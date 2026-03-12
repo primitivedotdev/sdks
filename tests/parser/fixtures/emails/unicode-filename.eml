@@ -1,0 +1,22 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: =?UTF-8?B?5pel5pys6Kqe44Gu44Oh44O844Or?=
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <unicode@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/plain; charset=utf-8
+
+Here's a file with a unicode filename.
+
+------=_Part_0
+Content-Type: application/pdf; name="=?UTF-8?B?5aCx5ZGK5pu4LnBkZg==?="
+Content-Disposition: attachment; filename*=UTF-8''%E5%A0%B1%E5%91%8A%E6%9B%B8.pdf
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwo+PgplbmRvYmoKdHJhaWxl
+cgo8PAovUm9vdCAxIDAgUgo+PgolJUVPRgo=
+
+------=_Part_0--

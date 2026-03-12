@@ -1,0 +1,14 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Simple HTML email
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <simple-html@example.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html>
+<body>
+<h1>Hello World</h1>
+<p>This is a <strong>simple</strong> HTML email.</p>
+</body>
+</html>

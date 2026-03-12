@@ -1,0 +1,17 @@
+From: =?ISO-8859-1?Q?Fran=E7ois?= <francois@example.com>
+To: recipient@example.com
+Subject: =?ISO-8859-1?Q?Caf=E9_menu_-_=E0_la_carte?=
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <non-utf8@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+
+Bonjour! Voici le menu du caf=E9:
+
+- Cr=E8me br=FBl=E9e: =A310.50
+- P=E2t=E9 en cro=FBte: =A315.00
+- Vin fran=E7ais: =A325.00
+
+Merci beaucoup!
+Fran=E7ois

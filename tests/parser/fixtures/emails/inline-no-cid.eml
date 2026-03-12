@@ -1,0 +1,22 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Inline attachment without Content-ID
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <inline-no-cid@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/plain; charset=utf-8
+
+This email has an image marked as inline but with no Content-ID.
+It cannot be referenced from HTML, so what should we do with it?
+
+------=_Part_0
+Content-Type: image/png; name="photo.png"
+Content-Disposition: inline; filename="photo.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+
+------=_Part_0--

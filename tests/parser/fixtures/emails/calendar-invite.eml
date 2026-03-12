@@ -1,0 +1,21 @@
+From: organizer@example.com
+To: attendee@example.com
+Subject: Meeting Invitation: Project Review
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <calendar@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/plain; charset=utf-8
+
+You have been invited to a meeting.
+
+------=_Part_0
+Content-Type: text/calendar; method=REQUEST; name="invite.ics"
+Content-Disposition: attachment; filename="invite.ics"
+Content-Transfer-Encoding: base64
+
+QkVHSU46VkNBTEVOREFSDQpWRVJTSU9OOjIuMA0KUFJPRFJEVC0vL0V4YW1wbGUvL0NBTEVOREFSLy9FTg0KTUVUSE9EOlJFUVVFU1QNCkJFR0lOOlZFVkVOVA0KRFRTVEFSVDoyMDI0MTIyMFQxMDAwMDBaDQpEVEVORDoyMDI0MTIyMFQxMTAwMDBaDQpTVU1NQVJZOlByb2plY3QgUmV2aWV3DQpFTkQ6VkVWRU5UDQpFTkQ6VkNBTEVOREFSDQo=
+
+------=_Part_0--

@@ -1,0 +1,28 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Two attachments with same filename
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <duplicate-names@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/plain; charset=utf-8
+
+This email has two PDF attachments both named "report.pdf".
+
+------=_Part_0
+Content-Type: application/pdf; name="report.pdf"
+Content-Disposition: attachment; filename="report.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKRklSU1QgUERGIENPTlRFTlQK
+
+------=_Part_0
+Content-Type: application/pdf; name="report.pdf"
+Content-Disposition: attachment; filename="report.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKU0VDT05EIFBERiBDT05URU5UCg==
+
+------=_Part_0--

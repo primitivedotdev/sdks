@@ -1,0 +1,42 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Email with inline image AND attachment
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <inline-and-attachment@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Mixed"
+
+------=_Mixed
+Content-Type: multipart/related; boundary="----=_Related"
+
+------=_Related
+Content-Type: text/html; charset=utf-8
+
+<html>
+<body>
+<h1>Important Update</h1>
+<img src="cid:header-image" alt="Header">
+<p>Please review the attached document.</p>
+</body>
+</html>
+
+------=_Related
+Content-Type: image/png; name="header.png"
+Content-Disposition: inline; filename="header.png"
+Content-Transfer-Encoding: base64
+Content-ID: <header-image>
+
+iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8DwHwYIGBgYGBgY
+GABHHAUhF2ywEQAAAABJRU5ErkJggg==
+
+------=_Related--
+
+------=_Mixed
+Content-Type: application/pdf; name="contract.pdf"
+Content-Disposition: attachment; filename="contract.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwo+PgplbmRvYmoKdHJhaWxl
+cgo8PAovUm9vdCAxIDAgUgo+PgolJUVPRgo=
+
+------=_Mixed--

@@ -1,0 +1,33 @@
+From: forwarder@example.com
+To: recipient@example.com
+Subject: Fwd: Original important email
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <forwarded@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/plain; charset=utf-8
+
+FYI - forwarding this to you.
+
+------=_Part_0
+Content-Type: message/rfc822
+Content-Disposition: attachment
+
+From: original-sender@example.com
+To: forwarder@example.com
+Subject: Original important email
+Date: Sat, 14 Dec 2024 09:00:00 -0800
+Message-ID: <original@example.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html>
+<body>
+<h1>This is the ORIGINAL email body</h1>
+<p>This should NOT be selected as the main body.</p>
+</body>
+</html>
+
+------=_Part_0--

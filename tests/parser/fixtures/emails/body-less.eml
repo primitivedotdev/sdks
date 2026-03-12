@@ -1,0 +1,23 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Attachments only - no body
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <bodyless@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: application/pdf; name="document1.pdf"
+Content-Disposition: attachment; filename="document1.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKRG9jdW1lbnQgMQo=
+
+------=_Part_0
+Content-Type: application/pdf; name="document2.pdf"
+Content-Disposition: attachment; filename="document2.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKRG9jdW1lbnQgMgo=
+
+------=_Part_0--

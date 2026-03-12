@@ -1,0 +1,45 @@
+From: alice@example.com
+To: bob@example.com
+Subject: Re: Re: Project Update
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <reply-chain@example.com>
+In-Reply-To: <original@example.com>
+References: <original@example.com> <reply1@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/plain; charset=utf-8
+
+THIS IS THE ACTUAL NEW REPLY TEXT that should be extracted.
+
+On Dec 14, 2024, Bob wrote:
+> Thanks for the update!
+>
+> On Dec 13, 2024, Alice wrote:
+>> Here's the project update you requested.
+>>
+>> Best regards,
+>> Alice
+
+------=_Part_0
+Content-Type: text/html; charset=utf-8
+
+<html>
+<body>
+<p>THIS IS THE ACTUAL NEW REPLY TEXT that should be extracted.</p>
+<div class="gmail_quote">
+<p>On Dec 14, 2024, Bob wrote:</p>
+<blockquote>
+<p>Thanks for the update!</p>
+<p>On Dec 13, 2024, Alice wrote:</p>
+<blockquote>
+<p>Here's the project update you requested.</p>
+<p>Best regards,<br>Alice</p>
+</blockquote>
+</blockquote>
+</div>
+</body>
+</html>
+
+------=_Part_0--

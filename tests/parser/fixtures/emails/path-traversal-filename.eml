@@ -1,0 +1,21 @@
+From: attacker@evil.com
+To: victim@example.com
+Subject: Malicious attachment filename
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <path-traversal@evil.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/plain; charset=utf-8
+
+Check out this attachment!
+
+------=_Part_0
+Content-Type: application/octet-stream; name="../../../etc/passwd"
+Content-Disposition: attachment; filename="../../../etc/passwd"
+Content-Transfer-Encoding: base64
+
+cm9vdDp4OjA6MDpyb290Oi9yb290Oi9iaW4vYmFzaAo=
+
+------=_Part_0--

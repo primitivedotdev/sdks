@@ -1,0 +1,85 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Various CID reference formats
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <multi-cid@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/html; charset=utf-8
+
+<html>
+<head>
+<style>
+.banner { background: url(cid:bg-image); }
+.logo { background: url("cid:LOGO-UPPER"); }
+</style>
+</head>
+<body>
+<img src="cid:img1" alt="Image 1">
+<img src="CID:IMG2" alt="Image 2 uppercase">
+<img src='cid:img3' alt="Single quotes">
+<div background="cid:bg-image">Background attr</div>
+<a href="cid:linked-doc">CID link</a>
+<img srcset="cid:small 1x, cid:large 2x" alt="Srcset">
+</body>
+</html>
+
+------=_Part_0
+Content-Type: image/png
+Content-ID: <img1>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+
+------=_Part_0
+Content-Type: image/png
+Content-ID: <IMG2>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+
+------=_Part_0
+Content-Type: image/png
+Content-ID: <img3>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+
+------=_Part_0
+Content-Type: image/png
+Content-ID: <bg-image>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+
+------=_Part_0
+Content-Type: image/png
+Content-ID: <LOGO-UPPER>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+
+------=_Part_0
+Content-Type: application/pdf
+Content-ID: <linked-doc>
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQK
+
+------=_Part_0
+Content-Type: image/png
+Content-ID: <small>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+
+------=_Part_0
+Content-Type: image/png
+Content-ID: <large>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==
+
+------=_Part_0--

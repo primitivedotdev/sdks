@@ -1,0 +1,19 @@
+From: marketing@example.com
+To: recipient@example.com
+Subject: HTML-only marketing email
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <html-only@example.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Special Offer</title>
+</head>
+<body>
+<h1>Amazing Deals!</h1>
+<p>This is an HTML-only email with <strong>no plain text alternative</strong>.</p>
+<p>Common for marketing emails.</p>
+</body>
+</html>

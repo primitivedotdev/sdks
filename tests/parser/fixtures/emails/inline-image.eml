@@ -1,0 +1,29 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Email with inline image
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <inline-image@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/html; charset=utf-8
+
+<html>
+<body>
+<h1>Check out this logo:</h1>
+<img src="cid:logo123" alt="Company Logo" width="100">
+<p>Pretty nice, right?</p>
+</body>
+</html>
+
+------=_Part_0
+Content-Type: image/png; name="logo.png"
+Content-Disposition: inline; filename="logo.png"
+Content-Transfer-Encoding: base64
+Content-ID: <logo123>
+
+iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNk+M9QzwAEjDAGNzYA
+AQCbAkO3X3s0AQAAAABJRU5ErkJggg==
+
+------=_Part_0--

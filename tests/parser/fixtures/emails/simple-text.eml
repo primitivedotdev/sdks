@@ -1,0 +1,10 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Simple text email
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <simple-text@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+This is a simple plain text email.
+No attachments, no HTML.

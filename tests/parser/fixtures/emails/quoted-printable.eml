@@ -1,0 +1,28 @@
+From: sender@example.com
+To: recipient@example.com
+Subject: Quoted-printable encoded email
+Date: Sun, 15 Dec 2024 10:00:00 -0800
+Message-ID: <quoted-printable@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_0"
+
+------=_Part_0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+This is a quoted-printable encoded message.
+
+Line wrapping test - this line is artificially wrapped at 76 characters using =
+soft line breaks which should be removed during decoding.
+
+Special characters: equals=3D sign, tab=09character.
+
+------=_Part_0
+Content-Type: text/plain; name="notes.txt"
+Content-Disposition: attachment; filename="notes.txt"
+Content-Transfer-Encoding: quoted-printable
+
+Attachment content also using quoted-printable encoding.
+Special chars: =3D =09 =0D=0A
+
+------=_Part_0--
