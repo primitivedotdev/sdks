@@ -1,8 +1,4 @@
 node_modules/
-contract-node/node_modules/
-contract-node/dist/
-contract-node/coverage/
-contract-node/*.tsbuildinfo
 sdk-node/node_modules/
 sdk-node/dist/
 sdk-node/*.tsbuildinfo

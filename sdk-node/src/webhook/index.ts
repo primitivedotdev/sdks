@@ -378,7 +378,7 @@ export function handleWebhook(
   // Step 2: Parse JSON (shared helper handles UTF-8 validation, BOM stripping, etc.)
   const parsed = parseJsonBody(body);
 
-  // Step 3: Validate with Zod
+  // Step 3: Validate against JSON Schema
   return validateEmailReceivedEvent(parsed);
 }
 
