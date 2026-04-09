@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import os
 import subprocess
 import sys
@@ -12,8 +13,8 @@ OUTPUT = ROOT / "src" / "primitive_sdk" / "models_generated.py"
 
 def _run_ruff(*args: str) -> None:
     preferred = [sys.executable, "-m", "ruff", *args]
-    result = subprocess.run(preferred, check=False)
-    if result.returncode == 0:
+    if importlib.util.find_spec("ruff") is not None:
+        subprocess.run(preferred, check=True)
         return
 
     fallback_env = os.environ.copy()
