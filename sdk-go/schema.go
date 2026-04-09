@@ -16,7 +16,11 @@ var (
 )
 
 func init() {
-	_ = json.Unmarshal(emailReceivedEventSchemaJSON, &EmailReceivedEventJSONSchema)
+	var schema map[string]any
+	if err := json.Unmarshal(emailReceivedEventSchemaJSON, &schema); err != nil {
+		panic("primitive: invalid embedded email received event schema: " + err.Error())
+	}
+	EmailReceivedEventJSONSchema = schema
 }
 
 func compiledSchema() (*gojsonschema.Schema, error) {
