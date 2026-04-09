@@ -226,6 +226,17 @@ func TestValidationHelpers(t *testing.T) {
 	delete(missingNested["email"].(map[string]any), "id")
 	if _, err := ValidateEmailReceivedEvent(missingNested); err == nil {
 		t.Fatal("expected nested required field validation to fail")
+	} else {
+		validationErr, ok := err.(*WebhookValidationError)
+		if !ok {
+			t.Fatalf("expected WebhookValidationError, got %v", err)
+		}
+		if validationErr.Field != "email.id" {
+			t.Fatalf("expected enriched required field path, got %q", validationErr.Field)
+		}
+		if len(validationErr.ValidationErrors) == 0 || validationErr.ValidationErrors[0].Path != "email.id" {
+			t.Fatalf("expected validation issue path to include missing field, got %#v", validationErr.ValidationErrors)
+		}
 	}
 	invalidEvent := loadJSONFixture(t, "webhook", "valid-email-received.json")
 	invalidEvent["event"] = "email.opened"

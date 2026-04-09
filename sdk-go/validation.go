@@ -20,15 +20,10 @@ func toFieldPath(field string) string {
 }
 
 func formatValidationIssue(issue gojsonschema.ResultError) (string, string, string) {
-	field := toFieldPath(issue.Field())
+	field := validationIssuePath(issue)
 	switch issue.Type() {
 	case "required":
 		missing := fmt.Sprint(issue.Details()["property"])
-		if field == "payload" {
-			field = missing
-		} else {
-			field = field + "." + missing
-		}
 		return field, fmt.Sprintf("Missing required field: %s", missing), fmt.Sprintf("Add the required field \"%s\" to the webhook payload.", missing)
 	case "const":
 		return field, fmt.Sprintf("Invalid value for %s: %s", field, issue.Description()), fmt.Sprintf("Check the value of \"%s\" in the webhook payload.", field)
@@ -39,11 +34,24 @@ func formatValidationIssue(issue gojsonschema.ResultError) (string, string, stri
 	}
 }
 
+func validationIssuePath(issue gojsonschema.ResultError) string {
+	field := toFieldPath(issue.Field())
+	if issue.Type() != "required" {
+		return field
+	}
+
+	missing := fmt.Sprint(issue.Details()["property"])
+	if field == "payload" {
+		return missing
+	}
+	return field + "." + missing
+}
+
 func createValidationError(issues []gojsonschema.ResultError) *WebhookValidationError {
 	validationIssues := make([]ValidationIssue, 0, len(issues))
 	for _, issue := range issues {
 		validationIssues = append(validationIssues, ValidationIssue{
-			Path:      toFieldPath(issue.Field()),
+			Path:      validationIssuePath(issue),
 			Message:   issue.Description(),
 			Validator: issue.Type(),
 		})
