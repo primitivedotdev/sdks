@@ -11,11 +11,24 @@ SCHEMA = ROOT / "src" / "primitive_sdk" / "schemas" / "email_received_event.sche
 OUTPUT = ROOT / "src" / "primitive_sdk" / "models_generated.py"
 
 
+def _should_fall_back_to_system_ruff(result: subprocess.CompletedProcess[str]) -> bool:
+    stderr = result.stderr or ""
+    return result.returncode == 127 or "No module named ruff" in stderr
+
+
 def _run_ruff(*args: str) -> None:
     preferred = [sys.executable, "-m", "ruff", *args]
     if importlib.util.find_spec("ruff") is not None:
-        subprocess.run(preferred, check=True)
-        return
+        result = subprocess.run(preferred, check=False, text=True, capture_output=True)
+        if result.returncode == 0:
+            return
+        if not _should_fall_back_to_system_ruff(result):
+            raise subprocess.CalledProcessError(
+                result.returncode,
+                preferred,
+                output=result.stdout,
+                stderr=result.stderr,
+            )
 
     fallback_env = os.environ.copy()
     fallback_env["PATH"] = ":".join(
@@ -24,6 +37,8 @@ def _run_ruff(*args: str) -> None:
         if entry and Path(entry) != ROOT / ".venv" / "bin"
     )
     subprocess.run(["ruff", *args], check=True, env=fallback_env)
+
+
 def main() -> None:
     subprocess.run(
         [
