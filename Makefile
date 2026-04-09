@@ -62,7 +62,7 @@ go-check-generated:
 	cd sdk-go && python scripts/generate_schema_module.py && git diff --exit-code -- schema_generated.go
 
 go-check: go-check-generated
-	cd sdk-go && test -z "$(gofmt -l .)"
+	cd sdk-go && test -z "$$(gofmt -l .)"
 	cd sdk-go && go vet ./...
 	cd sdk-go && go test ./...
 
