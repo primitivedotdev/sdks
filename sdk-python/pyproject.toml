@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "primitive-sdk"
+version = "0.1.0"
+description = "Official Primitive Python SDK for webhook verification and validation"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Primitive", email = "support@primitive.dev" }]
+keywords = ["primitive", "email", "webhook", "signature", "hmac"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
+]
+dependencies = [
+  "jsonschema>=4.24.0,<5",
+  "pydantic>=2.11,<3",
+]
+
+[dependency-groups]
+dev = [
+  "basedpyright>=1.31.0,<2",
+  "build>=1.2.2,<2",
+  "datamodel-code-generator>=0.31.0,<1",
+  "hatchling>=1.27.0,<2",
+  "pytest>=8.3.0,<9",
+  "pytest-cov>=6.2.0,<7",
+  "ruff>=0.12.0,<1",
+  "twine>=6.1.0,<7",
+]
+
+[project.urls]
+Homepage = "https://primitive.dev"
+Repository = "https://github.com/primitivedotdev/sdks"
+Issues = "https://github.com/primitivedotdev/sdks/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/primitive_sdk"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/primitive_sdk/schemas/email_received_event.schema.json" = "primitive_sdk/schemas/email_received_event.schema.json"
+"src/primitive_sdk/py.typed" = "primitive_sdk/py.typed"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/README.md",
+  "/pyproject.toml",
+  "/scripts",
+  "/src/primitive_sdk",
+  "/tests",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["primitive_sdk"]
+omit = [
+  "src/primitive_sdk/models_generated.py",
+  "src/primitive_sdk/schemas/*",
+]
+
+[tool.coverage.report]
+omit = [
+  "src/primitive_sdk/models_generated.py",
+  "src/primitive_sdk/schemas/*",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501", "SIM108", "UP012", "UP017"]
+
+[tool.basedpyright]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+include = ["src", "tests", "scripts"]

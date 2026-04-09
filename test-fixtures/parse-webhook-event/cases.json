@@ -1,0 +1,86 @@
+{
+  "cases": [
+    {
+      "name": "valid_known_event",
+      "input_fixture": ["webhook", "valid-email-received.json"],
+      "expected": {
+        "kind": "email.received",
+        "id": "evt_abc123"
+      }
+    },
+    {
+      "name": "malformed_known_event",
+      "input": {
+        "event": "email.received",
+        "id": "evt_only"
+      },
+      "expected": {
+        "kind": "error",
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "unknown_event_passthrough",
+      "input": {
+        "event": "email.bounced",
+        "id": "evt_unknown",
+        "version": "2025-12-14",
+        "bounce_reason": "mailbox_full"
+      },
+      "expected": {
+        "kind": "unknown",
+        "event": "email.bounced",
+        "id": "evt_unknown",
+        "version": "2025-12-14"
+      }
+    },
+    {
+      "name": "missing_event_field",
+      "input": {
+        "id": "evt_missing"
+      },
+      "expected": {
+        "kind": "error",
+        "error_code": "PAYLOAD_MISSING_EVENT"
+      }
+    },
+    {
+      "name": "non_string_event",
+      "input": {
+        "event": 123
+      },
+      "expected": {
+        "kind": "error",
+        "error_code": "PAYLOAD_MISSING_EVENT"
+      }
+    },
+    {
+      "name": "null_input",
+      "input": null,
+      "expected": {
+        "kind": "error",
+        "error_code": "PAYLOAD_NULL"
+      }
+    },
+    {
+      "name": "array_input",
+      "input": [
+        {
+          "event": "email.received"
+        }
+      ],
+      "expected": {
+        "kind": "error",
+        "error_code": "PAYLOAD_IS_ARRAY"
+      }
+    },
+    {
+      "name": "wrong_type_input",
+      "input": "not-an-object",
+      "expected": {
+        "kind": "error",
+        "error_code": "PAYLOAD_WRONG_TYPE"
+      }
+    }
+  ]
+}

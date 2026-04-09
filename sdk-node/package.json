@@ -1,0 +1,79 @@
+{
+  "name": "@primitivedotdev/sdk-node",
+  "version": "0.2.0",
+  "description": "Official Primitive Node.js SDK — webhook, contract, and parser modules",
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./webhook": {
+      "types": "./dist/webhook/index.d.ts",
+      "default": "./dist/webhook/index.js"
+    },
+    "./contract": {
+      "types": "./dist/contract/index.d.ts",
+      "default": "./dist/contract/index.js"
+    },
+    "./parser": {
+      "types": "./dist/parser/index.d.ts",
+      "default": "./dist/parser/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "generate:schema": "tsx scripts/generate-schema-module.ts",
+    "generate:types": "tsx scripts/generate-types.ts",
+    "generate:validator": "tsx scripts/generate-validator.ts",
+    "generate": "pnpm generate:schema && pnpm generate:types && pnpm generate:validator",
+    "build": "pnpm generate && tsdown",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "pnpm generate && tsc --noEmit",
+    "lint": "biome check src/ tests/",
+    "lint:fix": "biome check --write src/ tests/",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": ["primitive", "email", "webhook", "signature", "hmac", "contract", "parser"],
+  "author": "Primitive <support@primitive.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/primitivedotdev/sdks.git",
+    "directory": "sdk-node"
+  },
+  "bugs": {
+    "url": "https://github.com/primitivedotdev/sdks/issues"
+  },
+  "homepage": "https://primitive.dev",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "archiver": "^7.0.1",
+    "isomorphic-dompurify": "^2.34.0",
+    "mailparser": "^3.9.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
+    "@types/archiver": "^7.0.0",
+    "@types/json-schema": "^7.0.15",
+    "@types/mailparser": "^3.4.6",
+    "@types/node": "^22.10.2",
+    "json-schema-to-typescript": "^15.0.4",
+    "tsdown": "^0.9.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.2",
+    "@vitest/coverage-v8": "^2.1.8",
+    "vitest": "^2.1.8"
+  }
+}

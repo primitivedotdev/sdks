@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a bug in one or more SDKs.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is happening?
+    validations:
+      required: true
+  - type: checkboxes
+    id: sdk
+    attributes:
+      label: Affected SDKs
+      options:
+        - label: Node
+        - label: Python
+        - label: Go
+        - label: Shared contract / fixtures
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Minimal steps, payload, headers, or fixture needed to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Include versions, logs, or links if relevant.
