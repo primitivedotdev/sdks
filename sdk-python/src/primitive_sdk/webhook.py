@@ -75,7 +75,7 @@ def _detect_reserialized_body(body: str) -> str | None:
     if _PRETTY_PRINTED_JSON_RE.search(body):
         return (
             "Request body appears re-serialized (pretty-printed). Use the raw "
-            "request body before any JSON.parse() or JSON.stringify() calls."
+            "request body before any json.loads() or json.dumps() calls."
         )
     return None
 
@@ -194,7 +194,8 @@ def verify_webhook_signature(
     expected = hmac.new(secret_bytes, signed_payload, hashlib.sha256).hexdigest()
 
     for provided in signatures:
-        if len(provided) == len(expected) and HEX_PATTERN.fullmatch(provided) and hmac.compare_digest(provided, expected):
+        normalized = provided.lower()
+        if len(provided) == len(expected) and HEX_PATTERN.fullmatch(provided) and hmac.compare_digest(normalized, expected):
             return True
 
     reserialization_hint = _detect_reserialized_body(body)

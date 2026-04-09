@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 import DOMPurify from "isomorphic-dompurify";
-import { type ParsedMail, simpleParser } from "mailparser";
+import type { ParsedMail } from "mailparser";
 import type { EmailAddress } from "../types.js";
+
+async function loadMailparser() {
+  return import("mailparser");
+}
 
 // Signature/artifact MIME types to filter out - these are not "real" attachments
 const SIGNATURE_ARTIFACTS = new Set([
@@ -90,6 +94,7 @@ export async function parseEmailWithAttachments(
 ): Promise<ParsedEmailWithAttachments> {
   const generateId =
     options?.generateAttachmentId ?? (() => crypto.randomUUID());
+  const { simpleParser } = await loadMailparser();
 
   // Parse with default options - mailparser converts CID refs to data: URLs
   const parsed: ParsedMail = await simpleParser(emlBuffer);

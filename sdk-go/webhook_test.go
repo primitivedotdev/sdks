@@ -150,6 +150,22 @@ func TestDownloadHelpers(t *testing.T) {
 	if remaining <= 0 {
 		t.Fatalf("expected positive remaining time, got %d", remaining)
 	}
+
+	payload["email"].(map[string]any)["content"].(map[string]any)["download"].(map[string]any)["expires_at"] = "2025-12-15T12:00:00.123+00:00"
+	expired, err = IsDownloadExpired(payload, 1765800000000)
+	if err != nil {
+		t.Fatalf("IsDownloadExpired should accept fractional RFC3339 timestamps: %v", err)
+	}
+	if expired {
+		t.Fatal("expected fractional download URL to still be valid")
+	}
+	remaining, err = GetDownloadTimeRemaining(payload, 1765800000000)
+	if err != nil {
+		t.Fatalf("GetDownloadTimeRemaining should accept fractional RFC3339 timestamps: %v", err)
+	}
+	if remaining != 123 {
+		t.Fatalf("expected remaining time to include fractional milliseconds, got %d", remaining)
+	}
 }
 
 func TestValidateEmailAuth(t *testing.T) {

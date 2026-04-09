@@ -119,6 +119,22 @@ def test_verify_webhook_signature_accepts_valid_signature() -> None:
     )
 
 
+def test_verify_webhook_signature_accepts_uppercase_hex_signature() -> None:
+    body = '{"event":"email.received"}'
+    result = sign_webhook_payload(body, "secret", 1734567890)
+    uppercase_header = str(result["header"]).upper().replace("T=", "t=").replace(",V1=", ",v1=")
+
+    assert (
+        verify_webhook_signature(
+            raw_body=body,
+            signature_header=uppercase_header,
+            secret="secret",
+            now_seconds=1734567890,
+        )
+        is True
+    )
+
+
 def test_verify_webhook_signature_rejects_invalid_header() -> None:
     with pytest.raises(WebhookVerificationError) as error:
         verify_webhook_signature(raw_body="{}", signature_header="", secret="secret")
@@ -300,6 +316,8 @@ def test_verify_webhook_signature_detects_pretty_printed_json_hint() -> None:
             now_seconds=1734567890,
         )
     assert "pretty-printed" in str(error.value)
+    assert "json.loads()" in str(error.value)
+    assert "json.dumps()" in str(error.value)
 
 
 def test_verify_webhook_signature_works_with_unicode_special_characters_and_long_body() -> None:

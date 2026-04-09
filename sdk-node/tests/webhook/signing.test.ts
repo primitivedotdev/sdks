@@ -645,14 +645,6 @@ describe("test vectors - cross-language verification", () => {
       }),
     ).not.toThrow();
 
-    // Log for cross-language verification
-    console.log("Test Vector - Simple:");
-    console.log(`  Secret: ${secret}`);
-    console.log(`  Timestamp: ${timestamp}`);
-    console.log(`  Raw Body: ${rawBody}`);
-    console.log(`  Signed Payload: ${timestamp}.${rawBody}`);
-    console.log(`  Expected Hex: ${expectedHex}`);
-    console.log(`  Full Header: ${header}`);
   });
 
   it("vector: minimal payload", () => {
@@ -670,13 +662,6 @@ describe("test vectors - cross-language verification", () => {
         nowSeconds: timestamp,
       }),
     ).not.toThrow();
-
-    console.log("Test Vector - Minimal:");
-    console.log(`  Secret: ${secret}`);
-    console.log(`  Timestamp: ${timestamp}`);
-    console.log(`  Raw Body: ${rawBody}`);
-    console.log(`  Signed Payload: ${timestamp}.${rawBody}`);
-    console.log(`  Expected Hex: ${expectedHex}`);
   });
 
   it("vector: realistic webhook payload", () => {
@@ -694,12 +679,6 @@ describe("test vectors - cross-language verification", () => {
         nowSeconds: timestamp,
       }),
     ).not.toThrow();
-
-    console.log("Test Vector - Realistic:");
-    console.log(`  Secret: ${secret}`);
-    console.log(`  Timestamp: ${timestamp}`);
-    console.log(`  Raw Body: ${rawBody}`);
-    console.log(`  Expected Hex: ${expectedHex}`);
   });
 });
 

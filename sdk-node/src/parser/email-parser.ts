@@ -1,4 +1,8 @@
-import { type AddressObject, type ParsedMail, simpleParser } from "mailparser";
+import type { AddressObject, ParsedMail } from "mailparser";
+
+async function loadMailparser() {
+  return import("mailparser");
+}
 
 // Mailparser address types for header parsing
 interface MailparserAddress {
@@ -22,6 +26,7 @@ export interface ParsedEmail {
  * Uses mailparser library for robust email parsing
  */
 export async function parseEmail(emlRaw: string): Promise<ParsedEmail> {
+  const { simpleParser } = await loadMailparser();
   const parsed: ParsedMail = await simpleParser(emlRaw);
 
   // Extract headers as a plain object

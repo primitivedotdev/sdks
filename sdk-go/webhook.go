@@ -226,7 +226,7 @@ func IsDownloadExpired(event any, nowMillis ...int64) (bool, error) {
 	if !ok {
 		return false, fmt.Errorf("missing email.content.download.expires_at")
 	}
-	expires, err := time.Parse(time.RFC3339, normalizeISO8601(expiresAt))
+	expires, err := parseRFC3339Timestamp(expiresAt)
 	if err != nil {
 		return false, err
 	}
@@ -242,7 +242,7 @@ func GetDownloadTimeRemaining(event any, nowMillis ...int64) (int64, error) {
 	if !ok {
 		return 0, fmt.Errorf("missing email.content.download.expires_at")
 	}
-	expires, err := time.Parse(time.RFC3339, normalizeISO8601(expiresAt))
+	expires, err := parseRFC3339Timestamp(expiresAt)
 	if err != nil {
 		return 0, err
 	}
@@ -259,6 +259,10 @@ func GetDownloadTimeRemaining(event any, nowMillis ...int64) (int64, error) {
 
 func normalizeISO8601(value string) string {
 	return value
+}
+
+func parseRFC3339Timestamp(value string) (time.Time, error) {
+	return time.Parse(time.RFC3339Nano, normalizeISO8601(value))
 }
 
 func IsRawIncluded(event any) (bool, error) {
