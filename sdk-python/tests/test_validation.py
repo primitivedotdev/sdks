@@ -10,7 +10,11 @@ from primitive_sdk import (
     safe_validate_email_received_event,
     validate_email_received_event,
 )
-from primitive_sdk.validation import _create_validation_error, _format_validation_issue
+from primitive_sdk.validation import (
+    _create_validation_error,
+    _format_validation_issue,
+    _validation_sort_key,
+)
 
 
 class StubValidationError:
@@ -259,6 +263,18 @@ def test_format_validation_issue_appends_required_field_to_nested_path() -> None
     assert field == "email.id"
     assert message == "Missing required field: id"
     assert suggestion == 'Add the required field "id" to the webhook payload.'
+
+
+def test_validation_sort_key_handles_mixed_string_and_index_segments() -> None:
+    errors = [
+        StubValidationError("type", "bad type", ["email", "parsed", "cc", 0]),
+        StubValidationError("type", "bad type", ["email", "parsed", "bcc"]),
+    ]
+    sorted_errors = sorted(errors, key=_validation_sort_key)
+    assert [list(error.absolute_path) for error in sorted_errors] == [
+        ["email", "parsed", "bcc"],
+        ["email", "parsed", "cc", 0],
+    ]
 
 
 def test_webhook_validation_error_serializes_additional_error_count() -> None:

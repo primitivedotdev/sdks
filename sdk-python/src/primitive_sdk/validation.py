@@ -37,6 +37,10 @@ def _to_field_path(path: list[str | int]) -> str:
     return ".".join(str(segment) for segment in path)
 
 
+def _validation_sort_key(error: Any) -> tuple[str, ...]:
+    return tuple(str(segment) for segment in error.absolute_path)
+
+
 def _format_validation_issue(error: Any) -> tuple[str, str, str]:
     field = _to_field_path(list(error.absolute_path))
     validator = error.validator
@@ -96,7 +100,7 @@ def _create_validation_error(errors: list[Any]) -> WebhookValidationError:
 
 
 def validate_email_received_event(input: Any) -> EmailReceivedEvent:
-    errors = sorted(_validator.iter_errors(input), key=lambda error: list(error.absolute_path))
+    errors = sorted(_validator.iter_errors(input), key=_validation_sort_key)
     if errors:
         raise _create_validation_error(errors)
     return EmailReceivedEvent.model_validate(input)
