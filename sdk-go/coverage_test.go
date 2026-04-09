@@ -92,7 +92,9 @@ func TestHelpers(t *testing.T) {
 		}
 	}
 
-	normalized, data, err := normalizeJSONValue(struct{ Event string `json:"event"` }{Event: "email.received"})
+	normalized, data, err := normalizeJSONValue(struct {
+		Event string `json:"event"`
+	}{Event: "email.received"})
 	if err != nil || len(data) == 0 {
 		t.Fatalf("unexpected normalized json result: %#v %v", normalized, err)
 	}
@@ -103,7 +105,9 @@ func TestHelpers(t *testing.T) {
 		t.Fatal("expected normalizeJSONValue to fail when marshaled json is invalid")
 	}
 
-	type simpleEvent struct{ Event string `json:"event"` }
+	type simpleEvent struct {
+		Event string `json:"event"`
+	}
 	decoded, err := decodeInto[simpleEvent](map[string]any{"event": "email.received"})
 	if err != nil || decoded.Event != "email.received" {
 		t.Fatalf("unexpected decodeInto result: %#v %v", decoded, err)
@@ -192,7 +196,7 @@ func TestHelpers(t *testing.T) {
 	if hint := detectReserializedBody("{\n  \"event\": \"email.received\"\n}"); !strings.Contains(hint, "re-serialized") {
 		t.Fatalf("expected pretty-printed body hint, got %q", hint)
 	}
-	if hint := detectReserializedBody("{}" ); hint != "" {
+	if hint := detectReserializedBody("{}"); hint != "" {
 		t.Fatalf("expected compact json to produce no hint, got %q", hint)
 	}
 
@@ -404,7 +408,9 @@ func TestWebhookUtilityCoverage(t *testing.T) {
 	if !IsEmailReceivedEvent(unknownEvent) {
 		t.Fatal("expected unknown event wrapper to be recognized by event name")
 	}
-	if !IsEmailReceivedEvent(struct{ Event string `json:"event"` }{Event: string(EventTypeEmailReceived)}) {
+	if !IsEmailReceivedEvent(struct {
+		Event string `json:"event"`
+	}{Event: string(EventTypeEmailReceived)}) {
 		t.Fatal("expected struct event wrapper to be recognized")
 	}
 
@@ -415,7 +421,7 @@ func TestWebhookUtilityCoverage(t *testing.T) {
 	downloadOnly := map[string]any{
 		"email": map[string]any{
 			"content": map[string]any{
-				"raw": map[string]any{"included": false, "size_bytes": 10, "max_inline_bytes": 5},
+				"raw":      map[string]any{"included": false, "size_bytes": 10, "max_inline_bytes": 5},
 				"download": map[string]any{"url": "https://example.com"},
 			},
 		},
@@ -525,11 +531,11 @@ func TestWebhookUtilityCoverage(t *testing.T) {
 		t.Fatalf("expected no-DMARC SPF-fail branch: %#v %v", result, err)
 	}
 	weakResult, err := ValidateEmailAuth(EmailAuth{
-		SPF:               SpfResultPass,
-		DMARC:             DmarcResultPass,
-		DMARCDkimAligned:  true,
-		DMARCSpfAligned:   true,
-		DKIMSignatures:    []DKIMSignature{{Domain: "example.com", Result: DkimResultPass, Aligned: true, KeyBits: intPtr(512)}},
+		SPF:              SpfResultPass,
+		DMARC:            DmarcResultPass,
+		DMARCDkimAligned: true,
+		DMARCSpfAligned:  true,
+		DKIMSignatures:   []DKIMSignature{{Domain: "example.com", Result: DkimResultPass, Aligned: true, KeyBits: intPtr(512)}},
 	})
 	if err != nil || weakResult.Confidence != AuthConfidenceMedium || !strings.Contains(fmt.Sprint(weakResult.Reasons), "Weak DKIM key") {
 		t.Fatalf("expected weak-key auth branch: %#v %v", weakResult, err)
