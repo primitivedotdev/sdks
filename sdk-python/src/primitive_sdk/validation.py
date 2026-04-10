@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Generic, Literal, TypeVar
 
 from jsonschema import Draft7Validator, FormatChecker
+from pydantic import ValidationError
 
 from primitive_sdk.errors import ValidationIssue, WebhookValidationError
 from primitive_sdk.schema import email_received_event_json_schema
@@ -99,11 +100,41 @@ def _create_validation_error(errors: list[Any]) -> WebhookValidationError:
     return WebhookValidationError(field, message, suggestion, issues)
 
 
+def _create_model_validation_error(error: ValidationError) -> WebhookValidationError:
+    issues = [
+        ValidationIssue(
+            path=_to_field_path(list(issue["loc"])),
+            message=str(issue["msg"]),
+            validator=str(issue["type"]),
+        )
+        for issue in error.errors()
+    ]
+
+    if not issues:
+        return WebhookValidationError(
+            "payload",
+            "Webhook payload failed model validation",
+            'Check the structure of the webhook payload against "EmailReceivedEvent".',
+            issues,
+        )
+
+    field = issues[0].path
+    return WebhookValidationError(
+        field,
+        f"Validation failed for {field}: {issues[0].message}",
+        f'Check the value of "{field}" in the webhook payload.',
+        issues,
+    )
+
+
 def validate_email_received_event(input: Any) -> EmailReceivedEvent:
     errors = sorted(_validator.iter_errors(input), key=_validation_sort_key)
     if errors:
         raise _create_validation_error(errors)
-    return EmailReceivedEvent.model_validate(input)
+    try:
+        return EmailReceivedEvent.model_validate(input)
+    except ValidationError as error:
+        raise _create_model_validation_error(error) from error
 
 
 def safe_validate_email_received_event(input: Any) -> ValidationResult[EmailReceivedEvent]:

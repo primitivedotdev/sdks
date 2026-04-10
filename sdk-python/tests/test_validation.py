@@ -3,8 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from pydantic import BaseModel, ValidationError
 
 from primitive_sdk import (
+    EmailReceivedEvent,
     ValidationFailure,
     WebhookValidationError,
     safe_validate_email_received_event,
@@ -40,6 +42,35 @@ def test_safe_validate_email_received_event_returns_failure_shape() -> None:
     result = safe_validate_email_received_event({"event": "email.received"})
     assert isinstance(result, ValidationFailure)
     assert result.error.code == "SCHEMA_VALIDATION_FAILED"
+
+
+def test_safe_validate_email_received_event_wraps_model_validation_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    valid_payload: dict[str, Any],
+) -> None:
+    class StubModel(BaseModel):
+        field: int
+
+    try:
+        StubModel.model_validate({"field": "not-an-int"})
+    except ValidationError as error:
+        model_error = error
+    else:
+        pytest.fail("expected stub model validation to fail")
+
+    def raise_validation_error(cls: type[EmailReceivedEvent], _: Any) -> EmailReceivedEvent:
+        raise model_error
+
+    monkeypatch.setattr(
+        EmailReceivedEvent,
+        "model_validate",
+        classmethod(raise_validation_error),
+    )
+
+    result = safe_validate_email_received_event(valid_payload)
+    assert isinstance(result, ValidationFailure)
+    assert result.error.code == "SCHEMA_VALIDATION_FAILED"
+    assert result.error.field == "field"
 
 
 def test_validate_email_received_event_accepts_date_formatted_version(

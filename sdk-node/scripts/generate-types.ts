@@ -13,8 +13,20 @@ const schema = JSON.parse(readFileSync(schemaPath, "utf8")) as {
   definitions: Record<string, unknown>;
 };
 
+const emailReceivedEventSchema = schema.definitions.EmailReceivedEvent;
+
+if (
+  !emailReceivedEventSchema ||
+  typeof emailReceivedEventSchema !== "object" ||
+  Array.isArray(emailReceivedEventSchema)
+) {
+  throw new Error(
+    'Expected schema.definitions.EmailReceivedEvent to be an object',
+  );
+}
+
 const rootSchema = {
-  ...(schema.definitions.EmailReceivedEvent as Record<string, unknown>),
+  ...emailReceivedEventSchema,
   $schema: schema.$schema,
   definitions: schema.definitions,
 };
