@@ -49,10 +49,11 @@ python-check: python-check-generated
 	$(MAKE) python-test
 
 python-build:
+	rm -rf sdk-python/dist
 	cd sdk-python && uv run python -m build
 
-python-smoke:
-	smoke_dir=$$(mktemp -d) && $(PYTHON) -m venv "$$smoke_dir/venv" && "$$smoke_dir/venv/bin/pip" install sdk-python/dist/*.whl && "$$smoke_dir/venv/bin/python" -c "import primitive_sdk; primitive_sdk.handle_webhook"
+python-smoke: python-build
+	smoke_dir=$$(mktemp -d) && wheel_path=$$($(PYTHON) -c "from pathlib import Path; wheels = sorted(Path('sdk-python/dist').glob('*.whl')); assert len(wheels) == 1, wheels; print(wheels[0])") && $(PYTHON) -m venv "$$smoke_dir/venv" && "$$smoke_dir/venv/bin/pip" install "$$wheel_path" && "$$smoke_dir/venv/bin/python" -c "import primitive_sdk; primitive_sdk.handle_webhook"
 
 python-coverage:
 	cd sdk-python && uv run pytest tests --cov=primitive_sdk --cov-report=term-missing
