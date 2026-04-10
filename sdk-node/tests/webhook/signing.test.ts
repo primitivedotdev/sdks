@@ -1158,4 +1158,39 @@ describe("signature caching (performance optimization)", () => {
       }),
     ).not.toThrow();
   });
+
+  it("cache invalidation: mutating a Buffer requires recompute", () => {
+    const bodyBuffer = Buffer.from(rawBody);
+    const timestamp = 1734567890;
+    const firstHeader = signWebhookPayload(
+      bodyBuffer,
+      secret,
+      timestamp,
+    ).header;
+
+    expect(() =>
+      verifyWebhookSignature({
+        rawBody: bodyBuffer,
+        signatureHeader: firstHeader,
+        secret,
+        nowSeconds: timestamp,
+      }),
+    ).not.toThrow();
+
+    bodyBuffer.write('{"test":"changed"}');
+    const secondHeader = signWebhookPayload(
+      bodyBuffer,
+      secret,
+      timestamp,
+    ).header;
+
+    expect(() =>
+      verifyWebhookSignature({
+        rawBody: bodyBuffer,
+        signatureHeader: secondHeader,
+        secret,
+        nowSeconds: timestamp,
+      }),
+    ).not.toThrow();
+  });
 });

@@ -31,6 +31,8 @@ interface SignatureCacheEntry {
   secretHash: string;
   /** Timestamp from the signature header */
   timestamp: number;
+  /** Request body string used to compute the signature */
+  body: string;
   /** The computed HMAC signature (hex) */
   computed: string;
 }
@@ -269,6 +271,7 @@ export function verifyWebhookSignature(opts: VerifyOptions): true {
 
     if (
       cached &&
+      cached.body === body &&
       cached.timestamp === timestamp &&
       cached.secretHash === currentSecretHash
     ) {
@@ -284,6 +287,7 @@ export function verifyWebhookSignature(opts: VerifyOptions): true {
       signatureCache.set(rawBody, {
         secretHash: currentSecretHash,
         timestamp,
+        body,
         computed: expectedHex,
       });
     }
