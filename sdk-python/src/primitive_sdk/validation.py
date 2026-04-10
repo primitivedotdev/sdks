@@ -42,19 +42,30 @@ def _validation_sort_key(error: Any) -> tuple[str, ...]:
     return tuple(str(segment) for segment in error.absolute_path)
 
 
-def _format_validation_issue(error: Any) -> tuple[str, str, str]:
+def _missing_required_property(error: Any) -> str:
+    match = _REQUIRED_PROPERTY_RE.search(str(error.message))
+    return match.group(1) if match else "unknown"
+
+
+def _validation_issue_field(error: Any) -> str:
     field = _to_field_path(list(error.absolute_path))
+    if error.validator != "required":
+        return field
+
+    missing = _missing_required_property(error)
+    if field != "payload":
+        return f"{field}.{missing}"
+    return missing
+
+
+def _format_validation_issue(error: Any) -> tuple[str, str, str]:
+    field = _validation_issue_field(error)
     validator = error.validator
 
     if validator == "required":
-        match = _REQUIRED_PROPERTY_RE.search(str(error.message))
-        missing = match.group(1) if match else "unknown"
+        missing = _missing_required_property(error)
         message = f"Missing required field: {missing}"
         suggestion = f'Add the required field "{missing}" to the webhook payload.'
-        if field != "payload":
-            field = f"{field}.{missing}"
-        else:
-            field = missing
         return field, message, suggestion
 
     if validator == "const":
@@ -81,7 +92,7 @@ def _format_validation_issue(error: Any) -> tuple[str, str, str]:
 def _create_validation_error(errors: list[Any]) -> WebhookValidationError:
     issues = [
         ValidationIssue(
-            path=_to_field_path(list(error.absolute_path)),
+            path=_validation_issue_field(error),
             message=str(error.message),
             validator=str(error.validator),
         )

@@ -3,6 +3,8 @@
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
 .PHONY: shared-check check build release-check
 
+PYTHON := $(shell if command -v python3 >/dev/null 2>&1; then printf python3; else printf python; fi)
+
 node-install:
 	pnpm --dir sdk-node install --frozen-lockfile
 
@@ -50,16 +52,16 @@ python-build:
 	cd sdk-python && uv run python -m build
 
 python-smoke:
-	smoke_dir=$$(mktemp -d) && python -m venv "$$smoke_dir/venv" && "$$smoke_dir/venv/bin/pip" install sdk-python/dist/*.whl && "$$smoke_dir/venv/bin/python" -c "import primitive_sdk; primitive_sdk.handle_webhook"
+	smoke_dir=$$(mktemp -d) && $(PYTHON) -m venv "$$smoke_dir/venv" && "$$smoke_dir/venv/bin/pip" install sdk-python/dist/*.whl && "$$smoke_dir/venv/bin/python" -c "import primitive_sdk; primitive_sdk.handle_webhook"
 
 python-coverage:
 	cd sdk-python && uv run pytest tests --cov=primitive_sdk --cov-report=term-missing
 
 go-generate:
-	cd sdk-go && python scripts/generate_schema_module.py
+	cd sdk-go && $(PYTHON) scripts/generate_schema_module.py
 
 go-check-generated:
-	cd sdk-go && python scripts/generate_schema_module.py && git diff --exit-code -- schema_generated.go
+	cd sdk-go && $(PYTHON) scripts/generate_schema_module.py && git diff --exit-code -- schema_generated.go
 
 go-check: go-check-generated
 	cd sdk-go && test -z "$$(gofmt -l .)"

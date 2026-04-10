@@ -139,7 +139,7 @@ if err != nil {
 From `primitive-sdks/sdk-go`:
 
 ```bash
-python scripts/generate_schema_module.py
+make -C .. go-generate
 go test ./...
 go test -run TestSharedCompatibilityFixtures ./...
 gofmt -w .

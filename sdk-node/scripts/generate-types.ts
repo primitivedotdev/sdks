@@ -41,9 +41,6 @@ const output = await compile(rootSchema, "EmailReceivedEvent", {
  */`,
   declareExternallyReferenced: true,
   format: false,
-  style: {
-    singleQuote: false,
-  },
   unreachableDefinitions: true,
 });
 

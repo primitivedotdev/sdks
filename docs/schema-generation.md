@@ -29,9 +29,9 @@ Generated files:
 
 How it works:
 
-- `scripts/generate-schema-module.ts` copies the canonical JSON schema into a typed module export
-- `scripts/generate-types.ts` derives TypeScript types from the schema
-- `scripts/generate-validator.ts` produces an AJV standalone validator module
+- `sdk-node/scripts/generate-schema-module.ts` copies the canonical JSON schema into a typed module export
+- `sdk-node/scripts/generate-types.ts` derives TypeScript types from the schema
+- `sdk-node/scripts/generate-validator.ts` produces an AJV standalone validator module
 
 ### Python
 
@@ -48,8 +48,8 @@ Generated files:
 
 How it works:
 
-- `scripts/generate_schema_module.py` copies the canonical schema into the package
-- `scripts/generate_models.py` derives Pydantic models from the schema
+- `sdk-python/scripts/generate_schema_module.py` copies the canonical schema into the package
+- `sdk-python/scripts/generate_models.py` derives Pydantic models from the schema
 
 ### Go
 
@@ -65,7 +65,7 @@ Generated files:
 
 How it works:
 
-- `scripts/generate_schema_module.py` embeds the canonical JSON schema in Go source
+- `sdk-go/scripts/generate_schema_module.py` embeds the canonical JSON schema in Go source
 
 ## CI Enforcement
 

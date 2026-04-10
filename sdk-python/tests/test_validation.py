@@ -296,6 +296,26 @@ def test_format_validation_issue_appends_required_field_to_nested_path() -> None
     assert suggestion == 'Add the required field "id" to the webhook payload.'
 
 
+@pytest.mark.parametrize(
+    ("absolute_path", "message", "expected_path"),
+    [
+        ([], "'event' is a required property", "event"),
+        (["email"], "'id' is a required property", "email.id"),
+    ],
+)
+def test_create_validation_error_uses_adjusted_required_issue_paths(
+    absolute_path: list[str | int],
+    message: str,
+    expected_path: str,
+) -> None:
+    error = _create_validation_error(
+        [StubValidationError("required", message, absolute_path)]
+    )
+
+    assert error.field == expected_path
+    assert error.validation_errors[0].path == expected_path
+
+
 def test_validation_sort_key_handles_mixed_string_and_index_segments() -> None:
     errors = [
         StubValidationError("type", "bad type", ["email", "parsed", "cc", 0]),
