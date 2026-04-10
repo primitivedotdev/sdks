@@ -132,6 +132,28 @@ def test_dmarc_policy_exposes_null_member() -> None:
     assert DmarcPolicy(None) is getattr(DmarcPolicy, "NULL")
 
 
+def test_validated_event_exposes_union_fields_like_schema_payload(
+    valid_payload: dict[str, Any],
+) -> None:
+    event = validate_email_received_event(valid_payload)
+
+    assert event.email.content.raw.included is True
+    assert event.email.parsed.status == "complete"
+
+
+def test_validated_event_model_dump_round_trips_with_schema_aliases(
+    valid_payload: dict[str, Any],
+) -> None:
+    event = validate_email_received_event(valid_payload)
+    dumped = event.model_dump()
+
+    assert "from" in dumped["email"]["headers"]
+    assert "from_" not in dumped["email"]["headers"]
+    assert dumped["email"]["auth"]["dmarcPolicy"] == "reject"
+    assert dumped["email"]["auth"]["dkimSignatures"][0]["keyBits"] == 2048
+    assert validate_email_received_event(dumped).id == event.id
+
+
 def test_parse_webhook_event_rejects_bad_inputs() -> None:
     with pytest.raises(WebhookPayloadError):
         parse_webhook_event(None)
@@ -165,7 +187,8 @@ def test_is_email_received_event_handles_mixed_inputs(
 def test_is_email_received_event_accepts_valid_email_received_payload(
     valid_payload: dict[str, Any],
 ) -> None:
-    assert is_email_received_event(valid_payload) is True
+    assert is_email_received_event(valid_payload) is False
+    assert is_email_received_event(validate_email_received_event(valid_payload)) is True
 
 
 def test_parse_webhook_event_rejects_malformed_known_event() -> None:

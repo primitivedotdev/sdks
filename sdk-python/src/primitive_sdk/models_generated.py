@@ -4,9 +4,48 @@
 from __future__ import annotations
 
 from enum import Enum, StrEnum
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypeVar
 
-from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field, RootModel, UrlConstraints
+from pydantic import (
+    AnyUrl,
+    AwareDatetime,
+    BaseModel as PydanticBaseModel,
+    ConfigDict,
+    Field,
+    RootModel as PydanticRootModel,
+    UrlConstraints,
+)
+
+RootT = TypeVar("RootT")
+
+
+class BaseModel(PydanticBaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    def model_dump(self, *args, **kwargs):
+        kwargs.setdefault("by_alias", True)
+        kwargs.setdefault("exclude_defaults", True)
+        kwargs.setdefault("mode", "json")
+        return super().model_dump(*args, **kwargs)
+
+    def model_dump_json(self, *args, **kwargs):
+        kwargs.setdefault("by_alias", True)
+        return super().model_dump_json(*args, **kwargs)
+
+
+class RootModel(PydanticRootModel[RootT]):
+    def __getattr__(self, name: str):
+        return getattr(self.root, name)
+
+    def model_dump(self, *args, **kwargs):
+        kwargs.setdefault("by_alias", True)
+        kwargs.setdefault("exclude_defaults", True)
+        kwargs.setdefault("mode", "json")
+        return super().model_dump(*args, **kwargs)
+
+    def model_dump_json(self, *args, **kwargs):
+        kwargs.setdefault("by_alias", True)
+        return super().model_dump_json(*args, **kwargs)
 
 
 class Delivery(BaseModel):
