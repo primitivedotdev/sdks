@@ -32,43 +32,7 @@ export async function parseEmail(emlRaw: string): Promise<ParsedEmail> {
   // Extract headers as a plain object
   const headers: Record<string, string | string[]> = {};
   parsed.headers.forEach((value, key) => {
-    if (typeof value === "string") {
-      headers[key] = value;
-    } else if (
-      Array.isArray(value) &&
-      value.every((v) => typeof v === "string")
-    ) {
-      headers[key] = value as string[];
-    } else if (value instanceof Date) {
-      headers[key] = value.toISOString();
-    } else if (value && typeof value === "object") {
-      // mailparser returns objects for structured headers
-      // Extract useful string representation instead of [object Object]
-      if ("text" in value && typeof value.text === "string") {
-        headers[key] = value.text;
-      } else if ("value" in value) {
-        if (Array.isArray(value.value)) {
-          // Address list
-          headers[key] = value.value
-            .map((v: MailparserAddress | string) =>
-              typeof v === "string" ? v : v.address || "",
-            )
-            .join(", ");
-        } else if (typeof value.value === "string") {
-          // Simple value (like content-type)
-          headers[key] = value.value;
-        } else {
-          // Complex - JSON stringify
-          headers[key] = JSON.stringify(value);
-        }
-      } else {
-        // Unknown object structure - JSON stringify
-        headers[key] = JSON.stringify(value);
-      }
-    } else {
-      // Convert any other type to string
-      headers[key] = String(value);
-    }
+    headers[key] = headerValueToString(value);
   });
 
   // Safely get text from address (AddressObject from mailparser)
@@ -77,7 +41,7 @@ export async function parseEmail(emlRaw: string): Promise<ParsedEmail> {
   ): string => {
     if (!addr) return "";
     if (Array.isArray(addr)) {
-      return addr[0]?.text || "";
+      return addr.map((entry) => entry.text || "").filter(Boolean).join(", ");
     }
     return addr.text || "";
   };
@@ -92,4 +56,67 @@ export async function parseEmail(emlRaw: string): Promise<ParsedEmail> {
     messageId: parsed.messageId,
     date: parsed.date,
   };
+}
+
+function headerValueToString(value: unknown): string | string[] {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.every((entry) => typeof entry === "string")) {
+      return value as string[];
+    }
+
+    return value
+      .map((entry) => structuredHeaderToString(entry))
+      .filter((entry) => entry.length > 0)
+      .join(", ");
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (value && typeof value === "object") {
+    return structuredHeaderToString(value);
+  }
+
+  return String(value);
+}
+
+function structuredHeaderToString(value: unknown): string {
+  if (!value || typeof value !== "object") {
+    return String(value ?? "");
+  }
+
+  if ("text" in value && typeof value.text === "string") {
+    return value.text;
+  }
+
+  if ("address" in value || "name" in value) {
+    const address = (value as MailparserAddress).address;
+    return typeof address === "string" ? address : "";
+  }
+
+  if ("value" in value) {
+    const nested = value.value;
+
+    if (Array.isArray(nested)) {
+      return nested
+        .map((entry) =>
+          typeof entry === "string"
+            ? entry
+            : entry.address || structuredHeaderToString(entry),
+        )
+        .filter((entry) => entry.length > 0)
+        .join(", ");
+    }
+
+    if (typeof nested === "string") {
+      return nested;
+    }
+  }
+
+  return JSON.stringify(value);
 }

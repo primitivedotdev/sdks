@@ -35,7 +35,7 @@ describe("email-parser mocked branches", () => {
     const { parseEmail } = await import("../../src/parser/email-parser.js");
     const result = await parseEmail("irrelevant");
 
-    expect(result.from).toBe("first@example.com");
+    expect(result.from).toBe("first@example.com, second@example.com");
     expect(result.to).toBe("");
     expect(result.html).toBe("<p>Body</p>");
     expect(result.headers.date).toBe("2025-01-01T00:00:00.000Z");
@@ -88,5 +88,36 @@ describe("email-parser mocked branches", () => {
     expect(result.from).toBe("");
     expect(result.to).toBe("");
     expect(result.headers["address-list"]).toBe("");
+  });
+
+  it("joins repeated structured address headers and address arrays", async () => {
+    const { simpleParser } = await import("mailparser");
+    vi.mocked(simpleParser).mockResolvedValue({
+      headers: new Map<string, unknown>([
+        [
+          "to",
+          [
+            { text: "first@example.com" },
+            { text: "second@example.com" },
+          ],
+        ],
+      ]),
+      from: { text: "sender@example.com" },
+      to: [
+        { text: "first@example.com" },
+        { text: "second@example.com" },
+      ],
+      subject: "Repeated recipients",
+      text: "Body",
+      html: undefined,
+      messageId: undefined,
+      date: undefined,
+    } as never);
+
+    const { parseEmail } = await import("../../src/parser/email-parser.js");
+    const result = await parseEmail("irrelevant");
+
+    expect(result.to).toBe("first@example.com, second@example.com");
+    expect(result.headers.to).toBe("first@example.com, second@example.com");
   });
 });

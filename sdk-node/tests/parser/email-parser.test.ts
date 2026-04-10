@@ -127,6 +127,21 @@ Body`;
         expect(result.to).toContain("jane@example.com");
       });
 
+      it("preserves repeated recipients", async () => {
+        const repeatedRecipients = `From: sender@example.com
+To: first@example.com
+To: second@example.com
+Subject: Test
+
+Body`;
+
+        const result = await parseEmail(repeatedRecipients);
+        expect(result.to).toContain("first@example.com");
+        expect(result.to).toContain("second@example.com");
+        expect(result.headers.to).toContain("first@example.com");
+        expect(result.headers.to).toContain("second@example.com");
+      });
+
       it("handles bare email addresses", async () => {
         const bareEmail = `From: sender@example.com
 To: recipient@example.com
