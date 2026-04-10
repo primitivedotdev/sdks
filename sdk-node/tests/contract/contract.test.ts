@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import * as contractPackage from "../../src/contract/index.js";
 import {
@@ -51,7 +52,10 @@ describe("contract", () => {
   });
 
   describe("buildEmailReceivedEvent", () => {
-    const rawSha256 = "a".repeat(64);
+    const rawBytes = Buffer.from(
+      "From: from@example.com\r\nTo: to@example.com\r\n\r\nTest body",
+    );
+    const rawSha256 = createHash("sha256").update(rawBytes).digest("hex");
 
     const baseInput: EmailReceivedEventInput = {
       email_id: "email-123",
@@ -64,11 +68,9 @@ describe("contract", () => {
       smtp_helo: "mail.example.com",
       smtp_mail_from: "from@example.com",
       smtp_rcpt_to: ["to@example.com"],
-      raw_bytes: Buffer.from(
-        "From: from@example.com\r\nTo: to@example.com\r\n\r\nTest body",
-      ),
+      raw_bytes: rawBytes,
       raw_sha256: rawSha256,
-      raw_size_bytes: 100,
+      raw_size_bytes: rawBytes.length,
       attempt_count: 1,
       date_header: "Wed, 1 Jan 2025 12:00:00 +0000",
       download_url: "https://example.com/download/email-123",
@@ -140,9 +142,12 @@ describe("contract", () => {
     });
 
     it("excludes large raw emails", () => {
+      const largeRawBytes = Buffer.alloc(RAW_EMAIL_INLINE_THRESHOLD + 1, "x");
       const largeInput: EmailReceivedEventInput = {
         ...baseInput,
-        raw_size_bytes: RAW_EMAIL_INLINE_THRESHOLD + 1,
+        raw_bytes: largeRawBytes,
+        raw_sha256: createHash("sha256").update(largeRawBytes).digest("hex"),
+        raw_size_bytes: largeRawBytes.length,
       };
 
       const event = buildEmailReceivedEvent(largeInput);
@@ -155,6 +160,7 @@ describe("contract", () => {
     });
 
     it("nulls out body_text and body_html for large emails", () => {
+      const largeRawBytes = Buffer.alloc(RAW_EMAIL_INLINE_THRESHOLD + 1, "x");
       const parsed: ParsedInputComplete = {
         status: "complete",
         body_text: "This would be a very large body",
@@ -165,7 +171,9 @@ describe("contract", () => {
 
       const largeInput: EmailReceivedEventInput = {
         ...baseInput,
-        raw_size_bytes: RAW_EMAIL_INLINE_THRESHOLD + 1,
+        raw_bytes: largeRawBytes,
+        raw_sha256: createHash("sha256").update(largeRawBytes).digest("hex"),
+        raw_size_bytes: largeRawBytes.length,
         parsed,
       };
 
@@ -254,6 +262,24 @@ describe("contract", () => {
         expect(event.email.parsed.error.code).toBe("PARSE_FAILED");
         expect(event.email.parsed.error.message).toBe("Parsing not attempted");
       }
+    });
+
+    it("rejects mismatched raw_size_bytes", () => {
+      expect(() =>
+        buildEmailReceivedEvent({
+          ...baseInput,
+          raw_size_bytes: baseInput.raw_size_bytes + 1,
+        }),
+      ).toThrow(/raw_size_bytes/);
+    });
+
+    it("rejects mismatched raw_sha256", () => {
+      expect(() =>
+        buildEmailReceivedEvent({
+          ...baseInput,
+          raw_sha256: "0".repeat(64),
+        }),
+      ).toThrow(/raw_sha256/);
     });
 
     describe("email address fields", () => {

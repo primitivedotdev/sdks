@@ -243,23 +243,37 @@ export function buildEmailReceivedEvent(
     ? validateTimestamp(options.attempted_at, "attempted_at")
     : new Date().toISOString();
 
-  const shouldInline = input.raw_size_bytes <= RAW_EMAIL_INLINE_THRESHOLD;
+  const raw_size_bytes = input.raw_bytes.length;
+  if (input.raw_size_bytes !== raw_size_bytes) {
+    throw new Error(
+      `[@primitivedotdev/sdk-node/contract] Invalid raw_size_bytes: ${input.raw_size_bytes}. Expected ${raw_size_bytes} based on raw_bytes length`,
+    );
+  }
+
+  const raw_sha256 = createHash("sha256").update(input.raw_bytes).digest("hex");
+  if (input.raw_sha256 !== raw_sha256) {
+    throw new Error(
+      `[@primitivedotdev/sdk-node/contract] Invalid raw_sha256: "${input.raw_sha256}". Expected ${raw_sha256} based on raw_bytes`,
+    );
+  }
+
+  const shouldInline = raw_size_bytes <= RAW_EMAIL_INLINE_THRESHOLD;
 
   const rawContent: RawContentInline | RawContentDownloadOnly = shouldInline
     ? {
         included: true,
         encoding: "base64",
         max_inline_bytes: RAW_EMAIL_INLINE_THRESHOLD,
-        size_bytes: input.raw_size_bytes,
-        sha256: input.raw_sha256,
+        size_bytes: raw_size_bytes,
+        sha256: raw_sha256,
         data: input.raw_bytes.toString("base64"),
       }
     : {
         included: false,
         reason_code: "size_exceeded",
         max_inline_bytes: RAW_EMAIL_INLINE_THRESHOLD,
-        size_bytes: input.raw_size_bytes,
-        sha256: input.raw_sha256,
+        size_bytes: raw_size_bytes,
+        sha256: raw_sha256,
       };
 
   let parsedData: ParsedDataComplete | ParsedDataFailed;
