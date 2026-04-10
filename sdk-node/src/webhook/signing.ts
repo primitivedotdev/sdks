@@ -212,7 +212,11 @@ export function verifyWebhookSignature(opts: VerifyOptions): true {
   } = opts;
 
   // Validate secret is provided and non-empty
-  if (!secret || (typeof secret === "string" && secret.length === 0)) {
+  if (
+    !secret ||
+    (typeof secret === "string" && secret.length === 0) ||
+    (Buffer.isBuffer(secret) && secret.length === 0)
+  ) {
     throw new WebhookVerificationError(
       "MISSING_SECRET",
       "Webhook secret is required but was empty or not provided",

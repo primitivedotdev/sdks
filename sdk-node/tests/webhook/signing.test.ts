@@ -236,6 +236,26 @@ describe("secret validation", () => {
       expect((e as WebhookVerificationError).code).toBe("MISSING_SECRET");
     }
   });
+
+  it("throws MISSING_SECRET for empty Buffer secret", () => {
+    expect(() =>
+      verifyWebhookSignature({
+        rawBody: "{}",
+        signatureHeader: "t=123,v1=abc",
+        secret: Buffer.alloc(0),
+      }),
+    ).toThrow(WebhookVerificationError);
+
+    try {
+      verifyWebhookSignature({
+        rawBody: "{}",
+        signatureHeader: "t=123,v1=abc",
+        secret: Buffer.alloc(0),
+      });
+    } catch (e) {
+      expect((e as WebhookVerificationError).code).toBe("MISSING_SECRET");
+    }
+  });
 });
 
 describe("verifyWebhookSignature", () => {
