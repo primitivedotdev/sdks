@@ -41,6 +41,7 @@ export const emailReceivedEventJsonSchema = {
             },
             "attempted_at": {
               "type": "string",
+              "format": "date-time",
               "description": "ISO 8601 timestamp (UTC) when this delivery was attempted.",
               "examples": [
                 "2025-01-15T10:30:00.000Z"
@@ -63,6 +64,7 @@ export const emailReceivedEventJsonSchema = {
             },
             "received_at": {
               "type": "string",
+              "format": "date-time",
               "description": "ISO 8601 timestamp (UTC) when Primitive received the email.",
               "examples": [
                 "2025-01-15T10:29:55.123Z"
@@ -158,6 +160,7 @@ export const emailReceivedEventJsonSchema = {
                     },
                     "expires_at": {
                       "type": "string",
+                      "format": "date-time",
                       "description": "ISO 8601 timestamp (UTC) when this URL expires. Download before this time or the URL will return 403."
                     }
                   },

@@ -6,7 +6,7 @@ from __future__ import annotations
 from enum import Enum, StrEnum
 from typing import Annotated, Literal
 
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
+from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 
 
 class Delivery(BaseModel):
@@ -27,7 +27,7 @@ class Delivery(BaseModel):
         ),
     ]
     attempted_at: Annotated[
-        str,
+        AwareDatetime,
         Field(
             description="ISO 8601 timestamp (UTC) when this delivery was attempted.",
             examples=["2025-01-15T10:30:00.000Z"],
@@ -108,7 +108,7 @@ class Download(BaseModel):
         ),
     ]
     expires_at: Annotated[
-        str,
+        AwareDatetime,
         Field(
             description="ISO 8601 timestamp (UTC) when this URL expires. Download before this time or the URL will return 403."
         ),
@@ -742,7 +742,7 @@ class Email(BaseModel):
         ),
     ]
     received_at: Annotated[
-        str,
+        AwareDatetime,
         Field(
             description="ISO 8601 timestamp (UTC) when Primitive received the email.",
             examples=["2025-01-15T10:29:55.123Z"],

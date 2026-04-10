@@ -266,6 +266,19 @@ func TestValidationHelpers(t *testing.T) {
 	if _, err := ValidateEmailReceivedEvent(invalidVersion); err == nil {
 		t.Fatal("expected invalid version to fail validation")
 	}
+	invalidAttemptedAt := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	invalidAttemptedAt["delivery"].(map[string]any)["attempted_at"] = "Tuesday"
+	if _, err := ValidateEmailReceivedEvent(invalidAttemptedAt); err == nil {
+		t.Fatal("expected invalid attempted_at to fail validation")
+	} else {
+		validationErr, ok := err.(*WebhookValidationError)
+		if !ok {
+			t.Fatalf("expected WebhookValidationError, got %v", err)
+		}
+		if validationErr.Field != "delivery.attempted_at" {
+			t.Fatalf("expected attempted_at field path, got %q", validationErr.Field)
+		}
+	}
 	if fallbackErr := createValidationError(nil); fallbackErr.Field != "payload" || fallbackErr.AdditionalErrorCount != 0 {
 		t.Fatalf("expected zero-issue validation fallback error: %#v", fallbackErr)
 	}

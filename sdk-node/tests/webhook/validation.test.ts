@@ -181,6 +181,29 @@ describe("validation", () => {
     ).toBe("2030-12-31");
   });
 
+  it("rejects invalid download expiry timestamps", () => {
+    try {
+      validateEmailReceivedEvent({
+        ...validPayload,
+        email: {
+          ...validPayload.email,
+          content: {
+            ...validPayload.email.content,
+            download: {
+              ...validPayload.email.content.download,
+              expires_at: "Tuesday",
+            },
+          },
+        },
+      });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(WebhookValidationError);
+      const validationError = error as WebhookValidationError;
+      expect(validationError.field).toBe("email.content.download.expires_at");
+    }
+  });
+
   it("returns safe failure shape for invalid payload", () => {
     const result = safeValidateEmailReceivedEvent({ event: "email.received" });
     expect(result.success).toBe(false);

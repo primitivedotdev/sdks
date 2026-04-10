@@ -37,7 +37,8 @@ func handle(body []byte, headers map[string]string) {
 		Secret:  "whsec_...",
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("invalid webhook: %v", err)
+		return
 	}
 
 	log.Println("Email from:", event.Email.Headers.From)
