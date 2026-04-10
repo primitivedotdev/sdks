@@ -197,10 +197,14 @@ function isValidHex(str: string, expectedLength: number): boolean {
  * import { verifyWebhookSignature, WebhookVerificationError } from '@primitivedotdev/sdk-node';
  *
  * try {
+ *   const signatureHeader = req.headers['primitive-signature'];
+ *   if (typeof signatureHeader !== 'string') {
+ *     throw new Error('Missing Primitive-Signature header');
+ *   }
  *   verifyWebhookSignature({
  *     rawBody: req.body, // raw string, NOT parsed JSON
- *     signatureHeader: req.headers['primitive-signature'],
- *     secret: process.env.PRIMITIVE_WEBHOOK_SECRET,
+ *     signatureHeader,
+ *     secret: process.env.PRIMITIVE_WEBHOOK_SECRET!,
  *   });
  *   // Signature is valid, process the webhook
  * } catch (err) {

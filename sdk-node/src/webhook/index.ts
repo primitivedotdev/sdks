@@ -12,7 +12,7 @@
  *     const event = handleWebhook({
  *       body: req.body,
  *       headers: req.headers,
- *       secret: process.env.PRIMITIVE_WEBHOOK_SECRET,
+ *       secret: process.env.PRIMITIVE_WEBHOOK_SECRET!,
  *     });
  *
  *     console.log('Email from:', event.email.headers.from);
@@ -412,7 +412,7 @@ export function handleWebhook(
  *
  * @example Express (only if using content discard)
  * ```typescript
- * app.post('/webhook', (req, res) => {
+ * app.post('/webhook', async (req, res) => {
  *   const event = handleWebhook({ ... });
  *   // Durably save the email first!
  *   await db.saveEmail(event);
