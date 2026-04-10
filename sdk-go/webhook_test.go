@@ -107,6 +107,78 @@ func TestHandleWebhook(t *testing.T) {
 	}
 }
 
+func TestHandleWebhookEvent(t *testing.T) {
+	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	signed, err := SignWebhookPayload(body, "test-webhook-secret")
+	if err != nil {
+		t.Fatalf("SignWebhookPayload returned error: %v", err)
+	}
+
+	event, err := HandleWebhookEvent(HandleWebhookOptions{
+		Body:    body,
+		Headers: map[string]string{"primitive-signature": signed.Header},
+		Secret:  "test-webhook-secret",
+	})
+	if err != nil {
+		t.Fatalf("HandleWebhookEvent returned error: %v", err)
+	}
+	if !IsEmailReceivedEvent(event) {
+		t.Fatalf("expected email.received event, got %T", event)
+	}
+
+	unknownBody, err := json.Marshal(map[string]any{
+		"id":      "evt_unknown",
+		"event":   "email.bounced",
+		"version": "2025-12-14",
+		"reason":  "mailbox_full",
+	})
+	if err != nil {
+		t.Fatalf("marshal unknown payload: %v", err)
+	}
+
+	unknownSigned, err := SignWebhookPayload(unknownBody, "test-webhook-secret")
+	if err != nil {
+		t.Fatalf("SignWebhookPayload returned error for unknown payload: %v", err)
+	}
+
+	unknownEvent, err := HandleWebhookEvent(HandleWebhookOptions{
+		Body:    unknownBody,
+		Headers: map[string]string{"primitive-signature": unknownSigned.Header},
+		Secret:  "test-webhook-secret",
+	})
+	if err != nil {
+		t.Fatalf("HandleWebhookEvent returned error for unknown event: %v", err)
+	}
+	unknown, ok := unknownEvent.(UnknownEvent)
+	if !ok {
+		t.Fatalf("expected UnknownEvent, got %T", unknownEvent)
+	}
+	if unknown.Event != "email.bounced" {
+		t.Fatalf("unexpected unknown event type: %s", unknown.Event)
+	}
+	if unknown.Payload["reason"] != "mailbox_full" {
+		t.Fatalf("unexpected unknown event payload: %#v", unknown.Payload)
+	}
+
+	_, err = HandleWebhook(HandleWebhookOptions{
+		Body:    unknownBody,
+		Headers: map[string]string{"primitive-signature": unknownSigned.Header},
+		Secret:  "test-webhook-secret",
+	})
+	var payloadErr *PrimitiveWebhookError
+	if !errors.As(err, &payloadErr) {
+		t.Fatalf("expected PrimitiveWebhookError for unknown event, got %v", err)
+	}
+	if payloadErr.Code() != "PAYLOAD_UNKNOWN_EVENT" {
+		t.Fatalf("unexpected error code: %s", payloadErr.Code())
+	}
+}
+
 func TestRawEmailHelpers(t *testing.T) {
 	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
 	included, err := IsRawIncluded(payload)

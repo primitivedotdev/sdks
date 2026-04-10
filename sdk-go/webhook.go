@@ -200,7 +200,7 @@ func IsEmailReceivedEvent(event any) bool {
 	}
 }
 
-func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
+func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
 	_, err := VerifyWebhookSignature(VerifyOptions{
 		RawBody:          options.Body,
 		SignatureHeader:  getHeaderValue(options.Headers, PrimitiveSignatureHeader),
@@ -214,7 +214,28 @@ func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ValidateEmailReceivedEvent(parsed)
+	return ParseWebhookEvent(parsed)
+}
+
+func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
+	event, err := HandleWebhookEvent(options)
+	if err != nil {
+		return nil, err
+	}
+
+	switch typed := event.(type) {
+	case EmailReceivedEvent:
+		return &typed, nil
+	case *EmailReceivedEvent:
+		return typed, nil
+	default:
+		return nil, NewWebhookPayloadError(
+			"PAYLOAD_UNKNOWN_EVENT",
+			fmt.Sprintf("HandleWebhook only supports email.received events, got %q", event.GetEvent()),
+			"Use HandleWebhookEvent or ParseWebhookEvent to handle unknown events gracefully.",
+			nil,
+		)
+	}
 }
 
 func ConfirmedHeaders() map[string]string {

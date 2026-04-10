@@ -57,10 +57,14 @@ func deref(value *string) string {
 
 ### Main functions
 
+- `HandleWebhookEvent(options)`
+  - verifies the webhook signature
+  - decodes and parses the request body
+  - returns a known webhook event or `UnknownEvent`
 - `HandleWebhook(options)`
   - verifies the webhook signature
   - decodes and parses the request body
-  - validates the payload
+  - validates an `email.received` payload
   - returns a typed `EmailReceivedEvent`
 - `ParseWebhookEvent(input)`
   - parses a JSON payload into a known webhook event or `UnknownEvent`
