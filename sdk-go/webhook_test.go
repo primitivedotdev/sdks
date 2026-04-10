@@ -109,6 +109,17 @@ func TestParseJSONBodyRejectsTrailingContent(t *testing.T) {
 	}
 }
 
+func TestParseJSONBodyAcceptsJSONRawMessage(t *testing.T) {
+	parsed, err := ParseJSONBody(json.RawMessage(`{"event":"email.received"}`))
+	if err != nil {
+		t.Fatalf("ParseJSONBody returned error: %v", err)
+	}
+	obj, ok := parsed.(map[string]any)
+	if !ok || obj["event"] != "email.received" {
+		t.Fatalf("unexpected parsed JSON object: %#v", parsed)
+	}
+}
+
 func TestUnknownEventMarshalJSON(t *testing.T) {
 	parsed, err := ParseWebhookEvent(map[string]any{
 		"id":      "evt_unknown",
@@ -227,6 +238,31 @@ func TestHandleWebhook(t *testing.T) {
 	}
 	if event.Event != string(EventTypeEmailReceived) {
 		t.Fatalf("unexpected event type: %s", event.Event)
+	}
+}
+
+func TestHandleWebhookAcceptsByteValuedSignatureHeader(t *testing.T) {
+	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	signed, err := SignWebhookPayload(body, "test-webhook-secret")
+	if err != nil {
+		t.Fatalf("SignWebhookPayload returned error: %v", err)
+	}
+
+	event, err := HandleWebhook(HandleWebhookOptions{
+		Body:    body,
+		Headers: map[string]any{"primitive-signature": []byte(signed.Header)},
+		Secret:  "test-webhook-secret",
+	})
+	if err != nil {
+		t.Fatalf("HandleWebhook returned error: %v", err)
+	}
+	if event.ID != "evt_abc123" {
+		t.Fatalf("unexpected event ID: %s", event.ID)
 	}
 }
 

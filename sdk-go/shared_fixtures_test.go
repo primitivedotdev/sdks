@@ -331,7 +331,7 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 				Secret           string            `json:"secret"`
 				SignSecret       string            `json:"sign_secret"`
 				Timestamp        *int64            `json:"timestamp"`
-				ToleranceSeconds int64             `json:"tolerance_seconds"`
+				ToleranceSeconds *int64            `json:"tolerance_seconds"`
 				Expected         struct {
 					Valid     bool   `json:"valid"`
 					ID        string `json:"id"`

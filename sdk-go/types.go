@@ -307,18 +307,16 @@ type SignResult struct {
 }
 
 type VerifyOptions struct {
-	RawBody            any
-	SignatureHeader    string
-	Secret             any
-	ToleranceSeconds   int64
-	UseCustomTolerance bool
-	NowSeconds         *int64
+	RawBody          any
+	SignatureHeader  string
+	Secret           any
+	ToleranceSeconds *int64
+	NowSeconds       *int64
 }
 
 type HandleWebhookOptions struct {
-	Body               any
-	Headers            any
-	Secret             any
-	ToleranceSeconds   int64
-	UseCustomTolerance bool
+	Body             any
+	Headers          any
+	Secret           any
+	ToleranceSeconds *int64
 }

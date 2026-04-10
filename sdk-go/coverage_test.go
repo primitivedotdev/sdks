@@ -128,11 +128,13 @@ func TestWebhookUtilityEdges(t *testing.T) {
 		t.Fatal("expected invalid signature header verification to fail")
 	}
 	staleNow := int64(2000)
-	if _, err := VerifyWebhookSignature(VerifyOptions{RawBody: body, SignatureHeader: goodSignature.Header, Secret: "secret", ToleranceSeconds: 10, NowSeconds: &staleNow}); err == nil {
+	staleTolerance := int64(10)
+	if _, err := VerifyWebhookSignature(VerifyOptions{RawBody: body, SignatureHeader: goodSignature.Header, Secret: "secret", ToleranceSeconds: &staleTolerance, NowSeconds: &staleNow}); err == nil {
 		t.Fatal("expected stale signature verification to fail")
 	}
 	zeroToleranceNow := int64(1001)
-	if _, err := VerifyWebhookSignature(VerifyOptions{RawBody: body, SignatureHeader: goodSignature.Header, Secret: "secret", ToleranceSeconds: 0, UseCustomTolerance: true, NowSeconds: &zeroToleranceNow}); err == nil {
+	zeroTolerance := int64(0)
+	if _, err := VerifyWebhookSignature(VerifyOptions{RawBody: body, SignatureHeader: goodSignature.Header, Secret: "secret", ToleranceSeconds: &zeroTolerance, NowSeconds: &zeroToleranceNow}); err == nil {
 		t.Fatal("expected explicit zero tolerance verification to fail")
 	}
 	brokenBody := []byte{0xff}

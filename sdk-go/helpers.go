@@ -26,6 +26,16 @@ func bodyToString(value any, label string) (string, error) {
 			)
 		}
 		return string(typed), nil
+	case json.RawMessage:
+		if !utf8.Valid(typed) {
+			return "", NewWebhookPayloadError(
+				"INVALID_ENCODING",
+				fmt.Sprintf("%s contains invalid UTF-8 bytes", label),
+				fmt.Sprintf("Ensure the %s is valid UTF-8 encoded text. If the data is binary, it should be base64 encoded first.", label),
+				nil,
+			)
+		}
+		return string(typed), nil
 	default:
 		return "", NewWebhookPayloadError(
 			"PAYLOAD_WRONG_TYPE",
@@ -184,6 +194,14 @@ func getHeaderValue(headers any, target string) string {
 			switch v := value.(type) {
 			case string:
 				return v
+			case []byte:
+				if utf8.Valid(v) {
+					return string(v)
+				}
+			case json.RawMessage:
+				if utf8.Valid(v) {
+					return string(v)
+				}
 			case []string:
 				if len(v) > 0 {
 					return v[0]

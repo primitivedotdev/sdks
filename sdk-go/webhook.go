@@ -127,8 +127,8 @@ func VerifyWebhookSignature(options VerifyOptions) (bool, error) {
 		now = *options.NowSeconds
 	}
 	tolerance := defaultToleranceSeconds
-	if options.UseCustomTolerance || options.ToleranceSeconds != 0 {
-		tolerance = options.ToleranceSeconds
+	if options.ToleranceSeconds != nil {
+		tolerance = *options.ToleranceSeconds
 	}
 	age := now - timestamp
 	if age > tolerance {
@@ -234,11 +234,10 @@ func IsEmailReceivedEvent(event any) bool {
 
 func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
 	_, err := VerifyWebhookSignature(VerifyOptions{
-		RawBody:            options.Body,
-		SignatureHeader:    getHeaderValue(options.Headers, PrimitiveSignatureHeader),
-		Secret:             options.Secret,
-		ToleranceSeconds:   options.ToleranceSeconds,
-		UseCustomTolerance: options.UseCustomTolerance,
+		RawBody:          options.Body,
+		SignatureHeader:  getHeaderValue(options.Headers, PrimitiveSignatureHeader),
+		Secret:           options.Secret,
+		ToleranceSeconds: options.ToleranceSeconds,
 	})
 	if err != nil {
 		return nil, err
