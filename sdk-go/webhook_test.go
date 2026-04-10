@@ -95,6 +95,20 @@ func TestParseWebhookEvent(t *testing.T) {
 	}
 }
 
+func TestParseJSONBodyRejectsTrailingContent(t *testing.T) {
+	if _, err := ParseJSONBody([]byte(`{"event":"email.received"} junk`)); err == nil {
+		t.Fatal("expected trailing JSON content to fail")
+	} else {
+		var payloadErr *WebhookPayloadError
+		if !errors.As(err, &payloadErr) {
+			t.Fatalf("expected WebhookPayloadError, got %v", err)
+		}
+		if payloadErr.Code() != "JSON_PARSE_FAILED" {
+			t.Fatalf("expected JSON_PARSE_FAILED, got %s", payloadErr.Code())
+		}
+	}
+}
+
 func TestUnknownEventMarshalJSON(t *testing.T) {
 	parsed, err := ParseWebhookEvent(map[string]any{
 		"id":      "evt_unknown",
@@ -213,6 +227,12 @@ func TestHandleWebhook(t *testing.T) {
 	}
 	if event.Event != string(EventTypeEmailReceived) {
 		t.Fatalf("unexpected event type: %s", event.Event)
+	}
+}
+
+func TestIsEmailReceivedEventRejectsMalformedMaps(t *testing.T) {
+	if IsEmailReceivedEvent(map[string]any{"event": "email.received"}) {
+		t.Fatal("expected malformed email.received payload to be rejected")
 	}
 }
 

@@ -163,13 +163,13 @@ func TestWebhookUtilityEdges(t *testing.T) {
 		t.Fatal("expected typed event variants to be recognized")
 	}
 	unknownEvent := UnknownEvent{Event: string(EventTypeEmailReceived)}
-	if !IsEmailReceivedEvent(unknownEvent) {
-		t.Fatal("expected unknown event wrapper to be recognized by event name")
+	if IsEmailReceivedEvent(unknownEvent) {
+		t.Fatal("expected unknown event wrapper to be rejected without a valid payload")
 	}
-	if !IsEmailReceivedEvent(struct {
+	if IsEmailReceivedEvent(struct {
 		Event string `json:"event"`
 	}{Event: string(EventTypeEmailReceived)}) {
-		t.Fatal("expected struct event wrapper to be recognized")
+		t.Fatal("expected malformed struct wrapper to be rejected")
 	}
 
 	if ConfirmedHeaders()[PrimitiveConfirmedHeader] != "true" {

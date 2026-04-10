@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -38,6 +39,18 @@ func ParseJSONBody(rawBody any) (any, error) {
 			"Failed to parse webhook body as JSON",
 			fmt.Sprintf("Invalid JSON: %s. Check the raw request body is valid JSON.", err.Error()),
 			err,
+		)
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		message := "unexpected trailing content after JSON value"
+		if err != nil {
+			message = err.Error()
+		}
+		return nil, NewWebhookPayloadError(
+			"JSON_PARSE_FAILED",
+			"Failed to parse webhook body as JSON",
+			fmt.Sprintf("Invalid JSON: %s. Check the raw request body is valid JSON.", message),
+			nil,
 		)
 	}
 	return parsed, nil
@@ -201,13 +214,21 @@ func IsEmailReceivedEvent(event any) bool {
 	case *EmailReceivedEvent:
 		return typed != nil && typed.Event == string(EventTypeEmailReceived)
 	case UnknownEvent:
-		return typed.Event == string(EventTypeEmailReceived)
+		return false
 	case map[string]any:
 		value, ok := typed["event"].(string)
-		return ok && value == string(EventTypeEmailReceived)
+		if !ok || value != string(EventTypeEmailReceived) {
+			return false
+		}
+		_, err := ValidateEmailReceivedEvent(typed)
+		return err == nil
 	default:
 		value, ok := getString(typed, "event")
-		return ok && value == string(EventTypeEmailReceived)
+		if !ok || value != string(EventTypeEmailReceived) {
+			return false
+		}
+		_, err := ValidateEmailReceivedEvent(typed)
+		return err == nil
 	}
 }
 
