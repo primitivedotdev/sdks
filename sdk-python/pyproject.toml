@@ -60,6 +60,9 @@ include = [
   "/tests",
 ]
 
+[tool.hatch.build.targets.sdist.force-include]
+"../test-fixtures" = "test-fixtures"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
