@@ -82,6 +82,6 @@ shared-check:
 
 check: node-check python-check go-check shared-check
 
-build: node-build python-build
+build: node-build python-build go-build
 
 release-check: node-check node-build node-smoke python-check python-build python-smoke go-check go-build shared-check
