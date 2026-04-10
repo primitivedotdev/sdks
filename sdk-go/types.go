@@ -1,5 +1,7 @@
 package primitive
 
+import "encoding/json"
+
 type EventType string
 
 const EventTypeEmailReceived EventType = "email.received"
@@ -91,6 +93,21 @@ type UnknownEvent struct {
 }
 
 func (e UnknownEvent) GetEvent() string { return e.Event }
+
+func (e UnknownEvent) MarshalJSON() ([]byte, error) {
+	payload := map[string]any{}
+	for key, value := range e.Payload {
+		payload[key] = value
+	}
+	payload["event"] = e.Event
+	if e.ID != nil {
+		payload["id"] = *e.ID
+	}
+	if e.Version != nil {
+		payload["version"] = *e.Version
+	}
+	return json.Marshal(payload)
+}
 
 type EmailReceivedEvent struct {
 	ID       string   `json:"id"`

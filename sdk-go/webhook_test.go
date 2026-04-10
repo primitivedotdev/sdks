@@ -82,6 +82,50 @@ func TestParseWebhookEvent(t *testing.T) {
 	}
 }
 
+func TestUnknownEventMarshalJSON(t *testing.T) {
+	parsed, err := ParseWebhookEvent(map[string]any{
+		"id":      "evt_unknown",
+		"event":   "email.bounced",
+		"version": "2025-12-14",
+		"reason":  "mailbox_full",
+		"retry":   false,
+	})
+	if err != nil {
+		t.Fatalf("ParseWebhookEvent returned error: %v", err)
+	}
+
+	unknown, ok := parsed.(UnknownEvent)
+	if !ok {
+		t.Fatalf("expected UnknownEvent, got %T", parsed)
+	}
+
+	data, err := json.Marshal(unknown)
+	if err != nil {
+		t.Fatalf("json.Marshal returned error: %v", err)
+	}
+
+	var roundTrip map[string]any
+	if err := json.Unmarshal(data, &roundTrip); err != nil {
+		t.Fatalf("json.Unmarshal returned error: %v", err)
+	}
+
+	if roundTrip["event"] != "email.bounced" {
+		t.Fatalf("unexpected event after marshal: %#v", roundTrip)
+	}
+	if roundTrip["id"] != "evt_unknown" {
+		t.Fatalf("unexpected id after marshal: %#v", roundTrip)
+	}
+	if roundTrip["version"] != "2025-12-14" {
+		t.Fatalf("unexpected version after marshal: %#v", roundTrip)
+	}
+	if roundTrip["reason"] != "mailbox_full" {
+		t.Fatalf("expected unknown fields to round-trip, got %#v", roundTrip)
+	}
+	if retry, ok := roundTrip["retry"].(bool); !ok || retry {
+		t.Fatalf("unexpected retry flag after marshal: %#v", roundTrip)
+	}
+}
+
 func TestHandleWebhook(t *testing.T) {
 	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
 	body, err := json.Marshal(payload)
