@@ -83,6 +83,12 @@ from primitive_sdk.models_generated import (
     WebhookAttachment as GeneratedWebhookAttachment,
 )
 
+
+def _add_enum_aliases(enum_cls, aliases: dict[str, object]):
+    for name, member in aliases.items():
+        setattr(enum_cls, name, member)
+    return enum_cls
+
 EmailReceivedEvent = GeneratedEmailReceivedEvent
 RawContent = GeneratedRawContent
 RawContentInline = GeneratedRawContentInline
@@ -114,46 +120,71 @@ class ParsedStatus(StrEnum):
     FAILED = "failed"
 
 
-class ForwardVerdict(StrEnum):
-    LEGIT = GeneratedForwardVerdict.legit
-    UNKNOWN = GeneratedForwardVerdict.unknown
+ForwardVerdict = _add_enum_aliases(
+    GeneratedForwardVerdict,
+    {
+        "LEGIT": GeneratedForwardVerdict.legit,
+        "UNKNOWN": GeneratedForwardVerdict.unknown,
+    },
+)
 
 
-class SpfResult(StrEnum):
-    PASS = GeneratedSpfResult.pass_
-    FAIL = GeneratedSpfResult.fail
-    SOFTFAIL = GeneratedSpfResult.softfail
-    NEUTRAL = GeneratedSpfResult.neutral
-    NONE = GeneratedSpfResult.none
-    TEMPERROR = GeneratedSpfResult.temperror
-    PERMERROR = GeneratedSpfResult.permerror
+SpfResult = _add_enum_aliases(
+    GeneratedSpfResult,
+    {
+        "PASS": GeneratedSpfResult.pass_,
+        "FAIL": GeneratedSpfResult.fail,
+        "SOFTFAIL": GeneratedSpfResult.softfail,
+        "NEUTRAL": GeneratedSpfResult.neutral,
+        "NONE": GeneratedSpfResult.none,
+        "TEMPERROR": GeneratedSpfResult.temperror,
+        "PERMERROR": GeneratedSpfResult.permerror,
+    },
+)
 
 
-class DmarcResult(StrEnum):
-    PASS = GeneratedDmarcResult.pass_
-    FAIL = GeneratedDmarcResult.fail
-    NONE = GeneratedDmarcResult.none
-    TEMPERROR = GeneratedDmarcResult.temperror
-    PERMERROR = GeneratedDmarcResult.permerror
+DmarcResult = _add_enum_aliases(
+    GeneratedDmarcResult,
+    {
+        "PASS": GeneratedDmarcResult.pass_,
+        "FAIL": GeneratedDmarcResult.fail,
+        "NONE": GeneratedDmarcResult.none,
+        "TEMPERROR": GeneratedDmarcResult.temperror,
+        "PERMERROR": GeneratedDmarcResult.permerror,
+    },
+)
 
 
-class DmarcPolicy(StrEnum):
-    REJECT = str(GeneratedDmarcPolicy.reject.value)
-    QUARANTINE = str(GeneratedDmarcPolicy.quarantine.value)
-    NONE = str(GeneratedDmarcPolicy.none.value)
+DmarcPolicy = _add_enum_aliases(
+    GeneratedDmarcPolicy,
+    {
+        "REJECT": GeneratedDmarcPolicy.reject,
+        "QUARANTINE": GeneratedDmarcPolicy.quarantine,
+        "NONE": GeneratedDmarcPolicy.none,
+        "NULL": GeneratedDmarcPolicy.none_type_none,
+    },
+)
 
 
-class DkimResult(StrEnum):
-    PASS = GeneratedDkimResult.pass_
-    FAIL = GeneratedDkimResult.fail
-    TEMPERROR = GeneratedDkimResult.temperror
-    PERMERROR = GeneratedDkimResult.permerror
+DkimResult = _add_enum_aliases(
+    GeneratedDkimResult,
+    {
+        "PASS": GeneratedDkimResult.pass_,
+        "FAIL": GeneratedDkimResult.fail,
+        "TEMPERROR": GeneratedDkimResult.temperror,
+        "PERMERROR": GeneratedDkimResult.permerror,
+    },
+)
 
 
-class AuthConfidence(StrEnum):
-    HIGH = GeneratedAuthConfidence.high
-    MEDIUM = GeneratedAuthConfidence.medium
-    LOW = GeneratedAuthConfidence.low
+AuthConfidence = _add_enum_aliases(
+    GeneratedAuthConfidence,
+    {
+        "HIGH": GeneratedAuthConfidence.high,
+        "MEDIUM": GeneratedAuthConfidence.medium,
+        "LOW": GeneratedAuthConfidence.low,
+    },
+)
 
 
 class AuthVerdict(StrEnum):

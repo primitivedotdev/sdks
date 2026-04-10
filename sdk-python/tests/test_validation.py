@@ -170,6 +170,45 @@ def test_validate_email_received_event_accepts_https_attachments_download_url(
     assert event.id == "evt_abc123"
 
 
+def test_email_received_event_model_rejects_http_download_url(
+    valid_payload: dict[str, Any],
+) -> None:
+    with pytest.raises(ValidationError):
+        EmailReceivedEvent.model_validate(
+            {
+                **valid_payload,
+                "email": {
+                    **valid_payload["email"],
+                    "content": {
+                        **valid_payload["email"]["content"],
+                        "download": {
+                            **valid_payload["email"]["content"]["download"],
+                            "url": "http://example.com/raw",
+                        },
+                    },
+                },
+            }
+        )
+
+
+def test_email_received_event_model_rejects_http_attachments_download_url(
+    valid_payload: dict[str, Any],
+) -> None:
+    with pytest.raises(ValidationError):
+        EmailReceivedEvent.model_validate(
+            {
+                **valid_payload,
+                "email": {
+                    **valid_payload["email"],
+                    "parsed": {
+                        **valid_payload["email"]["parsed"],
+                        "attachments_download_url": "http://example.com/attachments",
+                    },
+                },
+            }
+        )
+
+
 def test_validate_email_received_event_rejects_fractional_dkim_key_bits(
     valid_payload: dict[str, Any],
 ) -> None:

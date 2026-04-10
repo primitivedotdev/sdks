@@ -8,8 +8,10 @@ from typing import Any, cast
 import pytest
 
 from primitive_sdk import (
+    DmarcPolicy,
     PrimitiveWebhookError,
     RawEmailDecodeError,
+    SpfResult,
     UnknownEvent,
     WebhookPayloadError,
     WebhookValidationError,
@@ -113,6 +115,21 @@ def test_parse_webhook_event_handles_known_and_unknown_events() -> None:
         parse_webhook_event({"event": "email.bounced", "id": "y"}),
     )
     assert unknown["event"] == "email.bounced"
+
+
+def test_exported_enums_match_validated_runtime_values(valid_payload: dict[str, Any]) -> None:
+    event = validate_email_received_event(valid_payload)
+    spf_pass = getattr(SpfResult, "PASS")
+    dmarc_reject = getattr(DmarcPolicy, "REJECT")
+
+    assert isinstance(event.email.auth.spf, SpfResult)
+    assert event.email.auth.spf is spf_pass
+    assert isinstance(event.email.auth.dmarc_policy, DmarcPolicy)
+    assert event.email.auth.dmarc_policy is dmarc_reject
+
+
+def test_dmarc_policy_exposes_null_member() -> None:
+    assert DmarcPolicy(None) is getattr(DmarcPolicy, "NULL")
 
 
 def test_parse_webhook_event_rejects_bad_inputs() -> None:

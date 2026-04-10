@@ -6,7 +6,7 @@ from __future__ import annotations
 from enum import Enum, StrEnum
 from typing import Annotated, Literal
 
-from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field, RootModel
+from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field, RootModel, UrlConstraints
 
 
 class Delivery(BaseModel):
@@ -102,7 +102,7 @@ class Download(BaseModel):
         extra="allow",
     )
     url: Annotated[
-        AnyUrl,
+        Annotated[AnyUrl, UrlConstraints(allowed_schemes=["https"])],
         Field(
             description="HTTPS URL to download the raw email. Returns the email as-is in RFC 5322 format."
         ),
@@ -431,7 +431,7 @@ class ParsedDataComplete(BaseModel):
         ),
     ]
     attachments_download_url: Annotated[
-        AnyUrl | None,
+        Annotated[AnyUrl, UrlConstraints(allowed_schemes=["https"])] | None,
         Field(
             description="HTTPS URL to download all attachments as a tar.gz archive. Null if the email had no attachments. URL expires - check the expiration before downloading."
         ),
