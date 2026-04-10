@@ -678,14 +678,14 @@ class EmailAuth(BaseModel):
         ),
     ]
     dmarc_spf_aligned: Annotated[
-        bool | None,
+        bool,
         Field(
             alias="dmarcSpfAligned",
             description="Whether SPF aligned with the From: domain for DMARC purposes.\n\nTrue if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments.",
         ),
     ] = None
     dmarc_dkim_aligned: Annotated[
-        bool | None,
+        bool,
         Field(
             alias="dmarcDkimAligned",
             description="Whether DKIM aligned with the From: domain for DMARC purposes.\n\nTrue if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments.",
@@ -762,10 +762,10 @@ class EmailAnalysis(BaseModel):
         extra="allow",
     )
     spamassassin: Annotated[
-        Spamassassin | None, Field(description="SpamAssassin analysis results.")
+        Spamassassin, Field(description="SpamAssassin analysis results.")
     ] = None
     forward: Annotated[
-        ForwardAnalysis | None,
+        ForwardAnalysis,
         Field(description="Forward detection and analysis results."),
     ] = None
 

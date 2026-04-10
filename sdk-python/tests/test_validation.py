@@ -209,6 +209,43 @@ def test_email_received_event_model_rejects_http_attachments_download_url(
         )
 
 
+def test_email_received_event_model_rejects_null_alignment_flags(
+    valid_payload: dict[str, Any],
+) -> None:
+    with pytest.raises(ValidationError):
+        EmailReceivedEvent.model_validate(
+            {
+                **valid_payload,
+                "email": {
+                    **valid_payload["email"],
+                    "auth": {
+                        **valid_payload["email"]["auth"],
+                        "dmarcSpfAligned": None,
+                        "dmarcDkimAligned": None,
+                    },
+                },
+            }
+        )
+
+
+def test_email_received_event_model_rejects_null_analysis_objects(
+    valid_payload: dict[str, Any],
+) -> None:
+    with pytest.raises(ValidationError):
+        EmailReceivedEvent.model_validate(
+            {
+                **valid_payload,
+                "email": {
+                    **valid_payload["email"],
+                    "analysis": {
+                        "spamassassin": None,
+                        "forward": None,
+                    },
+                },
+            }
+        )
+
+
 def test_validate_email_received_event_rejects_fractional_dkim_key_bits(
     valid_payload: dict[str, Any],
 ) -> None:
