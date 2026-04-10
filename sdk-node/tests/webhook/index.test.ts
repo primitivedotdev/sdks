@@ -413,8 +413,14 @@ describe("PrimitiveWebhookError base class", () => {
 
 describe("isEmailReceivedEvent", () => {
   it("returns true for email.received events", () => {
-    const event = { event: "email.received", id: "test" };
+    const event = validPayload;
     expect(isEmailReceivedEvent(event)).toBe(true);
+  });
+
+  it("returns false for malformed email.received payloads", () => {
+    expect(isEmailReceivedEvent({ event: "email.received", id: "test" })).toBe(
+      false,
+    );
   });
 
   it("returns false for unknown events", () => {

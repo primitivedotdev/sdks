@@ -13,6 +13,7 @@ from typing import Any, TypedDict, TypeGuard, cast
 from primitive_sdk.errors import (
     RawEmailDecodeError,
     WebhookPayloadError,
+    WebhookValidationError,
     WebhookVerificationError,
 )
 from primitive_sdk.types import (
@@ -257,9 +258,13 @@ def parse_webhook_event(input: Any = _UNDEFINED) -> WebhookEvent:
 
 
 def is_email_received_event(event: object) -> TypeGuard[EmailReceivedEvent]:
+    if isinstance(event, EmailReceivedEvent):
+        return True
+
     try:
-        return _field(event, "event") == "email.received"
-    except (AttributeError, KeyError, TypeError):
+        validate_email_received_event(event)
+        return True
+    except WebhookValidationError:
         return False
 
 
@@ -394,7 +399,7 @@ def validate_email_auth(
     auth: EmailAuth | Mapping[str, Any],
 ) -> ValidateEmailAuthResult:
     if isinstance(auth, Mapping):
-        auth = EmailAuth.model_validate(auth)
+        auth = EmailAuth.model_validate(auth, by_alias=True, by_name=True)
 
     reasons: list[str] = []
     min_secure_key_bits = 1024

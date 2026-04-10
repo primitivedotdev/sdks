@@ -169,11 +169,15 @@ func ParseWebhookEvent(input any) (WebhookEvent, error) {
 		}
 		return *event, nil
 	}
-	unknown := UnknownEvent{Event: eventName, Payload: obj}
-	if id, ok := obj["id"].(string); ok {
+	preserved, err := mapFromInputPreservingNumbers(input)
+	if err != nil {
+		return nil, err
+	}
+	unknown := UnknownEvent{Event: eventName, Payload: preserved}
+	if id, ok := preserved["id"].(string); ok {
 		unknown.ID = &id
 	}
-	if version, ok := obj["version"].(string); ok {
+	if version, ok := preserved["version"].(string); ok {
 		unknown.Version = &version
 	}
 	return unknown, nil

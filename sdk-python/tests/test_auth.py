@@ -55,6 +55,34 @@ def test_auth_legit_high_confidence_with_aligned_dkim() -> None:
     assert "DMARC passed with DKIM alignment (example.com)" in result.reasons
 
 
+def test_validate_email_auth_accepts_snake_case_mapping_keys() -> None:
+    result = validate_email_auth(
+        {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarc_policy": "none",
+            "dmarc_from_domain": "example.com",
+            "dmarc_spf_aligned": True,
+            "dmarc_dkim_aligned": True,
+            "dmarc_spf_strict": False,
+            "dmarc_dkim_strict": False,
+            "dkim_signatures": [
+                {
+                    "domain": "example.com",
+                    "selector": "default",
+                    "result": "pass",
+                    "aligned": True,
+                    "key_bits": 2048,
+                    "algo": "rsa-sha256",
+                }
+            ],
+        }
+    )
+
+    assert result.verdict == "legit"
+    assert result.confidence == "high"
+
+
 def test_auth_legit_high_confidence_with_multiple_aligned_dkim() -> None:
     auth = create_base_auth(
         {

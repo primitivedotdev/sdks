@@ -1,6 +1,7 @@
 package primitive
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -80,6 +81,29 @@ func decodeInto[T any](input any) (T, error) {
 func mapFromInput(input any) (map[string]any, error) {
 	normalized, _, err := normalizeJSONValue(input)
 	if err != nil {
+		return nil, err
+	}
+	obj, ok := normalized.(map[string]any)
+	if !ok {
+		return nil, NewWebhookPayloadError(
+			"PAYLOAD_WRONG_TYPE",
+			fmt.Sprintf("Received %T instead of webhook payload object", input),
+			"Webhook payloads must be objects.",
+			nil,
+		)
+	}
+	return obj, nil
+}
+
+func mapFromInputPreservingNumbers(input any) (map[string]any, error) {
+	data, err := json.Marshal(input)
+	if err != nil {
+		return nil, err
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var normalized any
+	if err := decoder.Decode(&normalized); err != nil {
 		return nil, err
 	}
 	obj, ok := normalized.(map[string]any)

@@ -240,12 +240,21 @@ export function parseWebhookEvent(input: unknown): WebhookEvent {
 export function isEmailReceivedEvent(
   event: WebhookEvent | unknown,
 ): event is EmailReceivedEvent {
-  return (
-    typeof event === "object" &&
-    event !== null &&
-    "event" in event &&
-    (event as { event: unknown }).event === "email.received"
-  );
+  if (
+    typeof event !== "object" ||
+    event === null ||
+    !("event" in event) ||
+    (event as { event: unknown }).event !== "email.received"
+  ) {
+    return false;
+  }
+
+  try {
+    validateEmailReceivedEvent(event);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // -----------------------------------------------------------------------------

@@ -127,6 +127,58 @@ func TestUnknownEventMarshalJSON(t *testing.T) {
 	}
 }
 
+func TestParseWebhookEventPreservesLargeUnknownIntegers(t *testing.T) {
+	event, err := ParseWebhookEvent(map[string]any{
+		"event": "future.test",
+		"seq":   int64(9007199254740993),
+	})
+	if err != nil {
+		t.Fatalf("ParseWebhookEvent returned error: %v", err)
+	}
+
+	unknown, ok := event.(UnknownEvent)
+	if !ok {
+		t.Fatalf("expected UnknownEvent, got %T", event)
+	}
+
+	seq, ok := unknown.Payload["seq"].(json.Number)
+	if !ok {
+		t.Fatalf("expected json.Number for preserved integer, got %#v", unknown.Payload["seq"])
+	}
+	if string(seq) != "9007199254740993" {
+		t.Fatalf("expected integer precision to be preserved, got %s", seq)
+	}
+}
+
+func TestUnknownEventUnmarshalJSONPreservesPayload(t *testing.T) {
+	var unknown UnknownEvent
+	if err := json.Unmarshal([]byte(`{"event":"email.bounced","id":"evt_1","foo":"bar","count":9007199254740993}`), &unknown); err != nil {
+		t.Fatalf("json.Unmarshal returned error: %v", err)
+	}
+
+	if unknown.Event != "email.bounced" {
+		t.Fatalf("unexpected event after unmarshal: %#v", unknown)
+	}
+	if unknown.ID == nil || *unknown.ID != "evt_1" {
+		t.Fatalf("unexpected id after unmarshal: %#v", unknown)
+	}
+	if unknown.Payload["foo"] != "bar" {
+		t.Fatalf("expected payload field to be preserved, got %#v", unknown.Payload)
+	}
+	count, ok := unknown.Payload["count"].(json.Number)
+	if !ok || string(count) != "9007199254740993" {
+		t.Fatalf("expected numeric payload to be preserved, got %#v", unknown.Payload["count"])
+	}
+
+	data, err := json.Marshal(unknown)
+	if err != nil {
+		t.Fatalf("json.Marshal returned error: %v", err)
+	}
+	if string(data) != `{"count":9007199254740993,"event":"email.bounced","foo":"bar","id":"evt_1"}` {
+		t.Fatalf("unexpected round-tripped payload: %s", data)
+	}
+}
+
 func TestHandleWebhook(t *testing.T) {
 	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
 	body, err := json.Marshal(payload)

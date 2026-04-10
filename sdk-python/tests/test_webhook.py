@@ -131,7 +131,7 @@ def test_parse_webhook_event_rejects_bad_inputs() -> None:
 @pytest.mark.parametrize(
     ("event", "expected"),
     [
-        ({"event": "email.received", "id": "test"}, True),
+        ({"event": "email.received", "id": "test"}, False),
         ({"event": "email.bounced", "id": "test"}, False),
         (None, False),
         ("string", False),
@@ -143,6 +143,12 @@ def test_is_email_received_event_handles_mixed_inputs(
     event: object, expected: bool
 ) -> None:
     assert is_email_received_event(event) is expected
+
+
+def test_is_email_received_event_accepts_valid_email_received_payload(
+    valid_payload: dict[str, Any],
+) -> None:
+    assert is_email_received_event(valid_payload) is True
 
 
 def test_parse_webhook_event_rejects_malformed_known_event() -> None:
