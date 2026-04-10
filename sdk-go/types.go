@@ -260,6 +260,23 @@ type ForwardResult struct {
 	Summary            string                 `json:"summary"`
 }
 
+func (r ForwardResult) MarshalJSON() ([]byte, error) {
+	payload := map[string]any{
+		"type":            r.Type,
+		"original_sender": r.OriginalSender,
+		"verification":    r.Verification,
+		"summary":         r.Summary,
+	}
+
+	if r.Type == "attachment" {
+		payload["attachment_tar_path"] = r.AttachmentTarPath
+		payload["attachment_filename"] = r.AttachmentFilename
+		payload["analyzed"] = r.Analyzed
+	}
+
+	return json.Marshal(payload)
+}
+
 type ForwardOriginalSender struct {
 	Email  string `json:"email"`
 	Domain string `json:"domain"`

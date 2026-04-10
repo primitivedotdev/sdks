@@ -1,6 +1,7 @@
 package primitive
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,6 +11,8 @@ import (
 func intPtr(v int) *int { return &v }
 
 func boolPtr(v bool) *bool { return &v }
+
+func strPtr(v string) *string { return &v }
 
 func TestPrimitiveWebhookErrors(t *testing.T) {
 	verification := NewWebhookVerificationError("MISSING_SECRET", "", "")
@@ -309,5 +312,22 @@ func TestWebhookUtilityEdges(t *testing.T) {
 	})
 	if err != nil || weakResult.Confidence != AuthConfidenceMedium || !strings.Contains(fmt.Sprint(weakResult.Reasons), "Weak DKIM key") {
 		t.Fatalf("expected weak-key auth branch: %#v %v", weakResult, err)
+	}
+
+	attachmentSkipped := false
+	forwardResultJSON, err := json.Marshal(ForwardResult{
+		Type:               "attachment",
+		AttachmentTarPath:  strPtr("attachments/forwarded.eml"),
+		AttachmentFilename: nil,
+		Analyzed:           &attachmentSkipped,
+		OriginalSender:     nil,
+		Verification:       nil,
+		Summary:            "Attachment skipped",
+	})
+	if err != nil {
+		t.Fatalf("expected ForwardResult marshal to succeed: %v", err)
+	}
+	if !strings.Contains(string(forwardResultJSON), `"attachment_filename":null`) {
+		t.Fatalf("expected attachment_filename null to be preserved, got %s", forwardResultJSON)
 	}
 }
