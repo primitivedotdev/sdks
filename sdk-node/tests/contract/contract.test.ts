@@ -142,6 +142,41 @@ describe("contract", () => {
       expect(validateEmailReceivedEvent(event)).toEqual(event);
     });
 
+    it("accepts schema-valid RFC 3339 timestamps with explicit offsets", () => {
+      const event = buildEmailReceivedEvent(
+        {
+          ...baseInput,
+          received_at: "2025-01-01T12:00:00+00:00",
+          download_expires_at: "2025-01-02T12:00:00+00:00",
+        },
+        {
+          attempted_at: "2025-01-01T12:01:00+00:00",
+        },
+      );
+
+      expect(event.email.received_at).toBe("2025-01-01T12:00:00+00:00");
+      expect(event.email.content.download.expires_at).toBe(
+        "2025-01-02T12:00:00+00:00",
+      );
+      expect(event.delivery.attempted_at).toBe("2025-01-01T12:01:00+00:00");
+    });
+
+    it("does not require attachments_storage_key in parsed input", () => {
+      const parsed: ParsedInputComplete = {
+        status: "complete",
+        body_text: "Plain text body",
+        body_html: "<p>HTML body</p>",
+        attachments: [],
+      };
+
+      const event = buildEmailReceivedEvent({
+        ...baseInput,
+        parsed,
+      });
+
+      expect(event.email.parsed.status).toBe("complete");
+    });
+
     it("inlines small raw emails", () => {
       const event = buildEmailReceivedEvent(baseInput);
 
@@ -644,14 +679,14 @@ describe("contract", () => {
         );
       });
 
-      it("rejects non-UTC timezone", () => {
+      it("accepts explicit UTC offsets", () => {
         const input: EmailReceivedEventInput = {
           ...baseInput,
           received_at: "2025-01-15T10:30:00+05:00",
         };
 
-        expect(() => buildEmailReceivedEvent(input)).toThrow(
-          /Invalid received_at/,
+        expect(buildEmailReceivedEvent(input).email.received_at).toBe(
+          "2025-01-15T10:30:00+05:00",
         );
       });
 
@@ -681,8 +716,8 @@ describe("contract", () => {
           received_at: "2025/01/15",
         };
 
-        expect(() => buildEmailReceivedEvent(input)).toThrow(/ISO 8601/);
-        expect(() => buildEmailReceivedEvent(input)).toThrow(/T.*:.*Z/);
+        expect(() => buildEmailReceivedEvent(input)).toThrow(/RFC 3339/);
+        expect(() => buildEmailReceivedEvent(input)).toThrow(/\+00:00/);
       });
 
       it("rejects invalid download_expires_at format", () => {

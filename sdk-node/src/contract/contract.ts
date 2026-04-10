@@ -74,8 +74,8 @@ export interface ParsedInputComplete {
   /** References header values. Defaults to `null` when omitted. */
   references?: string[] | null;
   attachments: WebhookAttachment[];
-  /** Storage key for the attachments tarball, if attachments were persisted. */
-  attachments_storage_key: string | null;
+  /** Storage key for the attachments tarball, if attachments were persisted. Ignored by the canonical payload builder. */
+  attachments_storage_key?: string | null;
 }
 
 /** Parsed content input when parsing failed. */
@@ -141,25 +141,26 @@ export interface EmailReceivedEventInput {
 /**
  * ISO 8601 timestamp pattern.
  *
- * Matches `YYYY-MM-DDTHH:mm:ss.sssZ` and `YYYY-MM-DDTHH:mm:ssZ`, but rejects
- * loose formats like `Tuesday` that `Date.parse()` would otherwise accept.
+ * Matches RFC 3339 date-time strings with either `Z` or an explicit UTC offset,
+ * but rejects loose formats like `Tuesday` that `Date.parse()` would otherwise accept.
  */
-const ISO_8601_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
+const ISO_8601_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
 
 /**
- * Validate that a timestamp is a valid ISO 8601 UTC string.
+ * Validate that a timestamp is a valid RFC 3339 date-time string.
  *
  * The original string is preserved so callers retain their chosen precision.
  *
  * @param timestamp - Timestamp string to validate.
  * @param fieldName - Logical field name used in error messages.
  * @returns The validated timestamp, unchanged.
- * @throws Error if the timestamp is not a valid ISO 8601 UTC string.
+ * @throws Error if the timestamp is not a valid RFC 3339 date-time string.
  */
 function validateTimestamp(timestamp: string, fieldName: string): string {
   if (!ISO_8601_PATTERN.test(timestamp)) {
     throw new Error(
-      `[@primitivedotdev/sdk-node/contract] Invalid ${fieldName}: "${timestamp}". Expected ISO 8601 UTC format (e.g., "2025-01-15T10:30:00.000Z")`,
+      `[@primitivedotdev/sdk-node/contract] Invalid ${fieldName}: "${timestamp}". Expected RFC 3339 date-time format (e.g., "2025-01-15T10:30:00.000Z" or "2025-01-15T10:30:00+00:00")`,
     );
   }
 
