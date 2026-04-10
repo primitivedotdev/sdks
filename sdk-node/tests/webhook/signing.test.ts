@@ -644,7 +644,6 @@ describe("test vectors - cross-language verification", () => {
         nowSeconds: timestamp,
       }),
     ).not.toThrow();
-
   });
 
   it("vector: minimal payload", () => {
