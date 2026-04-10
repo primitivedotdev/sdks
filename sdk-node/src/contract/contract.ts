@@ -225,7 +225,15 @@ export function generateEventId(endpoint_id: string, email_id: string): string {
  *   download_url: "https://example.com/download/email-123",
  *   download_expires_at: "2025-01-02T00:00:00Z",
  *   attachments_download_url: null,
- *   auth: { spf: "pass", dmarc: "pass", dkimSignatures: [] },
+ *   auth: {
+ *     spf: "pass",
+ *     dmarc: "pass",
+ *     dmarcPolicy: "reject",
+ *     dmarcFromDomain: "example.com",
+ *     dmarcSpfStrict: false,
+ *     dmarcDkimStrict: false,
+ *     dkimSignatures: [],
+ *   },
  *   analysis: {},
  * });
  * ```

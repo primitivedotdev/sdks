@@ -130,7 +130,7 @@ export type RawEmailDecodeErrorCode = keyof typeof RAW_EMAIL_ERRORS;
  * import { handleWebhook, PrimitiveWebhookError } from '@primitivedotdev/sdk-node';
  *
  * try {
- *   const event = handleWebhook({ body, signature, secret });
+ *   const event = handleWebhook({ body, headers, secret });
  * } catch (err) {
  *   if (err instanceof PrimitiveWebhookError) {
  *     console.error(`[${err.code}] ${err.message}`);
