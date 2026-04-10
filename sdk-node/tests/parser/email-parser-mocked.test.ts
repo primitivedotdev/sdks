@@ -67,11 +67,11 @@ describe("email-parser mocked branches", () => {
     expect(result.headers.received).toEqual(["mx1", "mx2"]);
   });
 
-  it("handles missing address fields inside address objects", async () => {
+  it("handles nullish and missing address entries inside address lists", async () => {
     const { simpleParser } = await import("mailparser");
     vi.mocked(simpleParser).mockResolvedValue({
       headers: new Map<string, unknown>([
-        ["address-list", { value: [{ name: "Only Name" }] }],
+        ["address-list", { value: [null, undefined, { name: "Only Name" }] }],
       ]),
       from: [{ text: "" }],
       to: { text: "" },

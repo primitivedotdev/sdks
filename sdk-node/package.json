@@ -41,7 +41,15 @@
     "lint:fix": "biome check --write src/ tests/",
     "prepublishOnly": "pnpm build"
   },
-  "keywords": ["primitive", "email", "webhook", "signature", "hmac", "contract", "parser"],
+  "keywords": [
+    "primitive",
+    "email",
+    "webhook",
+    "signature",
+    "hmac",
+    "contract",
+    "parser"
+  ],
   "author": "Primitive <support@primitive.dev>",
   "license": "MIT",
   "repository": {
@@ -60,7 +68,6 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "archiver": "^7.0.1",
-    "isomorphic-dompurify": "^2.34.0",
     "mailparser": "^3.9.0"
   },
   "devDependencies": {
@@ -69,11 +76,11 @@
     "@types/json-schema": "^7.0.15",
     "@types/mailparser": "^3.4.6",
     "@types/node": "^22.10.2",
+    "@vitest/coverage-v8": "^2.1.8",
     "json-schema-to-typescript": "^15.0.4",
     "tsdown": "^0.9.1",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
-    "@vitest/coverage-v8": "^2.1.8",
     "vitest": "^2.1.8"
   }
 }

@@ -25,7 +25,7 @@ node-check: node-check-generated
 node-build:
 	pnpm --dir sdk-node build
 
-node-smoke:
+node-smoke: node-build
 	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd sdk-node && npm pack --pack-destination "$$pack_dir") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && node --input-type=module -e "const root = await import('@primitivedotdev/sdk-node'); const webhook = await import('@primitivedotdev/sdk-node/webhook'); const contract = await import('@primitivedotdev/sdk-node/contract'); const parser = await import('@primitivedotdev/sdk-node/parser'); if (typeof root.handleWebhook !== 'function') throw new Error('missing root handleWebhook export'); if (typeof webhook.handleWebhook !== 'function') throw new Error('missing webhook handleWebhook export'); if (typeof contract.buildEmailReceivedEvent !== 'function') throw new Error('missing contract buildEmailReceivedEvent export'); if (typeof parser.parseEmail !== 'function') throw new Error('missing parser parseEmail export');"
 
 node-coverage:

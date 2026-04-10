@@ -1,5 +1,4 @@
 import { createHash } from "node:crypto";
-import DOMPurify from "isomorphic-dompurify";
 import type { ParsedMail } from "mailparser";
 import type { EmailAddress } from "../types.js";
 
@@ -58,7 +57,6 @@ export interface ParsedEmailWithAttachments {
   // Body
   bodyText: string | null;
   bodyHtml: string | null; // Raw HTML from mailparser (inline images as data: URLs)
-  bodyHtmlSanitized: string | null; // After sanitization
 
   // Attachments
   attachments: ParsedAttachment[];
@@ -155,17 +153,14 @@ export async function parseEmailWithAttachments(
 
   // Get body HTML (mailparser already converted CID refs to data: URLs)
   let bodyHtml: string | null = null;
-  let bodyHtmlSanitized: string | null = null;
 
   if (parsed.html && typeof parsed.html === "string") {
     bodyHtml = parsed.html;
-    bodyHtmlSanitized = sanitizeHtml(bodyHtml);
   }
 
   return {
     bodyText: parsed.text ?? null,
     bodyHtml,
-    bodyHtmlSanitized,
     attachments,
     subject: parsed.subject ?? null,
     messageId: parsed.messageId ?? null,
@@ -357,151 +352,4 @@ export function sanitizeFilename(
   }
 
   return safe;
-}
-
-// DOMPurify configuration for email HTML
-const ALLOWED_TAGS = [
-  // Structure
-  "div",
-  "span",
-  "p",
-  "br",
-  "hr",
-  // Text formatting
-  "b",
-  "i",
-  "u",
-  "strong",
-  "em",
-  "small",
-  "sub",
-  "sup",
-  "s",
-  "strike",
-  // Headings
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  // Lists
-  "ul",
-  "ol",
-  "li",
-  "dl",
-  "dt",
-  "dd",
-  // Tables
-  "table",
-  "thead",
-  "tbody",
-  "tfoot",
-  "tr",
-  "th",
-  "td",
-  "colgroup",
-  "col",
-  "caption",
-  // Links and images
-  "a",
-  "img",
-  // Semantic
-  "blockquote",
-  "pre",
-  "code",
-  "address",
-  "center",
-  // Legacy but common in email
-  "font",
-  "big",
-];
-
-const ALLOWED_ATTRS = [
-  // Global attrs
-  "class",
-  "id",
-  "dir",
-  "lang",
-  // Link attrs
-  "href",
-  "title",
-  "target", // for _blank links
-  "rel", // for noopener noreferrer
-  // Image attrs
-  "src",
-  "alt",
-  "width",
-  "height",
-  // Table attrs
-  "border",
-  "cellpadding",
-  "cellspacing",
-  "align",
-  "valign",
-  "bgcolor",
-  "colspan",
-  "rowspan",
-  "span",
-  // Font attrs
-  "color",
-  "size",
-  "face",
-];
-
-// Allow data: URLs (for inline images), mailto:, and anchor links
-// data: URLs come from mailparser converting CID refs to base64-embedded images
-const ALLOWED_URI_REGEXP = /^(data:|mailto:|#)/i;
-
-// Register DOMPurify hooks at module scope (stateless callbacks, safe for concurrent use)
-DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
-  // Strip all on* event handlers
-  if (data.attrName.startsWith("on")) {
-    data.keepAttr = false;
-  }
-  // Strip style attributes (CSS url() can exfiltrate data)
-  if (data.attrName === "style") {
-    data.keepAttr = false;
-  }
-});
-
-// Force rel="noopener noreferrer" on links with target="_blank"
-DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-  if (node.tagName === "A") {
-    const target = node.getAttribute("target");
-    if (target === "_blank") {
-      node.setAttribute("rel", "noopener noreferrer");
-    }
-  }
-});
-
-/**
- * Sanitize email HTML for safe rendering.
- * Strips scripts, remote resources, event handlers, etc.
- */
-export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS,
-    ALLOWED_ATTR: ALLOWED_ATTRS,
-    ALLOW_DATA_ATTR: false,
-    ALLOW_UNKNOWN_PROTOCOLS: false,
-    ALLOWED_URI_REGEXP,
-    FORBID_TAGS: [
-      "style",
-      "script",
-      "iframe",
-      "object",
-      "embed",
-      "form",
-      "input",
-      "button",
-      "select",
-      "textarea",
-      "link",
-      "meta",
-      "base",
-      "svg",
-      "math",
-    ],
-  });
 }

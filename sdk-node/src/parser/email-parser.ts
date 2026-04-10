@@ -104,11 +104,20 @@ function structuredHeaderToString(value: unknown): string {
 
     if (Array.isArray(nested)) {
       return nested
-        .map((entry) =>
-          typeof entry === "string"
-            ? entry
-            : entry.address || structuredHeaderToString(entry),
-        )
+        .map((entry) => {
+          if (typeof entry === "string") {
+            return entry;
+          }
+
+          if (entry && typeof entry === "object" && "address" in entry) {
+            const address = entry.address;
+            if (typeof address === "string") {
+              return address;
+            }
+          }
+
+          return structuredHeaderToString(entry);
+        })
         .filter((entry) => entry.length > 0)
         .join(", ");
     }

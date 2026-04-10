@@ -304,7 +304,7 @@ error: null
  */
 body_text: (string | null)
 /**
- * HTML body of the email (sanitized via DOMPurify). Null if the email had no text/html part.
+ * HTML body of the email. Null if the email had no text/html part.
  */
 body_html: (string | null)
 /**

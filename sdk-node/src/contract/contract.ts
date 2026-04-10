@@ -19,7 +19,6 @@
  */
 
 import { createHash } from "node:crypto";
-import { sanitizeHtml } from "../parser/attachment-parser.js";
 import type {
   EmailAddress,
   EmailAnalysis,
@@ -293,10 +292,7 @@ export function buildEmailReceivedEvent(
       status: "complete",
       error: null,
       body_text: input.parsed.body_text,
-      body_html:
-        input.parsed.body_html === null
-          ? null
-          : sanitizeHtml(input.parsed.body_html),
+      body_html: input.parsed.body_html,
       reply_to: input.parsed.reply_to ?? null,
       cc: input.parsed.cc ?? null,
       bcc: input.parsed.bcc ?? null,

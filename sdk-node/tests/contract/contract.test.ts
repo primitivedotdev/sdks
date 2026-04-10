@@ -268,7 +268,9 @@ describe("contract", () => {
       if (event.email.parsed.status === "complete") {
         expect(event.email.parsed.error).toBeNull();
         expect(event.email.parsed.body_text).toBe("Plain text body");
-        expect(event.email.parsed.body_html).toBe("<p>HTML body</p><img>");
+        expect(event.email.parsed.body_html).toBe(
+          '<p>HTML body</p><img src="x" onerror="alert(1)">',
+        );
         expect(event.email.parsed.attachments).toHaveLength(1);
         expect(event.email.parsed.attachments[0].filename).toBe("test.pdf");
         expect(event.email.parsed.attachments_download_url).toBe(

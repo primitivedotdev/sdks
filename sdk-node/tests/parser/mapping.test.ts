@@ -43,7 +43,6 @@ function createParsedEmail(
   return {
     bodyText: "Hello world",
     bodyHtml: "<p>Hello <script>alert('xss')</script>world</p>",
-    bodyHtmlSanitized: "<p>Hello world</p>",
     attachments: [],
     subject: "Test Subject",
     messageId: "<msg-123@example.com>",
@@ -80,21 +79,19 @@ describe("toParsedDataComplete", () => {
     expect(result.bcc).toBeNull();
   });
 
-  it("uses bodyHtmlSanitized for body_html, not raw bodyHtml", () => {
+  it("passes through bodyHtml without sanitizing it", () => {
     const parsed = createParsedEmail({
       bodyHtml: "<p>raw <script>bad</script></p>",
-      bodyHtmlSanitized: "<p>raw </p>",
     });
     const result = toParsedDataComplete(parsed, null);
 
-    expect(result.body_html).toBe("<p>raw </p>");
+    expect(result.body_html).toBe("<p>raw <script>bad</script></p>");
   });
 
   it("passes through null body values", () => {
     const parsed = createParsedEmail({
       bodyText: null,
       bodyHtml: null,
-      bodyHtmlSanitized: null,
     });
     const result = toParsedDataComplete(parsed, null);
 

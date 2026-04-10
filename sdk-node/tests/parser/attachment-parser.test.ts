@@ -5,7 +5,6 @@ import {
   normalizeContentType,
   parseEmailWithAttachments,
   sanitizeFilename,
-  sanitizeHtml,
   sha256Hex,
 } from "../../src/parser/attachment-parser.js";
 
@@ -212,157 +211,19 @@ describe("inline image handling", () => {
 });
 
 // =============================================================================
-// HTML SANITIZATION TESTS
+// HTML BODY TESTS
 // =============================================================================
 
-describe("HTML sanitization", () => {
-  test("removes script tags", async () => {
+describe("HTML body handling", () => {
+  test("preserves raw HTML without sanitizing it", async () => {
     const eml = loadFixture("malicious-xss.eml");
     const result = await parseEmailWithAttachments(eml, {
       generateAttachmentId: mockAttachmentId,
     });
 
-    expect(result.bodyHtmlSanitized).not.toContain("<script");
-    expect(result.bodyHtmlSanitized).not.toContain("alert(");
-  });
-
-  test("removes event handlers (onclick, onerror, onload)", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    expect(result.bodyHtmlSanitized).not.toContain("onclick=");
-    expect(result.bodyHtmlSanitized).not.toContain("onerror=");
-    expect(result.bodyHtmlSanitized).not.toContain("onload=");
-  });
-
-  test("removes javascript: URLs", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    expect(result.bodyHtmlSanitized).not.toContain("javascript:");
-  });
-
-  test("removes iframe, object, embed tags", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    expect(result.bodyHtmlSanitized).not.toContain("<iframe");
-    expect(result.bodyHtmlSanitized).not.toContain("<object");
-    expect(result.bodyHtmlSanitized).not.toContain("<embed");
-  });
-
-  test("removes form elements", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    expect(result.bodyHtmlSanitized).not.toContain("<form");
-    expect(result.bodyHtmlSanitized).not.toContain("<input");
-  });
-
-  test("removes svg and math tags", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    expect(result.bodyHtmlSanitized).not.toContain("<svg");
-    expect(result.bodyHtmlSanitized).not.toContain("<math");
-  });
-
-  test("removes style attributes (CSS exfiltration)", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    expect(result.bodyHtmlSanitized).not.toContain("style=");
-  });
-
-  test("removes style tags", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    expect(result.bodyHtmlSanitized).not.toContain("<style");
-  });
-
-  test("removes meta, base, link tags", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    expect(result.bodyHtmlSanitized).not.toContain("<meta");
-    expect(result.bodyHtmlSanitized).not.toContain("<base");
-    expect(result.bodyHtmlSanitized).not.toContain("<link");
-  });
-
-  test("removes data attributes", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    expect(result.bodyHtmlSanitized).not.toContain("data-custom=");
-  });
-
-  test("blocks remote image URLs", async () => {
-    const eml = loadFixture("malicious-xss.eml");
-    const result = await parseEmailWithAttachments(eml, {
-      generateAttachmentId: mockAttachmentId,
-    });
-
-    // Remote tracking pixel should be stripped
-    expect(result.bodyHtmlSanitized).not.toContain("https://evil.com");
-  });
-
-  test("preserves legitimate HTML structure", () => {
-    const html = `
-      <h1>Hello</h1>
-      <p>This is a <strong>test</strong> with a <a href="mailto:test@example.com">link</a>.</p>
-      <ul><li>Item 1</li><li>Item 2</li></ul>
-      <table><tr><td>Cell</td></tr></table>
-    `;
-    const result = sanitizeHtml(html);
-
-    expect(result).toContain("<h1>");
-    expect(result).toContain("<strong>");
-    expect(result).toContain('<a href="mailto:test@example.com"');
-    expect(result).toContain("<ul>");
-    expect(result).toContain("<table>");
-  });
-
-  test("preserves data: URLs in img src (inline images)", () => {
-    const html = '<img src="data:image/png;base64,iVBORw0KGgo=">';
-    const result = sanitizeHtml(html);
-
-    expect(result).toContain("data:image/png;base64,");
-  });
-
-  test("preserves mailto links", () => {
-    const html = '<a href="mailto:test@example.com">Email us</a>';
-    const result = sanitizeHtml(html);
-
-    expect(result).toContain("mailto:test@example.com");
-    expect(result).toContain("Email us");
-  });
-
-  test("strips external URLs from links", () => {
-    const html = '<a href="https://evil.com/phishing">Click here</a>';
-    const result = sanitizeHtml(html);
-
-    // External URL gets stripped, but link text preserved
-    expect(result).not.toContain("evil.com");
-    expect(result).toContain("Click here");
+    expect(result.bodyHtml).toContain("<script>alert('XSS')</script>");
+    expect(result.bodyHtml).toContain('onload="alert(\'body onload XSS\')"');
+    expect(result.bodyHtml).toContain("https://evil.com/phishing");
   });
 });
 

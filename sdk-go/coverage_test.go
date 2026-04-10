@@ -220,8 +220,17 @@ func TestWebhookUtilityEdges(t *testing.T) {
 	if _, err := VerifyRawEmailDownload([]byte("other"), payload); err == nil {
 		t.Fatal("expected raw email download verification to fail on hash mismatch")
 	}
+	missingRawHash := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	delete(missingRawHash["email"].(map[string]any)["content"].(map[string]any)["raw"].(map[string]any), "sha256")
+	if _, err := DecodeRawEmail(missingRawHash); err == nil {
+		t.Fatal("expected missing raw hash to fail decode")
+	} else if err.Error() != "missing email.content.raw.sha256" {
+		t.Fatalf("expected missing raw hash decode error, got %v", err)
+	}
 	if _, err := VerifyRawEmailDownload([]byte("Hello World"), map[string]any{}); err == nil {
 		t.Fatal("expected missing raw hash to fail download verification")
+	} else if err.Error() != "missing email.content.raw.sha256" {
+		t.Fatalf("expected missing raw hash download error, got %v", err)
 	}
 	missingRawData := loadJSONFixture(t, "webhook", "valid-email-received.json")
 	delete(missingRawData["email"].(map[string]any)["content"].(map[string]any)["raw"].(map[string]any), "data")

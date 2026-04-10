@@ -18,7 +18,6 @@ export {
   normalizeContentType,
   parseEmailWithAttachments,
   sanitizeFilename,
-  sanitizeHtml,
   sha256Hex,
 } from "./attachment-parser.js";
 export type { ParsedEmail } from "./email-parser.js";

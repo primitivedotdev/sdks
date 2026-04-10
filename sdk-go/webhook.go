@@ -346,7 +346,10 @@ func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 		shouldVerify = verify[0]
 	}
 	if shouldVerify {
-		expected, _ := getString(event, "email", "content", "raw", "sha256")
+		expected, ok := getString(event, "email", "content", "raw", "sha256")
+		if !ok || expected == "" {
+			return nil, fmt.Errorf("missing email.content.raw.sha256")
+		}
 		digest := sha256.Sum256(decoded)
 		actual := hex.EncodeToString(digest[:])
 		if !strings.EqualFold(actual, expected) {
@@ -357,7 +360,10 @@ func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 }
 
 func VerifyRawEmailDownload(downloaded []byte, event any) ([]byte, error) {
-	expected, _ := getString(event, "email", "content", "raw", "sha256")
+	expected, ok := getString(event, "email", "content", "raw", "sha256")
+	if !ok || expected == "" {
+		return nil, fmt.Errorf("missing email.content.raw.sha256")
+	}
 	digest := sha256.Sum256(downloaded)
 	actual := hex.EncodeToString(digest[:])
 	if !strings.EqualFold(actual, expected) {

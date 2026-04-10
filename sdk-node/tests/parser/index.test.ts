@@ -16,7 +16,6 @@ describe("parser index", () => {
     expect(typeof parser.toCanonicalHeaders).toBe("function");
     expect(typeof parser.normalizeContentType).toBe("function");
     expect(typeof parser.sanitizeFilename).toBe("function");
-    expect(typeof parser.sanitizeHtml).toBe("function");
     expect(typeof parser.sha256Hex).toBe("function");
   });
 });

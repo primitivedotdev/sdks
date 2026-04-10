@@ -18,7 +18,7 @@ import type {
 /**
  * Convert parser output to canonical ParsedDataComplete (snake_case).
  *
- * Maps `bodyHtmlSanitized` → `body_html` (matching production behavior).
+ * Maps `bodyHtml` → `body_html` without mutating the HTML content.
  * Preserves the original Date header value when available.
  * Coerces nullable `from`/`to` to non-nullable strings.
  *
@@ -36,7 +36,7 @@ export function toParsedDataComplete(
     status: "complete",
     error: null,
     body_text: parsed.bodyText,
-    body_html: parsed.bodyHtmlSanitized,
+    body_html: parsed.bodyHtml,
     reply_to: parsed.replyTo,
     cc: parsed.cc,
     bcc: parsed.bcc,

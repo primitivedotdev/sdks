@@ -429,7 +429,7 @@ class ParsedDataComplete(BaseModel):
     body_html: Annotated[
         str | None,
         Field(
-            description="HTML body of the email (sanitized via DOMPurify). Null if the email had no text/html part."
+            description="HTML body of the email. Null if the email had no text/html part."
         ),
     ]
     reply_to: Annotated[
