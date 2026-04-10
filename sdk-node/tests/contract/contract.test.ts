@@ -49,6 +49,19 @@ describe("contract", () => {
       const id = generateEventId("endpoint-123", "email-456");
       expect(id).toMatch(/^evt_[a-f0-9]+$/);
     });
+
+    it("does not include the webhook version in the stable event ID hash", () => {
+      const id = generateEventId("endpoint-123", "email-456");
+      const stableHash = createHash("sha256")
+        .update("email.received:endpoint-123:email-456")
+        .digest("hex");
+      const versionedHash = createHash("sha256")
+        .update(`email.received:${WEBHOOK_VERSION}:endpoint-123:email-456`)
+        .digest("hex");
+
+      expect(id).toBe(`evt_${stableHash}`);
+      expect(id).not.toBe(`evt_${versionedHash}`);
+    });
   });
 
   describe("buildEmailReceivedEvent", () => {
@@ -159,7 +172,7 @@ describe("contract", () => {
       }
     });
 
-    it("nulls out body_text and body_html for large emails", () => {
+    it("preserves parsed bodies for large emails", () => {
       const largeRawBytes = Buffer.alloc(RAW_EMAIL_INLINE_THRESHOLD + 1, "x");
       const parsed: ParsedInputComplete = {
         status: "complete",
@@ -182,8 +195,10 @@ describe("contract", () => {
       expect(event.email.content.raw.included).toBe(false);
       expect(event.email.parsed.status).toBe("complete");
       if (event.email.parsed.status === "complete") {
-        expect(event.email.parsed.body_text).toBeNull();
-        expect(event.email.parsed.body_html).toBeNull();
+        expect(event.email.parsed.body_text).toBe("This would be a very large body");
+        expect(event.email.parsed.body_html).toBe(
+          "<p>This would be very large HTML</p>",
+        );
         expect(event.email.parsed.attachments).toEqual([]);
       }
     });

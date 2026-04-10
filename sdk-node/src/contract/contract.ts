@@ -176,7 +176,7 @@ function validateTimestamp(timestamp: string, fieldName: string): string {
  * Generate a stable event ID for webhook deduplication.
  *
  * Format: `evt_{sha256_hex}` where the hash is deterministic based on the
- * event type, webhook version, endpoint ID, and email ID. The same email sent
+ * event type, endpoint ID, and email ID. The same email sent
  * to the same endpoint will always get the same event ID.
  *
  * @param endpoint_id - Webhook endpoint ID.
@@ -184,7 +184,7 @@ function validateTimestamp(timestamp: string, fieldName: string): string {
  * @returns Stable event ID with `evt_` prefix.
  */
 export function generateEventId(endpoint_id: string, email_id: string): string {
-  const hashInput = `email.received:${WEBHOOK_VERSION}:${endpoint_id}:${email_id}`;
+  const hashInput = `email.received:${endpoint_id}:${email_id}`;
   const hash = createHash("sha256").update(hashInput).digest("hex");
   return `evt_${hash}`;
 }
@@ -282,8 +282,8 @@ export function buildEmailReceivedEvent(
     parsedData = {
       status: "complete",
       error: null,
-      body_text: shouldInline ? input.parsed.body_text : null,
-      body_html: shouldInline ? input.parsed.body_html : null,
+      body_text: input.parsed.body_text,
+      body_html: input.parsed.body_html,
       reply_to: input.parsed.reply_to ?? null,
       cc: input.parsed.cc ?? null,
       bcc: input.parsed.bcc ?? null,
