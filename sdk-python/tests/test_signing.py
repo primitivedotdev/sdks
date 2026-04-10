@@ -141,6 +141,31 @@ def test_verify_webhook_signature_rejects_invalid_header() -> None:
     assert error.value.code == "INVALID_SIGNATURE_HEADER"
 
 
+@pytest.mark.parametrize(
+    ("signature_header", "expected_code"),
+    [
+        ("t=,v1=abcd", "INVALID_SIGNATURE_HEADER"),
+        ("t=abc,v1=abcd", "INVALID_SIGNATURE_HEADER"),
+        ("t=1734567890,v1=", "INVALID_SIGNATURE_HEADER"),
+        ("t=1734567890,v1=short", "SIGNATURE_MISMATCH"),
+        ("t=1734567890,v1=not-valid-hex!!!", "SIGNATURE_MISMATCH"),
+        ("t=1734567890,other=value", "INVALID_SIGNATURE_HEADER"),
+    ],
+)
+def test_verify_webhook_signature_rejects_malformed_header_variants(
+    signature_header: str,
+    expected_code: str,
+) -> None:
+    with pytest.raises(WebhookVerificationError) as error:
+        verify_webhook_signature(
+            raw_body='{"event":"email.received"}',
+            signature_header=signature_header,
+            secret="secret",
+            now_seconds=1734567890,
+        )
+    assert error.value.code == expected_code
+
+
 def test_verify_webhook_signature_rejects_missing_secret() -> None:
     with pytest.raises(WebhookVerificationError) as error:
         verify_webhook_signature(raw_body="{}", signature_header="t=1,v1=abc", secret="")
@@ -256,6 +281,30 @@ def test_verify_webhook_signature_accepts_boundary_but_rejects_one_second_past()
         )
 
 
+def test_verify_webhook_signature_accepts_future_boundary_but_rejects_one_second_past() -> None:
+    body = '{"event":"email.received"}'
+    header = sign_webhook_payload(body, "secret", 1060)["header"]
+
+    assert (
+        verify_webhook_signature(
+            raw_body=body,
+            signature_header=header,
+            secret="secret",
+            now_seconds=1000,
+        )
+        is True
+    )
+
+    with pytest.raises(WebhookVerificationError) as error:
+        verify_webhook_signature(
+            raw_body=body,
+            signature_header=header,
+            secret="secret",
+            now_seconds=999,
+        )
+    assert error.value.code == "TIMESTAMP_OUT_OF_RANGE"
+
+
 @pytest.mark.parametrize("timestamp", [0, -1, 2**53 - 1, 4102444800])
 def test_verify_webhook_signature_rejects_extreme_timestamps(timestamp: int) -> None:
     body = '{"event":"email.received"}'
@@ -278,6 +327,31 @@ def test_verify_webhook_signature_skips_non_hex_and_wrong_length_signatures() ->
         verify_webhook_signature(
             raw_body=body,
             signature_header=header,
+            secret="secret",
+            now_seconds=1734567890,
+        )
+        is True
+    )
+
+
+@pytest.mark.parametrize(
+    "template",
+    [
+        " t=1734567890 , v1={valid} ",
+        "ignore=this,t=1734567890,v1={valid}",
+        "t=1734567890,v0=legacy,v1={valid}",
+    ],
+)
+def test_verify_webhook_signature_accepts_supported_header_variants(
+    template: str,
+) -> None:
+    body = '{"event":"email.received"}'
+    valid = sign_webhook_payload(body, "secret", 1734567890)["v1"]
+
+    assert (
+        verify_webhook_signature(
+            raw_body=body,
+            signature_header=template.format(valid=valid),
             secret="secret",
             now_seconds=1734567890,
         )
@@ -326,7 +400,7 @@ def test_verify_webhook_signature_works_with_unicode_special_characters_and_long
             "event": "email.received",
             "subject": 'Test with "quotes" and \n newlines',
             "emoji": "hello 👋",
-            "long": "x" * 10000,
+            "long": "x" * 100000,
         },
         ensure_ascii=False,
         separators=(",", ":"),

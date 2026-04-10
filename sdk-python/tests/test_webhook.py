@@ -128,6 +128,23 @@ def test_parse_webhook_event_rejects_bad_inputs() -> None:
         parse_webhook_event([{"event": "email.received"}])
 
 
+@pytest.mark.parametrize(
+    ("event", "expected"),
+    [
+        ({"event": "email.received", "id": "test"}, True),
+        ({"event": "email.bounced", "id": "test"}, False),
+        (None, False),
+        ("string", False),
+        (123, False),
+        ({}, False),
+    ],
+)
+def test_is_email_received_event_handles_mixed_inputs(
+    event: object, expected: bool
+) -> None:
+    assert is_email_received_event(event) is expected
+
+
 def test_parse_webhook_event_rejects_malformed_known_event() -> None:
     with pytest.raises(WebhookValidationError) as error:
         parse_webhook_event({"event": "email.received", "id": "x"})
@@ -377,8 +394,10 @@ def test_decode_raw_email_rejects_download_only_content() -> None:
             }
         }
     }
-    with pytest.raises(RawEmailDecodeError):
+    with pytest.raises(RawEmailDecodeError) as error:
         decode_raw_email(event)
+
+    assert "download URL" in error.value.suggestion
 
 
 def test_verify_raw_email_download_accepts_empty_and_binary_content() -> None:
@@ -415,6 +434,29 @@ def test_verify_raw_email_download_accepts_empty_and_binary_content() -> None:
         }
     }
     assert verify_raw_email_download(memoryview(binary), binary_event) == binary
+    assert verify_raw_email_download(bytearray(binary), binary_event) == binary
+
+
+def test_verify_raw_email_download_hash_mismatch_includes_code_and_message() -> None:
+    event = {
+        "email": {
+            "content": {
+                "raw": {
+                    "included": False,
+                    "reason_code": "size_exceeded",
+                    "size_bytes": 4,
+                    "max_inline_bytes": 262144,
+                    "sha256": "c" * 64,
+                }
+            }
+        }
+    }
+
+    with pytest.raises(RawEmailDecodeError) as error:
+        verify_raw_email_download(b"test", event)
+
+    assert error.value.code == "HASH_MISMATCH"
+    assert "SHA-256" in str(error.value)
 
 
 def test_validate_email_auth(valid_payload: dict[str, Any]) -> None:
@@ -427,3 +469,4 @@ def test_validate_email_auth(valid_payload: dict[str, Any]) -> None:
 def test_error_hierarchy() -> None:
     error = RawEmailDecodeError("NOT_INCLUDED")
     assert isinstance(error, PrimitiveWebhookError)
+    assert not isinstance(Exception("x"), PrimitiveWebhookError)
