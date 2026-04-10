@@ -66,6 +66,10 @@ RAW_EMAIL_ERRORS = {
         "message": "Raw email content not included inline",
         "suggestion": "Use the download URL at event.email.content.download.url to fetch the raw email.",
     },
+    "INVALID_BASE64": {
+        "message": "Raw email content is not valid base64",
+        "suggestion": "The raw email data is malformed. Fetch the raw email from the download URL or regenerate the webhook payload.",
+    },
     "HASH_MISMATCH": {
         "message": "SHA-256 hash verification failed",
         "suggestion": "The raw email data may be corrupted. Try downloading from the URL instead.",
@@ -90,7 +94,7 @@ WebhookPayloadErrorCode = Literal[
     "INVALID_ENCODING",
 ]
 WebhookValidationErrorCode = Literal["SCHEMA_VALIDATION_FAILED"]
-RawEmailDecodeErrorCode = Literal["NOT_INCLUDED", "HASH_MISMATCH"]
+RawEmailDecodeErrorCode = Literal["NOT_INCLUDED", "INVALID_BASE64", "HASH_MISMATCH"]
 WebhookErrorCode = (
     WebhookVerificationErrorCode
     | WebhookPayloadErrorCode

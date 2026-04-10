@@ -288,9 +288,9 @@ func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("missing email.content.raw.data")
 	}
-	decoded, err := base64.StdEncoding.DecodeString(data)
+	decoded, err := base64.StdEncoding.Strict().DecodeString(data)
 	if err != nil {
-		return nil, err
+		return nil, NewRawEmailDecodeError("INVALID_BASE64", fmt.Sprintf("Raw email data is not valid base64: %v", err))
 	}
 	shouldVerify := true
 	if len(verify) > 0 {

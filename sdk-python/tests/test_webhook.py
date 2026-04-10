@@ -329,6 +329,18 @@ def test_raw_email_hash_mismatch(valid_payload: dict[str, Any]) -> None:
         decode_raw_email(event)
 
 
+def test_decode_raw_email_rejects_invalid_base64(
+    valid_payload: dict[str, Any],
+) -> None:
+    event = valid_payload
+    event["email"]["content"]["raw"]["data"] = "!!!"
+
+    with pytest.raises(RawEmailDecodeError) as error:
+        decode_raw_email(event)
+
+    assert error.value.code == "INVALID_BASE64"
+
+
 def test_decode_raw_email_rejects_download_only_content() -> None:
     event = {
         "email": {

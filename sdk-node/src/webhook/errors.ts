@@ -93,6 +93,11 @@ export const RAW_EMAIL_ERRORS = {
     suggestion:
       "Use the download URL at event.email.content.download.url to fetch the raw email.",
   },
+  INVALID_BASE64: {
+    message: "Raw email content is not valid base64",
+    suggestion:
+      "The raw email data is malformed. Fetch the raw email from the download URL or regenerate the webhook payload.",
+  },
   HASH_MISMATCH: {
     message: "SHA-256 hash verification failed",
     suggestion:

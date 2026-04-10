@@ -466,6 +466,14 @@ func TestWebhookUtilityCoverage(t *testing.T) {
 	invalidData["email"].(map[string]any)["content"].(map[string]any)["raw"].(map[string]any)["data"] = "!!!"
 	if _, err := DecodeRawEmail(invalidData); err == nil {
 		t.Fatal("expected invalid base64 to fail decode")
+	} else {
+		decodeErr, ok := err.(*RawEmailDecodeError)
+		if !ok {
+			t.Fatalf("expected RawEmailDecodeError, got %v", err)
+		}
+		if decodeErr.Code() != "INVALID_BASE64" {
+			t.Fatalf("expected INVALID_BASE64 code, got %q", decodeErr.Code())
+		}
 	}
 	if decoded, err := DecodeRawEmail(payload, false); err != nil || string(decoded) != "Hello World" {
 		t.Fatalf("expected decode without verification to succeed: %q %v", string(decoded), err)

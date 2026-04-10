@@ -608,6 +608,18 @@ describe("decodeRawEmail", () => {
 
     expect(() => decodeRawEmail(event)).toThrow(RawEmailDecodeError);
   });
+
+  it("throws INVALID_BASE64 for malformed inline raw data", () => {
+    const event = createEventWithRaw("!!!");
+
+    try {
+      decodeRawEmail(event);
+      expect.fail("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(RawEmailDecodeError);
+      expect((err as RawEmailDecodeError).code).toBe("INVALID_BASE64");
+    }
+  });
 });
 
 describe("verifyRawEmailDownload", () => {

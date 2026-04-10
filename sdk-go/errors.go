@@ -70,6 +70,10 @@ var RawEmailErrors = map[string]ErrorDefinition{
 		Message:    "Raw email content not included inline",
 		Suggestion: "Use the download URL at event.email.content.download.url to fetch the raw email.",
 	},
+	"INVALID_BASE64": {
+		Message:    "Raw email content is not valid base64",
+		Suggestion: "The raw email data is malformed. Fetch the raw email from the download URL or regenerate the webhook payload.",
+	},
 	"HASH_MISMATCH": {
 		Message:    "SHA-256 hash verification failed",
 		Suggestion: "The raw email data may be corrupted. Try downloading from the URL instead.",

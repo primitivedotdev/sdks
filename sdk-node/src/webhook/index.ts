@@ -69,6 +69,9 @@ import {
   verifyWebhookSignature,
 } from "./signing.js";
 
+const BASE64_PATTERN =
+  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
 // JSON Schema
 export { emailReceivedEventJsonSchema } from "../schema.generated.js";
 // Types
@@ -552,6 +555,13 @@ export function decodeRawEmail(
       "NOT_INCLUDED",
       `Raw email not included inline (size: ${raw.size_bytes} bytes, threshold: ${raw.max_inline_bytes} bytes). ` +
         `Download from: ${event.email.content.download.url}`,
+    );
+  }
+
+  if (!BASE64_PATTERN.test(raw.data)) {
+    throw new RawEmailDecodeError(
+      "INVALID_BASE64",
+      "Raw email data is not valid base64. The raw email data may be malformed.",
     );
   }
 

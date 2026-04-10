@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -341,7 +342,14 @@ def decode_raw_email(
             f"Download from: {_field(download, 'url')}",
         )
 
-    decoded = base64.b64decode(_field(raw, "data"))
+    try:
+        decoded = base64.b64decode(_field(raw, "data"), validate=True)
+    except (binascii.Error, TypeError, ValueError) as error:
+        raise RawEmailDecodeError(
+            "INVALID_BASE64",
+            "Raw email data is not valid base64. The raw email data may be malformed.",
+        ) from error
+
     if verify:
         digest = hashlib.sha256(decoded).hexdigest()
         expected = _field(raw, "sha256")
