@@ -293,7 +293,9 @@ def confirmed_headers() -> dict[str, str]:
     return {PRIMITIVE_CONFIRMED_HEADER: "true"}
 
 
-def _parse_iso8601(value: str) -> datetime:
+def _parse_iso8601(value: str | datetime) -> datetime:
+    if isinstance(value, datetime):
+        return value
     normalized = value.replace("Z", "+00:00")
     return datetime.fromisoformat(normalized)
 

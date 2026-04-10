@@ -23,6 +23,7 @@ from primitive_sdk import (
     parse_webhook_event,
     sign_webhook_payload,
     validate_email_auth,
+    validate_email_received_event,
     verify_raw_email_download,
 )
 from primitive_sdk.webhook import _get_signature_header
@@ -304,6 +305,14 @@ def test_download_helpers_handle_exact_and_past_expiration() -> None:
     past_ms = exact_ms + 1
     assert is_download_expired(event, exact_ms) is True
     assert get_download_time_remaining(event, past_ms) == 0
+
+
+def test_download_helpers_accept_typed_events(valid_payload: dict[str, Any]) -> None:
+    event = validate_email_received_event(valid_payload)
+    future_now = 1734177600000
+
+    assert is_download_expired(event, future_now) is False
+    assert get_download_time_remaining(event, future_now) > 0
 
 
 def test_raw_email_helpers(valid_payload: dict[str, Any]) -> None:
