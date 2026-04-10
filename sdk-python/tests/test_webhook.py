@@ -8,9 +8,16 @@ from typing import Any, cast
 import pytest
 
 from primitive_sdk import (
+    Content,
     DmarcPolicy,
+    Delivery,
+    Download,
+    Email,
+    Headers,
     PrimitiveWebhookError,
     RawEmailDecodeError,
+    Smtp,
+    Spamassassin,
     SpfResult,
     UnknownEvent,
     WebhookPayloadError,
@@ -27,6 +34,7 @@ from primitive_sdk import (
     validate_email_auth,
     validate_email_received_event,
     verify_raw_email_download,
+    WebhookVersion,
 )
 from primitive_sdk.webhook import _get_signature_header
 
@@ -130,6 +138,17 @@ def test_exported_enums_match_validated_runtime_values(valid_payload: dict[str, 
 
 def test_dmarc_policy_exposes_null_member() -> None:
     assert DmarcPolicy(None) is getattr(DmarcPolicy, "NULL")
+
+
+def test_public_package_exports_nested_schema_models() -> None:
+    assert Delivery.__name__ == "Delivery"
+    assert Smtp.__name__ == "Smtp"
+    assert Headers.__name__ == "Headers"
+    assert Download.__name__ == "Download"
+    assert WebhookVersion.__name__ == "WebhookVersion"
+    assert Spamassassin.__name__ == "Spamassassin"
+    assert Content.__name__ == "Content"
+    assert Email.__name__ == "Email"
 
 
 def test_validated_event_exposes_union_fields_like_schema_payload(

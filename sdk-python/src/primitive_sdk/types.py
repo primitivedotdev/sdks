@@ -2,10 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import NotRequired, TypeAlias, TypedDict
+from typing import Literal, NotRequired, TypeAlias, TypedDict
 
 from primitive_sdk.models_generated import (
     AuthConfidence as GeneratedAuthConfidence,
+)
+from primitive_sdk.models_generated import (
+    Content as GeneratedContent,
+)
+from primitive_sdk.models_generated import (
+    Delivery as GeneratedDelivery,
+)
+from primitive_sdk.models_generated import (
+    Download as GeneratedDownload,
 )
 from primitive_sdk.models_generated import (
     DkimResult as GeneratedDkimResult,
@@ -18,6 +27,9 @@ from primitive_sdk.models_generated import (
 )
 from primitive_sdk.models_generated import (
     DmarcResult as GeneratedDmarcResult,
+)
+from primitive_sdk.models_generated import (
+    Email as GeneratedEmail,
 )
 from primitive_sdk.models_generated import (
     EmailAddress as GeneratedEmailAddress,
@@ -56,6 +68,9 @@ from primitive_sdk.models_generated import (
     ForwardVerification as GeneratedForwardVerification,
 )
 from primitive_sdk.models_generated import (
+    Headers as GeneratedHeaders,
+)
+from primitive_sdk.models_generated import (
     ParsedData as GeneratedParsedData,
 )
 from primitive_sdk.models_generated import (
@@ -77,10 +92,19 @@ from primitive_sdk.models_generated import (
     RawContentInline as GeneratedRawContentInline,
 )
 from primitive_sdk.models_generated import (
+    Spamassassin as GeneratedSpamassassin,
+)
+from primitive_sdk.models_generated import (
     SpfResult as GeneratedSpfResult,
 )
 from primitive_sdk.models_generated import (
+    Smtp as GeneratedSmtp,
+)
+from primitive_sdk.models_generated import (
     WebhookAttachment as GeneratedWebhookAttachment,
+)
+from primitive_sdk.models_generated import (
+    WebhookVersion as GeneratedWebhookVersion,
 )
 
 
@@ -90,16 +114,24 @@ def _add_enum_aliases(enum_cls, aliases: dict[str, object]):
     return enum_cls
 
 EmailReceivedEvent = GeneratedEmailReceivedEvent
+Delivery = GeneratedDelivery
+Smtp = GeneratedSmtp
+Headers = GeneratedHeaders
 RawContent = GeneratedRawContent
 RawContentInline = GeneratedRawContentInline
 RawContentDownloadOnly = GeneratedRawContentDownloadOnly
+Download = GeneratedDownload
 ParsedData = GeneratedParsedData
 ParsedDataComplete = GeneratedParsedDataComplete
 ParsedDataFailed = GeneratedParsedDataFailed
 ParsedError = GeneratedParsedError
+Content = GeneratedContent
+Email = GeneratedEmail
 EmailAddress = GeneratedEmailAddress
 WebhookAttachment = GeneratedWebhookAttachment
+WebhookVersion = GeneratedWebhookVersion
 EmailAnalysis = GeneratedEmailAnalysis
+Spamassassin = GeneratedSpamassassin
 ForwardAnalysis = GeneratedForwardAnalysis
 ForwardResult = GeneratedForwardResult
 ForwardResultInline = GeneratedForwardResultInline
@@ -196,7 +228,7 @@ class AuthVerdict(StrEnum):
 @dataclass(slots=True)
 class ValidateEmailAuthResult:
     verdict: AuthVerdict
-    confidence: AuthConfidence
+    confidence: Literal["high", "medium", "low"]
     reasons: list[str]
 
 
@@ -206,5 +238,5 @@ class UnknownEvent(TypedDict):
     version: NotRequired[str]
 
 
-KnownWebhookEvent: TypeAlias = EmailReceivedEvent
+KnownWebhookEvent: TypeAlias = GeneratedEmailReceivedEvent
 WebhookEvent: TypeAlias = KnownWebhookEvent | UnknownEvent
