@@ -580,6 +580,16 @@ describe("decodeRawEmail", () => {
     expect(() => decodeRawEmail(event)).toThrow(RawEmailDecodeError);
   });
 
+  it("accepts uppercase SHA-256 hashes", () => {
+    const base64 = Buffer.from("Hello World").toString("base64");
+    const event = createEventWithRaw(
+      base64,
+      createHash("sha256").update("Hello World").digest("hex").toUpperCase(),
+    );
+
+    expect(decodeRawEmail(event).toString()).toBe("Hello World");
+  });
+
   it("skips verification when verify: false", () => {
     const base64 = Buffer.from("test").toString("base64");
     const event = createEventWithRaw(base64, "wrong-hash");
@@ -714,6 +724,17 @@ describe("verifyRawEmailDownload", () => {
     const uint8Array = new Uint8Array(buffer);
 
     const result = verifyRawEmailDownload(uint8Array, event);
+    expect(result.toString()).toBe(content);
+  });
+
+  it("accepts uppercase SHA-256 hashes", () => {
+    const content = "Hello, World!";
+    const buffer = Buffer.from(content);
+    const event = createEventWithHash(
+      createHash("sha256").update(buffer).digest("hex").toUpperCase(),
+    );
+
+    const result = verifyRawEmailDownload(buffer, event);
     expect(result.toString()).toBe(content);
   });
 

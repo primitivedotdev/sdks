@@ -564,6 +564,7 @@ describe("metadata extraction", () => {
     });
 
     expect(result.date).toBeInstanceOf(Date);
+    expect(result.dateHeader).toBe("Sun, 15 Dec 2024 10:00:00 -0800");
   });
 });
 

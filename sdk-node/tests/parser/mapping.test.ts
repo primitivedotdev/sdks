@@ -48,6 +48,7 @@ function createParsedEmail(
     subject: "Test Subject",
     messageId: "<msg-123@example.com>",
     date: new Date("2025-06-15T10:30:00.000Z"),
+    dateHeader: "Sun, 15 Jun 2025 10:30:00 +0000",
     from: "sender@example.com",
     to: "recipient@example.com",
     replyTo: [{ address: "reply@example.com", name: "Reply" }],
@@ -228,13 +229,14 @@ describe("toCanonicalHeaders", () => {
       subject: "Test Subject",
       from: "sender@example.com",
       to: "recipient@example.com",
-      date: "2025-06-15T10:30:00.000Z",
+      date: "Sun, 15 Jun 2025 10:30:00 +0000",
     });
   });
 
-  it("converts Date to ISO string", () => {
+  it("falls back to ISO string when the original Date header is unavailable", () => {
     const parsed = createParsedEmail({
       date: new Date("2024-01-01T00:00:00.000Z"),
+      dateHeader: null,
     });
     const headers = toCanonicalHeaders(parsed);
 
@@ -242,7 +244,7 @@ describe("toCanonicalHeaders", () => {
   });
 
   it("handles null date", () => {
-    const parsed = createParsedEmail({ date: null });
+    const parsed = createParsedEmail({ date: null, dateHeader: null });
     const headers = toCanonicalHeaders(parsed);
 
     expect(headers.date).toBeNull();

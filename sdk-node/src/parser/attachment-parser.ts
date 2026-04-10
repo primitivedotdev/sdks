@@ -67,6 +67,7 @@ export interface ParsedEmailWithAttachments {
   subject: string | null;
   messageId: string | null;
   date: Date | null;
+  dateHeader: string | null;
   from: string | null;
   to: string | null;
 
@@ -169,6 +170,7 @@ export async function parseEmailWithAttachments(
     subject: parsed.subject ?? null,
     messageId: parsed.messageId ?? null,
     date: parsed.date ?? null,
+    dateHeader: getOriginalHeaderValue(parsed, "date"),
     from: parsed.from?.text ?? null,
     to: Array.isArray(parsed.to)
       ? parsed.to.map((a) => a.text).join(", ")
@@ -274,6 +276,25 @@ function getHeaderString(value: unknown): string | null {
     return v.value;
   }
   return String(value);
+}
+
+function getOriginalHeaderValue(parsed: ParsedMail, key: string): string | null {
+  const headerLines = (
+    parsed as ParsedMail & {
+      headerLines?: Array<{ key?: string; line?: string }>;
+    }
+  ).headerLines;
+
+  const original = headerLines?.find(
+    (header) => header.key?.toLowerCase() === key.toLowerCase(),
+  )?.line;
+
+  if (!original) {
+    return null;
+  }
+
+  const separator = original.indexOf(":");
+  return separator === -1 ? original : original.slice(separator + 1).trimStart();
 }
 
 /**

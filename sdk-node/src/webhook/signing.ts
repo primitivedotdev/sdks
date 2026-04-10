@@ -67,6 +67,9 @@ const FUTURE_TOLERANCE_SECONDS = 60;
 /** Valid hex pattern for signature verification */
 const HEX_PATTERN = /^[0-9a-f]+$/i;
 
+/** Strict unix-seconds pattern for the timestamp component */
+const UNIX_SECONDS_PATTERN = /^\d+$/;
+
 /**
  * Result from signing a webhook payload
  */
@@ -157,8 +160,12 @@ function parseSignatureHeader(
     if (!key || !value) continue;
 
     if (key === "t") {
-      const parsed = Number.parseInt(value, 10);
-      if (!Number.isNaN(parsed)) {
+      if (!UNIX_SECONDS_PATTERN.test(value)) {
+        continue;
+      }
+
+      const parsed = Number(value);
+      if (Number.isSafeInteger(parsed)) {
         timestamp = parsed;
       }
     } else if (key === "v1") {

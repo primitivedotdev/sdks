@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -247,6 +248,26 @@ func TestRawEmailHelpers(t *testing.T) {
 	}
 	if string(verified) != "Hello World" {
 		t.Fatalf("unexpected verified content: %q", string(verified))
+	}
+
+	payload["email"].(map[string]any)["content"].(map[string]any)["raw"].(map[string]any)["sha256"] = strings.ToUpper(
+		payload["email"].(map[string]any)["content"].(map[string]any)["raw"].(map[string]any)["sha256"].(string),
+	)
+
+	decodedUpper, err := DecodeRawEmail(payload)
+	if err != nil {
+		t.Fatalf("DecodeRawEmail should accept uppercase hashes: %v", err)
+	}
+	if string(decodedUpper) != "Hello World" {
+		t.Fatalf("unexpected uppercase decoded content: %q", string(decodedUpper))
+	}
+
+	verifiedUpper, err := VerifyRawEmailDownload([]byte("Hello World"), payload)
+	if err != nil {
+		t.Fatalf("VerifyRawEmailDownload should accept uppercase hashes: %v", err)
+	}
+	if string(verifiedUpper) != "Hello World" {
+		t.Fatalf("unexpected uppercase verified content: %q", string(verifiedUpper))
 	}
 }
 

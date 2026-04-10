@@ -154,6 +154,14 @@ def _parse_signature_header(signature_header: str) -> tuple[int, list[str]] | No
     return timestamp, signatures
 
 
+def _header_value_to_string(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return buffer_to_string(bytes(value), "Primitive-Signature header")
+    return str(value)
+
+
 def verify_webhook_signature(
     *,
     raw_body: str | bytes | bytearray | memoryview,
@@ -259,12 +267,10 @@ def _get_signature_header(headers: Mapping[str, Any]) -> str:
     for key, value in headers.items():
         if key.lower() != "primitive-signature":
             continue
-        if isinstance(value, str):
-            return value
         if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
             first = value[0] if value else ""
-            return first if isinstance(first, str) else str(first)
-        return str(value)
+            return _header_value_to_string(first)
+        return _header_value_to_string(value)
     return ""
 
 

@@ -316,6 +316,19 @@ describe("verifyWebhookSignature", () => {
     ).toThrow(expect.objectContaining({ code: "INVALID_SIGNATURE_HEADER" }));
   });
 
+  it("throws INVALID_SIGNATURE_HEADER for timestamps with trailing junk", () => {
+    const { v1 } = signWebhookPayload(rawBody, secret, 123);
+
+    expect(() =>
+      verifyWebhookSignature({
+        rawBody,
+        signatureHeader: `t=123junk,v1=${v1}`,
+        secret,
+        nowSeconds: 123,
+      }),
+    ).toThrow(expect.objectContaining({ code: "INVALID_SIGNATURE_HEADER" }));
+  });
+
   it("throws TIMESTAMP_OUT_OF_RANGE for old signatures", () => {
     const timestamp = Math.floor(Date.now() / 1000) - 6 * 60; // 6 minutes ago
     const { header } = signWebhookPayload(rawBody, secret, timestamp);

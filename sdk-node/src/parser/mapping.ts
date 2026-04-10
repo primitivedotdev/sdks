@@ -19,7 +19,7 @@ import type {
  * Convert parser output to canonical ParsedDataComplete (snake_case).
  *
  * Maps `bodyHtmlSanitized` → `body_html` (matching production behavior).
- * Converts Date objects to ISO strings.
+ * Preserves the original Date header value when available.
  * Coerces nullable `from`/`to` to non-nullable strings.
  *
  * @param parsed - Output from parseEmailWithAttachments()
@@ -110,6 +110,6 @@ export function toCanonicalHeaders(parsed: ParsedEmailWithAttachments): {
     subject: parsed.subject,
     from: parsed.from ?? "",
     to: parsed.to ?? "",
-    date: parsed.date?.toISOString() ?? null,
+    date: parsed.dateHeader ?? parsed.date?.toISOString() ?? null,
   };
 }

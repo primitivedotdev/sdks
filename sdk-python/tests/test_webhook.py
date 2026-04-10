@@ -225,6 +225,22 @@ def test_handle_webhook_finds_signature_with_uppercase_header_name(
     assert event.id == "evt_abc123"
 
 
+def test_handle_webhook_accepts_bytes_signature_header(
+    valid_payload: dict[str, Any],
+) -> None:
+    secret = "test-webhook-secret"
+    body = json.dumps(valid_payload)
+    header = sign_webhook_payload(body, secret)["header"].encode()
+
+    event = handle_webhook(
+        body=body,
+        headers={"primitive-signature": header},
+        secret=secret,
+    )
+
+    assert event.id == "evt_abc123"
+
+
 def test_handle_webhook_uses_first_signature_from_sequence_header(
     valid_payload: dict[str, Any],
 ) -> None:
@@ -257,6 +273,10 @@ def test_handle_webhook_coerces_non_string_header_values(valid_payload: dict[str
 
 def test_get_signature_header_skips_non_matching_keys_and_coerces_scalars() -> None:
     assert _get_signature_header({"content-type": "application/json", "primitive-signature": 123}) == "123"
+
+
+def test_get_signature_header_decodes_bytes_values() -> None:
+    assert _get_signature_header({"primitive-signature": b"t=123,v1=abc"}) == "t=123,v1=abc"
 
 
 def test_handle_webhook_rejects_invalid_version_format(

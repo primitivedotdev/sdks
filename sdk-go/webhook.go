@@ -111,9 +111,9 @@ func VerifyWebhookSignature(options VerifyOptions) (bool, error) {
 	if options.NowSeconds != nil {
 		now = *options.NowSeconds
 	}
-	tolerance := options.ToleranceSeconds
-	if tolerance == 0 {
-		tolerance = defaultToleranceSeconds
+	tolerance := defaultToleranceSeconds
+	if options.UseCustomTolerance || options.ToleranceSeconds != 0 {
+		tolerance = options.ToleranceSeconds
 	}
 	age := now - timestamp
 	if age > tolerance {
@@ -198,10 +198,11 @@ func IsEmailReceivedEvent(event any) bool {
 
 func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
 	_, err := VerifyWebhookSignature(VerifyOptions{
-		RawBody:          options.Body,
-		SignatureHeader:  getHeaderValue(options.Headers, PrimitiveSignatureHeader),
-		Secret:           options.Secret,
-		ToleranceSeconds: options.ToleranceSeconds,
+		RawBody:            options.Body,
+		SignatureHeader:    getHeaderValue(options.Headers, PrimitiveSignatureHeader),
+		Secret:             options.Secret,
+		ToleranceSeconds:   options.ToleranceSeconds,
+		UseCustomTolerance: options.UseCustomTolerance,
 	})
 	if err != nil {
 		return nil, err
@@ -313,7 +314,7 @@ func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 		expected, _ := getString(event, "email", "content", "raw", "sha256")
 		digest := sha256.Sum256(decoded)
 		actual := hex.EncodeToString(digest[:])
-		if actual != expected {
+		if !strings.EqualFold(actual, expected) {
 			return nil, NewRawEmailDecodeError("HASH_MISMATCH", fmt.Sprintf("SHA-256 hash mismatch. Expected: %s, got: %s. The raw email data may be corrupted.", expected, actual))
 		}
 	}
@@ -324,7 +325,7 @@ func VerifyRawEmailDownload(downloaded []byte, event any) ([]byte, error) {
 	expected, _ := getString(event, "email", "content", "raw", "sha256")
 	digest := sha256.Sum256(downloaded)
 	actual := hex.EncodeToString(digest[:])
-	if actual != expected {
+	if !strings.EqualFold(actual, expected) {
 		return nil, NewRawEmailDecodeError("HASH_MISMATCH", fmt.Sprintf("SHA-256 hash mismatch. Expected: %s, got: %s. The downloaded content may be corrupted.", expected, actual))
 	}
 	return downloaded, nil

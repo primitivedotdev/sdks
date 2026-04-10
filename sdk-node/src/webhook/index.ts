@@ -569,7 +569,7 @@ export function decodeRawEmail(
 
   if (verify) {
     const hash = createHash("sha256").update(decoded).digest("hex");
-    if (hash !== raw.sha256) {
+    if (hash !== raw.sha256.toLowerCase()) {
       throw new RawEmailDecodeError(
         "HASH_MISMATCH",
         `SHA-256 hash mismatch. Expected: ${raw.sha256}, got: ${hash}. The raw email data may be corrupted.`,
@@ -616,7 +616,7 @@ export function verifyRawEmailDownload(
   const hash = createHash("sha256").update(buffer).digest("hex");
   const expected = event.email.content.raw.sha256;
 
-  if (hash !== expected) {
+  if (hash !== expected.toLowerCase()) {
     throw new RawEmailDecodeError(
       "HASH_MISMATCH",
       `SHA-256 hash mismatch. Expected: ${expected}, got: ${hash}. The downloaded content may be corrupted.`,
