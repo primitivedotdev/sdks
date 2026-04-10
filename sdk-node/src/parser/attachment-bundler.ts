@@ -63,33 +63,55 @@ export async function bundleAttachments(
   // Collect output into a buffer
   const chunks: Buffer[] = [];
   const passThrough = new PassThrough();
-
-  passThrough.on("data", (chunk: Buffer) => {
-    chunks.push(chunk);
-  });
-
-  archive.pipe(passThrough);
-
-  // Track total bytes
   let totalAttachmentBytes = 0;
 
-  // Add each attachment to the archive
-  for (const att of downloadable) {
-    archive.append(att.content, { name: att.tarPath });
-    totalAttachmentBytes += att.sizeBytes;
-  }
+  const tarGzBuffer = await new Promise<Buffer>((resolve, reject) => {
+    let settled = false;
 
-  // Finalize the archive
-  await archive.finalize();
+    const cleanup = () => {
+      archive.off("error", rejectArchive);
+      archive.off("warning", rejectArchive);
+      passThrough.off("data", handleData);
+      passThrough.off("end", handleEnd);
+      passThrough.off("error", rejectArchive);
+    };
 
-  // Wait for all data to be collected
-  await new Promise<void>((resolve, reject) => {
-    passThrough.on("end", resolve);
-    passThrough.on("error", reject);
+    const rejectArchive = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    const handleData = (chunk: Buffer) => {
+      chunks.push(chunk);
+    };
+
+    const handleEnd = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(Buffer.concat(chunks));
+    };
+
+    archive.on("error", rejectArchive);
+    archive.on("warning", rejectArchive);
+    passThrough.on("data", handleData);
+    passThrough.on("end", handleEnd);
+    passThrough.on("error", rejectArchive);
+
+    archive.pipe(passThrough);
+
+    try {
+      for (const att of downloadable) {
+        archive.append(att.content, { name: att.tarPath });
+        totalAttachmentBytes += att.sizeBytes;
+      }
+      void archive.finalize().catch(rejectArchive);
+    } catch (error) {
+      rejectArchive(error instanceof Error ? error : new Error(String(error)));
+    }
   });
-
-  // Combine chunks into a single buffer
-  const tarGzBuffer = Buffer.concat(chunks);
 
   // Compute SHA-256
   const sha256 = createHash("sha256").update(tarGzBuffer).digest("hex");

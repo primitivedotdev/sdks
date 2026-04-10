@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { PassThrough } from "node:stream";
 import { gunzipSync } from "node:zlib";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   bundleAttachments,
   extractAttachmentMetadata,
@@ -60,6 +61,11 @@ function listTarEntries(buffer: Buffer): string[] {
 
   return files;
 }
+
+afterEach(() => {
+  vi.doUnmock("archiver");
+  vi.resetModules();
+});
 
 describe("attachment-bundler", () => {
   it("returns null when there are no downloadable attachments", async () => {
@@ -140,5 +146,32 @@ describe("attachment-bundler", () => {
     expect(getAttachmentsStorageKey("email-123", "abcdef1234567890")).toBe(
       "attachments/email-123_abcdef12.tar.gz",
     );
+  });
+
+  it("rejects when archiver emits an error", async () => {
+    vi.resetModules();
+
+    const archive = new PassThrough() as PassThrough & {
+      append: ReturnType<typeof vi.fn>;
+      finalize: () => Promise<void>;
+    };
+    archive.append = vi.fn();
+    archive.finalize = vi.fn(async () => {
+      queueMicrotask(() => {
+        archive.emit("error", new Error("archive failed"));
+      });
+    });
+
+    vi.doMock("archiver", () => ({
+      default: vi.fn(() => archive),
+    }));
+
+    const { bundleAttachments: bundleAttachmentsWithMock } = await import(
+      "../../src/parser/attachment-bundler.js"
+    );
+
+    await expect(
+      bundleAttachmentsWithMock([createAttachment()]),
+    ).rejects.toThrow("archive failed");
   });
 });
