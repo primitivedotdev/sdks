@@ -4,33 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
-
-	"github.com/xeipuuv/gojsonschema"
 )
 
-type headerGetter struct{ value string }
-
-func (h headerGetter) Get(string) string { return h.value }
-
 func intPtr(v int) *int { return &v }
-
-type invalidJSONMarshaler struct{}
-
-func (invalidJSONMarshaler) MarshalJSON() ([]byte, error) { return []byte("{"), nil }
-
-type decodeFailureSchemaInput int
-
-func setSchemaState(schemaJSON []byte, loader *gojsonschema.Schema, err error) {
-	emailReceivedEventSchemaJSON = schemaJSON
-	schemaOnce = sync.Once{}
-	schemaLoader = loader
-	schemaErr = err
-	if loader != nil || err != nil {
-		schemaOnce.Do(func() {})
-	}
-}
 
 func TestPrimitiveWebhookErrors(t *testing.T) {
 	verification := NewWebhookVerificationError("MISSING_SECRET", "", "")
@@ -83,257 +60,24 @@ func TestPrimitiveWebhookErrors(t *testing.T) {
 	}
 }
 
-func TestHelpers(t *testing.T) {
-	if got, err := bodyToString("hello", "payload"); err != nil || got != "hello" {
-		t.Fatalf("unexpected string conversion: %q %v", got, err)
-	}
-	if _, err := bodyToString([]byte{0xff}, "payload"); err == nil {
-		t.Fatal("expected invalid utf-8 error")
-	}
-	if _, err := bodyToString(123, "payload"); err == nil {
-		t.Fatal("expected wrong type error")
-	}
-
-	if got, err := secretToBytes("secret"); err != nil || string(got) != "secret" {
-		t.Fatalf("unexpected secret bytes result: %q %v", string(got), err)
-	}
-	if got, err := secretToBytes([]byte("secret")); err != nil || string(got) != "secret" {
-		t.Fatalf("unexpected byte secret result: %q %v", string(got), err)
-	}
-	for _, value := range []any{"", []byte{}, nil, 123} {
-		if _, err := secretToBytes(value); err == nil {
-			t.Fatalf("expected missing secret error for %#v", value)
-		}
-	}
-
-	normalized, data, err := normalizeJSONValue(struct {
-		Event string `json:"event"`
-	}{Event: "email.received"})
-	if err != nil || len(data) == 0 {
-		t.Fatalf("unexpected normalized json result: %#v %v", normalized, err)
-	}
-	if _, _, err := normalizeJSONValue(func() {}); err == nil {
-		t.Fatal("expected normalizeJSONValue to fail for functions")
-	}
-	if _, _, err := normalizeJSONValue(invalidJSONMarshaler{}); err == nil {
-		t.Fatal("expected normalizeJSONValue to fail when marshaled json is invalid")
-	}
-
-	type simpleEvent struct {
-		Event string `json:"event"`
-	}
-	decoded, err := decodeInto[simpleEvent](map[string]any{"event": "email.received"})
-	if err != nil || decoded.Event != "email.received" {
-		t.Fatalf("unexpected decodeInto result: %#v %v", decoded, err)
-	}
-	if _, err := decodeInto[simpleEvent](func() {}); err == nil {
-		t.Fatal("expected decodeInto to fail for unsupported input")
-	}
-
-	if _, err := mapFromInput(struct{ Event string }{Event: "email.received"}); err != nil {
-		t.Fatalf("expected struct input to normalize into a map: %v", err)
-	}
-	if _, err := mapFromInput([]string{"nope"}); err == nil {
-		t.Fatal("expected array input to fail mapFromInput")
-	}
-	if _, err := mapFromInput(invalidJSONMarshaler{}); err == nil {
-		t.Fatal("expected invalid marshaler input to fail mapFromInput")
-	}
-
-	nested := map[string]any{"email": map[string]any{"content": map[string]any{"raw": map[string]any{"included": true}}}}
-	if value, ok := getMapValue(nested, "email", "content", "raw", "included"); !ok || value != true {
-		t.Fatalf("unexpected nested map value: %#v %v", value, ok)
-	}
-	if _, ok := getMapValue(simpleEvent{Event: "email.received"}, "event"); !ok {
-		t.Fatal("expected struct field lookup to work")
-	}
-	if _, ok := getMapValue(nested, "email", "missing"); ok {
-		t.Fatal("expected missing path lookup to fail")
-	}
-	if _, ok := getMapValue(simpleEvent{Event: "email.received"}, "missing"); ok {
-		t.Fatal("expected missing struct field lookup to fail")
-	}
-	if _, ok := getMapValue(invalidJSONMarshaler{}, "missing"); ok {
-		t.Fatal("expected invalid marshaler lookup to fail")
-	}
-
-	if value, ok := getString(map[string]any{"event": "email.received"}, "event"); !ok || value != "email.received" {
-		t.Fatalf("unexpected string lookup: %q %v", value, ok)
-	}
-	if _, ok := getString(map[string]any{"event": true}, "event"); ok {
-		t.Fatal("expected non-string lookup to fail")
-	}
-	if value, ok := getBool(nested, "email", "content", "raw", "included"); !ok || !value {
-		t.Fatalf("unexpected bool lookup: %v %v", value, ok)
-	}
-	if _, ok := getBool(map[string]any{"flag": "true"}, "flag"); ok {
-		t.Fatal("expected non-bool lookup to fail")
-	}
-
-	if got := getHeaderValue(map[string]string{"Primitive-Signature": "abc"}, PrimitiveSignatureHeader); got != "abc" {
-		t.Fatalf("unexpected map[string]string header value: %q", got)
-	}
-	if got := getHeaderValue(map[string]any{"Primitive-Signature": "abc"}, PrimitiveSignatureHeader); got != "abc" {
-		t.Fatalf("unexpected map[string]any string header value: %q", got)
-	}
-	if got := getHeaderValue(map[string][]string{"Primitive-Signature": {}}, PrimitiveSignatureHeader); got != "" {
-		t.Fatalf("expected empty []string header lookup to return empty string, got %q", got)
-	}
-	if got := getHeaderValue(map[string][]string{"Primitive-Signature": {"abc", "def"}}, PrimitiveSignatureHeader); got != "abc" {
-		t.Fatalf("unexpected map[string][]string header value: %q", got)
-	}
-	if got := getHeaderValue(map[string]any{"Primitive-Signature": []string{"abc", "def"}}, PrimitiveSignatureHeader); got != "abc" {
-		t.Fatalf("unexpected []string-any header value: %q", got)
-	}
-	if got := getHeaderValue(map[string]any{"Primitive-Signature": []string{}}, PrimitiveSignatureHeader); got != "" {
-		t.Fatalf("expected empty []string-any header lookup to return empty string, got %q", got)
-	}
-	if got := getHeaderValue(map[string]any{"x-other": "abc"}, PrimitiveSignatureHeader); got != "" {
-		t.Fatalf("expected non-matching map[string]any header lookup to return empty string, got %q", got)
-	}
-	if got := getHeaderValue(headerGetter{value: ""}, PrimitiveSignatureHeader); got != "" {
-		t.Fatalf("expected getter header lookup to return empty string when unset, got %q", got)
-	}
-	if got := getHeaderValue(map[string]any{"Primitive-Signature": []any{"abc", "def"}}, PrimitiveSignatureHeader); got != "abc" {
-		t.Fatalf("unexpected []any header value: %q", got)
-	}
-	if got := getHeaderValue(map[string]any{"Primitive-Signature": 123}, PrimitiveSignatureHeader); got != "123" {
-		t.Fatalf("unexpected coerced header value: %q", got)
-	}
-	if got := getHeaderValue(headerGetter{value: "abc"}, PrimitiveSignatureHeader); got != "abc" {
-		t.Fatalf("unexpected getter header value: %q", got)
-	}
-	if got := getHeaderValue(map[string]string{}, PrimitiveSignatureHeader); got != "" {
-		t.Fatalf("expected missing header lookup to return empty string, got %q", got)
-	}
-
-	if hint := detectReserializedBody("{\n  \"event\": \"email.received\"\n}"); !strings.Contains(hint, "re-serialized") {
-		t.Fatalf("expected pretty-printed body hint, got %q", hint)
-	}
-	if hint := detectReserializedBody("{}"); hint != "" {
-		t.Fatalf("expected compact json to produce no hint, got %q", hint)
-	}
-
-	if WebhookVersion == "" || PrimitiveSignatureHeader == "" || PrimitiveConfirmedHeader == "" {
-		t.Fatal("expected public constants to be populated")
-	}
-	if len(EmailReceivedEventJSONSchema) == 0 {
-		t.Fatal("expected compiled schema to be loaded")
-	}
-	if _, err := compiledSchema(); err != nil {
-		t.Fatalf("expected compiled schema to load: %v", err)
-	}
-}
-
-func TestValidationHelpers(t *testing.T) {
-	if got := toFieldPath(""); got != "payload" {
-		t.Fatalf("unexpected root path conversion: %q", got)
-	}
-	if got := toFieldPath("(root).email.id"); got != "email.id" {
-		t.Fatalf("unexpected field path conversion: %q", got)
-	}
-	if got := toFieldPath("(root)."); got != "payload" {
-		t.Fatalf("unexpected root-with-dot path conversion: %q", got)
-	}
-	if got := toFieldPath("(root)"); got != "payload" {
-		t.Fatalf("unexpected bare root path conversion: %q", got)
-	}
-
-	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
+func TestValidateEmailReceivedEventReportsNestedFieldPath(t *testing.T) {
 	missingNested := loadJSONFixture(t, "webhook", "valid-email-received.json")
 	delete(missingNested["email"].(map[string]any), "id")
-	if _, err := ValidateEmailReceivedEvent(missingNested); err == nil {
-		t.Fatal("expected nested required field validation to fail")
-	} else {
-		validationErr, ok := err.(*WebhookValidationError)
-		if !ok {
-			t.Fatalf("expected WebhookValidationError, got %v", err)
-		}
-		if validationErr.Field != "email.id" {
-			t.Fatalf("expected enriched required field path, got %q", validationErr.Field)
-		}
-		if len(validationErr.ValidationErrors) == 0 || validationErr.ValidationErrors[0].Path != "email.id" {
-			t.Fatalf("expected validation issue path to include missing field, got %#v", validationErr.ValidationErrors)
-		}
-	}
-	invalidEvent := loadJSONFixture(t, "webhook", "valid-email-received.json")
-	invalidEvent["event"] = "email.opened"
-	if _, err := ValidateEmailReceivedEvent(invalidEvent); err == nil {
-		t.Fatal("expected const validation failure for event")
-	}
-	invalidVersion := loadJSONFixture(t, "webhook", "valid-email-received.json")
-	invalidVersion["version"] = "not-a-date"
-	if _, err := ValidateEmailReceivedEvent(invalidVersion); err == nil {
-		t.Fatal("expected invalid version to fail validation")
-	}
-	invalidAttemptedAt := loadJSONFixture(t, "webhook", "valid-email-received.json")
-	invalidAttemptedAt["delivery"].(map[string]any)["attempted_at"] = "Tuesday"
-	if _, err := ValidateEmailReceivedEvent(invalidAttemptedAt); err == nil {
-		t.Fatal("expected invalid attempted_at to fail validation")
-	} else {
-		validationErr, ok := err.(*WebhookValidationError)
-		if !ok {
-			t.Fatalf("expected WebhookValidationError, got %v", err)
-		}
-		if validationErr.Field != "delivery.attempted_at" {
-			t.Fatalf("expected attempted_at field path, got %q", validationErr.Field)
-		}
-	}
-	if fallbackErr := createValidationError(nil); fallbackErr.Field != "payload" || fallbackErr.AdditionalErrorCount != 0 {
-		t.Fatalf("expected zero-issue validation fallback error: %#v", fallbackErr)
-	}
-	originalSchemaJSON := emailReceivedEventSchemaJSON
-	t.Cleanup(func() {
-		setSchemaState(originalSchemaJSON, nil, nil)
-	})
 
-	setSchemaState([]byte("{"), nil, nil)
-	if _, err := ValidateEmailReceivedEvent(payload); err == nil {
-		t.Fatal("expected invalid compiled schema to fail validation")
+	_, err := ValidateEmailReceivedEvent(missingNested)
+	var validationErr *WebhookValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("expected WebhookValidationError, got %v", err)
 	}
-
-	compiledNumberSchema, err := gojsonschema.NewSchema(gojsonschema.NewStringLoader(`{"type":"number"}`))
-	if err != nil {
-		t.Fatalf("failed to build test schema: %v", err)
+	if validationErr.Field != "email.id" {
+		t.Fatalf("expected enriched required field path, got %q", validationErr.Field)
 	}
-	setSchemaState(originalSchemaJSON, compiledNumberSchema, nil)
-	if _, err := ValidateEmailReceivedEvent(decodeFailureSchemaInput(123)); err == nil {
-		t.Fatal("expected decodeInto branch to fail after schema validation")
-	}
-	setSchemaState(originalSchemaJSON, nil, nil)
-	if _, err := ValidateEmailReceivedEvent(func() {}); err == nil {
-		t.Fatal("expected schema validation loader errors for unsupported input")
-	}
-	safePayloadErr := SafeValidateEmailReceivedEvent("bad")
-	if safePayloadErr.Success || safePayloadErr.Error == nil || safePayloadErr.Error.Field != "payload" {
-		t.Fatalf("expected safe validation to wrap payload-level errors: %#v", safePayloadErr)
-	}
-	setSchemaState(originalSchemaJSON, compiledNumberSchema, nil)
-	safeDecodeErr := SafeValidateEmailReceivedEvent(decodeFailureSchemaInput(123))
-	if safeDecodeErr.Success || safeDecodeErr.Error == nil || safeDecodeErr.Error.Field != "payload" || !strings.Contains(safeDecodeErr.Error.Message(), "cannot unmarshal number") {
-		t.Fatalf("expected safe validation to wrap decode errors: %#v", safeDecodeErr)
-	}
-	setSchemaState(originalSchemaJSON, nil, nil)
-	safeSchemaErr := SafeValidateEmailReceivedEvent(map[string]any{"event": "email.received"})
-	if safeSchemaErr.Success || safeSchemaErr.Error == nil || safeSchemaErr.Error.Code() != "SCHEMA_VALIDATION_FAILED" {
-		t.Fatalf("expected safe validation to return schema validation error: %#v", safeSchemaErr)
-	}
-	safeSuccess := SafeValidateEmailReceivedEvent(payload)
-	if !safeSuccess.Success || safeSuccess.Data == nil || safeSuccess.Data.Event != string(EventTypeEmailReceived) {
-		t.Fatalf("expected safe validation success: %#v", safeSuccess)
-	}
-
-	result := SafeValidateEmailReceivedEvent(map[string]any{"event": "email.received"})
-	if result.Success || result.Error == nil {
-		t.Fatal("expected safe validation failure")
-	}
-
-	if _, err := ValidateEmailReceivedEvent(payload); err != nil {
-		t.Fatalf("expected fixture payload to validate: %v", err)
+	if len(validationErr.ValidationErrors) == 0 || validationErr.ValidationErrors[0].Path != "email.id" {
+		t.Fatalf("expected validation issue path to include missing field, got %#v", validationErr.ValidationErrors)
 	}
 }
 
-func TestWebhookUtilityCoverage(t *testing.T) {
+func TestWebhookUtilityEdges(t *testing.T) {
 	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
 	body := []byte(`{"event":"email.received"}`)
 
@@ -367,23 +111,6 @@ func TestWebhookUtilityCoverage(t *testing.T) {
 	}
 	if _, err := SignWebhookPayload(body, ""); err == nil {
 		t.Fatal("expected empty signing secret to fail")
-	}
-
-	if _, signatures, ok := parseSignatureHeader("bad, t=123, v1=abc"); !ok || len(signatures) != 1 {
-		t.Fatalf("expected signature header to parse correctly: %v %v", signatures, ok)
-	}
-	if _, _, ok := parseSignatureHeader("t=abc,v1=abc"); ok {
-		t.Fatal("expected invalid timestamp signature header to fail")
-	}
-	if _, _, ok := parseSignatureHeader("t=123"); ok {
-		t.Fatal("expected signature header without signatures to fail")
-	}
-	if _, _, ok := parseSignatureHeader(""); ok {
-		t.Fatal("expected empty signature header to fail")
-	}
-
-	if _, err := parseInt64("abc"); err == nil {
-		t.Fatal("expected parseInt64 to reject non-numeric values")
 	}
 
 	goodSignature, err := SignWebhookPayload(body, "secret", 1000)

@@ -75,7 +75,7 @@ func parseSignatureHeader(signatureHeader string) (int64, []string, bool) {
 		}
 		switch key {
 		case "t":
-			t, err := parseInt64(value)
+			t, err := strconv.ParseInt(value, 10, 64)
 			if err == nil {
 				timestamp = t
 				hasTimestamp = true
@@ -88,10 +88,6 @@ func parseSignatureHeader(signatureHeader string) (int64, []string, bool) {
 		return 0, nil, false
 	}
 	return timestamp, signatures, true
-}
-
-func parseInt64(value string) (int64, error) {
-	return strconv.ParseInt(value, 10, 64)
 }
 
 func VerifyWebhookSignature(options VerifyOptions) (bool, error) {
@@ -278,12 +274,8 @@ func GetDownloadTimeRemaining(event any, nowMillis ...int64) (int64, error) {
 	return remaining, nil
 }
 
-func normalizeISO8601(value string) string {
-	return value
-}
-
 func parseRFC3339Timestamp(value string) (time.Time, error) {
-	return time.Parse(time.RFC3339Nano, normalizeISO8601(value))
+	return time.Parse(time.RFC3339Nano, value)
 }
 
 func IsRawIncluded(event any) (bool, error) {
