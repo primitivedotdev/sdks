@@ -19,6 +19,7 @@
             basedpyright
             biome
             git
+            gnumake
             go
             jq
             nil
