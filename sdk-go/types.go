@@ -278,8 +278,8 @@ type EmailAuth struct {
 	DMARC            DmarcResult     `json:"dmarc"`
 	DMARCPolicy      *DmarcPolicy    `json:"dmarcPolicy"`
 	DMARCFromDomain  *string         `json:"dmarcFromDomain"`
-	DMARCSpfAligned  bool            `json:"dmarcSpfAligned"`
-	DMARCDkimAligned bool            `json:"dmarcDkimAligned"`
+	DMARCSpfAligned  *bool           `json:"dmarcSpfAligned,omitempty"`
+	DMARCDkimAligned *bool           `json:"dmarcDkimAligned,omitempty"`
 	DMARCSpfStrict   *bool           `json:"dmarcSpfStrict"`
 	DMARCDkimStrict  *bool           `json:"dmarcDkimStrict"`
 	DKIMSignatures   []DKIMSignature `json:"dkimSignatures"`

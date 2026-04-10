@@ -9,6 +9,8 @@ import (
 
 func intPtr(v int) *int { return &v }
 
+func boolPtr(v bool) *bool { return &v }
+
 func TestPrimitiveWebhookErrors(t *testing.T) {
 	verification := NewWebhookVerificationError("MISSING_SECRET", "", "")
 	if verification.Error() == "" || verification.Name() != "WebhookVerificationError" {
@@ -271,10 +273,10 @@ func TestWebhookUtilityEdges(t *testing.T) {
 	if result, err := ValidateEmailAuth(map[string]any{"spf": "pass", "dmarc": "pass", "dmarcSpfAligned": false, "dmarcDkimAligned": false, "dkimSignatures": []map[string]any{}}); err != nil || result.Reasons[0] != "DMARC passed" {
 		t.Fatalf("expected DMARC-pass fallback branch: %#v %v", result, err)
 	}
-	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultPass, DMARC: DmarcResultPass, DMARCDkimAligned: true, DKIMSignatures: []DKIMSignature{{Domain: "example.com", Result: DkimResultPass, Aligned: true}}}); err != nil || result.Confidence != AuthConfidenceHigh {
+	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultPass, DMARC: DmarcResultPass, DMARCDkimAligned: boolPtr(true), DKIMSignatures: []DKIMSignature{{Domain: "example.com", Result: DkimResultPass, Aligned: true}}}); err != nil || result.Confidence != AuthConfidenceHigh {
 		t.Fatalf("expected aligned DKIM auth branch: %#v %v", result, err)
 	}
-	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultPass, DMARC: DmarcResultPass, DMARCSpfAligned: true}); err != nil || result.Reasons[0] != "DMARC passed with SPF alignment" {
+	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultPass, DMARC: DmarcResultPass, DMARCSpfAligned: boolPtr(true)}); err != nil || result.Reasons[0] != "DMARC passed with SPF alignment" {
 		t.Fatalf("expected SPF-aligned DMARC branch: %#v %v", result, err)
 	}
 	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultNone, DMARC: DmarcResultFail}); err != nil || result.Confidence != AuthConfidenceLow {
@@ -286,13 +288,13 @@ func TestWebhookUtilityEdges(t *testing.T) {
 	if result, err := ValidateEmailAuth(map[string]any{"spf": "none", "dmarc": "temperror", "dkimSignatures": []map[string]any{}}); err != nil || !strings.Contains(result.Reasons[0], "temperror") {
 		t.Fatalf("expected DMARC error branch: %#v %v", result, err)
 	}
-	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultPermerror, DMARC: DmarcResultPass, DMARCSpfAligned: false, DMARCDkimAligned: false}); err != nil || !strings.Contains(fmt.Sprint(result.Reasons), "SPF verification error") {
+	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultPermerror, DMARC: DmarcResultPass, DMARCSpfAligned: boolPtr(false), DMARCDkimAligned: boolPtr(false)}); err != nil || !strings.Contains(fmt.Sprint(result.Reasons), "SPF verification error") {
 		t.Fatalf("expected SPF error branch: %#v %v", result, err)
 	}
 	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultPass, DMARC: DmarcResultNone, DKIMSignatures: []DKIMSignature{{Domain: "example.com", Result: DkimResultPass, Aligned: true}}}); err != nil || !strings.Contains(fmt.Sprint(result.Reasons), "SPF passed") {
 		t.Fatalf("expected no-DMARC DKIM+SPF branch: %#v %v", result, err)
 	}
-	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultPass, DMARC: DmarcResultPass, DMARCDkimAligned: true}); err != nil || result.Reasons[0] != "DMARC passed" {
+	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultPass, DMARC: DmarcResultPass, DMARCDkimAligned: boolPtr(true)}); err != nil || result.Reasons[0] != "DMARC passed" {
 		t.Fatalf("expected DMARC fallback when alignment detail is missing: %#v %v", result, err)
 	}
 	if result, err := ValidateEmailAuth(EmailAuth{SPF: SpfResultFail, DMARC: DmarcResultNone}); err != nil || result.Confidence != AuthConfidenceMedium || result.Reasons[1] != "SPF failed - sending IP not authorized" {
@@ -301,8 +303,8 @@ func TestWebhookUtilityEdges(t *testing.T) {
 	weakResult, err := ValidateEmailAuth(EmailAuth{
 		SPF:              SpfResultPass,
 		DMARC:            DmarcResultPass,
-		DMARCDkimAligned: true,
-		DMARCSpfAligned:  true,
+		DMARCDkimAligned: boolPtr(true),
+		DMARCSpfAligned:  boolPtr(true),
 		DKIMSignatures:   []DKIMSignature{{Domain: "example.com", Result: DkimResultPass, Aligned: true, KeyBits: intPtr(512)}},
 	})
 	if err != nil || weakResult.Confidence != AuthConfidenceMedium || !strings.Contains(fmt.Sprint(weakResult.Reasons), "Weak DKIM key") {

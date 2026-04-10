@@ -208,7 +208,20 @@ func getHeaderValue(headers any, target string) string {
 				}
 			case []any:
 				if len(v) > 0 {
-					return fmt.Sprint(v[0])
+					switch first := v[0].(type) {
+					case string:
+						return first
+					case []byte:
+						if utf8.Valid(first) {
+							return string(first)
+						}
+					case json.RawMessage:
+						if utf8.Valid(first) {
+							return string(first)
+						}
+					default:
+						return fmt.Sprint(first)
+					}
 				}
 			default:
 				return fmt.Sprint(v)

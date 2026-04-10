@@ -49,6 +49,23 @@ func TestValidateEmailReceivedEvent(t *testing.T) {
 	if result.Error == nil || result.Error.Code() != "SCHEMA_VALIDATION_FAILED" {
 		t.Fatalf("unexpected validation error: %#v", result.Error)
 	}
+
+	delete(payload["email"].(map[string]any)["auth"].(map[string]any), "dmarcSpfAligned")
+	delete(payload["email"].(map[string]any)["auth"].(map[string]any), "dmarcDkimAligned")
+	eventWithoutAlignment, err := ValidateEmailReceivedEvent(payload)
+	if err != nil {
+		t.Fatalf("ValidateEmailReceivedEvent should accept missing DMARC alignment fields: %v", err)
+	}
+	if eventWithoutAlignment.Email.Auth.DMARCSpfAligned != nil || eventWithoutAlignment.Email.Auth.DMARCDkimAligned != nil {
+		t.Fatalf("expected missing DMARC alignment fields to stay nil, got %#v", eventWithoutAlignment.Email.Auth)
+	}
+	serialized, err := json.Marshal(eventWithoutAlignment)
+	if err != nil {
+		t.Fatalf("json.Marshal returned error: %v", err)
+	}
+	if strings.Contains(string(serialized), "dmarcSpfAligned") || strings.Contains(string(serialized), "dmarcDkimAligned") {
+		t.Fatalf("expected missing DMARC alignment fields to remain omitted, got %s", serialized)
+	}
 }
 
 func TestParseWebhookEvent(t *testing.T) {
@@ -263,6 +280,18 @@ func TestHandleWebhookAcceptsByteValuedSignatureHeader(t *testing.T) {
 	}
 	if event.ID != "evt_abc123" {
 		t.Fatalf("unexpected event ID: %s", event.ID)
+	}
+
+	eventFromSequence, err := HandleWebhook(HandleWebhookOptions{
+		Body:    body,
+		Headers: map[string]any{"primitive-signature": []any{[]byte(signed.Header)}},
+		Secret:  "test-webhook-secret",
+	})
+	if err != nil {
+		t.Fatalf("HandleWebhook should accept byte-valued header sequences: %v", err)
+	}
+	if eventFromSequence.ID != "evt_abc123" {
+		t.Fatalf("unexpected event ID from header sequence: %s", eventFromSequence.ID)
 	}
 }
 

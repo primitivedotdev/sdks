@@ -393,7 +393,7 @@ func ValidateEmailAuth(input any) (ValidateEmailAuthResult, error) {
 				aligned = append(aligned, sig.Domain)
 			}
 		}
-		if auth.DMARCDkimAligned && len(aligned) > 0 {
+		if auth.DMARCDkimAligned != nil && *auth.DMARCDkimAligned && len(aligned) > 0 {
 			reasons = append([]string{fmt.Sprintf("DMARC passed with DKIM alignment (%s)", strings.Join(aligned, ", "))}, reasons...)
 			confidence := AuthConfidenceHigh
 			if len(weakKeySignatures) > 0 {
@@ -401,7 +401,7 @@ func ValidateEmailAuth(input any) (ValidateEmailAuthResult, error) {
 			}
 			return ValidateEmailAuthResult{Verdict: AuthVerdictLegit, Confidence: confidence, Reasons: reasons}, nil
 		}
-		if auth.DMARCSpfAligned && auth.SPF == SpfResultPass {
+		if auth.DMARCSpfAligned != nil && *auth.DMARCSpfAligned && auth.SPF == SpfResultPass {
 			reasons = append([]string{"DMARC passed with SPF alignment"}, reasons...)
 			reasons = append(reasons, "No aligned DKIM signature (SPF can break through forwarding)")
 			return ValidateEmailAuthResult{Verdict: AuthVerdictLegit, Confidence: AuthConfidenceMedium, Reasons: reasons}, nil
