@@ -62,6 +62,9 @@ def main() -> None:
             "--use-union-operator",
             "--reuse-model",
             "--allow-extra-fields",
+            "--formatters",
+            "black",
+            "isort",
         ],
         check=True,
     )
