@@ -31,10 +31,11 @@ def _run_ruff(*args: str) -> None:
             )
 
     fallback_env = os.environ.copy()
-    fallback_env["PATH"] = ":".join(
+    venv_scripts_dir = ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin")
+    fallback_env["PATH"] = os.pathsep.join(
         entry
-        for entry in fallback_env.get("PATH", "").split(":")
-        if entry and Path(entry) != ROOT / ".venv" / "bin"
+        for entry in fallback_env.get("PATH", "").split(os.pathsep)
+        if entry and Path(entry) != venv_scripts_dir
     )
     subprocess.run(["ruff", *args], check=True, env=fallback_env)
 

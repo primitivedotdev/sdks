@@ -40,11 +40,25 @@ func TestPrimitiveWebhookErrors(t *testing.T) {
 	if verification.Message() != VerificationErrors["MISSING_SECRET"].Message {
 		t.Fatalf("expected default verification message")
 	}
+	var baseVerification *PrimitiveWebhookError
+	if !errors.As(verification, &baseVerification) {
+		t.Fatal("expected verification error to match PrimitiveWebhookError")
+	}
+	if baseVerification.Code() != "MISSING_SECRET" {
+		t.Fatalf("expected base verification code, got %q", baseVerification.Code())
+	}
 
 	payloadCause := errors.New("boom")
 	payload := NewWebhookPayloadError("PAYLOAD_EMPTY_BODY", "", "", payloadCause)
 	if !errors.Is(payload, payloadCause) {
 		t.Fatalf("expected payload error to unwrap cause")
+	}
+	var basePayload *PrimitiveWebhookError
+	if !errors.As(payload, &basePayload) {
+		t.Fatal("expected payload error to match PrimitiveWebhookError")
+	}
+	if basePayload.Code() != "PAYLOAD_EMPTY_BODY" {
+		t.Fatalf("expected base payload code, got %q", basePayload.Code())
 	}
 	if payload.ToMap()["code"] != "PAYLOAD_EMPTY_BODY" {
 		t.Fatalf("expected payload error map to include code")

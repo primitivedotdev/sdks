@@ -88,6 +88,15 @@ func (e *PrimitiveWebhookError) Error() string {
 	return fmt.Sprintf("%s [%s]: %s\n\nSuggestion: %s", e.Name(), e.Code(), e.Message(), e.Suggestion())
 }
 
+func (e *PrimitiveWebhookError) As(target any) bool {
+	primitiveTarget, ok := target.(**PrimitiveWebhookError)
+	if !ok {
+		return false
+	}
+	*primitiveTarget = e
+	return true
+}
+
 func (e *PrimitiveWebhookError) Unwrap() error {
 	return e.Cause
 }

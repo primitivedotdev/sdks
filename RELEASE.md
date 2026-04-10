@@ -35,8 +35,8 @@ Use this process when cutting a release for one or more SDKs.
 
 1. Ensure the `sdk-go/` module contents are ready to tag.
 2. Run `make go-check go-build`.
-3. Create and push a git tag for the release.
-4. Verify the tag resolves correctly through the Go module proxy.
+3. Create and push a subdirectory-prefixed git tag for the release, for example `sdk-go/v0.1.0`.
+4. Verify the subdirectory-prefixed tag resolves correctly through the Go module proxy.
 
 ## Shared Contract Changes
 

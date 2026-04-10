@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   confirmedHeaders,
   decodeRawEmail,
@@ -15,6 +15,7 @@ import {
   parseWebhookEvent,
   RawEmailDecodeError,
   verifyRawEmailDownload,
+  type UnknownEvent,
   WebhookPayloadError,
   WebhookValidationError,
   WebhookVerificationError,
@@ -39,6 +40,17 @@ describe("parseWebhookEvent", () => {
       expect(result.event).toBe("email.received");
       if (result.event === "email.received") {
         expect(result.id).toBe("evt_abc123");
+      }
+    });
+
+    it("preserves discriminant narrowing for known event types", () => {
+      const result = parseWebhookEvent(validPayload);
+
+      if (result.event === "email.received") {
+        expectTypeOf(result).toEqualTypeOf<EmailReceivedEvent>();
+      } else {
+        expectTypeOf(result).toEqualTypeOf<UnknownEvent>();
+        expectTypeOf(result.event).toMatchTypeOf<string>();
       }
     });
 

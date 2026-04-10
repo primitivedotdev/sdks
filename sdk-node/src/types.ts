@@ -137,8 +137,16 @@ export interface ValidateEmailAuthResult {
   reasons: string[];
 }
 
+declare const unknownEventTypeBrand: unique symbol;
+
+// Keep unknown events string-compatible without overlapping known event literals,
+// so `event.event === "email.received"` still narrows to EmailReceivedEvent.
+export type UnknownEventType = string & {
+  readonly [unknownEventTypeBrand]: true;
+};
+
 export interface UnknownEvent {
-  event: string;
+  event: UnknownEventType;
   id?: string;
   version?: string;
   [key: string]: unknown;
