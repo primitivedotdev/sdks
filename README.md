@@ -45,12 +45,6 @@ primitive-sdks/
 
 ## Development
 
-If you use Nix, install the shared toolchain with:
-
-```bash
-nix develop
-```
-
 Use the root `Makefile` as the main task interface:
 
 ```bash

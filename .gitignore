@@ -1,5 +1,8 @@
 .DS_Store
 .direnv/
+/.envrc
+/flake.nix
+/flake.lock
 node_modules/
 sdk-node/node_modules/
 sdk-node/dist/

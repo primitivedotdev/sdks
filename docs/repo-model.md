@@ -17,7 +17,6 @@ No root-level language workspace owns all three SDKs.
 The repository root provides coordination, not packaging.
 
 - `Makefile` is the shared task interface for checks, generation, and builds
-- `flake.nix` is the optional reproducible environment setup for contributors who use Nix
 - `.github/workflows/sdk-checks.yml` runs the same high-level tasks in CI
 - `json-schema/` and `test-fixtures/` define the shared contract across SDKs
 

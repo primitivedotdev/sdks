@@ -138,12 +138,6 @@ make python-check
 make python-build
 ```
 
-If you use Nix, from `primitive-sdks/`:
-
-```bash
-nix develop
-```
-
 ## Repository Layout
 
 ```text

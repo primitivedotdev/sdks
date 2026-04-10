@@ -157,12 +157,6 @@ make go-generate
 make go-check
 ```
 
-If you use Nix, from `primitive-sdks/`:
-
-```bash
-nix develop
-```
-
 ## Repository Layout
 
 ```text

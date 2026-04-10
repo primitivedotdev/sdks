@@ -195,12 +195,6 @@ make node-check
 make node-build
 ```
 
-If you use Nix, from `primitive-sdks/`:
-
-```bash
-nix develop
-```
-
 ## Package Layout
 
 ```text

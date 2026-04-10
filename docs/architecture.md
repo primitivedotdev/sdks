@@ -67,7 +67,6 @@ That behavior is part of the shared compatibility suite and should stay aligned 
 The repository separates orchestration from environment setup.
 
 - `Makefile` provides root-level workflows such as `make check`, `make shared-check`, and `make build`
-- `flake.nix` provides an optional reproducible development environment via `nix develop`
 - each SDK keeps its native package tooling inside its own directory
 
 ## CI Model
