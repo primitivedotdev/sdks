@@ -323,6 +323,15 @@ def test_raw_email_helpers(valid_payload: dict[str, Any]) -> None:
     assert verify_raw_email_download(downloaded, event) == downloaded
 
 
+def test_raw_email_helpers_accept_uppercase_hashes(valid_payload: dict[str, Any]) -> None:
+    event = valid_payload
+    uppercase_hash = hashlib.sha256(b"Hello World").hexdigest().upper()
+    event["email"]["content"]["raw"]["sha256"] = uppercase_hash
+
+    assert decode_raw_email(event) == b"Hello World"
+    assert verify_raw_email_download(b"Hello World", event) == b"Hello World"
+
+
 def test_decode_raw_email_skips_verification_when_requested(
     valid_payload: dict[str, Any],
 ) -> None:

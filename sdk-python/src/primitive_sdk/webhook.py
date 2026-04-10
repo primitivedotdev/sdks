@@ -300,6 +300,10 @@ def _parse_iso8601(value: str | datetime) -> datetime:
     return datetime.fromisoformat(normalized)
 
 
+def _normalize_sha256(value: str) -> str:
+    return value.lower()
+
+
 def is_download_expired(
     event: EmailReceivedEvent | Mapping[str, Any],
     now: int | None = None,
@@ -354,7 +358,7 @@ def decode_raw_email(
 
     if verify:
         digest = hashlib.sha256(decoded).hexdigest()
-        expected = _field(raw, "sha256")
+        expected = _normalize_sha256(_field(raw, "sha256"))
         if digest != expected:
             raise RawEmailDecodeError(
                 "HASH_MISMATCH",
@@ -371,7 +375,7 @@ def verify_raw_email_download(
     buffer = bytes(downloaded)
     digest = hashlib.sha256(buffer).hexdigest()
     raw = _unwrap_root(_field(_field(_field(event, "email"), "content"), "raw"))
-    expected = _field(raw, "sha256")
+    expected = _normalize_sha256(_field(raw, "sha256"))
     if digest != expected:
         raise RawEmailDecodeError(
             "HASH_MISMATCH",
