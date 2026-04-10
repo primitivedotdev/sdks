@@ -207,7 +207,7 @@ describe("contract", () => {
       const parsed: ParsedInputComplete = {
         status: "complete",
         body_text: "Plain text body",
-        body_html: "<p>HTML body</p>",
+        body_html: '<p>HTML body</p><img src="x" onerror="alert(1)">',
         attachments: [
           {
             filename: "test.pdf",
@@ -233,12 +233,34 @@ describe("contract", () => {
       if (event.email.parsed.status === "complete") {
         expect(event.email.parsed.error).toBeNull();
         expect(event.email.parsed.body_text).toBe("Plain text body");
-        expect(event.email.parsed.body_html).toBe("<p>HTML body</p>");
+        expect(event.email.parsed.body_html).toBe("<p>HTML body</p><img>");
         expect(event.email.parsed.attachments).toHaveLength(1);
         expect(event.email.parsed.attachments[0].filename).toBe("test.pdf");
         expect(event.email.parsed.attachments_download_url).toBe(
           "https://example.com/attachments.tar.gz",
         );
+      }
+    });
+
+    it("forces attachments_download_url to null when there are no attachments", () => {
+      const parsed: ParsedInputComplete = {
+        status: "complete",
+        body_text: "Plain text body",
+        body_html: "<p>HTML body</p>",
+        attachments: [],
+        attachments_storage_key: null,
+      };
+
+      const event = buildEmailReceivedEvent({
+        ...baseInput,
+        parsed,
+        attachments_download_url: "https://example.com/attachments.tar.gz",
+      });
+
+      expect(event.email.parsed.status).toBe("complete");
+      if (event.email.parsed.status === "complete") {
+        expect(event.email.parsed.attachments).toEqual([]);
+        expect(event.email.parsed.attachments_download_url).toBeNull();
       }
     });
 

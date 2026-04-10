@@ -104,7 +104,7 @@ describe("toParsedDataComplete", () => {
 
   it("passes through attachments_download_url", () => {
     const result = toParsedDataComplete(
-      createParsedEmail(),
+      createParsedEmail({ attachments: [createAttachment()] }),
       "https://cdn.example.com/attachments/123.tar.gz",
     );
     expect(result.attachments_download_url).toBe(
@@ -114,6 +114,16 @@ describe("toParsedDataComplete", () => {
 
   it("passes through null attachments_download_url", () => {
     const result = toParsedDataComplete(createParsedEmail(), null);
+    expect(result.attachments_download_url).toBeNull();
+  });
+
+  it("forces attachments_download_url to null when there are no attachments", () => {
+    const result = toParsedDataComplete(
+      createParsedEmail({ attachments: [] }),
+      "https://cdn.example.com/attachments/123.tar.gz",
+    );
+
+    expect(result.attachments).toEqual([]);
     expect(result.attachments_download_url).toBeNull();
   });
 
@@ -233,14 +243,14 @@ describe("toCanonicalHeaders", () => {
     });
   });
 
-  it("falls back to ISO string when the original Date header is unavailable", () => {
+  it("returns null when the original Date header is unavailable", () => {
     const parsed = createParsedEmail({
       date: new Date("2024-01-01T00:00:00.000Z"),
       dateHeader: null,
     });
     const headers = toCanonicalHeaders(parsed);
 
-    expect(headers.date).toBe("2024-01-01T00:00:00.000Z");
+    expect(headers.date).toBeNull();
   });
 
   it("handles null date", () => {

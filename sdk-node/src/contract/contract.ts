@@ -19,6 +19,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { sanitizeHtml } from "../parser/attachment-parser.js";
 import type {
   EmailAddress,
   EmailAnalysis,
@@ -283,14 +284,20 @@ export function buildEmailReceivedEvent(
       status: "complete",
       error: null,
       body_text: input.parsed.body_text,
-      body_html: input.parsed.body_html,
+      body_html:
+        input.parsed.body_html === null
+          ? null
+          : sanitizeHtml(input.parsed.body_html),
       reply_to: input.parsed.reply_to ?? null,
       cc: input.parsed.cc ?? null,
       bcc: input.parsed.bcc ?? null,
       in_reply_to: input.parsed.in_reply_to ?? null,
       references: input.parsed.references ?? null,
       attachments: input.parsed.attachments,
-      attachments_download_url: input.attachments_download_url,
+      attachments_download_url:
+        input.parsed.attachments.length === 0
+          ? null
+          : input.attachments_download_url,
     };
   } else if (input.parsed?.status === "failed") {
     parsedData = {

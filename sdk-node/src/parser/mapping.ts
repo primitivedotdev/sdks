@@ -30,6 +30,8 @@ export function toParsedDataComplete(
   parsed: ParsedEmailWithAttachments,
   attachmentsDownloadUrl: string | null,
 ): ParsedDataComplete {
+  const attachments = toWebhookAttachments(parsed.attachments);
+
   return {
     status: "complete",
     error: null,
@@ -40,8 +42,9 @@ export function toParsedDataComplete(
     bcc: parsed.bcc,
     in_reply_to: parsed.inReplyTo,
     references: parsed.references,
-    attachments: toWebhookAttachments(parsed.attachments),
-    attachments_download_url: attachmentsDownloadUrl,
+    attachments,
+    attachments_download_url:
+      attachments.length === 0 ? null : attachmentsDownloadUrl,
   };
 }
 
@@ -110,6 +113,6 @@ export function toCanonicalHeaders(parsed: ParsedEmailWithAttachments): {
     subject: parsed.subject,
     from: parsed.from ?? "",
     to: parsed.to ?? "",
-    date: parsed.dateHeader ?? parsed.date?.toISOString() ?? null,
+    date: parsed.dateHeader ?? null,
   };
 }
