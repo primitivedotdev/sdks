@@ -81,6 +81,18 @@ func TestParseWebhookEvent(t *testing.T) {
 	if _, err := ParseWebhookEvent([]map[string]any{{"event": "email.received"}}); err == nil {
 		t.Fatal("expected array payload error")
 	}
+
+	if _, err := ParseWebhookEvent([]byte(`{"event":"email.bounced","id":"evt_1"}`)); err == nil {
+		t.Fatal("expected raw byte payload error")
+	} else {
+		var payloadErr *WebhookPayloadError
+		if !errors.As(err, &payloadErr) {
+			t.Fatalf("expected WebhookPayloadError, got %v", err)
+		}
+		if payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE, got %s", payloadErr.Code())
+		}
+	}
 }
 
 func TestUnknownEventMarshalJSON(t *testing.T) {
@@ -201,6 +213,36 @@ func TestHandleWebhook(t *testing.T) {
 	}
 	if event.Event != string(EventTypeEmailReceived) {
 		t.Fatalf("unexpected event type: %s", event.Event)
+	}
+}
+
+func TestHandleWebhookEventPreservesLargeUnknownIntegersFromRawJSON(t *testing.T) {
+	body := []byte(`{"event":"future.test","seq":9007199254740993}`)
+	signed, err := SignWebhookPayload(body, "test-webhook-secret")
+	if err != nil {
+		t.Fatalf("SignWebhookPayload returned error: %v", err)
+	}
+
+	event, err := HandleWebhookEvent(HandleWebhookOptions{
+		Body:    body,
+		Headers: map[string]string{"primitive-signature": signed.Header},
+		Secret:  "test-webhook-secret",
+	})
+	if err != nil {
+		t.Fatalf("HandleWebhookEvent returned error: %v", err)
+	}
+
+	unknown, ok := event.(UnknownEvent)
+	if !ok {
+		t.Fatalf("expected UnknownEvent, got %T", event)
+	}
+
+	seq, ok := unknown.Payload["seq"].(json.Number)
+	if !ok {
+		t.Fatalf("expected json.Number for preserved integer, got %#v", unknown.Payload["seq"])
+	}
+	if string(seq) != "9007199254740993" {
+		t.Fatalf("expected preserved integer value, got %s", seq)
 	}
 }
 

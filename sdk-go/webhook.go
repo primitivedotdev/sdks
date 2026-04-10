@@ -29,8 +29,10 @@ func ParseJSONBody(rawBody any) (any, error) {
 	if strings.HasPrefix(body, "\ufeff") {
 		body = strings.TrimPrefix(body, "\ufeff")
 	}
+	decoder := json.NewDecoder(strings.NewReader(body))
+	decoder.UseNumber()
 	var parsed any
-	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
+	if err := decoder.Decode(&parsed); err != nil {
 		return nil, NewWebhookPayloadError(
 			"JSON_PARSE_FAILED",
 			"Failed to parse webhook body as JSON",
@@ -149,6 +151,15 @@ func VerifyWebhookSignature(options VerifyOptions) (bool, error) {
 func ParseWebhookEvent(input any) (WebhookEvent, error) {
 	if input == nil {
 		return nil, NewWebhookPayloadError("PAYLOAD_NULL", "Received null instead of webhook payload", "Check that your request body variable is defined.", nil)
+	}
+	switch input.(type) {
+	case []byte, json.RawMessage:
+		return nil, NewWebhookPayloadError(
+			"PAYLOAD_WRONG_TYPE",
+			fmt.Sprintf("Received %T instead of webhook payload object", input),
+			"Webhook payloads must be objects.",
+			nil,
+		)
 	}
 	kind := reflect.TypeOf(input).Kind()
 	if kind == reflect.Slice || kind == reflect.Array {
