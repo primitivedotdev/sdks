@@ -50,7 +50,7 @@ python-check: python-check-generated
 
 python-build:
 	rm -rf sdk-python/dist
-	cd sdk-python && uv run python -m build
+	cd sdk-python && uv run python -m build && uv run twine check dist/*
 
 python-smoke: python-build
 	smoke_dir=$$(mktemp -d) && wheel_path=$$($(PYTHON) -c "from pathlib import Path; wheels = sorted(Path('sdk-python/dist').glob('*.whl')); assert len(wheels) == 1, wheels; print(wheels[0])") && $(PYTHON) -m venv "$$smoke_dir/venv" && "$$smoke_dir/venv/bin/pip" install "$$wheel_path" && "$$smoke_dir/venv/bin/python" -c "import primitive_sdk; primitive_sdk.handle_webhook"
