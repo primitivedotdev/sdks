@@ -14,6 +14,7 @@ from pydantic import (
     Field,
     RootModel as PydanticRootModel,
     UrlConstraints,
+    field_validator,
 )
 
 RootT = TypeVar("RootT")
@@ -678,14 +679,14 @@ class EmailAuth(BaseModel):
         ),
     ]
     dmarc_spf_aligned: Annotated[
-        bool,
+        bool | None,
         Field(
             alias="dmarcSpfAligned",
             description="Whether SPF aligned with the From: domain for DMARC purposes.\n\nTrue if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments.",
         ),
     ] = None
     dmarc_dkim_aligned: Annotated[
-        bool,
+        bool | None,
         Field(
             alias="dmarcDkimAligned",
             description="Whether DKIM aligned with the From: domain for DMARC purposes.\n\nTrue if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments.",
@@ -712,6 +713,13 @@ class EmailAuth(BaseModel):
             description="All DKIM signatures found in the email with their verification results.\n\nMay be empty if no DKIM signatures were present.",
         ),
     ]
+
+    @field_validator("dmarc_spf_aligned", "dmarc_dkim_aligned", mode="before")
+    @classmethod
+    def reject_explicit_null_optional_alignment_flags(cls, value):
+        if value is None:
+            raise ValueError("Field may be omitted but must not be null")
+        return value
 
 
 class ForwardResult(
@@ -762,12 +770,19 @@ class EmailAnalysis(BaseModel):
         extra="allow",
     )
     spamassassin: Annotated[
-        Spamassassin, Field(description="SpamAssassin analysis results.")
+        Spamassassin | None, Field(description="SpamAssassin analysis results.")
     ] = None
     forward: Annotated[
-        ForwardAnalysis,
+        ForwardAnalysis | None,
         Field(description="Forward detection and analysis results."),
     ] = None
+
+    @field_validator("spamassassin", "forward", mode="before")
+    @classmethod
+    def reject_explicit_null_optional_objects(cls, value):
+        if value is None:
+            raise ValueError("Field may be omitted but must not be null")
+        return value
 
 
 class Email(BaseModel):
