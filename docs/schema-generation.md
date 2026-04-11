@@ -62,11 +62,11 @@ make go-generate
 Generated files:
 
 - `sdk-go/schema_generated.go`
-- `sdk-go/schema.go` loads and exposes the embedded schema at runtime
 
 How it works:
 
-- `sdk-go/scripts/generate_schema_module.py` embeds the canonical JSON schema in Go source
+- `sdk-go/scripts/generate_schema_module.py` embeds the canonical JSON schema in `sdk-go/schema_generated.go`
+- `sdk-go/schema.go` loads and exposes the embedded schema at runtime
 
 ## CI Enforcement
 

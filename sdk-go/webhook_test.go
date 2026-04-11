@@ -115,6 +115,20 @@ func TestParseWebhookEvent(t *testing.T) {
 	if fromRawMessage.GetEvent() != "email.bounced" {
 		t.Fatalf("unexpected event type from json.RawMessage: %s", fromRawMessage.GetEvent())
 	}
+
+	for _, input := range []any{[]byte("null"), json.RawMessage("null")} {
+		if _, err := ParseWebhookEvent(input); err == nil {
+			t.Fatalf("expected null payload error for %T", input)
+		} else {
+			var payloadErr *WebhookPayloadError
+			if !errors.As(err, &payloadErr) {
+				t.Fatalf("expected WebhookPayloadError for %T, got %v", input, err)
+			}
+			if payloadErr.Code() != "PAYLOAD_NULL" {
+				t.Fatalf("expected PAYLOAD_NULL for %T, got %s", input, payloadErr.Code())
+			}
+		}
+	}
 }
 
 func TestParseJSONBodyRejectsTrailingContent(t *testing.T) {

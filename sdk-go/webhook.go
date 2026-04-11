@@ -173,6 +173,9 @@ func ParseWebhookEvent(input any) (WebhookEvent, error) {
 		}
 		input = parsed
 	}
+	if input == nil {
+		return nil, NewWebhookPayloadError("PAYLOAD_NULL", "Received null instead of webhook payload", "Check that your request body variable is defined.", nil)
+	}
 	kind := reflect.TypeOf(input).Kind()
 	if kind == reflect.Slice || kind == reflect.Array {
 		return nil, NewWebhookPayloadError("PAYLOAD_IS_ARRAY", "Received array instead of webhook payload object", "Webhook payloads must be objects, not arrays.", nil)

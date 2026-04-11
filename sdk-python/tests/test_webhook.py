@@ -175,6 +175,18 @@ def test_validated_event_model_dump_round_trips_with_schema_aliases(
     assert validate_email_received_event(dumped).id == event.id
 
 
+def test_validated_event_model_dump_json_round_trips_with_schema_aliases(
+    valid_payload: dict[str, Any],
+) -> None:
+    event = validate_email_received_event(valid_payload)
+    dumped = json.loads(event.model_dump_json())
+
+    assert "from" in dumped["email"]["headers"]
+    assert "from_" not in dumped["email"]["headers"]
+    assert dumped["email"]["analysis"] == {}
+    assert validate_email_received_event(dumped).id == event.id
+
+
 def test_parse_webhook_event_rejects_bad_inputs() -> None:
     with pytest.raises(WebhookPayloadError):
         parse_webhook_event(None)

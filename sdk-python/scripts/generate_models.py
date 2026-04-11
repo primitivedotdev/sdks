@@ -103,6 +103,7 @@ def _patch_generated_models() -> None:
         "        return super().model_dump(*args, **kwargs)\n\n"
         "    def model_dump_json(self, *args, **kwargs):\n"
         "        kwargs.setdefault(\"by_alias\", True)\n"
+        "        kwargs.setdefault(\"exclude_defaults\", True)\n"
         "        return super().model_dump_json(*args, **kwargs)\n\n\n"
         "class RootModel(PydanticRootModel[RootT]):\n"
         "    def __getattr__(self, name: str):\n"
@@ -114,6 +115,7 @@ def _patch_generated_models() -> None:
         "        return super().model_dump(*args, **kwargs)\n\n"
         "    def model_dump_json(self, *args, **kwargs):\n"
         "        kwargs.setdefault(\"by_alias\", True)\n"
+        "        kwargs.setdefault(\"exclude_defaults\", True)\n"
         "        return super().model_dump_json(*args, **kwargs)\n",
     )
 

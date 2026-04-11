@@ -37,6 +37,7 @@ class BaseModel(PydanticBaseModel):
 
     def model_dump_json(self, *args, **kwargs):
         kwargs.setdefault("by_alias", True)
+        kwargs.setdefault("exclude_defaults", True)
         return super().model_dump_json(*args, **kwargs)
 
 
@@ -52,6 +53,7 @@ class RootModel(PydanticRootModel[RootT]):
 
     def model_dump_json(self, *args, **kwargs):
         kwargs.setdefault("by_alias", True)
+        kwargs.setdefault("exclude_defaults", True)
         return super().model_dump_json(*args, **kwargs)
 
 
