@@ -80,6 +80,23 @@ def test_validate_email_received_event_accepts_date_formatted_version(
     assert event.version.root == "2030-12-31"
 
 
+def test_validate_email_received_event_rejects_empty_from_header(
+    valid_payload: dict[str, Any],
+) -> None:
+    with pytest.raises(WebhookValidationError) as error:
+        validate_email_received_event(
+            {
+                **valid_payload,
+                "email": {
+                    **valid_payload["email"],
+                    "headers": {**valid_payload["email"]["headers"], "from": ""},
+                },
+            }
+        )
+
+    assert error.value.field == "email.headers.from"
+
+
 def test_validate_email_received_event_rejects_invalid_received_at_format(
     valid_payload: dict[str, Any],
 ) -> None:

@@ -748,6 +748,28 @@ describe("validation", () => {
     }
   });
 
+  it("humanizes empty required header strings", () => {
+    try {
+      validateEmailReceivedEvent({
+        ...validPayload,
+        email: {
+          ...validPayload.email,
+          headers: {
+            ...validPayload.email.headers,
+            from: "",
+          },
+        },
+      });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      const validationError = error as WebhookValidationError;
+      expect(validationError.field).toBe("email.headers.from");
+      expect(validationError.message).toBe(
+        "Invalid value for email.headers.from: must not be empty",
+      );
+    }
+  });
+
   it("formats version pattern failures with an unknown value when the payload is missing it", async () => {
     const mockedValidator = Object.assign(() => false, {
       errors: [

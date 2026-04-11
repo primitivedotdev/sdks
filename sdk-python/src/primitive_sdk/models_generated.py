@@ -121,12 +121,14 @@ class Headers(BaseModel):
         Field(
             alias="from",
             description='From header value. May include display name: `"John Doe" <john@example.com>`',
+            min_length=1,
         ),
     ]
     to: Annotated[
         str,
         Field(
-            description="To header value. May include multiple addresses or display names."
+            description="To header value. May include multiple addresses or display names.",
+            min_length=1,
         ),
     ]
     date: Annotated[

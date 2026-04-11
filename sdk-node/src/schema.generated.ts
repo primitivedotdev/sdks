@@ -120,10 +120,12 @@ export const emailReceivedEventJsonSchema = {
                 },
                 "from": {
                   "type": "string",
+                  "minLength": 1,
                   "description": "From header value. May include display name: `\"John Doe\" <john@example.com>`"
                 },
                 "to": {
                   "type": "string",
+                  "minLength": 1,
                   "description": "To header value. May include multiple addresses or display names."
                 },
                 "date": {

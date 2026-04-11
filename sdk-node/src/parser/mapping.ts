@@ -108,11 +108,27 @@ export function toCanonicalHeaders(parsed: ParsedEmailWithAttachments): {
   to: string;
   date: string | null;
 } {
+  const from = requireNonEmptyHeader(parsed.from, "From");
+  const to = requireNonEmptyHeader(parsed.to, "To");
+
   return {
     message_id: parsed.messageId,
     subject: parsed.subject,
-    from: parsed.from ?? "",
-    to: parsed.to ?? "",
+    from,
+    to,
     date: parsed.dateHeader ?? null,
   };
+}
+
+function requireNonEmptyHeader(
+  value: string | null,
+  headerName: "From" | "To",
+): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(
+      `Parsed email is missing a usable ${headerName} header value`,
+    );
+  }
+
+  return value;
 }
