@@ -160,7 +160,7 @@ class WebhookVersion(RootModel[str]):
         str,
         Field(
             description="Valid webhook version format (YYYY-MM-DD date string). The SDK accepts any valid date-formatted version, not just the current one, for forward and backward compatibility.",
-            pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            pattern="^(?:(?:\\d{4}-(?:(?:01|03|05|07|08|10|12)-(?:0[1-9]|[12]\\d|3[01])|(?:04|06|09|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))|(?:(?:[02468][048]00|[13579][26]00|\\d{2}(?:0[48]|[2468][048]|[13579][26]))-02-29))$",
         ),
     ]
 

@@ -96,7 +96,7 @@
       "payload": {
         "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         "event": "email.received",
-        "version": "not-a-date"
+        "version": "2025-99-99"
       },
       "expected": {
         "valid": false,

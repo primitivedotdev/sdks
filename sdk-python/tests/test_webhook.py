@@ -348,7 +348,7 @@ def test_handle_webhook_rejects_invalid_version_format(
     valid_payload: dict[str, Any],
 ) -> None:
     secret = "test-webhook-secret"
-    body = json.dumps({**valid_payload, "version": "not-a-date"})
+    body = json.dumps({**valid_payload, "version": "2025-99-99"})
     header = sign_webhook_payload(body, secret)["header"]
 
     with pytest.raises(WebhookValidationError):

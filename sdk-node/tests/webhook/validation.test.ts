@@ -737,12 +737,12 @@ describe("validation", () => {
 
   it("formats version pattern failures like the old validator", () => {
     try {
-      validateEmailReceivedEvent({ ...validPayload, version: "not-a-date" });
+      validateEmailReceivedEvent({ ...validPayload, version: "2025-99-99" });
       throw new Error("expected validation to fail");
     } catch (error) {
       const validationError = error as WebhookValidationError;
       expect(validationError.message).toBe(
-        'Invalid version format: "not-a-date"',
+        'Invalid version format: "2025-99-99"',
       );
       expect(validationError.suggestion).toContain("YYYY-MM-DD");
     }

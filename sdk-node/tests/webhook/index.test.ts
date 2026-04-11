@@ -373,7 +373,7 @@ describe("handleWebhook", () => {
     });
 
     it("throws WebhookValidationError for invalid version format", () => {
-      const invalidVersion = { ...validPayload, version: "not-a-date" };
+      const invalidVersion = { ...validPayload, version: "2025-99-99" };
       const body = JSON.stringify(invalidVersion);
       const { header } = signWebhookPayload(body, secret);
 
