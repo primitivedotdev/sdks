@@ -166,7 +166,7 @@ func ParseWebhookEvent(input any) (WebhookEvent, error) {
 		return nil, NewWebhookPayloadError("PAYLOAD_NULL", "Received null instead of webhook payload", "Check that your request body variable is defined.", nil)
 	}
 	switch input.(type) {
-	case string, []byte, json.RawMessage:
+	case []byte, json.RawMessage:
 		parsed, err := ParseJSONBody(input)
 		if err != nil {
 			return nil, err
