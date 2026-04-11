@@ -1,0 +1,192 @@
+{
+  "cases": [
+    {
+      "name": "gmail",
+      "input": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "gmail.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "gmail.com",
+            "selector": "20230601",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "legit",
+        "confidence": "high"
+      }
+    },
+    {
+      "name": "resend",
+      "input": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "none",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "resend.dev",
+            "selector": "resend",
+            "result": "pass",
+            "aligned": false,
+            "keyBits": 1024,
+            "algo": "rsa-sha256"
+          },
+          {
+            "domain": "example.com",
+            "selector": "resend",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 1024,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "legit",
+        "confidence": "high"
+      }
+    },
+    {
+      "name": "phishing",
+      "input": {
+        "spf": "fail",
+        "dmarc": "fail",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "paypal.com",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": false,
+        "dmarcSpfStrict": true,
+        "dmarcDkimStrict": true,
+        "dkimSignatures": []
+      },
+      "expected": {
+        "verdict": "suspicious",
+        "confidence": "high"
+      }
+    },
+    {
+      "name": "legacy_no_dmarc",
+      "input": {
+        "spf": "pass",
+        "dmarc": "none",
+        "dmarcPolicy": null,
+        "dmarcFromDomain": null,
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": false,
+        "dmarcSpfStrict": null,
+        "dmarcDkimStrict": null,
+        "dkimSignatures": []
+      },
+      "expected": {
+        "verdict": "unknown",
+        "confidence": "low"
+      }
+    },
+    {
+      "name": "forwarded",
+      "input": {
+        "spf": "fail",
+        "dmarc": "pass",
+        "dmarcPolicy": "none",
+        "dmarcFromDomain": "original.com",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "original.com",
+            "selector": "key1",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "legit",
+        "confidence": "high"
+      }
+    },
+    {
+      "name": "quarantine_failure",
+      "input": {
+        "spf": "pass",
+        "dmarc": "fail",
+        "dmarcPolicy": "quarantine",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": false,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": []
+      },
+      "expected": {
+        "verdict": "suspicious",
+        "confidence": "high"
+      }
+    },
+    {
+      "name": "weak_aligned_dkim",
+      "input": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "weak",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 512,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "legit",
+        "confidence": "medium"
+      }
+    },
+    {
+      "name": "dmarc_temperror",
+      "input": {
+        "spf": "pass",
+        "dmarc": "temperror",
+        "dmarcPolicy": null,
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": false,
+        "dmarcSpfStrict": null,
+        "dmarcDkimStrict": null,
+        "dkimSignatures": []
+      },
+      "expected": {
+        "verdict": "unknown",
+        "confidence": "low"
+      }
+    }
+  ]
+}

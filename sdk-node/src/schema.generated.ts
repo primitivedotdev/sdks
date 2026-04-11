@@ -1,0 +1,1064 @@
+/**
+ * JSON Schema for EmailReceivedEvent.
+ *
+ * AUTO-GENERATED - DO NOT EDIT
+ * Run `pnpm generate:schema` to regenerate.
+ */
+
+import type { JSONSchema7 } from "json-schema";
+
+export const emailReceivedEventJsonSchema = {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/EmailReceivedEvent",
+  "definitions": {
+    "EmailReceivedEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique delivery event ID.\n\nThis ID is stable across retries to the same endpoint - use it as your idempotency/dedupe key. Note that the same email delivered to different endpoints will have different event IDs.\n\nFormat: `evt_` prefix followed by a SHA-256 hash (64 hex characters). Example: `evt_a1b2c3d4e5f6...` (68 characters total)"
+        },
+        "event": {
+          "type": "string",
+          "const": "email.received",
+          "description": "Event type identifier. Always `\"email.received\"` for this event type."
+        },
+        "version": {
+          "$ref": "#/definitions/WebhookVersion",
+          "description": "API version in date format (YYYY-MM-DD). Use this to detect version mismatches between webhook and SDK."
+        },
+        "delivery": {
+          "type": "object",
+          "properties": {
+            "endpoint_id": {
+              "type": "string",
+              "description": "ID of the webhook endpoint receiving this event. Matches the endpoint ID from your Primitive dashboard."
+            },
+            "attempt": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Delivery attempt number, starting at 1. Increments with each retry if previous attempts failed."
+            },
+            "attempted_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp (UTC) when this delivery was attempted.",
+              "examples": [
+                "2025-01-15T10:30:00.000Z"
+              ]
+            }
+          },
+          "required": [
+            "endpoint_id",
+            "attempt",
+            "attempted_at"
+          ],
+          "description": "Metadata about this webhook delivery."
+        },
+        "email": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique email ID in Primitive. Use this ID when calling Primitive APIs to reference this email."
+            },
+            "received_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp (UTC) when Primitive received the email.",
+              "examples": [
+                "2025-01-15T10:29:55.123Z"
+              ]
+            },
+            "smtp": {
+              "type": "object",
+              "properties": {
+                "helo": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "HELO/EHLO hostname from the sending server. Null if not provided during SMTP transaction."
+                },
+                "mail_from": {
+                  "type": "string",
+                  "description": "SMTP envelope sender (MAIL FROM command). This is the bounce address, which may differ from the From header."
+                },
+                "rcpt_to": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "description": "SMTP envelope recipients (RCPT TO commands). All addresses that received this email in a single delivery."
+                }
+              },
+              "required": [
+                "helo",
+                "mail_from",
+                "rcpt_to"
+              ],
+              "description": "SMTP envelope information. This is the \"real\" sender/recipient info from the SMTP transaction, which may differ from the headers (e.g., BCC recipients)."
+            },
+            "headers": {
+              "type": "object",
+              "properties": {
+                "message_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Message-ID header value. Null if the email had no Message-ID header."
+                },
+                "subject": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Subject header value. Null if the email had no Subject header."
+                },
+                "from": {
+                  "type": "string",
+                  "description": "From header value. May include display name: `\"John Doe\" <john@example.com>`"
+                },
+                "to": {
+                  "type": "string",
+                  "description": "To header value. May include multiple addresses or display names."
+                },
+                "date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Date header value as it appeared in the email. Null if the email had no Date header."
+                }
+              },
+              "required": [
+                "message_id",
+                "subject",
+                "from",
+                "to",
+                "date"
+              ],
+              "description": "Parsed email headers. These are extracted from the email content, not the SMTP envelope."
+            },
+            "content": {
+              "type": "object",
+              "properties": {
+                "raw": {
+                  "$ref": "#/definitions/RawContent",
+                  "description": "Raw email in RFC 5322 format. May be inline (base64) or download-only depending on size."
+                },
+                "download": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri",
+                      "pattern": "^https://",
+                      "description": "HTTPS URL to download the raw email. Returns the email as-is in RFC 5322 format."
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "ISO 8601 timestamp (UTC) when this URL expires. Download before this time or the URL will return 403."
+                    }
+                  },
+                  "required": [
+                    "url",
+                    "expires_at"
+                  ],
+                  "description": "Download information for the raw email. Always present, even if raw content is inline."
+                }
+              },
+              "required": [
+                "raw",
+                "download"
+              ],
+              "description": "Raw email content and download information."
+            },
+            "parsed": {
+              "$ref": "#/definitions/ParsedData",
+              "description": "Parsed email content (body text, HTML, attachments). Check `status` to determine if parsing succeeded."
+            },
+            "analysis": {
+              "$ref": "#/definitions/EmailAnalysis",
+              "description": "Email analysis and classification results."
+            },
+            "auth": {
+              "$ref": "#/definitions/EmailAuth",
+              "description": "Email authentication results (SPF, DKIM, DMARC)."
+            }
+          },
+          "required": [
+            "id",
+            "received_at",
+            "smtp",
+            "headers",
+            "content",
+            "parsed",
+            "analysis",
+            "auth"
+          ],
+          "description": "The email that triggered this event."
+        }
+      },
+      "required": [
+        "id",
+        "event",
+        "version",
+        "delivery",
+        "email"
+      ],
+      "description": "Webhook payload for the `email.received` event.\n\nThis is delivered to your webhook endpoint when Primitive receives an email matching your domain configuration."
+    },
+    "WebhookVersion": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Valid webhook version format (YYYY-MM-DD date string). The SDK accepts any valid date-formatted version, not just the current one, for forward and backward compatibility."
+    },
+    "RawContent": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RawContentInline"
+        },
+        {
+          "$ref": "#/definitions/RawContentDownloadOnly"
+        }
+      ],
+      "description": "Raw email content - a discriminated union on `included`."
+    },
+    "RawContentInline": {
+      "type": "object",
+      "properties": {
+        "included": {
+          "type": "boolean",
+          "const": true,
+          "description": "Discriminant indicating raw content is included inline."
+        },
+        "encoding": {
+          "type": "string",
+          "const": "base64",
+          "description": "Encoding used for the data field. Always \"base64\"."
+        },
+        "max_inline_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum size in bytes for inline inclusion. Emails larger than this threshold require download."
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Actual size of the raw email in bytes."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$",
+          "description": "SHA-256 hash of the raw email content (hex-encoded). Use this to verify integrity after base64 decoding."
+        },
+        "data": {
+          "type": "string",
+          "description": "Base64-encoded raw email (RFC 5322 format). Decode with `Buffer.from(data, 'base64')` in Node.js."
+        }
+      },
+      "required": [
+        "included",
+        "encoding",
+        "max_inline_bytes",
+        "size_bytes",
+        "sha256",
+        "data"
+      ],
+      "description": "Raw email content included inline (base64 encoded).\n\nWhen the raw email is small enough (under  {@link  max_inline_bytes } ), it's included directly in the webhook payload for convenience."
+    },
+    "RawContentDownloadOnly": {
+      "type": "object",
+      "properties": {
+        "included": {
+          "type": "boolean",
+          "const": false,
+          "description": "Discriminant indicating raw content must be downloaded."
+        },
+        "reason_code": {
+          "type": "string",
+          "const": "size_exceeded",
+          "description": "Reason the content wasn't included inline."
+        },
+        "max_inline_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum size in bytes for inline inclusion. The email exceeded this threshold."
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Actual size of the raw email in bytes."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$",
+          "description": "SHA-256 hash of the raw email content (hex-encoded). Use this to verify integrity after download."
+        }
+      },
+      "required": [
+        "included",
+        "reason_code",
+        "max_inline_bytes",
+        "size_bytes",
+        "sha256"
+      ],
+      "description": "Raw email content not included (must be downloaded).\n\nWhen the raw email exceeds  {@link  max_inline_bytes } , it's not included in the webhook payload. Use the download URL from  {@link  EmailReceivedEvent.email.content.download  }  to fetch it."
+    },
+    "ParsedData": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ParsedDataComplete"
+        },
+        {
+          "$ref": "#/definitions/ParsedDataFailed"
+        }
+      ],
+      "description": "Parsed email content - a discriminated union on `status`."
+    },
+    "ParsedDataComplete": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "complete",
+          "description": "Discriminant indicating successful parsing."
+        },
+        "error": {
+          "type": "null",
+          "description": "Always null when parsing succeeds."
+        },
+        "body_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Plain text body of the email. Null if the email had no text/plain part."
+        },
+        "body_html": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "HTML body of the email. Null if the email had no text/html part."
+        },
+        "reply_to": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EmailAddress"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parsed Reply-To header addresses. Null if the email had no Reply-To header."
+        },
+        "cc": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EmailAddress"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parsed CC header addresses. Null if the email had no CC header."
+        },
+        "bcc": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EmailAddress"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parsed BCC header addresses. Null if the email had no BCC header. Note: BCC is only available for outgoing emails or when explicitly provided."
+        },
+        "in_reply_to": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "In-Reply-To header values (Message-IDs of the email(s) being replied to). Null if the email had no In-Reply-To header. Per RFC 5322, this can contain multiple Message-IDs, though typically just one.",
+          "examples": [
+            [
+              "<original-message-id@example.com>"
+            ]
+          ]
+        },
+        "references": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "References header values (Message-IDs of the email thread). Null if the email had no References header.",
+          "examples": [
+            [
+              "<msg1@example.com>",
+              "<msg2@example.com>"
+            ]
+          ]
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WebhookAttachment"
+          },
+          "description": "List of attachments with metadata. Use  {@link  attachments_download_url }  to download the actual files."
+        },
+        "attachments_download_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri",
+          "pattern": "^https://",
+          "description": "HTTPS URL to download all attachments as a tar.gz archive. Null if the email had no attachments. URL expires - check the expiration before downloading."
+        }
+      },
+      "required": [
+        "status",
+        "error",
+        "body_text",
+        "body_html",
+        "reply_to",
+        "cc",
+        "bcc",
+        "in_reply_to",
+        "references",
+        "attachments",
+        "attachments_download_url"
+      ],
+      "description": "Parsed email content when parsing succeeded.\n\nUse the discriminant `status: \"complete\"` to narrow from  {@link  ParsedData } ."
+    },
+    "EmailAddress": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "description": "The email address portion (e.g., \"john@example.com\").\n\nThis is the raw value from the email header with no validation applied. May contain unusual but valid formats like quoted local parts."
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The display name portion, if present. Null if the address had no display name.\n\nMay contain any characters including unicode, emoji, or special characters as they appeared in the original email header."
+        }
+      },
+      "required": [
+        "address",
+        "name"
+      ],
+      "description": "A parsed email address with optional display name.\n\nThis structure is used in the `parsed` section of the webhook payload (e.g., `reply_to`, `cc`, `bcc`). For unparsed header strings, see the `headers` section (e.g., `event.email.headers.from`)."
+    },
+    "WebhookAttachment": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Original filename from the email. May be null if the attachment had no filename specified."
+        },
+        "content_type": {
+          "type": "string",
+          "description": "MIME content type (e.g., \"application/pdf\", \"image/png\")."
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Size of the attachment in bytes."
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$",
+          "description": "SHA-256 hash of the attachment content (hex-encoded). Use this to verify attachment integrity after download."
+        },
+        "part_index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index of this part in the MIME structure."
+        },
+        "tar_path": {
+          "type": "string",
+          "description": "Path to this attachment within the downloaded tar.gz archive."
+        }
+      },
+      "required": [
+        "filename",
+        "content_type",
+        "size_bytes",
+        "sha256",
+        "part_index",
+        "tar_path"
+      ],
+      "description": "Metadata for an email attachment.\n\nAttachment content is not included directly in the webhook payload. Use the `attachments_download_url` from  {@link  ParsedDataComplete }  to download all attachments as a tar.gz archive."
+    },
+    "ParsedDataFailed": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "const": "failed",
+          "description": "Discriminant indicating parsing failed."
+        },
+        "error": {
+          "$ref": "#/definitions/ParsedError",
+          "description": "Details about why parsing failed."
+        },
+        "body_text": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        },
+        "body_html": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        },
+        "reply_to": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        },
+        "cc": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        },
+        "bcc": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        },
+        "in_reply_to": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        },
+        "references": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WebhookAttachment"
+          },
+          "description": "May contain partial attachment metadata even when parsing failed. Useful for debugging or recovering partial data."
+        },
+        "attachments_download_url": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        }
+      },
+      "required": [
+        "status",
+        "error",
+        "body_text",
+        "body_html",
+        "reply_to",
+        "cc",
+        "bcc",
+        "in_reply_to",
+        "references",
+        "attachments",
+        "attachments_download_url"
+      ],
+      "description": "Parsed email content when parsing failed.\n\nUse the discriminant `status: \"failed\"` to narrow from  {@link  ParsedData } ."
+    },
+    "ParsedError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "PARSE_FAILED",
+            "ATTACHMENT_EXTRACTION_FAILED"
+          ],
+          "description": "Error code indicating the type of failure.\n- `PARSE_FAILED`: The email could not be parsed (e.g., malformed MIME)\n- `ATTACHMENT_EXTRACTION_FAILED`: Email parsed but attachments couldn't be extracted"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error message describing what went wrong."
+        },
+        "retryable": {
+          "type": "boolean",
+          "description": "Whether retrying might succeed. If true, the error was transient (e.g., timeout). If false, the email itself is problematic."
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "description": "Error details when email parsing fails."
+    },
+    "EmailAnalysis": {
+      "type": "object",
+      "properties": {
+        "spamassassin": {
+          "type": "object",
+          "properties": {
+            "score": {
+              "type": "number",
+              "description": "Overall spam score (sum of all rule scores). Higher scores indicate higher likelihood of spam. Unbounded - can be negative (ham) or very high (spam)."
+            }
+          },
+          "required": [
+            "score"
+          ],
+          "description": "SpamAssassin analysis results."
+        },
+        "forward": {
+          "$ref": "#/definitions/ForwardAnalysis",
+          "description": "Forward detection and analysis results."
+        }
+      },
+      "description": "Email analysis and classification results."
+    },
+    "ForwardAnalysis": {
+      "type": "object",
+      "properties": {
+        "detected": {
+          "type": "boolean",
+          "description": "Whether any forwards were detected in the email."
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ForwardResult"
+          },
+          "description": "Analysis results for each detected forward."
+        },
+        "attachments_found": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of .eml attachments found."
+        },
+        "attachments_analyzed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of .eml attachments that were analyzed."
+        },
+        "attachments_limit": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "description": "Maximum number of attachments that will be analyzed, or null if unlimited."
+        }
+      },
+      "required": [
+        "detected",
+        "results",
+        "attachments_found",
+        "attachments_analyzed",
+        "attachments_limit"
+      ],
+      "description": "Forward detection and analysis results."
+    },
+    "ForwardResult": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ForwardResultInline"
+        },
+        {
+          "$ref": "#/definitions/ForwardResultAttachmentAnalyzed"
+        },
+        {
+          "$ref": "#/definitions/ForwardResultAttachmentSkipped"
+        }
+      ],
+      "description": "Result for a single forwarded email detected in the message.\n\nUse the `type` and `analyzed` fields to narrow the type:\n- `type: 'inline'` - Inline forward, always analyzed\n- `type: 'attachment'` + `analyzed: true` - Analyzed attachment\n- `type: 'attachment'` + `analyzed: false` - Skipped attachment"
+    },
+    "ForwardResultInline": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "inline"
+        },
+        "original_sender": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ForwardOriginalSender"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Original sender of the forwarded email, if extractable."
+        },
+        "verification": {
+          "$ref": "#/definitions/ForwardVerification",
+          "description": "Verification result for the forwarded email."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Human-readable summary of the forward analysis."
+        }
+      },
+      "required": [
+        "type",
+        "original_sender",
+        "verification",
+        "summary"
+      ],
+      "description": "Result for an inline forward that was detected and analyzed. Inline forwards are always analyzed when forward detection is enabled."
+    },
+    "ForwardOriginalSender": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email address of the original sender."
+        },
+        "domain": {
+          "type": "string",
+          "description": "Domain of the original sender."
+        }
+      },
+      "required": [
+        "email",
+        "domain"
+      ],
+      "description": "Original sender information extracted from the forwarded email."
+    },
+    "ForwardVerification": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "$ref": "#/definitions/ForwardVerdict",
+          "description": "Overall verdict on whether the forward is authentic."
+        },
+        "confidence": {
+          "$ref": "#/definitions/AuthConfidence",
+          "description": "Confidence level for this verdict."
+        },
+        "dkim_verified": {
+          "type": "boolean",
+          "description": "Whether a valid DKIM signature was found that verifies the original sender."
+        },
+        "dkim_domain": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Domain of the DKIM signature that verified the forward, if any."
+        },
+        "dmarc_policy": {
+          "$ref": "#/definitions/DmarcPolicy",
+          "description": "DMARC policy of the original sender's domain."
+        }
+      },
+      "required": [
+        "verdict",
+        "confidence",
+        "dkim_verified",
+        "dkim_domain",
+        "dmarc_policy"
+      ],
+      "description": "Verification result for a forwarded email."
+    },
+    "ForwardVerdict": {
+      "type": "string",
+      "enum": [
+        "legit",
+        "unknown"
+      ],
+      "description": "Verdict for forwarded email verification.\n\n- `legit`: DKIM signature verified the original sender\n- `unknown`: Could not verify the forwarded email's authenticity"
+    },
+    "AuthConfidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "description": "Confidence level for the authentication verdict.\n\n- `high`: Strong cryptographic evidence (DKIM aligned + DMARC pass)\n- `medium`: Good evidence but with caveats (SPF-only alignment)\n- `low`: Weak evidence (missing authentication or unclear results)"
+    },
+    "DmarcPolicy": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "reject",
+        "quarantine",
+        "none",
+        null
+      ],
+      "description": "DMARC policy action specified in the domain's DMARC record.\n\n- `reject`: The domain owner requests that receivers reject failing emails\n- `quarantine`: The domain owner requests that failing emails be treated as suspicious\n- `none`: The domain owner is only monitoring (no action requested)\n- `null`: No DMARC policy was found for the domain"
+    },
+    "ForwardResultAttachmentAnalyzed": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "attachment"
+        },
+        "attachment_tar_path": {
+          "type": "string",
+          "description": "Path to the attachment in the attachments tar archive."
+        },
+        "attachment_filename": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Original filename of the attachment, if available."
+        },
+        "analyzed": {
+          "type": "boolean",
+          "const": true,
+          "description": "Whether this attachment was analyzed."
+        },
+        "original_sender": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ForwardOriginalSender"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Original sender of the forwarded email, if extractable."
+        },
+        "verification": {
+          "$ref": "#/definitions/ForwardVerification",
+          "description": "Verification result for the forwarded email."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Human-readable summary of the forward analysis."
+        }
+      },
+      "required": [
+        "type",
+        "attachment_tar_path",
+        "attachment_filename",
+        "analyzed",
+        "original_sender",
+        "verification",
+        "summary"
+      ],
+      "description": "Result for an attachment forward that was analyzed."
+    },
+    "ForwardResultAttachmentSkipped": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "attachment"
+        },
+        "attachment_tar_path": {
+          "type": "string",
+          "description": "Path to the attachment in the attachments tar archive."
+        },
+        "attachment_filename": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Original filename of the attachment, if available."
+        },
+        "analyzed": {
+          "type": "boolean",
+          "const": false,
+          "description": "Whether this attachment was analyzed."
+        },
+        "original_sender": {
+          "type": "null",
+          "description": "Always null when not analyzed."
+        },
+        "verification": {
+          "type": "null",
+          "description": "Always null when not analyzed."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Human-readable summary explaining why analysis was skipped."
+        }
+      },
+      "required": [
+        "type",
+        "attachment_tar_path",
+        "attachment_filename",
+        "analyzed",
+        "original_sender",
+        "verification",
+        "summary"
+      ],
+      "description": "Result for an attachment forward that was detected but not analyzed. This occurs when attachment analysis is disabled or the limit was reached."
+    },
+    "EmailAuth": {
+      "type": "object",
+      "properties": {
+        "spf": {
+          "$ref": "#/definitions/SpfResult",
+          "description": "SPF verification result.\n\nSPF checks if the sending IP is authorized by the envelope sender's domain. \"pass\" means the IP is authorized; \"fail\" means it's explicitly not allowed."
+        },
+        "dmarc": {
+          "$ref": "#/definitions/DmarcResult",
+          "description": "DMARC verification result.\n\nDMARC passes if either SPF or DKIM passes AND aligns with the From: domain. \"pass\" means the email is authenticated according to the sender's policy."
+        },
+        "dmarcPolicy": {
+          "$ref": "#/definitions/DmarcPolicy",
+          "description": "DMARC policy from the sender's DNS record.\n\n- `reject`: Domain wants receivers to reject failing emails\n- `quarantine`: Domain wants failing emails marked as suspicious\n- `none`: Domain is monitoring only (no action requested)\n- `null`: No DMARC record found for this domain"
+        },
+        "dmarcFromDomain": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The organizational domain used for DMARC lookups.\n\nFor example, if the From: address is `user@mail.example.com`, the DMARC lookup checks `_dmarc.mail.example.com`, then falls back to `_dmarc.example.com`. This field shows which domain's policy was used."
+        },
+        "dmarcSpfAligned": {
+          "type": "boolean",
+          "description": "Whether SPF aligned with the From: domain for DMARC purposes.\n\nTrue if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments."
+        },
+        "dmarcDkimAligned": {
+          "type": "boolean",
+          "description": "Whether DKIM aligned with the From: domain for DMARC purposes.\n\nTrue if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments."
+        },
+        "dmarcSpfStrict": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether DMARC SPF alignment mode is strict.\n\n- `true`: Strict alignment required (exact domain match)\n- `false`: Relaxed alignment allowed (organizational domain match)\n- `null`: No DMARC record found"
+        },
+        "dmarcDkimStrict": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Whether DMARC DKIM alignment mode is strict.\n\n- `true`: Strict alignment required (exact domain match)\n- `false`: Relaxed alignment allowed (organizational domain match)\n- `null`: No DMARC record found"
+        },
+        "dkimSignatures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DkimSignature"
+          },
+          "description": "All DKIM signatures found in the email with their verification results.\n\nMay be empty if no DKIM signatures were present."
+        }
+      },
+      "required": [
+        "spf",
+        "dmarc",
+        "dmarcPolicy",
+        "dmarcFromDomain",
+        "dmarcSpfStrict",
+        "dmarcDkimStrict",
+        "dkimSignatures"
+      ],
+      "description": "Email authentication results for SPF, DKIM, and DMARC.\n\nUse `validateEmailAuth()` to compute a verdict based on these results."
+    },
+    "SpfResult": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "softfail",
+        "neutral",
+        "none",
+        "temperror",
+        "permerror"
+      ],
+      "description": "SPF verification result."
+    },
+    "DmarcResult": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "none",
+        "temperror",
+        "permerror"
+      ],
+      "description": "DMARC verification result."
+    },
+    "DkimSignature": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "description": "The domain that signed this DKIM signature (d= tag). This may differ from the From: domain (that's what alignment checks)."
+        },
+        "selector": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The DKIM selector used to locate the public key (s= tag). Combined with the domain to form the DNS lookup: `selector._domainkey.domain`\n\nOptional in self-hosted environments where the milter may not provide selector info."
+        },
+        "result": {
+          "$ref": "#/definitions/DkimResult",
+          "description": "Verification result for this specific signature."
+        },
+        "aligned": {
+          "type": "boolean",
+          "description": "Whether this signature's domain aligns with the From: domain (for DMARC).\n\nAlignment can be \"strict\" (exact match) or \"relaxed\" (organizational domain match). For example, if From: is `user@sub.example.com` and DKIM is signed by `example.com`:\n- Relaxed alignment: true (same organizational domain)\n- Strict alignment: false (not exact match)"
+        },
+        "keyBits": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 16384,
+          "description": "Key size in bits (e.g., 1024, 2048). Null if the key size couldn't be determined.\n\nOptional in self-hosted environments."
+        },
+        "algo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Signing algorithm (e.g., \"rsa-sha256\", \"ed25519-sha256\").\n\nOptional in self-hosted environments."
+        }
+      },
+      "required": [
+        "domain",
+        "result",
+        "aligned"
+      ],
+      "description": "Details about a single DKIM signature found in the email.\n\nAn email may have multiple DKIM signatures (e.g., one from the sending domain and one from the ESP). Each signature is verified independently.\n\nFields marked optional (`selector`, `keyBits`, `algo`) may be unavailable in self-hosted environments where the milter provides limited DKIM detail."
+    },
+    "DkimResult": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "temperror",
+        "permerror"
+      ],
+      "description": "DKIM signature verification result for a single signature."
+    }
+  }
+} as const satisfies JSONSchema7;

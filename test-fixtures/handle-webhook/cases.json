@@ -1,0 +1,88 @@
+{
+  "cases": [
+    {
+      "name": "valid_lowercase_header",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "primitive-signature": "{signed}"
+      },
+      "secret": "test-webhook-secret",
+      "expected": {
+        "valid": true,
+        "id": "evt_abc123"
+      }
+    },
+    {
+      "name": "valid_original_header_casing",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "Primitive-Signature": "{signed}"
+      },
+      "secret": "test-webhook-secret",
+      "expected": {
+        "valid": true,
+        "id": "evt_abc123"
+      }
+    },
+    {
+      "name": "missing_signature_header",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {},
+      "secret": "test-webhook-secret",
+      "expected": {
+        "valid": false,
+        "error_code": "INVALID_SIGNATURE_HEADER"
+      }
+    },
+    {
+      "name": "wrong_secret",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "primitive-signature": "{signed}"
+      },
+      "secret": "wrong-secret",
+      "sign_secret": "test-webhook-secret",
+      "expected": {
+        "valid": false,
+        "error_code": "SIGNATURE_MISMATCH"
+      }
+    },
+    {
+      "name": "expired_signature",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "primitive-signature": "{signed}"
+      },
+      "secret": "test-webhook-secret",
+      "timestamp": 1734567000,
+      "expected": {
+        "valid": false,
+        "error_code": "TIMESTAMP_OUT_OF_RANGE"
+      }
+    },
+    {
+      "name": "invalid_json_body",
+      "body": "{\"event\":\"email.received\"",
+      "headers": {
+        "primitive-signature": "{signed}"
+      },
+      "secret": "test-webhook-secret",
+      "expected": {
+        "valid": false,
+        "error_code": "JSON_PARSE_FAILED"
+      }
+    },
+    {
+      "name": "schema_invalid_known_event",
+      "body": "{\"event\":\"email.received\",\"id\":\"evt_only\"}",
+      "headers": {
+        "primitive-signature": "{signed}"
+      },
+      "secret": "test-webhook-secret",
+      "expected": {
+        "valid": false,
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    }
+  ]
+}

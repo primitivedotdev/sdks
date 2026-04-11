@@ -1,0 +1,137 @@
+name: SDK Checks
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  node:
+    name: Node (${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        with:
+          version: 10
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: sdk-node/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: make node-install
+
+      - name: Run node checks
+        run: make node-check
+
+      - name: Build node package
+        run: make node-build
+
+      - name: Smoke test packed node package
+        run: make node-smoke
+
+      - name: Collect node coverage
+        run: make node-coverage
+
+  python:
+    name: Python (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Sync dependencies
+        run: make python-sync
+
+      - name: Run python checks
+        run: make python-check
+
+      - name: Build python package
+        run: make python-build
+
+      - name: Smoke test built python wheel
+        run: make python-smoke
+
+      - name: Collect python coverage
+        run: make python-coverage
+
+  go:
+    name: Go (${{ matrix.go-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ["1.23", "1.26"]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.14"
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: sdk-go/go.sum
+
+      - name: Run go checks
+        run: make go-check
+
+      - name: Build go package
+        run: make go-build
+
+      - name: Collect go coverage
+        run: make go-coverage
+
+  shared:
+    name: Shared
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        with:
+          version: 10
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: sdk-node/pnpm-lock.yaml
+
+      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
+        with:
+          python-version: "3.14"
+          save-cache: false
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        with:
+          go-version: "1.26"
+          cache-dependency-path: sdk-go/go.sum
+
+      - name: Install node dependencies
+        run: make node-install
+
+      - name: Sync python dependencies
+        run: make python-sync
+
+      - name: Run shared fixture checks
+        run: make shared-check

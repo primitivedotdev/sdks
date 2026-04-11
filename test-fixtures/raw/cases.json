@@ -1,0 +1,95 @@
+{
+  "cases": [
+    {
+      "name": "inline_raw",
+      "event": {
+        "email": {
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "included": true,
+        "decoded_utf8": "Hello World"
+      }
+    },
+    {
+      "name": "download_only_raw",
+      "event": {
+        "email": {
+          "content": {
+            "raw": {
+              "included": false,
+              "reason_code": "size_exceeded",
+              "size_bytes": 500000,
+              "max_inline_bytes": 262144,
+              "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "included": false,
+        "decode_error_code": "NOT_INCLUDED"
+      }
+    },
+    {
+      "name": "verified_download_bytes",
+      "event": {
+        "email": {
+          "content": {
+            "raw": {
+              "included": false,
+              "reason_code": "size_exceeded",
+              "size_bytes": 11,
+              "max_inline_bytes": 262144,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+            }
+          }
+        }
+      },
+      "download_bytes_utf8": "Hello World",
+      "expected": {
+        "included": false,
+        "verify_download": true
+      }
+    },
+    {
+      "name": "hash_mismatch_download",
+      "event": {
+        "email": {
+          "content": {
+            "raw": {
+              "included": false,
+              "reason_code": "size_exceeded",
+              "size_bytes": 11,
+              "max_inline_bytes": 262144,
+              "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }
+          }
+        }
+      },
+      "download_bytes_utf8": "Hello World",
+      "expected": {
+        "included": false,
+        "verify_download_error_code": "HASH_MISMATCH"
+      }
+    }
+  ]
+}

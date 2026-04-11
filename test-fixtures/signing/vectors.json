@@ -1,0 +1,106 @@
+{
+  "cases": [
+    {
+      "name": "simple",
+      "raw_body": "{\"event\":\"email.received\",\"email_id\":\"msg_123\"}",
+      "secret": "whsec_test_secret_key_123",
+      "timestamp": 1734567890,
+      "expected_v1": "45c9e2f95add59da39d6bdf3e617b8bfcad771a59d06bf4687d11d39af041d91",
+      "expected_valid": true
+    },
+    {
+      "name": "minimal",
+      "raw_body": "{}",
+      "secret": "secret",
+      "timestamp": 1000000000,
+      "expected_v1": "10447a13c77e61914632c736653543f75b152b77a1573fc15a41baad63fc66a3",
+      "expected_valid": true
+    },
+    {
+      "name": "special_chars",
+      "raw_body": "{\"subject\":\"Test with \\\"quotes\\\" and \\n newlines\",\"from\":\"test@example.com\"}",
+      "secret": "whsec_another_secret!@#$%",
+      "timestamp": 1700000000,
+      "expected_v1": "cd71c66c33d133f60a4aa83681e6fa748cb4267745f80755be152abb85617417",
+      "expected_valid": true
+    },
+    {
+      "name": "wrong_secret_mismatch",
+      "raw_body": "{\"test\":\"data\"}",
+      "secret": "secret",
+      "timestamp": 1734567890,
+      "verify_secret": "wrong-secret",
+      "expected_v1": "f747da0a13743bf5e35669aa362d26c14d128057818097909b62279f48a55a0e",
+      "expected_valid": false,
+      "expected_error_code": "SIGNATURE_MISMATCH"
+    },
+    {
+      "name": "expired_timestamp",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "secret",
+      "timestamp": 1734567000,
+      "now_seconds": 1734567890,
+      "expected_v1": "798b9ea6c530f7316d3b2b9fc8e90857923bcb85f9a2a80628cb59d026f14a43",
+      "expected_valid": false,
+      "expected_error_code": "TIMESTAMP_OUT_OF_RANGE"
+    },
+    {
+      "name": "boundary_old_valid",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "secret",
+      "timestamp": 1734567590,
+      "now_seconds": 1734567890,
+      "expected_v1": "dab67b1a17f919727e08cb3715d30011e7770b41df7ea8fef7a4f85d340dd2fa",
+      "expected_valid": true
+    },
+    {
+      "name": "boundary_old_invalid",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "secret",
+      "timestamp": 1734567589,
+      "now_seconds": 1734567890,
+      "expected_v1": "af94511ae93a37402b9e2af32e9254779cc5440926a4fc3b27f4c32543348024",
+      "expected_valid": false,
+      "expected_error_code": "TIMESTAMP_OUT_OF_RANGE"
+    },
+    {
+      "name": "future_boundary_valid",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "secret",
+      "timestamp": 1734567950,
+      "now_seconds": 1734567890,
+      "expected_v1": "de4c46874e28aa0acac95ac3658fc63dd093561ec80f49baae7aa35eb93a60d7",
+      "expected_valid": true
+    },
+    {
+      "name": "future_boundary_invalid",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "secret",
+      "timestamp": 1734567951,
+      "now_seconds": 1734567890,
+      "expected_v1": "bb5a05745bbef90ecd2252d16b9846d460efcdac31c45f937e00ea3ad4abfbd6",
+      "expected_valid": false,
+      "expected_error_code": "TIMESTAMP_OUT_OF_RANGE"
+    },
+    {
+      "name": "multiple_v1_values_with_match",
+      "raw_body": "{\"event\":\"email.received\",\"id\":\"evt_1\"}",
+      "secret": "secret",
+      "timestamp": 1734567890,
+      "now_seconds": 1734567890,
+      "signature_header": "t=1734567890,v1=0000000000000000000000000000000000000000000000000000000000000000,v1=cfad7c8c0ad57539146bdfb0d41856b105dd9a79e1d8d768bb46b1c29213e081",
+      "expected_v1": "cfad7c8c0ad57539146bdfb0d41856b105dd9a79e1d8d768bb46b1c29213e081",
+      "expected_valid": true
+    },
+    {
+      "name": "whitespace_and_legacy_fields",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "secret",
+      "timestamp": 1734567890,
+      "now_seconds": 1734567890,
+      "signature_header": " t=1734567890 , v0=legacy , v1=da72bb671b4a86a7e9df5eabbe2bad6144211ce123f5251525aab7c4c0c636e8 ",
+      "expected_v1": "da72bb671b4a86a7e9df5eabbe2bad6144211ce123f5251525aab7c4c0c636e8",
+      "expected_valid": true
+    }
+  ]
+}
