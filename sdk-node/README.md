@@ -12,7 +12,7 @@ This package ships three Node.js modules:
 
 ## Requirements
 
-- Node.js `>=18`
+- Node.js `>=20`
 
 ## Installation
 
