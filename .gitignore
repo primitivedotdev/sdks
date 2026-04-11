@@ -13,3 +13,5 @@ sdk-python/.pytest_cache/
 sdk-python/.ruff_cache/
 sdk-python/**/*.pyc
 sdk-python/**/__pycache__/
+.internal/
+dist/
