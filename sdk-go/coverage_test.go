@@ -193,9 +193,19 @@ func TestWebhookUtilityEdges(t *testing.T) {
 	}
 	if _, err := IsRawIncluded(map[string]any{}); err == nil {
 		t.Fatal("expected missing raw included flag to fail")
+	} else {
+		payloadErr, ok := err.(*WebhookPayloadError)
+		if !ok || payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE for missing raw included flag, got %v", err)
+		}
 	}
 	if _, err := DecodeRawEmail(map[string]any{}); err == nil {
 		t.Fatal("expected missing raw included flag to fail decode")
+	} else {
+		payloadErr, ok := err.(*WebhookPayloadError)
+		if !ok || payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE for missing raw decode fields, got %v", err)
+		}
 	}
 	if _, err := DecodeRawEmail(downloadOnly); err == nil {
 		t.Fatal("expected download-only raw content to fail decode")
@@ -224,34 +234,65 @@ func TestWebhookUtilityEdges(t *testing.T) {
 	delete(missingRawHash["email"].(map[string]any)["content"].(map[string]any)["raw"].(map[string]any), "sha256")
 	if _, err := DecodeRawEmail(missingRawHash); err == nil {
 		t.Fatal("expected missing raw hash to fail decode")
-	} else if err.Error() != "missing email.content.raw.sha256" {
-		t.Fatalf("expected missing raw hash decode error, got %v", err)
+	} else {
+		payloadErr, ok := err.(*WebhookPayloadError)
+		if !ok || payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE for missing raw hash decode error, got %v", err)
+		}
 	}
 	if _, err := VerifyRawEmailDownload([]byte("Hello World"), map[string]any{}); err == nil {
 		t.Fatal("expected missing raw hash to fail download verification")
-	} else if err.Error() != "missing email.content.raw.sha256" {
-		t.Fatalf("expected missing raw hash download error, got %v", err)
+	} else {
+		payloadErr, ok := err.(*WebhookPayloadError)
+		if !ok || payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE for missing raw hash download error, got %v", err)
+		}
 	}
 	missingRawData := loadJSONFixture(t, "webhook", "valid-email-received.json")
 	delete(missingRawData["email"].(map[string]any)["content"].(map[string]any)["raw"].(map[string]any), "data")
 	if _, err := DecodeRawEmail(missingRawData); err == nil {
 		t.Fatal("expected missing raw data to fail decode")
+	} else {
+		payloadErr, ok := err.(*WebhookPayloadError)
+		if !ok || payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE for missing raw data, got %v", err)
+		}
 	}
 
 	missingDownload := map[string]any{"email": map[string]any{"content": map[string]any{"download": map[string]any{}}}}
 	if _, err := IsDownloadExpired(missingDownload); err == nil {
 		t.Fatal("expected missing expires_at to fail expiration check")
+	} else {
+		payloadErr, ok := err.(*WebhookPayloadError)
+		if !ok || payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE for missing expires_at, got %v", err)
+		}
 	}
 	badDownload := map[string]any{"email": map[string]any{"content": map[string]any{"download": map[string]any{"expires_at": "nope"}}}}
 	if _, err := IsDownloadExpired(badDownload); err == nil {
 		t.Fatal("expected invalid expires_at to fail expiration status check")
+	} else {
+		payloadErr, ok := err.(*WebhookPayloadError)
+		if !ok || payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE for invalid expires_at, got %v", err)
+		}
 	}
 	expiredDownload := map[string]any{"email": map[string]any{"content": map[string]any{"download": map[string]any{"expires_at": "2025-01-01T00:00:00Z"}}}}
 	if _, err := GetDownloadTimeRemaining(missingDownload); err == nil {
 		t.Fatal("expected missing expires_at to fail remaining time check")
+	} else {
+		payloadErr, ok := err.(*WebhookPayloadError)
+		if !ok || payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE for missing remaining-time expires_at, got %v", err)
+		}
 	}
 	if _, err := GetDownloadTimeRemaining(badDownload); err == nil {
 		t.Fatal("expected invalid expires_at to fail remaining time check")
+	} else {
+		payloadErr, ok := err.(*WebhookPayloadError)
+		if !ok || payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
+			t.Fatalf("expected PAYLOAD_WRONG_TYPE for invalid remaining-time expires_at, got %v", err)
+		}
 	}
 	if expired, err := IsDownloadExpired(expiredDownload, 1735689600001); err != nil || !expired {
 		t.Fatalf("expected expired download helper branch: %v %v", expired, err)
@@ -262,6 +303,11 @@ func TestWebhookUtilityEdges(t *testing.T) {
 
 	if _, err := ValidateEmailAuth("bad"); err == nil {
 		t.Fatal("expected invalid auth input to fail validation")
+	} else {
+		validationErr, ok := err.(*WebhookValidationError)
+		if !ok || validationErr.Code() != "SCHEMA_VALIDATION_FAILED" {
+			t.Fatalf("expected SCHEMA_VALIDATION_FAILED for invalid auth input, got %v", err)
+		}
 	}
 	if result, err := ValidateEmailAuth(map[string]any{"spf": "fail", "dmarc": "fail", "dmarcPolicy": "none", "dkimSignatures": []map[string]any{}}); err != nil || result.Confidence != AuthConfidenceMedium {
 		t.Fatalf("expected monitoring mode SPF fail branch: %#v %v", result, err)

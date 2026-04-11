@@ -10,6 +10,8 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any, TypedDict, TypeGuard, cast
 
+from pydantic import ValidationError
+
 from primitive_sdk.errors import (
     RawEmailDecodeError,
     WebhookPayloadError,
@@ -25,7 +27,7 @@ from primitive_sdk.types import (
     ValidateEmailAuthResult,
     WebhookEvent,
 )
-from primitive_sdk.validation import validate_email_received_event
+from primitive_sdk.validation import _create_model_validation_error, validate_email_received_event
 
 WEBHOOK_VERSION = "2025-12-14"
 PRIMITIVE_SIGNATURE_HEADER = "Primitive-Signature"
@@ -63,6 +65,31 @@ def _field(obj: Any, *names: str) -> Any:
         if hasattr(obj, name):
             return getattr(obj, name)
     raise KeyError(names[0])
+
+
+def _missing_payload_field(path: str, cause: Exception | None = None) -> WebhookPayloadError:
+    return WebhookPayloadError(
+        "PAYLOAD_WRONG_TYPE",
+        f'Missing required field "{path}" in webhook payload',
+        f'Check that "{path}" is present in the webhook payload.',
+        cause,
+    )
+
+
+def _invalid_payload_field(
+    path: str,
+    message: str,
+    suggestion: str,
+    cause: Exception | None = None,
+) -> WebhookPayloadError:
+    return WebhookPayloadError("PAYLOAD_WRONG_TYPE", message, suggestion, cause)
+
+
+def _require_field(obj: Any, path: str, *names: str) -> Any:
+    try:
+        return _field(obj, *names)
+    except KeyError as error:
+        raise _missing_payload_field(path, error) from error
 
 
 def _unwrap_root(value: Any) -> Any:
@@ -313,9 +340,19 @@ def is_download_expired(
     now: int | None = None,
 ) -> bool:
     now_ms = now if now is not None else int(datetime.now(tz=UTC).timestamp() * 1000)
-    download = _field(_field(_field(event, "email"), "content"), "download")
-    expires_at = _field(download, "expires_at")
-    expires_ms = int(_parse_iso8601(expires_at).timestamp() * 1000)
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    download = _require_field(content, "email.content.download", "download")
+    expires_at = _require_field(download, "email.content.download.expires_at", "expires_at")
+    try:
+        expires_ms = int(_parse_iso8601(expires_at).timestamp() * 1000)
+    except (AttributeError, TypeError, ValueError) as error:
+        raise _invalid_payload_field(
+            "email.content.download.expires_at",
+            f'Invalid value for "email.content.download.expires_at": {expires_at!r} is not a valid ISO 8601 timestamp',
+            'Check that "email.content.download.expires_at" is a valid ISO 8601 timestamp.',
+            error,
+        ) from error
     return now_ms >= expires_ms
 
 
@@ -324,15 +361,27 @@ def get_download_time_remaining(
     now: int | None = None,
 ) -> int:
     now_ms = now if now is not None else int(datetime.now(tz=UTC).timestamp() * 1000)
-    download = _field(_field(_field(event, "email"), "content"), "download")
-    expires_at = _field(download, "expires_at")
-    expires_ms = int(_parse_iso8601(expires_at).timestamp() * 1000)
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    download = _require_field(content, "email.content.download", "download")
+    expires_at = _require_field(download, "email.content.download.expires_at", "expires_at")
+    try:
+        expires_ms = int(_parse_iso8601(expires_at).timestamp() * 1000)
+    except (AttributeError, TypeError, ValueError) as error:
+        raise _invalid_payload_field(
+            "email.content.download.expires_at",
+            f'Invalid value for "email.content.download.expires_at": {expires_at!r} is not a valid ISO 8601 timestamp',
+            'Check that "email.content.download.expires_at" is a valid ISO 8601 timestamp.',
+            error,
+        ) from error
     return max(0, expires_ms - now_ms)
 
 
 def is_raw_included(event: EmailReceivedEvent | Mapping[str, Any]) -> bool:
-    raw = _unwrap_root(_field(_field(_field(event, "email"), "content"), "raw"))
-    return bool(_field(raw, "included"))
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
+    return bool(_require_field(raw, "email.content.raw.included", "included"))
 
 
 def decode_raw_email(
@@ -340,20 +389,23 @@ def decode_raw_email(
     *,
     verify: bool = True,
 ) -> bytes:
-    content = _field(_field(event, "email"), "content")
-    raw = _unwrap_root(_field(content, "raw"))
-    download = _field(content, "download")
-    if not _field(raw, "included"):
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
+    download = _require_field(content, "email.content.download", "download")
+    if not _require_field(raw, "email.content.raw.included", "included"):
         raise RawEmailDecodeError(
             "NOT_INCLUDED",
             "Raw email not included inline "
-            f"(size: {_field(raw, 'size_bytes')} bytes, "
-            f"threshold: {_field(raw, 'max_inline_bytes')} bytes). "
-            f"Download from: {_field(download, 'url')}",
+            f"(size: {_require_field(raw, 'email.content.raw.size_bytes', 'size_bytes')} bytes, "
+            f"threshold: {_require_field(raw, 'email.content.raw.max_inline_bytes', 'max_inline_bytes')} bytes). "
+            f"Download from: {_require_field(download, 'email.content.download.url', 'url')}",
         )
 
     try:
-        decoded = base64.b64decode(_field(raw, "data"), validate=True)
+        decoded = base64.b64decode(
+            _require_field(raw, "email.content.raw.data", "data"), validate=True
+        )
     except (binascii.Error, TypeError, ValueError) as error:
         raise RawEmailDecodeError(
             "INVALID_BASE64",
@@ -362,7 +414,17 @@ def decode_raw_email(
 
     if verify:
         digest = hashlib.sha256(decoded).hexdigest()
-        expected = _normalize_sha256(_field(raw, "sha256"))
+        try:
+            expected = _normalize_sha256(
+                _require_field(raw, "email.content.raw.sha256", "sha256")
+            )
+        except (AttributeError, TypeError) as error:
+            raise _invalid_payload_field(
+                "email.content.raw.sha256",
+                'Invalid value for "email.content.raw.sha256": expected a hex string',
+                'Check that "email.content.raw.sha256" is a hex-encoded SHA-256 string.',
+                error,
+            ) from error
         if digest != expected:
             raise RawEmailDecodeError(
                 "HASH_MISMATCH",
@@ -378,8 +440,20 @@ def verify_raw_email_download(
 ) -> bytes:
     buffer = bytes(downloaded)
     digest = hashlib.sha256(buffer).hexdigest()
-    raw = _unwrap_root(_field(_field(_field(event, "email"), "content"), "raw"))
-    expected = _normalize_sha256(_field(raw, "sha256"))
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
+    try:
+        expected = _normalize_sha256(
+            _require_field(raw, "email.content.raw.sha256", "sha256")
+        )
+    except (AttributeError, TypeError) as error:
+        raise _invalid_payload_field(
+            "email.content.raw.sha256",
+            'Invalid value for "email.content.raw.sha256": expected a hex string',
+            'Check that "email.content.raw.sha256" is a hex-encoded SHA-256 string.',
+            error,
+        ) from error
     if digest != expected:
         raise RawEmailDecodeError(
             "HASH_MISMATCH",
@@ -392,7 +466,10 @@ def validate_email_auth(
     auth: EmailAuth | Mapping[str, Any],
 ) -> ValidateEmailAuthResult:
     if isinstance(auth, Mapping):
-        auth = EmailAuth.model_validate(auth, by_alias=True, by_name=True)
+        try:
+            auth = EmailAuth.model_validate(auth, by_alias=True, by_name=True)
+        except ValidationError as error:
+            raise _create_model_validation_error(error) from error
 
     reasons: list[str] = []
     min_secure_key_bits = 1024

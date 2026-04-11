@@ -417,6 +417,20 @@ def test_download_helpers_accept_typed_events(valid_payload: dict[str, Any]) -> 
     assert get_download_time_remaining(event, future_now) > 0
 
 
+def test_download_helpers_raise_webhook_errors_for_invalid_payloads() -> None:
+    with pytest.raises(WebhookPayloadError) as missing_error:
+        is_download_expired({})
+
+    assert missing_error.value.code == "PAYLOAD_WRONG_TYPE"
+
+    with pytest.raises(WebhookPayloadError) as invalid_error:
+        get_download_time_remaining(
+            {"email": {"content": {"download": {"expires_at": "nope"}}}}
+        )
+
+    assert invalid_error.value.code == "PAYLOAD_WRONG_TYPE"
+
+
 def test_raw_email_helpers(valid_payload: dict[str, Any]) -> None:
     event = valid_payload
     assert is_raw_included(event) is True
@@ -485,6 +499,23 @@ def test_decode_raw_email_rejects_download_only_content() -> None:
     assert "download URL" in error.value.suggestion
 
 
+def test_raw_email_helpers_raise_webhook_errors_for_invalid_payloads() -> None:
+    with pytest.raises(WebhookPayloadError) as included_error:
+        is_raw_included({})
+
+    assert included_error.value.code == "PAYLOAD_WRONG_TYPE"
+
+    with pytest.raises(WebhookPayloadError) as decode_error:
+        decode_raw_email({})
+
+    assert decode_error.value.code == "PAYLOAD_WRONG_TYPE"
+
+    with pytest.raises(WebhookPayloadError) as verify_error:
+        verify_raw_email_download(b"Hello World", {})
+
+    assert verify_error.value.code == "PAYLOAD_WRONG_TYPE"
+
+
 def test_verify_raw_email_download_accepts_empty_and_binary_content() -> None:
     empty = b""
     empty_sha = hashlib.sha256(empty).hexdigest()
@@ -549,6 +580,13 @@ def test_validate_email_auth(valid_payload: dict[str, Any]) -> None:
     assert result.verdict == "legit"
     assert result.confidence == "high"
     assert any("DKIM alignment" in reason for reason in result.reasons)
+
+
+def test_validate_email_auth_wraps_invalid_mappings() -> None:
+    with pytest.raises(WebhookValidationError) as error:
+        validate_email_auth({})
+
+    assert error.value.code == "SCHEMA_VALIDATION_FAILED"
 
 
 def test_error_hierarchy() -> None:
