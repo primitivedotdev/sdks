@@ -166,13 +166,12 @@ func ParseWebhookEvent(input any) (WebhookEvent, error) {
 		return nil, NewWebhookPayloadError("PAYLOAD_NULL", "Received null instead of webhook payload", "Check that your request body variable is defined.", nil)
 	}
 	switch input.(type) {
-	case []byte, json.RawMessage:
-		return nil, NewWebhookPayloadError(
-			"PAYLOAD_WRONG_TYPE",
-			fmt.Sprintf("Received %T instead of webhook payload object", input),
-			"Webhook payloads must be objects.",
-			nil,
-		)
+	case string, []byte, json.RawMessage:
+		parsed, err := ParseJSONBody(input)
+		if err != nil {
+			return nil, err
+		}
+		input = parsed
 	}
 	kind := reflect.TypeOf(input).Kind()
 	if kind == reflect.Slice || kind == reflect.Array {

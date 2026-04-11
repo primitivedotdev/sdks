@@ -99,16 +99,20 @@ func TestParseWebhookEvent(t *testing.T) {
 		t.Fatal("expected array payload error")
 	}
 
-	if _, err := ParseWebhookEvent([]byte(`{"event":"email.bounced","id":"evt_1"}`)); err == nil {
-		t.Fatal("expected raw byte payload error")
-	} else {
-		var payloadErr *WebhookPayloadError
-		if !errors.As(err, &payloadErr) {
-			t.Fatalf("expected WebhookPayloadError, got %v", err)
-		}
-		if payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
-			t.Fatalf("expected PAYLOAD_WRONG_TYPE, got %s", payloadErr.Code())
-		}
+	fromBytes, err := ParseWebhookEvent([]byte(`{"event":"email.bounced","id":"evt_1"}`))
+	if err != nil {
+		t.Fatalf("expected raw byte payload to parse: %v", err)
+	}
+	if fromBytes.GetEvent() != "email.bounced" {
+		t.Fatalf("unexpected event type from bytes: %s", fromBytes.GetEvent())
+	}
+
+	fromRawMessage, err := ParseWebhookEvent(json.RawMessage(`{"event":"email.bounced","id":"evt_1"}`))
+	if err != nil {
+		t.Fatalf("expected json.RawMessage payload to parse: %v", err)
+	}
+	if fromRawMessage.GetEvent() != "email.bounced" {
+		t.Fatalf("unexpected event type from json.RawMessage: %s", fromRawMessage.GetEvent())
 	}
 }
 
