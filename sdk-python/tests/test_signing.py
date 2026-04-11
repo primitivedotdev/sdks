@@ -35,7 +35,7 @@ TEST_VECTORS = {
         "timestamp": 1734567890,
         "raw_body": json.dumps(
             {
-                "id": "evt_abc123xyz789",
+                "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
                 "event": "email.received",
                 "version": "2025-12-14",
                 "delivery": {

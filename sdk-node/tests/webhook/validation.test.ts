@@ -6,7 +6,7 @@ import {
 import { WebhookValidationError } from "../../src/webhook/errors.js";
 
 const validPayload = {
-  id: "evt_abc123",
+  id: "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   event: "email.received",
   version: "2025-12-14",
   delivery: {
@@ -90,7 +90,9 @@ describe("validation", () => {
 
   it("returns typed event for valid payload", () => {
     const event = validateEmailReceivedEvent(validPayload);
-    expect(event.id).toBe("evt_abc123");
+    expect(event.id).toBe(
+      "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    );
   });
 
   it("gives an old-style root payload message for non-objects", () => {
@@ -432,7 +434,9 @@ describe("validation", () => {
   it("accepts extra unknown top-level fields like the old validator", () => {
     expect(
       validateEmailReceivedEvent({ ...validPayload, extra_field: "ok" }).id,
-    ).toBe("evt_abc123");
+      ).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
   });
 
   it("accepts extra unknown nested fields like the old validator", () => {
@@ -445,7 +449,9 @@ describe("validation", () => {
           auth: { ...validPayload.email.auth, extra_auth: "ok" },
         },
       }).id,
-    ).toBe("evt_abc123");
+      ).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
   });
 
   it("rejects javascript URLs in download.url", () => {
@@ -970,7 +976,9 @@ describe("validation", () => {
           },
         },
       }).id,
-    ).toBe("evt_abc123");
+      ).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
   });
 
   it("rejects fractional DKIM keyBits", () => {
@@ -1274,6 +1282,8 @@ describe("validation", () => {
           },
         },
       }).id,
-    ).toBe("evt_abc123");
+      ).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
   });
 });

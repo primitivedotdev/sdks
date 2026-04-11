@@ -43,7 +43,7 @@ def test_parse_webhook_event_handles_known_and_unknown_events() -> None:
     assert is_email_received_event(
         parse_webhook_event(
             {
-                "id": "evt_abc123",
+                "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
                 "event": "email.received",
                 "version": "2025-12-14",
                 "delivery": {
@@ -239,7 +239,7 @@ def test_handle_webhook_accepts_bytes_body(valid_payload: dict[str, Any]) -> Non
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_handle_webhook_accepts_custom_tolerance(valid_payload: dict[str, Any]) -> None:
@@ -255,7 +255,7 @@ def test_handle_webhook_accepts_custom_tolerance(valid_payload: dict[str, Any]) 
         tolerance_seconds=1000,
     )
 
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_handle_webhook_finds_signature_with_original_header_casing(
@@ -271,7 +271,7 @@ def test_handle_webhook_finds_signature_with_original_header_casing(
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_handle_webhook_finds_signature_with_uppercase_header_name(
@@ -287,7 +287,7 @@ def test_handle_webhook_finds_signature_with_uppercase_header_name(
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_handle_webhook_accepts_bytes_signature_header(
@@ -303,7 +303,7 @@ def test_handle_webhook_accepts_bytes_signature_header(
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_handle_webhook_uses_first_signature_from_sequence_header(
@@ -319,7 +319,7 @@ def test_handle_webhook_uses_first_signature_from_sequence_header(
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_handle_webhook_coerces_non_string_header_values(valid_payload: dict[str, Any]) -> None:
@@ -333,7 +333,7 @@ def test_handle_webhook_coerces_non_string_header_values(valid_payload: dict[str
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_get_signature_header_skips_non_matching_keys_and_coerces_scalars() -> None:

@@ -38,7 +38,7 @@ func TestValidateEmailReceivedEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateEmailReceivedEvent returned error: %v", err)
 	}
-	if event.ID != "evt_abc123" {
+	if event.ID != "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" {
 		t.Fatalf("unexpected event ID: %s", event.ID)
 	}
 
@@ -278,7 +278,7 @@ func TestHandleWebhookAcceptsByteValuedSignatureHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleWebhook returned error: %v", err)
 	}
-	if event.ID != "evt_abc123" {
+	if event.ID != "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" {
 		t.Fatalf("unexpected event ID: %s", event.ID)
 	}
 
@@ -290,7 +290,7 @@ func TestHandleWebhookAcceptsByteValuedSignatureHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleWebhook should accept byte-valued header sequences: %v", err)
 	}
-	if eventFromSequence.ID != "evt_abc123" {
+	if eventFromSequence.ID != "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" {
 		t.Fatalf("unexpected event ID from header sequence: %s", eventFromSequence.ID)
 	}
 }

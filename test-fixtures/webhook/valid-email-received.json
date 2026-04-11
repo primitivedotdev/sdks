@@ -1,5 +1,5 @@
 {
-  "id": "evt_abc123",
+  "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "event": "email.received",
   "version": "2025-12-14",
   "delivery": {

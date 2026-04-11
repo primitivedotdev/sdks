@@ -3,7 +3,7 @@
     {
       "name": "valid_payload",
       "payload": {
-        "id": "evt_abc123",
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         "event": "email.received",
         "version": "2025-12-14",
         "delivery": {
@@ -78,7 +78,7 @@
       },
       "expected": {
         "valid": true,
-        "id": "evt_abc123"
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
       }
     },
     {
@@ -94,7 +94,7 @@
     {
       "name": "invalid_version_format",
       "payload": {
-        "id": "evt_abc123",
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         "event": "email.received",
         "version": "not-a-date"
       },
@@ -106,7 +106,7 @@
     {
       "name": "invalid_javascript_download_url",
       "payload": {
-        "id": "evt_abc123",
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         "event": "email.received",
         "version": "2025-12-14",
         "delivery": {

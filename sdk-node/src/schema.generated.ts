@@ -16,6 +16,7 @@ export const emailReceivedEventJsonSchema = {
       "properties": {
         "id": {
           "type": "string",
+          "pattern": "^evt_[a-f0-9]{64}$",
           "description": "Unique delivery event ID.\n\nThis ID is stable across retries to the same endpoint - use it as your idempotency/dedupe key. Note that the same email delivered to different endpoints will have different event IDs.\n\nFormat: `evt_` prefix followed by a SHA-256 hash (64 hex characters). Example: `evt_a1b2c3d4e5f6...` (68 characters total)"
         },
         "event": {

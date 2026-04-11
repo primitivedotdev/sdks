@@ -114,11 +114,14 @@ describe("contract", () => {
 
     it("builds valid EmailReceivedEvent", () => {
       const event = buildEmailReceivedEvent(baseInput, {
-        event_id: "evt_test123",
+        event_id:
+          "evt_fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
         attempted_at: "2025-01-01T12:01:00Z",
       });
 
-      expect(event.id).toBe("evt_test123");
+      expect(event.id).toBe(
+        "evt_fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+      );
       expect(event.event).toBe("email.received");
       expect(event.version).toBe("2025-12-14");
       expect(event.delivery.endpoint_id).toBe("endpoint-456");
