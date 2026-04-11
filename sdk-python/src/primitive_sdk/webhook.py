@@ -15,11 +15,9 @@ from pydantic import ValidationError
 from primitive_sdk.errors import (
     RawEmailDecodeError,
     WebhookPayloadError,
-    WebhookValidationError,
     WebhookVerificationError,
 )
 from primitive_sdk.types import (
-    AuthConfidence,
     AuthVerdict,
     EmailAuth,
     EmailReceivedEvent,
@@ -27,7 +25,10 @@ from primitive_sdk.types import (
     ValidateEmailAuthResult,
     WebhookEvent,
 )
-from primitive_sdk.validation import _create_model_validation_error, validate_email_received_event
+from primitive_sdk.validation import (
+    _create_model_validation_error,
+    validate_email_received_event,
+)
 
 WEBHOOK_VERSION = "2025-12-14"
 PRIMITIVE_SIGNATURE_HEADER = "Primitive-Signature"
@@ -480,7 +481,7 @@ def validate_email_auth(
     if dmarc in {"temperror", "permerror"}:
         return ValidateEmailAuthResult(
             verdict=AuthVerdict.UNKNOWN,
-            confidence=AuthConfidence.low,
+            confidence="low",
             reasons=[
                 f"DMARC verification error ({dmarc})",
                 "Cannot determine email authenticity due to DNS or policy errors",
@@ -512,7 +513,7 @@ def validate_email_auth(
             reasons.insert(0, f"DMARC passed with DKIM alignment ({domains})")
             return ValidateEmailAuthResult(
                 verdict=AuthVerdict.LEGIT,
-                confidence=AuthConfidence.medium if weak_key_signatures else AuthConfidence.high,
+                confidence="medium" if weak_key_signatures else "high",
                 reasons=reasons,
             )
         if auth.dmarc_spf_aligned and spf == "pass":
@@ -520,13 +521,13 @@ def validate_email_auth(
             reasons.append("No aligned DKIM signature (SPF can break through forwarding)")
             return ValidateEmailAuthResult(
                 verdict=AuthVerdict.LEGIT,
-                confidence=AuthConfidence.medium,
+                confidence="medium",
                 reasons=reasons,
             )
         reasons.insert(0, "DMARC passed")
         return ValidateEmailAuthResult(
             verdict=AuthVerdict.LEGIT,
-            confidence=AuthConfidence.medium,
+            confidence="medium",
             reasons=reasons,
         )
 
@@ -534,21 +535,21 @@ def validate_email_auth(
         if dmarc_policy == "reject":
             reasons.insert(0, "DMARC failed and domain has reject policy")
             reasons.append("The sender's domain explicitly rejects emails that fail authentication")
-            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.high, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "high", reasons)
         if dmarc_policy == "quarantine":
             reasons.insert(0, "DMARC failed and domain has quarantine policy")
             reasons.append("The sender's domain marks failing emails as suspicious")
-            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.high, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "high", reasons)
         reasons.insert(0, "DMARC failed (domain is in monitoring mode)")
         if spf == "fail":
             reasons.append("SPF failed - sending IP not authorized")
-            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.medium, reasons)
-        return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.low, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "medium", reasons)
+        return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "low", reasons)
 
     if dmarc == "none":
         if spf == "fail":
             reasons.extend(["No DMARC record for sender domain", "SPF failed - sending IP not authorized"])
-            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.medium, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "medium", reasons)
         passing_dkim = [
             sig for sig in auth.dkim_signatures if _enum_value(sig.result) == "pass"
         ]
@@ -557,7 +558,7 @@ def validate_email_auth(
             reasons.append(f"DKIM verified for: {', '.join(sig.domain for sig in passing_dkim)}")
             if spf == "pass":
                 reasons.append("SPF passed")
-            return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, AuthConfidence.low, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, "low", reasons)
         if spf == "pass":
             reasons.extend(
                 [
@@ -566,12 +567,12 @@ def validate_email_auth(
                     "SPF passed (but SPF alone is weak authentication)",
                 ]
             )
-            return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, AuthConfidence.low, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, "low", reasons)
         reasons.extend(["No DMARC record for sender domain", "No valid authentication found"])
-        return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, AuthConfidence.low, reasons)
+        return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, "low", reasons)
 
     return ValidateEmailAuthResult(
         verdict=AuthVerdict.UNKNOWN,
-        confidence=AuthConfidence.low,
+        confidence="low",
         reasons=["Unable to determine email authenticity"],
     )

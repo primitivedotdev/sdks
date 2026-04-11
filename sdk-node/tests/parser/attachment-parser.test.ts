@@ -222,7 +222,7 @@ describe("HTML body handling", () => {
     });
 
     expect(result.bodyHtml).toContain("<script>alert('XSS')</script>");
-    expect(result.bodyHtml).toContain('onload="alert(\'body onload XSS\')"');
+    expect(result.bodyHtml).toContain("onload=\"alert('body onload XSS')\"");
     expect(result.bodyHtml).toContain("https://evil.com/phishing");
   });
 });

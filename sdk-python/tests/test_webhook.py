@@ -9,8 +9,8 @@ import pytest
 
 from primitive_sdk import (
     Content,
-    DmarcPolicy,
     Delivery,
+    DmarcPolicy,
     Download,
     Email,
     Headers,
@@ -22,6 +22,7 @@ from primitive_sdk import (
     UnknownEvent,
     WebhookPayloadError,
     WebhookValidationError,
+    WebhookVersion,
     confirmed_headers,
     decode_raw_email,
     get_download_time_remaining,
@@ -34,7 +35,6 @@ from primitive_sdk import (
     validate_email_auth,
     validate_email_received_event,
     verify_raw_email_download,
-    WebhookVersion,
 )
 from primitive_sdk.webhook import _get_signature_header
 
@@ -127,8 +127,8 @@ def test_parse_webhook_event_handles_known_and_unknown_events() -> None:
 
 def test_exported_enums_match_validated_runtime_values(valid_payload: dict[str, Any]) -> None:
     event = validate_email_received_event(valid_payload)
-    spf_pass = getattr(SpfResult, "PASS")
-    dmarc_reject = getattr(DmarcPolicy, "REJECT")
+    spf_pass = cast(Any, SpfResult).PASS
+    dmarc_reject = cast(Any, DmarcPolicy).REJECT
 
     assert isinstance(event.email.auth.spf, SpfResult)
     assert event.email.auth.spf is spf_pass
@@ -137,7 +137,7 @@ def test_exported_enums_match_validated_runtime_values(valid_payload: dict[str, 
 
 
 def test_dmarc_policy_exposes_null_member() -> None:
-    assert DmarcPolicy(None) is getattr(DmarcPolicy, "NULL")
+    assert DmarcPolicy(None) is cast(Any, DmarcPolicy).NULL
 
 
 def test_public_package_exports_nested_schema_models() -> None:

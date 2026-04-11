@@ -141,7 +141,7 @@ if err != nil {
 
 ## Development
 
-From `primitive-sdks/sdk-go`:
+From `sdks/sdk-go`:
 
 ```bash
 make -C .. go-generate
@@ -150,7 +150,7 @@ go test -run TestSharedCompatibilityFixtures ./...
 gofmt -w .
 ```
 
-Or from `primitive-sdks/`:
+Or from repo root `sdks/`:
 
 ```bash
 make go-generate
@@ -160,12 +160,13 @@ make go-check
 ## Repository Layout
 
 ```text
-primitive-sdks/
+sdks/
   json-schema/
     email-received-event.schema.json
   sdk-go/
     webhook.go
     validation.go
+    schema.go
     schema_generated.go
     types.go
     scripts/

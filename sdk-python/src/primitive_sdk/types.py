@@ -14,9 +14,6 @@ from primitive_sdk.models_generated import (
     Delivery as GeneratedDelivery,
 )
 from primitive_sdk.models_generated import (
-    Download as GeneratedDownload,
-)
-from primitive_sdk.models_generated import (
     DkimResult as GeneratedDkimResult,
 )
 from primitive_sdk.models_generated import (
@@ -27,6 +24,9 @@ from primitive_sdk.models_generated import (
 )
 from primitive_sdk.models_generated import (
     DmarcResult as GeneratedDmarcResult,
+)
+from primitive_sdk.models_generated import (
+    Download as GeneratedDownload,
 )
 from primitive_sdk.models_generated import (
     Email as GeneratedEmail,
@@ -92,13 +92,13 @@ from primitive_sdk.models_generated import (
     RawContentInline as GeneratedRawContentInline,
 )
 from primitive_sdk.models_generated import (
+    Smtp as GeneratedSmtp,
+)
+from primitive_sdk.models_generated import (
     Spamassassin as GeneratedSpamassassin,
 )
 from primitive_sdk.models_generated import (
     SpfResult as GeneratedSpfResult,
-)
-from primitive_sdk.models_generated import (
-    Smtp as GeneratedSmtp,
 )
 from primitive_sdk.models_generated import (
     WebhookAttachment as GeneratedWebhookAttachment,

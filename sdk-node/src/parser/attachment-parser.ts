@@ -273,7 +273,10 @@ function getHeaderString(value: unknown): string | null {
   return String(value);
 }
 
-function getOriginalHeaderValue(parsed: ParsedMail, key: string): string | null {
+function getOriginalHeaderValue(
+  parsed: ParsedMail,
+  key: string,
+): string | null {
   const headerLines = (
     parsed as ParsedMail & {
       headerLines?: Array<{ key?: string; line?: string }>;
@@ -289,7 +292,9 @@ function getOriginalHeaderValue(parsed: ParsedMail, key: string): string | null 
   }
 
   const separator = original.indexOf(":");
-  return separator === -1 ? original : original.slice(separator + 1).trimStart();
+  return separator === -1
+    ? original
+    : original.slice(separator + 1).trimStart();
 }
 
 /**

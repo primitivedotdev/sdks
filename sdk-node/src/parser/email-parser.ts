@@ -41,7 +41,10 @@ export async function parseEmail(emlRaw: string): Promise<ParsedEmail> {
   ): string => {
     if (!addr) return "";
     if (Array.isArray(addr)) {
-      return addr.map((entry) => entry.text || "").filter(Boolean).join(", ");
+      return addr
+        .map((entry) => entry.text || "")
+        .filter(Boolean)
+        .join(", ");
     }
     return addr.text || "";
   };

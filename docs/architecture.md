@@ -1,6 +1,6 @@
 # Architecture
 
-`primitive-sdks` is a multi-language repository for Primitive webhook SDKs.
+`sdks` is a multi-language repository for Primitive webhook SDKs.
 
 The repository is organized around one shared webhook contract and three language packages that implement the same core workflow.
 

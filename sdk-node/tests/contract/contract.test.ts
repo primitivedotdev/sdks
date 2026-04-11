@@ -233,7 +233,9 @@ describe("contract", () => {
       expect(event.email.content.raw.included).toBe(false);
       expect(event.email.parsed.status).toBe("complete");
       if (event.email.parsed.status === "complete") {
-        expect(event.email.parsed.body_text).toBe("This would be a very large body");
+        expect(event.email.parsed.body_text).toBe(
+          "This would be a very large body",
+        );
         expect(event.email.parsed.body_html).toBe(
           "<p>This would be very large HTML</p>",
         );

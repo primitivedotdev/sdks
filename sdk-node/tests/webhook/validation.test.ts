@@ -434,9 +434,9 @@ describe("validation", () => {
   it("accepts extra unknown top-level fields like the old validator", () => {
     expect(
       validateEmailReceivedEvent({ ...validPayload, extra_field: "ok" }).id,
-      ).toBe(
-        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-      );
+    ).toBe(
+      "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    );
   });
 
   it("accepts extra unknown nested fields like the old validator", () => {
@@ -449,9 +449,9 @@ describe("validation", () => {
           auth: { ...validPayload.email.auth, extra_auth: "ok" },
         },
       }).id,
-      ).toBe(
-        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-      );
+    ).toBe(
+      "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    );
   });
 
   it("rejects javascript URLs in download.url", () => {
@@ -998,9 +998,9 @@ describe("validation", () => {
           },
         },
       }).id,
-      ).toBe(
-        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-      );
+    ).toBe(
+      "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    );
   });
 
   it("rejects fractional DKIM keyBits", () => {
@@ -1304,8 +1304,8 @@ describe("validation", () => {
           },
         },
       }).id,
-      ).toBe(
-        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-      );
+    ).toBe(
+      "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    );
   });
 });

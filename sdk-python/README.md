@@ -118,7 +118,7 @@ except PrimitiveWebhookError as error:
 
 ## Development
 
-From `primitive-sdks/sdk-python`:
+From `sdks/sdk-python`:
 
 ```bash
 uv sync --dev
@@ -130,7 +130,7 @@ uv run basedpyright
 uv run python -m build
 ```
 
-Or from `primitive-sdks/`:
+Or from repo root `sdks/`:
 
 ```bash
 make python-sync
@@ -141,7 +141,7 @@ make python-build
 ## Repository Layout
 
 ```text
-primitive-sdks/
+sdks/
   json-schema/
     email-received-event.schema.json
   sdk-python/
