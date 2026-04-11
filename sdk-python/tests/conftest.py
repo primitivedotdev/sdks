@@ -7,8 +7,20 @@ from typing import Any
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-SHARED_FIXTURES = ROOT / "test-fixtures"
+
+def _shared_fixtures_root() -> Path:
+    current = Path(__file__).resolve()
+    candidates = (
+        current.parents[2] / "test-fixtures",
+        current.parents[1] / "test-fixtures",
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError("Could not locate shared test-fixtures directory")
+
+
+SHARED_FIXTURES = _shared_fixtures_root()
 
 
 @pytest.fixture
