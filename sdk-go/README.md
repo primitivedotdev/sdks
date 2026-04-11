@@ -11,7 +11,7 @@ This package helps you:
 
 ## Requirements
 
-- Go `>=1.23`
+- Go `>=1.18`
 
 ## Installation
 

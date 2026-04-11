@@ -31,7 +31,11 @@ def _run_ruff(*args: str) -> None:
             )
 
     fallback_env = os.environ.copy()
-    venv_scripts_dir = ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin")
+    active_venv = fallback_env.get("VIRTUAL_ENV")
+    if active_venv:
+        venv_scripts_dir = Path(active_venv) / ("Scripts" if os.name == "nt" else "bin")
+    else:
+        venv_scripts_dir = ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin")
     fallback_env["PATH"] = os.pathsep.join(
         entry
         for entry in fallback_env.get("PATH", "").split(os.pathsep)
@@ -48,6 +52,32 @@ def _replace_once(text: str, old: str, new: str) -> str:
 
 def _patch_generated_models() -> None:
     text = OUTPUT.read_text()
+
+    if "from enum import Enum, StrEnum\n" in text:
+        text = text.replace(
+            "from enum import Enum, StrEnum\n",
+            "from enum import Enum\n\nfrom primitive_sdk._compat import StrEnum\n",
+            1,
+        )
+    elif "from enum import Enum\n" in text and "from primitive_sdk._compat import StrEnum\n" not in text:
+        text = text.replace(
+            "from enum import Enum\n",
+            "from enum import Enum\n\nfrom primitive_sdk._compat import StrEnum\n",
+            1,
+        )
+
+    for enum_name in (
+        "Code",
+        "ForwardVerdict",
+        "AuthConfidence",
+        "SpfResult",
+        "DmarcResult",
+        "DkimResult",
+    ):
+        text = text.replace(
+            f"class {enum_name}(Enum):",
+            f"class {enum_name}(StrEnum):",
+        )
 
     text = _replace_once(
         text,
@@ -145,7 +175,7 @@ def main() -> None:
             "--snake-case-field",
             "--field-constraints",
             "--target-python-version",
-            "3.11",
+            "3.10",
             "--disable-timestamp",
             "--use-annotated",
             "--use-union-operator",

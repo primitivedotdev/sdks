@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, test } from "vitest";
 import {
   normalizeContentType,
@@ -8,7 +9,10 @@ import {
   sha256Hex,
 } from "../../src/parser/attachment-parser.js";
 
-const FIXTURES_DIR = join(import.meta.dirname, "fixtures/emails");
+const FIXTURES_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "fixtures/emails",
+);
 
 function loadFixture(name: string): Buffer {
   return readFileSync(join(FIXTURES_DIR, name));

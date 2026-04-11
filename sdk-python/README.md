@@ -13,7 +13,7 @@ Validated events are returned as generated Pydantic models derived from the cano
 
 ## Requirements
 
-- Python `>=3.11`
+- Python `>=3.10`
 
 ## Installation
 

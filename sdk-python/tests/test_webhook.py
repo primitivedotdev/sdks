@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any, cast
 
 import pytest
@@ -125,7 +125,9 @@ def test_parse_webhook_event_handles_known_and_unknown_events() -> None:
     assert unknown["event"] == "email.bounced"
 
 
-def test_exported_enums_match_validated_runtime_values(valid_payload: dict[str, Any]) -> None:
+def test_exported_enums_match_validated_runtime_values(
+    valid_payload: dict[str, Any],
+) -> None:
     event = validate_email_received_event(valid_payload)
     spf_pass = cast(Any, SpfResult).PASS
     dmarc_reject = cast(Any, DmarcPolicy).REJECT
@@ -239,13 +241,16 @@ def test_handle_webhook_accepts_bytes_body(valid_payload: dict[str, Any]) -> Non
         secret=secret,
     )
 
-    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_accepts_custom_tolerance(valid_payload: dict[str, Any]) -> None:
     secret = "test-webhook-secret"
     body = json.dumps(valid_payload)
-    timestamp = int(datetime.now(tz=UTC).timestamp()) - 500
+    timestamp = int(datetime.now(tz=timezone.utc).timestamp()) - 500
     header = sign_webhook_payload(body, secret, timestamp)["header"]
 
     event = handle_webhook(
@@ -255,7 +260,10 @@ def test_handle_webhook_accepts_custom_tolerance(valid_payload: dict[str, Any]) 
         tolerance_seconds=1000,
     )
 
-    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_finds_signature_with_original_header_casing(
@@ -271,7 +279,10 @@ def test_handle_webhook_finds_signature_with_original_header_casing(
         secret=secret,
     )
 
-    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_finds_signature_with_uppercase_header_name(
@@ -287,7 +298,10 @@ def test_handle_webhook_finds_signature_with_uppercase_header_name(
         secret=secret,
     )
 
-    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_accepts_bytes_signature_header(
@@ -303,7 +317,10 @@ def test_handle_webhook_accepts_bytes_signature_header(
         secret=secret,
     )
 
-    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_uses_first_signature_from_sequence_header(
@@ -319,10 +336,15 @@ def test_handle_webhook_uses_first_signature_from_sequence_header(
         secret=secret,
     )
 
-    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
-def test_handle_webhook_coerces_non_string_header_values(valid_payload: dict[str, Any]) -> None:
+def test_handle_webhook_coerces_non_string_header_values(
+    valid_payload: dict[str, Any],
+) -> None:
     secret = "test-webhook-secret"
     body = json.dumps(valid_payload)
     header = sign_webhook_payload(body, secret)["header"]
@@ -333,15 +355,26 @@ def test_handle_webhook_coerces_non_string_header_values(valid_payload: dict[str
         secret=secret,
     )
 
-    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_get_signature_header_skips_non_matching_keys_and_coerces_scalars() -> None:
-    assert _get_signature_header({"content-type": "application/json", "primitive-signature": 123}) == "123"
+    assert (
+        _get_signature_header(
+            {"content-type": "application/json", "primitive-signature": 123}
+        )
+        == "123"
+    )
 
 
 def test_get_signature_header_decodes_bytes_values() -> None:
-    assert _get_signature_header({"primitive-signature": b"t=123,v1=abc"}) == "t=123,v1=abc"
+    assert (
+        _get_signature_header({"primitive-signature": b"t=123,v1=abc"})
+        == "t=123,v1=abc"
+    )
 
 
 def test_handle_webhook_rejects_invalid_version_format(
@@ -359,7 +392,9 @@ def test_handle_webhook_rejects_invalid_version_format(
         )
 
 
-def test_handle_webhook_rejects_invalid_json(secret: str = "test-webhook-secret") -> None:
+def test_handle_webhook_rejects_invalid_json(
+    secret: str = "test-webhook-secret",
+) -> None:
     body = "{invalid json"
     header = sign_webhook_payload(body, secret)["header"]
     with pytest.raises(WebhookPayloadError):
@@ -370,7 +405,9 @@ def test_handle_webhook_rejects_invalid_json(secret: str = "test-webhook-secret"
         )
 
 
-def test_handle_webhook_rejects_invalid_payload_structure(secret: str = "test-webhook-secret") -> None:
+def test_handle_webhook_rejects_invalid_payload_structure(
+    secret: str = "test-webhook-secret",
+) -> None:
     body = json.dumps({"event": "email.received", "id": "test"})
     header = sign_webhook_payload(body, secret)["header"]
     with pytest.raises(WebhookValidationError):
@@ -439,7 +476,9 @@ def test_raw_email_helpers(valid_payload: dict[str, Any]) -> None:
     assert verify_raw_email_download(downloaded, event) == downloaded
 
 
-def test_raw_email_helpers_accept_uppercase_hashes(valid_payload: dict[str, Any]) -> None:
+def test_raw_email_helpers_accept_uppercase_hashes(
+    valid_payload: dict[str, Any],
+) -> None:
     event = valid_payload
     uppercase_hash = hashlib.sha256(b"Hello World").hexdigest().upper()
     event["email"]["content"]["raw"]["sha256"] = uppercase_hash

@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
-from enum import StrEnum
-from typing import Literal, NotRequired, TypeAlias, TypedDict
+from typing import Literal, TypeAlias, TypedDict
+
+from primitive_sdk._compat import StrEnum
+
+if sys.version_info >= (3, 11):
+    from typing import NotRequired
+else:
+    from typing_extensions import NotRequired
 
 from primitive_sdk.models_generated import (
     AuthConfidence as GeneratedAuthConfidence,
@@ -112,6 +119,7 @@ def _add_enum_aliases(enum_cls, aliases: dict[str, object]):
     for name, member in aliases.items():
         setattr(enum_cls, name, member)
     return enum_cls
+
 
 EmailReceivedEvent = GeneratedEmailReceivedEvent
 Delivery = GeneratedDelivery

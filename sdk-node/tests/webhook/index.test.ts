@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   confirmedHeaders,
@@ -25,7 +26,7 @@ import { signWebhookPayload } from "../../src/webhook/signing.js";
 const validPayload = JSON.parse(
   readFileSync(
     resolve(
-      import.meta.dirname,
+      dirname(fileURLToPath(import.meta.url)),
       "../../../test-fixtures/webhook/valid-email-received.json",
     ),
     "utf8",

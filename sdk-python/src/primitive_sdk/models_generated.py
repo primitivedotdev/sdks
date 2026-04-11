@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from enum import Enum, StrEnum
+from enum import Enum
 from typing import Annotated, Literal, TypeVar
 
 from pydantic import (
@@ -20,6 +20,8 @@ from pydantic import (
 from pydantic import (
     RootModel as PydanticRootModel,
 )
+
+from primitive_sdk._compat import StrEnum
 
 RootT = TypeVar("RootT")
 
