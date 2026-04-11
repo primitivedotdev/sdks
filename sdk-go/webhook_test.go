@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -498,6 +499,44 @@ func TestValidateEmailAuth(t *testing.T) {
 	}
 	if result.Verdict != AuthVerdictLegit || result.Confidence != AuthConfidenceHigh {
 		t.Fatalf("unexpected auth verdict: %#v", result)
+	}
+}
+
+func TestJSONIntegerFieldsUseInt64(t *testing.T) {
+	if reflect.TypeOf(Delivery{}.Attempt).Kind() != reflect.Int64 {
+		t.Fatalf("expected Delivery.Attempt to use int64")
+	}
+	if reflect.TypeOf(RawContent{}.MaxInlineBytes).Kind() != reflect.Int64 {
+		t.Fatalf("expected RawContent.MaxInlineBytes to use int64")
+	}
+	if reflect.TypeOf(RawContent{}.SizeBytes).Kind() != reflect.Int64 {
+		t.Fatalf("expected RawContent.SizeBytes to use int64")
+	}
+	if reflect.TypeOf(WebhookAttachment{}.SizeBytes).Kind() != reflect.Int64 {
+		t.Fatalf("expected WebhookAttachment.SizeBytes to use int64")
+	}
+	if reflect.TypeOf(WebhookAttachment{}.PartIndex).Kind() != reflect.Int64 {
+		t.Fatalf("expected WebhookAttachment.PartIndex to use int64")
+	}
+	if reflect.TypeOf(ForwardAnalysis{}.AttachmentsFound).Kind() != reflect.Int64 {
+		t.Fatalf("expected ForwardAnalysis.AttachmentsFound to use int64")
+	}
+	if reflect.TypeOf(ForwardAnalysis{}.AttachmentsAnalyzed).Kind() != reflect.Int64 {
+		t.Fatalf("expected ForwardAnalysis.AttachmentsAnalyzed to use int64")
+	}
+	keyBitsType, ok := reflect.TypeOf(DKIMSignature{}).FieldByName("KeyBits")
+	if !ok {
+		t.Fatal("expected DKIMSignature.KeyBits field to exist")
+	}
+	attachmentsLimitType, ok := reflect.TypeOf(ForwardAnalysis{}).FieldByName("AttachmentsLimit")
+	if !ok {
+		t.Fatal("expected ForwardAnalysis.AttachmentsLimit field to exist")
+	}
+	if keyBitsType.Type.Kind() != reflect.Ptr || keyBitsType.Type.Elem().Kind() != reflect.Int64 {
+		t.Fatalf("expected DKIMSignature.KeyBits to use *int64")
+	}
+	if attachmentsLimitType.Type.Kind() != reflect.Ptr || attachmentsLimitType.Type.Elem().Kind() != reflect.Int64 {
+		t.Fatalf("expected ForwardAnalysis.AttachmentsLimit to use *int64")
 	}
 }
 

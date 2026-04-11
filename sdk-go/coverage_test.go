@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func intPtr(v int) *int { return &v }
+func intPtr(v int64) *int64 { return &v }
 
 func boolPtr(v bool) *bool { return &v }
 
