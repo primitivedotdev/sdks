@@ -4,13 +4,22 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT.parent / "json-schema" / "email-received-event.schema.json"
 DEST = ROOT / "src" / "primitive_sdk" / "schemas" / "email_received_event.schema.json"
+
+
+def _source_path() -> Path:
+    repo_source = ROOT.parent / "json-schema" / "email-received-event.schema.json"
+    if repo_source.exists():
+        return repo_source
+    packaged_source = ROOT / "json-schema" / "email-received-event.schema.json"
+    if packaged_source.exists():
+        return packaged_source
+    raise FileNotFoundError("Could not locate email-received-event.schema.json")
 
 
 def main() -> None:
     DEST.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(SOURCE, DEST)
+    shutil.copyfile(_source_path(), DEST)
 
 
 if __name__ == "__main__":
