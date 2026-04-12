@@ -431,7 +431,7 @@ def test_handle_webhook_rejects_invalid_payload_structure(
 
 
 def test_confirmed_headers() -> None:
-    assert confirmed_headers() == {"X-Primitive-Confirmed": "true"}
+    assert confirmed_headers() == {"X-Primitive-Confirmed": "true", "X-MyMX-Confirmed": "true"}
 
 
 def test_download_helpers(valid_payload: dict[str, Any]) -> None:

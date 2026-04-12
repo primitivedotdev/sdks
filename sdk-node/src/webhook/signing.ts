@@ -55,8 +55,14 @@ function hashSecret(secret: string | Buffer): string {
 /** Header name for incoming webhook signature */
 export const PRIMITIVE_SIGNATURE_HEADER = "Primitive-Signature";
 
+/** Legacy header name kept for backward compatibility with older servers */
+export const LEGACY_SIGNATURE_HEADER = "MyMX-Signature";
+
 /** Header name to confirm webhook was processed (prevents retries) */
 export const PRIMITIVE_CONFIRMED_HEADER = "X-Primitive-Confirmed";
+
+/** Legacy confirmed header name kept for backward compatibility */
+export const LEGACY_CONFIRMED_HEADER = "X-MyMX-Confirmed";
 
 /** Default max age for webhook requests (5 minutes) */
 const DEFAULT_TOLERANCE_SECONDS = 5 * 60;

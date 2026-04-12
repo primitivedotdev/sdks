@@ -60,6 +60,8 @@ from primitive_sdk.validation import (
     validate_email_received_event,
 )
 from primitive_sdk.webhook import (
+    LEGACY_CONFIRMED_HEADER,
+    LEGACY_SIGNATURE_HEADER,
     PRIMITIVE_CONFIRMED_HEADER,
     PRIMITIVE_SIGNATURE_HEADER,
     WEBHOOK_VERSION,
@@ -104,6 +106,8 @@ __all__ = [
     "ForwardVerification",
     "Headers",
     "KnownWebhookEvent",
+    "LEGACY_CONFIRMED_HEADER",
+    "LEGACY_SIGNATURE_HEADER",
     "PAYLOAD_ERRORS",
     "PRIMITIVE_CONFIRMED_HEADER",
     "PRIMITIVE_SIGNATURE_HEADER",

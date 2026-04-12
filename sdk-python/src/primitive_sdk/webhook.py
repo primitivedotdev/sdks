@@ -32,7 +32,10 @@ from primitive_sdk.validation import (
 
 WEBHOOK_VERSION = "2025-12-14"
 PRIMITIVE_SIGNATURE_HEADER = "Primitive-Signature"
+LEGACY_SIGNATURE_HEADER = "MyMX-Signature"
 PRIMITIVE_CONFIRMED_HEADER = "X-Primitive-Confirmed"
+LEGACY_CONFIRMED_HEADER = "X-MyMX-Confirmed"
+_SIGNATURE_HEADER_NAMES = ("primitive-signature", "mymx-signature")
 DEFAULT_TOLERANCE_SECONDS = 5 * 60
 FUTURE_TOLERANCE_SECONDS = 60
 HEX_PATTERN = re.compile(r"^[0-9a-f]+$", re.IGNORECASE)
@@ -312,15 +315,16 @@ def is_email_received_event(event: object) -> TypeGuard[EmailReceivedEvent]:
 
 
 def _get_signature_header(headers: Mapping[str, Any]) -> str:
-    for key, value in headers.items():
-        if key.lower() != "primitive-signature":
-            continue
-        if isinstance(value, Sequence) and not isinstance(
-            value, (bytes, bytearray, str)
-        ):
-            first = value[0] if value else ""
-            return _header_value_to_string(first)
-        return _header_value_to_string(value)
+    for name in _SIGNATURE_HEADER_NAMES:
+        for key, value in headers.items():
+            if key.lower() != name:
+                continue
+            if isinstance(value, Sequence) and not isinstance(
+                value, (bytes, bytearray, str)
+            ):
+                first = value[0] if value else ""
+                return _header_value_to_string(first)
+            return _header_value_to_string(value)
     return ""
 
 
@@ -346,7 +350,7 @@ def handle_webhook(
 
 
 def confirmed_headers() -> dict[str, str]:
-    return {PRIMITIVE_CONFIRMED_HEADER: "true"}
+    return {PRIMITIVE_CONFIRMED_HEADER: "true", LEGACY_CONFIRMED_HEADER: "true"}
 
 
 def _parse_iso8601(value: str | datetime) -> datetime:

@@ -233,6 +233,56 @@ describe("handleWebhook", () => {
       );
     });
 
+    it("falls back to legacy MyMX-Signature header", () => {
+      const body = JSON.stringify(validPayload);
+      const { header } = signWebhookPayload(body, secret);
+
+      const event = handleWebhook({
+        body,
+        headers: { "MyMX-Signature": header },
+        secret,
+      });
+
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
+    });
+
+    it("falls back to legacy header with Fetch API Headers", () => {
+      const body = JSON.stringify(validPayload);
+      const { header } = signWebhookPayload(body, secret);
+      const headers = new Headers();
+      headers.set("mymx-signature", header);
+
+      const event = handleWebhook({
+        body,
+        headers,
+        secret,
+      });
+
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
+    });
+
+    it("prefers Primitive-Signature over legacy MyMX-Signature", () => {
+      const body = JSON.stringify(validPayload);
+      const { header } = signWebhookPayload(body, secret);
+
+      const event = handleWebhook({
+        body,
+        headers: {
+          "Primitive-Signature": header,
+          "MyMX-Signature": "t=0,v1=wrong",
+        },
+        secret,
+      });
+
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
+    });
+
     it("uses the first signature when a header value is an array", () => {
       const body = JSON.stringify(validPayload);
       const { header } = signWebhookPayload(body, secret);
@@ -456,14 +506,17 @@ describe("isEmailReceivedEvent", () => {
 });
 
 describe("confirmedHeaders", () => {
-  it("returns the correct header", () => {
-    expect(confirmedHeaders()).toEqual({ "X-Primitive-Confirmed": "true" });
+  it("returns both current and legacy headers", () => {
+    expect(confirmedHeaders()).toEqual({
+      "X-Primitive-Confirmed": "true",
+      "X-MyMX-Confirmed": "true",
+    });
   });
 
-  it("header value is exactly 'true' (string)", () => {
+  it("header values are exactly 'true' (string)", () => {
     const headers = confirmedHeaders();
     expect(headers["X-Primitive-Confirmed"]).toBe("true");
-    expect(typeof headers["X-Primitive-Confirmed"]).toBe("string");
+    expect(headers["X-MyMX-Confirmed"]).toBe("true");
   });
 });
 
