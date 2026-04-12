@@ -944,11 +944,11 @@ export const emailReceivedEventJsonSchema = {
         },
         "dmarcSpfAligned": {
           "type": "boolean",
-          "description": "Whether SPF aligned with the From: domain for DMARC purposes.\n\nTrue if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments."
+          "description": "Whether SPF aligned with the From: domain for DMARC purposes.\n\nTrue if the envelope sender domain matches the From: domain (per alignment mode)."
         },
         "dmarcDkimAligned": {
           "type": "boolean",
-          "description": "Whether DKIM aligned with the From: domain for DMARC purposes.\n\nTrue if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments."
+          "description": "Whether DKIM aligned with the From: domain for DMARC purposes.\n\nTrue if at least one DKIM signature's domain matches the From: domain."
         },
         "dmarcSpfStrict": {
           "type": [

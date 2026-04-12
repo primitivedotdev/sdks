@@ -683,13 +683,13 @@ dmarcFromDomain: (string | null)
 /**
  * Whether SPF aligned with the From: domain for DMARC purposes.
  * 
- * True if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments.
+ * True if the envelope sender domain matches the From: domain (per alignment mode).
  */
 dmarcSpfAligned: boolean
 /**
  * Whether DKIM aligned with the From: domain for DMARC purposes.
  * 
- * True if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments.
+ * True if at least one DKIM signature's domain matches the From: domain.
  */
 dmarcDkimAligned: boolean
 /**
@@ -1022,13 +1022,13 @@ dmarcFromDomain: (string | null)
 /**
  * Whether SPF aligned with the From: domain for DMARC purposes.
  * 
- * True if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments.
+ * True if the envelope sender domain matches the From: domain (per alignment mode).
  */
 dmarcSpfAligned: boolean
 /**
  * Whether DKIM aligned with the From: domain for DMARC purposes.
  * 
- * True if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments.
+ * True if at least one DKIM signature's domain matches the From: domain.
  */
 dmarcDkimAligned: boolean
 /**
