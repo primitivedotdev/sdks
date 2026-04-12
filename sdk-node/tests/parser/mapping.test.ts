@@ -257,18 +257,16 @@ describe("toCanonicalHeaders", () => {
     expect(headers.date).toBeNull();
   });
 
-  it("coerces null from to empty string", () => {
+  it("throws when the From header is missing", () => {
     const parsed = createParsedEmail({ from: null });
-    const headers = toCanonicalHeaders(parsed);
 
-    expect(headers.from).toBe("");
+    expect(() => toCanonicalHeaders(parsed)).toThrow(/From header/);
   });
 
-  it("coerces null to to empty string", () => {
+  it("throws when the To header is missing", () => {
     const parsed = createParsedEmail({ to: null });
-    const headers = toCanonicalHeaders(parsed);
 
-    expect(headers.to).toBe("");
+    expect(() => toCanonicalHeaders(parsed)).toThrow(/To header/);
   });
 
   it("handles null subject and messageId", () => {

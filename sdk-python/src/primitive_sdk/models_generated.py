@@ -3,19 +3,25 @@
 
 from __future__ import annotations
 
-from enum import Enum, StrEnum
+from enum import Enum
 from typing import Annotated, Literal, TypeVar
 
 from pydantic import (
     AnyUrl,
     AwareDatetime,
-    BaseModel as PydanticBaseModel,
     ConfigDict,
     Field,
-    RootModel as PydanticRootModel,
     UrlConstraints,
     field_validator,
 )
+from pydantic import (
+    BaseModel as PydanticBaseModel,
+)
+from pydantic import (
+    RootModel as PydanticRootModel,
+)
+
+from primitive_sdk._compat import StrEnum
 
 RootT = TypeVar("RootT")
 
@@ -31,6 +37,7 @@ class BaseModel(PydanticBaseModel):
 
     def model_dump_json(self, *args, **kwargs):
         kwargs.setdefault("by_alias", True)
+        kwargs.setdefault("exclude_defaults", True)
         return super().model_dump_json(*args, **kwargs)
 
 
@@ -46,6 +53,7 @@ class RootModel(PydanticRootModel[RootT]):
 
     def model_dump_json(self, *args, **kwargs):
         kwargs.setdefault("by_alias", True)
+        kwargs.setdefault("exclude_defaults", True)
         return super().model_dump_json(*args, **kwargs)
 
 
@@ -121,12 +129,14 @@ class Headers(BaseModel):
         Field(
             alias="from",
             description='From header value. May include display name: `"John Doe" <john@example.com>`',
+            min_length=1,
         ),
     ]
     to: Annotated[
         str,
         Field(
-            description="To header value. May include multiple addresses or display names."
+            description="To header value. May include multiple addresses or display names.",
+            min_length=1,
         ),
     ]
     date: Annotated[
@@ -160,7 +170,7 @@ class WebhookVersion(RootModel[str]):
         str,
         Field(
             description="Valid webhook version format (YYYY-MM-DD date string). The SDK accepts any valid date-formatted version, not just the current one, for forward and backward compatibility.",
-            pattern="^\\d{4}-\\d{2}-\\d{2}$",
+            pattern="^(?:(?:\\d{4}-(?:(?:01|03|05|07|08|10|12)-(?:0[1-9]|[12]\\d|3[01])|(?:04|06|09|11)-(?:0[1-9]|[12]\\d|30)|02-(?:0[1-9]|1\\d|2[0-8])))|(?:(?:[02468][048]00|[13579][26]00|\\d{2}(?:0[48]|[2468][048]|[13579][26]))-02-29))$",
         ),
     ]
 
@@ -838,7 +848,8 @@ class EmailReceivedEvent(BaseModel):
     id: Annotated[
         str,
         Field(
-            description="Unique delivery event ID.\n\nThis ID is stable across retries to the same endpoint - use it as your idempotency/dedupe key. Note that the same email delivered to different endpoints will have different event IDs.\n\nFormat: `evt_` prefix followed by a SHA-256 hash (64 hex characters). Example: `evt_a1b2c3d4e5f6...` (68 characters total)"
+            description="Unique delivery event ID.\n\nThis ID is stable across retries to the same endpoint - use it as your idempotency/dedupe key. Note that the same email delivered to different endpoints will have different event IDs.\n\nFormat: `evt_` prefix followed by a SHA-256 hash (64 hex characters). Example: `evt_a1b2c3d4e5f6...` (68 characters total)",
+            pattern="^evt_[a-f0-9]{64}$",
         ),
     ]
     event: Annotated[

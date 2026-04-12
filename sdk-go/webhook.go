@@ -167,12 +167,14 @@ func ParseWebhookEvent(input any) (WebhookEvent, error) {
 	}
 	switch input.(type) {
 	case []byte, json.RawMessage:
-		return nil, NewWebhookPayloadError(
-			"PAYLOAD_WRONG_TYPE",
-			fmt.Sprintf("Received %T instead of webhook payload object", input),
-			"Webhook payloads must be objects.",
-			nil,
-		)
+		parsed, err := ParseJSONBody(input)
+		if err != nil {
+			return nil, err
+		}
+		input = parsed
+	}
+	if input == nil {
+		return nil, NewWebhookPayloadError("PAYLOAD_NULL", "Received null instead of webhook payload", "Check that your request body variable is defined.", nil)
 	}
 	kind := reflect.TypeOf(input).Kind()
 	if kind == reflect.Slice || kind == reflect.Array {
@@ -274,14 +276,41 @@ func ConfirmedHeaders() map[string]string {
 	return map[string]string{PrimitiveConfirmedHeader: "true"}
 }
 
+func missingPayloadFieldError(path string) *WebhookPayloadError {
+	return NewWebhookPayloadError(
+		"PAYLOAD_WRONG_TYPE",
+		fmt.Sprintf("Missing required field %q in webhook payload", path),
+		fmt.Sprintf("Check that %q is present in the webhook payload.", path),
+		nil,
+	)
+}
+
+func invalidPayloadFieldError(path string, message string, suggestion string, cause error) *WebhookPayloadError {
+	return NewWebhookPayloadError("PAYLOAD_WRONG_TYPE", message, suggestion, cause)
+}
+
+func invalidAuthInputError(err error) *WebhookValidationError {
+	return NewWebhookValidationError(
+		"auth",
+		fmt.Sprintf("Validation failed for auth: %s", err.Error()),
+		"Check the structure of the auth object.",
+		nil,
+	)
+}
+
 func IsDownloadExpired(event any, nowMillis ...int64) (bool, error) {
 	expiresAt, ok := getString(event, "email", "content", "download", "expires_at")
 	if !ok {
-		return false, fmt.Errorf("missing email.content.download.expires_at")
+		return false, missingPayloadFieldError("email.content.download.expires_at")
 	}
 	expires, err := parseRFC3339Timestamp(expiresAt)
 	if err != nil {
-		return false, err
+		return false, invalidPayloadFieldError(
+			"email.content.download.expires_at",
+			fmt.Sprintf("Invalid value for email.content.download.expires_at: %q is not a valid RFC 3339 timestamp", expiresAt),
+			"Check that \"email.content.download.expires_at\" is a valid RFC 3339 timestamp.",
+			err,
+		)
 	}
 	now := time.Now().UnixMilli()
 	if len(nowMillis) > 0 {
@@ -293,11 +322,16 @@ func IsDownloadExpired(event any, nowMillis ...int64) (bool, error) {
 func GetDownloadTimeRemaining(event any, nowMillis ...int64) (int64, error) {
 	expiresAt, ok := getString(event, "email", "content", "download", "expires_at")
 	if !ok {
-		return 0, fmt.Errorf("missing email.content.download.expires_at")
+		return 0, missingPayloadFieldError("email.content.download.expires_at")
 	}
 	expires, err := parseRFC3339Timestamp(expiresAt)
 	if err != nil {
-		return 0, err
+		return 0, invalidPayloadFieldError(
+			"email.content.download.expires_at",
+			fmt.Sprintf("Invalid value for email.content.download.expires_at: %q is not a valid RFC 3339 timestamp", expiresAt),
+			"Check that \"email.content.download.expires_at\" is a valid RFC 3339 timestamp.",
+			err,
+		)
 	}
 	now := time.Now().UnixMilli()
 	if len(nowMillis) > 0 {
@@ -317,7 +351,7 @@ func parseRFC3339Timestamp(value string) (time.Time, error) {
 func IsRawIncluded(event any) (bool, error) {
 	included, ok := getBool(event, "email", "content", "raw", "included")
 	if !ok {
-		return false, fmt.Errorf("missing email.content.raw.included")
+		return false, missingPayloadFieldError("email.content.raw.included")
 	}
 	return included, nil
 }
@@ -325,7 +359,7 @@ func IsRawIncluded(event any) (bool, error) {
 func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 	included, ok := getBool(event, "email", "content", "raw", "included")
 	if !ok {
-		return nil, fmt.Errorf("missing email.content.raw.included")
+		return nil, missingPayloadFieldError("email.content.raw.included")
 	}
 	if !included {
 		url, _ := getString(event, "email", "content", "download", "url")
@@ -335,7 +369,7 @@ func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 	}
 	data, ok := getString(event, "email", "content", "raw", "data")
 	if !ok {
-		return nil, fmt.Errorf("missing email.content.raw.data")
+		return nil, missingPayloadFieldError("email.content.raw.data")
 	}
 	decoded, err := base64.StdEncoding.Strict().DecodeString(data)
 	if err != nil {
@@ -348,7 +382,7 @@ func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 	if shouldVerify {
 		expected, ok := getString(event, "email", "content", "raw", "sha256")
 		if !ok || expected == "" {
-			return nil, fmt.Errorf("missing email.content.raw.sha256")
+			return nil, missingPayloadFieldError("email.content.raw.sha256")
 		}
 		digest := sha256.Sum256(decoded)
 		actual := hex.EncodeToString(digest[:])
@@ -362,7 +396,7 @@ func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 func VerifyRawEmailDownload(downloaded []byte, event any) ([]byte, error) {
 	expected, ok := getString(event, "email", "content", "raw", "sha256")
 	if !ok || expected == "" {
-		return nil, fmt.Errorf("missing email.content.raw.sha256")
+		return nil, missingPayloadFieldError("email.content.raw.sha256")
 	}
 	digest := sha256.Sum256(downloaded)
 	actual := hex.EncodeToString(digest[:])
@@ -375,7 +409,7 @@ func VerifyRawEmailDownload(downloaded []byte, event any) ([]byte, error) {
 func ValidateEmailAuth(input any) (ValidateEmailAuthResult, error) {
 	auth, err := decodeInto[EmailAuth](input)
 	if err != nil {
-		return ValidateEmailAuthResult{}, err
+		return ValidateEmailAuthResult{}, invalidAuthInputError(err)
 	}
 	reasons := []string{}
 	weakKeySignatures := []DKIMSignature{}

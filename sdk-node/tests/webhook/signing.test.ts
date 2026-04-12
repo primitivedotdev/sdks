@@ -46,7 +46,7 @@ const TEST_VECTORS = {
     secret: "whsec_production_key_abc123xyz",
     timestamp: 1734567890,
     rawBody: JSON.stringify({
-      id: "evt_abc123xyz789",
+      id: "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
       event: "email.received",
       version: "2025-12-14",
       delivery: {

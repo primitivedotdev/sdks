@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   confirmedHeaders,
@@ -25,7 +26,7 @@ import { signWebhookPayload } from "../../src/webhook/signing.js";
 const validPayload = JSON.parse(
   readFileSync(
     resolve(
-      import.meta.dirname,
+      dirname(fileURLToPath(import.meta.url)),
       "../../../test-fixtures/webhook/valid-email-received.json",
     ),
     "utf8",
@@ -39,7 +40,9 @@ describe("parseWebhookEvent", () => {
 
       expect(result.event).toBe("email.received");
       if (result.event === "email.received") {
-        expect(result.id).toBe("evt_abc123");
+        expect(result.id).toBe(
+          "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        );
       }
     });
 
@@ -145,7 +148,9 @@ describe("handleWebhook", () => {
         secret,
       });
 
-      expect(event.id).toBe("evt_abc123");
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
       expect(event.event).toBe("email.received");
       expect(event.email.headers.subject).toBe("Test Email");
     });
@@ -160,7 +165,9 @@ describe("handleWebhook", () => {
         secret,
       });
 
-      expect(event.id).toBe("evt_abc123");
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
     });
 
     it("accepts custom tolerance", () => {
@@ -174,7 +181,9 @@ describe("handleWebhook", () => {
         toleranceSeconds: 600,
       });
 
-      expect(event.id).toBe("evt_abc123");
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
     });
 
     it("finds signature with original casing (Primitive-Signature)", () => {
@@ -187,7 +196,9 @@ describe("handleWebhook", () => {
         secret,
       });
 
-      expect(event.id).toBe("evt_abc123");
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
     });
 
     it("works with Fetch API Headers object", () => {
@@ -202,7 +213,9 @@ describe("handleWebhook", () => {
         secret,
       });
 
-      expect(event.id).toBe("evt_abc123");
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
     });
 
     it("finds signature with uppercase header name", () => {
@@ -215,7 +228,9 @@ describe("handleWebhook", () => {
         secret,
       });
 
-      expect(event.id).toBe("evt_abc123");
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
     });
 
     it("uses the first signature when a header value is an array", () => {
@@ -228,7 +243,9 @@ describe("handleWebhook", () => {
         secret,
       });
 
-      expect(event.id).toBe("evt_abc123");
+      expect(event.id).toBe(
+        "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      );
     });
 
     it("treats an empty signature array as a missing header", () => {
@@ -357,7 +374,7 @@ describe("handleWebhook", () => {
     });
 
     it("throws WebhookValidationError for invalid version format", () => {
-      const invalidVersion = { ...validPayload, version: "not-a-date" };
+      const invalidVersion = { ...validPayload, version: "2025-99-99" };
       const body = JSON.stringify(invalidVersion);
       const { header } = signWebhookPayload(body, secret);
 

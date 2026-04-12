@@ -1,7 +1,7 @@
 .PHONY: node-install node-generate node-check-generated node-test node-check node-build node-smoke node-coverage
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
-.PHONY: shared-check check build release-check
+.PHONY: shared-check check build release-check ci
 
 PYTHON := $(shell if command -v python3 >/dev/null 2>&1; then printf python3; else printf python; fi)
 
@@ -85,3 +85,19 @@ check: node-check python-check go-check shared-check
 build: node-build python-build go-build
 
 release-check: node-check node-build node-smoke python-check python-build python-smoke go-check go-build shared-check
+
+ci:
+	$(MAKE) node-install
+	$(MAKE) python-sync
+	$(MAKE) node-check
+	$(MAKE) node-build
+	$(MAKE) node-smoke
+	$(MAKE) node-coverage
+	$(MAKE) python-check
+	$(MAKE) python-build
+	$(MAKE) python-smoke
+	$(MAKE) python-coverage
+	$(MAKE) go-check
+	$(MAKE) go-build
+	$(MAKE) go-coverage
+	$(MAKE) shared-check

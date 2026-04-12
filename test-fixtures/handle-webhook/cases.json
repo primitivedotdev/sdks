@@ -9,7 +9,7 @@
       "secret": "test-webhook-secret",
       "expected": {
         "valid": true,
-        "id": "evt_abc123"
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
       }
     },
     {
@@ -21,7 +21,7 @@
       "secret": "test-webhook-secret",
       "expected": {
         "valid": true,
-        "id": "evt_abc123"
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
       }
     },
     {

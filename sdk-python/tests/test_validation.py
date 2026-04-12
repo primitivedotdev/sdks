@@ -30,7 +30,7 @@ def test_validate_email_received_event_accepts_valid_payload(
     valid_payload: dict[str, Any],
 ) -> None:
     event = validate_email_received_event(valid_payload)
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_validate_email_received_event_rejects_invalid_payload() -> None:
@@ -80,6 +80,23 @@ def test_validate_email_received_event_accepts_date_formatted_version(
     assert event.version.root == "2030-12-31"
 
 
+def test_validate_email_received_event_rejects_empty_from_header(
+    valid_payload: dict[str, Any],
+) -> None:
+    with pytest.raises(WebhookValidationError) as error:
+        validate_email_received_event(
+            {
+                **valid_payload,
+                "email": {
+                    **valid_payload["email"],
+                    "headers": {**valid_payload["email"]["headers"], "from": ""},
+                },
+            }
+        )
+
+    assert error.value.field == "email.headers.from"
+
+
 def test_validate_email_received_event_rejects_invalid_received_at_format(
     valid_payload: dict[str, Any],
 ) -> None:
@@ -108,7 +125,7 @@ def test_validate_email_received_event_accepts_extra_unknown_fields(
             },
         }
     )
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_validate_email_received_event_rejects_javascript_download_url(
@@ -167,7 +184,7 @@ def test_validate_email_received_event_accepts_https_attachments_download_url(
             },
         }
     )
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_email_received_event_model_rejects_http_download_url(
@@ -358,7 +375,7 @@ def test_validate_email_received_event_accepts_valid_forward_attachment_counters
             },
         }
     )
-    assert event.id == "evt_abc123"
+    assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
 def test_format_validation_issue_formats_const_errors() -> None:

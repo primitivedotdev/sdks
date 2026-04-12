@@ -34,7 +34,7 @@ The Node SDK also ships Node-only `contract` and `parser` modules under `@primit
 ## Repository Layout
 
 ```text
-primitive-sdks/
+sdks/
   .github/workflows/
   json-schema/
   sdk-go/

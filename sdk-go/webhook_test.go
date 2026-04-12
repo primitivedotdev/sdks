@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -38,7 +39,7 @@ func TestValidateEmailReceivedEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateEmailReceivedEvent returned error: %v", err)
 	}
-	if event.ID != "evt_abc123" {
+	if event.ID != "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" {
 		t.Fatalf("unexpected event ID: %s", event.ID)
 	}
 
@@ -99,15 +100,33 @@ func TestParseWebhookEvent(t *testing.T) {
 		t.Fatal("expected array payload error")
 	}
 
-	if _, err := ParseWebhookEvent([]byte(`{"event":"email.bounced","id":"evt_1"}`)); err == nil {
-		t.Fatal("expected raw byte payload error")
-	} else {
-		var payloadErr *WebhookPayloadError
-		if !errors.As(err, &payloadErr) {
-			t.Fatalf("expected WebhookPayloadError, got %v", err)
-		}
-		if payloadErr.Code() != "PAYLOAD_WRONG_TYPE" {
-			t.Fatalf("expected PAYLOAD_WRONG_TYPE, got %s", payloadErr.Code())
+	fromBytes, err := ParseWebhookEvent([]byte(`{"event":"email.bounced","id":"evt_1"}`))
+	if err != nil {
+		t.Fatalf("expected raw byte payload to parse: %v", err)
+	}
+	if fromBytes.GetEvent() != "email.bounced" {
+		t.Fatalf("unexpected event type from bytes: %s", fromBytes.GetEvent())
+	}
+
+	fromRawMessage, err := ParseWebhookEvent(json.RawMessage(`{"event":"email.bounced","id":"evt_1"}`))
+	if err != nil {
+		t.Fatalf("expected json.RawMessage payload to parse: %v", err)
+	}
+	if fromRawMessage.GetEvent() != "email.bounced" {
+		t.Fatalf("unexpected event type from json.RawMessage: %s", fromRawMessage.GetEvent())
+	}
+
+	for _, input := range []any{[]byte("null"), json.RawMessage("null")} {
+		if _, err := ParseWebhookEvent(input); err == nil {
+			t.Fatalf("expected null payload error for %T", input)
+		} else {
+			var payloadErr *WebhookPayloadError
+			if !errors.As(err, &payloadErr) {
+				t.Fatalf("expected WebhookPayloadError for %T, got %v", input, err)
+			}
+			if payloadErr.Code() != "PAYLOAD_NULL" {
+				t.Fatalf("expected PAYLOAD_NULL for %T, got %s", input, payloadErr.Code())
+			}
 		}
 	}
 }
@@ -278,7 +297,7 @@ func TestHandleWebhookAcceptsByteValuedSignatureHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleWebhook returned error: %v", err)
 	}
-	if event.ID != "evt_abc123" {
+	if event.ID != "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" {
 		t.Fatalf("unexpected event ID: %s", event.ID)
 	}
 
@@ -290,7 +309,7 @@ func TestHandleWebhookAcceptsByteValuedSignatureHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HandleWebhook should accept byte-valued header sequences: %v", err)
 	}
-	if eventFromSequence.ID != "evt_abc123" {
+	if eventFromSequence.ID != "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" {
 		t.Fatalf("unexpected event ID from header sequence: %s", eventFromSequence.ID)
 	}
 }
@@ -494,6 +513,44 @@ func TestValidateEmailAuth(t *testing.T) {
 	}
 	if result.Verdict != AuthVerdictLegit || result.Confidence != AuthConfidenceHigh {
 		t.Fatalf("unexpected auth verdict: %#v", result)
+	}
+}
+
+func TestJSONIntegerFieldsUseInt64(t *testing.T) {
+	if reflect.TypeOf(Delivery{}.Attempt).Kind() != reflect.Int64 {
+		t.Fatalf("expected Delivery.Attempt to use int64")
+	}
+	if reflect.TypeOf(RawContent{}.MaxInlineBytes).Kind() != reflect.Int64 {
+		t.Fatalf("expected RawContent.MaxInlineBytes to use int64")
+	}
+	if reflect.TypeOf(RawContent{}.SizeBytes).Kind() != reflect.Int64 {
+		t.Fatalf("expected RawContent.SizeBytes to use int64")
+	}
+	if reflect.TypeOf(WebhookAttachment{}.SizeBytes).Kind() != reflect.Int64 {
+		t.Fatalf("expected WebhookAttachment.SizeBytes to use int64")
+	}
+	if reflect.TypeOf(WebhookAttachment{}.PartIndex).Kind() != reflect.Int64 {
+		t.Fatalf("expected WebhookAttachment.PartIndex to use int64")
+	}
+	if reflect.TypeOf(ForwardAnalysis{}.AttachmentsFound).Kind() != reflect.Int64 {
+		t.Fatalf("expected ForwardAnalysis.AttachmentsFound to use int64")
+	}
+	if reflect.TypeOf(ForwardAnalysis{}.AttachmentsAnalyzed).Kind() != reflect.Int64 {
+		t.Fatalf("expected ForwardAnalysis.AttachmentsAnalyzed to use int64")
+	}
+	keyBitsType, ok := reflect.TypeOf(DKIMSignature{}).FieldByName("KeyBits")
+	if !ok {
+		t.Fatal("expected DKIMSignature.KeyBits field to exist")
+	}
+	attachmentsLimitType, ok := reflect.TypeOf(ForwardAnalysis{}).FieldByName("AttachmentsLimit")
+	if !ok {
+		t.Fatal("expected ForwardAnalysis.AttachmentsLimit field to exist")
+	}
+	if keyBitsType.Type.Kind() != reflect.Ptr || keyBitsType.Type.Elem().Kind() != reflect.Int64 {
+		t.Fatalf("expected DKIMSignature.KeyBits to use *int64")
+	}
+	if attachmentsLimitType.Type.Kind() != reflect.Ptr || attachmentsLimitType.Type.Elem().Kind() != reflect.Int64 {
+		t.Fatalf("expected ForwardAnalysis.AttachmentsLimit to use *int64")
 	}
 }
 

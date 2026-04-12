@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any, cast
 
 import pytest
 
 from primitive_sdk import (
     Content,
-    DmarcPolicy,
     Delivery,
+    DmarcPolicy,
     Download,
     Email,
     Headers,
@@ -22,6 +22,7 @@ from primitive_sdk import (
     UnknownEvent,
     WebhookPayloadError,
     WebhookValidationError,
+    WebhookVersion,
     confirmed_headers,
     decode_raw_email,
     get_download_time_remaining,
@@ -34,7 +35,6 @@ from primitive_sdk import (
     validate_email_auth,
     validate_email_received_event,
     verify_raw_email_download,
-    WebhookVersion,
 )
 from primitive_sdk.webhook import _get_signature_header
 
@@ -43,7 +43,7 @@ def test_parse_webhook_event_handles_known_and_unknown_events() -> None:
     assert is_email_received_event(
         parse_webhook_event(
             {
-                "id": "evt_abc123",
+                "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
                 "event": "email.received",
                 "version": "2025-12-14",
                 "delivery": {
@@ -125,10 +125,12 @@ def test_parse_webhook_event_handles_known_and_unknown_events() -> None:
     assert unknown["event"] == "email.bounced"
 
 
-def test_exported_enums_match_validated_runtime_values(valid_payload: dict[str, Any]) -> None:
+def test_exported_enums_match_validated_runtime_values(
+    valid_payload: dict[str, Any],
+) -> None:
     event = validate_email_received_event(valid_payload)
-    spf_pass = getattr(SpfResult, "PASS")
-    dmarc_reject = getattr(DmarcPolicy, "REJECT")
+    spf_pass = cast(Any, SpfResult).PASS
+    dmarc_reject = cast(Any, DmarcPolicy).REJECT
 
     assert isinstance(event.email.auth.spf, SpfResult)
     assert event.email.auth.spf is spf_pass
@@ -137,7 +139,7 @@ def test_exported_enums_match_validated_runtime_values(valid_payload: dict[str, 
 
 
 def test_dmarc_policy_exposes_null_member() -> None:
-    assert DmarcPolicy(None) is getattr(DmarcPolicy, "NULL")
+    assert DmarcPolicy(None) is cast(Any, DmarcPolicy).NULL
 
 
 def test_public_package_exports_nested_schema_models() -> None:
@@ -170,6 +172,18 @@ def test_validated_event_model_dump_round_trips_with_schema_aliases(
     assert "from_" not in dumped["email"]["headers"]
     assert dumped["email"]["auth"]["dmarcPolicy"] == "reject"
     assert dumped["email"]["auth"]["dkimSignatures"][0]["keyBits"] == 2048
+    assert validate_email_received_event(dumped).id == event.id
+
+
+def test_validated_event_model_dump_json_round_trips_with_schema_aliases(
+    valid_payload: dict[str, Any],
+) -> None:
+    event = validate_email_received_event(valid_payload)
+    dumped = json.loads(event.model_dump_json())
+
+    assert "from" in dumped["email"]["headers"]
+    assert "from_" not in dumped["email"]["headers"]
+    assert dumped["email"]["analysis"] == {}
     assert validate_email_received_event(dumped).id == event.id
 
 
@@ -239,13 +253,16 @@ def test_handle_webhook_accepts_bytes_body(valid_payload: dict[str, Any]) -> Non
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_accepts_custom_tolerance(valid_payload: dict[str, Any]) -> None:
     secret = "test-webhook-secret"
     body = json.dumps(valid_payload)
-    timestamp = int(datetime.now(tz=UTC).timestamp()) - 500
+    timestamp = int(datetime.now(tz=timezone.utc).timestamp()) - 500
     header = sign_webhook_payload(body, secret, timestamp)["header"]
 
     event = handle_webhook(
@@ -255,7 +272,10 @@ def test_handle_webhook_accepts_custom_tolerance(valid_payload: dict[str, Any]) 
         tolerance_seconds=1000,
     )
 
-    assert event.id == "evt_abc123"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_finds_signature_with_original_header_casing(
@@ -271,7 +291,10 @@ def test_handle_webhook_finds_signature_with_original_header_casing(
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_finds_signature_with_uppercase_header_name(
@@ -287,7 +310,10 @@ def test_handle_webhook_finds_signature_with_uppercase_header_name(
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_accepts_bytes_signature_header(
@@ -303,7 +329,10 @@ def test_handle_webhook_accepts_bytes_signature_header(
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_handle_webhook_uses_first_signature_from_sequence_header(
@@ -319,10 +348,15 @@ def test_handle_webhook_uses_first_signature_from_sequence_header(
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
-def test_handle_webhook_coerces_non_string_header_values(valid_payload: dict[str, Any]) -> None:
+def test_handle_webhook_coerces_non_string_header_values(
+    valid_payload: dict[str, Any],
+) -> None:
     secret = "test-webhook-secret"
     body = json.dumps(valid_payload)
     header = sign_webhook_payload(body, secret)["header"]
@@ -333,22 +367,33 @@ def test_handle_webhook_coerces_non_string_header_values(valid_payload: dict[str
         secret=secret,
     )
 
-    assert event.id == "evt_abc123"
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
 
 
 def test_get_signature_header_skips_non_matching_keys_and_coerces_scalars() -> None:
-    assert _get_signature_header({"content-type": "application/json", "primitive-signature": 123}) == "123"
+    assert (
+        _get_signature_header(
+            {"content-type": "application/json", "primitive-signature": 123}
+        )
+        == "123"
+    )
 
 
 def test_get_signature_header_decodes_bytes_values() -> None:
-    assert _get_signature_header({"primitive-signature": b"t=123,v1=abc"}) == "t=123,v1=abc"
+    assert (
+        _get_signature_header({"primitive-signature": b"t=123,v1=abc"})
+        == "t=123,v1=abc"
+    )
 
 
 def test_handle_webhook_rejects_invalid_version_format(
     valid_payload: dict[str, Any],
 ) -> None:
     secret = "test-webhook-secret"
-    body = json.dumps({**valid_payload, "version": "not-a-date"})
+    body = json.dumps({**valid_payload, "version": "2025-99-99"})
     header = sign_webhook_payload(body, secret)["header"]
 
     with pytest.raises(WebhookValidationError):
@@ -359,7 +404,9 @@ def test_handle_webhook_rejects_invalid_version_format(
         )
 
 
-def test_handle_webhook_rejects_invalid_json(secret: str = "test-webhook-secret") -> None:
+def test_handle_webhook_rejects_invalid_json(
+    secret: str = "test-webhook-secret",
+) -> None:
     body = "{invalid json"
     header = sign_webhook_payload(body, secret)["header"]
     with pytest.raises(WebhookPayloadError):
@@ -370,7 +417,9 @@ def test_handle_webhook_rejects_invalid_json(secret: str = "test-webhook-secret"
         )
 
 
-def test_handle_webhook_rejects_invalid_payload_structure(secret: str = "test-webhook-secret") -> None:
+def test_handle_webhook_rejects_invalid_payload_structure(
+    secret: str = "test-webhook-secret",
+) -> None:
     body = json.dumps({"event": "email.received", "id": "test"})
     header = sign_webhook_payload(body, secret)["header"]
     with pytest.raises(WebhookValidationError):
@@ -417,6 +466,20 @@ def test_download_helpers_accept_typed_events(valid_payload: dict[str, Any]) -> 
     assert get_download_time_remaining(event, future_now) > 0
 
 
+def test_download_helpers_raise_webhook_errors_for_invalid_payloads() -> None:
+    with pytest.raises(WebhookPayloadError) as missing_error:
+        is_download_expired({})
+
+    assert missing_error.value.code == "PAYLOAD_WRONG_TYPE"
+
+    with pytest.raises(WebhookPayloadError) as invalid_error:
+        get_download_time_remaining(
+            {"email": {"content": {"download": {"expires_at": "nope"}}}}
+        )
+
+    assert invalid_error.value.code == "PAYLOAD_WRONG_TYPE"
+
+
 def test_raw_email_helpers(valid_payload: dict[str, Any]) -> None:
     event = valid_payload
     assert is_raw_included(event) is True
@@ -425,7 +488,9 @@ def test_raw_email_helpers(valid_payload: dict[str, Any]) -> None:
     assert verify_raw_email_download(downloaded, event) == downloaded
 
 
-def test_raw_email_helpers_accept_uppercase_hashes(valid_payload: dict[str, Any]) -> None:
+def test_raw_email_helpers_accept_uppercase_hashes(
+    valid_payload: dict[str, Any],
+) -> None:
     event = valid_payload
     uppercase_hash = hashlib.sha256(b"Hello World").hexdigest().upper()
     event["email"]["content"]["raw"]["sha256"] = uppercase_hash
@@ -483,6 +548,23 @@ def test_decode_raw_email_rejects_download_only_content() -> None:
         decode_raw_email(event)
 
     assert "download URL" in error.value.suggestion
+
+
+def test_raw_email_helpers_raise_webhook_errors_for_invalid_payloads() -> None:
+    with pytest.raises(WebhookPayloadError) as included_error:
+        is_raw_included({})
+
+    assert included_error.value.code == "PAYLOAD_WRONG_TYPE"
+
+    with pytest.raises(WebhookPayloadError) as decode_error:
+        decode_raw_email({})
+
+    assert decode_error.value.code == "PAYLOAD_WRONG_TYPE"
+
+    with pytest.raises(WebhookPayloadError) as verify_error:
+        verify_raw_email_download(b"Hello World", {})
+
+    assert verify_error.value.code == "PAYLOAD_WRONG_TYPE"
 
 
 def test_verify_raw_email_download_accepts_empty_and_binary_content() -> None:
@@ -549,6 +631,13 @@ def test_validate_email_auth(valid_payload: dict[str, Any]) -> None:
     assert result.verdict == "legit"
     assert result.confidence == "high"
     assert any("DKIM alignment" in reason for reason in result.reasons)
+
+
+def test_validate_email_auth_wraps_invalid_mappings() -> None:
+    with pytest.raises(WebhookValidationError) as error:
+        validate_email_auth({})
+
+    assert error.value.code == "SCHEMA_VALIDATION_FAILED"
 
 
 def test_error_hierarchy() -> None:

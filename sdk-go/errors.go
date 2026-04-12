@@ -193,8 +193,15 @@ func NewWebhookValidationError(field string, message string, suggestion string, 
 		},
 		Field:                field,
 		ValidationErrors:     validationErrors,
-		AdditionalErrorCount: max(0, len(validationErrors)-1),
+		AdditionalErrorCount: maxInt(0, len(validationErrors)-1),
 	}
+}
+
+func maxInt(a int, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (e *WebhookValidationError) ToMap() map[string]any {

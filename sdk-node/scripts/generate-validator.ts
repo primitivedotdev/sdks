@@ -1,14 +1,17 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 import standaloneCode from "ajv/dist/standalone";
+import { fileURLToPath } from "node:url";
+
+const scriptDir = dirname(fileURLToPath(import.meta.url));
 
 const schemaPath = resolve(
-  import.meta.dirname,
+  scriptDir,
   "../../json-schema/email-received-event.schema.json",
 );
-const outputDir = resolve(import.meta.dirname, "../src/generated");
+const outputDir = resolve(scriptDir, "../src/generated");
 const outputPath = resolve(
   outputDir,
   "email-received-event.validator.generated.ts",

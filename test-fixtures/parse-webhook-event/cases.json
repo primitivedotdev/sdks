@@ -5,7 +5,7 @@
       "input_fixture": ["webhook", "valid-email-received.json"],
       "expected": {
         "kind": "email.received",
-        "id": "evt_abc123"
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
       }
     },
     {

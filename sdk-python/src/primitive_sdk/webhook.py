@@ -7,17 +7,17 @@ import hmac
 import json
 import re
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any, TypedDict, TypeGuard, cast
+
+from pydantic import ValidationError
 
 from primitive_sdk.errors import (
     RawEmailDecodeError,
     WebhookPayloadError,
-    WebhookValidationError,
     WebhookVerificationError,
 )
 from primitive_sdk.types import (
-    AuthConfidence,
     AuthVerdict,
     EmailAuth,
     EmailReceivedEvent,
@@ -25,7 +25,10 @@ from primitive_sdk.types import (
     ValidateEmailAuthResult,
     WebhookEvent,
 )
-from primitive_sdk.validation import validate_email_received_event
+from primitive_sdk.validation import (
+    _create_model_validation_error,
+    validate_email_received_event,
+)
 
 WEBHOOK_VERSION = "2025-12-14"
 PRIMITIVE_SIGNATURE_HEADER = "Primitive-Signature"
@@ -63,6 +66,33 @@ def _field(obj: Any, *names: str) -> Any:
         if hasattr(obj, name):
             return getattr(obj, name)
     raise KeyError(names[0])
+
+
+def _missing_payload_field(
+    path: str, cause: Exception | None = None
+) -> WebhookPayloadError:
+    return WebhookPayloadError(
+        "PAYLOAD_WRONG_TYPE",
+        f'Missing required field "{path}" in webhook payload',
+        f'Check that "{path}" is present in the webhook payload.',
+        cause,
+    )
+
+
+def _invalid_payload_field(
+    path: str,
+    message: str,
+    suggestion: str,
+    cause: Exception | None = None,
+) -> WebhookPayloadError:
+    return WebhookPayloadError("PAYLOAD_WRONG_TYPE", message, suggestion, cause)
+
+
+def _require_field(obj: Any, path: str, *names: str) -> Any:
+    try:
+        return _field(obj, *names)
+    except KeyError as error:
+        raise _missing_payload_field(path, error) from error
 
 
 def _unwrap_root(value: Any) -> Any:
@@ -119,8 +149,16 @@ def sign_webhook_payload(
     secret: str | bytes,
     timestamp: int | None = None,
 ) -> SignResult:
-    ts = timestamp if timestamp is not None else int(datetime.now(tz=UTC).timestamp())
-    body = raw_body if isinstance(raw_body, str) else buffer_to_string(bytes(raw_body), "raw_body")
+    ts = (
+        timestamp
+        if timestamp is not None
+        else int(datetime.now(tz=timezone.utc).timestamp())
+    )
+    body = (
+        raw_body
+        if isinstance(raw_body, str)
+        else buffer_to_string(bytes(raw_body), "raw_body")
+    )
     secret_bytes = secret.encode("utf-8") if isinstance(secret, str) else secret
     signed_payload = f"{ts}.{body}".encode()
     v1 = hmac.new(secret_bytes, signed_payload, hashlib.sha256).hexdigest()
@@ -185,7 +223,11 @@ def verify_webhook_signature(
         )
 
     timestamp, signatures = parsed
-    now = now_seconds if now_seconds is not None else int(datetime.now(tz=UTC).timestamp())
+    now = (
+        now_seconds
+        if now_seconds is not None
+        else int(datetime.now(tz=timezone.utc).timestamp())
+    )
     age = now - timestamp
     if age > tolerance_seconds:
         raise WebhookVerificationError(
@@ -198,14 +240,22 @@ def verify_webhook_signature(
             "Webhook timestamp is too far in the future. Check server clock sync.",
         )
 
-    body = raw_body if isinstance(raw_body, str) else buffer_to_string(bytes(raw_body), "request body")
+    body = (
+        raw_body
+        if isinstance(raw_body, str)
+        else buffer_to_string(bytes(raw_body), "request body")
+    )
     secret_bytes = secret.encode("utf-8") if isinstance(secret, str) else secret
     signed_payload = f"{timestamp}.{body}".encode()
     expected = hmac.new(secret_bytes, signed_payload, hashlib.sha256).hexdigest()
 
     for provided in signatures:
         normalized = provided.lower()
-        if len(provided) == len(expected) and HEX_PATTERN.fullmatch(provided) and hmac.compare_digest(normalized, expected):
+        if (
+            len(provided) == len(expected)
+            and HEX_PATTERN.fullmatch(provided)
+            and hmac.compare_digest(normalized, expected)
+        ):
             return True
 
     reserialization_hint = _detect_reserialized_body(body)
@@ -265,7 +315,9 @@ def _get_signature_header(headers: Mapping[str, Any]) -> str:
     for key, value in headers.items():
         if key.lower() != "primitive-signature":
             continue
-        if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray, str)):
+        if isinstance(value, Sequence) and not isinstance(
+            value, (bytes, bytearray, str)
+        ):
             first = value[0] if value else ""
             return _header_value_to_string(first)
         return _header_value_to_string(value)
@@ -312,10 +364,26 @@ def is_download_expired(
     event: EmailReceivedEvent | Mapping[str, Any],
     now: int | None = None,
 ) -> bool:
-    now_ms = now if now is not None else int(datetime.now(tz=UTC).timestamp() * 1000)
-    download = _field(_field(_field(event, "email"), "content"), "download")
-    expires_at = _field(download, "expires_at")
-    expires_ms = int(_parse_iso8601(expires_at).timestamp() * 1000)
+    now_ms = (
+        now
+        if now is not None
+        else int(datetime.now(tz=timezone.utc).timestamp() * 1000)
+    )
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    download = _require_field(content, "email.content.download", "download")
+    expires_at = _require_field(
+        download, "email.content.download.expires_at", "expires_at"
+    )
+    try:
+        expires_ms = int(_parse_iso8601(expires_at).timestamp() * 1000)
+    except (AttributeError, TypeError, ValueError) as error:
+        raise _invalid_payload_field(
+            "email.content.download.expires_at",
+            f'Invalid value for "email.content.download.expires_at": {expires_at!r} is not a valid ISO 8601 timestamp',
+            'Check that "email.content.download.expires_at" is a valid ISO 8601 timestamp.',
+            error,
+        ) from error
     return now_ms >= expires_ms
 
 
@@ -323,16 +391,34 @@ def get_download_time_remaining(
     event: EmailReceivedEvent | Mapping[str, Any],
     now: int | None = None,
 ) -> int:
-    now_ms = now if now is not None else int(datetime.now(tz=UTC).timestamp() * 1000)
-    download = _field(_field(_field(event, "email"), "content"), "download")
-    expires_at = _field(download, "expires_at")
-    expires_ms = int(_parse_iso8601(expires_at).timestamp() * 1000)
+    now_ms = (
+        now
+        if now is not None
+        else int(datetime.now(tz=timezone.utc).timestamp() * 1000)
+    )
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    download = _require_field(content, "email.content.download", "download")
+    expires_at = _require_field(
+        download, "email.content.download.expires_at", "expires_at"
+    )
+    try:
+        expires_ms = int(_parse_iso8601(expires_at).timestamp() * 1000)
+    except (AttributeError, TypeError, ValueError) as error:
+        raise _invalid_payload_field(
+            "email.content.download.expires_at",
+            f'Invalid value for "email.content.download.expires_at": {expires_at!r} is not a valid ISO 8601 timestamp',
+            'Check that "email.content.download.expires_at" is a valid ISO 8601 timestamp.',
+            error,
+        ) from error
     return max(0, expires_ms - now_ms)
 
 
 def is_raw_included(event: EmailReceivedEvent | Mapping[str, Any]) -> bool:
-    raw = _unwrap_root(_field(_field(_field(event, "email"), "content"), "raw"))
-    return bool(_field(raw, "included"))
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
+    return bool(_require_field(raw, "email.content.raw.included", "included"))
 
 
 def decode_raw_email(
@@ -340,20 +426,23 @@ def decode_raw_email(
     *,
     verify: bool = True,
 ) -> bytes:
-    content = _field(_field(event, "email"), "content")
-    raw = _unwrap_root(_field(content, "raw"))
-    download = _field(content, "download")
-    if not _field(raw, "included"):
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
+    download = _require_field(content, "email.content.download", "download")
+    if not _require_field(raw, "email.content.raw.included", "included"):
         raise RawEmailDecodeError(
             "NOT_INCLUDED",
             "Raw email not included inline "
-            f"(size: {_field(raw, 'size_bytes')} bytes, "
-            f"threshold: {_field(raw, 'max_inline_bytes')} bytes). "
-            f"Download from: {_field(download, 'url')}",
+            f"(size: {_require_field(raw, 'email.content.raw.size_bytes', 'size_bytes')} bytes, "
+            f"threshold: {_require_field(raw, 'email.content.raw.max_inline_bytes', 'max_inline_bytes')} bytes). "
+            f"Download from: {_require_field(download, 'email.content.download.url', 'url')}",
         )
 
     try:
-        decoded = base64.b64decode(_field(raw, "data"), validate=True)
+        decoded = base64.b64decode(
+            _require_field(raw, "email.content.raw.data", "data"), validate=True
+        )
     except (binascii.Error, TypeError, ValueError) as error:
         raise RawEmailDecodeError(
             "INVALID_BASE64",
@@ -362,7 +451,17 @@ def decode_raw_email(
 
     if verify:
         digest = hashlib.sha256(decoded).hexdigest()
-        expected = _normalize_sha256(_field(raw, "sha256"))
+        try:
+            expected = _normalize_sha256(
+                _require_field(raw, "email.content.raw.sha256", "sha256")
+            )
+        except (AttributeError, TypeError) as error:
+            raise _invalid_payload_field(
+                "email.content.raw.sha256",
+                'Invalid value for "email.content.raw.sha256": expected a hex string',
+                'Check that "email.content.raw.sha256" is a hex-encoded SHA-256 string.',
+                error,
+            ) from error
         if digest != expected:
             raise RawEmailDecodeError(
                 "HASH_MISMATCH",
@@ -378,8 +477,20 @@ def verify_raw_email_download(
 ) -> bytes:
     buffer = bytes(downloaded)
     digest = hashlib.sha256(buffer).hexdigest()
-    raw = _unwrap_root(_field(_field(_field(event, "email"), "content"), "raw"))
-    expected = _normalize_sha256(_field(raw, "sha256"))
+    email = _require_field(event, "email", "email")
+    content = _require_field(email, "email.content", "content")
+    raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
+    try:
+        expected = _normalize_sha256(
+            _require_field(raw, "email.content.raw.sha256", "sha256")
+        )
+    except (AttributeError, TypeError) as error:
+        raise _invalid_payload_field(
+            "email.content.raw.sha256",
+            'Invalid value for "email.content.raw.sha256": expected a hex string',
+            'Check that "email.content.raw.sha256" is a hex-encoded SHA-256 string.',
+            error,
+        ) from error
     if digest != expected:
         raise RawEmailDecodeError(
             "HASH_MISMATCH",
@@ -392,7 +503,10 @@ def validate_email_auth(
     auth: EmailAuth | Mapping[str, Any],
 ) -> ValidateEmailAuthResult:
     if isinstance(auth, Mapping):
-        auth = EmailAuth.model_validate(auth, by_alias=True, by_name=True)
+        try:
+            auth = EmailAuth.model_validate(auth, by_alias=True, by_name=True)
+        except ValidationError as error:
+            raise _create_model_validation_error(error) from error
 
     reasons: list[str] = []
     min_secure_key_bits = 1024
@@ -403,7 +517,7 @@ def validate_email_auth(
     if dmarc in {"temperror", "permerror"}:
         return ValidateEmailAuthResult(
             verdict=AuthVerdict.UNKNOWN,
-            confidence=AuthConfidence.low,
+            confidence="low",
             reasons=[
                 f"DMARC verification error ({dmarc})",
                 "Cannot determine email authenticity due to DNS or policy errors",
@@ -435,52 +549,63 @@ def validate_email_auth(
             reasons.insert(0, f"DMARC passed with DKIM alignment ({domains})")
             return ValidateEmailAuthResult(
                 verdict=AuthVerdict.LEGIT,
-                confidence=AuthConfidence.medium if weak_key_signatures else AuthConfidence.high,
+                confidence="medium" if weak_key_signatures else "high",
                 reasons=reasons,
             )
         if auth.dmarc_spf_aligned and spf == "pass":
             reasons.insert(0, "DMARC passed with SPF alignment")
-            reasons.append("No aligned DKIM signature (SPF can break through forwarding)")
+            reasons.append(
+                "No aligned DKIM signature (SPF can break through forwarding)"
+            )
             return ValidateEmailAuthResult(
                 verdict=AuthVerdict.LEGIT,
-                confidence=AuthConfidence.medium,
+                confidence="medium",
                 reasons=reasons,
             )
         reasons.insert(0, "DMARC passed")
         return ValidateEmailAuthResult(
             verdict=AuthVerdict.LEGIT,
-            confidence=AuthConfidence.medium,
+            confidence="medium",
             reasons=reasons,
         )
 
     if dmarc == "fail":
         if dmarc_policy == "reject":
             reasons.insert(0, "DMARC failed and domain has reject policy")
-            reasons.append("The sender's domain explicitly rejects emails that fail authentication")
-            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.high, reasons)
+            reasons.append(
+                "The sender's domain explicitly rejects emails that fail authentication"
+            )
+            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "high", reasons)
         if dmarc_policy == "quarantine":
             reasons.insert(0, "DMARC failed and domain has quarantine policy")
             reasons.append("The sender's domain marks failing emails as suspicious")
-            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.high, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "high", reasons)
         reasons.insert(0, "DMARC failed (domain is in monitoring mode)")
         if spf == "fail":
             reasons.append("SPF failed - sending IP not authorized")
-            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.medium, reasons)
-        return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.low, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "medium", reasons)
+        return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "low", reasons)
 
     if dmarc == "none":
         if spf == "fail":
-            reasons.extend(["No DMARC record for sender domain", "SPF failed - sending IP not authorized"])
-            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, AuthConfidence.medium, reasons)
+            reasons.extend(
+                [
+                    "No DMARC record for sender domain",
+                    "SPF failed - sending IP not authorized",
+                ]
+            )
+            return ValidateEmailAuthResult(AuthVerdict.SUSPICIOUS, "medium", reasons)
         passing_dkim = [
             sig for sig in auth.dkim_signatures if _enum_value(sig.result) == "pass"
         ]
         if passing_dkim:
             reasons.append("No DMARC record for sender domain")
-            reasons.append(f"DKIM verified for: {', '.join(sig.domain for sig in passing_dkim)}")
+            reasons.append(
+                f"DKIM verified for: {', '.join(sig.domain for sig in passing_dkim)}"
+            )
             if spf == "pass":
                 reasons.append("SPF passed")
-            return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, AuthConfidence.low, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, "low", reasons)
         if spf == "pass":
             reasons.extend(
                 [
@@ -489,12 +614,14 @@ def validate_email_auth(
                     "SPF passed (but SPF alone is weak authentication)",
                 ]
             )
-            return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, AuthConfidence.low, reasons)
-        reasons.extend(["No DMARC record for sender domain", "No valid authentication found"])
-        return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, AuthConfidence.low, reasons)
+            return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, "low", reasons)
+        reasons.extend(
+            ["No DMARC record for sender domain", "No valid authentication found"]
+        )
+        return ValidateEmailAuthResult(AuthVerdict.UNKNOWN, "low", reasons)
 
     return ValidateEmailAuthResult(
         verdict=AuthVerdict.UNKNOWN,
-        confidence=AuthConfidence.low,
+        confidence="low",
         reasons=["Unable to determine email authenticity"],
     )

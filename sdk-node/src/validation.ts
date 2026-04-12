@@ -230,6 +230,21 @@ function formatValidationIssue(
         suggestion: `Add more entries to ${fromFieldLabel(field)} in the webhook payload.`,
       };
     }
+    case "minLength": {
+      const limit = Number((error.params as { limit?: unknown }).limit ?? 0);
+      if (limit === 1) {
+        return {
+          field,
+          message: `Invalid value for ${field}: must not be empty`,
+          suggestion: `Check that ${fromFieldLabel(field)} is present and not an empty string.`,
+        };
+      }
+      return {
+        field,
+        message: `Invalid value for ${field}: must be at least ${limit} characters long`,
+        suggestion: `Check that ${fromFieldLabel(field)} meets the minimum length requirement.`,
+      };
+    }
     case "minimum": {
       const limit = Number((error.params as { limit?: unknown }).limit ?? 0);
       return {

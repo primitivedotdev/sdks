@@ -1,12 +1,15 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { compile } from "json-schema-to-typescript";
+import { fileURLToPath } from "node:url";
+
+const scriptDir = dirname(fileURLToPath(import.meta.url));
 
 const schemaPath = resolve(
-  import.meta.dirname,
+  scriptDir,
   "../../json-schema/email-received-event.schema.json",
 );
-const outputPath = resolve(import.meta.dirname, "../src/types.generated.ts");
+const outputPath = resolve(scriptDir, "../src/types.generated.ts");
 
 const schema = JSON.parse(readFileSync(schemaPath, "utf8")) as {
   $schema: string;

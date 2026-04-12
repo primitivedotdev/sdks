@@ -25,8 +25,20 @@ from primitive_sdk import (
     verify_webhook_signature,
 )
 
-ROOT = Path(__file__).resolve().parents[2]
-FIXTURES = ROOT / "test-fixtures"
+
+def _fixtures_root() -> Path:
+    current = Path(__file__).resolve()
+    candidates = (
+        current.parents[2] / "test-fixtures",
+        current.parents[1] / "test-fixtures",
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError("Could not locate shared test-fixtures directory")
+
+
+FIXTURES = _fixtures_root()
 
 
 def _load_json(*parts: str) -> Any:

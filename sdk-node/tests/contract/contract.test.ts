@@ -114,11 +114,14 @@ describe("contract", () => {
 
     it("builds valid EmailReceivedEvent", () => {
       const event = buildEmailReceivedEvent(baseInput, {
-        event_id: "evt_test123",
+        event_id:
+          "evt_fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
         attempted_at: "2025-01-01T12:01:00Z",
       });
 
-      expect(event.id).toBe("evt_test123");
+      expect(event.id).toBe(
+        "evt_fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+      );
       expect(event.event).toBe("email.received");
       expect(event.version).toBe("2025-12-14");
       expect(event.delivery.endpoint_id).toBe("endpoint-456");
@@ -230,7 +233,9 @@ describe("contract", () => {
       expect(event.email.content.raw.included).toBe(false);
       expect(event.email.parsed.status).toBe("complete");
       if (event.email.parsed.status === "complete") {
-        expect(event.email.parsed.body_text).toBe("This would be a very large body");
+        expect(event.email.parsed.body_text).toBe(
+          "This would be a very large body",
+        );
         expect(event.email.parsed.body_html).toBe(
           "<p>This would be very large HTML</p>",
         );

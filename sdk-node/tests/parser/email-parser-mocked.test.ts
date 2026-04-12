@@ -94,19 +94,10 @@ describe("email-parser mocked branches", () => {
     const { simpleParser } = await import("mailparser");
     vi.mocked(simpleParser).mockResolvedValue({
       headers: new Map<string, unknown>([
-        [
-          "to",
-          [
-            { text: "first@example.com" },
-            { text: "second@example.com" },
-          ],
-        ],
+        ["to", [{ text: "first@example.com" }, { text: "second@example.com" }]],
       ]),
       from: { text: "sender@example.com" },
-      to: [
-        { text: "first@example.com" },
-        { text: "second@example.com" },
-      ],
+      to: [{ text: "first@example.com" }, { text: "second@example.com" }],
       subject: "Repeated recipients",
       text: "Body",
       html: undefined,

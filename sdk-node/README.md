@@ -12,7 +12,7 @@ This package ships three Node.js modules:
 
 ## Requirements
 
-- Node.js `>=22`
+- Node.js `>=20`
 
 ## Installation
 
@@ -177,7 +177,7 @@ try {
 
 ## Development
 
-From `primitive-sdks/sdk-node`:
+From `sdks/sdk-node`:
 
 ```bash
 pnpm install
@@ -187,7 +187,7 @@ pnpm test
 pnpm build
 ```
 
-Or from `primitive-sdks/`:
+Or from repo root `sdks/`:
 
 ```bash
 make node-install

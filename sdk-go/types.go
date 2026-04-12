@@ -150,7 +150,7 @@ func (e EmailReceivedEvent) GetEvent() string { return e.Event }
 
 type Delivery struct {
 	EndpointID  string `json:"endpoint_id"`
-	Attempt     int    `json:"attempt"`
+	Attempt     int64  `json:"attempt"`
 	AttemptedAt string `json:"attempted_at"`
 }
 
@@ -193,8 +193,8 @@ type RawContent struct {
 	Included       bool    `json:"included"`
 	Encoding       *string `json:"encoding,omitempty"`
 	ReasonCode     *string `json:"reason_code,omitempty"`
-	MaxInlineBytes int     `json:"max_inline_bytes"`
-	SizeBytes      int     `json:"size_bytes"`
+	MaxInlineBytes int64   `json:"max_inline_bytes"`
+	SizeBytes      int64   `json:"size_bytes"`
 	SHA256         string  `json:"sha256"`
 	Data           *string `json:"data,omitempty"`
 }
@@ -221,9 +221,9 @@ type EmailAddress struct {
 type WebhookAttachment struct {
 	Filename    *string `json:"filename"`
 	ContentType string  `json:"content_type"`
-	SizeBytes   int     `json:"size_bytes"`
+	SizeBytes   int64   `json:"size_bytes"`
 	SHA256      string  `json:"sha256"`
-	PartIndex   int     `json:"part_index"`
+	PartIndex   int64   `json:"part_index"`
 	TarPath     string  `json:"tar_path"`
 }
 
@@ -245,9 +245,9 @@ type SpamAssassinAnalysis struct {
 type ForwardAnalysis struct {
 	Detected            bool            `json:"detected"`
 	Results             []ForwardResult `json:"results"`
-	AttachmentsFound    int             `json:"attachments_found"`
-	AttachmentsAnalyzed int             `json:"attachments_analyzed"`
-	AttachmentsLimit    *int            `json:"attachments_limit"`
+	AttachmentsFound    int64           `json:"attachments_found"`
+	AttachmentsAnalyzed int64           `json:"attachments_analyzed"`
+	AttachmentsLimit    *int64          `json:"attachments_limit"`
 }
 
 type ForwardResult struct {
@@ -307,7 +307,7 @@ type DKIMSignature struct {
 	Selector *string    `json:"selector,omitempty"`
 	Result   DkimResult `json:"result"`
 	Aligned  bool       `json:"aligned"`
-	KeyBits  *int       `json:"keyBits,omitempty"`
+	KeyBits  *int64     `json:"keyBits,omitempty"`
 	Algo     *string    `json:"algo,omitempty"`
 }
 
