@@ -88,7 +88,7 @@ const ALLOWED_ATTRS = [
 // fragment links. Block data:image/svg+xml (can contain embedded JS) and all
 // other data: schemes (text/html, etc.).
 const ALLOWED_URI_REGEXP =
-  /^(https?:|data:image\/(?!svg\+xml)[a-z]+[;,]|mailto:|cid:|#)/i;
+  /^(https?:|data:image\/(?!svg\+xml)[a-z0-9][a-z0-9+.-]*[;,]|mailto:|cid:|#)/i;
 
 // Register hooks once at module load to avoid race conditions when
 // multiple calls to sanitizeHtml run concurrently.
