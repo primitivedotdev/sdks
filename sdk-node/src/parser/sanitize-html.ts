@@ -84,17 +84,30 @@ const ALLOWED_ATTRS = [
   "face",
 ];
 
-// Allow https, data:image/ (for inline CID images), mailto, and fragment links.
-// Explicitly block data:text/html which is an XSS vector via <a href>.
-const ALLOWED_URI_REGEXP = /^(https?:|data:image\/|mailto:|cid:|#)/i;
+// Allow https, safe raster data:image/ (for inline CID images), mailto, and
+// fragment links. Block data:image/svg+xml (can contain embedded JS) and all
+// other data: schemes (text/html, etc.).
+const ALLOWED_URI_REGEXP =
+  /^(https?:|data:image\/(?!svg\+xml)[a-z]+[;,]|mailto:|cid:|#)/i;
 
 // Register hooks once at module load to avoid race conditions when
 // multiple calls to sanitizeHtml run concurrently.
+const SVG_DATA_URI_RE = /^data:image\/svg\+xml/i;
+
 DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
   if (data.attrName.startsWith("on")) {
     data.keepAttr = false;
   }
   if (data.attrName === "style") {
+    data.keepAttr = false;
+  }
+  // Block data:image/svg+xml URIs — SVG can contain embedded JavaScript.
+  // DOMPurify's DATA_URI_TAGS allowlist bypasses ALLOWED_URI_REGEXP for
+  // img src, so we must strip it in the hook.
+  if (
+    (data.attrName === "src" || data.attrName === "href") &&
+    SVG_DATA_URI_RE.test(data.attrValue)
+  ) {
     data.keepAttr = false;
   }
 });

@@ -263,6 +263,12 @@ describe("sanitizeHtml", () => {
     expect(sanitizeHtml(html)).not.toContain("data:text/html");
   });
 
+  test("strips data:image/svg+xml URIs (can contain embedded JS)", () => {
+    const html =
+      '<img src="data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+">';
+    expect(sanitizeHtml(html)).not.toContain("data:");
+  });
+
   test("preserves mailto links", () => {
     const html = '<a href="mailto:a@b.com">email</a>';
     expect(sanitizeHtml(html)).toContain('href="mailto:a@b.com"');
