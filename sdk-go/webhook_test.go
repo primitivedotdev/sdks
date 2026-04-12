@@ -53,19 +53,9 @@ func TestValidateEmailReceivedEvent(t *testing.T) {
 
 	delete(payload["email"].(map[string]any)["auth"].(map[string]any), "dmarcSpfAligned")
 	delete(payload["email"].(map[string]any)["auth"].(map[string]any), "dmarcDkimAligned")
-	eventWithoutAlignment, err := ValidateEmailReceivedEvent(payload)
-	if err != nil {
-		t.Fatalf("ValidateEmailReceivedEvent should accept missing DMARC alignment fields: %v", err)
-	}
-	if eventWithoutAlignment.Email.Auth.DMARCSpfAligned != nil || eventWithoutAlignment.Email.Auth.DMARCDkimAligned != nil {
-		t.Fatalf("expected missing DMARC alignment fields to stay nil, got %#v", eventWithoutAlignment.Email.Auth)
-	}
-	serialized, err := json.Marshal(eventWithoutAlignment)
-	if err != nil {
-		t.Fatalf("json.Marshal returned error: %v", err)
-	}
-	if strings.Contains(string(serialized), "dmarcSpfAligned") || strings.Contains(string(serialized), "dmarcDkimAligned") {
-		t.Fatalf("expected missing DMARC alignment fields to remain omitted, got %s", serialized)
+	_, err = ValidateEmailReceivedEvent(payload)
+	if err == nil {
+		t.Fatal("ValidateEmailReceivedEvent should reject missing DMARC alignment fields")
 	}
 }
 

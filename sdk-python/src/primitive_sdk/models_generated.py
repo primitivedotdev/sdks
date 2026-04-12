@@ -587,7 +587,7 @@ class DkimSignature(BaseModel):
         Field(
             description="The DKIM selector used to locate the public key (s= tag). Combined with the domain to form the DNS lookup: `selector._domainkey.domain`\n\nOptional in self-hosted environments where the milter may not provide selector info."
         ),
-    ] = None
+    ]
     result: Annotated[
         DkimResult,
         Field(description="Verification result for this specific signature."),
@@ -606,13 +606,13 @@ class DkimSignature(BaseModel):
             ge=1,
             le=16384,
         ),
-    ] = None
+    ]
     algo: Annotated[
         str | None,
         Field(
             description='Signing algorithm (e.g., "rsa-sha256", "ed25519-sha256").\n\nOptional in self-hosted environments.'
         ),
-    ] = None
+    ]
 
 
 class Content(BaseModel):
@@ -689,19 +689,19 @@ class EmailAuth(BaseModel):
         ),
     ]
     dmarc_spf_aligned: Annotated[
-        bool | None,
+        bool,
         Field(
             alias="dmarcSpfAligned",
-            description="Whether SPF aligned with the From: domain for DMARC purposes.\n\nTrue if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments.",
+            description="Whether SPF aligned with the From: domain for DMARC purposes.\n\nTrue if the envelope sender domain matches the From: domain (per alignment mode).",
         ),
-    ] = None
+    ]
     dmarc_dkim_aligned: Annotated[
-        bool | None,
+        bool,
         Field(
             alias="dmarcDkimAligned",
-            description="Whether DKIM aligned with the From: domain for DMARC purposes.\n\nTrue if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments.",
+            description="Whether DKIM aligned with the From: domain for DMARC purposes.\n\nTrue if at least one DKIM signature's domain matches the From: domain.",
         ),
-    ] = None
+    ]
     dmarc_spf_strict: Annotated[
         bool | None,
         Field(

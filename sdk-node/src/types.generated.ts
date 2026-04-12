@@ -683,15 +683,15 @@ dmarcFromDomain: (string | null)
 /**
  * Whether SPF aligned with the From: domain for DMARC purposes.
  * 
- * True if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments.
+ * True if the envelope sender domain matches the From: domain (per alignment mode).
  */
-dmarcSpfAligned?: boolean
+dmarcSpfAligned: boolean
 /**
  * Whether DKIM aligned with the From: domain for DMARC purposes.
  * 
- * True if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments.
+ * True if at least one DKIM signature's domain matches the From: domain.
  */
-dmarcDkimAligned?: boolean
+dmarcDkimAligned: boolean
 /**
  * Whether DMARC SPF alignment mode is strict.
  * 
@@ -720,8 +720,6 @@ dkimSignatures: DkimSignature[]
  * 
  * An email may have multiple DKIM signatures (e.g., one from the sending domain and one from the ESP). Each signature is verified independently.
  * 
- * Fields marked optional (`selector`, `keyBits`, `algo`) may be unavailable in self-hosted environments where the milter provides limited DKIM detail.
- * 
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "DkimSignature".
  */
@@ -735,7 +733,7 @@ domain: string
  * 
  * Optional in self-hosted environments where the milter may not provide selector info.
  */
-selector?: (string | null)
+selector: (string | null)
 /**
  * Verification result for this specific signature.
  */
@@ -753,13 +751,13 @@ aligned: boolean
  * 
  * Optional in self-hosted environments.
  */
-keyBits?: (number | null)
+keyBits: (number | null)
 /**
  * Signing algorithm (e.g., "rsa-sha256", "ed25519-sha256").
  * 
  * Optional in self-hosted environments.
  */
-algo?: (string | null)
+algo: (string | null)
 }
 /**
  * Webhook payload for the `email.received` event.
@@ -1024,15 +1022,15 @@ dmarcFromDomain: (string | null)
 /**
  * Whether SPF aligned with the From: domain for DMARC purposes.
  * 
- * True if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments.
+ * True if the envelope sender domain matches the From: domain (per alignment mode).
  */
-dmarcSpfAligned?: boolean
+dmarcSpfAligned: boolean
 /**
  * Whether DKIM aligned with the From: domain for DMARC purposes.
  * 
- * True if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments.
+ * True if at least one DKIM signature's domain matches the From: domain.
  */
-dmarcDkimAligned?: boolean
+dmarcDkimAligned: boolean
 /**
  * Whether DMARC SPF alignment mode is strict.
  * 

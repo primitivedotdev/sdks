@@ -944,11 +944,11 @@ export const emailReceivedEventJsonSchema = {
         },
         "dmarcSpfAligned": {
           "type": "boolean",
-          "description": "Whether SPF aligned with the From: domain for DMARC purposes.\n\nTrue if the envelope sender domain matches the From: domain (per alignment mode). Optional in self-hosted environments."
+          "description": "Whether SPF aligned with the From: domain for DMARC purposes.\n\nTrue if the envelope sender domain matches the From: domain (per alignment mode)."
         },
         "dmarcDkimAligned": {
           "type": "boolean",
-          "description": "Whether DKIM aligned with the From: domain for DMARC purposes.\n\nTrue if at least one DKIM signature's domain matches the From: domain. Optional in self-hosted environments."
+          "description": "Whether DKIM aligned with the From: domain for DMARC purposes.\n\nTrue if at least one DKIM signature's domain matches the From: domain."
         },
         "dmarcSpfStrict": {
           "type": [
@@ -977,6 +977,8 @@ export const emailReceivedEventJsonSchema = {
         "dmarc",
         "dmarcPolicy",
         "dmarcFromDomain",
+        "dmarcSpfAligned",
+        "dmarcDkimAligned",
         "dmarcSpfStrict",
         "dmarcDkimStrict",
         "dkimSignatures"
@@ -1048,10 +1050,13 @@ export const emailReceivedEventJsonSchema = {
       },
       "required": [
         "domain",
+        "selector",
         "result",
-        "aligned"
+        "aligned",
+        "keyBits",
+        "algo"
       ],
-      "description": "Details about a single DKIM signature found in the email.\n\nAn email may have multiple DKIM signatures (e.g., one from the sending domain and one from the ESP). Each signature is verified independently.\n\nFields marked optional (`selector`, `keyBits`, `algo`) may be unavailable in self-hosted environments where the milter provides limited DKIM detail."
+      "description": "Details about a single DKIM signature found in the email.\n\nAn email may have multiple DKIM signatures (e.g., one from the sending domain and one from the ESP). Each signature is verified independently."
     },
     "DkimResult": {
       "type": "string",
