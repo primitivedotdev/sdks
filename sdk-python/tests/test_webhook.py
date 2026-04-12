@@ -316,6 +316,69 @@ def test_handle_webhook_finds_signature_with_uppercase_header_name(
     )
 
 
+def test_handle_webhook_falls_back_to_legacy_mymx_signature(
+    valid_payload: dict[str, Any],
+) -> None:
+    secret = "test-webhook-secret"
+    body = json.dumps(valid_payload)
+    header = sign_webhook_payload(body, secret)["header"]
+
+    event = handle_webhook(
+        body=body,
+        headers={"MyMX-Signature": str(header)},
+        secret=secret,
+    )
+
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
+
+
+def test_handle_webhook_prefers_primitive_signature_over_legacy(
+    valid_payload: dict[str, Any],
+) -> None:
+    secret = "test-webhook-secret"
+    body = json.dumps(valid_payload)
+    header = sign_webhook_payload(body, secret)["header"]
+
+    event = handle_webhook(
+        body=body,
+        headers={
+            "Primitive-Signature": str(header),
+            "MyMX-Signature": "t=0,v1=wrong",
+        },
+        secret=secret,
+    )
+
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
+
+
+def test_handle_webhook_falls_through_empty_primitive_to_legacy(
+    valid_payload: dict[str, Any],
+) -> None:
+    secret = "test-webhook-secret"
+    body = json.dumps(valid_payload)
+    header = sign_webhook_payload(body, secret)["header"]
+
+    event = handle_webhook(
+        body=body,
+        headers={
+            "Primitive-Signature": "",
+            "MyMX-Signature": str(header),
+        },
+        secret=secret,
+    )
+
+    assert (
+        event.id
+        == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    )
+
+
 def test_handle_webhook_accepts_bytes_signature_header(
     valid_payload: dict[str, Any],
 ) -> None:

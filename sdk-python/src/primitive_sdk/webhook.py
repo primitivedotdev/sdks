@@ -323,8 +323,12 @@ def _get_signature_header(headers: Mapping[str, Any]) -> str:
                 value, (bytes, bytearray, str)
             ):
                 first = value[0] if value else ""
-                return _header_value_to_string(first)
-            return _header_value_to_string(value)
+                result = _header_value_to_string(first)
+            else:
+                result = _header_value_to_string(value)
+            if result:
+                return result
+            break  # matched key but empty value, try next header name
     return ""
 
 

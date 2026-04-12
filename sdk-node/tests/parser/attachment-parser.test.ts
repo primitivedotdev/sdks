@@ -8,6 +8,7 @@ import {
   sanitizeFilename,
   sha256Hex,
 } from "../../src/parser/attachment-parser.js";
+import { sanitizeHtml } from "../../src/parser/sanitize-html.js";
 
 const FIXTURES_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -238,6 +239,74 @@ describe("HTML body handling", () => {
 
     expect(result.bodyHtml).toContain("<script>alert('XSS')</script>");
     expect(result.bodyHtml).toContain("onload=\"alert('body onload XSS')\"");
+  });
+});
+
+describe("sanitizeHtml", () => {
+  test("preserves https links", () => {
+    const html = '<a href="https://example.com">click</a>';
+    expect(sanitizeHtml(html)).toContain('href="https://example.com"');
+  });
+
+  test("preserves http links", () => {
+    const html = '<a href="http://example.com">click</a>';
+    expect(sanitizeHtml(html)).toContain('href="http://example.com"');
+  });
+
+  test("preserves data:image URIs (inline CID images)", () => {
+    const html = '<img src="data:image/png;base64,abc123">';
+    expect(sanitizeHtml(html)).toContain("data:image/png;base64,abc123");
+  });
+
+  test("strips data:text/html URIs (XSS vector)", () => {
+    const html = '<a href="data:text/html,<script>alert(1)</script>">xss</a>';
+    expect(sanitizeHtml(html)).not.toContain("data:text/html");
+  });
+
+  test("strips data:image/svg+xml URIs (can contain embedded JS)", () => {
+    const html =
+      '<img src="data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+">';
+    expect(sanitizeHtml(html)).not.toContain("data:");
+  });
+
+  test("preserves mailto links", () => {
+    const html = '<a href="mailto:a@b.com">email</a>';
+    expect(sanitizeHtml(html)).toContain('href="mailto:a@b.com"');
+  });
+
+  test("strips script tags", () => {
+    expect(sanitizeHtml("<script>alert(1)</script>")).not.toContain("script");
+  });
+
+  test("strips event handlers", () => {
+    const html = '<div onmouseover="alert(1)">hover</div>';
+    expect(sanitizeHtml(html)).not.toContain("onmouseover");
+  });
+
+  test("strips style attributes", () => {
+    const html = '<div style="background:url(evil)">x</div>';
+    expect(sanitizeHtml(html)).not.toContain("style");
+  });
+
+  test("strips target=_blank (not in allowed attrs) preventing window opener attacks", () => {
+    const html = '<a href="https://x.com" target="_blank">x</a>';
+    const result = sanitizeHtml(html);
+    expect(result).toContain('href="https://x.com"');
+    expect(result).not.toContain("target=");
+  });
+
+  test("is safe to call concurrently", async () => {
+    const inputs = Array.from(
+      { length: 50 },
+      (_, i) => `<p><a href="https://example.com/${i}">link ${i}</a></p>`,
+    );
+    const results = await Promise.all(
+      inputs.map((html) => Promise.resolve(sanitizeHtml(html))),
+    );
+    for (let i = 0; i < inputs.length; i++) {
+      expect(results[i]).toContain(`https://example.com/${i}`);
+      expect(results[i]).toContain(`link ${i}`);
+    }
   });
 });
 

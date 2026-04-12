@@ -314,6 +314,59 @@ func TestHandleWebhookAcceptsByteValuedSignatureHeader(t *testing.T) {
 	}
 }
 
+func TestHandleWebhookLegacyMyMXSignatureHeader(t *testing.T) {
+	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	signed, err := SignWebhookPayload(body, "test-webhook-secret")
+	if err != nil {
+		t.Fatalf("SignWebhookPayload returned error: %v", err)
+	}
+
+	event, err := HandleWebhook(HandleWebhookOptions{
+		Body:    body,
+		Headers: map[string]string{"MyMX-Signature": signed.Header},
+		Secret:  "test-webhook-secret",
+	})
+	if err != nil {
+		t.Fatalf("HandleWebhook with legacy header returned error: %v", err)
+	}
+	if event.Event != string(EventTypeEmailReceived) {
+		t.Fatalf("unexpected event type: %s", event.Event)
+	}
+}
+
+func TestHandleWebhookPrefersPrimitiveSignatureOverLegacy(t *testing.T) {
+	payload := loadJSONFixture(t, "webhook", "valid-email-received.json")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	signed, err := SignWebhookPayload(body, "test-webhook-secret")
+	if err != nil {
+		t.Fatalf("SignWebhookPayload returned error: %v", err)
+	}
+
+	event, err := HandleWebhook(HandleWebhookOptions{
+		Body: body,
+		Headers: map[string]string{
+			"Primitive-Signature": signed.Header,
+			"MyMX-Signature":      "t=0,v1=wrong",
+		},
+		Secret: "test-webhook-secret",
+	})
+	if err != nil {
+		t.Fatalf("HandleWebhook should prefer Primitive-Signature: %v", err)
+	}
+	if event.Event != string(EventTypeEmailReceived) {
+		t.Fatalf("unexpected event type: %s", event.Event)
+	}
+}
+
 func TestIsEmailReceivedEventRejectsMalformedMaps(t *testing.T) {
 	if IsEmailReceivedEvent(map[string]any{"event": "email.received"}) {
 		t.Fatal("expected malformed email.received payload to be rejected")
