@@ -131,7 +131,7 @@ const SANITIZE_OPTIONS = {
     "svg",
     "math",
   ],
-} as const;
+};
 
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, SANITIZE_OPTIONS);
