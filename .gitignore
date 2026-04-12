@@ -15,4 +15,5 @@ sdk-python/.ruff_cache/
 sdk-python/**/*.pyc
 sdk-python/**/__pycache__/
 .internal/
+.vite/
 dist/
