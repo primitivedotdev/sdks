@@ -282,7 +282,7 @@ func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
 func ConfirmedHeaders() map[string]string {
 	return map[string]string{
 		PrimitiveConfirmedHeader: "true",
-		LegacyConfirmedHeader:   "true",
+		LegacyConfirmedHeader:    "true",
 	}
 }
 
