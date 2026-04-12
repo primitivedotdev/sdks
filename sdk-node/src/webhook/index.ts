@@ -55,6 +55,8 @@ export {
 } from "./errors.js";
 // Signing & Verification
 export {
+  LEGACY_CONFIRMED_HEADER,
+  LEGACY_SIGNATURE_HEADER,
   PRIMITIVE_CONFIRMED_HEADER,
   PRIMITIVE_SIGNATURE_HEADER,
   type SignResult,
@@ -65,6 +67,7 @@ export {
 
 import { validateEmailReceivedEvent } from "../validation.js";
 import {
+  LEGACY_CONFIRMED_HEADER,
   PRIMITIVE_CONFIRMED_HEADER,
   verifyWebhookSignature,
 } from "./signing.js";
@@ -304,34 +307,37 @@ export interface HandleWebhookOptions {
   toleranceSeconds?: number;
 }
 
+const SIGNATURE_HEADER_NAMES = ["primitive-signature", "mymx-signature"];
+
 /**
  * Extract signature header from various header formats.
+ * Checks for Primitive-Signature first, then falls back to the legacy
+ * MyMX-Signature for backward compatibility with older servers.
  */
 function getSignatureHeader(headers: WebhookHeaders): string {
   // Fetch API Headers object - already case-insensitive
   if (headers instanceof Headers) {
-    return headers.get("primitive-signature") ?? "";
+    for (const name of SIGNATURE_HEADER_NAMES) {
+      const value = headers.get(name);
+      if (value) return value;
+    }
+    return "";
   }
 
   // Plain object - do case-insensitive lookup per RFC 7230
   const obj = headers as Record<string, string | string[] | undefined>;
+  const keys = Object.keys(obj);
 
-  const key = Object.keys(obj).find(
-    (k) => k.toLowerCase() === "primitive-signature",
-  );
+  for (const name of SIGNATURE_HEADER_NAMES) {
+    const key = keys.find((k) => k.toLowerCase() === name);
+    if (!key) continue;
 
-  if (!key) {
-    return "";
+    const value = obj[key];
+    if (Array.isArray(value)) return value[0] ?? "";
+    if (value) return value;
   }
 
-  const value = obj[key];
-
-  // Handle array values (rare but possible)
-  if (Array.isArray(value)) {
-    return value[0] ?? "";
-  }
-
-  return value ?? "";
+  return "";
 }
 
 /**
@@ -431,8 +437,14 @@ export function handleWebhook(
  * });
  * ```
  */
-export function confirmedHeaders(): { "X-Primitive-Confirmed": "true" } {
-  return { [PRIMITIVE_CONFIRMED_HEADER]: "true" };
+export function confirmedHeaders(): {
+  "X-Primitive-Confirmed": "true";
+  "X-MyMX-Confirmed": "true";
+} {
+  return {
+    [PRIMITIVE_CONFIRMED_HEADER]: "true",
+    [LEGACY_CONFIRMED_HEADER]: "true",
+  };
 }
 
 // -----------------------------------------------------------------------------

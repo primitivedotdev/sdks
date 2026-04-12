@@ -31,3 +31,6 @@ export {
   toParsedDataComplete,
   toWebhookAttachments,
 } from "./mapping.js";
+
+// sanitize-html: DOMPurify-based email HTML sanitizer
+export { sanitizeHtml } from "./sanitize-html.js";

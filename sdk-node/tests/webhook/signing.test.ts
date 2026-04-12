@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { WebhookVerificationError } from "../../src/webhook/errors.js";
 import {
+  LEGACY_CONFIRMED_HEADER,
+  LEGACY_SIGNATURE_HEADER,
   PRIMITIVE_CONFIRMED_HEADER,
   PRIMITIVE_SIGNATURE_HEADER,
   signWebhookPayload,
@@ -88,6 +90,18 @@ describe("PRIMITIVE_SIGNATURE_HEADER", () => {
 describe("PRIMITIVE_CONFIRMED_HEADER", () => {
   it("exports the correct header name", () => {
     expect(PRIMITIVE_CONFIRMED_HEADER).toBe("X-Primitive-Confirmed");
+  });
+});
+
+describe("LEGACY_SIGNATURE_HEADER", () => {
+  it("exports the legacy header name", () => {
+    expect(LEGACY_SIGNATURE_HEADER).toBe("MyMX-Signature");
+  });
+});
+
+describe("LEGACY_CONFIRMED_HEADER", () => {
+  it("exports the legacy confirmed header name", () => {
+    expect(LEGACY_CONFIRMED_HEADER).toBe("X-MyMX-Confirmed");
   });
 });
 

@@ -219,15 +219,25 @@ describe("inline image handling", () => {
 // =============================================================================
 
 describe("HTML body handling", () => {
-  test("preserves raw HTML without sanitizing it", async () => {
+  test("sanitizes HTML by default (strips scripts, event handlers)", async () => {
     const eml = loadFixture("malicious-xss.eml");
     const result = await parseEmailWithAttachments(eml, {
       generateAttachmentId: mockAttachmentId,
     });
 
+    expect(result.bodyHtml).not.toContain("<script>");
+    expect(result.bodyHtml).not.toContain("onload=");
+  });
+
+  test("raw HTML preserved with skipHtmlSanitization", async () => {
+    const eml = loadFixture("malicious-xss.eml");
+    const result = await parseEmailWithAttachments(eml, {
+      generateAttachmentId: mockAttachmentId,
+      skipHtmlSanitization: true,
+    });
+
     expect(result.bodyHtml).toContain("<script>alert('XSS')</script>");
     expect(result.bodyHtml).toContain("onload=\"alert('body onload XSS')\"");
-    expect(result.bodyHtml).toContain("https://evil.com/phishing");
   });
 });
 

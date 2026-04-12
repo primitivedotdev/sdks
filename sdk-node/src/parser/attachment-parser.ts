@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ParsedMail } from "mailparser";
 import type { EmailAddress } from "../types.js";
+import { sanitizeHtml } from "./sanitize-html.js";
 
 async function loadMailparser() {
   return import("mailparser");
@@ -56,7 +57,7 @@ export interface ParsedAttachment {
 export interface ParsedEmailWithAttachments {
   // Body
   bodyText: string | null;
-  bodyHtml: string | null; // Raw HTML from mailparser (inline images as data: URLs)
+  bodyHtml: string | null; // Sanitized HTML (safe for rendering). Raw if skipHtmlSanitization was set.
 
   // Attachments
   attachments: ParsedAttachment[];
@@ -88,7 +89,8 @@ export interface ParsedEmailWithAttachments {
 export async function parseEmailWithAttachments(
   emlBuffer: Buffer,
   options?: {
-    generateAttachmentId?: () => string; // Optional custom ID generator
+    generateAttachmentId?: () => string;
+    skipHtmlSanitization?: boolean;
   },
 ): Promise<ParsedEmailWithAttachments> {
   const generateId =
@@ -155,7 +157,9 @@ export async function parseEmailWithAttachments(
   let bodyHtml: string | null = null;
 
   if (parsed.html && typeof parsed.html === "string") {
-    bodyHtml = parsed.html;
+    bodyHtml = options?.skipHtmlSanitization
+      ? parsed.html
+      : sanitizeHtml(parsed.html);
   }
 
   return {

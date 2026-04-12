@@ -234,10 +234,17 @@ func IsEmailReceivedEvent(event any) bool {
 	}
 }
 
+func getSignatureHeaderValue(headers any) string {
+	if v := getHeaderValue(headers, PrimitiveSignatureHeader); v != "" {
+		return v
+	}
+	return getHeaderValue(headers, LegacySignatureHeader)
+}
+
 func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
 	_, err := VerifyWebhookSignature(VerifyOptions{
 		RawBody:          options.Body,
-		SignatureHeader:  getHeaderValue(options.Headers, PrimitiveSignatureHeader),
+		SignatureHeader:  getSignatureHeaderValue(options.Headers),
 		Secret:           options.Secret,
 		ToleranceSeconds: options.ToleranceSeconds,
 	})
@@ -273,7 +280,10 @@ func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {
 }
 
 func ConfirmedHeaders() map[string]string {
-	return map[string]string{PrimitiveConfirmedHeader: "true"}
+	return map[string]string{
+		PrimitiveConfirmedHeader: "true",
+		LegacyConfirmedHeader:   "true",
+	}
 }
 
 func missingPayloadFieldError(path string) *WebhookPayloadError {
