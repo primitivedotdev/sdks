@@ -1,11 +1,7 @@
 import { createHash } from "node:crypto";
 import { PassThrough } from "node:stream";
+import archiver from "archiver";
 import type { ParsedAttachment } from "./attachment-parser.js";
-
-async function loadArchiver() {
-  const module = await import("archiver");
-  return module.default;
-}
 
 /**
  * Result of bundling attachments into a tar.gz archive
@@ -54,7 +50,6 @@ export async function bundleAttachments(
   }
 
   // Create tar.gz archive
-  const archiver = await loadArchiver();
   const archive = archiver("tar", {
     gzip: true,
     gzipOptions: { level: 6 }, // Balanced compression
