@@ -977,6 +977,8 @@ export const emailReceivedEventJsonSchema = {
         "dmarc",
         "dmarcPolicy",
         "dmarcFromDomain",
+        "dmarcSpfAligned",
+        "dmarcDkimAligned",
         "dmarcSpfStrict",
         "dmarcDkimStrict",
         "dkimSignatures"
@@ -1048,10 +1050,13 @@ export const emailReceivedEventJsonSchema = {
       },
       "required": [
         "domain",
+        "selector",
         "result",
-        "aligned"
+        "aligned",
+        "keyBits",
+        "algo"
       ],
-      "description": "Details about a single DKIM signature found in the email.\n\nAn email may have multiple DKIM signatures (e.g., one from the sending domain and one from the ESP). Each signature is verified independently.\n\nFields marked optional (`selector`, `keyBits`, `algo`) may be unavailable in self-hosted environments where the milter provides limited DKIM detail."
+      "description": "Details about a single DKIM signature found in the email.\n\nAn email may have multiple DKIM signatures (e.g., one from the sending domain and one from the ESP). Each signature is verified independently."
     },
     "DkimResult": {
       "type": "string",

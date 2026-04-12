@@ -50,17 +50,13 @@ describe("contract", () => {
       expect(id).toMatch(/^evt_[a-f0-9]+$/);
     });
 
-    it("does not include the webhook version in the stable event ID hash", () => {
+    it("includes the webhook version in the event ID hash for old SDK compat", () => {
       const id = generateEventId("endpoint-123", "email-456");
-      const stableHash = createHash("sha256")
-        .update("email.received:endpoint-123:email-456")
-        .digest("hex");
       const versionedHash = createHash("sha256")
         .update(`email.received:${WEBHOOK_VERSION}:endpoint-123:email-456`)
         .digest("hex");
 
-      expect(id).toBe(`evt_${stableHash}`);
-      expect(id).not.toBe(`evt_${versionedHash}`);
+      expect(id).toBe(`evt_${versionedHash}`);
     });
   });
 
