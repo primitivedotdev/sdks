@@ -355,7 +355,7 @@ func TestHandleWebhookPrefersPrimitiveSignatureOverLegacy(t *testing.T) {
 		Body: body,
 		Headers: map[string]string{
 			"Primitive-Signature": signed.Header,
-			"MyMX-Signature":     "t=0,v1=wrong",
+			"MyMX-Signature":      "t=0,v1=wrong",
 		},
 		Secret: "test-webhook-secret",
 	})

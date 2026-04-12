@@ -259,8 +259,7 @@ describe("sanitizeHtml", () => {
   });
 
   test("strips data:text/html URIs (XSS vector)", () => {
-    const html =
-      '<a href="data:text/html,<script>alert(1)</script>">xss</a>';
+    const html = '<a href="data:text/html,<script>alert(1)</script>">xss</a>';
     expect(sanitizeHtml(html)).not.toContain("data:text/html");
   });
 
