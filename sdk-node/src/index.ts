@@ -1,5 +1,5 @@
 /**
- * @primitivedotdev/sdk-node
+ * @primitivedotdev/sdk
  *
  * Official Primitive Node.js SDK.
  *

@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { handleWebhook, validateEmailAuth } from '@primitivedotdev/sdk-node';
+ * import { handleWebhook, validateEmailAuth } from '@primitivedotdev/sdk';
  *
  * const event = handleWebhook({ body, headers, secret });
  * const result = validateEmailAuth(event.email.auth);

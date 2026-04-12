@@ -1,5 +1,5 @@
 {
-  "name": "@primitivedotdev/sdk-node",
+  "name": "@primitivedotdev/sdk",
   "version": "0.2.0",
   "description": "Official Primitive Node.js SDK — webhook, contract, and parser modules",
   "type": "module",

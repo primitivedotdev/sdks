@@ -5,7 +5,7 @@
  *
  * @example
  * ```typescript
- * import { handleWebhook, PrimitiveWebhookError } from '@primitivedotdev/sdk-node';
+ * import { handleWebhook, PrimitiveWebhookError } from '@primitivedotdev/sdk';
  *
  * app.post('/webhooks/email', express.raw({ type: 'application/json' }), (req, res) => {
  *   try {
@@ -157,7 +157,7 @@ import { parseJsonBody } from "./parsing.js";
  *
  * @example
  * ```typescript
- * import { parseWebhookEvent } from '@primitivedotdev/sdk-node';
+ * import { parseWebhookEvent } from '@primitivedotdev/sdk';
  *
  * const event = parseWebhookEvent(JSON.parse(rawBody));
  *
@@ -351,7 +351,7 @@ function getSignatureHeader(headers: WebhookHeaders): string {
  *
  * @example
  * ```typescript
- * import { handleWebhook, PrimitiveWebhookError } from '@primitivedotdev/sdk-node';
+ * import { handleWebhook, PrimitiveWebhookError } from '@primitivedotdev/sdk';
  *
  * app.post('/webhooks/email', express.raw({ type: 'application/json' }), (req, res) => {
  *   try {
@@ -540,7 +540,7 @@ export interface DecodeRawEmailOptions {
  *
  * @example
  * ```typescript
- * import { handleWebhook, decodeRawEmail, isRawIncluded } from '@primitivedotdev/sdk-node';
+ * import { handleWebhook, decodeRawEmail, isRawIncluded } from '@primitivedotdev/sdk';
  *
  * const event = handleWebhook({ body, headers, secret });
  *
@@ -602,7 +602,7 @@ export function decodeRawEmail(
  *
  * @example
  * ```typescript
- * import { handleWebhook, verifyRawEmailDownload, isRawIncluded } from '@primitivedotdev/sdk-node';
+ * import { handleWebhook, verifyRawEmailDownload, isRawIncluded } from '@primitivedotdev/sdk';
  *
  * const event = handleWebhook({ body, headers, secret });
  *
