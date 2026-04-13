@@ -54,25 +54,18 @@ jobs:
 
           printf 'changed=true\n' >> "$GITHUB_OUTPUT"
 
-      - name: Ensure release tag does not already exist
+      - name: Check npm publish state
         if: ${{ steps.version.outputs.changed == 'true' }}
-        env:
-          TAG: sdk-node/v${{ steps.version.outputs.current }}
-        run: |
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists" >&2
-            exit 1
-          fi
-
-      - name: Ensure npm version does not already exist
-        if: ${{ steps.version.outputs.changed == 'true' }}
+        id: npm_state
         env:
           VERSION: ${{ steps.version.outputs.current }}
         run: |
           if npm view "@primitivedotdev/sdk@$VERSION" version >/dev/null 2>&1; then
-            echo "@primitivedotdev/sdk@$VERSION already exists on npm" >&2
-            exit 1
+            printf 'published=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          printf 'published=false\n' >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
         if: ${{ steps.version.outputs.changed == 'true' }}
@@ -91,11 +84,25 @@ jobs:
         run: make node-smoke
 
       - name: Publish package to npm
-        if: ${{ steps.version.outputs.changed == 'true' }}
+        if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
         run: cd sdk-node && npm publish --access public
 
-      - name: Create GitHub release and tag
+      - name: Check GitHub release state
         if: ${{ steps.version.outputs.changed == 'true' }}
+        id: release_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: sdk-node/v${{ steps.version.outputs.current }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            printf 'exists=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'exists=false\n' >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release and tag
+        if: ${{ steps.version.outputs.changed == 'true' && steps.release_state.outputs.exists != 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: sdk-node/v${{ steps.version.outputs.current }}
