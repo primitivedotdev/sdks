@@ -1,0 +1,121 @@
+name: Python Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdk-python/pyproject.toml'
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    name: Publish Python SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
+        with:
+          python-version: "3.14"
+          save-cache: false
+
+      - name: Detect version change
+        id: version
+        run: |
+          current_version=$(python - <<'PY'
+          import pathlib
+          import tomllib
+
+          pyproject = pathlib.Path("sdk-python/pyproject.toml")
+          print(tomllib.loads(pyproject.read_text())["project"]["version"])
+          PY
+          )
+          previous_version=
+
+          if git cat-file -e "${{ github.event.before }}:sdk-python/pyproject.toml" 2>/dev/null; then
+            previous_version=$(git show "${{ github.event.before }}:sdk-python/pyproject.toml" | python -c 'import sys, tomllib; print(tomllib.loads(sys.stdin.read())["project"]["version"])')
+          fi
+
+          printf 'current=%s\n' "$current_version" >> "$GITHUB_OUTPUT"
+
+          if [ "$current_version" = "$previous_version" ]; then
+            printf 'changed=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'changed=true\n' >> "$GITHUB_OUTPUT"
+
+      - name: Ensure release tag does not already exist
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        env:
+          TAG: sdk-python/v${{ steps.version.outputs.current }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists" >&2
+            exit 1
+          fi
+
+      - name: Ensure PyPI version does not already exist
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        env:
+          VERSION: ${{ steps.version.outputs.current }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          import urllib.error
+          import urllib.request
+
+          version = os.environ["VERSION"]
+          url = f"https://pypi.org/pypi/primitivedotdev/{version}/json"
+          try:
+              with urllib.request.urlopen(url) as response:
+                  if response.status == 200:
+                      print(f"primitivedotdev=={version} already exists on PyPI", file=sys.stderr)
+                      sys.exit(1)
+          except urllib.error.HTTPError as error:
+              if error.code == 404:
+                  sys.exit(0)
+              raise
+          PY
+
+      - name: Sync dependencies
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        run: make python-sync
+
+      - name: Run python checks
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        run: make python-check
+
+      - name: Build python package
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        run: make python-build
+
+      - name: Smoke test built python wheel
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        run: make python-smoke
+
+      - name: Publish package to PyPI
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: sdk-python/dist/
+
+      - name: Create GitHub release and tag
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: sdk-python/v${{ steps.version.outputs.current }}
+          VERSION: ${{ steps.version.outputs.current }}
+        run: |
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "Python SDK v$VERSION" \
+            --generate-notes
