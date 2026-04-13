@@ -55,4 +55,4 @@ If a release includes schema or shared-fixture changes:
 1. Update `json-schema/email-received-event.schema.json`.
 2. Regenerate SDK artifacts.
 3. Update `test-fixtures/` if the behavioral contract changed.
-4. Run `make check` again before publishing.
+4. Run `make release-check` again before publishing.
