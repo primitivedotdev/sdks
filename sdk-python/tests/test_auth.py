@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from primitive_sdk import validate_email_auth
-from primitive_sdk.types import EmailAuth
+from primitive import validate_email_auth
+from primitive.types import EmailAuth
 
 
 def create_base_auth(overrides: dict[str, Any] | None = None) -> dict[str, Any]:

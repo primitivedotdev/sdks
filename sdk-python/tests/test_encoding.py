@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from primitive_sdk.errors import WebhookPayloadError
-from primitive_sdk.webhook import buffer_to_string
+from primitive.errors import WebhookPayloadError
+from primitive.webhook import buffer_to_string
 
 
 def test_buffer_to_string_converts_valid_utf8() -> None:

@@ -1,4 +1,4 @@
-from primitive_sdk.errors import (
+from .errors import (
     PAYLOAD_ERRORS,
     RAW_EMAIL_ERRORS,
     VERIFICATION_ERRORS,
@@ -8,8 +8,8 @@ from primitive_sdk.errors import (
     WebhookValidationError,
     WebhookVerificationError,
 )
-from primitive_sdk.schema import email_received_event_json_schema
-from primitive_sdk.types import (
+from .schema import email_received_event_json_schema
+from .types import (
     AuthConfidence,
     AuthVerdict,
     Content,
@@ -52,14 +52,14 @@ from primitive_sdk.types import (
     WebhookEvent,
     WebhookVersion,
 )
-from primitive_sdk.validation import (
+from .validation import (
     ValidationFailure,
     ValidationResult,
     ValidationSuccess,
     safe_validate_email_received_event,
     validate_email_received_event,
 )
-from primitive_sdk.webhook import (
+from .webhook import (
     LEGACY_CONFIRMED_HEADER,
     LEGACY_SIGNATURE_HEADER,
     PRIMITIVE_CONFIRMED_HEADER,

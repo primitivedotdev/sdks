@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEST = ROOT / "src" / "primitive_sdk" / "schemas" / "email_received_event.schema.json"
+DEST = ROOT / "src" / "primitive" / "schemas" / "email_received_event.schema.json"
 
 
 def _source_path() -> Path:

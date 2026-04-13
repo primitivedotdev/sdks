@@ -17,7 +17,7 @@ The repository currently contains:
 | SDK | Install target | README |
 | --- | --- | --- |
 | Node.js | `npm install primitivedotdev` | `sdk-node/README.md` |
-| Python | `pip install primitive-sdk` | `sdk-python/README.md` |
+| Python | `pip install primitivedotdev` | `sdk-python/README.md` |
 | Go | `go get github.com/primitivedotdev/sdks/sdk-go` | `sdk-go/README.md` |
 
 ## Purpose

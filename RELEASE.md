@@ -3,7 +3,7 @@
 This repository publishes three language SDKs from one shared webhook contract.
 
 - Node: `primitivedotdev`
-- Python: `primitive-sdk`
+- Python: `primitivedotdev`
 - Go: `github.com/primitivedotdev/sdks/sdk-go`
 
 Use this process when cutting a release for one or more SDKs.
