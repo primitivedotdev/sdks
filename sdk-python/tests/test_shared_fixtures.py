@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import pytest
 
-from primitive_sdk import (
+from primitive import (
     EmailReceivedEvent,
     PrimitiveWebhookError,
     RawEmailDecodeError,

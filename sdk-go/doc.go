@@ -8,6 +8,9 @@
 // HandleWebhookEvent preserves unknown future event types as UnknownEvent values.
 // HandleWebhook is the email.received-specific convenience wrapper.
 //
+// Import the module path github.com/primitivedotdev/sdks/sdk-go and use the
+// package name primitive in code.
+//
 // For lower-level use cases, applications can call VerifyWebhookSignature,
 // ParseWebhookEvent, or ValidateEmailReceivedEvent directly.
 //

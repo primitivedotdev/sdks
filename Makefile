@@ -38,7 +38,7 @@ python-generate:
 	cd sdk-python && uv run python scripts/generate_schema_module.py && uv run python scripts/generate_models.py
 
 python-check-generated:
-	cd sdk-python && uv run python scripts/generate_schema_module.py && uv run python scripts/generate_models.py && git diff --exit-code -- src/primitive_sdk/schemas/email_received_event.schema.json src/primitive_sdk/models_generated.py
+	cd sdk-python && uv run python scripts/generate_schema_module.py && uv run python scripts/generate_models.py && git diff --exit-code -- src/primitive/schemas/email_received_event.schema.json src/primitive/models_generated.py
 
 python-test:
 	cd sdk-python && uv run pytest tests -k "not shared_fixtures"
@@ -53,10 +53,10 @@ python-build:
 	cd sdk-python && uv run python -m build && uv run twine check dist/*
 
 python-smoke: python-build
-	smoke_dir=$$(mktemp -d) && wheel_path=$$($(PYTHON) -c "from pathlib import Path; wheels = sorted(Path('sdk-python/dist').glob('*.whl')); assert len(wheels) == 1, wheels; print(wheels[0])") && $(PYTHON) -m venv "$$smoke_dir/venv" && "$$smoke_dir/venv/bin/pip" install "$$wheel_path" && "$$smoke_dir/venv/bin/python" -c "import primitive_sdk; primitive_sdk.handle_webhook"
+	smoke_dir=$$(mktemp -d) && wheel_path=$$($(PYTHON) -c "from pathlib import Path; wheels = sorted(Path('sdk-python/dist').glob('*.whl')); assert len(wheels) == 1, wheels; print(wheels[0])") && $(PYTHON) -m venv "$$smoke_dir/venv" && "$$smoke_dir/venv/bin/pip" install "$$wheel_path" && "$$smoke_dir/venv/bin/python" -c "import primitive; primitive.handle_webhook"
 
 python-coverage:
-	cd sdk-python && uv run pytest tests --cov=primitive_sdk --cov-report=term-missing
+	cd sdk-python && uv run pytest tests --cov=primitive --cov-report=term-missing
 
 go-generate:
 	cd sdk-go && $(PYTHON) scripts/generate_schema_module.py

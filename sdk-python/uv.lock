@@ -894,7 +894,7 @@ wheels = [
 ]
 
 [[package]]
-name = "primitive-sdk"
+name = "primitivedotdev"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

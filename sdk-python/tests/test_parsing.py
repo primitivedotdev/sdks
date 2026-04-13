@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from primitive_sdk import WebhookPayloadError, parse_json_body
+from primitive import WebhookPayloadError, parse_json_body
 
 
 def test_parse_json_body_rejects_empty_body() -> None:

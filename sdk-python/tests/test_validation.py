@@ -5,14 +5,14 @@ from typing import Any
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from primitive_sdk import (
+from primitive import (
     EmailReceivedEvent,
     ValidationFailure,
     WebhookValidationError,
     safe_validate_email_received_event,
     validate_email_received_event,
 )
-from primitive_sdk.validation import (
+from primitive.validation import (
     _create_validation_error,
     _format_validation_issue,
     _validation_sort_key,

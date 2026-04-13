@@ -6,7 +6,7 @@ from typing import Any
 
 
 def _load_schema() -> dict[str, Any]:
-    schema_path = files("primitive_sdk").joinpath(
+    schema_path = files("primitive").joinpath(
         "schemas/email_received_event.schema.json"
     )
     with schema_path.open("r", encoding="utf-8") as schema_file:

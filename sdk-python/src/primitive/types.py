@@ -4,113 +4,113 @@ import sys
 from dataclasses import dataclass
 from typing import Literal, TypeAlias, TypedDict
 
-from primitive_sdk._compat import StrEnum
+from ._compat import StrEnum
 
 if sys.version_info >= (3, 11):
     from typing import NotRequired
 else:
     from typing_extensions import NotRequired
 
-from primitive_sdk.models_generated import (
+from .models_generated import (
     AuthConfidence as GeneratedAuthConfidence,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     Content as GeneratedContent,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     Delivery as GeneratedDelivery,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     DkimResult as GeneratedDkimResult,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     DkimSignature as GeneratedDkimSignature,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     DmarcPolicy as GeneratedDmarcPolicy,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     DmarcResult as GeneratedDmarcResult,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     Download as GeneratedDownload,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     Email as GeneratedEmail,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     EmailAddress as GeneratedEmailAddress,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     EmailAnalysis as GeneratedEmailAnalysis,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     EmailAuth as GeneratedEmailAuth,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     EmailReceivedEvent as GeneratedEmailReceivedEvent,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ForwardAnalysis as GeneratedForwardAnalysis,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ForwardOriginalSender as GeneratedForwardOriginalSender,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ForwardResult as GeneratedForwardResult,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ForwardResultAttachmentAnalyzed as GeneratedForwardResultAttachmentAnalyzed,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ForwardResultAttachmentSkipped as GeneratedForwardResultAttachmentSkipped,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ForwardResultInline as GeneratedForwardResultInline,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ForwardVerdict as GeneratedForwardVerdict,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ForwardVerification as GeneratedForwardVerification,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     Headers as GeneratedHeaders,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ParsedData as GeneratedParsedData,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ParsedDataComplete as GeneratedParsedDataComplete,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ParsedDataFailed as GeneratedParsedDataFailed,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     ParsedError as GeneratedParsedError,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     RawContent as GeneratedRawContent,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     RawContentDownloadOnly as GeneratedRawContentDownloadOnly,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     RawContentInline as GeneratedRawContentInline,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     Smtp as GeneratedSmtp,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     Spamassassin as GeneratedSpamassassin,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     SpfResult as GeneratedSpfResult,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     WebhookAttachment as GeneratedWebhookAttachment,
 )
-from primitive_sdk.models_generated import (
+from .models_generated import (
     WebhookVersion as GeneratedWebhookVersion,
 )
 

@@ -7,9 +7,9 @@ from typing import Any, Generic, Literal, TypeVar
 from jsonschema import Draft7Validator, FormatChecker
 from pydantic import ValidationError
 
-from primitive_sdk.errors import ValidationIssue, WebhookValidationError
-from primitive_sdk.schema import email_received_event_json_schema
-from primitive_sdk.types import EmailReceivedEvent
+from .errors import ValidationIssue, WebhookValidationError
+from .schema import email_received_event_json_schema
+from .types import EmailReceivedEvent
 
 T = TypeVar("T")
 

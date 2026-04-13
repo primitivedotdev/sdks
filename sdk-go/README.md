@@ -16,8 +16,10 @@ This package helps you:
 ## Installation
 
 ```bash
-go get github.com/primitivedotdev/sdks/sdk-go
+go get github.com/primitivedotdev/sdks/sdk-go@latest
 ```
+
+In Go code, import the module path and use the package as `primitive`.
 
 ## Basic Usage
 

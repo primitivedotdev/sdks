@@ -12,12 +12,12 @@ from typing import Any, TypedDict, TypeGuard, cast
 
 from pydantic import ValidationError
 
-from primitive_sdk.errors import (
+from .errors import (
     RawEmailDecodeError,
     WebhookPayloadError,
     WebhookVerificationError,
 )
-from primitive_sdk.types import (
+from .types import (
     AuthVerdict,
     EmailAuth,
     EmailReceivedEvent,
@@ -25,7 +25,7 @@ from primitive_sdk.types import (
     ValidateEmailAuthResult,
     WebhookEvent,
 )
-from primitive_sdk.validation import (
+from .validation import (
     _create_model_validation_error,
     validate_email_received_event,
 )

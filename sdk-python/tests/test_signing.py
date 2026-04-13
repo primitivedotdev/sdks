@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from primitive_sdk import (
+from primitive import (
     PRIMITIVE_CONFIRMED_HEADER,
     PRIMITIVE_SIGNATURE_HEADER,
     WebhookVerificationError,

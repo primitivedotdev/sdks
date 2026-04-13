@@ -43,8 +43,8 @@ make python-generate
 
 Generated files:
 
-- `sdk-python/src/primitive_sdk/schemas/email_received_event.schema.json`
-- `sdk-python/src/primitive_sdk/models_generated.py`
+- `sdk-python/src/primitive/schemas/email_received_event.schema.json`
+- `sdk-python/src/primitive/models_generated.py`
 
 How it works:
 

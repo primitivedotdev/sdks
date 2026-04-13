@@ -1,4 +1,4 @@
-# `primitive-sdk`
+# `primitivedotdev`
 
 Official Primitive Python SDK for webhook verification and validation.
 
@@ -18,13 +18,13 @@ Validated events are returned as generated Pydantic models derived from the cano
 ## Installation
 
 ```bash
-pip install primitive-sdk
+pip install primitivedotdev
 ```
 
 ## Basic Usage
 
 ```python
-from primitive_sdk import PrimitiveWebhookError, handle_webhook
+from primitive import PrimitiveWebhookError, handle_webhook
 
 
 def webhook_handler(body: bytes, headers: dict[str, str]) -> dict[str, object]:
@@ -108,7 +108,7 @@ The SDK uses that schema to generate:
 All SDK-specific runtime errors extend `PrimitiveWebhookError` and include a stable error `code`.
 
 ```python
-from primitive_sdk import PrimitiveWebhookError
+from primitive import PrimitiveWebhookError
 
 try:
     ...
@@ -145,7 +145,7 @@ sdks/
   json-schema/
     email-received-event.schema.json
   sdk-python/
-    src/primitive_sdk/
+    src/primitive/
       models_generated.py
       schema.py
       schemas/email_received_event.schema.json

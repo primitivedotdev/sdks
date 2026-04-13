@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import pytest
 
-from primitive_sdk import (
+from primitive import (
     Content,
     Delivery,
     DmarcPolicy,
@@ -36,7 +36,7 @@ from primitive_sdk import (
     validate_email_received_event,
     verify_raw_email_download,
 )
-from primitive_sdk.webhook import _get_signature_header
+from primitive.webhook import _get_signature_header
 
 
 def test_parse_webhook_event_handles_known_and_unknown_events() -> None:

@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = ROOT / "src" / "primitive_sdk" / "schemas" / "email_received_event.schema.json"
-OUTPUT = ROOT / "src" / "primitive_sdk" / "models_generated.py"
+SCHEMA = ROOT / "src" / "primitive" / "schemas" / "email_received_event.schema.json"
+OUTPUT = ROOT / "src" / "primitive" / "models_generated.py"
 
 
 def _should_fall_back_to_system_ruff(result: subprocess.CompletedProcess[str]) -> bool:
@@ -56,13 +56,13 @@ def _patch_generated_models() -> None:
     if "from enum import Enum, StrEnum\n" in text:
         text = text.replace(
             "from enum import Enum, StrEnum\n",
-            "from enum import Enum\n\nfrom primitive_sdk._compat import StrEnum\n",
+            "from enum import Enum\n\nfrom ._compat import StrEnum\n",
             1,
         )
-    elif "from enum import Enum\n" in text and "from primitive_sdk._compat import StrEnum\n" not in text:
+    elif "from enum import Enum\n" in text and "from ._compat import StrEnum\n" not in text:
         text = text.replace(
             "from enum import Enum\n",
-            "from enum import Enum\n\nfrom primitive_sdk._compat import StrEnum\n",
+            "from enum import Enum\n\nfrom ._compat import StrEnum\n",
             1,
         )
 

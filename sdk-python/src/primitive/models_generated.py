@@ -21,7 +21,7 @@ from pydantic import (
     RootModel as PydanticRootModel,
 )
 
-from primitive_sdk._compat import StrEnum
+from ._compat import StrEnum
 
 RootT = TypeVar("RootT")
 
