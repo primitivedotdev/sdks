@@ -1,12 +1,12 @@
-# `@primitivedotdev/sdk`
+# `primitivedotdev`
 
 Official Primitive Node.js SDK.
 
 This package ships three Node.js modules:
 
-- `@primitivedotdev/sdk` for the webhook module
-- `@primitivedotdev/sdk/contract` for the contract module
-- `@primitivedotdev/sdk/parser` for the parser module
+- `primitivedotdev` for the webhook module
+- `primitivedotdev/contract` for the contract module
+- `primitivedotdev/parser` for the parser module
 
 `contract` and `parser` are only available in the Node SDK. The Go and Python SDKs expose the webhook surface only.
 
@@ -17,7 +17,7 @@ This package ships three Node.js modules:
 ## Installation
 
 ```bash
-npm install @primitivedotdev/sdk
+npm install primitivedotdev
 ```
 
 ## Modules
@@ -27,11 +27,11 @@ npm install @primitivedotdev/sdk
 The root entrypoint remains webhook-focused.
 
 ```ts
-import { handleWebhook, PrimitiveWebhookError } from "@primitivedotdev/sdk";
+import * as primitive from "primitivedotdev";
 
 app.post("/webhooks/email", express.raw({ type: "application/json" }), (req, res) => {
   try {
-    const event = handleWebhook({
+    const event = primitive.handleWebhook({
       body: req.body,
       headers: req.headers,
       secret: process.env.PRIMITIVE_WEBHOOK_SECRET!,
@@ -42,7 +42,7 @@ app.post("/webhooks/email", express.raw({ type: "application/json" }), (req, res
 
     res.json({ received: true });
   } catch (error) {
-    if (error instanceof PrimitiveWebhookError) {
+    if (error instanceof primitive.PrimitiveWebhookError) {
       return res.status(400).json({ error: error.code, message: error.message });
     }
 
@@ -51,7 +51,7 @@ app.post("/webhooks/email", express.raw({ type: "application/json" }), (req, res
 });
 ```
 
-The same API is also available from `@primitivedotdev/sdk/webhook`.
+The same API is also available from `primitivedotdev/webhook`.
 
 Webhook exports include:
 
@@ -70,7 +70,7 @@ Webhook exports include:
 Use the contract module when constructing canonical Primitive webhook payloads on the producer side.
 
 ```ts
-import { buildEmailReceivedEvent, signWebhookPayload } from "@primitivedotdev/sdk/contract";
+import { buildEmailReceivedEvent, signWebhookPayload } from "primitivedotdev/contract";
 
 const event = buildEmailReceivedEvent({
   email_id: "email-123",
@@ -127,7 +127,7 @@ import {
   parseEmail,
   parseEmailWithAttachments,
   toParsedDataComplete,
-} from "@primitivedotdev/sdk/parser";
+} from "primitivedotdev/parser";
 
 const parsed = await parseEmailWithAttachments(emlBuffer);
 const archive = await bundleAttachments(parsed.attachments);
@@ -164,12 +164,12 @@ The SDK uses that schema to generate:
 All SDK-specific runtime errors extend `PrimitiveWebhookError` and include a stable error `code`.
 
 ```ts
-import { PrimitiveWebhookError } from "@primitivedotdev/sdk";
+import * as primitive from "primitivedotdev";
 
 try {
   // ...
 } catch (error) {
-  if (error instanceof PrimitiveWebhookError) {
+  if (error instanceof primitive.PrimitiveWebhookError) {
     console.error(error.code, error.message);
   }
 }

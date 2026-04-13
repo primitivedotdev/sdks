@@ -127,12 +127,12 @@ export type RawEmailDecodeErrorCode = keyof typeof RAW_EMAIL_ERRORS;
  *
  * @example
  * ```typescript
- * import { handleWebhook, PrimitiveWebhookError } from '@primitivedotdev/sdk';
+ * import * as primitive from 'primitivedotdev';
  *
  * try {
- *   const event = handleWebhook({ body, headers, secret });
+ *   const event = primitive.handleWebhook({ body, headers, secret });
  * } catch (err) {
- *   if (err instanceof PrimitiveWebhookError) {
+ *   if (err instanceof primitive.PrimitiveWebhookError) {
  *     console.error(`[${err.code}] ${err.message}`);
  *     return res.status(400).json({ error: err.code });
  *   }

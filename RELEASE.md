@@ -2,7 +2,7 @@
 
 This repository publishes three language SDKs from one shared webhook contract.
 
-- Node: `@primitivedotdev/sdk`
+- Node: `primitivedotdev`
 - Python: `primitive-sdk`
 - Go: `github.com/primitivedotdev/sdks/sdk-go`
 
@@ -21,8 +21,8 @@ Use this process when cutting a release for one or more SDKs.
 1. Update `sdk-node/package.json` version.
 2. Run `make node-check node-build node-smoke`.
 3. Publish from `sdk-node/` with your normal npm release credentials.
-4. Verify the package contents with `npm view @primitivedotdev/sdk version`.
-5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/contract`, and `@primitivedotdev/sdk/parser`.
+4. Verify the package contents with `npm view primitivedotdev version`.
+5. Confirm the packed artifact exposes `primitivedotdev`, `primitivedotdev/webhook`, `primitivedotdev/contract`, and `primitivedotdev/parser`.
 
 ## Python Release
 
