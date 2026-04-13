@@ -6,10 +6,10 @@
  *
  * @example
  * ```typescript
- * import * as primitive from 'primitivedotdev';
+ * import { handleWebhook, validateEmailAuth } from '@primitivedotdev/sdk';
  *
- * const event = primitive.handleWebhook({ body, headers, secret });
- * const result = primitive.validateEmailAuth(event.email.auth);
+ * const event = handleWebhook({ body, headers, secret });
+ * const result = validateEmailAuth(event.email.auth);
  *
  * if (result.verdict === 'legit') {
  *   // Email is authenticated

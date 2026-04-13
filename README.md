@@ -16,9 +16,9 @@ The repository currently contains:
 
 | SDK | Install target | README |
 | --- | --- | --- |
-| Node.js | `npm install primitivedotdev` | `sdk-node/README.md` |
+| Node.js | `npm install @primitivedotdev/sdk` | `sdk-node/README.md` |
 | Python | `pip install primitivedotdev` | `sdk-python/README.md` |
-| Go | `go get github.com/primitivedotdev/sdks/sdk-go` | `sdk-go/README.md` |
+| Go | `go get github.com/primitivedotdev/sdks/sdk-go@latest` | `sdk-go/README.md` |
 
 ## Purpose
 
@@ -29,7 +29,7 @@ Each SDK implements the same core webhook workflow:
 - validate payloads against the canonical JSON schema
 - expose typed `email.received` events in the target language
 
-The Node SDK also ships Node-only `contract` and `parser` modules under `primitivedotdev/contract` and `primitivedotdev/parser`.
+The Node SDK also ships Node-only `contract` and `parser` modules under `@primitivedotdev/sdk/contract` and `@primitivedotdev/sdk/parser`.
 
 ## Repository Layout
 

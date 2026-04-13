@@ -200,7 +200,7 @@ function isValidHex(str: string, expectedLength: number): boolean {
  *
  * @example
  * ```typescript
- * import { verifyWebhookSignature, WebhookVerificationError } from 'primitivedotdev';
+ * import { verifyWebhookSignature, WebhookVerificationError } from '@primitivedotdev/sdk';
  *
  * try {
  *   const signatureHeader = req.headers['primitive-signature'];

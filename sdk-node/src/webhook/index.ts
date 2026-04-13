@@ -5,11 +5,11 @@
  *
  * @example
  * ```typescript
- * import * as primitive from 'primitivedotdev';
+ * import { handleWebhook, PrimitiveWebhookError } from '@primitivedotdev/sdk';
  *
  * app.post('/webhooks/email', express.raw({ type: 'application/json' }), (req, res) => {
  *   try {
- *     const event = primitive.handleWebhook({
+ *     const event = handleWebhook({
  *       body: req.body,
  *       headers: req.headers,
  *       secret: process.env.PRIMITIVE_WEBHOOK_SECRET!,
@@ -18,7 +18,7 @@
  *     console.log('Email from:', event.email.headers.from);
  *     res.json({ received: true });
  *   } catch (err) {
- *     if (err instanceof primitive.PrimitiveWebhookError) {
+ *     if (err instanceof PrimitiveWebhookError) {
  *       console.error(`[${err.code}] ${err.message}`);
  *       return res.status(400).json({ error: err.code });
  *     }
@@ -160,9 +160,9 @@ import { parseJsonBody } from "./parsing.js";
  *
  * @example
  * ```typescript
- * import * as primitive from 'primitivedotdev';
+ * import { parseWebhookEvent } from '@primitivedotdev/sdk';
  *
- * const event = primitive.parseWebhookEvent(JSON.parse(rawBody));
+ * const event = parseWebhookEvent(JSON.parse(rawBody));
  *
  * if (event.event === "email.received") {
  *   // TypeScript knows this is EmailReceivedEvent
@@ -357,11 +357,11 @@ function getSignatureHeader(headers: WebhookHeaders): string {
  *
  * @example
  * ```typescript
- * import * as primitive from 'primitivedotdev';
+ * import { handleWebhook, PrimitiveWebhookError } from '@primitivedotdev/sdk';
  *
  * app.post('/webhooks/email', express.raw({ type: 'application/json' }), (req, res) => {
  *   try {
- *     const event = primitive.handleWebhook({
+ *     const event = handleWebhook({
  *       body: req.body,
  *       headers: req.headers,
  *       secret: process.env.PRIMITIVE_WEBHOOK_SECRET,
@@ -370,7 +370,7 @@ function getSignatureHeader(headers: WebhookHeaders): string {
  *     console.log('Email from:', event.email.headers.from);
  *     res.json({ received: true });
  *   } catch (err) {
- *     if (err instanceof primitive.PrimitiveWebhookError) {
+ *     if (err instanceof PrimitiveWebhookError) {
  *       console.error(`[${err.code}] ${err.message}`);
  *       return res.status(400).json({ error: err.code });
  *     }
@@ -552,12 +552,12 @@ export interface DecodeRawEmailOptions {
  *
  * @example
  * ```typescript
- * import * as primitive from 'primitivedotdev';
+ * import { handleWebhook, decodeRawEmail, isRawIncluded } from '@primitivedotdev/sdk';
  *
- * const event = primitive.handleWebhook({ body, headers, secret });
+ * const event = handleWebhook({ body, headers, secret });
  *
- * if (primitive.isRawIncluded(event)) {
- *   const rawEmail = primitive.decodeRawEmail(event);
+ * if (isRawIncluded(event)) {
+ *   const rawEmail = decodeRawEmail(event);
  *   // rawEmail is a Buffer containing the RFC 5322 email
  * } else {
  *   // Must download from event.email.content.download.url
@@ -614,14 +614,14 @@ export function decodeRawEmail(
  *
  * @example
  * ```typescript
- * import * as primitive from 'primitivedotdev';
+ * import { handleWebhook, verifyRawEmailDownload, isRawIncluded } from '@primitivedotdev/sdk';
  *
- * const event = primitive.handleWebhook({ body, headers, secret });
+ * const event = handleWebhook({ body, headers, secret });
  *
- * if (!primitive.isRawIncluded(event)) {
+ * if (!isRawIncluded(event)) {
  *   const response = await fetch(event.email.content.download.url);
  *   const arrayBuffer = await response.arrayBuffer();
- *   const verified = primitive.verifyRawEmailDownload(arrayBuffer, event);
+ *   const verified = verifyRawEmailDownload(arrayBuffer, event);
  *   // verified is a Buffer containing the RFC 5322 email
  * }
  * ```

@@ -15,7 +15,7 @@
  * This package is also useful for building test fixtures that match real
  * payloads exactly.
  *
- * @module primitivedotdev/contract
+ * @module @primitivedotdev/sdk/contract
  */
 
 import { createHash } from "node:crypto";
@@ -159,14 +159,14 @@ const ISO_8601_PATTERN =
 function validateTimestamp(timestamp: string, fieldName: string): string {
   if (!ISO_8601_PATTERN.test(timestamp)) {
     throw new Error(
-      `[primitivedotdev/contract] Invalid ${fieldName}: "${timestamp}". Expected RFC 3339 date-time format (e.g., "2025-01-15T10:30:00.000Z" or "2025-01-15T10:30:00+00:00")`,
+      `[@primitivedotdev/sdk/contract] Invalid ${fieldName}: "${timestamp}". Expected RFC 3339 date-time format (e.g., "2025-01-15T10:30:00.000Z" or "2025-01-15T10:30:00+00:00")`,
     );
   }
 
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) {
     throw new Error(
-      `[primitivedotdev/contract] Invalid ${fieldName}: "${timestamp}" is not a valid date`,
+      `[@primitivedotdev/sdk/contract] Invalid ${fieldName}: "${timestamp}" is not a valid date`,
     );
   }
 
@@ -203,7 +203,7 @@ export function generateEventId(endpoint_id: string, email_id: string): string {
  *
  * @example
  * ```typescript
- * import { buildEmailReceivedEvent } from "primitivedotdev/contract";
+ * import { buildEmailReceivedEvent } from "@primitivedotdev/sdk/contract";
  *
  * const event = buildEmailReceivedEvent({
  *   email_id: "email-123",
@@ -255,14 +255,14 @@ export function buildEmailReceivedEvent(
   const raw_size_bytes = input.raw_bytes.length;
   if (input.raw_size_bytes !== raw_size_bytes) {
     throw new Error(
-      `[primitivedotdev/contract] Invalid raw_size_bytes: ${input.raw_size_bytes}. Expected ${raw_size_bytes} based on raw_bytes length`,
+      `[@primitivedotdev/sdk/contract] Invalid raw_size_bytes: ${input.raw_size_bytes}. Expected ${raw_size_bytes} based on raw_bytes length`,
     );
   }
 
   const raw_sha256 = createHash("sha256").update(input.raw_bytes).digest("hex");
   if (input.raw_sha256 !== raw_sha256) {
     throw new Error(
-      `[primitivedotdev/contract] Invalid raw_sha256: "${input.raw_sha256}". Expected ${raw_sha256} based on raw_bytes`,
+      `[@primitivedotdev/sdk/contract] Invalid raw_sha256: "${input.raw_sha256}". Expected ${raw_sha256} based on raw_bytes`,
     );
   }
 
