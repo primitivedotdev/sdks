@@ -1,5 +1,8 @@
 name: Python Release
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: [main]
@@ -52,6 +55,24 @@ jobs:
 
           printf 'changed=true\n' >> "$GITHUB_OUTPUT"
 
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        with:
+          version: 10
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: sdk-node/pnpm-lock.yaml
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        with:
+          go-version: "1.26"
+          cache-dependency-path: sdk-go/go.sum
+
       - name: Check PyPI publish state
         if: ${{ steps.version.outputs.changed == 'true' }}
         id: pypi_state
@@ -79,21 +100,9 @@ jobs:
               raise
           PY
 
-      - name: Sync dependencies
+      - name: Run full release validation
         if: ${{ steps.version.outputs.changed == 'true' }}
-        run: make python-sync
-
-      - name: Run python checks
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        run: make python-check
-
-      - name: Build python package
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        run: make python-build
-
-      - name: Smoke test built python wheel
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        run: make python-smoke
+        run: make ci release-check
 
       - name: Publish package to PyPI
         if: ${{ steps.version.outputs.changed == 'true' && steps.pypi_state.outputs.published != 'true' }}
