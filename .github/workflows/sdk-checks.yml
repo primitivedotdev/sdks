@@ -184,13 +184,13 @@ jobs:
 
   ci:
     name: CI
-    needs: [node, python, go, shared]
+    needs: [changes, node, python, go, shared]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check results
         run: |
-          results=("${{ needs.node.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
+          results=("${{ needs.changes.result }}" "${{ needs.node.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
           for r in "${results[@]}"; do
             if [[ "$r" != "success" && "$r" != "skipped" ]]; then
               echo "Job failed with result: $r"
