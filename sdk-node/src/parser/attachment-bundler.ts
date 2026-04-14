@@ -1,7 +1,33 @@
 import { createHash } from "node:crypto";
-import { PassThrough } from "node:stream";
-import archiver from "archiver";
+import { createGzip } from "node:zlib";
+import type { Pack } from "tar-stream";
+import { pack } from "tar-stream";
 import type { ParsedAttachment } from "./attachment-parser.js";
+
+function appendTarEntry(
+  archive: Pack,
+  name: string,
+  content: Buffer,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    archive.entry(
+      {
+        mode: 0o644,
+        name,
+        size: content.length,
+        type: "file",
+      },
+      content,
+      (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      },
+    );
+  });
+}
 
 /**
  * Result of bundling attachments into a tar.gz archive
@@ -49,15 +75,10 @@ export async function bundleAttachments(
     return null;
   }
 
-  // Create tar.gz archive
-  const archive = archiver("tar", {
-    gzip: true,
-    gzipOptions: { level: 6 }, // Balanced compression
-  });
-
-  // Collect output into a buffer
+  // Create tar.gz archive and collect the compressed output into a buffer.
+  const archive = pack();
+  const gzip = createGzip({ level: 6 });
   const chunks: Buffer[] = [];
-  const passThrough = new PassThrough();
   let totalAttachmentBytes = 0;
 
   const tarGzBuffer = await new Promise<Buffer>((resolve, reject) => {
@@ -65,21 +86,22 @@ export async function bundleAttachments(
 
     const cleanup = () => {
       archive.off("error", rejectArchive);
-      archive.off("warning", rejectArchive);
-      passThrough.off("data", handleData);
-      passThrough.off("end", handleEnd);
-      passThrough.off("error", rejectArchive);
+      gzip.off("data", handleData);
+      gzip.off("end", handleEnd);
+      gzip.off("error", rejectArchive);
     };
 
     const rejectArchive = (error: Error) => {
       if (settled) return;
       settled = true;
       cleanup();
+      archive.destroy();
+      gzip.destroy();
       reject(error);
     };
 
-    const handleData = (chunk: Buffer) => {
-      chunks.push(chunk);
+    const handleData = (chunk: Buffer | string) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     };
 
     const handleEnd = () => {
@@ -90,22 +112,25 @@ export async function bundleAttachments(
     };
 
     archive.on("error", rejectArchive);
-    archive.on("warning", rejectArchive);
-    passThrough.on("data", handleData);
-    passThrough.on("end", handleEnd);
-    passThrough.on("error", rejectArchive);
+    gzip.on("data", handleData);
+    gzip.on("end", handleEnd);
+    gzip.on("error", rejectArchive);
 
-    archive.pipe(passThrough);
+    archive.pipe(gzip);
 
-    try {
-      for (const att of downloadable) {
-        archive.append(att.content, { name: att.tarPath });
-        totalAttachmentBytes += att.sizeBytes;
+    void (async () => {
+      try {
+        for (const att of downloadable) {
+          await appendTarEntry(archive, att.tarPath, att.content);
+          totalAttachmentBytes += att.sizeBytes;
+        }
+        archive.finalize();
+      } catch (error) {
+        rejectArchive(
+          error instanceof Error ? error : new Error(String(error)),
+        );
       }
-      void archive.finalize().catch(rejectArchive);
-    } catch (error) {
-      rejectArchive(error instanceof Error ? error : new Error(String(error)));
-    }
+    })();
   });
 
   // Compute SHA-256

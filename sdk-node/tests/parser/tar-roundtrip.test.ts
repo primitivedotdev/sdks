@@ -1,6 +1,5 @@
-import { PassThrough } from "node:stream";
-import { gunzipSync } from "node:zlib";
-import archiver from "archiver";
+import { createGzip, gunzipSync } from "node:zlib";
+import { pack } from "tar-stream";
 import { describe, expect, test } from "vitest";
 import { sanitizeFilename } from "../../src/parser/attachment-parser.js";
 
@@ -44,21 +43,35 @@ async function verifyRoundTrip(
   const sanitized = sanitizeFilename(originalFilename, partIndex);
   const tarPath = `${partIndex}_${sanitized}`;
 
-  // Create tar with the tarPath
-  const archive = archiver("tar", { gzip: true });
-  const chunks: Buffer[] = [];
-  const passThrough = new PassThrough();
+  const tarGz = await new Promise<Buffer>((resolve, reject) => {
+    const archive = pack();
+    const gzip = createGzip();
+    const chunks: Buffer[] = [];
 
-  passThrough.on("data", (chunk: Buffer) => chunks.push(chunk));
-  archive.pipe(passThrough);
+    const handleData = (chunk: Buffer | string) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    };
 
-  archive.append(content, { name: tarPath });
-  await archive.finalize();
+    archive.on("error", reject);
+    gzip.on("error", reject);
+    gzip.on("data", handleData);
+    gzip.on("end", () => resolve(Buffer.concat(chunks)));
 
-  await new Promise<void>((resolve) => passThrough.on("end", resolve));
+    archive.pipe(gzip);
+    archive.entry(
+      { mode: 0o644, name: tarPath, size: content.length, type: "file" },
+      content,
+      (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        archive.finalize();
+      },
+    );
+  });
 
   // Parse it back
-  const tarGz = Buffer.concat(chunks);
   const tar = gunzipSync(tarGz);
   const files = parseTar(tar);
 

@@ -358,9 +358,9 @@ describe("filename sanitization", () => {
     expect(sanitizeFilename("..", 0)).toBe("attachment_0");
   });
 
-  test("replaces unicode with underscore (archiver PaxHeader issue)", () => {
-    // Archiver uses PaxHeader format for non-ASCII which our tar parser doesn't handle
-    // Original filename is preserved in attachment metadata
+  test("replaces unicode with underscore for ASCII-only tar paths", () => {
+    // Keep tar entry names in the simple header format our parser reads.
+    // Original filenames are still preserved in attachment metadata.
     expect(sanitizeFilename("\u5831\u544A\u66F8.pdf", 0)).toBe("___.pdf");
     expect(
       sanitizeFilename(
@@ -374,8 +374,7 @@ describe("filename sanitization", () => {
     );
   });
 
-  test("removes colons (archiver treats them as drive letters)", () => {
-    // Colons cause issues with the archiver library - it strips content before them
+  test("removes colons from tar paths", () => {
     expect(sanitizeFilename("Climate: The Report.pdf", 0)).toBe(
       "Climate- The Report.pdf",
     );
