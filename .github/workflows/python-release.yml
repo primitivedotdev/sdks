@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'sdk-python/pyproject.toml'
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -40,13 +41,18 @@ jobs:
           print(tomllib.loads(pyproject.read_text())["project"]["version"])
           PY
           )
+          printf 'current=%s\n' "$current_version" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = 'workflow_dispatch' ] || [ -z "${{ github.event.before }}" ]; then
+            printf 'changed=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           previous_version=
 
           if git cat-file -e "${{ github.event.before }}:sdk-python/pyproject.toml" 2>/dev/null; then
             previous_version=$(git show "${{ github.event.before }}:sdk-python/pyproject.toml" | python -c 'import sys, tomllib; print(tomllib.loads(sys.stdin.read())["project"]["version"])')
           fi
-
-          printf 'current=%s\n' "$current_version" >> "$GITHUB_OUTPUT"
 
           if [ "$current_version" = "$previous_version" ]; then
             printf 'changed=false\n' >> "$GITHUB_OUTPUT"
@@ -81,6 +87,14 @@ jobs:
                   raise SystemExit(0)
               raise
           PY
+
+      - name: Sync python dependencies
+        if: ${{ steps.version.outputs.changed == 'true' && steps.pypi_state.outputs.published != 'true' }}
+        run: make python-sync
+
+      - name: Build python package
+        if: ${{ steps.version.outputs.changed == 'true' && steps.pypi_state.outputs.published != 'true' }}
+        run: make python-build
 
       - name: Publish package to PyPI
         if: ${{ steps.version.outputs.changed == 'true' && steps.pypi_state.outputs.published != 'true' }}
