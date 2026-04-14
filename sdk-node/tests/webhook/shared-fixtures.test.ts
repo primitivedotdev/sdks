@@ -18,6 +18,10 @@ import {
   WebhookVerificationError,
 } from "../../src/index.js";
 import { signWebhookPayload } from "../../src/webhook/signing.js";
+import {
+  signStandardWebhooksPayload,
+  verifyStandardWebhooksSignature,
+} from "../../src/webhook/standard-webhooks.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = join(__dirname, "../../../test-fixtures");
@@ -295,6 +299,148 @@ describe("shared compatibility fixtures", () => {
           key,
           value === "{signed}" ? (signed?.header ?? "") : value,
         ]),
+      );
+
+      if (testCase.expected.valid) {
+        const event = handleWebhook({
+          body,
+          headers,
+          secret: testCase.secret,
+          toleranceSeconds: testCase.tolerance_seconds,
+        });
+        expect(event.id, testCase.name).toBe(testCase.expected.id);
+        continue;
+      }
+
+      try {
+        handleWebhook({
+          body,
+          headers,
+          secret: testCase.secret,
+          toleranceSeconds: testCase.tolerance_seconds,
+        });
+        expect.fail(`Expected handleWebhook failure for ${testCase.name}`);
+      } catch (error) {
+        expect(error, testCase.name).toBeInstanceOf(PrimitiveWebhookError);
+        expect((error as PrimitiveWebhookError).code, testCase.name).toBe(
+          testCase.expected.error_code,
+        );
+      }
+    }
+  });
+
+  it("verifies shared standard webhooks signing fixtures", () => {
+    const fixtures = loadJson<{
+      cases: Array<{
+        name: string;
+        raw_body: string;
+        secret: string;
+        msg_id: string;
+        timestamp: number;
+        verify_secret?: string;
+        now_seconds?: number;
+        webhook_signature_header?: string;
+        expected_signature: string;
+        expected_valid: boolean;
+        expected_error_code?: string;
+      }>;
+    }>("signing", "standard-webhooks-vectors.json");
+
+    for (const testCase of fixtures.cases) {
+      const signed = signStandardWebhooksPayload(
+        testCase.raw_body,
+        testCase.secret,
+        testCase.msg_id,
+        testCase.timestamp,
+      );
+      expect(signed.signature, testCase.name).toBe(
+        `v1,${testCase.expected_signature}`,
+      );
+
+      const verifySecret = testCase.verify_secret ?? testCase.secret;
+      const nowSeconds = testCase.now_seconds ?? testCase.timestamp;
+      const signatureHeader =
+        testCase.webhook_signature_header ?? signed.signature;
+
+      if (testCase.expected_valid) {
+        expect(
+          verifyStandardWebhooksSignature({
+            rawBody: testCase.raw_body,
+            msgId: testCase.msg_id,
+            timestamp: String(testCase.timestamp),
+            signatureHeader,
+            secret: verifySecret,
+            nowSeconds,
+          }),
+          testCase.name,
+        ).toBe(true);
+      } else {
+        try {
+          verifyStandardWebhooksSignature({
+            rawBody: testCase.raw_body,
+            msgId: testCase.msg_id,
+            timestamp: String(testCase.timestamp),
+            signatureHeader,
+            secret: verifySecret,
+            nowSeconds,
+          });
+          expect.fail(`Expected verification failure for ${testCase.name}`);
+        } catch (error) {
+          expect(error, testCase.name).toBeInstanceOf(WebhookVerificationError);
+          expect((error as WebhookVerificationError).code, testCase.name).toBe(
+            testCase.expected_error_code,
+          );
+        }
+      }
+    }
+  });
+
+  it("handles shared standard webhooks webhook fixtures", () => {
+    const fixtures = loadJson<{
+      cases: Array<{
+        name: string;
+        body?: string;
+        body_fixture?: string[];
+        headers: Record<string, string>;
+        secret: string;
+        sign_secret?: string;
+        msg_id?: string;
+        timestamp?: number;
+        tolerance_seconds?: number;
+        expected: {
+          valid: boolean;
+          id?: string;
+          error_code?: string;
+        };
+      }>;
+    }>("handle-webhook", "standard-webhooks-cases.json");
+
+    for (const testCase of fixtures.cases) {
+      const body = testCase.body_fixture
+        ? loadText(...testCase.body_fixture)
+        : (testCase.body ?? "");
+      const signSecret = testCase.sign_secret ?? testCase.secret;
+      const msgId = testCase.msg_id ?? "msg_default";
+      const needsSign = Object.values(testCase.headers).includes(
+        "{signed_standard}",
+      );
+      const signed = needsSign
+        ? signStandardWebhooksPayload(
+            body,
+            signSecret,
+            msgId,
+            testCase.timestamp,
+          )
+        : null;
+
+      const headers = Object.fromEntries(
+        Object.entries(testCase.headers).map(([key, value]) => {
+          if (value === "{signed_standard}")
+            return [key, signed?.signature ?? ""];
+          if (value === "{timestamp}")
+            return [key, String(signed?.timestamp ?? testCase.timestamp ?? "")];
+          return [key, value];
+        }),
       );
 
       if (testCase.expected.valid) {

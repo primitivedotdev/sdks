@@ -242,12 +242,27 @@ func getSignatureHeaderValue(headers any) string {
 }
 
 func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
-	_, err := VerifyWebhookSignature(VerifyOptions{
-		RawBody:          options.Body,
-		SignatureHeader:  getSignatureHeaderValue(options.Headers),
-		Secret:           options.Secret,
-		ToleranceSeconds: options.ToleranceSeconds,
-	})
+	msgID, ts, sig, isStdWH, err := detectStandardWebhooksHeaders(options.Headers)
+	if err != nil {
+		return nil, err
+	}
+	if isStdWH {
+		_, err = VerifyStandardWebhooksSignature(StandardWebhooksVerifyOptions{
+			RawBody:          options.Body,
+			MsgID:            msgID,
+			Timestamp:        ts,
+			SignatureHeader:  sig,
+			Secret:           options.Secret,
+			ToleranceSeconds: options.ToleranceSeconds,
+		})
+	} else {
+		_, err = VerifyWebhookSignature(VerifyOptions{
+			RawBody:          options.Body,
+			SignatureHeader:  getSignatureHeaderValue(options.Headers),
+			Secret:           options.Secret,
+			ToleranceSeconds: options.ToleranceSeconds,
+		})
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package primitive
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -383,6 +384,175 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 			}
 
 			_, err = HandleWebhook(HandleWebhookOptions{
+				Body:             body,
+				Headers:          headers,
+				Secret:           testCase.Secret,
+				ToleranceSeconds: testCase.ToleranceSeconds,
+			})
+			code, ok := webhookErrorCode(err)
+			if !ok {
+				t.Fatalf("%s: expected PrimitiveWebhookError, got %v", testCase.Name, err)
+			}
+			if code != testCase.Expected.ErrorCode {
+				t.Fatalf("%s: unexpected error code %q", testCase.Name, code)
+			}
+		}
+	})
+
+	t.Run("standard webhooks signing", func(t *testing.T) {
+		fixtures := loadFixtureCases[struct {
+			Cases []struct {
+				Name                   string `json:"name"`
+				RawBody                string `json:"raw_body"`
+				Secret                 string `json:"secret"`
+				MsgID                  string `json:"msg_id"`
+				Timestamp              int64  `json:"timestamp"`
+				VerifySecret           string `json:"verify_secret"`
+				NowSeconds             int64  `json:"now_seconds"`
+				WebhookSignatureHeader string `json:"webhook_signature_header"`
+				ExpectedSignature      string `json:"expected_signature"`
+				ExpectedValid          bool   `json:"expected_valid"`
+				ExpectedErrorCode      string `json:"expected_error_code"`
+			} `json:"cases"`
+		}](t, "signing", "standard-webhooks-vectors.json")
+
+		for _, testCase := range fixtures.Cases {
+			signed, err := SignStandardWebhooksPayload(testCase.RawBody, testCase.Secret, testCase.MsgID, testCase.Timestamp)
+			if err != nil {
+				t.Fatalf("%s: SignStandardWebhooksPayload returned error: %v", testCase.Name, err)
+			}
+			expectedSig := "v1," + testCase.ExpectedSignature
+			if signed.Signature != expectedSig {
+				t.Fatalf("%s: unexpected signature %q, expected %q", testCase.Name, signed.Signature, expectedSig)
+			}
+
+			verifySecret := testCase.VerifySecret
+			if verifySecret == "" {
+				verifySecret = testCase.Secret
+			}
+			nowSeconds := testCase.NowSeconds
+			if nowSeconds == 0 {
+				nowSeconds = testCase.Timestamp
+			}
+			signatureHeader := testCase.WebhookSignatureHeader
+			if signatureHeader == "" {
+				signatureHeader = signed.Signature
+			}
+
+			_, err = VerifyStandardWebhooksSignature(StandardWebhooksVerifyOptions{
+				RawBody:         testCase.RawBody,
+				MsgID:           testCase.MsgID,
+				Timestamp:       fmt.Sprintf("%d", testCase.Timestamp),
+				SignatureHeader: signatureHeader,
+				Secret:          verifySecret,
+				NowSeconds:      &nowSeconds,
+			})
+
+			if testCase.ExpectedValid {
+				if err != nil {
+					t.Fatalf("%s: VerifyStandardWebhooksSignature returned error: %v", testCase.Name, err)
+				}
+				continue
+			}
+
+			var verificationErr *WebhookVerificationError
+			if !errors.As(err, &verificationErr) {
+				t.Fatalf("%s: expected WebhookVerificationError, got %v", testCase.Name, err)
+			}
+			if verificationErr.Code() != testCase.ExpectedErrorCode {
+				t.Fatalf("%s: unexpected error code %q", testCase.Name, verificationErr.Code())
+			}
+		}
+	})
+
+	t.Run("standard webhooks handle webhook", func(t *testing.T) {
+		fixtures := loadFixtureCases[struct {
+			Cases []struct {
+				Name             string            `json:"name"`
+				Body             string            `json:"body"`
+				BodyFixture      []string          `json:"body_fixture"`
+				Headers          map[string]string `json:"headers"`
+				Secret           string            `json:"secret"`
+				SignSecret       string            `json:"sign_secret"`
+				MsgID            string            `json:"msg_id"`
+				Timestamp        *int64            `json:"timestamp"`
+				ToleranceSeconds *int64            `json:"tolerance_seconds"`
+				Expected         struct {
+					Valid     bool   `json:"valid"`
+					ID        string `json:"id"`
+					ErrorCode string `json:"error_code"`
+				} `json:"expected"`
+			} `json:"cases"`
+		}](t, "handle-webhook", "standard-webhooks-cases.json")
+
+		for _, testCase := range fixtures.Cases {
+			body := testCase.Body
+			if len(testCase.BodyFixture) > 0 {
+				body = loadFixtureText(t, testCase.BodyFixture...)
+			}
+			signSecret := testCase.SignSecret
+			if signSecret == "" {
+				signSecret = testCase.Secret
+			}
+			msgID := testCase.MsgID
+			if msgID == "" {
+				msgID = "msg_default"
+			}
+
+			needsSign := false
+			for _, v := range testCase.Headers {
+				if v == "{signed_standard}" {
+					needsSign = true
+					break
+				}
+			}
+
+			var signed StandardWebhooksSignResult
+			if needsSign {
+				var ts []int64
+				if testCase.Timestamp != nil {
+					ts = append(ts, *testCase.Timestamp)
+				}
+				var err error
+				signed, err = SignStandardWebhooksPayload(body, signSecret, msgID, ts...)
+				if err != nil {
+					t.Fatalf("%s: SignStandardWebhooksPayload returned error: %v", testCase.Name, err)
+				}
+			}
+
+			headers := map[string]string{}
+			for key, value := range testCase.Headers {
+				switch value {
+				case "{signed_standard}":
+					headers[key] = signed.Signature
+				case "{timestamp}":
+					if needsSign {
+						headers[key] = fmt.Sprintf("%d", signed.Timestamp)
+					} else if testCase.Timestamp != nil {
+						headers[key] = fmt.Sprintf("%d", *testCase.Timestamp)
+					}
+				default:
+					headers[key] = value
+				}
+			}
+
+			if testCase.Expected.Valid {
+				event, err := HandleWebhook(HandleWebhookOptions{
+					Body:             body,
+					Headers:          headers,
+					Secret:           testCase.Secret,
+					ToleranceSeconds: testCase.ToleranceSeconds,
+				})
+				if err != nil {
+					t.Fatalf("%s: HandleWebhook returned error: %v", testCase.Name, err)
+				}
+				if event.ID != testCase.Expected.ID {
+					t.Fatalf("%s: unexpected event ID %q", testCase.Name, event.ID)
+				}
+				continue
+			}
+
+			_, err := HandleWebhook(HandleWebhookOptions{
 				Body:             body,
 				Headers:          headers,
 				Secret:           testCase.Secret,

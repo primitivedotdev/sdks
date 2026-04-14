@@ -36,6 +36,11 @@ LEGACY_SIGNATURE_HEADER = "MyMX-Signature"
 PRIMITIVE_CONFIRMED_HEADER = "X-Primitive-Confirmed"
 LEGACY_CONFIRMED_HEADER = "X-MyMX-Confirmed"
 _SIGNATURE_HEADER_NAMES = ("primitive-signature", "mymx-signature")
+STANDARD_WEBHOOK_ID_HEADER = "webhook-id"
+STANDARD_WEBHOOK_TIMESTAMP_HEADER = "webhook-timestamp"
+STANDARD_WEBHOOK_SIGNATURE_HEADER = "webhook-signature"
+_WHSEC_PREFIX = "whsec_"
+_BASE64_PATTERN = re.compile(r"^[A-Za-z0-9+/]*={0,2}$")
 DEFAULT_TOLERANCE_SECONDS = 5 * 60
 FUTURE_TOLERANCE_SECONDS = 60
 HEX_PATTERN = re.compile(r"^[0-9a-f]+$", re.IGNORECASE)
@@ -274,6 +279,194 @@ def verify_webhook_signature(
     )
 
 
+# ---------------------------------------------------------------------------
+# Standard Webhooks
+# ---------------------------------------------------------------------------
+
+
+class StandardWebhooksSignResult(TypedDict):
+    signature: str
+    msg_id: str
+    timestamp: int
+
+
+def _prepare_standard_webhooks_secret(secret: str | bytes) -> bytes:
+    if isinstance(secret, bytes):
+        return secret
+    key_str = secret
+    if key_str.startswith(_WHSEC_PREFIX):
+        key_str = key_str[len(_WHSEC_PREFIX) :]
+    if not key_str or not _BASE64_PATTERN.fullmatch(key_str):
+        raise WebhookVerificationError(
+            "MISSING_SECRET",
+            "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix).",
+        )
+    return base64.b64decode(key_str)
+
+
+def _parse_standard_webhooks_signatures(header: str) -> list[str]:
+    if not header:
+        return []
+    signatures: list[str] = []
+    for entry in header.split(" "):
+        entry = entry.strip()
+        if not entry or "," not in entry:
+            continue
+        version, sig = entry.split(",", 1)
+        if version == "v1" and sig:
+            signatures.append(sig)
+    return signatures
+
+
+def sign_standard_webhooks_payload(
+    raw_body: str | bytes | bytearray | memoryview,
+    secret: str | bytes,
+    msg_id: str,
+    timestamp: int | None = None,
+) -> StandardWebhooksSignResult:
+    ts = (
+        timestamp
+        if timestamp is not None
+        else int(datetime.now(tz=timezone.utc).timestamp())
+    )
+    body = (
+        raw_body
+        if isinstance(raw_body, str)
+        else buffer_to_string(bytes(raw_body), "raw_body")
+    )
+    key = _prepare_standard_webhooks_secret(secret)
+    signed_payload = f"{msg_id}.{ts}.{body}".encode()
+    sig = base64.b64encode(
+        hmac.new(key, signed_payload, hashlib.sha256).digest()
+    ).decode()
+    return {"signature": f"v1,{sig}", "msg_id": msg_id, "timestamp": ts}
+
+
+def verify_standard_webhooks_signature(
+    *,
+    raw_body: str | bytes | bytearray | memoryview,
+    msg_id: str,
+    timestamp: str,
+    signature_header: str,
+    secret: str | bytes | None,
+    tolerance_seconds: int = DEFAULT_TOLERANCE_SECONDS,
+    now_seconds: int | None = None,
+) -> bool:
+    if secret in (None, "", b""):
+        raise WebhookVerificationError(
+            "MISSING_SECRET",
+            "Webhook secret is required but was empty or not provided.",
+        )
+
+    key = _prepare_standard_webhooks_secret(secret)  # type: ignore[arg-type]
+    if len(key) == 0:
+        raise WebhookVerificationError(
+            "MISSING_SECRET",
+            "Webhook secret is required but was empty or not provided.",
+        )
+
+    try:
+        ts = int(timestamp)
+    except (ValueError, TypeError) as exc:
+        raise WebhookVerificationError(
+            "INVALID_SIGNATURE_HEADER",
+            f'Invalid webhook-timestamp header: "{timestamp}". Expected a unix timestamp in seconds.',
+        ) from exc
+
+    if ts < 0:
+        raise WebhookVerificationError(
+            "INVALID_SIGNATURE_HEADER",
+            f'Invalid webhook-timestamp header: "{timestamp}". Expected a unix timestamp in seconds.',
+        )
+
+    now = (
+        now_seconds
+        if now_seconds is not None
+        else int(datetime.now(tz=timezone.utc).timestamp())
+    )
+    age = now - ts
+    if age > tolerance_seconds:
+        raise WebhookVerificationError(
+            "TIMESTAMP_OUT_OF_RANGE",
+            f"Webhook timestamp too old ({age}s). Max age is {tolerance_seconds}s.",
+        )
+    if age < -FUTURE_TOLERANCE_SECONDS:
+        raise WebhookVerificationError(
+            "TIMESTAMP_OUT_OF_RANGE",
+            "Webhook timestamp is too far in the future. Check server clock sync.",
+        )
+
+    body = (
+        raw_body
+        if isinstance(raw_body, str)
+        else buffer_to_string(bytes(raw_body), "request body")
+    )
+    signed_payload = f"{msg_id}.{ts}.{body}".encode()
+    expected = base64.b64encode(
+        hmac.new(key, signed_payload, hashlib.sha256).digest()
+    ).decode()
+
+    signatures = _parse_standard_webhooks_signatures(signature_header)
+    if not signatures:
+        raise WebhookVerificationError(
+            "INVALID_SIGNATURE_HEADER",
+            'Invalid webhook-signature header format. Expected: "v1,<base64>".',
+        )
+
+    expected_bytes = base64.b64decode(expected)
+    for sig in signatures:
+        try:
+            sig_bytes = base64.b64decode(sig)
+        except (binascii.Error, ValueError):
+            continue
+        if len(sig_bytes) == len(expected_bytes) and hmac.compare_digest(
+            sig_bytes, expected_bytes
+        ):
+            return True
+
+    raise WebhookVerificationError(
+        "SIGNATURE_MISMATCH",
+        "No valid signature found. Verify the webhook secret matches and you're using the raw request body (not re-serialized JSON).",
+    )
+
+
+def _detect_standard_webhooks_headers(
+    headers: Mapping[str, Any],
+) -> tuple[str, str, str] | None:
+    targets = {
+        "webhook-signature": "signature",
+        "webhook-id": "msg_id",
+        "webhook-timestamp": "timestamp",
+    }
+    values: dict[str, str] = {"signature": "", "msg_id": "", "timestamp": ""}
+    for key, value in headers.items():
+        lower = key.lower()
+        if lower in targets:
+            field = targets[lower]
+            if isinstance(value, Sequence) and not isinstance(
+                value, (bytes, bytearray, str)
+            ):
+                values[field] = _header_value_to_string(value[0]) if value else ""
+            else:
+                values[field] = _header_value_to_string(value)
+
+    signature = values["signature"]
+    if not signature:
+        return None
+
+    msg_id = values["msg_id"]
+    timestamp = values["timestamp"]
+    if not msg_id or not timestamp:
+        missing = "webhook-id" if not msg_id else "webhook-timestamp"
+        raise WebhookVerificationError(
+            "INVALID_SIGNATURE_HEADER",
+            f"Found webhook-signature header but missing {missing} header. "
+            "Standard Webhooks requires all three headers: webhook-id, webhook-timestamp, webhook-signature.",
+        )
+
+    return msg_id, timestamp, signature
+
+
 def parse_webhook_event(input: Any = _UNDEFINED) -> WebhookEvent:
     if input is _UNDEFINED:
         raise WebhookPayloadError(
@@ -339,16 +532,29 @@ def handle_webhook(
     secret: str,
     tolerance_seconds: int | None = None,
 ) -> EmailReceivedEvent:
-    verify_webhook_signature(
-        raw_body=body,
-        signature_header=_get_signature_header(headers),
-        secret=secret,
-        tolerance_seconds=(
-            tolerance_seconds
-            if tolerance_seconds is not None
-            else DEFAULT_TOLERANCE_SECONDS
-        ),
+    tol = (
+        tolerance_seconds
+        if tolerance_seconds is not None
+        else DEFAULT_TOLERANCE_SECONDS
     )
+    sw_headers = _detect_standard_webhooks_headers(headers)
+    if sw_headers:
+        msg_id, timestamp, signature = sw_headers
+        verify_standard_webhooks_signature(
+            raw_body=body,
+            msg_id=msg_id,
+            timestamp=timestamp,
+            signature_header=signature,
+            secret=secret,
+            tolerance_seconds=tol,
+        )
+    else:
+        verify_webhook_signature(
+            raw_body=body,
+            signature_header=_get_signature_header(headers),
+            secret=secret,
+            tolerance_seconds=tol,
+        )
     parsed = parse_json_body(body)
     return validate_email_received_event(parsed)
 

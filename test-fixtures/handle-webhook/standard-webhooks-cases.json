@@ -1,0 +1,122 @@
+{
+  "cases": [
+    {
+      "name": "valid_standard_webhooks",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "{timestamp}",
+        "webhook-signature": "{signed_standard}"
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_test123",
+      "expected": {
+        "valid": true,
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "valid_standard_webhooks_uppercase_headers",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "Webhook-Id": "msg_test123",
+        "Webhook-Timestamp": "{timestamp}",
+        "Webhook-Signature": "{signed_standard}"
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_test123",
+      "expected": {
+        "valid": true,
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
+      "name": "wrong_secret_standard_webhooks",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "{timestamp}",
+        "webhook-signature": "{signed_standard}"
+      },
+      "secret": "whsec_dGVzdF9zZWNyZXRfa2V5XzEyMw==",
+      "sign_secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_test123",
+      "expected": {
+        "valid": false,
+        "error_code": "SIGNATURE_MISMATCH"
+      }
+    },
+    {
+      "name": "expired_standard_webhooks",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "{timestamp}",
+        "webhook-signature": "{signed_standard}"
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_test123",
+      "timestamp": 1734567000,
+      "expected": {
+        "valid": false,
+        "error_code": "TIMESTAMP_OUT_OF_RANGE"
+      }
+    },
+    {
+      "name": "missing_webhook_id",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-timestamp": "1734567890",
+        "webhook-signature": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "expected": {
+        "valid": false,
+        "error_code": "INVALID_SIGNATURE_HEADER"
+      }
+    },
+    {
+      "name": "missing_webhook_timestamp",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-signature": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "expected": {
+        "valid": false,
+        "error_code": "INVALID_SIGNATURE_HEADER"
+      }
+    },
+    {
+      "name": "invalid_json_body_standard_webhooks",
+      "body": "{\"event\":\"email.received\"",
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "{timestamp}",
+        "webhook-signature": "{signed_standard}"
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_test123",
+      "expected": {
+        "valid": false,
+        "error_code": "JSON_PARSE_FAILED"
+      }
+    },
+    {
+      "name": "schema_invalid_standard_webhooks",
+      "body": "{\"event\":\"email.received\",\"id\":\"evt_only\"}",
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "{timestamp}",
+        "webhook-signature": "{signed_standard}"
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_test123",
+      "expected": {
+        "valid": false,
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    }
+  ]
+}
