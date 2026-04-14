@@ -377,9 +377,12 @@ function getStandardWebhooksHeaders(
   let msgId = "";
   let timestamp = "";
 
+  let hasSignatureKey = false;
+
   if (headers instanceof Headers) {
+    hasSignatureKey = headers.has("webhook-signature");
+    if (!hasSignatureKey) return null;
     signature = headers.get("webhook-signature") ?? "";
-    if (!signature) return null;
     msgId = headers.get("webhook-id") ?? "";
     timestamp = headers.get("webhook-timestamp") ?? "";
   } else {
@@ -391,12 +394,21 @@ function getStandardWebhooksHeaders(
       const raw = key ? obj[key] : undefined;
       const value = Array.isArray(raw) ? (raw[0] ?? "") : (raw ?? "");
 
-      if (name === "webhook-signature") signature = value;
-      else if (name === "webhook-id") msgId = value;
+      if (name === "webhook-signature") {
+        hasSignatureKey = key !== undefined;
+        signature = value;
+      } else if (name === "webhook-id") msgId = value;
       else if (name === "webhook-timestamp") timestamp = value;
     }
 
-    if (!signature) return null;
+    if (!hasSignatureKey) return null;
+  }
+
+  if (!signature) {
+    throw new WebhookVerificationError(
+      "INVALID_SIGNATURE_HEADER",
+      'Empty webhook-signature header. Expected: "v1,<base64>".',
+    );
   }
 
   if (!msgId || !timestamp) {

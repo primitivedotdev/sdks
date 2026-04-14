@@ -301,7 +301,13 @@ def _prepare_standard_webhooks_secret(secret: str | bytes) -> bytes:
             "MISSING_SECRET",
             "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix).",
         )
-    return base64.b64decode(key_str)
+    try:
+        return base64.b64decode(key_str)
+    except (binascii.Error, ValueError) as exc:
+        raise WebhookVerificationError(
+            "MISSING_SECRET",
+            "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix).",
+        ) from exc
 
 
 def _parse_standard_webhooks_signatures(header: str) -> list[str]:
@@ -439,10 +445,13 @@ def _detect_standard_webhooks_headers(
         "webhook-timestamp": "timestamp",
     }
     values: dict[str, str] = {"signature": "", "msg_id": "", "timestamp": ""}
+    has_signature_key = False
     for key, value in headers.items():
         lower = key.lower()
         if lower in targets:
             field = targets[lower]
+            if lower == "webhook-signature":
+                has_signature_key = True
             if isinstance(value, Sequence) and not isinstance(
                 value, (bytes, bytearray, str)
             ):
@@ -450,9 +459,15 @@ def _detect_standard_webhooks_headers(
             else:
                 values[field] = _header_value_to_string(value)
 
+    if not has_signature_key:
+        return None
+
     signature = values["signature"]
     if not signature:
-        return None
+        raise WebhookVerificationError(
+            "INVALID_SIGNATURE_HEADER",
+            'Empty webhook-signature header. Expected: "v1,<base64>".',
+        )
 
     msg_id = values["msg_id"]
     timestamp = values["timestamp"]

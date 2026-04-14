@@ -140,6 +140,12 @@ export function signStandardWebhooksPayload(
   const body =
     typeof rawBody === "string" ? rawBody : bufferToString(rawBody, "rawBody");
   const key = prepareStandardWebhooksSecret(secret);
+  if (key.length === 0) {
+    throw new WebhookVerificationError(
+      "MISSING_SECRET",
+      "Webhook secret is required but was empty or not provided.",
+    );
+  }
 
   const signedPayload = `${msgId}.${ts}.${body}`;
   const sig = createHmac("sha256", key).update(signedPayload).digest("base64");

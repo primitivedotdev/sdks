@@ -18,6 +18,13 @@ func PrepareStandardWebhooksSecret(secret any) ([]byte, error) {
 	case string:
 		keyStr = v
 	case []byte:
+		if len(v) == 0 {
+			return nil, NewWebhookVerificationError(
+				"MISSING_SECRET",
+				"Webhook secret is required but was empty or not provided.",
+				"",
+			)
+		}
 		return v, nil
 	case nil:
 		return nil, NewWebhookVerificationError(
@@ -198,8 +205,15 @@ func VerifyStandardWebhooksSignature(options StandardWebhooksVerifyOptions) (boo
 // If webhook-signature is found but other headers are missing, returns an error.
 func detectStandardWebhooksHeaders(headers any) (msgID, timestamp, signature string, ok bool, err error) {
 	signature = getHeaderValue(headers, StandardWebhookSignatureHeader)
-	if signature == "" {
+	if !hasHeaderKey(headers, StandardWebhookSignatureHeader) {
 		return "", "", "", false, nil
+	}
+	if signature == "" {
+		return "", "", "", false, NewWebhookVerificationError(
+			"INVALID_SIGNATURE_HEADER",
+			"Empty webhook-signature header. Expected: \"v1,<base64>\".",
+			"",
+		)
 	}
 	msgID = getHeaderValue(headers, StandardWebhookIDHeader)
 	timestamp = getHeaderValue(headers, StandardWebhookTimestampHeader)

@@ -233,6 +233,35 @@ func getHeaderValue(headers any, target string) string {
 	return ""
 }
 
+func hasHeaderKey(headers any, target string) bool {
+	lowerTarget := strings.ToLower(target)
+	switch typed := headers.(type) {
+	case map[string]string:
+		for key := range typed {
+			if strings.ToLower(key) == lowerTarget {
+				return true
+			}
+		}
+	case map[string][]string:
+		for key := range typed {
+			if strings.ToLower(key) == lowerTarget {
+				return true
+			}
+		}
+	case map[string]any:
+		for key := range typed {
+			if strings.ToLower(key) == lowerTarget {
+				return true
+			}
+		}
+	case interface{ Get(string) string }:
+		// Fetch-style headers: Get returns "" for both absent and empty,
+		// so we can't distinguish. Treat non-empty as present.
+		return typed.Get(target) != ""
+	}
+	return false
+}
+
 func detectReserializedBody(body string) string {
 	if prettyPrintedJSONPattern.MatchString(body) {
 		return "Request body appears re-serialized (pretty-printed). Use the raw request body before any json.Unmarshal() or json.Marshal() calls."
