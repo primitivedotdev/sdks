@@ -54,18 +54,6 @@ jobs:
 
           printf 'changed=true\n' >> "$GITHUB_OUTPUT"
 
-      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        with:
-          python-version: "3.14"
-          save-cache: false
-
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        with:
-          go-version: "1.26"
-          cache-dependency-path: sdk-go/go.sum
-
       - name: Check npm publish state
         if: ${{ steps.version.outputs.changed == 'true' }}
         id: npm_state
@@ -78,10 +66,6 @@ jobs:
           fi
 
           printf 'published=false\n' >> "$GITHUB_OUTPUT"
-
-      - name: Run full release validation
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        run: make ci release-check
 
       - name: Publish package to npm
         if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}

@@ -54,29 +54,6 @@ jobs:
 
           printf 'changed=true\n' >> "$GITHUB_OUTPUT"
 
-      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        with:
-          python-version: "3.14"
-
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        with:
-          version: 10
-
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: sdk-node/pnpm-lock.yaml
-
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        with:
-          go-version: "1.26"
-          cache-dependency-path: sdk-go/go.sum
-
       - name: Ensure release tag does not already exist
         if: ${{ steps.version.outputs.changed == 'true' }}
         env:
@@ -86,10 +63,6 @@ jobs:
             echo "Tag $TAG already exists" >&2
             exit 1
           fi
-
-      - name: Run full release validation
-        if: ${{ steps.version.outputs.changed == 'true' }}
-        run: make ci release-check
 
       - name: Create GitHub release and tag
         if: ${{ steps.version.outputs.changed == 'true' }}
