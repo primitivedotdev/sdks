@@ -254,9 +254,14 @@ func hasHeaderKey(headers any, target string) bool {
 				return true
 			}
 		}
+	case interface {
+		Get(string) string
+		Has(string) bool
+	}:
+		return typed.Has(target)
 	case interface{ Get(string) string }:
-		// Fetch-style headers: Get returns "" for both absent and empty,
-		// so we can't distinguish. Treat non-empty as present.
+		// Fallback for Get-only interfaces: Get returns "" for both absent
+		// and empty, so we can't distinguish. Treat non-empty as present.
 		return typed.Get(target) != ""
 	}
 	return false
