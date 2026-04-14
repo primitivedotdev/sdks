@@ -1,6 +1,6 @@
 module github.com/primitivedotdev/sdks/sdk-go
 
-go 1.18
+go 1.21
 
 require github.com/xeipuuv/gojsonschema v1.2.0
 
