@@ -34,6 +34,9 @@ const ajv = new Ajv({
     source: true,
   },
   strict: false,
+  // Use .length instead of ucs2length to avoid CJS runtime import.
+  // Only affects minLength/maxLength (both are 1 in this schema).
+  unicode: false,
 });
 
 // Register format validators as regex patterns instead of using ajv-formats.
