@@ -63,7 +63,7 @@ function listTarEntries(buffer: Buffer): string[] {
 }
 
 afterEach(() => {
-  vi.doUnmock("archiver");
+  vi.doUnmock("tar-stream");
   vi.resetModules();
 });
 
@@ -148,22 +148,25 @@ describe("attachment-bundler", () => {
     );
   });
 
-  it("rejects when archiver emits an error", async () => {
+  it("rejects when tar packing emits an error", async () => {
     vi.resetModules();
 
     const archive = new PassThrough() as PassThrough & {
-      append: ReturnType<typeof vi.fn>;
-      finalize: () => Promise<void>;
+      entry: ReturnType<typeof vi.fn>;
+      finalize: () => void;
     };
-    archive.append = vi.fn();
-    archive.finalize = vi.fn(async () => {
+    archive.entry = vi.fn((_headers, _buffer, callback) => {
+      callback?.();
+      return new PassThrough();
+    });
+    archive.finalize = vi.fn(() => {
       queueMicrotask(() => {
         archive.emit("error", new Error("archive failed"));
       });
     });
 
-    vi.doMock("archiver", () => ({
-      default: vi.fn(() => archive),
+    vi.doMock("tar-stream", () => ({
+      pack: vi.fn(() => archive),
     }));
 
     const { bundleAttachments: bundleAttachmentsWithMock } = await import(

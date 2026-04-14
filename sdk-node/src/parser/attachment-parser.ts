@@ -325,15 +325,15 @@ export function sanitizeFilename(
   let safe = filename
     // Remove path separators (prevent path traversal)
     .replace(/[/\\]/g, "_")
-    // Remove colons (archiver library treats them as drive letters and strips content before)
+    // Remove colons to keep tar entry names portable and avoid drive-like prefixes.
     .replace(/:/g, "-")
     // Remove .. sequences (path traversal)
     .replace(/\.\./g, "_")
     // Remove null bytes and control characters
     // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional — stripping control chars from filenames
     .replace(/[\x00-\x1f\x7f]/g, "")
-    // Replace non-ASCII characters with underscore (archiver uses PaxHeader for these,
-    // which our simple tar parser doesn't handle - original filename is preserved in metadata)
+    // Keep entry names ASCII-only so they stay in the basic tar header format that
+    // our simple tar parser handles. The original filename is still preserved in metadata.
     .replace(/[^\x20-\x7E]/g, "_")
     // Normalize whitespace
     .replace(/\s+/g, " ")
