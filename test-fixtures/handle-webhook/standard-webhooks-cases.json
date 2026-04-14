@@ -117,6 +117,90 @@
         "valid": false,
         "error_code": "SCHEMA_VALIDATION_FAILED"
       }
+    },
+    {
+      "name": "empty_secret",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "1734567890",
+        "webhook-signature": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "secret": "",
+      "expected": {
+        "valid": false,
+        "error_code": "MISSING_SECRET"
+      }
+    },
+    {
+      "name": "bare_whsec_prefix_secret",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "1734567890",
+        "webhook-signature": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "secret": "whsec_",
+      "expected": {
+        "valid": false,
+        "error_code": "MISSING_SECRET"
+      }
+    },
+    {
+      "name": "padding_only_secret",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "1734567890",
+        "webhook-signature": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "secret": "whsec_==",
+      "expected": {
+        "valid": false,
+        "error_code": "MISSING_SECRET"
+      }
+    },
+    {
+      "name": "invalid_base64_secret",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "1734567890",
+        "webhook-signature": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "secret": "whsec_not!valid!base64",
+      "expected": {
+        "valid": false,
+        "error_code": "MISSING_SECRET"
+      }
+    },
+    {
+      "name": "empty_webhook_signature_value",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "1734567890",
+        "webhook-signature": ""
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "expected": {
+        "valid": false,
+        "error_code": "INVALID_SIGNATURE_HEADER"
+      }
+    },
+    {
+      "name": "non_numeric_timestamp",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "not-a-number",
+        "webhook-signature": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "expected": {
+        "valid": false,
+        "error_code": "INVALID_SIGNATURE_HEADER"
+      }
     }
   ]
 }
