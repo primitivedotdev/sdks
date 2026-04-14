@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'sdk-python/pyproject.toml'
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -81,6 +82,14 @@ jobs:
                   raise SystemExit(0)
               raise
           PY
+
+      - name: Sync python dependencies
+        if: ${{ steps.version.outputs.changed == 'true' && steps.pypi_state.outputs.published != 'true' }}
+        run: make python-sync
+
+      - name: Build python package
+        if: ${{ steps.version.outputs.changed == 'true' && steps.pypi_state.outputs.published != 'true' }}
+        run: make python-build
 
       - name: Publish package to PyPI
         if: ${{ steps.version.outputs.changed == 'true' && steps.pypi_state.outputs.published != 'true' }}

@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'sdk-node/package.json'
+  workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -66,6 +67,10 @@ jobs:
           fi
 
           printf 'published=false\n' >> "$GITHUB_OUTPUT"
+
+      - name: Install node dependencies
+        if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
+        run: make node-install
 
       - name: Publish package to npm
         if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
