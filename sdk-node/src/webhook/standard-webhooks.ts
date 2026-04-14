@@ -74,6 +74,12 @@ export interface StandardWebhooksVerifyOptions {
  */
 export function prepareStandardWebhooksSecret(secret: string | Buffer): Buffer {
   if (Buffer.isBuffer(secret)) {
+    if (secret.length === 0) {
+      throw new WebhookVerificationError(
+        "MISSING_SECRET",
+        "Webhook secret is required but was empty or not provided.",
+      );
+    }
     return secret;
   }
 
@@ -89,7 +95,14 @@ export function prepareStandardWebhooksSecret(secret: string | Buffer): Buffer {
     );
   }
 
-  return Buffer.from(keyStr, "base64");
+  const decoded = Buffer.from(keyStr, "base64");
+  if (decoded.length === 0) {
+    throw new WebhookVerificationError(
+      "MISSING_SECRET",
+      "Webhook secret is required but was empty or not provided.",
+    );
+  }
+  return decoded;
 }
 
 /**

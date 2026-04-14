@@ -292,6 +292,11 @@ class StandardWebhooksSignResult(TypedDict):
 
 def _prepare_standard_webhooks_secret(secret: str | bytes) -> bytes:
     if isinstance(secret, bytes):
+        if len(secret) == 0:
+            raise WebhookVerificationError(
+                "MISSING_SECRET",
+                "Webhook secret is required but was empty or not provided.",
+            )
         return secret
     key_str = secret
     if key_str.startswith(_WHSEC_PREFIX):
@@ -302,12 +307,18 @@ def _prepare_standard_webhooks_secret(secret: str | bytes) -> bytes:
             "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix).",
         )
     try:
-        return base64.b64decode(key_str)
+        decoded = base64.b64decode(key_str)
     except (binascii.Error, ValueError) as exc:
         raise WebhookVerificationError(
             "MISSING_SECRET",
             "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix).",
         ) from exc
+    if len(decoded) == 0:
+        raise WebhookVerificationError(
+            "MISSING_SECRET",
+            "Webhook secret is required but was empty or not provided.",
+        )
+    return decoded
 
 
 def _parse_standard_webhooks_signatures(header: str) -> list[str]:

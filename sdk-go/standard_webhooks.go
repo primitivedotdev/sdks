@@ -65,6 +65,14 @@ func PrepareStandardWebhooksSecret(secret any) ([]byte, error) {
 		}
 	}
 
+	if len(decoded) == 0 {
+		return nil, NewWebhookVerificationError(
+			"MISSING_SECRET",
+			"Webhook secret is required but was empty or not provided.",
+			"",
+		)
+	}
+
 	return decoded, nil
 }
 
