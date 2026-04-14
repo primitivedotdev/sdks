@@ -1,0 +1,98 @@
+name: Node Release
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdk-node/package.json'
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    name: Publish Node SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        with:
+          version: 10
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: sdk-node/pnpm-lock.yaml
+          registry-url: https://registry.npmjs.org
+
+      - name: Detect version change
+        id: version
+        run: |
+          current_version=$(node -p "require('./sdk-node/package.json').version")
+          previous_version=
+
+          if git cat-file -e "${{ github.event.before }}:sdk-node/package.json" 2>/dev/null; then
+            previous_version=$(git show "${{ github.event.before }}:sdk-node/package.json" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => process.stdout.write(JSON.parse(data).version));")
+          fi
+
+          printf 'current=%s\n' "$current_version" >> "$GITHUB_OUTPUT"
+
+          if [ "$current_version" = "$previous_version" ]; then
+            printf 'changed=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'changed=true\n' >> "$GITHUB_OUTPUT"
+
+      - name: Check npm publish state
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        id: npm_state
+        env:
+          VERSION: ${{ steps.version.outputs.current }}
+        run: |
+          if npm view "@primitivedotdev/sdk@$VERSION" version >/dev/null 2>&1; then
+            printf 'published=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'published=false\n' >> "$GITHUB_OUTPUT"
+
+      - name: Publish package to npm
+        if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
+        run: cd sdk-node && npm publish --access public
+
+      - name: Check GitHub release state
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        id: release_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: sdk-node/v${{ steps.version.outputs.current }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            printf 'exists=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'exists=false\n' >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release and tag
+        if: ${{ steps.version.outputs.changed == 'true' && steps.release_state.outputs.exists != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: sdk-node/v${{ steps.version.outputs.current }}
+          VERSION: ${{ steps.version.outputs.current }}
+        run: |
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "Node SDK v$VERSION" \
+            --generate-notes

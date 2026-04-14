@@ -1,0 +1,115 @@
+name: Python Release
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdk-python/pyproject.toml'
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    name: Publish Python SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
+        with:
+          python-version: "3.14"
+          save-cache: false
+
+      - name: Detect version change
+        id: version
+        run: |
+          current_version=$(python - <<'PY'
+          import pathlib
+          import tomllib
+
+          pyproject = pathlib.Path("sdk-python/pyproject.toml")
+          print(tomllib.loads(pyproject.read_text())["project"]["version"])
+          PY
+          )
+          previous_version=
+
+          if git cat-file -e "${{ github.event.before }}:sdk-python/pyproject.toml" 2>/dev/null; then
+            previous_version=$(git show "${{ github.event.before }}:sdk-python/pyproject.toml" | python -c 'import sys, tomllib; print(tomllib.loads(sys.stdin.read())["project"]["version"])')
+          fi
+
+          printf 'current=%s\n' "$current_version" >> "$GITHUB_OUTPUT"
+
+          if [ "$current_version" = "$previous_version" ]; then
+            printf 'changed=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'changed=true\n' >> "$GITHUB_OUTPUT"
+
+      - name: Check PyPI publish state
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        id: pypi_state
+        env:
+          VERSION: ${{ steps.version.outputs.current }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import urllib.error
+          import urllib.request
+
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          version = os.environ["VERSION"]
+          url = f"https://pypi.org/pypi/primitivedotdev/{version}/json"
+          try:
+              with urllib.request.urlopen(url, timeout=10) as response:
+                  if response.status == 200:
+                      output_path.write_text("published=true\n")
+                      raise SystemExit(0)
+          except urllib.error.HTTPError as error:
+              if error.code == 404:
+                  output_path.write_text("published=false\n")
+                  raise SystemExit(0)
+              raise
+          PY
+
+      - name: Publish package to PyPI
+        if: ${{ steps.version.outputs.changed == 'true' && steps.pypi_state.outputs.published != 'true' }}
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
+        with:
+          packages-dir: sdk-python/dist/
+
+      - name: Check GitHub release state
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        id: release_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: sdk-python/v${{ steps.version.outputs.current }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            printf 'exists=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'exists=false\n' >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release and tag
+        if: ${{ steps.version.outputs.changed == 'true' && steps.release_state.outputs.exists != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: sdk-python/v${{ steps.version.outputs.current }}
+          VERSION: ${{ steps.version.outputs.current }}
+        run: |
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "Python SDK v$VERSION" \
+            --generate-notes
