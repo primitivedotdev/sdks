@@ -1,4 +1,5 @@
 .DS_Store
+.claude/
 .direnv/
 /.envrc
 /flake.nix
