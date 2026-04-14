@@ -181,3 +181,19 @@ jobs:
 
       - name: Run shared fixture checks
         run: make shared-check
+
+  ci:
+    name: CI
+    needs: [node, python, go, shared]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          results=("${{ needs.node.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
+          for r in "${results[@]}"; do
+            if [[ "$r" != "success" && "$r" != "skipped" ]]; then
+              echo "Job failed with result: $r"
+              exit 1
+            fi
+          done
