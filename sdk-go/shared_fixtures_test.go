@@ -402,17 +402,17 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 	t.Run("standard webhooks signing", func(t *testing.T) {
 		fixtures := loadFixtureCases[struct {
 			Cases []struct {
-				Name                   string `json:"name"`
-				RawBody                string `json:"raw_body"`
-				Secret                 string `json:"secret"`
-				MsgID                  string `json:"msg_id"`
-				Timestamp              int64  `json:"timestamp"`
-				VerifySecret           string `json:"verify_secret"`
-				NowSeconds             int64  `json:"now_seconds"`
-				WebhookSignatureHeader string `json:"webhook_signature_header"`
-				ExpectedSignature      string `json:"expected_signature"`
-				ExpectedValid          bool   `json:"expected_valid"`
-				ExpectedErrorCode      string `json:"expected_error_code"`
+				Name                   string  `json:"name"`
+				RawBody                string  `json:"raw_body"`
+				Secret                 string  `json:"secret"`
+				MsgID                  string  `json:"msg_id"`
+				Timestamp              int64   `json:"timestamp"`
+				VerifySecret           *string `json:"verify_secret"`
+				NowSeconds             *int64  `json:"now_seconds"`
+				WebhookSignatureHeader *string `json:"webhook_signature_header"`
+				ExpectedSignature      string  `json:"expected_signature"`
+				ExpectedValid          bool    `json:"expected_valid"`
+				ExpectedErrorCode      string  `json:"expected_error_code"`
 			} `json:"cases"`
 		}](t, "signing", "standard-webhooks-vectors.json")
 
@@ -426,17 +426,17 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 				t.Fatalf("%s: unexpected signature %q, expected %q", testCase.Name, signed.Signature, expectedSig)
 			}
 
-			verifySecret := testCase.VerifySecret
-			if verifySecret == "" {
-				verifySecret = testCase.Secret
+			verifySecret := testCase.Secret
+			if testCase.VerifySecret != nil {
+				verifySecret = *testCase.VerifySecret
 			}
-			nowSeconds := testCase.NowSeconds
-			if nowSeconds == 0 {
-				nowSeconds = testCase.Timestamp
+			nowSeconds := testCase.Timestamp
+			if testCase.NowSeconds != nil {
+				nowSeconds = *testCase.NowSeconds
 			}
-			signatureHeader := testCase.WebhookSignatureHeader
-			if signatureHeader == "" {
-				signatureHeader = signed.Signature
+			signatureHeader := signed.Signature
+			if testCase.WebhookSignatureHeader != nil {
+				signatureHeader = *testCase.WebhookSignatureHeader
 			}
 
 			_, err = VerifyStandardWebhooksSignature(StandardWebhooksVerifyOptions{
