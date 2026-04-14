@@ -918,7 +918,7 @@ retryable: boolean
  * 
  * All properties in this object are optional. Which fields are present depends on the analysis pipeline processing the email. Primitive's managed service populates all fields. Self-hosted or third-party deployments may include some, all, or none of these fields depending on their pipeline configuration.
  * 
- * When a field is absent, it means that analysis was not performed -- not that the analysis produced no results. For example, a missing `spamassassin` field means SpamAssassin was not run, not that the email scored 0.
+ * When a field is absent, it means that particular analysis was not performed, not that the analysis produced no results. For example, a missing `spamassassin` field means SpamAssassin was not run, not that the email scored 0.
  * 
  * These fields may be omitted from the payload entirely but must not be set to null.
  * 
