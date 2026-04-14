@@ -233,9 +233,25 @@ type ParsedError struct {
 	Retryable bool   `json:"retryable"`
 }
 
+// EmailAnalysis contains email analysis and classification results.
+//
+// All fields are optional (pointer types). Which fields are present depends on
+// the analysis pipeline processing the email. Primitive's managed service
+// populates all fields. Self-hosted or third-party deployments may include
+// some, all, or none of these fields depending on their pipeline configuration.
+//
+// A nil field means that particular analysis was not performed, not that
+// analysis produced no results.
 type EmailAnalysis struct {
+	// Spamassassin holds SpamAssassin analysis results.
+	// Optional. Present when the email was processed by a SpamAssassin-equipped
+	// pipeline (always present in Primitive's managed service).
 	Spamassassin *SpamAssassinAnalysis `json:"spamassassin,omitempty"`
-	Forward      *ForwardAnalysis      `json:"forward,omitempty"`
+
+	// Forward holds forward detection and analysis results.
+	// Optional. Present when the email was processed by a forward-detection
+	// pipeline (always present in Primitive's managed service).
+	Forward *ForwardAnalysis `json:"forward,omitempty"`
 }
 
 type SpamAssassinAnalysis struct {

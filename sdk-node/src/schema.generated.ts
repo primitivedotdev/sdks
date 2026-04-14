@@ -635,14 +635,14 @@ export const emailReceivedEventJsonSchema = {
           "required": [
             "score"
           ],
-          "description": "SpamAssassin analysis results."
+          "description": "SpamAssassin analysis results.\n\nOptional. Present when the email was processed by a SpamAssassin-equipped pipeline (always present in Primitive's managed service). When absent, spam scoring was not performed on this email."
         },
         "forward": {
           "$ref": "#/definitions/ForwardAnalysis",
-          "description": "Forward detection and analysis results."
+          "description": "Forward detection and analysis results.\n\nOptional. Present when the email was processed by a forward-detection pipeline (always present in Primitive's managed service). When absent, forward detection was not performed on this email."
         }
       },
-      "description": "Email analysis and classification results."
+      "description": "Email analysis and classification results.\n\nAll properties in this object are optional. Which fields are present depends on the analysis pipeline processing the email. Primitive's managed service populates all fields. Self-hosted or third-party deployments may include some, all, or none of these fields depending on their pipeline configuration.\n\nWhen a field is absent, it means that analysis was not performed -- not that the analysis produced no results. For example, a missing `spamassassin` field means SpamAssassin was not run, not that the email scored 0.\n\nThese fields may be omitted from the payload entirely but must not be set to null."
     },
     "ForwardAnalysis": {
       "type": "object",
