@@ -101,6 +101,29 @@
       "webhook_signature_header": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= v1,EDejQQnwoARGUxRDazvQr797AO0KkabXyPPTn32uqIg=",
       "expected_signature": "EDejQQnwoARGUxRDazvQr797AO0KkabXyPPTn32uqIg=",
       "expected_valid": true
+    },
+    {
+      "name": "malformed_base64_signature_skipped",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_b64test",
+      "timestamp": 1734567890,
+      "now_seconds": 1734567890,
+      "webhook_signature_header": "v1,not!valid!base64!!! v1,fejKQbRppR/0gaHUkRzxSevlCvcSie8QCMHo1SuE2fc=",
+      "expected_signature": "fejKQbRppR/0gaHUkRzxSevlCvcSie8QCMHo1SuE2fc=",
+      "expected_valid": true
+    },
+    {
+      "name": "only_malformed_base64_signatures",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_b64test",
+      "timestamp": 1734567890,
+      "now_seconds": 1734567890,
+      "webhook_signature_header": "v1,not!valid!base64!!! v1,also-not-valid@@",
+      "expected_signature": "fejKQbRppR/0gaHUkRzxSevlCvcSie8QCMHo1SuE2fc=",
+      "expected_valid": false,
+      "expected_error_code": "SIGNATURE_MISMATCH"
     }
   ]
 }

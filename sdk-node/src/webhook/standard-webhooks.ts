@@ -253,6 +253,9 @@ export function verifyStandardWebhooksSignature(
   const expectedBytes = Buffer.from(expectedSig, "base64");
 
   for (const sig of signatures) {
+    if (!BASE64_PATTERN.test(sig)) {
+      continue;
+    }
     const sigBytes = Buffer.from(sig, "base64");
     if (
       sigBytes.length === expectedBytes.length &&

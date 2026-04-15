@@ -432,7 +432,7 @@ def verify_standard_webhooks_signature(
     expected_bytes = base64.b64decode(expected)
     for sig in signatures:
         try:
-            sig_bytes = base64.b64decode(sig)
+            sig_bytes = base64.b64decode(sig, validate=True)
         except (binascii.Error, ValueError):
             continue
         if len(sig_bytes) == len(expected_bytes) and hmac.compare_digest(
