@@ -468,6 +468,8 @@ retryable: boolean
 export interface EmailAnalysis {
 /**
  * SpamAssassin analysis results.
+ * 
+ * Optional. Present when the email was processed by a SpamAssassin-equipped pipeline (always present in Primitive's managed service). When absent, spam scoring was not performed on this email.
  */
 spamassassin?: {
 /**
@@ -479,6 +481,8 @@ forward?: ForwardAnalysis
 }
 /**
  * Forward detection and analysis results.
+ * 
+ * Optional. Present when the email was processed by a forward-detection pipeline (always present in Primitive's managed service). When absent, forward detection was not performed on this email.
  */
 export interface ForwardAnalysis {
 /**
@@ -912,12 +916,20 @@ retryable: boolean
 /**
  * Email analysis and classification results.
  * 
+ * All properties in this object are optional. Which fields are present depends on the analysis pipeline processing the email. Primitive's managed service populates all fields. Self-hosted or third-party deployments may include some, all, or none of these fields depending on their pipeline configuration.
+ * 
+ * When a field is absent, it means that particular analysis was not performed, not that the analysis produced no results. For example, a missing `spamassassin` field means SpamAssassin was not run, not that the email scored 0.
+ * 
+ * These fields may be omitted from the payload entirely but must not be set to null.
+ * 
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "EmailAnalysis".
  */
 export interface EmailAnalysis1 {
 /**
  * SpamAssassin analysis results.
+ * 
+ * Optional. Present when the email was processed by a SpamAssassin-equipped pipeline (always present in Primitive's managed service). When absent, spam scoring was not performed on this email.
  */
 spamassassin?: {
 /**

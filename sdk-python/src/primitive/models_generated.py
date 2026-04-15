@@ -780,11 +780,16 @@ class EmailAnalysis(BaseModel):
         extra="allow",
     )
     spamassassin: Annotated[
-        Spamassassin | None, Field(description="SpamAssassin analysis results.")
+        Spamassassin | None,
+        Field(
+            description="SpamAssassin analysis results.\n\nOptional. Present when the email was processed by a SpamAssassin-equipped pipeline (always present in Primitive's managed service). When absent, spam scoring was not performed on this email."
+        ),
     ] = None
     forward: Annotated[
         ForwardAnalysis | None,
-        Field(description="Forward detection and analysis results."),
+        Field(
+            description="Forward detection and analysis results.\n\nOptional. Present when the email was processed by a forward-detection pipeline (always present in Primitive's managed service). When absent, forward detection was not performed on this email."
+        ),
     ] = None
 
     @field_validator("spamassassin", "forward", mode="before")
