@@ -295,7 +295,7 @@ def _prepare_standard_webhooks_secret(secret: str | bytes) -> bytes:
         if len(secret) == 0:
             raise WebhookVerificationError(
                 "MISSING_SECRET",
-                "Webhook secret is required but was empty or not provided.",
+                "Webhook secret is required but was empty or not provided",
             )
         return secret
     key_str = secret
@@ -304,19 +304,19 @@ def _prepare_standard_webhooks_secret(secret: str | bytes) -> bytes:
     if not key_str or not _BASE64_PATTERN.fullmatch(key_str):
         raise WebhookVerificationError(
             "MISSING_SECRET",
-            "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix).",
+            "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix)",
         )
     try:
         decoded = base64.b64decode(key_str)
     except (binascii.Error, ValueError) as exc:
         raise WebhookVerificationError(
             "MISSING_SECRET",
-            "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix).",
+            "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix)",
         ) from exc
     if len(decoded) == 0:
         raise WebhookVerificationError(
             "MISSING_SECRET",
-            "Webhook secret is required but was empty or not provided.",
+            "Webhook secret is required but was empty or not provided",
         )
     return decoded
 
@@ -372,28 +372,27 @@ def verify_standard_webhooks_signature(
     if secret in (None, "", b""):
         raise WebhookVerificationError(
             "MISSING_SECRET",
-            "Webhook secret is required but was empty or not provided.",
+            "Webhook secret is required but was empty or not provided",
         )
 
     key = _prepare_standard_webhooks_secret(secret)  # type: ignore[arg-type]
     if len(key) == 0:
         raise WebhookVerificationError(
             "MISSING_SECRET",
-            "Webhook secret is required but was empty or not provided.",
+            "Webhook secret is required but was empty or not provided",
         )
 
-    try:
-        ts = int(timestamp)
-    except (ValueError, TypeError) as exc:
+    if not isinstance(timestamp, str) or not timestamp.isdigit():
         raise WebhookVerificationError(
             "INVALID_SIGNATURE_HEADER",
-            f'Invalid webhook-timestamp header: "{timestamp}". Expected a unix timestamp in seconds.',
-        ) from exc
+            f'Invalid webhook-timestamp header: "{timestamp}". Expected a unix timestamp in seconds',
+        )
+    ts = int(timestamp)
 
     if ts < 0:
         raise WebhookVerificationError(
             "INVALID_SIGNATURE_HEADER",
-            f'Invalid webhook-timestamp header: "{timestamp}". Expected a unix timestamp in seconds.',
+            f'Invalid webhook-timestamp header: "{timestamp}". Expected a unix timestamp in seconds',
         )
 
     now = (
@@ -427,7 +426,7 @@ def verify_standard_webhooks_signature(
     if not signatures:
         raise WebhookVerificationError(
             "INVALID_SIGNATURE_HEADER",
-            'Invalid webhook-signature header format. Expected: "v1,<base64>".',
+            'Invalid webhook-signature header format. Expected: "v1,<base64>"',
         )
 
     expected_bytes = base64.b64decode(expected)
@@ -477,7 +476,7 @@ def _detect_standard_webhooks_headers(
     if not signature:
         raise WebhookVerificationError(
             "INVALID_SIGNATURE_HEADER",
-            'Empty webhook-signature header. Expected: "v1,<base64>".',
+            'Empty webhook-signature header. Expected: "v1,<base64>"',
         )
 
     msg_id = values["msg_id"]

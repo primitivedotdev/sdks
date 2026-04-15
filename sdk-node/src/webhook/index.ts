@@ -407,7 +407,7 @@ function getStandardWebhooksHeaders(
   if (!signature) {
     throw new WebhookVerificationError(
       "INVALID_SIGNATURE_HEADER",
-      'Empty webhook-signature header. Expected: "v1,<base64>".',
+      'Empty webhook-signature header. Expected: "v1,<base64>"',
     );
   }
 

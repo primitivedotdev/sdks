@@ -77,7 +77,7 @@ export function prepareStandardWebhooksSecret(secret: string | Buffer): Buffer {
     if (secret.length === 0) {
       throw new WebhookVerificationError(
         "MISSING_SECRET",
-        "Webhook secret is required but was empty or not provided.",
+        "Webhook secret is required but was empty or not provided",
       );
     }
     return secret;
@@ -91,7 +91,7 @@ export function prepareStandardWebhooksSecret(secret: string | Buffer): Buffer {
   if (!keyStr || !BASE64_PATTERN.test(keyStr)) {
     throw new WebhookVerificationError(
       "MISSING_SECRET",
-      "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix).",
+      "Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix)",
     );
   }
 
@@ -99,7 +99,7 @@ export function prepareStandardWebhooksSecret(secret: string | Buffer): Buffer {
   if (decoded.length === 0) {
     throw new WebhookVerificationError(
       "MISSING_SECRET",
-      "Webhook secret is required but was empty or not provided.",
+      "Webhook secret is required but was empty or not provided",
     );
   }
   return decoded;
@@ -156,7 +156,7 @@ export function signStandardWebhooksPayload(
   if (key.length === 0) {
     throw new WebhookVerificationError(
       "MISSING_SECRET",
-      "Webhook secret is required but was empty or not provided.",
+      "Webhook secret is required but was empty or not provided",
     );
   }
 
@@ -193,7 +193,7 @@ export function verifyStandardWebhooksSignature(
   if (key.length === 0) {
     throw new WebhookVerificationError(
       "MISSING_SECRET",
-      "Webhook secret is required but was empty or not provided.",
+      "Webhook secret is required but was empty or not provided",
     );
   }
 
@@ -201,14 +201,14 @@ export function verifyStandardWebhooksSignature(
   if (!timestampStr || !/^\d+$/.test(timestampStr)) {
     throw new WebhookVerificationError(
       "INVALID_SIGNATURE_HEADER",
-      `Invalid webhook-timestamp header: "${timestampStr}". Expected a unix timestamp in seconds.`,
+      `Invalid webhook-timestamp header: "${timestampStr}". Expected a unix timestamp in seconds`,
     );
   }
   const timestamp = Number(timestampStr);
   if (!Number.isInteger(timestamp) || timestamp < 0) {
     throw new WebhookVerificationError(
       "INVALID_SIGNATURE_HEADER",
-      `Invalid webhook-timestamp header: "${timestampStr}". Expected a unix timestamp in seconds.`,
+      `Invalid webhook-timestamp header: "${timestampStr}". Expected a unix timestamp in seconds`,
     );
   }
 
@@ -246,7 +246,7 @@ export function verifyStandardWebhooksSignature(
   if (signatures.length === 0) {
     throw new WebhookVerificationError(
       "INVALID_SIGNATURE_HEADER",
-      'Invalid webhook-signature header format. Expected: "v1,<base64>".',
+      'Invalid webhook-signature header format. Expected: "v1,<base64>"',
     );
   }
 

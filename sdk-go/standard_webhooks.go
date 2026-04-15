@@ -21,7 +21,7 @@ func PrepareStandardWebhooksSecret(secret any) ([]byte, error) {
 		if len(v) == 0 {
 			return nil, NewWebhookVerificationError(
 				"MISSING_SECRET",
-				"Webhook secret is required but was empty or not provided.",
+				"Webhook secret is required but was empty or not provided",
 				"",
 			)
 		}
@@ -29,7 +29,7 @@ func PrepareStandardWebhooksSecret(secret any) ([]byte, error) {
 	case nil:
 		return nil, NewWebhookVerificationError(
 			"MISSING_SECRET",
-			"Webhook secret is required but was empty or not provided.",
+			"Webhook secret is required but was empty or not provided",
 			"",
 		)
 	default:
@@ -43,7 +43,7 @@ func PrepareStandardWebhooksSecret(secret any) ([]byte, error) {
 	if keyStr == "" {
 		return nil, NewWebhookVerificationError(
 			"MISSING_SECRET",
-			"Webhook secret is required but was empty or not provided.",
+			"Webhook secret is required but was empty or not provided",
 			"",
 		)
 	}
@@ -59,7 +59,7 @@ func PrepareStandardWebhooksSecret(secret any) ([]byte, error) {
 		if err != nil {
 			return nil, NewWebhookVerificationError(
 				"MISSING_SECRET",
-				"Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix).",
+				"Standard Webhooks secret must be base64-encoded (optionally with whsec_ prefix)",
 				"",
 			)
 		}
@@ -68,7 +68,7 @@ func PrepareStandardWebhooksSecret(secret any) ([]byte, error) {
 	if len(decoded) == 0 {
 		return nil, NewWebhookVerificationError(
 			"MISSING_SECRET",
-			"Webhook secret is required but was empty or not provided.",
+			"Webhook secret is required but was empty or not provided",
 			"",
 		)
 	}
@@ -134,7 +134,7 @@ func VerifyStandardWebhooksSignature(options StandardWebhooksVerifyOptions) (boo
 	if len(key) == 0 {
 		return false, NewWebhookVerificationError(
 			"MISSING_SECRET",
-			"Webhook secret is required but was empty or not provided.",
+			"Webhook secret is required but was empty or not provided",
 			"",
 		)
 	}
@@ -148,7 +148,7 @@ func VerifyStandardWebhooksSignature(options StandardWebhooksVerifyOptions) (boo
 	if err != nil || timestamp < 0 {
 		return false, NewWebhookVerificationError(
 			"INVALID_SIGNATURE_HEADER",
-			fmt.Sprintf("Invalid webhook-timestamp header: %q. Expected a unix timestamp in seconds.", options.Timestamp),
+			fmt.Sprintf("Invalid webhook-timestamp header: %q. Expected a unix timestamp in seconds", options.Timestamp),
 			"",
 		)
 	}
@@ -185,7 +185,7 @@ func VerifyStandardWebhooksSignature(options StandardWebhooksVerifyOptions) (boo
 	if len(signatures) == 0 {
 		return false, NewWebhookVerificationError(
 			"INVALID_SIGNATURE_HEADER",
-			"Invalid webhook-signature header format. Expected: \"v1,<base64>\".",
+			"Invalid webhook-signature header format. Expected: \"v1,<base64>\"",
 			"",
 		)
 	}
@@ -219,7 +219,7 @@ func detectStandardWebhooksHeaders(headers any) (msgID, timestamp, signature str
 	if signature == "" {
 		return "", "", "", false, NewWebhookVerificationError(
 			"INVALID_SIGNATURE_HEADER",
-			"Empty webhook-signature header. Expected: \"v1,<base64>\".",
+			"Empty webhook-signature header. Expected: \"v1,<base64>\"",
 			"",
 		)
 	}
