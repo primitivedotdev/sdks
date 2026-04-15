@@ -1,0 +1,129 @@
+{
+  "cases": [
+    {
+      "name": "simple",
+      "raw_body": "{\"event\":\"email.received\",\"email_id\":\"msg_123\"}",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_abc123",
+      "timestamp": 1734567890,
+      "expected_signature": "kAS7oL3limawP/RRRby5xMeEIto5gQ5kmPfR9RX1/DA=",
+      "expected_valid": true
+    },
+    {
+      "name": "secret_without_prefix",
+      "raw_body": "{}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_xyz",
+      "timestamp": 1000000000,
+      "expected_signature": "IX+OREH76fcnFNhmnRCIseFQJFrMsrNcSZq8WKzrzGM=",
+      "expected_valid": true
+    },
+    {
+      "name": "special_chars",
+      "raw_body": "{\"subject\":\"Test with \\\"quotes\\\" and \\n newlines\",\"from\":\"test@example.com\"}",
+      "secret": "whsec_dGVzdF9zZWNyZXRfa2V5XzEyMw==",
+      "msg_id": "msg_special",
+      "timestamp": 1700000000,
+      "expected_signature": "/4zCjw45REzPo8DwzpWL379zLGvlE6KI3LQr54Vav9g=",
+      "expected_valid": true
+    },
+    {
+      "name": "wrong_secret_mismatch",
+      "raw_body": "{\"test\":\"data\"}",
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_mismatch",
+      "timestamp": 1734567890,
+      "verify_secret": "whsec_dGVzdF9zZWNyZXRfa2V5XzEyMw==",
+      "expected_signature": "JNyIuJyCZdzmnXMPdy7O3FtT847rqhSxa+6ymfWFnfw=",
+      "expected_valid": false,
+      "expected_error_code": "SIGNATURE_MISMATCH"
+    },
+    {
+      "name": "expired_timestamp",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_expired",
+      "timestamp": 1734567000,
+      "now_seconds": 1734567890,
+      "expected_signature": "Ls3WDzSaE8WmUigSXZacy+N0r7NpmuYDAjSvSZOrrTc=",
+      "expected_valid": false,
+      "expected_error_code": "TIMESTAMP_OUT_OF_RANGE"
+    },
+    {
+      "name": "boundary_old_valid",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_boundary",
+      "timestamp": 1734567590,
+      "now_seconds": 1734567890,
+      "expected_signature": "zL8NLU61iirV/VfTPLbmNl+gp9KH248jHkr1NSlr2hE=",
+      "expected_valid": true
+    },
+    {
+      "name": "boundary_old_invalid",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_boundary",
+      "timestamp": 1734567589,
+      "now_seconds": 1734567890,
+      "expected_signature": "0hkIa8q7bk04LDTD2sMgpiWES9Pba3Hp76MZCcpydjI=",
+      "expected_valid": false,
+      "expected_error_code": "TIMESTAMP_OUT_OF_RANGE"
+    },
+    {
+      "name": "future_boundary_valid",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_future",
+      "timestamp": 1734567950,
+      "now_seconds": 1734567890,
+      "expected_signature": "YVgO6Ili0UiKuGnWyiuolIGgeDxmUgYd4Ukp6IFBvLg=",
+      "expected_valid": true
+    },
+    {
+      "name": "future_boundary_invalid",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_future",
+      "timestamp": 1734567951,
+      "now_seconds": 1734567890,
+      "expected_signature": "HTdQEIRtYMSzbWBfS0LTwgu75KUT4jvFCSny5rxSrnY=",
+      "expected_valid": false,
+      "expected_error_code": "TIMESTAMP_OUT_OF_RANGE"
+    },
+    {
+      "name": "multiple_signatures_with_match",
+      "raw_body": "{\"event\":\"email.received\",\"id\":\"evt_1\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_multi",
+      "timestamp": 1734567890,
+      "now_seconds": 1734567890,
+      "webhook_signature_header": "v1,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= v1,EDejQQnwoARGUxRDazvQr797AO0KkabXyPPTn32uqIg=",
+      "expected_signature": "EDejQQnwoARGUxRDazvQr797AO0KkabXyPPTn32uqIg=",
+      "expected_valid": true
+    },
+    {
+      "name": "malformed_base64_signature_skipped",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_b64test",
+      "timestamp": 1734567890,
+      "now_seconds": 1734567890,
+      "webhook_signature_header": "v1,not!valid!base64!!! v1,fejKQbRppR/0gaHUkRzxSevlCvcSie8QCMHo1SuE2fc=",
+      "expected_signature": "fejKQbRppR/0gaHUkRzxSevlCvcSie8QCMHo1SuE2fc=",
+      "expected_valid": true
+    },
+    {
+      "name": "only_malformed_base64_signatures",
+      "raw_body": "{\"event\":\"email.received\"}",
+      "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_b64test",
+      "timestamp": 1734567890,
+      "now_seconds": 1734567890,
+      "webhook_signature_header": "v1,not!valid!base64!!! v1,also-not-valid@@",
+      "expected_signature": "fejKQbRppR/0gaHUkRzxSevlCvcSie8QCMHo1SuE2fc=",
+      "expected_valid": false,
+      "expected_error_code": "SIGNATURE_MISMATCH"
+    }
+  ]
+}

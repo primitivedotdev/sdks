@@ -33,6 +33,8 @@ import type {
 } from "../types.js";
 import {
   type SignResult,
+  type StandardWebhooksSignResult,
+  signStandardWebhooksPayload,
   signWebhookPayload,
   validateEmailReceivedEvent,
   WEBHOOK_VERSION,
@@ -49,10 +51,11 @@ export type {
   RawContentDownloadOnly,
   RawContentInline,
   SignResult,
+  StandardWebhooksSignResult,
   WebhookAttachment,
 };
 
-export { signWebhookPayload, WEBHOOK_VERSION };
+export { signStandardWebhooksPayload, signWebhookPayload, WEBHOOK_VERSION };
 
 /** Maximum raw email size for inline inclusion (256 KB). */
 export const RAW_EMAIL_INLINE_THRESHOLD = 262144;

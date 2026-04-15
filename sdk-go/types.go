@@ -353,3 +353,19 @@ type HandleWebhookOptions struct {
 	Secret           any
 	ToleranceSeconds *int64
 }
+
+type StandardWebhooksVerifyOptions struct {
+	RawBody          any
+	MsgID            string
+	Timestamp        string
+	SignatureHeader  string
+	Secret           any
+	ToleranceSeconds *int64
+	NowSeconds       *int64
+}
+
+type StandardWebhooksSignResult struct {
+	Signature string `json:"signature"`
+	MsgID     string `json:"msg_id"`
+	Timestamp int64  `json:"timestamp"`
+}

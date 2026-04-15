@@ -18,10 +18,12 @@ from primitive import (
     is_raw_included,
     parse_webhook_event,
     safe_validate_email_received_event,
+    sign_standard_webhooks_payload,
     sign_webhook_payload,
     validate_email_auth,
     validate_email_received_event,
     verify_raw_email_download,
+    verify_standard_webhooks_signature,
     verify_webhook_signature,
 )
 
@@ -167,6 +169,91 @@ def test_shared_handle_webhook_cases() -> None:
             key: (signed["header"] if value == "{signed}" else value)
             for key, value in case["headers"].items()
         }
+        expected = case["expected"]
+
+        if expected["valid"]:
+            event = handle_webhook(
+                body=body,
+                headers=headers,
+                secret=case["secret"],
+                tolerance_seconds=case.get("tolerance_seconds"),
+            )
+            assert event.id == expected["id"]
+            continue
+
+        with pytest.raises(PrimitiveWebhookError) as error:
+            handle_webhook(
+                body=body,
+                headers=headers,
+                secret=case["secret"],
+                tolerance_seconds=case.get("tolerance_seconds"),
+            )
+        assert error.value.code == expected["error_code"]
+
+
+def test_shared_standard_webhooks_signing_vectors() -> None:
+    fixtures = _load_json("signing", "standard-webhooks-vectors.json")["cases"]
+    for case in fixtures:
+        signed = sign_standard_webhooks_payload(
+            case["raw_body"], case["secret"], case["msg_id"], case["timestamp"]
+        )
+        assert signed["signature"] == f"v1,{case['expected_signature']}"
+
+        verify_secret = case.get("verify_secret", case["secret"])
+        now_seconds = case.get("now_seconds", case["timestamp"])
+        signature_header = case.get("webhook_signature_header", signed["signature"])
+
+        if case["expected_valid"]:
+            assert (
+                verify_standard_webhooks_signature(
+                    raw_body=case["raw_body"],
+                    msg_id=case["msg_id"],
+                    timestamp=str(case["timestamp"]),
+                    signature_header=signature_header,
+                    secret=verify_secret,
+                    now_seconds=now_seconds,
+                )
+                is True
+            )
+        else:
+            with pytest.raises(WebhookVerificationError) as error:
+                verify_standard_webhooks_signature(
+                    raw_body=case["raw_body"],
+                    msg_id=case["msg_id"],
+                    timestamp=str(case["timestamp"]),
+                    signature_header=signature_header,
+                    secret=verify_secret,
+                    now_seconds=now_seconds,
+                )
+            assert error.value.code == case["expected_error_code"]
+
+
+def test_shared_standard_webhooks_handle_webhook_cases() -> None:
+    fixtures = _load_json("handle-webhook", "standard-webhooks-cases.json")["cases"]
+    for case in fixtures:
+        body = _load_text(*case["body_fixture"]) if "body_fixture" in case else case["body"]
+        sign_secret = case.get("sign_secret", case["secret"])
+        msg_id = case.get("msg_id", "msg_default")
+        needs_sign = "{signed_standard}" in case["headers"].values()
+        signed = (
+            sign_standard_webhooks_payload(
+                body, sign_secret, msg_id, case.get("timestamp")
+            )
+            if needs_sign
+            else None
+        )
+
+        headers = {}
+        for key, value in case["headers"].items():
+            if value == "{signed_standard}":
+                headers[key] = signed["signature"] if signed else ""
+            elif value == "{timestamp}":
+                headers[key] = str(
+                    signed["timestamp"] if signed else case.get("timestamp", "")
+                )
+            else:
+                headers[key] = value
+
         expected = case["expected"]
 
         if expected["valid"]:

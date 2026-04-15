@@ -64,6 +64,16 @@ export {
   type VerifyOptions,
   verifyWebhookSignature,
 } from "./signing.js";
+// Standard Webhooks
+export {
+  STANDARD_WEBHOOK_ID_HEADER,
+  STANDARD_WEBHOOK_SIGNATURE_HEADER,
+  STANDARD_WEBHOOK_TIMESTAMP_HEADER,
+  type StandardWebhooksSignResult,
+  type StandardWebhooksVerifyOptions,
+  signStandardWebhooksPayload,
+  verifyStandardWebhooksSignature,
+} from "./standard-webhooks.js";
 
 import { validateEmailReceivedEvent } from "../validation.js";
 import {
@@ -71,6 +81,7 @@ import {
   PRIMITIVE_CONFIRMED_HEADER,
   verifyWebhookSignature,
 } from "./signing.js";
+import { verifyStandardWebhooksSignature } from "./standard-webhooks.js";
 
 const BASE64_PATTERN =
   /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
@@ -136,7 +147,11 @@ import type {
   UnknownEvent,
   WebhookEvent,
 } from "../types.js";
-import { RawEmailDecodeError, WebhookPayloadError } from "./errors.js";
+import {
+  RawEmailDecodeError,
+  WebhookPayloadError,
+  WebhookVerificationError,
+} from "./errors.js";
 import { parseJsonBody } from "./parsing.js";
 
 /**
@@ -308,6 +323,11 @@ export interface HandleWebhookOptions {
 }
 
 const SIGNATURE_HEADER_NAMES = ["primitive-signature", "mymx-signature"];
+const STANDARD_WEBHOOKS_HEADER_NAMES = [
+  "webhook-signature",
+  "webhook-id",
+  "webhook-timestamp",
+] as const;
 
 /**
  * Extract signature header from various header formats.
@@ -338,6 +358,68 @@ function getSignatureHeader(headers: WebhookHeaders): string {
   }
 
   return "";
+}
+
+/**
+ * Extract Standard Webhooks headers from various header formats.
+ *
+ * Returns all three required headers if `webhook-signature` is present.
+ * If `webhook-signature` is found but `webhook-id` or `webhook-timestamp`
+ * is missing, throws an error (partial Standard Webhooks headers indicate
+ * a misconfiguration, not a Primitive-format webhook).
+ *
+ * Returns null if `webhook-signature` is not present (fall through to Primitive).
+ */
+function getStandardWebhooksHeaders(
+  headers: WebhookHeaders,
+): { msgId: string; timestamp: string; signature: string } | null {
+  let signature = "";
+  let msgId = "";
+  let timestamp = "";
+
+  let hasSignatureKey = false;
+
+  if (headers instanceof Headers) {
+    hasSignatureKey = headers.has("webhook-signature");
+    if (!hasSignatureKey) return null;
+    signature = headers.get("webhook-signature") ?? "";
+    msgId = headers.get("webhook-id") ?? "";
+    timestamp = headers.get("webhook-timestamp") ?? "";
+  } else {
+    const obj = headers as Record<string, string | string[] | undefined>;
+    const keys = Object.keys(obj);
+
+    for (const name of STANDARD_WEBHOOKS_HEADER_NAMES) {
+      const key = keys.find((k) => k.toLowerCase() === name);
+      const raw = key ? obj[key] : undefined;
+      const value = Array.isArray(raw) ? (raw[0] ?? "") : (raw ?? "");
+
+      if (name === "webhook-signature") {
+        hasSignatureKey = key !== undefined;
+        signature = value;
+      } else if (name === "webhook-id") msgId = value;
+      else if (name === "webhook-timestamp") timestamp = value;
+    }
+
+    if (!hasSignatureKey) return null;
+  }
+
+  if (!signature) {
+    throw new WebhookVerificationError(
+      "INVALID_SIGNATURE_HEADER",
+      'Empty webhook-signature header. Expected: "v1,<base64>"',
+    );
+  }
+
+  if (!msgId || !timestamp) {
+    throw new WebhookVerificationError(
+      "INVALID_SIGNATURE_HEADER",
+      `Found webhook-signature header but missing ${!msgId ? "webhook-id" : "webhook-timestamp"} header. ` +
+        "Standard Webhooks requires all three headers: webhook-id, webhook-timestamp, webhook-signature.",
+    );
+  }
+
+  return { msgId, timestamp, signature };
 }
 
 /**
@@ -384,14 +466,26 @@ export function handleWebhook(
 ): EmailReceivedEvent {
   const { body, headers, secret, toleranceSeconds } = options;
 
-  // Step 1: Verify signature
-  const signature = getSignatureHeader(headers);
-  verifyWebhookSignature({
-    rawBody: body,
-    signatureHeader: signature,
-    secret,
-    toleranceSeconds,
-  });
+  // Step 1: Verify signature (Standard Webhooks or Primitive format)
+  const swHeaders = getStandardWebhooksHeaders(headers);
+  if (swHeaders) {
+    verifyStandardWebhooksSignature({
+      rawBody: body,
+      msgId: swHeaders.msgId,
+      timestamp: swHeaders.timestamp,
+      signatureHeader: swHeaders.signature,
+      secret,
+      toleranceSeconds,
+    });
+  } else {
+    const signature = getSignatureHeader(headers);
+    verifyWebhookSignature({
+      rawBody: body,
+      signatureHeader: signature,
+      secret,
+      toleranceSeconds,
+    });
+  }
 
   // Step 2: Parse JSON (shared helper handles UTF-8 validation, BOM stripping, etc.)
   const parsed = parseJsonBody(body);
