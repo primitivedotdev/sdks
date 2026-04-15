@@ -273,6 +273,22 @@
         "valid": true,
         "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
       }
+    },
+    {
+      "name": "both_headers_standard_webhooks_wins",
+      "body_fixture": ["webhook", "valid-email-received.json"],
+      "headers": {
+        "primitive-signature": "t=1734567890,v1=0000000000000000000000000000000000000000000000000000000000000000",
+        "webhook-id": "msg_test123",
+        "webhook-timestamp": "{timestamp}",
+        "webhook-signature": "{signed_standard}"
+      },
+      "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
+      "msg_id": "msg_test123",
+      "expected": {
+        "valid": true,
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
     }
   ]
 }

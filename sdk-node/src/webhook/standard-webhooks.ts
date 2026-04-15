@@ -198,6 +198,12 @@ export function verifyStandardWebhooksSignature(
   }
 
   // Parse timestamp
+  if (!timestampStr || !/^\d+$/.test(timestampStr)) {
+    throw new WebhookVerificationError(
+      "INVALID_SIGNATURE_HEADER",
+      `Invalid webhook-timestamp header: "${timestampStr}". Expected a unix timestamp in seconds.`,
+    );
+  }
   const timestamp = Number(timestampStr);
   if (!Number.isInteger(timestamp) || timestamp < 0) {
     throw new WebhookVerificationError(
