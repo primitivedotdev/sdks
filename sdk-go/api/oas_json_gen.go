@@ -10,6 +10,7 @@ import (
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
 	"github.com/google/uuid"
+
 	"github.com/ogen-go/ogen/json"
 	"github.com/ogen-go/ogen/validate"
 )
@@ -511,7 +512,7 @@ func (s *AddDomainCreated) Encode(e *jx.Encoder) {
 func (s *AddDomainCreated) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -794,7 +795,7 @@ func (s *CreateEndpointCreated) Encode(e *jx.Encoder) {
 func (s *CreateEndpointCreated) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -1175,7 +1176,7 @@ func (s *CreateFilterCreated) Encode(e *jx.Encoder) {
 func (s *CreateFilterCreated) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -1986,7 +1987,7 @@ func (s *Deleted) Encode(e *jx.Encoder) {
 func (s *Deleted) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -2097,7 +2098,7 @@ func (s *DeletedData) Encode(e *jx.Encoder) {
 func (s *DeletedData) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("deleted")
-		e.Bool(true)
+		e.Bool(s.Deleted)
 	}
 }
 
@@ -2672,11 +2673,6 @@ func (s *Domain) Decode(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
 			case "is_active":
-				// Type-based discrimination: check if field has expected JSON type
-				if typ := d.Next(); typ != jx.Bool {
-					// Field exists but has wrong type, not a match for this variant
-					return d.Skip()
-				}
 				match := VerifiedDomainDomain
 				if found && s.Type != match {
 					s.Type = ""
@@ -2685,12 +2681,6 @@ func (s *Domain) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "spam_threshold":
-				// Type-based discrimination: check if field has expected JSON type (nullable)
-				typ := d.Next()
-				if typ != jx.Number && typ != jx.Null {
-					// Field exists but has wrong type, not a match for this variant
-					return d.Skip()
-				}
 				match := VerifiedDomainDomain
 				if found && s.Type != match {
 					s.Type = ""
@@ -2768,25 +2758,7 @@ func (s *DomainVerifyResult) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
-			case "error":
-				// Type-based discrimination: check if field has expected JSON type
-				if typ := d.Next(); typ != jx.String {
-					// Field exists but has wrong type, not a match for this variant
-					return d.Skip()
-				}
-				match := DomainVerifyResult1DomainVerifyResult
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
 			case "mxFound":
-				// Type-based discrimination: check if field has expected JSON type
-				if typ := d.Next(); typ != jx.Bool {
-					// Field exists but has wrong type, not a match for this variant
-					return d.Skip()
-				}
 				match := DomainVerifyResult1DomainVerifyResult
 				if found && s.Type != match {
 					s.Type = ""
@@ -2795,11 +2767,14 @@ func (s *DomainVerifyResult) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "txtFound":
-				// Type-based discrimination: check if field has expected JSON type
-				if typ := d.Next(); typ != jx.Bool {
-					// Field exists but has wrong type, not a match for this variant
-					return d.Skip()
+				match := DomainVerifyResult1DomainVerifyResult
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
 				}
+				found = true
+				s.Type = match
+			case "error":
 				match := DomainVerifyResult1DomainVerifyResult
 				if found && s.Type != match {
 					s.Type = ""
@@ -2855,7 +2830,7 @@ func (s *DomainVerifyResult0) Encode(e *jx.Encoder) {
 func (s *DomainVerifyResult0) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("verified")
-		e.Bool(true)
+		e.Bool(s.Verified)
 	}
 }
 
@@ -2951,7 +2926,7 @@ func (s *DomainVerifyResult1) Encode(e *jx.Encoder) {
 func (s *DomainVerifyResult1) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("verified")
-		e.Bool(false)
+		e.Bool(s.Verified)
 	}
 	{
 		e.FieldStart("mxFound")
@@ -4806,7 +4781,7 @@ func (s *ErrorResponse) Encode(e *jx.Encoder) {
 func (s *ErrorResponse) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(false)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("error")
@@ -5350,7 +5325,7 @@ func (s *GetAccountOK) Encode(e *jx.Encoder) {
 func (s *GetAccountOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -5575,7 +5550,7 @@ func (s *GetEmailOK) Encode(e *jx.Encoder) {
 func (s *GetEmailOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -5762,7 +5737,7 @@ func (s *GetStorageStatsOK) Encode(e *jx.Encoder) {
 func (s *GetStorageStatsOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -5949,7 +5924,7 @@ func (s *GetWebhookSecretOK) Encode(e *jx.Encoder) {
 func (s *GetWebhookSecretOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -6136,7 +6111,7 @@ func (s *ListDeliveriesOK) Encode(e *jx.Encoder) {
 func (s *ListDeliveriesOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("meta")
@@ -6312,7 +6287,7 @@ func (s *ListDomainsOK) Encode(e *jx.Encoder) {
 func (s *ListDomainsOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -6473,7 +6448,7 @@ func (s *ListEmailsOK) Encode(e *jx.Encoder) {
 func (s *ListEmailsOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("meta")
@@ -6649,7 +6624,7 @@ func (s *ListEndpointsOK) Encode(e *jx.Encoder) {
 func (s *ListEndpointsOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -6772,7 +6747,7 @@ func (s *ListFiltersOK) Encode(e *jx.Encoder) {
 func (s *ListFiltersOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -7731,7 +7706,7 @@ func (s *ReplayDeliveryOK) Encode(e *jx.Encoder) {
 func (s *ReplayDeliveryOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -7956,7 +7931,7 @@ func (s *ReplayEmailWebhooksOK) Encode(e *jx.Encoder) {
 func (s *ReplayEmailWebhooksOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -8294,7 +8269,7 @@ func (s *RotateWebhookSecretOK) Encode(e *jx.Encoder) {
 func (s *RotateWebhookSecretOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -8700,7 +8675,7 @@ func (s *TestEndpointOK) Encode(e *jx.Encoder) {
 func (s *TestEndpointOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -8991,7 +8966,7 @@ func (s *UnverifiedDomain) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("verified")
-		e.Bool(false)
+		e.Bool(s.Verified)
 	}
 	{
 		e.FieldStart("verification_token")
@@ -9327,7 +9302,7 @@ func (s *UpdateAccountOK) Encode(e *jx.Encoder) {
 func (s *UpdateAccountOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -9643,7 +9618,7 @@ func (s *UpdateDomainOK) Encode(e *jx.Encoder) {
 func (s *UpdateDomainOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -10039,7 +10014,7 @@ func (s *UpdateEndpointOK) Encode(e *jx.Encoder) {
 func (s *UpdateEndpointOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -10360,7 +10335,7 @@ func (s *UpdateFilterOK) Encode(e *jx.Encoder) {
 func (s *UpdateFilterOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")
@@ -10521,7 +10496,7 @@ func (s *VerifiedDomain) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("verified")
-		e.Bool(true)
+		e.Bool(s.Verified)
 	}
 	{
 		e.FieldStart("is_active")
@@ -10800,7 +10775,7 @@ func (s *VerifyDomainOK) Encode(e *jx.Encoder) {
 func (s *VerifyDomainOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
-		e.Bool(true)
+		e.Bool(s.Success)
 	}
 	{
 		e.FieldStart("data")

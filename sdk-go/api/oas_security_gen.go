@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-faster/errors"
+
 	"github.com/ogen-go/ogen/ogenerrors"
 )
 
@@ -15,10 +16,10 @@ import (
 type SecurityHandler interface {
 	// HandleBearerAuth handles BearerAuth security.
 	// API key with `prim_` prefix: `Authorization: Bearer prim_<key>`.
-	HandleBearerAuth(ctx context.Context, operationName OperationName, t BearerAuth) (context.Context, error)
+	HandleBearerAuth(ctx context.Context, operationName string, t BearerAuth) (context.Context, error)
 	// HandleDownloadToken handles DownloadToken security.
 	// Signed download token provided in webhook payloads.
-	HandleDownloadToken(ctx context.Context, operationName OperationName, t DownloadToken) (context.Context, error)
+	HandleDownloadToken(ctx context.Context, operationName string, t DownloadToken) (context.Context, error)
 }
 
 func findAuthorization(h http.Header, prefix string) (string, bool) {
@@ -36,93 +37,13 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 	return "", false
 }
 
-// operationRolesBearerAuth is a private map storing roles per operation.
-var operationRolesBearerAuth = map[string][]string{
-	AddDomainOperation:           []string{},
-	CreateEndpointOperation:      []string{},
-	CreateFilterOperation:        []string{},
-	DeleteDomainOperation:        []string{},
-	DeleteEmailOperation:         []string{},
-	DeleteEndpointOperation:      []string{},
-	DeleteFilterOperation:        []string{},
-	DownloadAttachmentsOperation: []string{},
-	DownloadRawEmailOperation:    []string{},
-	GetAccountOperation:          []string{},
-	GetEmailOperation:            []string{},
-	GetStorageStatsOperation:     []string{},
-	GetWebhookSecretOperation:    []string{},
-	ListDeliveriesOperation:      []string{},
-	ListDomainsOperation:         []string{},
-	ListEmailsOperation:          []string{},
-	ListEndpointsOperation:       []string{},
-	ListFiltersOperation:         []string{},
-	ReplayDeliveryOperation:      []string{},
-	ReplayEmailWebhooksOperation: []string{},
-	RotateWebhookSecretOperation: []string{},
-	TestEndpointOperation:        []string{},
-	UpdateAccountOperation:       []string{},
-	UpdateDomainOperation:        []string{},
-	UpdateEndpointOperation:      []string{},
-	UpdateFilterOperation:        []string{},
-	VerifyDomainOperation:        []string{},
-}
-
-// GetRolesForBearerAuth returns the required roles for the given operation.
-//
-// This is useful for authorization scenarios where you need to know which roles
-// are required for an operation.
-//
-// Example:
-//
-//	requiredRoles := GetRolesForBearerAuth(AddPetOperation)
-//
-// Returns nil if the operation has no role requirements or if the operation is unknown.
-func GetRolesForBearerAuth(operation string) []string {
-	roles, ok := operationRolesBearerAuth[operation]
-	if !ok {
-		return nil
-	}
-	// Return a copy to prevent external modification
-	result := make([]string, len(roles))
-	copy(result, roles)
-	return result
-}
-
-// operationRolesDownloadToken is a private map storing roles per operation.
-var operationRolesDownloadToken = map[string][]string{
-	DownloadAttachmentsOperation: []string{},
-	DownloadRawEmailOperation:    []string{},
-}
-
-// GetRolesForDownloadToken returns the required roles for the given operation.
-//
-// This is useful for authorization scenarios where you need to know which roles
-// are required for an operation.
-//
-// Example:
-//
-//	requiredRoles := GetRolesForDownloadToken(AddPetOperation)
-//
-// Returns nil if the operation has no role requirements or if the operation is unknown.
-func GetRolesForDownloadToken(operation string) []string {
-	roles, ok := operationRolesDownloadToken[operation]
-	if !ok {
-		return nil
-	}
-	// Return a copy to prevent external modification
-	result := make([]string, len(roles))
-	copy(result, roles)
-	return result
-}
-
-func (s *Server) securityBearerAuth(ctx context.Context, operationName OperationName, req *http.Request) (context.Context, bool, error) {
+func (s *Server) securityBearerAuth(ctx context.Context, operationName string, req *http.Request) (context.Context, bool, error) {
 	var t BearerAuth
 	token, ok := findAuthorization(req.Header, "Bearer")
 	if !ok {
 		return ctx, false, nil
 	}
 	t.Token = token
-	t.Roles = operationRolesBearerAuth[operationName]
 	rctx, err := s.sec.HandleBearerAuth(ctx, operationName, t)
 	if errors.Is(err, ogenerrors.ErrSkipServerSecurity) {
 		return nil, false, nil
@@ -131,8 +52,7 @@ func (s *Server) securityBearerAuth(ctx context.Context, operationName Operation
 	}
 	return rctx, true, err
 }
-
-func (s *Server) securityDownloadToken(ctx context.Context, operationName OperationName, req *http.Request) (context.Context, bool, error) {
+func (s *Server) securityDownloadToken(ctx context.Context, operationName string, req *http.Request) (context.Context, bool, error) {
 	var t DownloadToken
 	const parameterName = "token"
 	q := req.URL.Query()
@@ -141,7 +61,6 @@ func (s *Server) securityDownloadToken(ctx context.Context, operationName Operat
 	}
 	value := q.Get(parameterName)
 	t.APIKey = value
-	t.Roles = operationRolesDownloadToken[operationName]
 	rctx, err := s.sec.HandleDownloadToken(ctx, operationName, t)
 	if errors.Is(err, ogenerrors.ErrSkipServerSecurity) {
 		return nil, false, nil
@@ -155,13 +74,13 @@ func (s *Server) securityDownloadToken(ctx context.Context, operationName Operat
 type SecuritySource interface {
 	// BearerAuth provides BearerAuth security value.
 	// API key with `prim_` prefix: `Authorization: Bearer prim_<key>`.
-	BearerAuth(ctx context.Context, operationName OperationName) (BearerAuth, error)
+	BearerAuth(ctx context.Context, operationName string) (BearerAuth, error)
 	// DownloadToken provides DownloadToken security value.
 	// Signed download token provided in webhook payloads.
-	DownloadToken(ctx context.Context, operationName OperationName) (DownloadToken, error)
+	DownloadToken(ctx context.Context, operationName string) (DownloadToken, error)
 }
 
-func (s *Client) securityBearerAuth(ctx context.Context, operationName OperationName, req *http.Request) error {
+func (s *Client) securityBearerAuth(ctx context.Context, operationName string, req *http.Request) error {
 	t, err := s.sec.BearerAuth(ctx, operationName)
 	if err != nil {
 		return errors.Wrap(err, "security source \"BearerAuth\"")
@@ -169,7 +88,7 @@ func (s *Client) securityBearerAuth(ctx context.Context, operationName Operation
 	req.Header.Set("Authorization", "Bearer "+t.Token)
 	return nil
 }
-func (s *Client) securityDownloadToken(ctx context.Context, operationName OperationName, req *http.Request) error {
+func (s *Client) securityDownloadToken(ctx context.Context, operationName string, req *http.Request) error {
 	t, err := s.sec.DownloadToken(ctx, operationName)
 	if err != nil {
 		return errors.Wrap(err, "security source \"DownloadToken\"")

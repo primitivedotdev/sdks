@@ -20,7 +20,7 @@ func NewStaticTokenSource(apiKey string, downloadToken string) StaticTokenSource
 	}
 }
 
-func (s StaticTokenSource) BearerAuth(_ context.Context, _ OperationName) (BearerAuth, error) {
+func (s StaticTokenSource) BearerAuth(_ context.Context, _ string) (BearerAuth, error) {
 	if s.APIKey == "" {
 		return BearerAuth{}, ogenerrors.ErrSkipClientSecurity
 	}
@@ -28,7 +28,7 @@ func (s StaticTokenSource) BearerAuth(_ context.Context, _ OperationName) (Beare
 	return BearerAuth{Token: s.APIKey}, nil
 }
 
-func (s StaticTokenSource) DownloadToken(_ context.Context, _ OperationName) (DownloadToken, error) {
+func (s StaticTokenSource) DownloadToken(_ context.Context, _ string) (DownloadToken, error) {
 	if s.DownloadTokenValue == "" {
 		return DownloadToken{}, ogenerrors.ErrSkipClientSecurity
 	}

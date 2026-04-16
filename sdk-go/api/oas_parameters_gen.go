@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/google/uuid"
+
 	"github.com/ogen-go/ogen/conv"
 	"github.com/ogen-go/ogen/middleware"
 	"github.com/ogen-go/ogen/ogenerrors"
@@ -283,7 +284,7 @@ func decodeDeleteFilterParams(args [1]string, argsEscaped bool, r *http.Request)
 // DownloadAttachmentsParams is parameters of downloadAttachments operation.
 type DownloadAttachmentsParams struct {
 	// Signed download token from webhook payload.
-	Token OptString `json:",omitempty,omitzero"`
+	Token OptString
 	// Resource UUID.
 	ID uuid.UUID
 }
@@ -402,7 +403,7 @@ func decodeDownloadAttachmentsParams(args [1]string, argsEscaped bool, r *http.R
 // DownloadRawEmailParams is parameters of downloadRawEmail operation.
 type DownloadRawEmailParams struct {
 	// Signed download token from webhook payload.
-	Token OptString `json:",omitempty,omitzero"`
+	Token OptString
 	// Resource UUID.
 	ID uuid.UUID
 }
@@ -588,17 +589,17 @@ func decodeGetEmailParams(args [1]string, argsEscaped bool, r *http.Request) (pa
 type ListDeliveriesParams struct {
 	// Pagination cursor from a previous response's `meta.cursor` field.
 	// Format: `{ISO-datetime}|{id}`.
-	Cursor OptString `json:",omitempty,omitzero"`
+	Cursor OptString
 	// Number of results per page.
-	Limit OptInt `json:",omitempty,omitzero"`
+	Limit OptInt
 	// Filter by email ID.
-	EmailID OptUUID `json:",omitempty,omitzero"`
+	EmailID OptUUID
 	// Filter by delivery status.
-	Status OptListDeliveriesStatus `json:",omitempty,omitzero"`
+	Status OptListDeliveriesStatus
 	// Filter deliveries created on or after this timestamp.
-	DateFrom OptDateTime `json:",omitempty,omitzero"`
+	DateFrom OptDateTime
 	// Filter deliveries created on or before this timestamp.
-	DateTo OptDateTime `json:",omitempty,omitzero"`
+	DateTo OptDateTime
 }
 
 func unpackListDeliveriesParams(packed middleware.Parameters) (params ListDeliveriesParams) {
@@ -751,7 +752,6 @@ func decodeListDeliveriesParams(args [0]string, argsEscaped bool, r *http.Reques
 							MaxExclusive:  false,
 							MultipleOfSet: false,
 							MultipleOf:    0,
-							Pattern:       nil,
 						}).Validate(int64(value)); err != nil {
 							return errors.Wrap(err, "int")
 						}
@@ -959,19 +959,19 @@ func decodeListDeliveriesParams(args [0]string, argsEscaped bool, r *http.Reques
 type ListEmailsParams struct {
 	// Pagination cursor from a previous response's `meta.cursor` field.
 	// Format: `{ISO-datetime}|{id}`.
-	Cursor OptString `json:",omitempty,omitzero"`
+	Cursor OptString
 	// Number of results per page.
-	Limit OptInt `json:",omitempty,omitzero"`
+	Limit OptInt
 	// Filter by domain ID.
-	DomainID OptUUID `json:",omitempty,omitzero"`
+	DomainID OptUUID
 	// Filter by email status.
-	Status OptListEmailsStatus `json:",omitempty,omitzero"`
+	Status OptListEmailsStatus
 	// Search subject, sender, and recipient (case-insensitive).
-	Search OptString `json:",omitempty,omitzero"`
+	Search OptString
 	// Filter emails created on or after this timestamp.
-	DateFrom OptDateTime `json:",omitempty,omitzero"`
+	DateFrom OptDateTime
 	// Filter emails created on or before this timestamp.
-	DateTo OptDateTime `json:",omitempty,omitzero"`
+	DateTo OptDateTime
 }
 
 func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsParams) {
@@ -1133,7 +1133,6 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 							MaxExclusive:  false,
 							MultipleOfSet: false,
 							MultipleOf:    0,
-							Pattern:       nil,
 						}).Validate(int64(value)); err != nil {
 							return errors.Wrap(err, "int")
 						}
@@ -1288,17 +1287,13 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 				if value, ok := params.Search.Get(); ok {
 					if err := func() error {
 						if err := (validate.String{
-							MinLength:     0,
-							MinLengthSet:  false,
-							MaxLength:     500,
-							MaxLengthSet:  true,
-							Email:         false,
-							Hostname:      false,
-							Regex:         nil,
-							MinNumeric:    0,
-							MinNumericSet: false,
-							MaxNumeric:    0,
-							MaxNumericSet: false,
+							MinLength:    0,
+							MinLengthSet: false,
+							MaxLength:    500,
+							MaxLengthSet: true,
+							Email:        false,
+							Hostname:     false,
+							Regex:        nil,
 						}).Validate(string(value)); err != nil {
 							return errors.Wrap(err, "string")
 						}
@@ -1459,17 +1454,13 @@ func decodeReplayDeliveryParams(args [1]string, argsEscaped bool, r *http.Reques
 			}
 			if err := func() error {
 				if err := (validate.String{
-					MinLength:     0,
-					MinLengthSet:  false,
-					MaxLength:     0,
-					MaxLengthSet:  false,
-					Email:         false,
-					Hostname:      false,
-					Regex:         regexMap["^\\d+$"],
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
+					MinLength:    0,
+					MinLengthSet: false,
+					MaxLength:    0,
+					MaxLengthSet: false,
+					Email:        false,
+					Hostname:     false,
+					Regex:        regexMap["^\\d+$"],
 				}).Validate(string(params.ID)); err != nil {
 					return errors.Wrap(err, "string")
 				}

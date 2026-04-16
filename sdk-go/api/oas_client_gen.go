@@ -9,22 +9,18 @@ import (
 	"time"
 
 	"github.com/go-faster/errors"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/ogen-go/ogen/conv"
 	ht "github.com/ogen-go/ogen/http"
 	"github.com/ogen-go/ogen/ogenerrors"
 	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
-	"go.opentelemetry.io/otel/trace"
 )
-
-func trimTrailingSlashes(u *url.URL) {
-	u.Path = strings.TrimRight(u.Path, "/")
-	u.RawPath = strings.TrimRight(u.RawPath, "/")
-}
 
 // Invoker invokes operations described by OpenAPI v3 specification.
 type Invoker interface {
@@ -230,6 +226,15 @@ type Client struct {
 	baseClient
 }
 
+var _ Handler = struct {
+	*Client
+}{}
+
+func trimTrailingSlashes(u *url.URL) {
+	u.Path = strings.TrimRight(u.Path, "/")
+	u.RawPath = strings.TrimRight(u.RawPath, "/")
+}
+
 // NewClient initializes new Client defined by OAS.
 func NewClient(serverURL string, sec SecuritySource, opts ...ClientOption) (*Client, error) {
 	u, err := url.Parse(serverURL)
@@ -280,23 +285,22 @@ func (c *Client) sendAddDomain(ctx context.Context, request *AddDomainInput) (re
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("addDomain"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/domains"),
+		semconv.HTTPRouteKey.String("/domains"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, AddDomainOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "AddDomain",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -331,7 +335,7 @@ func (c *Client) sendAddDomain(ctx context.Context, request *AddDomainInput) (re
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, AddDomainOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "AddDomain", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -364,8 +368,7 @@ func (c *Client) sendAddDomain(ctx context.Context, request *AddDomainInput) (re
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeAddDomainResponse(resp)
@@ -392,23 +395,22 @@ func (c *Client) sendCreateEndpoint(ctx context.Context, request *CreateEndpoint
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createEndpoint"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/endpoints"),
+		semconv.HTTPRouteKey.String("/endpoints"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateEndpointOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "CreateEndpoint",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -443,7 +445,7 @@ func (c *Client) sendCreateEndpoint(ctx context.Context, request *CreateEndpoint
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, CreateEndpointOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "CreateEndpoint", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -476,8 +478,7 @@ func (c *Client) sendCreateEndpoint(ctx context.Context, request *CreateEndpoint
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateEndpointResponse(resp)
@@ -503,23 +504,22 @@ func (c *Client) sendCreateFilter(ctx context.Context, request *CreateFilterInpu
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createFilter"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/filters"),
+		semconv.HTTPRouteKey.String("/filters"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, CreateFilterOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "CreateFilter",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -554,7 +554,7 @@ func (c *Client) sendCreateFilter(ctx context.Context, request *CreateFilterInpu
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, CreateFilterOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "CreateFilter", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -587,8 +587,7 @@ func (c *Client) sendCreateFilter(ctx context.Context, request *CreateFilterInpu
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateFilterResponse(resp)
@@ -613,23 +612,22 @@ func (c *Client) sendDeleteDomain(ctx context.Context, params DeleteDomainParams
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteDomain"),
 		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/domains/{id}"),
+		semconv.HTTPRouteKey.String("/domains/{id}"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteDomainOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "DeleteDomain",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -679,7 +677,7 @@ func (c *Client) sendDeleteDomain(ctx context.Context, params DeleteDomainParams
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, DeleteDomainOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "DeleteDomain", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -712,8 +710,7 @@ func (c *Client) sendDeleteDomain(ctx context.Context, params DeleteDomainParams
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteDomainResponse(resp)
@@ -738,23 +735,22 @@ func (c *Client) sendDeleteEmail(ctx context.Context, params DeleteEmailParams) 
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteEmail"),
 		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/emails/{id}"),
+		semconv.HTTPRouteKey.String("/emails/{id}"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteEmailOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "DeleteEmail",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -804,7 +800,7 @@ func (c *Client) sendDeleteEmail(ctx context.Context, params DeleteEmailParams) 
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, DeleteEmailOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "DeleteEmail", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -837,8 +833,7 @@ func (c *Client) sendDeleteEmail(ctx context.Context, params DeleteEmailParams) 
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteEmailResponse(resp)
@@ -864,23 +859,22 @@ func (c *Client) sendDeleteEndpoint(ctx context.Context, params DeleteEndpointPa
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteEndpoint"),
 		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/endpoints/{id}"),
+		semconv.HTTPRouteKey.String("/endpoints/{id}"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteEndpointOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "DeleteEndpoint",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -930,7 +924,7 @@ func (c *Client) sendDeleteEndpoint(ctx context.Context, params DeleteEndpointPa
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, DeleteEndpointOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "DeleteEndpoint", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -963,8 +957,7 @@ func (c *Client) sendDeleteEndpoint(ctx context.Context, params DeleteEndpointPa
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteEndpointResponse(resp)
@@ -989,23 +982,22 @@ func (c *Client) sendDeleteFilter(ctx context.Context, params DeleteFilterParams
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteFilter"),
 		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.URLTemplateKey.String("/filters/{id}"),
+		semconv.HTTPRouteKey.String("/filters/{id}"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DeleteFilterOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "DeleteFilter",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1055,7 +1047,7 @@ func (c *Client) sendDeleteFilter(ctx context.Context, params DeleteFilterParams
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, DeleteFilterOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "DeleteFilter", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1088,8 +1080,7 @@ func (c *Client) sendDeleteFilter(ctx context.Context, params DeleteFilterParams
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteFilterResponse(resp)
@@ -1116,23 +1107,22 @@ func (c *Client) sendDownloadAttachments(ctx context.Context, params DownloadAtt
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("downloadAttachments"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/emails/{id}/attachments.tar.gz"),
+		semconv.HTTPRouteKey.String("/emails/{id}/attachments.tar.gz"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DownloadAttachmentsOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "DownloadAttachments",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1204,7 +1194,7 @@ func (c *Client) sendDownloadAttachments(ctx context.Context, params DownloadAtt
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, DownloadAttachmentsOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "DownloadAttachments", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1215,7 +1205,7 @@ func (c *Client) sendDownloadAttachments(ctx context.Context, params DownloadAtt
 		}
 		{
 			stage = "Security:DownloadToken"
-			switch err := c.securityDownloadToken(ctx, DownloadAttachmentsOperation, r); {
+			switch err := c.securityDownloadToken(ctx, "DownloadAttachments", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 1
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1249,8 +1239,7 @@ func (c *Client) sendDownloadAttachments(ctx context.Context, params DownloadAtt
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeDownloadAttachmentsResponse(resp)
@@ -1277,23 +1266,22 @@ func (c *Client) sendDownloadRawEmail(ctx context.Context, params DownloadRawEma
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("downloadRawEmail"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/emails/{id}/raw"),
+		semconv.HTTPRouteKey.String("/emails/{id}/raw"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, DownloadRawEmailOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "DownloadRawEmail",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1365,7 +1353,7 @@ func (c *Client) sendDownloadRawEmail(ctx context.Context, params DownloadRawEma
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, DownloadRawEmailOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "DownloadRawEmail", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1376,7 +1364,7 @@ func (c *Client) sendDownloadRawEmail(ctx context.Context, params DownloadRawEma
 		}
 		{
 			stage = "Security:DownloadToken"
-			switch err := c.securityDownloadToken(ctx, DownloadRawEmailOperation, r); {
+			switch err := c.securityDownloadToken(ctx, "DownloadRawEmail", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 1
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1410,8 +1398,7 @@ func (c *Client) sendDownloadRawEmail(ctx context.Context, params DownloadRawEma
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeDownloadRawEmailResponse(resp)
@@ -1436,23 +1423,22 @@ func (c *Client) sendGetAccount(ctx context.Context) (res GetAccountRes, err err
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAccount"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/account"),
+		semconv.HTTPRouteKey.String("/account"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetAccountOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "GetAccount",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1484,7 +1470,7 @@ func (c *Client) sendGetAccount(ctx context.Context) (res GetAccountRes, err err
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, GetAccountOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "GetAccount", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1517,8 +1503,7 @@ func (c *Client) sendGetAccount(ctx context.Context) (res GetAccountRes, err err
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeGetAccountResponse(resp)
@@ -1543,23 +1528,22 @@ func (c *Client) sendGetEmail(ctx context.Context, params GetEmailParams) (res G
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getEmail"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/emails/{id}"),
+		semconv.HTTPRouteKey.String("/emails/{id}"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetEmailOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "GetEmail",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1609,7 +1593,7 @@ func (c *Client) sendGetEmail(ctx context.Context, params GetEmailParams) (res G
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, GetEmailOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "GetEmail", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1642,8 +1626,7 @@ func (c *Client) sendGetEmail(ctx context.Context, params GetEmailParams) (res G
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeGetEmailResponse(resp)
@@ -1668,23 +1651,22 @@ func (c *Client) sendGetStorageStats(ctx context.Context) (res GetStorageStatsRe
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getStorageStats"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/account/storage"),
+		semconv.HTTPRouteKey.String("/account/storage"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetStorageStatsOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "GetStorageStats",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1716,7 +1698,7 @@ func (c *Client) sendGetStorageStats(ctx context.Context) (res GetStorageStatsRe
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, GetStorageStatsOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "GetStorageStats", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1749,8 +1731,7 @@ func (c *Client) sendGetStorageStats(ctx context.Context) (res GetStorageStatsRe
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeGetStorageStatsResponse(resp)
@@ -1776,23 +1757,22 @@ func (c *Client) sendGetWebhookSecret(ctx context.Context) (res GetWebhookSecret
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getWebhookSecret"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/account/webhook-secret"),
+		semconv.HTTPRouteKey.String("/account/webhook-secret"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetWebhookSecretOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "GetWebhookSecret",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -1824,7 +1804,7 @@ func (c *Client) sendGetWebhookSecret(ctx context.Context) (res GetWebhookSecret
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, GetWebhookSecretOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "GetWebhookSecret", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -1857,8 +1837,7 @@ func (c *Client) sendGetWebhookSecret(ctx context.Context) (res GetWebhookSecret
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeGetWebhookSecretResponse(resp)
@@ -1884,23 +1863,22 @@ func (c *Client) sendListDeliveries(ctx context.Context, params ListDeliveriesPa
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("listDeliveries"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/webhooks/deliveries"),
+		semconv.HTTPRouteKey.String("/webhooks/deliveries"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListDeliveriesOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "ListDeliveries",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2038,7 +2016,7 @@ func (c *Client) sendListDeliveries(ctx context.Context, params ListDeliveriesPa
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, ListDeliveriesOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "ListDeliveries", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2071,8 +2049,7 @@ func (c *Client) sendListDeliveries(ctx context.Context, params ListDeliveriesPa
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeListDeliveriesResponse(resp)
@@ -2099,23 +2076,22 @@ func (c *Client) sendListDomains(ctx context.Context) (res ListDomainsRes, err e
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("listDomains"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/domains"),
+		semconv.HTTPRouteKey.String("/domains"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListDomainsOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "ListDomains",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2147,7 +2123,7 @@ func (c *Client) sendListDomains(ctx context.Context) (res ListDomainsRes, err e
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, ListDomainsOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "ListDomains", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2180,8 +2156,7 @@ func (c *Client) sendListDomains(ctx context.Context) (res ListDomainsRes, err e
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeListDomainsResponse(resp)
@@ -2208,23 +2183,22 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("listEmails"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/emails"),
+		semconv.HTTPRouteKey.String("/emails"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListEmailsOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "ListEmails",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2379,7 +2353,7 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, ListEmailsOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "ListEmails", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2412,8 +2386,7 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeListEmailsResponse(resp)
@@ -2438,23 +2411,22 @@ func (c *Client) sendListEndpoints(ctx context.Context) (res ListEndpointsRes, e
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("listEndpoints"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/endpoints"),
+		semconv.HTTPRouteKey.String("/endpoints"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListEndpointsOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "ListEndpoints",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2486,7 +2458,7 @@ func (c *Client) sendListEndpoints(ctx context.Context) (res ListEndpointsRes, e
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, ListEndpointsOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "ListEndpoints", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2519,8 +2491,7 @@ func (c *Client) sendListEndpoints(ctx context.Context) (res ListEndpointsRes, e
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeListEndpointsResponse(resp)
@@ -2545,23 +2516,22 @@ func (c *Client) sendListFilters(ctx context.Context) (res ListFiltersRes, err e
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("listFilters"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/filters"),
+		semconv.HTTPRouteKey.String("/filters"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ListFiltersOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "ListFilters",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2593,7 +2563,7 @@ func (c *Client) sendListFilters(ctx context.Context) (res ListFiltersRes, err e
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, ListFiltersOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "ListFilters", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2626,8 +2596,7 @@ func (c *Client) sendListFilters(ctx context.Context) (res ListFiltersRes, err e
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeListFiltersResponse(resp)
@@ -2655,23 +2624,22 @@ func (c *Client) sendReplayDelivery(ctx context.Context, params ReplayDeliveryPa
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("replayDelivery"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/webhooks/deliveries/{id}/replay"),
+		semconv.HTTPRouteKey.String("/webhooks/deliveries/{id}/replay"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ReplayDeliveryOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "ReplayDelivery",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2722,7 +2690,7 @@ func (c *Client) sendReplayDelivery(ctx context.Context, params ReplayDeliveryPa
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, ReplayDeliveryOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "ReplayDelivery", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2755,8 +2723,7 @@ func (c *Client) sendReplayDelivery(ctx context.Context, params ReplayDeliveryPa
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeReplayDeliveryResponse(resp)
@@ -2783,23 +2750,22 @@ func (c *Client) sendReplayEmailWebhooks(ctx context.Context, params ReplayEmail
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("replayEmailWebhooks"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/emails/{id}/replay"),
+		semconv.HTTPRouteKey.String("/emails/{id}/replay"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, ReplayEmailWebhooksOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "ReplayEmailWebhooks",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2850,7 +2816,7 @@ func (c *Client) sendReplayEmailWebhooks(ctx context.Context, params ReplayEmail
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, ReplayEmailWebhooksOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "ReplayEmailWebhooks", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2883,8 +2849,7 @@ func (c *Client) sendReplayEmailWebhooks(ctx context.Context, params ReplayEmail
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeReplayEmailWebhooksResponse(resp)
@@ -2910,23 +2875,22 @@ func (c *Client) sendRotateWebhookSecret(ctx context.Context) (res RotateWebhook
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("rotateWebhookSecret"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/account/webhook-secret/rotate"),
+		semconv.HTTPRouteKey.String("/account/webhook-secret/rotate"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, RotateWebhookSecretOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "RotateWebhookSecret",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -2958,7 +2922,7 @@ func (c *Client) sendRotateWebhookSecret(ctx context.Context) (res RotateWebhook
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, RotateWebhookSecretOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "RotateWebhookSecret", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -2991,8 +2955,7 @@ func (c *Client) sendRotateWebhookSecret(ctx context.Context) (res RotateWebhook
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeRotateWebhookSecretResponse(resp)
@@ -3021,23 +2984,22 @@ func (c *Client) sendTestEndpoint(ctx context.Context, params TestEndpointParams
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("testEndpoint"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/endpoints/{id}/test"),
+		semconv.HTTPRouteKey.String("/endpoints/{id}/test"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, TestEndpointOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "TestEndpoint",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3088,7 +3050,7 @@ func (c *Client) sendTestEndpoint(ctx context.Context, params TestEndpointParams
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, TestEndpointOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "TestEndpoint", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3121,8 +3083,7 @@ func (c *Client) sendTestEndpoint(ctx context.Context, params TestEndpointParams
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeTestEndpointResponse(resp)
@@ -3147,23 +3108,22 @@ func (c *Client) sendUpdateAccount(ctx context.Context, request *UpdateAccountIn
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateAccount"),
 		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/account"),
+		semconv.HTTPRouteKey.String("/account"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateAccountOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "UpdateAccount",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3198,7 +3158,7 @@ func (c *Client) sendUpdateAccount(ctx context.Context, request *UpdateAccountIn
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, UpdateAccountOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "UpdateAccount", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3231,8 +3191,7 @@ func (c *Client) sendUpdateAccount(ctx context.Context, request *UpdateAccountIn
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateAccountResponse(resp)
@@ -3258,23 +3217,22 @@ func (c *Client) sendUpdateDomain(ctx context.Context, request *UpdateDomainInpu
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateDomain"),
 		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/domains/{id}"),
+		semconv.HTTPRouteKey.String("/domains/{id}"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateDomainOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "UpdateDomain",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3327,7 +3285,7 @@ func (c *Client) sendUpdateDomain(ctx context.Context, request *UpdateDomainInpu
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, UpdateDomainOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "UpdateDomain", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3360,8 +3318,7 @@ func (c *Client) sendUpdateDomain(ctx context.Context, request *UpdateDomainInpu
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateDomainResponse(resp)
@@ -3388,23 +3345,22 @@ func (c *Client) sendUpdateEndpoint(ctx context.Context, request *UpdateEndpoint
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateEndpoint"),
 		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/endpoints/{id}"),
+		semconv.HTTPRouteKey.String("/endpoints/{id}"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateEndpointOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "UpdateEndpoint",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3457,7 +3413,7 @@ func (c *Client) sendUpdateEndpoint(ctx context.Context, request *UpdateEndpoint
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, UpdateEndpointOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "UpdateEndpoint", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3490,8 +3446,7 @@ func (c *Client) sendUpdateEndpoint(ctx context.Context, request *UpdateEndpoint
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateEndpointResponse(resp)
@@ -3516,23 +3471,22 @@ func (c *Client) sendUpdateFilter(ctx context.Context, request *UpdateFilterInpu
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateFilter"),
 		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.URLTemplateKey.String("/filters/{id}"),
+		semconv.HTTPRouteKey.String("/filters/{id}"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, UpdateFilterOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "UpdateFilter",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3585,7 +3539,7 @@ func (c *Client) sendUpdateFilter(ctx context.Context, request *UpdateFilterInpu
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, UpdateFilterOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "UpdateFilter", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3618,8 +3572,7 @@ func (c *Client) sendUpdateFilter(ctx context.Context, request *UpdateFilterInpu
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateFilterResponse(resp)
@@ -3646,23 +3599,22 @@ func (c *Client) sendVerifyDomain(ctx context.Context, params VerifyDomainParams
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("verifyDomain"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/domains/{id}/verify"),
+		semconv.HTTPRouteKey.String("/domains/{id}/verify"),
 	}
-	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
 	// Run stopwatch.
 	startTime := time.Now()
 	defer func() {
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedDuration := time.Since(startTime)
-		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
 	}()
 
 	// Increment request counter.
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, VerifyDomainOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, "VerifyDomain",
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -3713,7 +3665,7 @@ func (c *Client) sendVerifyDomain(ctx context.Context, params VerifyDomainParams
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, VerifyDomainOperation, r); {
+			switch err := c.securityBearerAuth(ctx, "VerifyDomain", r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -3746,8 +3698,7 @@ func (c *Client) sendVerifyDomain(ctx context.Context, params VerifyDomainParams
 	if err != nil {
 		return res, errors.Wrap(err, "do request")
 	}
-	body := resp.Body
-	defer body.Close()
+	defer resp.Body.Close()
 
 	stage = "DecodeResponse"
 	result, err := decodeVerifyDomainResponse(resp)

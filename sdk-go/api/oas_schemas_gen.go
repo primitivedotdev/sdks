@@ -259,7 +259,6 @@ func (*AddDomainUnauthorized) addDomainRes() {}
 
 type BearerAuth struct {
 	Token string
-	Roles []string
 }
 
 // GetToken returns the value of Token.
@@ -267,19 +266,9 @@ func (s *BearerAuth) GetToken() string {
 	return s.Token
 }
 
-// GetRoles returns the value of Roles.
-func (s *BearerAuth) GetRoles() []string {
-	return s.Roles
-}
-
 // SetToken sets the value of Token.
 func (s *BearerAuth) SetToken(val string) {
 	s.Token = val
-}
-
-// SetRoles sets the value of Roles.
-func (s *BearerAuth) SetRoles(val []string) {
-	s.Roles = val
 }
 
 type CreateEndpointBadRequest ErrorResponse
@@ -1158,7 +1147,6 @@ func (*DownloadRawEmailUnauthorized) downloadRawEmailRes() {}
 
 type DownloadToken struct {
 	APIKey string
-	Roles  []string
 }
 
 // GetAPIKey returns the value of APIKey.
@@ -1166,19 +1154,9 @@ func (s *DownloadToken) GetAPIKey() string {
 	return s.APIKey
 }
 
-// GetRoles returns the value of Roles.
-func (s *DownloadToken) GetRoles() []string {
-	return s.Roles
-}
-
 // SetAPIKey sets the value of APIKey.
 func (s *DownloadToken) SetAPIKey(val string) {
 	s.APIKey = val
-}
-
-// SetRoles sets the value of Roles.
-func (s *DownloadToken) SetRoles(val []string) {
-	s.Roles = val
 }
 
 // Ref: #/components/schemas/EmailDetail
@@ -2801,10 +2779,10 @@ func (o *NilString) SetTo(v string) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o NilString) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *NilString) SetToNull() {
 	o.Null = true
 	var v string
@@ -3090,10 +3068,10 @@ func (o *OptNilBool) SetTo(v bool) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilBool) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilBool) SetToNull() {
 	o.Set = true
 	o.Null = true
@@ -3153,10 +3131,10 @@ func (o *OptNilDateTime) SetTo(v time.Time) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilDateTime) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilDateTime) SetToNull() {
 	o.Set = true
 	o.Null = true
@@ -3216,10 +3194,10 @@ func (o *OptNilDeliverySummaryEmail) SetTo(v DeliverySummaryEmail) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilDeliverySummaryEmail) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilDeliverySummaryEmail) SetToNull() {
 	o.Set = true
 	o.Null = true
@@ -3279,10 +3257,10 @@ func (o *OptNilEmailDetailWebhookStatus) SetTo(v EmailDetailWebhookStatus) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilEmailDetailWebhookStatus) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilEmailDetailWebhookStatus) SetToNull() {
 	o.Set = true
 	o.Null = true
@@ -3342,10 +3320,10 @@ func (o *OptNilEmailSummaryWebhookStatus) SetTo(v EmailSummaryWebhookStatus) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilEmailSummaryWebhookStatus) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilEmailSummaryWebhookStatus) SetToNull() {
 	o.Set = true
 	o.Null = true
@@ -3405,10 +3383,10 @@ func (o *OptNilFloat64) SetTo(v float64) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilFloat64) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilFloat64) SetToNull() {
 	o.Set = true
 	o.Null = true
@@ -3468,10 +3446,10 @@ func (o *OptNilInt) SetTo(v int) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilInt) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilInt) SetToNull() {
 	o.Set = true
 	o.Null = true
@@ -3531,10 +3509,10 @@ func (o *OptNilString) SetTo(v string) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilString) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilString) SetToNull() {
 	o.Set = true
 	o.Null = true
@@ -3594,10 +3572,10 @@ func (o *OptNilStringArray) SetTo(v []string) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilStringArray) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilStringArray) SetToNull() {
 	o.Set = true
 	o.Null = true
@@ -3657,10 +3635,10 @@ func (o *OptNilUUID) SetTo(v uuid.UUID) {
 	o.Value = v
 }
 
-// IsNull returns true if value is Null.
+// IsSet returns true if value is Null.
 func (o OptNilUUID) IsNull() bool { return o.Null }
 
-// SetToNull sets value to null.
+// SetNull sets value to null.
 func (o *OptNilUUID) SetToNull() {
 	o.Set = true
 	o.Null = true

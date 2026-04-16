@@ -59,10 +59,10 @@ python-coverage:
 	cd sdk-python && uv run pytest tests --cov=primitive --cov-report=term-missing
 
 go-generate:
-	cd sdk-go && $(PYTHON) scripts/generate_schema_module.py && $(PYTHON) scripts/generate_api_client.py && go mod tidy
+	cd sdk-go && $(PYTHON) scripts/generate_schema_module.py && $(PYTHON) scripts/generate_api_client.py && go mod tidy -go=1.21.0 -compat=1.21.0
 
 go-check-generated:
-	cd sdk-go && $(PYTHON) scripts/generate_schema_module.py && $(PYTHON) scripts/generate_api_client.py && go mod tidy && git diff --exit-code -- go.mod go.sum schema_generated.go api
+	cd sdk-go && $(PYTHON) scripts/generate_schema_module.py && $(PYTHON) scripts/generate_api_client.py && go mod tidy -go=1.21.0 -compat=1.21.0 && git diff --exit-code -- go.mod go.sum schema_generated.go api
 
 go-check: go-check-generated
 	cd sdk-go && test -z "$$(gofmt -l .)"
