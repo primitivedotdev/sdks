@@ -1,6 +1,6 @@
 # Release Process
 
-This repository publishes three language SDKs from one shared webhook contract.
+This repository publishes three language SDKs from one shared webhook contract and one shared API contract.
 
 - Node: `@primitivedotdev/sdk`
 - Python: `primitivedotdev`
@@ -18,7 +18,7 @@ Releases are now automated from `main`.
 
 1. Confirm the working tree is clean.
 2. Update the relevant SDK version metadata in a release PR.
-3. If the webhook contract changed, regenerate artifacts for each affected SDK.
+3. If the webhook contract or API contract changed, regenerate artifacts for each affected SDK.
 4. Ensure the release PR passes the required `SDK Checks` workflow.
 5. Review the SDK README and changelog notes for any public API changes.
 6. Merge the release PR into `main`.
@@ -29,7 +29,7 @@ Releases are now automated from `main`.
 2. Merge that PR into `main`.
 3. The `Node Release` workflow verifies the version bump, publishes to npm, and creates the `sdk-node/vX.Y.Z` tag plus a GitHub release.
 4. Verify the package contents with `npm view @primitivedotdev/sdk version`.
-5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/contract`, and `@primitivedotdev/sdk/parser`.
+5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/api`, `@primitivedotdev/sdk/openapi`, `@primitivedotdev/sdk/contract`, `@primitivedotdev/sdk/parser`, and the `primitive` bin.
 
 ## Python Release
 
@@ -56,3 +56,9 @@ If a release includes schema or shared-fixture changes:
 2. Regenerate SDK artifacts.
 3. Update `test-fixtures/` if the behavioral contract changed.
 4. Ensure the PR passes `SDK Checks` again before merging.
+
+If a release includes API spec changes:
+
+1. Update `openapi/primitive-api.yaml`.
+2. Regenerate the Node, Python, and Go API clients.
+3. Ensure the PR passes `SDK Checks` again before merging.

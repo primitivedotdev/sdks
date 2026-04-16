@@ -2,13 +2,17 @@
 
 Official Primitive Node.js SDK.
 
-This package ships three Node.js modules:
+This package ships five Node.js modules and one CLI:
 
 - `@primitivedotdev/sdk` for the webhook module
+- `@primitivedotdev/sdk/api` for the generated HTTP API client
+- `@primitivedotdev/sdk/openapi` for the canonical OpenAPI document export
 - `@primitivedotdev/sdk/contract` for the contract module
 - `@primitivedotdev/sdk/parser` for the parser module
 
-`contract` and `parser` are only available in the Node SDK. The Go and Python SDKs expose the webhook surface only.
+It also publishes the `primitive` CLI bin from the same package.
+
+`contract`, `parser`, and `openapi` are Node-only extras. The Go and Python SDKs expose `webhook` and `api` modules.
 
 ## Requirements
 
@@ -64,6 +68,52 @@ Webhook exports include:
 - `emailReceivedEventJsonSchema`
 - `WEBHOOK_VERSION`
 - webhook error classes and webhook types
+
+### API
+
+Use the API module for outbound calls to the Primitive HTTP API.
+
+```ts
+import { PrimitiveApiClient, getAccount } from "@primitivedotdev/sdk/api";
+
+const api = new PrimitiveApiClient({ apiKey: process.env.PRIMITIVE_API_KEY });
+const result = await getAccount({ client: api.client });
+
+if (result.error) {
+  throw result.error;
+}
+
+console.log(result.data.id);
+```
+
+The package also ships a generated CLI bin named `primitive`.
+
+### OpenAPI
+
+Use the OpenAPI module when another JavaScript application needs the canonical Primitive API spec.
+
+```ts
+import { openapiDocument } from "@primitivedotdev/sdk/openapi";
+
+console.log(openapiDocument.openapi);
+```
+
+### CLI
+
+Use the published `primitive` CLI for outbound API access from the terminal.
+
+```bash
+primitive --help
+primitive account get-account --api-key prim_test
+primitive emails download-raw-email --id <uuid> --api-key prim_test --output email.eml
+```
+
+Autocomplete support is available through:
+
+- `primitive completion fish`
+- `primitive completion bash`
+- `primitive completion zsh`
+- `primitive completion powershell`
 
 ### Contract
 
@@ -199,10 +249,23 @@ make node-build
 
 ```text
 sdk-node/
+  bin/
+    run.js
   src/
+    api/
+      generated/
+      index.ts
     contract/
       contract.ts
       index.ts
+    oclif/
+      api-command.ts
+      fish-completion.ts
+      index.ts
+    openapi/
+      index.ts
+      openapi.generated.ts
+      operations.generated.ts
     parser/
       attachment-bundler.ts
       attachment-parser.ts

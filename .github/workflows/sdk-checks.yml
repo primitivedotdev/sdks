@@ -37,14 +37,18 @@ jobs:
           filters: |
             node:
               - 'sdk-node/**'
+              - 'openapi/**'
             python:
               - 'sdk-python/**'
+              - 'openapi/**'
             go:
               - 'sdk-go/**'
+              - 'openapi/**'
             shared:
               - '.github/workflows/**'
               - 'Makefile'
               - 'json-schema/**'
+              - 'openapi/**'
               - 'test-fixtures/**'
 
   node:

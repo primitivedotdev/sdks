@@ -1,7 +1,7 @@
 {
   "name": "@primitivedotdev/sdk",
   "version": "0.2.4",
-  "description": "Official Primitive Node.js SDK — webhook, contract, and parser modules",
+  "description": "Official Primitive Node.js SDK — webhook, api, openapi, contract, and parser modules",
   "type": "module",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,6 +14,14 @@
       "types": "./dist/webhook/index.d.ts",
       "default": "./dist/webhook/index.js"
     },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "default": "./dist/api/index.js"
+    },
+    "./openapi": {
+      "types": "./dist/openapi/index.d.ts",
+      "default": "./dist/openapi/index.js"
+    },
     "./contract": {
       "types": "./dist/contract/index.d.ts",
       "default": "./dist/contract/index.js"
@@ -25,25 +33,72 @@
   },
   "sideEffects": false,
   "files": [
-    "dist"
+    "bin",
+    "dist",
+    "oclif.manifest.json"
   ],
+  "bin": {
+    "primitive": "./bin/run.js"
+  },
+  "oclif": {
+    "bin": "primitive",
+    "commands": {
+      "strategy": "explicit",
+      "target": "./dist/oclif/index.js",
+      "identifier": "COMMANDS"
+    },
+    "dirname": "primitive",
+    "plugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-autocomplete"
+    ],
+    "topics": {
+      "account": {
+        "description": "Manage your account settings, storage, and webhook secret"
+      },
+      "domains": {
+        "description": "Claim, verify, and manage email domains"
+      },
+      "emails": {
+        "description": "List, inspect, and manage received emails"
+      },
+      "endpoints": {
+        "description": "Manage webhook endpoints that receive email events"
+      },
+      "filters": {
+        "description": "Manage whitelist and blocklist filter rules"
+      },
+      "webhook-deliveries": {
+        "description": "View and replay webhook delivery attempts"
+      }
+    },
+    "topicSeparator": " "
+  },
   "scripts": {
+    "generate:openapi": "tsx scripts/generate-openapi-artifacts.ts",
+    "generate:api": "openapi-ts -f openapi-ts.config.ts && tsx scripts/fix-generated-api-imports.ts",
     "generate:schema": "tsx scripts/generate-schema-module.ts",
     "generate:types": "tsx scripts/generate-types.ts",
     "generate:validator": "tsx scripts/generate-validator.ts",
-    "generate": "pnpm generate:schema && pnpm generate:types && pnpm generate:validator",
-    "build": "pnpm generate && tsdown",
+    "generate": "pnpm generate:openapi && pnpm generate:api && pnpm generate:schema && pnpm generate:types && pnpm generate:validator",
+    "build:library": "pnpm generate && tsdown",
+    "build:oclif": "tsc -p tsconfig.oclif.json",
+    "build": "pnpm build:library && pnpm build:oclif",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "pnpm generate && tsc --noEmit",
-    "lint": "biome check src/ tests/",
-    "lint:fix": "biome check --write src/ tests/",
+    "lint": "biome check src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/",
+    "lint:fix": "biome check --write src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/",
+    "prepack": "pnpm build && oclif manifest",
+    "postpack": "shx rm -f oclif.manifest.json",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
     "primitive",
+    "api",
     "email",
+    "openapi",
     "webhook",
     "signature",
     "hmac",
@@ -65,12 +120,16 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@oclif/core": "^4.10.5",
+    "@oclif/plugin-autocomplete": "^3.2.45",
+    "@oclif/plugin-help": "^6.2.44",
     "ajv": "^8.17.1",
     "isomorphic-dompurify": "^3.8.0",
     "mailparser": "^3.9.0",
     "tar-stream": "^3.1.8"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "0.96.0",
     "@biomejs/biome": "^2.4.10",
     "@types/json-schema": "^7.0.15",
     "@types/mailparser": "^3.4.6",
@@ -78,10 +137,13 @@
     "@types/tar-stream": "^3.1.4",
     "@vitest/coverage-v8": "^4.1.4",
     "json-schema-to-typescript": "^15.0.4",
+    "oclif": "^4.23.0",
+    "shx": "^0.3.4",
     "tsdown": "^0.9.1",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^8.0.8",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "yaml": "^2.8.1"
   }
 }

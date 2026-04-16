@@ -1,6 +1,6 @@
 # `github.com/primitivedotdev/sdks/sdk-go`
 
-Official Primitive Go SDK for webhook verification and validation.
+Official Primitive Go SDK for webhook handling and API access.
 
 This package helps you:
 
@@ -8,6 +8,7 @@ This package helps you:
 - parse webhook request bodies
 - validate webhook payloads against the canonical JSON schema
 - work with typed `email.received` events in Go
+- call the Primitive HTTP API from `github.com/primitivedotdev/sdks/sdk-go/api`
 
 ## Requirements
 
@@ -56,6 +57,35 @@ func deref(value *string) string {
 ```
 
 ## Core API
+
+### API package
+
+Use the generated `api` package for outbound calls to the Primitive HTTP API.
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+)
+
+func main() {
+	client, err := primitiveapi.NewAPIClient("prim_test")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	res, err := client.GetAccount(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("account response: %#v", res)
+}
+```
 
 ### Main functions
 
@@ -166,11 +196,13 @@ sdks/
   json-schema/
     email-received-event.schema.json
   sdk-go/
+    api/
     webhook.go
     validation.go
     schema.go
     schema_generated.go
     types.go
     scripts/
+      generate_api_client.py
       generate_schema_module.py
 ```
