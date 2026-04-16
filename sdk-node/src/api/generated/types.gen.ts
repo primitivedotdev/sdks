@@ -906,6 +906,10 @@ export type DownloadRawEmailData = {
 
 export type DownloadRawEmailErrors = {
     /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
      * Invalid or missing API key
      */
     401: ErrorResponse;
@@ -944,6 +948,10 @@ export type DownloadAttachmentsData = {
 };
 
 export type DownloadAttachmentsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
     /**
      * Invalid or missing API key
      */

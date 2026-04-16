@@ -1011,6 +1011,10 @@ func (s *DomainVerifyResult1) SetError(val string) {
 	s.Error = val
 }
 
+type DownloadAttachmentsBadRequest ErrorResponse
+
+func (*DownloadAttachmentsBadRequest) downloadAttachmentsRes() {}
+
 type DownloadAttachmentsNotFound ErrorResponse
 
 func (*DownloadAttachmentsNotFound) downloadAttachmentsRes() {}
@@ -1082,6 +1086,10 @@ func (*DownloadAttachmentsOKHeaders) downloadAttachmentsRes() {}
 type DownloadAttachmentsUnauthorized ErrorResponse
 
 func (*DownloadAttachmentsUnauthorized) downloadAttachmentsRes() {}
+
+type DownloadRawEmailBadRequest ErrorResponse
+
+func (*DownloadRawEmailBadRequest) downloadRawEmailRes() {}
 
 type DownloadRawEmailNotFound ErrorResponse
 

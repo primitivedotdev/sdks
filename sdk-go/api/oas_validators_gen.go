@@ -435,6 +435,14 @@ func (s Domain) Validate() error {
 	}
 }
 
+func (s *DownloadAttachmentsBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *DownloadAttachmentsNotFound) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -444,6 +452,14 @@ func (s *DownloadAttachmentsNotFound) Validate() error {
 }
 
 func (s *DownloadAttachmentsUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DownloadRawEmailBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err

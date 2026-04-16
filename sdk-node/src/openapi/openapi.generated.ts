@@ -714,6 +714,9 @@ export const openapiDocument: Record<string, unknown> = {
               }
             }
           },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
@@ -785,6 +788,9 @@ export const openapiDocument: Record<string, unknown> = {
                 "description": "Number of attachments in the archive"
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"

@@ -213,7 +213,15 @@ export function createOperationCommand(
         return;
       }
 
-      this.log(JSON.stringify(result.data ?? null, null, 2));
+      const envelope = result.data as
+        | { data?: unknown; meta?: { cursor?: string | null } }
+        | null
+        | undefined;
+      const cursor = envelope?.meta?.cursor;
+      if (cursor) {
+        process.stderr.write(`next cursor: ${cursor}\n`);
+      }
+      this.log(JSON.stringify(envelope?.data ?? null, null, 2));
     }
   }
 

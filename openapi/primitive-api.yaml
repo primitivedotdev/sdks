@@ -494,6 +494,8 @@ paths:
               schema:
                 type: string
               description: SHA-256 hex digest of the file
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -541,6 +543,8 @@ paths:
               schema:
                 type: string
               description: Number of attachments in the archive
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
