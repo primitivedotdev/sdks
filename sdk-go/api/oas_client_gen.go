@@ -156,16 +156,19 @@ type Invoker interface {
 	//
 	// Re-sends the stored webhook payload from a previous delivery attempt.
 	// If the original endpoint is still active, it is targeted. If the
-	// original endpoint was deleted, the first active endpoint is used.
-	// Deactivated endpoints cannot be replayed to.
+	// original endpoint was deleted, the oldest active endpoint is used.
+	// Deactivated endpoints cannot be replayed to. Rate limited per-org,
+	// sharing an org-wide budget with email replays.
 	//
 	// POST /webhooks/deliveries/{id}/replay
 	ReplayDelivery(ctx context.Context, params ReplayDeliveryParams) (ReplayDeliveryRes, error)
 	// ReplayEmailWebhooks invokes replayEmailWebhooks operation.
 	//
 	// Re-delivers the webhook payload for this email to all active
-	// endpoints matching the email's domain. Includes rate limiting
-	// to prevent stampeding.
+	// endpoints matching the email's domain. Rate limited per-email
+	// (short cooldown between successive replays of the same email)
+	// and per-org (burst + sustained windows), sharing an org-wide
+	// budget with delivery replays.
 	//
 	// POST /emails/{id}/replay
 	ReplayEmailWebhooks(ctx context.Context, params ReplayEmailWebhooksParams) (ReplayEmailWebhooksRes, error)
@@ -2642,8 +2645,9 @@ func (c *Client) sendListFilters(ctx context.Context) (res ListFiltersRes, err e
 //
 // Re-sends the stored webhook payload from a previous delivery attempt.
 // If the original endpoint is still active, it is targeted. If the
-// original endpoint was deleted, the first active endpoint is used.
-// Deactivated endpoints cannot be replayed to.
+// original endpoint was deleted, the oldest active endpoint is used.
+// Deactivated endpoints cannot be replayed to. Rate limited per-org,
+// sharing an org-wide budget with email replays.
 //
 // POST /webhooks/deliveries/{id}/replay
 func (c *Client) ReplayDelivery(ctx context.Context, params ReplayDeliveryParams) (ReplayDeliveryRes, error) {
@@ -2770,8 +2774,10 @@ func (c *Client) sendReplayDelivery(ctx context.Context, params ReplayDeliveryPa
 // ReplayEmailWebhooks invokes replayEmailWebhooks operation.
 //
 // Re-delivers the webhook payload for this email to all active
-// endpoints matching the email's domain. Includes rate limiting
-// to prevent stampeding.
+// endpoints matching the email's domain. Rate limited per-email
+// (short cooldown between successive replays of the same email)
+// and per-org (burst + sustained windows), sharing an org-wide
+// budget with delivery replays.
 //
 // POST /emails/{id}/replay
 func (c *Client) ReplayEmailWebhooks(ctx context.Context, params ReplayEmailWebhooksParams) (ReplayEmailWebhooksRes, error) {

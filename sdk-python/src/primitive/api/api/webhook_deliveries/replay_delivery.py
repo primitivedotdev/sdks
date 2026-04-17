@@ -63,6 +63,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_404
 
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -88,8 +95,9 @@ def sync_detailed(
 
      Re-sends the stored webhook payload from a previous delivery attempt.
     If the original endpoint is still active, it is targeted. If the
-    original endpoint was deleted, the first active endpoint is used.
-    Deactivated endpoints cannot be replayed to.
+    original endpoint was deleted, the oldest active endpoint is used.
+    Deactivated endpoints cannot be replayed to. Rate limited per-org,
+    sharing an org-wide budget with email replays.
 
     Args:
         id (str):
@@ -124,8 +132,9 @@ def sync(
 
      Re-sends the stored webhook payload from a previous delivery attempt.
     If the original endpoint is still active, it is targeted. If the
-    original endpoint was deleted, the first active endpoint is used.
-    Deactivated endpoints cannot be replayed to.
+    original endpoint was deleted, the oldest active endpoint is used.
+    Deactivated endpoints cannot be replayed to. Rate limited per-org,
+    sharing an org-wide budget with email replays.
 
     Args:
         id (str):
@@ -155,8 +164,9 @@ async def asyncio_detailed(
 
      Re-sends the stored webhook payload from a previous delivery attempt.
     If the original endpoint is still active, it is targeted. If the
-    original endpoint was deleted, the first active endpoint is used.
-    Deactivated endpoints cannot be replayed to.
+    original endpoint was deleted, the oldest active endpoint is used.
+    Deactivated endpoints cannot be replayed to. Rate limited per-org,
+    sharing an org-wide budget with email replays.
 
     Args:
         id (str):
@@ -191,8 +201,9 @@ async def asyncio(
 
      Re-sends the stored webhook payload from a previous delivery attempt.
     If the original endpoint is still active, it is targeted. If the
-    original endpoint was deleted, the first active endpoint is used.
-    Deactivated endpoints cannot be replayed to.
+    original endpoint was deleted, the oldest active endpoint is used.
+    Deactivated endpoints cannot be replayed to. Rate limited per-org,
+    sharing an org-wide budget with email replays.
 
     Args:
         id (str):

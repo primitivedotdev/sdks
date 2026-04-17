@@ -64,6 +64,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_404
 
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -88,8 +95,10 @@ def sync_detailed(
     """ Replay email webhooks
 
      Re-delivers the webhook payload for this email to all active
-    endpoints matching the email's domain. Includes rate limiting
-    to prevent stampeding.
+    endpoints matching the email's domain. Rate limited per-email
+    (short cooldown between successive replays of the same email)
+    and per-org (burst + sustained windows), sharing an org-wide
+    budget with delivery replays.
 
     Args:
         id (UUID):
@@ -123,8 +132,10 @@ def sync(
     """ Replay email webhooks
 
      Re-delivers the webhook payload for this email to all active
-    endpoints matching the email's domain. Includes rate limiting
-    to prevent stampeding.
+    endpoints matching the email's domain. Rate limited per-email
+    (short cooldown between successive replays of the same email)
+    and per-org (burst + sustained windows), sharing an org-wide
+    budget with delivery replays.
 
     Args:
         id (UUID):
@@ -153,8 +164,10 @@ async def asyncio_detailed(
     """ Replay email webhooks
 
      Re-delivers the webhook payload for this email to all active
-    endpoints matching the email's domain. Includes rate limiting
-    to prevent stampeding.
+    endpoints matching the email's domain. Rate limited per-email
+    (short cooldown between successive replays of the same email)
+    and per-org (burst + sustained windows), sharing an org-wide
+    budget with delivery replays.
 
     Args:
         id (UUID):
@@ -188,8 +201,10 @@ async def asyncio(
     """ Replay email webhooks
 
      Re-delivers the webhook payload for this email to all active
-    endpoints matching the email's domain. Includes rate limiting
-    to prevent stampeding.
+    endpoints matching the email's domain. Rate limited per-email
+    (short cooldown between successive replays of the same email)
+    and per-org (burst + sustained windows), sharing an org-wide
+    budget with delivery replays.
 
     Args:
         id (UUID):

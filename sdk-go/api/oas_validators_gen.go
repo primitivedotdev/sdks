@@ -97,6 +97,14 @@ func (s *AddDomainBadRequest) Validate() error {
 	return nil
 }
 
+func (s *AddDomainConflict) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *AddDomainInput) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -750,6 +758,10 @@ func (s ErrorResponseErrorCode) Validate() error {
 	case "rate_limit_exceeded":
 		return nil
 	case "internal_error":
+		return nil
+	case "conflict":
+		return nil
+	case "mx_conflict":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
