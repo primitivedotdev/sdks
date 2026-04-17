@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/go-faster/errors"
-
 	"github.com/ogen-go/ogen/validate"
 )
 
@@ -28,6 +27,7 @@ func (s *Account) Validate() error {
 					MaxExclusive:  false,
 					MultipleOfSet: false,
 					MultipleOf:    nil,
+					Pattern:       nil,
 				}).Validate(float64(value)); err != nil {
 					return errors.Wrap(err, "float")
 				}
@@ -67,6 +67,7 @@ func (s *AccountUpdated) Validate() error {
 					MaxExclusive:  false,
 					MultipleOfSet: false,
 					MultipleOf:    nil,
+					Pattern:       nil,
 				}).Validate(float64(value)); err != nil {
 					return errors.Wrap(err, "float")
 				}
@@ -104,13 +105,17 @@ func (s *AddDomainInput) Validate() error {
 	var failures []validate.FieldError
 	if err := func() error {
 		if err := (validate.String{
-			MinLength:    1,
-			MinLengthSet: true,
-			MaxLength:    253,
-			MaxLengthSet: true,
-			Email:        false,
-			Hostname:     false,
-			Regex:        nil,
+			MinLength:     1,
+			MinLengthSet:  true,
+			MaxLength:     253,
+			MaxLengthSet:  true,
+			Email:         false,
+			Hostname:      false,
+			Regex:         nil,
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
 		}).Validate(string(s.Domain)); err != nil {
 			return errors.Wrap(err, "string")
 		}
@@ -151,13 +156,17 @@ func (s *CreateEndpointInput) Validate() error {
 	var failures []validate.FieldError
 	if err := func() error {
 		if err := (validate.String{
-			MinLength:    1,
-			MinLengthSet: true,
-			MaxLength:    0,
-			MaxLengthSet: false,
-			Email:        false,
-			Hostname:     false,
-			Regex:        nil,
+			MinLength:     1,
+			MinLengthSet:  true,
+			MaxLength:     0,
+			MaxLengthSet:  false,
+			Email:         false,
+			Hostname:      false,
+			Regex:         nil,
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
 		}).Validate(string(s.URL)); err != nil {
 			return errors.Wrap(err, "string")
 		}
@@ -232,13 +241,17 @@ func (s *CreateFilterInput) Validate() error {
 	}
 	if err := func() error {
 		if err := (validate.String{
-			MinLength:    1,
-			MinLengthSet: true,
-			MaxLength:    500,
-			MaxLengthSet: true,
-			Email:        false,
-			Hostname:     false,
-			Regex:        nil,
+			MinLength:     1,
+			MinLengthSet:  true,
+			MaxLength:     500,
+			MaxLengthSet:  true,
+			Email:         false,
+			Hostname:      false,
+			Regex:         nil,
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
 		}).Validate(string(s.Pattern)); err != nil {
 			return errors.Wrap(err, "string")
 		}
@@ -1364,6 +1377,7 @@ func (s *UpdateAccountInput) Validate() error {
 					MaxExclusive:  false,
 					MultipleOfSet: false,
 					MultipleOf:    nil,
+					Pattern:       nil,
 				}).Validate(float64(value)); err != nil {
 					return errors.Wrap(err, "float")
 				}
@@ -1450,6 +1464,7 @@ func (s *UpdateDomainInput) Validate() error {
 					MaxExclusive:  false,
 					MultipleOfSet: false,
 					MultipleOf:    nil,
+					Pattern:       nil,
 				}).Validate(float64(value)); err != nil {
 					return errors.Wrap(err, "float")
 				}
@@ -1528,13 +1543,17 @@ func (s *UpdateEndpointInput) Validate() error {
 		if value, ok := s.URL.Get(); ok {
 			if err := func() error {
 				if err := (validate.String{
-					MinLength:    1,
-					MinLengthSet: true,
-					MaxLength:    0,
-					MaxLengthSet: false,
-					Email:        false,
-					Hostname:     false,
-					Regex:        nil,
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     0,
+					MaxLengthSet:  false,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
 				}).Validate(string(value)); err != nil {
 					return errors.Wrap(err, "string")
 				}
@@ -1637,6 +1656,7 @@ func (s *VerifiedDomain) Validate() error {
 					MaxExclusive:  false,
 					MultipleOfSet: false,
 					MultipleOf:    nil,
+					Pattern:       nil,
 				}).Validate(float64(value)); err != nil {
 					return errors.Wrap(err, "float")
 				}

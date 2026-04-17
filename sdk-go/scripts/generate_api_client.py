@@ -9,7 +9,7 @@ SDK_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SPEC_PATH = REPO_ROOT / "openapi" / "primitive-api.codegen.json"
 TARGET_PATH = SDK_ROOT / "api"
-GENERATOR_VERSION = "v1.4.1"
+GENERATOR_VERSION = "v1.20.3"
 
 
 def remove_generated_files() -> None:

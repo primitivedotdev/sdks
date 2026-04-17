@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
-
 	"github.com/ogen-go/ogen/conv"
 	"github.com/ogen-go/ogen/ogenerrors"
 	"github.com/ogen-go/ogen/uri"
@@ -143,7 +142,7 @@ func decodeAddDomainResponse(resp *http.Response) (res AddDomainRes, _ error) {
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeCreateEndpointResponse(resp *http.Response) (res CreateEndpointRes, _ error) {
@@ -272,7 +271,7 @@ func decodeCreateEndpointResponse(resp *http.Response) (res CreateEndpointRes, _
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeCreateFilterResponse(resp *http.Response) (res CreateFilterRes, _ error) {
@@ -454,7 +453,7 @@ func decodeCreateFilterResponse(resp *http.Response) (res CreateFilterRes, _ err
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeDeleteDomainResponse(resp *http.Response) (res DeleteDomainRes, _ error) {
@@ -627,7 +626,7 @@ func decodeDeleteDomainResponse(resp *http.Response) (res DeleteDomainRes, _ err
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeDeleteEmailResponse(resp *http.Response) (res DeleteEmailRes, _ error) {
@@ -800,7 +799,7 @@ func decodeDeleteEmailResponse(resp *http.Response) (res DeleteEmailRes, _ error
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeDeleteEndpointResponse(resp *http.Response) (res DeleteEndpointRes, _ error) {
@@ -973,7 +972,7 @@ func decodeDeleteEndpointResponse(resp *http.Response) (res DeleteEndpointRes, _
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeDeleteFilterResponse(resp *http.Response) (res DeleteFilterRes, _ error) {
@@ -1146,7 +1145,7 @@ func decodeDeleteFilterResponse(resp *http.Response) (res DeleteFilterRes, _ err
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeDownloadAttachmentsResponse(resp *http.Response) (res DownloadAttachmentsRes, _ error) {
@@ -1417,7 +1416,7 @@ func decodeDownloadAttachmentsResponse(resp *http.Response) (res DownloadAttachm
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeDownloadRawEmailResponse(resp *http.Response) (res DownloadRawEmailRes, _ error) {
@@ -1651,7 +1650,7 @@ func decodeDownloadRawEmailResponse(resp *http.Response) (res DownloadRawEmailRe
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeGetAccountResponse(resp *http.Response) (res GetAccountRes, _ error) {
@@ -1789,7 +1788,7 @@ func decodeGetAccountResponse(resp *http.Response) (res GetAccountRes, _ error) 
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeGetEmailResponse(resp *http.Response) (res GetEmailRes, _ error) {
@@ -1971,7 +1970,7 @@ func decodeGetEmailResponse(resp *http.Response) (res GetEmailRes, _ error) {
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeGetStorageStatsResponse(resp *http.Response) (res GetStorageStatsRes, _ error) {
@@ -2109,7 +2108,7 @@ func decodeGetStorageStatsResponse(resp *http.Response) (res GetStorageStatsRes,
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeGetWebhookSecretResponse(resp *http.Response) (res GetWebhookSecretRes, _ error) {
@@ -2238,7 +2237,7 @@ func decodeGetWebhookSecretResponse(resp *http.Response) (res GetWebhookSecretRe
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeListDeliveriesResponse(resp *http.Response) (res ListDeliveriesRes, _ error) {
@@ -2376,7 +2375,7 @@ func decodeListDeliveriesResponse(resp *http.Response) (res ListDeliveriesRes, _
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeListDomainsResponse(resp *http.Response) (res ListDomainsRes, _ error) {
@@ -2470,7 +2469,7 @@ func decodeListDomainsResponse(resp *http.Response) (res ListDomainsRes, _ error
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeListEmailsResponse(resp *http.Response) (res ListEmailsRes, _ error) {
@@ -2608,7 +2607,7 @@ func decodeListEmailsResponse(resp *http.Response) (res ListEmailsRes, _ error) 
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeListEndpointsResponse(resp *http.Response) (res ListEndpointsRes, _ error) {
@@ -2702,7 +2701,7 @@ func decodeListEndpointsResponse(resp *http.Response) (res ListEndpointsRes, _ e
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeListFiltersResponse(resp *http.Response) (res ListFiltersRes, _ error) {
@@ -2796,7 +2795,7 @@ func decodeListFiltersResponse(resp *http.Response) (res ListFiltersRes, _ error
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeReplayDeliveryResponse(resp *http.Response) (res ReplayDeliveryRes, _ error) {
@@ -2969,7 +2968,7 @@ func decodeReplayDeliveryResponse(resp *http.Response) (res ReplayDeliveryRes, _
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeReplayEmailWebhooksResponse(resp *http.Response) (res ReplayEmailWebhooksRes, _ error) {
@@ -3142,7 +3141,7 @@ func decodeReplayEmailWebhooksResponse(resp *http.Response) (res ReplayEmailWebh
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeRotateWebhookSecretResponse(resp *http.Response) (res RotateWebhookSecretRes, _ error) {
@@ -3399,7 +3398,7 @@ func decodeRotateWebhookSecretResponse(resp *http.Response) (res RotateWebhookSe
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeTestEndpointResponse(resp *http.Response) (res TestEndpointRes, _ error) {
@@ -3656,7 +3655,7 @@ func decodeTestEndpointResponse(resp *http.Response) (res TestEndpointRes, _ err
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeUpdateAccountResponse(resp *http.Response) (res UpdateAccountRes, _ error) {
@@ -3838,7 +3837,7 @@ func decodeUpdateAccountResponse(resp *http.Response) (res UpdateAccountRes, _ e
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeUpdateDomainResponse(resp *http.Response) (res UpdateDomainRes, _ error) {
@@ -4020,7 +4019,7 @@ func decodeUpdateDomainResponse(resp *http.Response) (res UpdateDomainRes, _ err
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeUpdateEndpointResponse(resp *http.Response) (res UpdateEndpointRes, _ error) {
@@ -4193,7 +4192,7 @@ func decodeUpdateEndpointResponse(resp *http.Response) (res UpdateEndpointRes, _
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeUpdateFilterResponse(resp *http.Response) (res UpdateFilterRes, _ error) {
@@ -4375,7 +4374,7 @@ func decodeUpdateFilterResponse(resp *http.Response) (res UpdateFilterRes, _ err
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
 func decodeVerifyDomainResponse(resp *http.Response) (res VerifyDomainRes, _ error) {
@@ -4548,5 +4547,5 @@ func decodeVerifyDomainResponse(resp *http.Response) (res VerifyDomainRes, _ err
 			return res, validate.InvalidContentType(ct)
 		}
 	}
-	return res, validate.UnexpectedStatusCode(resp.StatusCode)
+	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
