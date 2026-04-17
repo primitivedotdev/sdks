@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.create_filter_input_type import CreateFilterInputType
-from ..types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 

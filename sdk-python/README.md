@@ -50,13 +50,10 @@ def webhook_handler(body: bytes, headers: dict[str, str]) -> dict[str, object]:
 Use `primitive.api` for outbound calls to the Primitive HTTP API.
 
 ```python
-from primitive.api import AuthenticatedClient
+from primitive.api import create_client
 from primitive.api.api.account.get_account import sync as get_account
 
-client = AuthenticatedClient(
-    base_url="https://www.primitive.dev/api/v1",
-    token="prim_test",
-)
+client = create_client("prim_test")
 
 account = get_account(client=client)
 print(account)

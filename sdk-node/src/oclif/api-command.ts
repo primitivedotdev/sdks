@@ -194,7 +194,12 @@ export function createOperationCommand(
       });
 
       if (result.error) {
-        process.stderr.write(`${JSON.stringify(result.error, null, 2)}\n`);
+        const errorEnvelope = result.error as
+          | { error?: unknown }
+          | null
+          | undefined;
+        const errorPayload = errorEnvelope?.error ?? result.error;
+        process.stderr.write(`${JSON.stringify(errorPayload, null, 2)}\n`);
         process.exitCode = 1;
         return;
       }

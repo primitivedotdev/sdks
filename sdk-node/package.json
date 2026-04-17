@@ -8,26 +8,32 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./webhook": {
       "types": "./dist/webhook/index.d.ts",
+      "import": "./dist/webhook/index.js",
       "default": "./dist/webhook/index.js"
     },
     "./api": {
       "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js",
       "default": "./dist/api/index.js"
     },
     "./openapi": {
       "types": "./dist/openapi/index.d.ts",
+      "import": "./dist/openapi/index.js",
       "default": "./dist/openapi/index.js"
     },
     "./contract": {
       "types": "./dist/contract/index.d.ts",
+      "import": "./dist/contract/index.js",
       "default": "./dist/contract/index.js"
     },
     "./parser": {
       "types": "./dist/parser/index.d.ts",
+      "import": "./dist/parser/index.js",
       "default": "./dist/parser/index.js"
     }
   },

@@ -1240,6 +1240,10 @@ export type CreateFilterErrors = {
      * Invalid or missing API key
      */
     401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
 };
 
 export type CreateFilterError = CreateFilterErrors[keyof CreateFilterErrors];

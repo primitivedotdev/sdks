@@ -279,6 +279,14 @@ func (s CreateFilterInputType) Validate() error {
 	}
 }
 
+func (s *CreateFilterNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *CreateFilterUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {

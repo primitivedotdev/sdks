@@ -1152,6 +1152,9 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }

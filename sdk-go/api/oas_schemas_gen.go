@@ -485,6 +485,10 @@ func (s *CreateFilterInputType) UnmarshalText(data []byte) error {
 	}
 }
 
+type CreateFilterNotFound ErrorResponse
+
+func (*CreateFilterNotFound) createFilterRes() {}
+
 type CreateFilterUnauthorized ErrorResponse
 
 func (*CreateFilterUnauthorized) createFilterRes() {}

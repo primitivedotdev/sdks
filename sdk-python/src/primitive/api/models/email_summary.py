@@ -12,7 +12,6 @@ from ..models.email_summary_status import EmailSummaryStatus
 from ..models.email_summary_webhook_status_type_1 import EmailSummaryWebhookStatusType1
 from ..models.email_summary_webhook_status_type_2_type_1 import EmailSummaryWebhookStatusType2Type1
 from ..models.email_summary_webhook_status_type_3_type_1 import EmailSummaryWebhookStatusType3Type1
-from ..types import UNSET, Unset
 from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID

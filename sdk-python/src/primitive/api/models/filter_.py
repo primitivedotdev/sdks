@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.filter_type import FilterType
-from ..types import UNSET, Unset
 from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
