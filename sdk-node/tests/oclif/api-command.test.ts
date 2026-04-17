@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Errors } from "@oclif/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  extractErrorPayload,
   flagForParameter,
   formatErrorPayload,
   readJsonBody,
@@ -17,7 +18,11 @@ describe("formatErrorPayload", () => {
     const output = formatErrorPayload(error);
     const parsed = JSON.parse(output);
 
-    expect(parsed).toEqual({ code: "ENOTFOUND", message: "fetch failed" });
+    expect(parsed).toEqual({
+      cause: { code: "ENOTFOUND" },
+      code: "ENOTFOUND",
+      message: "fetch failed",
+    });
   });
 
   it("falls back to client_error when no cause code is present", () => {
@@ -37,6 +42,84 @@ describe("formatErrorPayload", () => {
     const parsed = JSON.parse(formatErrorPayload(payload));
 
     expect(parsed).toEqual(payload);
+  });
+
+  it("surfaces additional scalar cause details (hostname, port, syscall)", () => {
+    const error = new TypeError("fetch failed");
+    Object.assign(error, {
+      cause: {
+        address: "127.0.0.1",
+        code: "ECONNREFUSED",
+        errno: -61,
+        hostname: "127.0.0.1",
+        port: 59999,
+        syscall: "connect",
+      },
+    });
+
+    const parsed = JSON.parse(formatErrorPayload(error));
+
+    expect(parsed).toEqual({
+      cause: {
+        address: "127.0.0.1",
+        code: "ECONNREFUSED",
+        errno: -61,
+        hostname: "127.0.0.1",
+        port: 59999,
+        syscall: "connect",
+      },
+      code: "ECONNREFUSED",
+      message: "fetch failed",
+    });
+  });
+
+  it("omits the cause field entirely when cause has no scalar properties", () => {
+    const error = new Error("plain error");
+
+    const parsed = JSON.parse(formatErrorPayload(error));
+
+    expect(parsed).not.toHaveProperty("cause");
+  });
+});
+
+describe("extractErrorPayload", () => {
+  it("unwraps a well-formed envelope with an inner error object", () => {
+    const envelope = { error: { code: "unauthorized", message: "nope" } };
+
+    expect(extractErrorPayload(envelope)).toEqual({
+      code: "unauthorized",
+      message: "nope",
+    });
+  });
+
+  it("returns the whole envelope when the inner error is null", () => {
+    const envelope = { error: null };
+
+    expect(extractErrorPayload(envelope)).toBe(envelope);
+  });
+
+  it("returns the whole envelope when the inner error is undefined", () => {
+    const envelope = { error: undefined };
+
+    expect(extractErrorPayload(envelope)).toBe(envelope);
+  });
+
+  it("returns an Error instance unchanged (does not attempt to unwrap)", () => {
+    const error = new TypeError("fetch failed");
+
+    expect(extractErrorPayload(error)).toBe(error);
+  });
+
+  it("returns plain objects without an error key unchanged", () => {
+    const payload = { code: "validation_error", message: "bad input" };
+
+    expect(extractErrorPayload(payload)).toBe(payload);
+  });
+
+  it("passes through null, undefined, and primitive values", () => {
+    expect(extractErrorPayload(null)).toBeNull();
+    expect(extractErrorPayload(undefined)).toBeUndefined();
+    expect(extractErrorPayload("oops")).toBe("oops");
   });
 });
 

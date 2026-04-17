@@ -78,12 +78,16 @@ function coerceParameterValue(
   throw new Errors.CLIError(`Unsupported flag value for --${parameter.name}`);
 }
 
+function cliError(message: string): Errors.CLIError {
+  return new Errors.CLIError(message, { exit: 1 });
+}
+
 function parseJson(source: string, flagLabel: string): unknown {
   try {
     return JSON.parse(source);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    throw new Errors.CLIError(`${flagLabel} is not valid JSON: ${detail}`);
+    throw cliError(`${flagLabel} is not valid JSON: ${detail}`);
   }
 }
 
@@ -92,7 +96,7 @@ export function readJsonBody(flags: Record<string, unknown>): unknown {
   const body = flags.body;
 
   if (bodyFile && body) {
-    throw new Errors.CLIError("Use either --body or --body-file, not both");
+    throw cliError("Use either --body or --body-file, not both");
   }
 
   if (typeof bodyFile === "string") {
@@ -101,9 +105,7 @@ export function readJsonBody(flags: Record<string, unknown>): unknown {
       contents = readFileSync(bodyFile, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      throw new Errors.CLIError(
-        `Could not read --body-file ${bodyFile}: ${detail}`,
-      );
+      throw cliError(`Could not read --body-file ${bodyFile}: ${detail}`);
     }
     return parseJson(contents, `--body-file ${bodyFile}`);
   }
@@ -115,24 +117,57 @@ export function readJsonBody(flags: Record<string, unknown>): unknown {
   return undefined;
 }
 
+export function extractErrorPayload(raw: unknown): unknown {
+  if (
+    raw &&
+    typeof raw === "object" &&
+    !(raw instanceof Error) &&
+    "error" in raw
+  ) {
+    const inner = (raw as { error: unknown }).error;
+    if (inner !== null && inner !== undefined) {
+      return inner;
+    }
+  }
+  return raw;
+}
+
+function extractCauseDetails(cause: unknown): {
+  code?: string;
+  details: Record<string, number | string>;
+} {
+  const details: Record<string, number | string> = {};
+  let code: string | undefined;
+
+  if (!cause || typeof cause !== "object") {
+    return { details };
+  }
+
+  for (const [key, value] of Object.entries(cause)) {
+    if (typeof value === "string" || typeof value === "number") {
+      details[key] = value;
+      if (key === "code" && typeof value === "string") {
+        code = value;
+      }
+    }
+  }
+
+  return { code, details };
+}
+
 export function formatErrorPayload(payload: unknown): string {
   if (payload instanceof Error) {
-    const cause = (payload as { cause?: unknown }).cause;
-    const causeCode =
-      cause &&
-      typeof cause === "object" &&
-      "code" in cause &&
-      typeof (cause as { code: unknown }).code === "string"
-        ? (cause as { code: string }).code
-        : undefined;
-    return JSON.stringify(
-      {
-        code: causeCode ?? "client_error",
-        message: payload.message || payload.name || String(payload),
-      },
-      null,
-      2,
+    const { code, details } = extractCauseDetails(
+      (payload as { cause?: unknown }).cause,
     );
+    const body: Record<string, unknown> = {
+      code: code ?? "client_error",
+      message: payload.message || payload.name || String(payload),
+    };
+    if (Object.keys(details).length > 0) {
+      body.cause = details;
+    }
+    return JSON.stringify(body, null, 2);
   }
   return JSON.stringify(payload, null, 2);
 }
@@ -240,14 +275,7 @@ export function createOperationCommand(
       });
 
       if (result.error) {
-        const errorEnvelope = result.error as
-          | { error?: unknown }
-          | null
-          | undefined;
-        const errorPayload =
-          errorEnvelope && !(errorEnvelope instanceof Error)
-            ? (errorEnvelope.error ?? result.error)
-            : result.error;
+        const errorPayload = extractErrorPayload(result.error);
         process.stderr.write(`${formatErrorPayload(errorPayload)}\n`);
         process.exitCode = 1;
         return;
