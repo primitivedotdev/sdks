@@ -18,7 +18,7 @@ node-test:
 	pnpm --dir sdk-node test
 
 node-check: node-check-generated
-	if command -v biome >/dev/null 2>&1; then cd sdk-node && biome check src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/; else pnpm --dir sdk-node lint; fi
+	if command -v biome >/dev/null 2>&1; then cd sdk-node && biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/; else pnpm --dir sdk-node lint; fi
 	pnpm --dir sdk-node typecheck
 	$(MAKE) node-test
 
