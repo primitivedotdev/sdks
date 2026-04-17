@@ -606,6 +606,18 @@ export type AddDomainErrors = {
      * Invalid or missing API key
      */
     401: ErrorResponse;
+    /**
+     * Domain claim conflicts with existing state. Two error codes
+     * are possible:
+     * * `mx_conflict` — the domain's current MX records point at
+     * another mailbox provider. The response includes
+     * `error.details.mx_conflict` with the detected provider
+     * and a suggested subdomain.
+     * * `conflict` — the domain is already claimed by another
+     * org, or a pending claim exists for another user.
+     *
+     */
+    409: ErrorResponse;
 };
 
 export type AddDomainError = AddDomainErrors[keyof AddDomainErrors];
@@ -998,6 +1010,10 @@ export type ReplayEmailWebhooksErrors = {
      * Resource not found
      */
     404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
 };
 
 export type ReplayEmailWebhooksError = ReplayEmailWebhooksErrors[keyof ReplayEmailWebhooksErrors];
@@ -1424,6 +1440,10 @@ export type ReplayDeliveryErrors = {
      * Resource not found
      */
     404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
 };
 
 export type ReplayDeliveryError = ReplayDeliveryErrors[keyof ReplayDeliveryErrors];

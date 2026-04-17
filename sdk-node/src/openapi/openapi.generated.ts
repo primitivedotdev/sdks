@@ -356,6 +356,44 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Domain claim conflicts with existing state. Two error codes\nare possible:\n  * `mx_conflict` — the domain's current MX records point at\n    another mailbox provider. The response includes\n    `error.details.mx_conflict` with the detected provider\n    and a suggested subdomain.\n  * `conflict` — the domain is already claimed by another\n    org, or a pending claim exists for another user.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "mx_conflict": {
+                    "summary": "Domain has MX records on another provider",
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "mx_conflict",
+                        "message": "Domain is currently receiving mail via another provider",
+                        "details": {
+                          "mx_conflict": {
+                            "provider_name": "Google Workspace",
+                            "suggested_subdomain": "mail"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "already_claimed": {
+                    "summary": "Domain already claimed by another org",
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "conflict",
+                        "message": "Domain is already claimed by another organization"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -810,7 +848,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "replayEmailWebhooks",
         "summary": "Replay email webhooks",
-        "description": "Re-delivers the webhook payload for this email to all active\nendpoints matching the email's domain. Includes rate limiting\nto prevent stampeding.\n",
+        "description": "Re-delivers the webhook payload for this email to all active\nendpoints matching the email's domain. Rate limited per-email\n(short cooldown between successive replays of the same email)\nand per-org (burst + sustained windows), sharing an org-wide\nbudget with delivery replays.\n",
         "tags": [
           "Emails"
         ],
@@ -845,6 +883,9 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -1346,7 +1387,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "replayDelivery",
         "summary": "Replay a webhook delivery",
-        "description": "Re-sends the stored webhook payload from a previous delivery attempt.\nIf the original endpoint is still active, it is targeted. If the\noriginal endpoint was deleted, the first active endpoint is used.\nDeactivated endpoints cannot be replayed to.\n",
+        "description": "Re-sends the stored webhook payload from a previous delivery attempt.\nIf the original endpoint is still active, it is targeted. If the\noriginal endpoint was deleted, the oldest active endpoint is used.\nDeactivated endpoints cannot be replayed to. Rate limited per-org,\nsharing an org-wide budget with email replays.\n",
         "tags": [
           "Webhook Deliveries"
         ],
@@ -1381,6 +1422,9 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }

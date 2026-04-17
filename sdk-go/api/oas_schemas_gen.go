@@ -209,6 +209,10 @@ type AddDomainBadRequest ErrorResponse
 
 func (*AddDomainBadRequest) addDomainRes() {}
 
+type AddDomainConflict ErrorResponse
+
+func (*AddDomainConflict) addDomainRes() {}
+
 // Merged schema.
 type AddDomainCreated struct {
 	Success bool             `json:"success"`
@@ -3845,6 +3849,8 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
+func (*RateLimitedHeaders) replayDeliveryRes()      {}
+func (*RateLimitedHeaders) replayEmailWebhooksRes() {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes() {}
 func (*RateLimitedHeaders) testEndpointRes()        {}
 
