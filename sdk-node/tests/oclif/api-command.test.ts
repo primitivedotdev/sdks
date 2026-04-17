@@ -185,6 +185,7 @@ describe("flagForParameter", () => {
   it("returns a string flag without options when no enum is set", () => {
     const flag = flagForParameter({
       description: "Free-form filter",
+      enum: null,
       name: "search",
       required: false,
       type: "string",
