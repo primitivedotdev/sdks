@@ -38,6 +38,8 @@ from .endpoint_rules import EndpointRules
 from .error_response import ErrorResponse
 from .error_response_error import ErrorResponseError
 from .error_response_error_code import ErrorResponseErrorCode
+from .error_response_error_details import ErrorResponseErrorDetails
+from .error_response_error_details_mx_conflict import ErrorResponseErrorDetailsMxConflict
 from .filter_ import Filter
 from .filter_type import FilterType
 from .get_account_response_200 import GetAccountResponse200
@@ -114,6 +116,8 @@ __all__ = (
     "ErrorResponse",
     "ErrorResponseError",
     "ErrorResponseErrorCode",
+    "ErrorResponseErrorDetails",
+    "ErrorResponseErrorDetailsMxConflict",
     "Filter",
     "FilterType",
     "GetAccountResponse200",

@@ -759,6 +759,10 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "internal_error":
 		return nil
+	case "conflict":
+		return nil
+	case "mx_conflict":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}

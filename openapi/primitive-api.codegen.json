@@ -351,7 +351,7 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "409": {
-            "description": "Domain claim conflicts with existing state. Two error codes\nare possible:\n  * `mx_conflict` — the domain's current MX records point at\n    another mailbox provider. The response includes\n    `error.details.mx_conflict` with the detected provider\n    and a suggested subdomain.\n  * `conflict` — the domain is already claimed by another\n    org, or a pending claim exists for another user.\n",
+            "description": "Domain claim conflicts with existing state. Two error codes\nare possible:\n  * `mx_conflict`: the domain's current MX records point at\n    another mailbox provider. The response includes\n    `error.details.mx_conflict` with the detected provider\n    and a suggested subdomain.\n  * `conflict`: the domain is already claimed by another\n    org, or a pending claim exists for another user.\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -1649,11 +1649,38 @@
                   "not_found",
                   "validation_error",
                   "rate_limit_exceeded",
-                  "internal_error"
+                  "internal_error",
+                  "conflict",
+                  "mx_conflict"
                 ]
               },
               "message": {
                 "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "description": "Optional structured data that callers can inspect to recover\nfrom the error. The fields present depend on `code`. Additional\nkeys may be added over time without a major-version bump.\n",
+                "additionalProperties": true,
+                "properties": {
+                  "mx_conflict": {
+                    "type": "object",
+                    "description": "Present when `code == mx_conflict`.",
+                    "required": [
+                      "provider_name",
+                      "suggested_subdomain"
+                    ],
+                    "properties": {
+                      "provider_name": {
+                        "type": "string",
+                        "description": "Human-readable name of the detected mailbox provider (e.g. \"Google Workspace\")."
+                      },
+                      "suggested_subdomain": {
+                        "type": "string",
+                        "description": "Subdomain to try instead (e.g. \"mail\" for `mail.example.com`)."
+                      }
+                    }
+                  }
+                }
               }
             },
             "required": [

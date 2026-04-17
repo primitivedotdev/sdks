@@ -272,11 +272,11 @@ paths:
           description: |
             Domain claim conflicts with existing state. Two error codes
             are possible:
-              * `mx_conflict` — the domain's current MX records point at
+              * `mx_conflict`: the domain's current MX records point at
                 another mailbox provider. The response includes
                 `error.details.mx_conflict` with the detected provider
                 and a suggested subdomain.
-              * `conflict` — the domain is already claimed by another
+              * `conflict`: the domain is already claimed by another
                 org, or a pending claim exists for another user.
           content:
             application/json:
@@ -1138,8 +1138,29 @@ components:
                 - validation_error
                 - rate_limit_exceeded
                 - internal_error
+                - conflict
+                - mx_conflict
             message:
               type: string
+            details:
+              type: object
+              description: |
+                Optional structured data that callers can inspect to recover
+                from the error. The fields present depend on `code`. Additional
+                keys may be added over time without a major-version bump.
+              additionalProperties: true
+              properties:
+                mx_conflict:
+                  type: object
+                  description: Present when `code == mx_conflict`.
+                  required: [provider_name, suggested_subdomain]
+                  properties:
+                    provider_name:
+                      type: string
+                      description: Human-readable name of the detected mailbox provider (e.g. "Google Workspace").
+                    suggested_subdomain:
+                      type: string
+                      description: Subdomain to try instead (e.g. "mail" for `mail.example.com`).
           required: [code, message]
       required: [success, error]
 
