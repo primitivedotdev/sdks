@@ -19,6 +19,7 @@ type OpenApiParameter = {
   name?: string;
   required?: boolean;
   schema?: {
+    enum?: unknown[];
     type?: string;
   };
 };
@@ -56,6 +57,7 @@ type OpenApiPathItem = {
 
 type PrimitiveParameterManifest = {
   description: string | null;
+  enum: string[] | null;
   name: string;
   required: boolean;
   type: string;
@@ -206,12 +208,20 @@ function manifestParameters(
 ): PrimitiveParameterManifest[] {
   return parameters
     .filter((parameter) => parameter.in === location && parameter.name)
-    .map((parameter) => ({
-      description: parameter.description ?? null,
-      name: parameter.name!,
-      required: Boolean(parameter.required),
-      type: parameter.schema?.type ?? "string",
-    }));
+    .map((parameter) => {
+      const enumValues = Array.isArray(parameter.schema?.enum)
+        ? parameter.schema.enum.filter(
+            (value): value is string => typeof value === "string",
+          )
+        : [];
+      return {
+        description: parameter.description ?? null,
+        enum: enumValues.length > 0 ? enumValues : null,
+        name: parameter.name!,
+        required: Boolean(parameter.required),
+        type: parameter.schema?.type ?? "string",
+      };
+    });
 }
 
 function hasJsonBody(operation: OpenApiOperation): boolean {
@@ -319,6 +329,7 @@ writeFileSync(
 
 export type PrimitiveParameterManifest = {
   description: string | null;
+  enum: string[] | null;
   name: string;
   required: boolean;
   type: string;

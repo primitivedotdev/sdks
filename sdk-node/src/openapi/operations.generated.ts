@@ -7,6 +7,7 @@
 
 export type PrimitiveParameterManifest = {
   description: string | null;
+  enum: string[] | null;
   name: string;
   required: boolean;
   type: string;
@@ -138,6 +139,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -177,6 +179,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -200,6 +203,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -223,6 +227,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -246,6 +251,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -254,6 +260,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [
       {
         "description": "Signed download token from webhook payload",
+        "enum": null,
         "name": "token",
         "required": false,
         "type": "string"
@@ -276,6 +283,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -284,6 +292,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [
       {
         "description": "Signed download token from webhook payload",
+        "enum": null,
         "name": "token",
         "required": false,
         "type": "string"
@@ -306,6 +315,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -330,42 +340,54 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [
       {
         "description": "Pagination cursor from a previous response's `meta.cursor` field.\nFormat: `{ISO-datetime}|{id}`\n",
+        "enum": null,
         "name": "cursor",
         "required": false,
         "type": "string"
       },
       {
         "description": "Number of results per page",
+        "enum": null,
         "name": "limit",
         "required": false,
         "type": "integer"
       },
       {
         "description": "Filter by domain ID",
+        "enum": null,
         "name": "domain_id",
         "required": false,
         "type": "string"
       },
       {
         "description": "Filter by email status",
+        "enum": [
+          "pending",
+          "accepted",
+          "completed",
+          "rejected"
+        ],
         "name": "status",
         "required": false,
         "type": "string"
       },
       {
         "description": "Search subject, sender, and recipient (case-insensitive)",
+        "enum": null,
         "name": "search",
         "required": false,
         "type": "string"
       },
       {
         "description": "Filter emails created on or after this timestamp",
+        "enum": null,
         "name": "date_from",
         "required": false,
         "type": "string"
       },
       {
         "description": "Filter emails created on or before this timestamp",
+        "enum": null,
         "name": "date_to",
         "required": false,
         "type": "string"
@@ -388,6 +410,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -427,6 +450,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -466,6 +490,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -489,6 +514,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -528,6 +554,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -567,6 +594,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Resource UUID",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
@@ -591,36 +619,47 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [
       {
         "description": "Pagination cursor from a previous response's `meta.cursor` field.\nFormat: `{ISO-datetime}|{id}`\n",
+        "enum": null,
         "name": "cursor",
         "required": false,
         "type": "string"
       },
       {
         "description": "Number of results per page",
+        "enum": null,
         "name": "limit",
         "required": false,
         "type": "integer"
       },
       {
         "description": "Filter by email ID",
+        "enum": null,
         "name": "email_id",
         "required": false,
         "type": "string"
       },
       {
         "description": "Filter by delivery status",
+        "enum": [
+          "pending",
+          "delivered",
+          "header_confirmed",
+          "failed"
+        ],
         "name": "status",
         "required": false,
         "type": "string"
       },
       {
         "description": "Filter deliveries created on or after this timestamp",
+        "enum": null,
         "name": "date_from",
         "required": false,
         "type": "string"
       },
       {
         "description": "Filter deliveries created on or before this timestamp",
+        "enum": null,
         "name": "date_to",
         "required": false,
         "type": "string"
@@ -643,6 +682,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [
       {
         "description": "Delivery ID (numeric)",
+        "enum": null,
         "name": "id",
         "required": true,
         "type": "string"
