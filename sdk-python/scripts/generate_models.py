@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -36,11 +37,22 @@ def _run_ruff(*args: str) -> None:
         venv_scripts_dir = Path(active_venv) / ("Scripts" if os.name == "nt" else "bin")
     else:
         venv_scripts_dir = ROOT / ".venv" / ("Scripts" if os.name == "nt" else "bin")
-    fallback_env["PATH"] = os.pathsep.join(
+
+    filtered_path = os.pathsep.join(
         entry
         for entry in fallback_env.get("PATH", "").split(os.pathsep)
         if entry and Path(entry) != venv_scripts_dir
     )
+    system_ruff = shutil.which("ruff", path=filtered_path)
+    if system_ruff:
+        subprocess.run([system_ruff, *args], check=True, env=fallback_env)
+        return
+
+    ruff_binary = venv_scripts_dir / ("ruff.exe" if os.name == "nt" else "ruff")
+    if ruff_binary.exists():
+        subprocess.run([str(ruff_binary), *args], check=True, env=fallback_env)
+        return
+
     subprocess.run(["ruff", *args], check=True, env=fallback_env)
 
 

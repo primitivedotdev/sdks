@@ -2,7 +2,7 @@
 
 This repository is a polyglot monorepo that contains independent SDK packages for Node, Python, and Go.
 
-The repository shares a canonical webhook schema and a shared compatibility test suite, but each SDK keeps its native packaging, build, and release conventions.
+The repository shares a canonical webhook schema, a canonical OpenAPI spec, and a shared compatibility test suite, while each SDK keeps its native packaging, build, and release conventions.
 
 ## Package Boundaries
 
@@ -18,7 +18,7 @@ The repository root provides coordination, not packaging.
 
 - `Makefile` is the shared task interface for checks, generation, and builds
 - `.github/workflows/sdk-checks.yml` runs the same high-level tasks in CI
-- `json-schema/` and `test-fixtures/` define the shared contract across SDKs
+- `json-schema/`, `openapi/`, and `test-fixtures/` define the shared contracts across SDKs
 
 ## Tooling Model
 
@@ -49,4 +49,5 @@ This keeps the repo easy to operate without forcing one language ecosystem to be
 
 - `sdk-node/pnpm-workspace.yaml` is package-local Node configuration, not a repo-wide workspace definition
 - changes to the webhook contract should usually touch `json-schema/`, generated artifacts, and `test-fixtures/` together
+- changes to the HTTP API contract should usually touch `openapi/` and the generated API clients in all three SDKs together
 - SDK-specific helpers can remain local to a package as long as shared webhook behavior stays consistent across languages

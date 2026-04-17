@@ -37,14 +37,18 @@ jobs:
           filters: |
             node:
               - 'sdk-node/**'
+              - 'openapi/**'
             python:
               - 'sdk-python/**'
+              - 'openapi/**'
             go:
               - 'sdk-go/**'
+              - 'openapi/**'
             shared:
               - '.github/workflows/**'
               - 'Makefile'
               - 'json-schema/**'
+              - 'openapi/**'
               - 'test-fixtures/**'
 
   node:
@@ -123,7 +127,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: ["1.21", "1.26"]
+        go-version: ["1.25", "1.26"]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 

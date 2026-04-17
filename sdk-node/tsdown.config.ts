@@ -4,6 +4,8 @@ export default defineConfig({
   entry: [
     "src/index.ts",
     "src/webhook/index.ts",
+    "src/api/index.ts",
+    "src/openapi/index.ts",
     "src/contract/index.ts",
     "src/parser/index.ts",
   ],

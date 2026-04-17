@@ -1,6 +1,6 @@
 # `primitivedotdev`
 
-Official Primitive Python SDK for webhook verification and validation.
+Official Primitive Python SDK for webhook handling and API access.
 
 This package helps you:
 
@@ -8,6 +8,7 @@ This package helps you:
 - parse webhook request bodies
 - validate webhook payloads against the canonical JSON schema
 - work with typed `email.received` events in Python
+- call the Primitive HTTP API from `primitive.api`
 
 Validated events are returned as generated Pydantic models derived from the canonical JSON schema.
 
@@ -43,6 +44,22 @@ def webhook_handler(body: bytes, headers: dict[str, str]) -> dict[str, object]:
 ```
 
 ## Core API
+
+### API module
+
+Use `primitive.api` for outbound calls to the Primitive HTTP API.
+
+```python
+from primitive.api import create_client
+from primitive.api.api.account.get_account import sync as get_account
+
+client = create_client("prim_test")
+
+account = get_account(client=client)
+print(account)
+```
+
+Binary download helpers that support either API-key clients or token-based download links are exposed from `primitive.api` directly.
 
 ### Main functions
 
@@ -147,11 +164,13 @@ sdks/
   sdk-python/
     src/primitive/
       models_generated.py
+      api/
       schema.py
       schemas/email_received_event.schema.json
       validation.py
       webhook.py
     scripts/
+      generate_api_client.py
       generate_models.py
       generate_schema_module.py
 ```

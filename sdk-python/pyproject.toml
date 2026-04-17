@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "primitivedotdev"
 version = "0.1.1"
-description = "Official Primitive Python SDK for webhook verification and validation"
+description = "Official Primitive Python SDK for webhook handling and API access"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -24,8 +24,11 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+  "attrs>=23.2.0,<26",
+  "httpx>=0.27.0,<1",
   "jsonschema>=4.24.0,<5",
   "pydantic>=2.11,<3",
+  "python-dateutil>=2.9.0,<3",
   "typing-extensions>=4.12.0; python_version < '3.11'",
 ]
 
@@ -35,6 +38,7 @@ dev = [
   "build>=1.2.2,<2",
   "datamodel-code-generator>=0.31.0,<1",
   "hatchling>=1.27.0,<2",
+  "openapi-python-client==0.28.3",
   "pytest>=8.3.0,<9",
   "pytest-cov>=6.2.0,<7",
   "ruff>=0.12.0,<1",
@@ -73,12 +77,22 @@ pythonpath = ["src"]
 [tool.coverage.run]
 source = ["primitive"]
 omit = [
+  "src/primitive/api/api/*",
+  "src/primitive/api/client.py",
+  "src/primitive/api/errors.py",
+  "src/primitive/api/models/*",
+  "src/primitive/api/types.py",
   "src/primitive/models_generated.py",
   "src/primitive/schemas/*",
 ]
 
 [tool.coverage.report]
 omit = [
+  "src/primitive/api/api/*",
+  "src/primitive/api/client.py",
+  "src/primitive/api/errors.py",
+  "src/primitive/api/models/*",
+  "src/primitive/api/types.py",
   "src/primitive/models_generated.py",
   "src/primitive/schemas/*",
 ]
@@ -86,6 +100,13 @@ omit = [
 [tool.ruff]
 target-version = "py310"
 line-length = 88
+extend-exclude = [
+  "src/primitive/api/api",
+  "src/primitive/api/client.py",
+  "src/primitive/api/errors.py",
+  "src/primitive/api/models",
+  "src/primitive/api/types.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -95,3 +116,12 @@ ignore = ["E501", "SIM108", "UP012", "UP017"]
 pythonVersion = "3.10"
 typeCheckingMode = "standard"
 include = ["src", "tests", "scripts"]
+exclude = [
+  "src/primitive/api/api",
+  "src/primitive/api/client.py",
+  "src/primitive/api/errors.py",
+  "src/primitive/api/models",
+  "src/primitive/api/types.py",
+  "src/primitive/models_generated.py",
+  "src/primitive/schemas",
+]

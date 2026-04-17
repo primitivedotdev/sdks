@@ -9,6 +9,7 @@ The repository currently contains:
 - `sdk-node/` for the Node.js SDK
 - `sdk-python/` for the Python SDK
 - `sdk-go/` for the Go SDK
+- `openapi/` for the canonical Primitive API specification
 - `json-schema/` for the canonical webhook schema
 - `test-fixtures/` for shared cross-SDK compatibility fixtures
 
@@ -22,20 +23,24 @@ The repository currently contains:
 
 ## Purpose
 
-Each SDK implements the same core webhook workflow:
+Each SDK exposes a webhook module and an API module:
 
-- verify Primitive webhook signatures
-- parse request bodies
-- validate payloads against the canonical JSON schema
-- expose typed `email.received` events in the target language
+- `webhook` handles inbound Primitive webhook verification and parsing
+- `api` handles outbound calls to the Primitive HTTP API
 
-The Node SDK also ships Node-only `contract` and `parser` modules under `@primitivedotdev/sdk/contract` and `@primitivedotdev/sdk/parser`.
+The Node SDK also ships:
+
+- `@primitivedotdev/sdk/openapi` for the canonical OpenAPI document
+- `@primitivedotdev/sdk/contract` for producer-side webhook construction
+- `@primitivedotdev/sdk/parser` for raw email parsing helpers
+- the `primitive` CLI powered by `oclif`
 
 ## Repository Layout
 
 ```text
 sdks/
   .github/workflows/
+  openapi/
   json-schema/
   sdk-go/
   sdk-node/
@@ -49,6 +54,7 @@ Use the root `Makefile` as the main task interface:
 
 ```bash
 make check
+make node-generate python-generate go-generate
 make shared-check
 make build
 make release-check

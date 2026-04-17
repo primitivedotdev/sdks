@@ -1,0 +1,2534 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Primitive API",
+    "version": "1.0.0",
+    "description": "The Primitive API lets you manage domains, emails, webhook endpoints,\nfilters, and account settings programmatically.\n\n## Authentication\n\nAll endpoints require a Bearer token in the `Authorization` header:\n\n```\nAuthorization: Bearer prim_<your_api_key>\n```\n\nAPI keys are org-scoped. Create and manage them in your dashboard\nunder Settings > API Keys.\n\n## Rate Limiting\n\nThe API enforces a sliding window rate limit of **120 requests per\n60 seconds** per organization. When exceeded, the API returns `429`\nwith a `Retry-After` header indicating how many seconds to wait.\n\n## Pagination\n\nList endpoints use cursor-based pagination. Responses include a\n`meta` object with `total`, `limit`, and `cursor` fields. Pass the\n`cursor` value as a query parameter to fetch the next page. When\n`cursor` is `null`, there are no more results.\n\n## Response Format\n\nAll responses use a consistent envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": { \"total\": 42, \"limit\": 50, \"cursor\": \"...\" }\n}\n```\n\nErrors follow the same pattern:\n\n```json\n{\n  \"success\": false,\n  \"error\": { \"code\": \"not_found\", \"message\": \"Email not found\" }\n}\n```\n",
+    "contact": {
+      "name": "Primitive",
+      "url": "https://primitive.dev"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://primitive.dev/terms"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://www.primitive.dev/api/v1",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Account",
+      "description": "Manage your account settings, storage, and webhook secret"
+    },
+    {
+      "name": "Domains",
+      "description": "Claim, verify, and manage email domains"
+    },
+    {
+      "name": "Emails",
+      "description": "List, inspect, and manage received emails"
+    },
+    {
+      "name": "Endpoints",
+      "description": "Manage webhook endpoints that receive email events"
+    },
+    {
+      "name": "Filters",
+      "description": "Manage whitelist and blocklist filter rules"
+    },
+    {
+      "name": "Webhook Deliveries",
+      "description": "View and replay webhook delivery attempts"
+    }
+  ],
+  "paths": {
+    "/account": {
+      "get": {
+        "operationId": "getAccount",
+        "summary": "Get account info",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Account details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Account"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateAccount",
+        "summary": "Update account settings",
+        "tags": [
+          "Account"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccountInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AccountUpdated"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/account/storage": {
+      "get": {
+        "operationId": "getStorageStats",
+        "summary": "Get storage usage",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Storage statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/StorageStats"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/account/webhook-secret": {
+      "get": {
+        "operationId": "getWebhookSecret",
+        "summary": "Get webhook signing secret",
+        "description": "Returns the webhook signing secret for your account. If no secret\nexists yet, one is generated automatically on first access.\n",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook secret",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WebhookSecret"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/account/webhook-secret/rotate": {
+      "post": {
+        "operationId": "rotateWebhookSecret",
+        "summary": "Rotate webhook signing secret",
+        "description": "Generates a new webhook signing secret, replacing the current one.\nRate limited to once per 60 minutes.\n",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "description": "New webhook secret",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/WebhookSecret"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/domains": {
+      "get": {
+        "operationId": "listDomains",
+        "summary": "List all domains",
+        "description": "Returns all verified and unverified domains for your organization,\nsorted by creation date (newest first). Each domain includes a\n`verified` boolean to distinguish between the two states.\n",
+        "tags": [
+          "Domains"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of domains",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Domain"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "operationId": "addDomain",
+        "summary": "Claim a new domain",
+        "description": "Creates an unverified domain claim. You will receive a\n`verification_token` to add as a DNS TXT record before\ncalling the verify endpoint.\n",
+        "tags": [
+          "Domains"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddDomainInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Domain claim created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/UnverifiedDomain"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/domains/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "patch": {
+        "operationId": "updateDomain",
+        "summary": "Update domain settings",
+        "description": "Update a verified domain's settings. Only verified domains can be\nupdated. Per-domain spam thresholds require a Pro plan.\n",
+        "tags": [
+          "Domains"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDomainInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/VerifiedDomain"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteDomain",
+        "summary": "Delete a domain",
+        "description": "Deletes a verified or unverified domain claim.",
+        "tags": [
+          "Domains"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/domains/{id}/verify": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "operationId": "verifyDomain",
+        "summary": "Verify domain ownership",
+        "description": "Checks DNS records (MX and TXT) to verify domain ownership.\nOn success, the domain is promoted from unverified to verified.\nOn failure, returns which checks passed and which failed.\n",
+        "tags": [
+          "Domains"
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/DomainVerifyResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/emails": {
+      "get": {
+        "operationId": "listEmails",
+        "summary": "List emails",
+        "description": "Returns a paginated list of received emails. Supports filtering by\ndomain, status, date range, and free-text search across subject,\nsender, and recipient fields.\n",
+        "tags": [
+          "Emails"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "name": "domain_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by domain ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "accepted",
+                "completed",
+                "rejected"
+              ]
+            },
+            "description": "Filter by email status"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "description": "Search subject, sender, and recipient (case-insensitive)"
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter emails created on or after this timestamp"
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter emails created on or before this timestamp"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of emails",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/EmailSummary"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/emails/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "operationId": "getEmail",
+        "summary": "Get email details",
+        "tags": [
+          "Emails"
+        ],
+        "responses": {
+          "200": {
+            "description": "Email details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/EmailDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteEmail",
+        "summary": "Delete an email",
+        "tags": [
+          "Emails"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/emails/{id}/raw": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "operationId": "downloadRawEmail",
+        "summary": "Download raw email",
+        "description": "Downloads the raw RFC 822 email file (.eml). Authenticates via\na signed download token (provided in webhook payloads) or a\nvalid session.\n",
+        "tags": [
+          "Emails"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "DownloadToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed download token from webhook payload"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Raw email file",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string",
+                  "example": "attachment; filename=\"email-id.eml\""
+                }
+              },
+              "X-Content-SHA256": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "SHA-256 hex digest of the file"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/emails/{id}/attachments.tar.gz": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "operationId": "downloadAttachments",
+        "summary": "Download email attachments",
+        "description": "Downloads all attachments as a gzip-compressed tar archive.\nAuthenticates via a signed download token (provided in webhook\npayloads) or a valid session.\n",
+        "tags": [
+          "Emails"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "DownloadToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Signed download token from webhook payload"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attachments archive",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string",
+                  "example": "attachment; filename=\"email-id_attachments.tar.gz\""
+                }
+              },
+              "X-Content-SHA256": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "SHA-256 hex digest of the archive"
+              },
+              "X-Attachment-Count": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Number of attachments in the archive"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/emails/{id}/replay": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "operationId": "replayEmailWebhooks",
+        "summary": "Replay email webhooks",
+        "description": "Re-delivers the webhook payload for this email to all active\nendpoints matching the email's domain. Includes rate limiting\nto prevent stampeding.\n",
+        "tags": [
+          "Emails"
+        ],
+        "responses": {
+          "200": {
+            "description": "Replay result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReplayResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/endpoints": {
+      "get": {
+        "operationId": "listEndpoints",
+        "summary": "List webhook endpoints",
+        "description": "Returns all active (non-deleted) webhook endpoints.",
+        "tags": [
+          "Endpoints"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Endpoint"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createEndpoint",
+        "summary": "Create a webhook endpoint",
+        "description": "Creates a new webhook endpoint. If a deactivated endpoint with the\nsame URL and domain exists, it is reactivated instead.\nSubject to plan limits on the number of active endpoints.\n",
+        "tags": [
+          "Endpoints"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEndpointInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Endpoint created (or reactivated)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Endpoint"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/endpoints/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "patch": {
+        "operationId": "updateEndpoint",
+        "summary": "Update a webhook endpoint",
+        "description": "Updates an active webhook endpoint. If the URL is changed, the old\nendpoint is deactivated and a new one is created (or an existing\ndeactivated endpoint with the new URL is reactivated).\n",
+        "tags": [
+          "Endpoints"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEndpointInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Endpoint"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteEndpoint",
+        "summary": "Delete a webhook endpoint",
+        "description": "Soft-deletes a webhook endpoint. The endpoint will no longer\nreceive webhook deliveries.\n",
+        "tags": [
+          "Endpoints"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/endpoints/{id}/test": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "operationId": "testEndpoint",
+        "summary": "Send a test webhook",
+        "description": "Sends a sample `email.received` event to the endpoint. The request\nincludes SSRF protection (private IP rejection and DNS pinning).\nRate limited to 4 per minute and 30 per hour (non-exempt).\nSuccessful deliveries and verified-domain endpoints are exempt\nfrom the rate limit.\n",
+        "tags": [
+          "Endpoints"
+        ],
+        "responses": {
+          "200": {
+            "description": "Test result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TestResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/filters": {
+      "get": {
+        "operationId": "listFilters",
+        "summary": "List filter rules",
+        "description": "Returns all whitelist and blocklist filter rules.",
+        "tags": [
+          "Filters"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of filters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Filter"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createFilter",
+        "summary": "Create a filter rule",
+        "description": "Creates a new whitelist or blocklist filter. Per-domain filters\nrequire a Pro plan. Patterns are stored as lowercase.\n",
+        "tags": [
+          "Filters"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFilterInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Filter created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Filter"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/filters/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "patch": {
+        "operationId": "updateFilter",
+        "summary": "Update a filter rule",
+        "description": "Toggle a filter's enabled state.",
+        "tags": [
+          "Filters"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFilterInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated filter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Filter"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteFilter",
+        "summary": "Delete a filter rule",
+        "tags": [
+          "Filters"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/webhooks/deliveries": {
+      "get": {
+        "operationId": "listDeliveries",
+        "summary": "List webhook deliveries",
+        "description": "Returns a paginated list of webhook delivery attempts. Each delivery\nincludes a nested `email` object with sender, recipient, and subject.\n",
+        "tags": [
+          "Webhook Deliveries"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "name": "email_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by email ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "delivered",
+                "header_confirmed",
+                "failed"
+              ]
+            },
+            "description": "Filter by delivery status"
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter deliveries created on or after this timestamp"
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter deliveries created on or before this timestamp"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of deliveries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/DeliverySummary"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/webhooks/deliveries/{id}/replay": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^\\d+$"
+          },
+          "description": "Delivery ID (numeric)"
+        }
+      ],
+      "post": {
+        "operationId": "replayDelivery",
+        "summary": "Replay a webhook delivery",
+        "description": "Re-sends the stored webhook payload from a previous delivery attempt.\nIf the original endpoint is still active, it is targeted. If the\noriginal endpoint was deleted, the first active endpoint is used.\nDeactivated endpoints cannot be replayed to.\n",
+        "tags": [
+          "Webhook Deliveries"
+        ],
+        "responses": {
+          "200": {
+            "description": "Replay result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ReplayResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key with `prim_` prefix: `Authorization: Bearer prim_<key>`"
+      },
+      "DownloadToken": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "token",
+        "description": "Signed download token provided in webhook payloads"
+      }
+    },
+    "parameters": {
+      "ResourceId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "Resource UUID"
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        },
+        "description": "Pagination cursor from a previous response's `meta.cursor` field.\nFormat: `{ISO-datetime}|{id}`\n"
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50
+        },
+        "description": "Number of results per page"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Invalid or missing API key",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "unauthorized",
+                "message": "Invalid or missing API key"
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "not_found",
+                "message": "Resource not found"
+              }
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Invalid request parameters",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "validation_error",
+                "message": "Invalid domain format"
+              }
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded",
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Seconds to wait before retrying"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "rate_limit_exceeded",
+                "message": "Rate limit exceeded"
+              }
+            }
+          }
+        }
+      },
+      "Deleted": {
+        "description": "Resource deleted",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/SuccessEnvelope"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deleted": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "deleted"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "SuccessEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "ListEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ]
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total number of matching records"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size used for this request"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Cursor for the next page, or null if no more results",
+            "nullable": true
+          }
+        },
+        "required": [
+          "total",
+          "limit",
+          "cursor"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": false
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "unauthorized",
+                  "forbidden",
+                  "not_found",
+                  "validation_error",
+                  "rate_limit_exceeded",
+                  "internal_error"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "error"
+        ]
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "onboarding_completed": {
+            "type": "boolean"
+          },
+          "onboarding_step": {
+            "type": "string",
+            "nullable": true
+          },
+          "stripe_subscription_status": {
+            "type": "string",
+            "nullable": true
+          },
+          "subscription_current_period_end": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "subscription_cancel_at_period_end": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "spam_threshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 15,
+            "nullable": true
+          },
+          "discard_content_on_webhook_confirmed": {
+            "type": "boolean"
+          },
+          "webhook_secret_rotated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "plan",
+          "created_at",
+          "discard_content_on_webhook_confirmed"
+        ]
+      },
+      "AccountUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "spam_threshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 15,
+            "nullable": true
+          },
+          "discard_content_on_webhook_confirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "plan",
+          "discard_content_on_webhook_confirmed"
+        ]
+      },
+      "UpdateAccountInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "spam_threshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 15,
+            "description": "Global spam score threshold (0-15). Emails scoring above this are rejected. Set to null to disable.",
+            "nullable": true
+          },
+          "discard_content_on_webhook_confirmed": {
+            "type": "boolean",
+            "description": "Whether to discard email content after the webhook endpoint confirms receipt."
+          }
+        },
+        "minProperties": 1
+      },
+      "StorageStats": {
+        "type": "object",
+        "properties": {
+          "used_bytes": {
+            "type": "integer",
+            "description": "Total storage used in bytes"
+          },
+          "used_kb": {
+            "type": "number",
+            "description": "Total storage used in kilobytes (1 decimal)"
+          },
+          "used_mb": {
+            "type": "number",
+            "description": "Total storage used in megabytes (2 decimals)"
+          },
+          "quota_mb": {
+            "type": "number",
+            "description": "Storage quota in megabytes (based on plan)"
+          },
+          "percentage": {
+            "type": "number",
+            "description": "Percentage of quota used (1 decimal)"
+          },
+          "emails_count": {
+            "type": "integer",
+            "description": "Number of stored emails"
+          }
+        },
+        "required": [
+          "used_bytes",
+          "used_kb",
+          "used_mb",
+          "quota_mb",
+          "percentage",
+          "emails_count"
+        ]
+      },
+      "WebhookSecret": {
+        "type": "object",
+        "properties": {
+          "secret": {
+            "type": "string",
+            "description": "The webhook signing secret value"
+          }
+        },
+        "required": [
+          "secret"
+        ]
+      },
+      "Domain": {
+        "description": "A domain can be either verified or unverified. Verified domains have\n`is_active` and `spam_threshold` fields. Unverified domains have a\n`verification_token` for DNS verification.\n",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/VerifiedDomain"
+          },
+          {
+            "$ref": "#/components/schemas/UnverifiedDomain"
+          }
+        ]
+      },
+      "VerifiedDomain": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean",
+            "const": true
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "spam_threshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 15,
+            "nullable": true
+          },
+          "verification_token": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "domain",
+          "verified",
+          "is_active",
+          "created_at"
+        ]
+      },
+      "UnverifiedDomain": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean",
+            "const": false
+          },
+          "verification_token": {
+            "type": "string",
+            "description": "Add this value as a TXT record to verify ownership"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "domain",
+          "verified",
+          "verification_token",
+          "created_at"
+        ]
+      },
+      "AddDomainInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "description": "The domain name to claim (e.g. \"example.com\")"
+          }
+        },
+        "required": [
+          "domain"
+        ]
+      },
+      "UpdateDomainInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "is_active": {
+            "type": "boolean",
+            "description": "Whether the domain accepts incoming emails"
+          },
+          "spam_threshold": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 15,
+            "description": "Per-domain spam threshold override (Pro plan required)",
+            "nullable": true
+          }
+        },
+        "minProperties": 1
+      },
+      "DomainVerifyResult": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "verified": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "verified"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "verified": {
+                "type": "boolean",
+                "const": false
+              },
+              "mxFound": {
+                "type": "boolean",
+                "description": "Whether MX records point to Primitive"
+              },
+              "txtFound": {
+                "type": "boolean",
+                "description": "Whether the TXT verification record was found"
+              },
+              "error": {
+                "type": "string",
+                "description": "Human-readable verification failure reason"
+              }
+            },
+            "required": [
+              "verified",
+              "mxFound",
+              "txtFound",
+              "error"
+            ]
+          }
+        ]
+      },
+      "EmailSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "domain_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "completed",
+              "rejected"
+            ]
+          },
+          "sender": {
+            "type": "string"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string",
+            "nullable": true
+          },
+          "domain": {
+            "type": "string"
+          },
+          "spam_score": {
+            "type": "number",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "raw_size_bytes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "webhook_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_flight",
+              "fired",
+              "failed",
+              "exhausted",
+              null
+            ],
+            "nullable": true
+          },
+          "webhook_attempt_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "sender",
+          "recipient",
+          "domain",
+          "created_at",
+          "received_at",
+          "webhook_attempt_count"
+        ]
+      },
+      "EmailDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "domain_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "sender": {
+            "type": "string"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "completed",
+              "rejected"
+            ]
+          },
+          "domain": {
+            "type": "string"
+          },
+          "spam_score": {
+            "type": "number",
+            "nullable": true
+          },
+          "raw_size_bytes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "raw_sha256": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rejection_reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "webhook_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_flight",
+              "fired",
+              "failed",
+              "exhausted",
+              null
+            ],
+            "nullable": true
+          },
+          "webhook_attempt_count": {
+            "type": "integer"
+          },
+          "webhook_last_attempt_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "webhook_last_status_code": {
+            "type": "integer",
+            "nullable": true
+          },
+          "webhook_last_error": {
+            "type": "string",
+            "nullable": true
+          },
+          "webhook_fired_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "smtp_helo": {
+            "type": "string",
+            "nullable": true
+          },
+          "smtp_mail_from": {
+            "type": "string",
+            "nullable": true
+          },
+          "smtp_rcpt_to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "from_header": {
+            "type": "string",
+            "nullable": true
+          },
+          "content_discarded_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "content_discarded_by_delivery_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "from_email": {
+            "type": "string",
+            "description": "Parsed from address (from_header or sender fallback)"
+          },
+          "to_email": {
+            "type": "string",
+            "description": "Parsed to address (same as recipient)"
+          }
+        },
+        "required": [
+          "id",
+          "sender",
+          "recipient",
+          "status",
+          "domain",
+          "created_at",
+          "received_at",
+          "webhook_attempt_count",
+          "from_email",
+          "to_email"
+        ]
+      },
+      "Endpoint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "domain_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Restrict this endpoint to emails from a specific domain",
+            "nullable": true
+          },
+          "rules": {
+            "type": "object",
+            "description": "Endpoint-specific filtering rules"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "delivery_count": {
+            "type": "integer",
+            "description": "Total webhook deliveries attempted"
+          },
+          "success_count": {
+            "type": "integer",
+            "description": "Successful deliveries"
+          },
+          "failure_count": {
+            "type": "integer",
+            "description": "Failed deliveries"
+          },
+          "consecutive_fails": {
+            "type": "integer",
+            "description": "Current streak of consecutive failures"
+          },
+          "last_delivery_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "last_success_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "last_failure_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deactivated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "enabled",
+          "rules",
+          "created_at",
+          "updated_at",
+          "delivery_count",
+          "success_count",
+          "failure_count",
+          "consecutive_fails"
+        ]
+      },
+      "CreateEndpointInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The webhook URL to deliver events to"
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether the endpoint is active"
+          },
+          "domain_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Restrict to emails from a specific domain",
+            "nullable": true
+          },
+          "rules": {
+            "type": "object",
+            "description": "Endpoint-specific filtering rules"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "UpdateEndpointInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New webhook URL (triggers endpoint rotation)"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "domain_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "rules": {
+            "type": "object"
+          }
+        },
+        "minProperties": 1
+      },
+      "TestResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code returned by the endpoint"
+          },
+          "body": {
+            "type": "string",
+            "description": "Response body (truncated to 1000 characters)"
+          },
+          "signature": {
+            "type": "string",
+            "description": "The signature header value sent (if webhook secret is configured)"
+          }
+        },
+        "required": [
+          "status",
+          "body"
+        ]
+      },
+      "Filter": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "If set, filter applies only to this domain",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "whitelist",
+              "blocklist"
+            ]
+          },
+          "pattern": {
+            "type": "string",
+            "description": "Email address or pattern to match (stored lowercase)"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "type",
+          "pattern",
+          "enabled",
+          "created_at"
+        ]
+      },
+      "CreateFilterInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "whitelist",
+              "blocklist"
+            ]
+          },
+          "pattern": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Email address or pattern to filter"
+          },
+          "domain_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Restrict filter to a specific domain (Pro plan required)",
+            "nullable": true
+          }
+        },
+        "required": [
+          "type",
+          "pattern"
+        ]
+      },
+      "UpdateFilterInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "DeliverySummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Delivery ID (numeric string)"
+          },
+          "email_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "endpoint_url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "delivered",
+              "header_confirmed",
+              "failed"
+            ]
+          },
+          "attempt_count": {
+            "type": "integer"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "nullable": true
+          },
+          "last_error": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "email": {
+            "type": "object",
+            "properties": {
+              "sender": {
+                "type": "string"
+              },
+              "recipient": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "sender",
+              "recipient"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "email_id",
+          "org_id",
+          "endpoint_id",
+          "endpoint_url",
+          "status",
+          "attempt_count",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "ReplayResult": {
+        "type": "object",
+        "properties": {
+          "delivered": {
+            "type": "integer",
+            "description": "Number of successful deliveries"
+          },
+          "failed": {
+            "type": "integer",
+            "description": "Number of failed deliveries"
+          }
+        },
+        "required": [
+          "delivered",
+          "failed"
+        ]
+      }
+    }
+  }
+}

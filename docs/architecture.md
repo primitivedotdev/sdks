@@ -1,8 +1,11 @@
 # Architecture
 
-`sdks` is a multi-language repository for Primitive webhook SDKs.
+`sdks` is a multi-language repository for Primitive webhook and API SDKs.
 
-The repository is organized around one shared webhook contract and three language packages that implement the same core workflow.
+The repository is organized around two shared sources of truth:
+
+- the webhook contract in `json-schema/`
+- the HTTP API contract in `openapi/`
 
 ## Core Flow
 
@@ -14,9 +17,11 @@ Each SDK is responsible for the same high-level behavior:
 4. expose a typed `email.received` event model
 5. preserve forward compatibility for unknown future event types
 
-## Shared Contract
+## Shared Contracts
 
-The shared contract lives in two places:
+### Webhooks
+
+The webhook contract lives in two places:
 
 - `json-schema/email-received-event.schema.json`
 - `test-fixtures/`
@@ -32,27 +37,35 @@ The shared fixtures define behavioral parity expectations across SDKs, including
 - `parseWebhookEvent` parity
 - `handleWebhook` parity
 
+### API
+
+The HTTP API contract lives at `openapi/primitive-api.yaml`.
+
+That source is transformed into a generated codegen artifact so all three SDKs generate from the same normalized API description, while Node also publishes the raw OpenAPI document for other JavaScript consumers.
+
 ## SDK Layers
 
 ### Node
 
 - package path: `sdk-node/`
-- published modules: root webhook entrypoint plus `webhook`, `contract`, and `parser` subpaths
+- published modules: root webhook entrypoint plus `webhook`, `api`, `openapi`, `contract`, and `parser` subpaths
+- published CLI: `primitive`
 - runtime validation: generated AJV standalone validator
-- generated artifacts: schema module, TypeScript types, validator module
+- generated artifacts: webhook schema module, TypeScript types, validator module, generated API client, generated OpenAPI document export
 - Node-only modules: `contract` and `parser`
+- CLI runtime: `oclif` with official autocomplete for bash/zsh/powershell plus custom fish completion output
 
 ### Python
 
 - package path: `sdk-python/`
 - runtime validation: schema-driven validation plus generated Pydantic models
-- generated artifacts: packaged schema copy, generated models
+- generated artifacts: packaged webhook schema copy, generated webhook models, generated API client package under `primitive.api`
 
 ### Go
 
 - package path: `sdk-go/`
 - runtime validation: embedded schema plus Go validation helpers
-- generated artifacts: embedded schema source
+- generated artifacts: embedded webhook schema source and generated API client package under `sdk-go/api`
 
 ## Forward Compatibility
 
@@ -91,3 +104,10 @@ When changing shared webhook behavior:
 5. review each SDK for language-specific helper implications
 
 When changing only one SDK's internal implementation, keep the shared fixture contract intact unless the intended public behavior is changing across all SDKs.
+
+When changing the HTTP API contract:
+
+1. update `openapi/primitive-api.yaml`
+2. regenerate the Node, Python, and Go API clients
+3. run `make node-check python-check go-check`
+4. verify the Node smoke test still exposes `api`, `openapi`, and the CLI bin
