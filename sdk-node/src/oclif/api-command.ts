@@ -21,7 +21,9 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
   return parameter.description ?? parameter.name;
 }
 
-function flagForParameter(parameter: PrimitiveParameterManifest): unknown {
+export function flagForParameter(
+  parameter: PrimitiveParameterManifest,
+): unknown {
   const common = {
     description: flagDescription(parameter),
     required: parameter.required,
@@ -33,6 +35,10 @@ function flagForParameter(parameter: PrimitiveParameterManifest): unknown {
 
   if (parameter.type === "integer") {
     return Flags.integer(common);
+  }
+
+  if (parameter.enum && parameter.enum.length > 0) {
+    return Flags.string({ ...common, options: parameter.enum });
   }
 
   return Flags.string(common);
@@ -72,23 +78,98 @@ function coerceParameterValue(
   throw new Errors.CLIError(`Unsupported flag value for --${parameter.name}`);
 }
 
-function readJsonBody(flags: Record<string, unknown>): unknown {
+function cliError(message: string): Errors.CLIError {
+  return new Errors.CLIError(message, { exit: 1 });
+}
+
+function parseJson(source: string, flagLabel: string): unknown {
+  try {
+    return JSON.parse(source);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw cliError(`${flagLabel} is not valid JSON: ${detail}`);
+  }
+}
+
+export function readJsonBody(flags: Record<string, unknown>): unknown {
   const bodyFile = flags["body-file"];
   const body = flags.body;
 
   if (bodyFile && body) {
-    throw new Errors.CLIError("Use either --body or --body-file, not both");
+    throw cliError("Use either --body or --body-file, not both");
   }
 
   if (typeof bodyFile === "string") {
-    return JSON.parse(readFileSync(bodyFile, "utf8"));
+    let contents: string;
+    try {
+      contents = readFileSync(bodyFile, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw cliError(`Could not read --body-file ${bodyFile}: ${detail}`);
+    }
+    return parseJson(contents, `--body-file ${bodyFile}`);
   }
 
   if (typeof body === "string") {
-    return JSON.parse(body);
+    return parseJson(body, "--body");
   }
 
   return undefined;
+}
+
+export function extractErrorPayload(raw: unknown): unknown {
+  if (
+    raw &&
+    typeof raw === "object" &&
+    !(raw instanceof Error) &&
+    "error" in raw
+  ) {
+    const inner = (raw as { error: unknown }).error;
+    if (inner !== null && inner !== undefined) {
+      return inner;
+    }
+  }
+  return raw;
+}
+
+function extractCauseDetails(cause: unknown): {
+  code?: string;
+  details: Record<string, number | string>;
+} {
+  const details: Record<string, number | string> = {};
+  let code: string | undefined;
+
+  if (!cause || typeof cause !== "object") {
+    return { details };
+  }
+
+  for (const [key, value] of Object.entries(cause)) {
+    if (typeof value === "string" || typeof value === "number") {
+      details[key] = value;
+      if (key === "code" && typeof value === "string") {
+        code = value;
+      }
+    }
+  }
+
+  return { code, details };
+}
+
+export function formatErrorPayload(payload: unknown): string {
+  if (payload instanceof Error) {
+    const { code, details } = extractCauseDetails(
+      (payload as { cause?: unknown }).cause,
+    );
+    const body: Record<string, unknown> = {
+      code: code ?? "client_error",
+      message: payload.message || payload.name || String(payload),
+    };
+    if (Object.keys(details).length > 0) {
+      body.cause = details;
+    }
+    return JSON.stringify(body, null, 2);
+  }
+  return JSON.stringify(payload, null, 2);
 }
 
 function buildFlags(
@@ -194,12 +275,8 @@ export function createOperationCommand(
       });
 
       if (result.error) {
-        const errorEnvelope = result.error as
-          | { error?: unknown }
-          | null
-          | undefined;
-        const errorPayload = errorEnvelope?.error ?? result.error;
-        process.stderr.write(`${JSON.stringify(errorPayload, null, 2)}\n`);
+        const errorPayload = extractErrorPayload(result.error);
+        process.stderr.write(`${formatErrorPayload(errorPayload)}\n`);
         process.exitCode = 1;
         return;
       }
