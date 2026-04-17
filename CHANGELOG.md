@@ -10,9 +10,6 @@
 - Kept the root `@primitivedotdev/sdk` entrypoint webhook-focused for compatibility.
 - Folded the former standalone Node contract package into `@primitivedotdev/sdk/contract`.
 - Added the Node-only email parser surface at `@primitivedotdev/sdk/parser`.
-- Added required `enum: string[] | null` field to `PrimitiveParameterManifest` (exported from `@primitivedotdev/sdk/openapi`), populated from OpenAPI `schema.enum`. CLI flags now validate enum values client-side and list allowed values in `--help`.
-- CLI network failures now render as `{code, message, cause}` with scalar cause details (hostname, port, syscall, errno) instead of an empty `{}`.
-- CLI client-side validation errors (invalid `--body` JSON, missing `--body-file`) now exit with code 1 to match server-error handling, and surface friendly messages naming the offending flag instead of raw Node stack traces.
 
 #### Python SDK
 
