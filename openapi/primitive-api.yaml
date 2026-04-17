@@ -268,6 +268,39 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: |
+            Domain claim conflicts with existing state. Two error codes
+            are possible:
+              * `mx_conflict`: the domain's current MX records point at
+                another mailbox provider. The response includes
+                `error.details.mx_conflict` with the detected provider
+                and a suggested subdomain.
+              * `conflict`: the domain is already claimed by another
+                org, or a pending claim exists for another user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                mx_conflict:
+                  summary: Domain has MX records on another provider
+                  value:
+                    success: false
+                    error:
+                      code: mx_conflict
+                      message: Domain is currently receiving mail via another provider
+                      details:
+                        mx_conflict:
+                          provider_name: Google Workspace
+                          suggested_subdomain: mail
+                already_claimed:
+                  summary: Domain already claimed by another org
+                  value:
+                    success: false
+                    error:
+                      code: conflict
+                      message: Domain is already claimed by another organization
 
   /domains/{id}:
     parameters:
@@ -559,8 +592,10 @@ paths:
       summary: Replay email webhooks
       description: |
         Re-delivers the webhook payload for this email to all active
-        endpoints matching the email's domain. Includes rate limiting
-        to prevent stampeding.
+        endpoints matching the email's domain. Rate limited per-email
+        (short cooldown between successive replays of the same email)
+        and per-org (burst + sustained windows), sharing an org-wide
+        budget with delivery replays.
       tags: [Emails]
       responses:
         '200':
@@ -580,6 +615,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   # ---------------------------------------------------------------------------
   # Endpoints
@@ -906,8 +943,9 @@ paths:
       description: |
         Re-sends the stored webhook payload from a previous delivery attempt.
         If the original endpoint is still active, it is targeted. If the
-        original endpoint was deleted, the first active endpoint is used.
-        Deactivated endpoints cannot be replayed to.
+        original endpoint was deleted, the oldest active endpoint is used.
+        Deactivated endpoints cannot be replayed to. Rate limited per-org,
+        sharing an org-wide budget with email replays.
       tags: [Webhook Deliveries]
       responses:
         '200':
@@ -927,6 +965,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
 # =============================================================================
 # Components
@@ -1098,8 +1138,29 @@ components:
                 - validation_error
                 - rate_limit_exceeded
                 - internal_error
+                - conflict
+                - mx_conflict
             message:
               type: string
+            details:
+              type: object
+              description: |
+                Optional structured data that callers can inspect to recover
+                from the error. The fields present depend on `code`. Additional
+                keys may be added over time without a major-version bump.
+              additionalProperties: true
+              properties:
+                mx_conflict:
+                  type: object
+                  description: Present when `code == mx_conflict`.
+                  required: [provider_name, suggested_subdomain]
+                  properties:
+                    provider_name:
+                      type: string
+                      description: Human-readable name of the detected mailbox provider (e.g. "Google Workspace").
+                    suggested_subdomain:
+                      type: string
+                      description: Subdomain to try instead (e.g. "mail" for `mail.example.com`).
           required: [code, message]
       required: [success, error]
 

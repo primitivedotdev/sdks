@@ -9,7 +9,10 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.error_response_error_code import ErrorResponseErrorCode
+from typing import cast
 
+if TYPE_CHECKING:
+  from ..models.error_response_error_details import ErrorResponseErrorDetails
 
 
 
@@ -25,10 +28,14 @@ class ErrorResponseError:
         Attributes:
             code (ErrorResponseErrorCode):
             message (str):
+            details (ErrorResponseErrorDetails | Unset): Optional structured data that callers can inspect to recover
+                from the error. The fields present depend on `code`. Additional
+                keys may be added over time without a major-version bump.
      """
 
     code: ErrorResponseErrorCode
     message: str
+    details: ErrorResponseErrorDetails | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -36,9 +43,14 @@ class ErrorResponseError:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.error_response_error_details import ErrorResponseErrorDetails
         code = self.code.value
 
         message = self.message
+
+        details: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.details, Unset):
+            details = self.details.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -47,6 +59,8 @@ class ErrorResponseError:
             "code": code,
             "message": message,
         })
+        if details is not UNSET:
+            field_dict["details"] = details
 
         return field_dict
 
@@ -54,6 +68,7 @@ class ErrorResponseError:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.error_response_error_details import ErrorResponseErrorDetails
         d = dict(src_dict)
         code = ErrorResponseErrorCode(d.pop("code"))
 
@@ -62,9 +77,20 @@ class ErrorResponseError:
 
         message = d.pop("message")
 
+        _details = d.pop("details", UNSET)
+        details: ErrorResponseErrorDetails | Unset
+        if isinstance(_details,  Unset):
+            details = UNSET
+        else:
+            details = ErrorResponseErrorDetails.from_dict(_details)
+
+
+
+
         error_response_error = cls(
             code=code,
             message=message,
+            details=details,
         )
 
 

@@ -31,8 +31,30 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict';
         message: string;
+        /**
+         * Optional structured data that callers can inspect to recover
+         * from the error. The fields present depend on `code`. Additional
+         * keys may be added over time without a major-version bump.
+         *
+         */
+        details?: {
+            /**
+             * Present when `code == mx_conflict`.
+             */
+            mx_conflict?: {
+                /**
+                 * Human-readable name of the detected mailbox provider (e.g. "Google Workspace").
+                 */
+                provider_name: string;
+                /**
+                 * Subdomain to try instead (e.g. "mail" for `mail.example.com`).
+                 */
+                suggested_subdomain: string;
+            };
+            [key: string]: unknown;
+        };
     };
 };
 
@@ -606,6 +628,18 @@ export type AddDomainErrors = {
      * Invalid or missing API key
      */
     401: ErrorResponse;
+    /**
+     * Domain claim conflicts with existing state. Two error codes
+     * are possible:
+     * * `mx_conflict`: the domain's current MX records point at
+     * another mailbox provider. The response includes
+     * `error.details.mx_conflict` with the detected provider
+     * and a suggested subdomain.
+     * * `conflict`: the domain is already claimed by another
+     * org, or a pending claim exists for another user.
+     *
+     */
+    409: ErrorResponse;
 };
 
 export type AddDomainError = AddDomainErrors[keyof AddDomainErrors];
@@ -998,6 +1032,10 @@ export type ReplayEmailWebhooksErrors = {
      * Resource not found
      */
     404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
 };
 
 export type ReplayEmailWebhooksError = ReplayEmailWebhooksErrors[keyof ReplayEmailWebhooksErrors];
@@ -1424,6 +1462,10 @@ export type ReplayDeliveryErrors = {
      * Resource not found
      */
     404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
 };
 
 export type ReplayDeliveryError = ReplayDeliveryErrors[keyof ReplayDeliveryErrors];

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-faster/errors"
+	"github.com/go-faster/jx"
 	"github.com/google/uuid"
 )
 
@@ -208,6 +209,10 @@ func (s *AccountUpdated) SetDiscardContentOnWebhookConfirmed(val bool) {
 type AddDomainBadRequest ErrorResponse
 
 func (*AddDomainBadRequest) addDomainRes() {}
+
+type AddDomainConflict ErrorResponse
+
+func (*AddDomainConflict) addDomainRes() {}
 
 // Merged schema.
 type AddDomainCreated struct {
@@ -2131,6 +2136,10 @@ func (*ErrorResponse) listFiltersRes()   {}
 type ErrorResponseError struct {
 	Code    ErrorResponseErrorCode `json:"code"`
 	Message string                 `json:"message"`
+	// Optional structured data that callers can inspect to recover
+	// from the error. The fields present depend on `code`. Additional
+	// keys may be added over time without a major-version bump.
+	Details OptErrorResponseErrorDetails `json:"details"`
 }
 
 // GetCode returns the value of Code.
@@ -2143,6 +2152,11 @@ func (s *ErrorResponseError) GetMessage() string {
 	return s.Message
 }
 
+// GetDetails returns the value of Details.
+func (s *ErrorResponseError) GetDetails() OptErrorResponseErrorDetails {
+	return s.Details
+}
+
 // SetCode sets the value of Code.
 func (s *ErrorResponseError) SetCode(val ErrorResponseErrorCode) {
 	s.Code = val
@@ -2151,6 +2165,11 @@ func (s *ErrorResponseError) SetCode(val ErrorResponseErrorCode) {
 // SetMessage sets the value of Message.
 func (s *ErrorResponseError) SetMessage(val string) {
 	s.Message = val
+}
+
+// SetDetails sets the value of Details.
+func (s *ErrorResponseError) SetDetails(val OptErrorResponseErrorDetails) {
+	s.Details = val
 }
 
 type ErrorResponseErrorCode string
@@ -2162,6 +2181,8 @@ const (
 	ErrorResponseErrorCodeValidationError   ErrorResponseErrorCode = "validation_error"
 	ErrorResponseErrorCodeRateLimitExceeded ErrorResponseErrorCode = "rate_limit_exceeded"
 	ErrorResponseErrorCodeInternalError     ErrorResponseErrorCode = "internal_error"
+	ErrorResponseErrorCodeConflict          ErrorResponseErrorCode = "conflict"
+	ErrorResponseErrorCodeMxConflict        ErrorResponseErrorCode = "mx_conflict"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -2173,6 +2194,8 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeValidationError,
 		ErrorResponseErrorCodeRateLimitExceeded,
 		ErrorResponseErrorCodeInternalError,
+		ErrorResponseErrorCodeConflict,
+		ErrorResponseErrorCodeMxConflict,
 	}
 }
 
@@ -2190,6 +2213,10 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeRateLimitExceeded:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInternalError:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMxConflict:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -2217,9 +2244,83 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeInternalError:
 		*s = ErrorResponseErrorCodeInternalError
 		return nil
+	case ErrorResponseErrorCodeConflict:
+		*s = ErrorResponseErrorCodeConflict
+		return nil
+	case ErrorResponseErrorCodeMxConflict:
+		*s = ErrorResponseErrorCodeMxConflict
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Optional structured data that callers can inspect to recover
+// from the error. The fields present depend on `code`. Additional
+// keys may be added over time without a major-version bump.
+type ErrorResponseErrorDetails struct {
+	// Present when `code == mx_conflict`.
+	MxConflict      OptErrorResponseErrorDetailsMxConflict `json:"mx_conflict"`
+	AdditionalProps ErrorResponseErrorDetailsAdditional
+}
+
+// GetMxConflict returns the value of MxConflict.
+func (s *ErrorResponseErrorDetails) GetMxConflict() OptErrorResponseErrorDetailsMxConflict {
+	return s.MxConflict
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *ErrorResponseErrorDetails) GetAdditionalProps() ErrorResponseErrorDetailsAdditional {
+	return s.AdditionalProps
+}
+
+// SetMxConflict sets the value of MxConflict.
+func (s *ErrorResponseErrorDetails) SetMxConflict(val OptErrorResponseErrorDetailsMxConflict) {
+	s.MxConflict = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *ErrorResponseErrorDetails) SetAdditionalProps(val ErrorResponseErrorDetailsAdditional) {
+	s.AdditionalProps = val
+}
+
+type ErrorResponseErrorDetailsAdditional map[string]jx.Raw
+
+func (s *ErrorResponseErrorDetailsAdditional) init() ErrorResponseErrorDetailsAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Present when `code == mx_conflict`.
+type ErrorResponseErrorDetailsMxConflict struct {
+	// Human-readable name of the detected mailbox provider (e.g. "Google Workspace").
+	ProviderName string `json:"provider_name"`
+	// Subdomain to try instead (e.g. "mail" for `mail.example.com`).
+	SuggestedSubdomain string `json:"suggested_subdomain"`
+}
+
+// GetProviderName returns the value of ProviderName.
+func (s *ErrorResponseErrorDetailsMxConflict) GetProviderName() string {
+	return s.ProviderName
+}
+
+// GetSuggestedSubdomain returns the value of SuggestedSubdomain.
+func (s *ErrorResponseErrorDetailsMxConflict) GetSuggestedSubdomain() string {
+	return s.SuggestedSubdomain
+}
+
+// SetProviderName sets the value of ProviderName.
+func (s *ErrorResponseErrorDetailsMxConflict) SetProviderName(val string) {
+	s.ProviderName = val
+}
+
+// SetSuggestedSubdomain sets the value of SuggestedSubdomain.
+func (s *ErrorResponseErrorDetailsMxConflict) SetSuggestedSubdomain(val string) {
+	s.SuggestedSubdomain = val
 }
 
 // Ref: #/components/schemas/Filter
@@ -2913,6 +3014,98 @@ func (o OptDateTime) Get() (v time.Time, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptDateTime) Or(d time.Time) time.Time {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptErrorResponseErrorDetails returns new OptErrorResponseErrorDetails with value set to v.
+func NewOptErrorResponseErrorDetails(v ErrorResponseErrorDetails) OptErrorResponseErrorDetails {
+	return OptErrorResponseErrorDetails{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptErrorResponseErrorDetails is optional ErrorResponseErrorDetails.
+type OptErrorResponseErrorDetails struct {
+	Value ErrorResponseErrorDetails
+	Set   bool
+}
+
+// IsSet returns true if OptErrorResponseErrorDetails was set.
+func (o OptErrorResponseErrorDetails) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptErrorResponseErrorDetails) Reset() {
+	var v ErrorResponseErrorDetails
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptErrorResponseErrorDetails) SetTo(v ErrorResponseErrorDetails) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptErrorResponseErrorDetails) Get() (v ErrorResponseErrorDetails, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptErrorResponseErrorDetails) Or(d ErrorResponseErrorDetails) ErrorResponseErrorDetails {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptErrorResponseErrorDetailsMxConflict returns new OptErrorResponseErrorDetailsMxConflict with value set to v.
+func NewOptErrorResponseErrorDetailsMxConflict(v ErrorResponseErrorDetailsMxConflict) OptErrorResponseErrorDetailsMxConflict {
+	return OptErrorResponseErrorDetailsMxConflict{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptErrorResponseErrorDetailsMxConflict is optional ErrorResponseErrorDetailsMxConflict.
+type OptErrorResponseErrorDetailsMxConflict struct {
+	Value ErrorResponseErrorDetailsMxConflict
+	Set   bool
+}
+
+// IsSet returns true if OptErrorResponseErrorDetailsMxConflict was set.
+func (o OptErrorResponseErrorDetailsMxConflict) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptErrorResponseErrorDetailsMxConflict) Reset() {
+	var v ErrorResponseErrorDetailsMxConflict
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptErrorResponseErrorDetailsMxConflict) SetTo(v ErrorResponseErrorDetailsMxConflict) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptErrorResponseErrorDetailsMxConflict) Get() (v ErrorResponseErrorDetailsMxConflict, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptErrorResponseErrorDetailsMxConflict) Or(d ErrorResponseErrorDetailsMxConflict) ErrorResponseErrorDetailsMxConflict {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -3845,6 +4038,8 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
+func (*RateLimitedHeaders) replayDeliveryRes()      {}
+func (*RateLimitedHeaders) replayEmailWebhooksRes() {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes() {}
 func (*RateLimitedHeaders) testEndpointRes()        {}
 
