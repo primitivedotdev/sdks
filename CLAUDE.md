@@ -41,3 +41,11 @@ If you edit the JSON schema, regenerate ALL SDKs and commit the generated files.
 ## Cross-SDK consistency
 
 All 3 SDKs must behave identically for the same input. Shared test fixtures in `test-fixtures/` enforce this. If you change behavior in one SDK, update all three.
+
+## Warnings are errors
+
+There are no warnings in this codebase — every diagnostic fails the build. Any warning is a bug to fix, not a signal to tolerate.
+
+- Biome lint runs with `--error-on-warnings` in `pnpm lint` and in `make node-check`. A single biome warning (unused import, unused variable, etc.) exits non-zero.
+- TypeScript typechecking uses `tsconfig.typecheck.json`, which covers both `src/**/*` and `tests/**/*`. Test fixtures must satisfy the same type contracts as production code.
+- Do NOT silence warnings with `// biome-ignore`, `@ts-ignore`, `@ts-expect-error`, or similar escape hatches. Fix the underlying issue. If an escape hatch is genuinely necessary (external type bug, etc.), document WHY in the same line and link to the upstream issue.

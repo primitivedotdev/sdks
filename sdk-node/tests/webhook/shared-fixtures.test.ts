@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   decodeRawEmail,
+  type EmailReceivedEvent,
   handleWebhook,
   isRawIncluded,
   PrimitiveWebhookError,
@@ -145,7 +146,7 @@ describe("shared compatibility fixtures", () => {
     const fixtures = loadJson<{
       cases: Array<{
         name: string;
-        event: unknown;
+        event: EmailReceivedEvent;
         download_bytes_utf8?: string;
         expected: {
           included: boolean;

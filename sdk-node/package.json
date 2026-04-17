@@ -93,9 +93,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "typecheck": "pnpm generate && tsc --noEmit",
-    "lint": "biome check src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/",
-    "lint:fix": "biome check --write src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/",
+    "typecheck": "pnpm generate && tsc --noEmit -p tsconfig.typecheck.json",
+    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/",
+    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/",
     "prepack": "pnpm build && oclif manifest",
     "postpack": "shx rm -f oclif.manifest.json",
     "prepublishOnly": "pnpm build"
