@@ -21,7 +21,9 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
   return parameter.description ?? parameter.name;
 }
 
-function flagForParameter(parameter: PrimitiveParameterManifest): unknown {
+export function flagForParameter(
+  parameter: PrimitiveParameterManifest,
+): unknown {
   const common = {
     description: flagDescription(parameter),
     required: parameter.required,
@@ -33,6 +35,10 @@ function flagForParameter(parameter: PrimitiveParameterManifest): unknown {
 
   if (parameter.type === "integer") {
     return Flags.integer(common);
+  }
+
+  if (parameter.enum && parameter.enum.length > 0) {
+    return Flags.string({ ...common, options: parameter.enum });
   }
 
   return Flags.string(common);
@@ -72,7 +78,16 @@ function coerceParameterValue(
   throw new Errors.CLIError(`Unsupported flag value for --${parameter.name}`);
 }
 
-function readJsonBody(flags: Record<string, unknown>): unknown {
+function parseJson(source: string, flagLabel: string): unknown {
+  try {
+    return JSON.parse(source);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Errors.CLIError(`${flagLabel} is not valid JSON: ${detail}`);
+  }
+}
+
+export function readJsonBody(flags: Record<string, unknown>): unknown {
   const bodyFile = flags["body-file"];
   const body = flags.body;
 
@@ -81,14 +96,45 @@ function readJsonBody(flags: Record<string, unknown>): unknown {
   }
 
   if (typeof bodyFile === "string") {
-    return JSON.parse(readFileSync(bodyFile, "utf8"));
+    let contents: string;
+    try {
+      contents = readFileSync(bodyFile, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Errors.CLIError(
+        `Could not read --body-file ${bodyFile}: ${detail}`,
+      );
+    }
+    return parseJson(contents, `--body-file ${bodyFile}`);
   }
 
   if (typeof body === "string") {
-    return JSON.parse(body);
+    return parseJson(body, "--body");
   }
 
   return undefined;
+}
+
+export function formatErrorPayload(payload: unknown): string {
+  if (payload instanceof Error) {
+    const cause = (payload as { cause?: unknown }).cause;
+    const causeCode =
+      cause &&
+      typeof cause === "object" &&
+      "code" in cause &&
+      typeof (cause as { code: unknown }).code === "string"
+        ? (cause as { code: string }).code
+        : undefined;
+    return JSON.stringify(
+      {
+        code: causeCode ?? "client_error",
+        message: payload.message || payload.name || String(payload),
+      },
+      null,
+      2,
+    );
+  }
+  return JSON.stringify(payload, null, 2);
 }
 
 function buildFlags(
@@ -198,8 +244,11 @@ export function createOperationCommand(
           | { error?: unknown }
           | null
           | undefined;
-        const errorPayload = errorEnvelope?.error ?? result.error;
-        process.stderr.write(`${JSON.stringify(errorPayload, null, 2)}\n`);
+        const errorPayload =
+          errorEnvelope && !(errorEnvelope instanceof Error)
+            ? (errorEnvelope.error ?? result.error)
+            : result.error;
+        process.stderr.write(`${formatErrorPayload(errorPayload)}\n`);
         process.exitCode = 1;
         return;
       }
