@@ -450,6 +450,13 @@ export interface BuildEventFromParsedDataOptions {
  * `download.url` is still populated. Above the threshold, only `download.url`
  * is populated. The download URL is always set regardless of inline status.
  *
+ * Callers using the bundled parser can populate the header fields
+ * (`messageId`, `sender`, `recipient`, `subject`, `dateHeader`) directly
+ * from `toCanonicalHeaders(parsed)`. Accepting the flat fields rather than
+ * a canonical-headers object keeps this function usable by callers that
+ * do not use the bundled parser. A future release may add an optional
+ * canonical-headers parameter as an ergonomic alternative.
+ *
  * @throws Error if `attachmentsDownloadUrl` disagrees with whether
  *   `parsed.attachments` is empty.
  * @throws Error if `smtpRcptTo` is empty.
@@ -468,7 +475,7 @@ export function buildEventFromParsedData(
   }
   if (!hasAttachments && attachmentsDownloadUrl !== null) {
     throw new Error(
-      "[@primitivedotdev/sdk/contract] attachmentsDownloadUrl must be null when parsed.attachments is empty",
+      `[@primitivedotdev/sdk/contract] attachmentsDownloadUrl must be null when parsed.attachments is empty (got: ${JSON.stringify(attachmentsDownloadUrl)})`,
     );
   }
 
