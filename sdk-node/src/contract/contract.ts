@@ -383,3 +383,146 @@ export function buildEmailReceivedEvent(
 
   return validateEmailReceivedEvent(event);
 }
+
+/**
+ * Input for building an `EmailReceivedEvent` directly from parser output.
+ */
+export interface BuildEventFromParsedDataOptions {
+  /** Unique email ID chosen by the producer. */
+  emailId: string;
+  /** ID of the webhook endpoint receiving this event. */
+  endpointId: string;
+  /** Raw RFC 5322 bytes. Used to compute sha256 and inline data. */
+  rawBytes: Buffer;
+  /** Parser output with attachments, body, and threading headers populated. */
+  parsed: ParsedDataComplete;
+  /** Message-ID header value, or null if the email had none. */
+  messageId: string | null;
+  /** From header value. */
+  sender: string;
+  /** To header value. */
+  recipient: string;
+  /** Subject header value, or null. */
+  subject: string | null;
+  /** ISO 8601 timestamp when the producer accepted the email. */
+  receivedAt: string;
+  /** SMTP HELO/EHLO hostname, or null if not captured. */
+  smtpHelo: string | null;
+  /** SMTP envelope MAIL FROM. */
+  smtpMailFrom: string;
+  /** SMTP envelope RCPT TO recipients. Must contain at least one entry. */
+  smtpRcptTo: [string, ...string[]];
+  /** Email authentication results (camelCase per the schema). */
+  auth: EmailAuth;
+  /** Email analysis block. */
+  analysis: EmailAnalysis;
+  /** HTTPS download URL for the raw email. Always populated. */
+  downloadUrl: string;
+  /** ISO 8601 expiry for the raw-email download URL. */
+  downloadExpiresAt: string;
+  /**
+   * Download URL for the attachments tarball.
+   * Must be null iff `parsed.attachments` is empty — mismatch throws.
+   */
+  attachmentsDownloadUrl: string | null;
+  /** Delivery attempt number, starting at 1. */
+  attemptCount: number;
+  /** Original Date header value, or null. */
+  dateHeader?: string | null;
+  /** Optional overrides forwarded to `buildEmailReceivedEvent`. */
+  buildOptions?: {
+    event_id?: string;
+    attempted_at?: string;
+  };
+}
+
+/**
+ * Build an `EmailReceivedEvent` from parsed email data plus delivery metadata.
+ *
+ * Pure adapter: the caller supplies the raw bytes and the already-parsed
+ * data; this function computes sha256 and size, enforces the attachments
+ * invariant, and delegates to `buildEmailReceivedEvent` for schema
+ * validation. It never reads from disk, so it is safe to use in any
+ * runtime that has the data in memory.
+ *
+ * Inline vs. download-only behavior: when `rawBytes.length` is at or below
+ * `RAW_EMAIL_INLINE_THRESHOLD`, the event's `raw.data` is populated and
+ * `download.url` is still populated. Above the threshold, only `download.url`
+ * is populated. The download URL is always set regardless of inline status.
+ *
+ * Callers using the bundled parser can populate the header fields
+ * (`messageId`, `sender`, `recipient`, `subject`, `dateHeader`) directly
+ * from `toCanonicalHeaders(parsed)`. Accepting the flat fields rather than
+ * a canonical-headers object keeps this function usable by callers that
+ * do not use the bundled parser. A future release may add an optional
+ * canonical-headers parameter as an ergonomic alternative.
+ *
+ * @throws Error if `attachmentsDownloadUrl` disagrees with whether
+ *   `parsed.attachments` is empty.
+ * @throws Error if `smtpRcptTo` is empty.
+ * @throws WebhookValidationError if the assembled event fails schema validation.
+ */
+export function buildEventFromParsedData(
+  params: BuildEventFromParsedDataOptions,
+): EmailReceivedEvent {
+  const { parsed, attachmentsDownloadUrl, smtpRcptTo } = params;
+
+  const hasAttachments = parsed.attachments.length > 0;
+  if (hasAttachments && attachmentsDownloadUrl === null) {
+    throw new Error(
+      `[@primitivedotdev/sdk/contract] attachmentsDownloadUrl must be non-null when parsed.attachments has ${parsed.attachments.length} entries`,
+    );
+  }
+  if (!hasAttachments && attachmentsDownloadUrl !== null) {
+    throw new Error(
+      `[@primitivedotdev/sdk/contract] attachmentsDownloadUrl must be null when parsed.attachments is empty (got: ${JSON.stringify(attachmentsDownloadUrl)})`,
+    );
+  }
+
+  if (smtpRcptTo.length === 0) {
+    throw new Error(
+      "[@primitivedotdev/sdk/contract] smtpRcptTo must contain at least one recipient",
+    );
+  }
+
+  const raw_size_bytes = params.rawBytes.length;
+  const raw_sha256 = createHash("sha256").update(params.rawBytes).digest("hex");
+
+  const parsedInput: ParsedInputComplete = {
+    status: "complete",
+    body_text: parsed.body_text,
+    body_html: parsed.body_html,
+    reply_to: parsed.reply_to,
+    cc: parsed.cc,
+    bcc: parsed.bcc,
+    in_reply_to: parsed.in_reply_to,
+    references: parsed.references,
+    attachments: parsed.attachments,
+  };
+
+  const input: EmailReceivedEventInput = {
+    email_id: params.emailId,
+    endpoint_id: params.endpointId,
+    message_id: params.messageId,
+    sender: params.sender,
+    recipient: params.recipient,
+    subject: params.subject,
+    received_at: params.receivedAt,
+    smtp_helo: params.smtpHelo,
+    smtp_mail_from: params.smtpMailFrom,
+    smtp_rcpt_to: smtpRcptTo,
+    raw_bytes: params.rawBytes,
+    raw_sha256,
+    raw_size_bytes,
+    attempt_count: params.attemptCount,
+    date_header: params.dateHeader ?? null,
+    download_url: params.downloadUrl,
+    download_expires_at: params.downloadExpiresAt,
+    attachments_download_url: attachmentsDownloadUrl,
+    parsed: parsedInput,
+    auth: params.auth,
+    analysis: params.analysis,
+  };
+
+  return buildEmailReceivedEvent(input, params.buildOptions);
+}
