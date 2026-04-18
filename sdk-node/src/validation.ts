@@ -201,11 +201,11 @@ function formatValidationIssue(
             'Version must be a date in YYYY-MM-DD format (e.g., "2025-12-14").',
         };
       }
-      if (pattern === "^https://") {
+      if (pattern === "^https?://") {
         return {
           field,
-          message: `Invalid value for ${field}: must be a valid HTTPS URL`,
-          suggestion: `Check that ${fromFieldLabel(field)} is a complete URL including the scheme and uses https://.`,
+          message: `Invalid value for ${field}: must be a valid http:// or https:// URL`,
+          suggestion: `Check that ${fromFieldLabel(field)} is a complete URL including the http:// or https:// scheme.`,
         };
       }
       if (pattern === "^[a-fA-F0-9]{64}$") {
