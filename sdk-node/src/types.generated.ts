@@ -201,7 +201,7 @@ raw: (RawContentInline | RawContentDownloadOnly)
  */
 download: {
 /**
- * HTTPS URL to download the raw email. Returns the email as-is in RFC 5322 format.
+ * URL to download the raw email as-is in RFC 5322 format. Managed Primitive always issues HTTPS. Self-host deployments may issue HTTP URLs that resolve inside the operator's network (e.g. `http://localhost:4001/...`). Receivers that want to refuse plaintext downloads should check the scheme explicitly.
  */
 url: string
 /**
@@ -332,7 +332,7 @@ references: (string[] | null)
  */
 attachments: WebhookAttachment[]
 /**
- * HTTPS URL to download all attachments as a tar.gz archive. Null if the email had no attachments. URL expires - check the expiration before downloading.
+ * URL to download all attachments as a tar.gz archive. Null if the email had no attachments. Managed Primitive always issues HTTPS. Self-host deployments may issue HTTP URLs that resolve inside the operator's network. URL expires - check the expiration before downloading.
  */
 attachments_download_url: (string | null)
 }
@@ -874,7 +874,7 @@ raw: (RawContentInline | RawContentDownloadOnly)
  */
 download: {
 /**
- * HTTPS URL to download the raw email. Returns the email as-is in RFC 5322 format.
+ * URL to download the raw email as-is in RFC 5322 format. Managed Primitive always issues HTTPS. Self-host deployments may issue HTTP URLs that resolve inside the operator's network (e.g. `http://localhost:4001/...`). Receivers that want to refuse plaintext downloads should check the scheme explicitly.
  */
 url: string
 /**

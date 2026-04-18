@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+
+### Changed
+
+- Relaxed the URL pattern on `email.content.download.url` and `email.parsed.attachments_download_url` from `^https://` to `^https?://`. Managed Primitive continues to issue HTTPS URLs; self-host deployments may now issue HTTP URLs that resolve inside the operator's network (e.g. `http://localhost:4001/...`) without failing schema validation. Receivers that want to refuse plaintext downloads should check the scheme explicitly — the SDK no longer guarantees it.
+
 ## Unreleased
 
 ### Added
