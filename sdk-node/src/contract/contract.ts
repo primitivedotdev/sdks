@@ -411,7 +411,7 @@ export interface BuildEventFromParsedDataOptions {
   /** SMTP envelope MAIL FROM. */
   smtpMailFrom: string;
   /** SMTP envelope RCPT TO recipients. Must contain at least one entry. */
-  smtpRcptTo: string[];
+  smtpRcptTo: [string, ...string[]];
   /** Email authentication results (camelCase per the schema). */
   auth: EmailAuth;
   /** Email analysis block. */
@@ -510,7 +510,7 @@ export function buildEventFromParsedData(
     received_at: params.receivedAt,
     smtp_helo: params.smtpHelo,
     smtp_mail_from: params.smtpMailFrom,
-    smtp_rcpt_to: smtpRcptTo as [string, ...string[]],
+    smtp_rcpt_to: smtpRcptTo,
     raw_bytes: params.rawBytes,
     raw_sha256,
     raw_size_bytes,

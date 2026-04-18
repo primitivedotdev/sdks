@@ -245,6 +245,21 @@ describe("verifyDownloadToken", () => {
     if (!result.valid) expect(result.error).toMatch(/empty part/i);
   });
 
+  it("rejects a token whose payload contains non-base64url characters", () => {
+    const garbage = "not!valid@chars";
+    const sig = createHmac("sha256", params.secret)
+      .update(garbage)
+      .digest("base64url");
+    const result = verifyDownloadToken({
+      token: `${garbage}.${sig}`,
+      emailId: params.emailId,
+      audience: params.audience,
+      secret: params.secret,
+    });
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toMatch(/base64url/i);
+  });
+
   it("rejects a token whose payload is valid base64url but not JSON", () => {
     const garbage = Buffer.from("not json at all", "utf8").toString(
       "base64url",

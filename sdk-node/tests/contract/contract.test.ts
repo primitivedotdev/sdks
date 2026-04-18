@@ -947,11 +947,13 @@ describe("contract", () => {
       ).toThrow(/attachments/i);
     });
 
-    it("throws when smtpRcptTo is empty", () => {
+    it("throws when smtpRcptTo is empty (runtime guard for untyped callers)", () => {
+      // The tuple type `[string, ...string[]]` catches this at compile time for
+      // typed callers; the cast simulates a JS or type-cast caller slipping past.
       expect(() =>
         buildEventFromParsedData({
           ...baseOptions,
-          smtpRcptTo: [],
+          smtpRcptTo: [] as unknown as [string, ...string[]],
         }),
       ).toThrow(/smtpRcptTo/);
     });

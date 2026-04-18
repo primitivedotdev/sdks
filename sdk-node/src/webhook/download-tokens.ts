@@ -24,6 +24,8 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
+
 interface DownloadTokenPayload {
   email_id: string;
   exp: number;
@@ -148,12 +150,12 @@ export function verifyDownloadToken(
     return { valid: false, error: "Invalid signature" };
   }
 
-  let decodedJson: string;
-  try {
-    decodedJson = Buffer.from(payloadStr, "base64url").toString("utf8");
-  } catch {
+  // Buffer.from(..., "base64url") is lenient — it silently drops non-alphabet
+  // characters instead of throwing — so validate the charset explicitly.
+  if (!BASE64URL_PATTERN.test(payloadStr)) {
     return { valid: false, error: "Token payload is not valid base64url" };
   }
+  const decodedJson = Buffer.from(payloadStr, "base64url").toString("utf8");
 
   let payload: unknown;
   try {
