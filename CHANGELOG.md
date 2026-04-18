@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+
+#### Node SDK
+
+- `buildEventFromParsedData` at `@primitivedotdev/sdk/contract`: pure adapter that takes raw bytes plus parser output plus delivery metadata and returns a schema-valid `EmailReceivedEvent`. Handy when a producer already has parsed email data in memory and needs to ship an event without reading from disk.
+- `generateDownloadToken` and `verifyDownloadToken` at `@primitivedotdev/sdk/webhook`: HMAC-SHA256 signed tokens for per-email download URLs. Tokens are self-describing (`email_id`, audience, expiry) and verify without server-side state. The verifier returns a discriminated-union result with distinct reasons on failure.
+
+Python and Go parity for the download-token functions will follow in later releases. `buildEventFromParsedData` is Node-only because it consumes the Node parser's output shape.
+
 ### Breaking Changes
 
 #### Node SDK

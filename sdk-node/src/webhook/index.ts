@@ -34,6 +34,14 @@ export {
   safeValidateEmailReceivedEvent,
   validateEmailReceivedEvent,
 } from "../validation.js";
+// Download Tokens
+export {
+  type GenerateDownloadTokenOptions,
+  generateDownloadToken,
+  type VerifyDownloadTokenOptions,
+  type VerifyDownloadTokenResult,
+  verifyDownloadToken,
+} from "./download-tokens.js";
 // Errors
 export {
   PAYLOAD_ERRORS,

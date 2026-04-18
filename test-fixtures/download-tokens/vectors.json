@@ -1,0 +1,12 @@
+{
+  "cases": [
+    {
+      "name": "primitive_raw_download",
+      "email_id": "email_test_12345",
+      "expires_at": 1800000000,
+      "audience": "primitive:raw-download",
+      "secret": "whsec_test_download_secret",
+      "expected_token": "eyJlbWFpbF9pZCI6ImVtYWlsX3Rlc3RfMTIzNDUiLCJleHAiOjE4MDAwMDAwMDAsImF1ZCI6InByaW1pdGl2ZTpyYXctZG93bmxvYWQifQ.k_d5JD6tU33_73Ar17rhHFdEujlteANA3UV70U1pxtA"
+    }
+  ]
+}
