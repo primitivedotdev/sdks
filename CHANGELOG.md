@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+### Breaking Changes
+
+#### Node SDK
+
+- Dropped the `event_id` override from `buildEmailReceivedEvent` options and from `BuildEventFromParsedDataOptions.buildOptions`. The event ID is now always computed by `generateEventId(endpoint_id, email_id)`. Callers that previously passed `event_id` can rely on the deterministic generator, or supply a unique `email_id` per call if they need distinct IDs. Rationale: the option accepted any `string` but was validated at runtime against `^evt_[a-f0-9]{64}$`, letting producers ship payloads that crashed the schema validator only when the webhook fired.
+
 ## 0.5.1
 
 ### Changed

@@ -201,7 +201,7 @@ export function generateEventId(endpoint_id: string, email_id: string): string {
  * result against the generated JSON Schema before returning.
  *
  * @param input - Producer-side data for the webhook payload.
- * @param options - Optional overrides for event ID and attempted-at timestamp.
+ * @param options - Optional overrides for the attempted-at timestamp.
  * @returns A fully constructed, schema-valid `EmailReceivedEvent`.
  *
  * @example
@@ -243,14 +243,11 @@ export function generateEventId(endpoint_id: string, email_id: string): string {
 export function buildEmailReceivedEvent(
   input: EmailReceivedEventInput,
   options?: {
-    /** Override the generated event ID, typically for tests. */
-    event_id?: string;
     /** Override the attempted-at timestamp, typically for tests. */
     attempted_at?: string;
   },
 ): EmailReceivedEvent {
-  const event_id =
-    options?.event_id ?? generateEventId(input.endpoint_id, input.email_id);
+  const event_id = generateEventId(input.endpoint_id, input.email_id);
   const attempted_at = options?.attempted_at
     ? validateTimestamp(options.attempted_at, "attempted_at")
     : new Date().toISOString();
@@ -431,7 +428,6 @@ export interface BuildEventFromParsedDataOptions {
   dateHeader?: string | null;
   /** Optional overrides forwarded to `buildEmailReceivedEvent`. */
   buildOptions?: {
-    event_id?: string;
     attempted_at?: string;
   };
 }
