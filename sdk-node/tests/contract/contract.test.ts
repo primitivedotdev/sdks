@@ -115,13 +115,11 @@ describe("contract", () => {
 
     it("builds valid EmailReceivedEvent", () => {
       const event = buildEmailReceivedEvent(baseInput, {
-        event_id:
-          "evt_fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
         attempted_at: "2025-01-01T12:01:00Z",
       });
 
       expect(event.id).toBe(
-        "evt_fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+        generateEventId(baseInput.endpoint_id, baseInput.email_id),
       );
       expect(event.event).toBe("email.received");
       expect(event.version).toBe("2025-12-14");
@@ -970,14 +968,9 @@ describe("contract", () => {
       const event = buildEventFromParsedData({
         ...baseOptions,
         buildOptions: {
-          event_id:
-            "evt_000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
           attempted_at: "2025-01-01T12:01:00Z",
         },
       });
-      expect(event.id).toBe(
-        "evt_000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
-      );
       expect(event.delivery.attempted_at).toBe("2025-01-01T12:01:00Z");
     });
 
