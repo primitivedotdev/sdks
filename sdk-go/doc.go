@@ -1,19 +1,18 @@
-// Package primitive provides webhook verification, validation, and a small
-// convenience client for outbound API calls.
+// Package primitive provides a small, high-level inbound/outbound email SDK for
+// Primitive.
 //
-// The package is centered around HandleWebhookEvent and HandleWebhook, which
-// verify the Primitive-Signature header, decode the raw request body, and parse
-// the JSON payload.
+// The main surface is centered around Receive for inbound webhooks and Client
+// for outbound send/reply/forward operations.
 //
-// HandleWebhookEvent preserves unknown future event types as UnknownEvent values.
-// HandleWebhook is the email.received-specific convenience wrapper.
+// Lower-level webhook and generated API helpers still remain available for
+// advanced use cases.
 //
 // Import the module path github.com/primitivedotdev/sdks/sdk-go and use the
 // package name primitive in code.
 //
-// For lower-level use cases, applications can call VerifyWebhookSignature,
-// ParseWebhookEvent, or ValidateEmailReceivedEvent directly, or use the
-// generated API client in the sibling api package.
+// For lower-level use cases, applications can call HandleWebhook,
+// VerifyWebhookSignature, ParseWebhookEvent, or ValidateEmailReceivedEvent
+// directly, or use the generated API client in the sibling api package.
 //
 // Unknown future event types are preserved as UnknownEvent values so consumers
 // can continue receiving webhook traffic before a package update ships.

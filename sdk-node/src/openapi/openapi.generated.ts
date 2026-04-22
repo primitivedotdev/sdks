@@ -2501,17 +2501,30 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 998,
             "description": "Subject line for the outbound message"
           },
-          "body": {
+          "text": {
             "type": "string",
             "minLength": 1,
             "description": "Plain-text message body. Maximum size is 65536 UTF-8 bytes."
+          },
+          "in_reply_to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Message-ID of the direct parent email when sending a threaded reply."
+          },
+          "references": {
+            "type": "array",
+            "description": "Full ordered message-id chain for the thread.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "required": [
           "from",
           "to",
           "subject",
-          "body"
+          "text"
         ]
       },
       "SendResult": {

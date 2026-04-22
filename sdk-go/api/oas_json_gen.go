@@ -9223,16 +9223,34 @@ func (s *SendInput) encodeFields(e *jx.Encoder) {
 		e.Str(s.Subject)
 	}
 	{
-		e.FieldStart("body")
-		e.Str(s.Body)
+		e.FieldStart("text")
+		e.Str(s.Text)
+	}
+	{
+		if s.InReplyTo.Set {
+			e.FieldStart("in_reply_to")
+			s.InReplyTo.Encode(e)
+		}
+	}
+	{
+		if s.References != nil {
+			e.FieldStart("references")
+			e.ArrStart()
+			for _, elem := range s.References {
+				e.Str(elem)
+			}
+			e.ArrEnd()
+		}
 	}
 }
 
-var jsonFieldsNameOfSendInput = [4]string{
+var jsonFieldsNameOfSendInput = [6]string{
 	0: "from",
 	1: "to",
 	2: "subject",
-	3: "body",
+	3: "text",
+	4: "in_reply_to",
+	5: "references",
 }
 
 // Decode decodes SendInput from json.
@@ -9280,17 +9298,46 @@ func (s *SendInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"subject\"")
 			}
-		case "body":
+		case "text":
 			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				v, err := d.Str()
-				s.Body = string(v)
+				s.Text = string(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"body\"")
+				return errors.Wrap(err, "decode field \"text\"")
+			}
+		case "in_reply_to":
+			if err := func() error {
+				s.InReplyTo.Reset()
+				if err := s.InReplyTo.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"in_reply_to\"")
+			}
+		case "references":
+			if err := func() error {
+				s.References = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.References = append(s.References, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"references\"")
 			}
 		default:
 			return errors.Errorf("unexpected field %q", k)

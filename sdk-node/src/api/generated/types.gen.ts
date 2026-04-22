@@ -265,7 +265,15 @@ export type SendInput = {
     /**
      * Plain-text message body. Maximum size is 65536 UTF-8 bytes.
      */
-    body: string;
+    text: string;
+    /**
+     * Message-ID of the direct parent email when sending a threaded reply.
+     */
+    in_reply_to?: string;
+    /**
+     * Full ordered message-id chain for the thread.
+     */
+    references?: Array<string>;
 };
 
 export type SendResult = {

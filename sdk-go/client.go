@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/google/uuid"
 	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
 )
 
@@ -15,14 +16,39 @@ type sendAPI interface {
 	SendEmail(ctx context.Context, request *primitiveapi.SendInput) (primitiveapi.SendEmailRes, error)
 }
 
+type SendThread struct {
+	InReplyTo  string
+	References []string
+}
+
 type SendParams struct {
 	From    string
 	To      string
 	Subject string
-	Body    string
+	Text    string
+	Thread  *SendThread
 }
 
-type SendResult = primitiveapi.SendResult
+type ReplyParams struct {
+	Text    string
+	Subject string
+}
+
+type ForwardParams struct {
+	To      string
+	Text    string
+	Subject string
+	From    string
+}
+
+type SendResult struct {
+	ID               uuid.UUID
+	Status           primitiveapi.SendResultStatus
+	SMTPCode         primitiveapi.NilInt
+	SMTPMessage      primitiveapi.NilString
+	RemoteHost       primitiveapi.NilString
+	ServiceMessageID primitiveapi.NilString
+}
 
 type APIError struct {
 	StatusCode int
@@ -72,8 +98,23 @@ func validateSendParams(params SendParams) error {
 	if strings.TrimSpace(params.Subject) == "" {
 		return fmt.Errorf("subject must be a non-empty string")
 	}
-	if params.Body == "" {
-		return fmt.Errorf("body must be a non-empty string")
+	if params.Text == "" {
+		return fmt.Errorf("text must be a non-empty string")
+	}
+	return nil
+}
+
+func validateForwardParams(params ForwardParams) error {
+	if err := validateEmailAddress("to", params.To); err != nil {
+		return err
+	}
+	if params.From != "" {
+		if err := validateEmailAddress("from", params.From); err != nil {
+			return err
+		}
+	}
+	if params.Subject != "" && strings.TrimSpace(params.Subject) == "" {
+		return fmt.Errorf("subject must be a non-empty string")
 	}
 	return nil
 }
@@ -119,20 +160,109 @@ func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error
 		return zero, err
 	}
 
-	res, err := c.api.SendEmail(ctx, &primitiveapi.SendInput{
+	request := &primitiveapi.SendInput{
 		From:    params.From,
 		To:      params.To,
 		Subject: params.Subject,
-		Body:    params.Body,
-	})
+		Text:    params.Text,
+	}
+	if params.Thread != nil {
+		if params.Thread.InReplyTo != "" {
+			request.InReplyTo = primitiveapi.NewOptString(params.Thread.InReplyTo)
+		}
+		if len(params.Thread.References) > 0 {
+			request.References = params.Thread.References
+		}
+	}
+
+	res, err := c.api.SendEmail(ctx, request)
 	if err != nil {
 		return zero, err
 	}
 
 	switch v := res.(type) {
 	case *primitiveapi.SendEmailOK:
-		return v.Data, nil
+		return SendResult{
+			ID:               v.Data.ID,
+			Status:           v.Data.Status,
+			SMTPCode:         v.Data.SMTPCode,
+			SMTPMessage:      v.Data.SMTPMessage,
+			RemoteHost:       v.Data.RemoteHost,
+			ServiceMessageID: v.Data.ServiceMessageID,
+		}, nil
 	default:
 		return zero, mapSendError(res)
 	}
+}
+
+func (c *Client) Reply(ctx context.Context, email *ReceivedEmail, input ReplyParams) (SendResult, error) {
+	var zero SendResult
+	if email == nil {
+		return zero, fmt.Errorf("email is required")
+	}
+
+	references := append([]string{}, email.Thread.References...)
+	if email.Thread.MessageID != "" {
+		references = append(references, email.Thread.MessageID)
+	}
+
+	return c.Send(ctx, SendParams{
+		From:    email.ReceivedBy,
+		To:      email.ReplyTarget.Address,
+		Subject: firstNonEmpty(input.Subject, email.ReplySubject),
+		Text:    input.Text,
+		Thread: &SendThread{
+			InReplyTo:  email.Thread.MessageID,
+			References: references,
+		},
+	})
+}
+
+func (c *Client) Forward(ctx context.Context, email *ReceivedEmail, input ForwardParams) (SendResult, error) {
+	var zero SendResult
+	if email == nil {
+		return zero, fmt.Errorf("email is required")
+	}
+	if err := validateForwardParams(input); err != nil {
+		return zero, err
+	}
+
+	return c.Send(ctx, SendParams{
+		From:    firstNonEmpty(input.From, email.ReceivedBy),
+		To:      input.To,
+		Subject: firstNonEmpty(input.Subject, email.ForwardSubject),
+		Text:    buildForwardText(*email, input.Text),
+	})
+}
+
+func buildForwardText(email ReceivedEmail, intro string) string {
+	parts := []string{}
+	if strings.TrimSpace(intro) != "" {
+		parts = append(parts, strings.TrimSpace(intro), "")
+	}
+
+	parts = append(parts,
+		"---------- Forwarded message ----------",
+		fmt.Sprintf("From: %s", FormatAddress(email.Sender)),
+		fmt.Sprintf("To: %s", email.Raw.Email.Headers.To),
+		fmt.Sprintf("Subject: %s", email.Subject),
+	)
+	if email.Raw.Email.Headers.Date != nil {
+		parts = append(parts, fmt.Sprintf("Date: %s", *email.Raw.Email.Headers.Date))
+	}
+	if email.Thread.MessageID != "" {
+		parts = append(parts, fmt.Sprintf("Message-ID: %s", email.Thread.MessageID))
+	}
+	parts = append(parts, "", email.Text)
+
+	return strings.TrimRight(strings.Join(parts, "\n"), "\n")
+}
+
+func firstNonEmpty(candidates ...string) string {
+	for _, candidate := range candidates {
+		if strings.TrimSpace(candidate) != "" {
+			return candidate
+		}
+	}
+	return ""
 }

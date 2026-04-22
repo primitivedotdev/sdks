@@ -4318,7 +4318,11 @@ type SendInput struct {
 	// Subject line for the outbound message.
 	Subject string `json:"subject"`
 	// Plain-text message body. Maximum size is 65536 UTF-8 bytes.
-	Body string `json:"body"`
+	Text string `json:"text"`
+	// Message-ID of the direct parent email when sending a threaded reply.
+	InReplyTo OptString `json:"in_reply_to"`
+	// Full ordered message-id chain for the thread.
+	References []string `json:"references"`
 }
 
 // GetFrom returns the value of From.
@@ -4336,9 +4340,19 @@ func (s *SendInput) GetSubject() string {
 	return s.Subject
 }
 
-// GetBody returns the value of Body.
-func (s *SendInput) GetBody() string {
-	return s.Body
+// GetText returns the value of Text.
+func (s *SendInput) GetText() string {
+	return s.Text
+}
+
+// GetInReplyTo returns the value of InReplyTo.
+func (s *SendInput) GetInReplyTo() OptString {
+	return s.InReplyTo
+}
+
+// GetReferences returns the value of References.
+func (s *SendInput) GetReferences() []string {
+	return s.References
 }
 
 // SetFrom sets the value of From.
@@ -4356,9 +4370,19 @@ func (s *SendInput) SetSubject(val string) {
 	s.Subject = val
 }
 
-// SetBody sets the value of Body.
-func (s *SendInput) SetBody(val string) {
-	s.Body = val
+// SetText sets the value of Text.
+func (s *SendInput) SetText(val string) {
+	s.Text = val
+}
+
+// SetInReplyTo sets the value of InReplyTo.
+func (s *SendInput) SetInReplyTo(val OptString) {
+	s.InReplyTo = val
+}
+
+// SetReferences sets the value of References.
+func (s *SendInput) SetReferences(val []string) {
+	s.References = val
 }
 
 // Ref: #/components/schemas/SendResult

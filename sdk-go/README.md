@@ -1,14 +1,18 @@
 # `github.com/primitivedotdev/sdks/sdk-go`
 
-Official Primitive Go SDK for webhook handling and API access.
+Official Primitive Go SDK.
 
-This package helps you:
+The package is intentionally centered on a small inbound/outbound email
+automation flow:
 
-- verify Primitive webhook signatures
-- parse webhook request bodies
-- validate webhook payloads against the canonical JSON schema
-- work with typed `email.received` events in Go
-- call the Primitive HTTP API from `github.com/primitivedotdev/sdks/sdk-go/api`
+- `primitive.Receive(...)`
+- `primitive.NewClient(...)`
+- `client.Send(...)`
+- `client.Reply(...)`
+- `client.Forward(...)`
+
+The generated HTTP API and lower-level webhook helpers remain available for
+advanced use.
 
 ## Requirements
 
@@ -20,21 +24,22 @@ This package helps you:
 go get github.com/primitivedotdev/sdks/sdk-go@latest
 ```
 
-In Go code, import the module path and use the package as `primitive`.
+## Basic usage
 
-## Basic Usage
+### Receive and reply
 
 ```go
 package main
 
 import (
+	"context"
 	"log"
 
 	primitive "github.com/primitivedotdev/sdks/sdk-go"
 )
 
-func handle(body []byte, headers map[string]string) {
-	event, err := primitive.HandleWebhook(primitive.HandleWebhookOptions{
+func handle(ctx context.Context, body []byte, headers map[string]string) {
+	email, err := primitive.Receive(primitive.HandleWebhookOptions{
 		Body:    body,
 		Headers: headers,
 		Secret:  "whsec_...",
@@ -44,173 +49,82 @@ func handle(body []byte, headers map[string]string) {
 		return
 	}
 
-	log.Println("Email from:", event.Email.Headers.From)
-	log.Println("Subject:", deref(event.Email.Headers.Subject))
-}
-
-func deref(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}
-```
-
-## Core API
-
-### Convenience client
-
-Use `primitive.NewClient` when you want a small `.Send()` helper instead of the full generated API package.
-
-```go
-package main
-
-import (
-	"context"
-	"log"
-
-	primitive "github.com/primitivedotdev/sdks/sdk-go"
-)
-
-func main() {
 	client, err := primitive.NewClient("prim_test")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	result, err := client.Send(context.Background(), primitive.SendParams{
-		From:    "support@example.com",
-		To:      "alice@example.com",
-		Subject: "Hello",
-		Body:    "Hi there",
-	})
+	_, err = client.Reply(ctx, email, primitive.ReplyParams{Text: "Thank you for your email."})
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("reply failed: %v", err)
 	}
-
-	log.Println(result.Status)
 }
 ```
 
-### API package
-
-Use the generated `api` package for outbound calls to the Primitive HTTP API.
+### Send a new email
 
 ```go
-package main
-
-import (
-	"context"
-	"log"
-
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
-)
-
-func main() {
-	client, err := primitiveapi.NewAPIClient("prim_test")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	res, err := client.GetAccount(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("account response: %#v", res)
-}
+result, err := client.Send(context.Background(), primitive.SendParams{
+	From:    "support@example.com",
+	To:      "alice@example.com",
+	Subject: "Hello",
+	Text:    "Hi there",
+})
 ```
 
-### Main functions
-
-- `HandleWebhookEvent(options)`
-  - verifies the webhook signature
-  - decodes and parses the request body
-  - returns a known webhook event or `UnknownEvent`
-- `HandleWebhook(options)`
-  - verifies the webhook signature
-  - decodes and parses the request body
-  - validates an `email.received` payload
-  - returns a typed `EmailReceivedEvent`
-- `ParseWebhookEvent(input)`
-  - parses a JSON payload into a known webhook event or `UnknownEvent`
-  - validates known event types against the canonical schema
-  - returns `*WebhookValidationError` for malformed known events
-- `ValidateEmailReceivedEvent(input)`
-  - validates an `email.received` payload and returns the typed event
-- `SafeValidateEmailReceivedEvent(input)`
-  - returns a success flag plus data or error
-- `VerifyWebhookSignature(options)`
-  - verifies `Primitive-Signature`
-- `ValidateEmailAuth(auth)`
-  - computes a verdict from SPF, DKIM, and DMARC results
-
-### Helpful exports
-
-- `WebhookVersion`
-- `PrimitiveSignatureHeader`
-- `PrimitiveConfirmedHeader`
-- `PrimitiveWebhookError`
-- `WebhookVerificationError`
-- `WebhookPayloadError`
-- `WebhookValidationError`
-- `RawEmailDecodeError`
-
-### Types
-
-The package exports the main webhook types, including:
-
-- `EmailReceivedEvent`
-- `WebhookEvent`
-- `UnknownEvent`
-- `EmailAuth`
-- `EmailAnalysis`
-- `ParsedData`
-- `RawContent`
-- `WebhookAttachment`
-
-## Parsing Events
-
-- `ParseWebhookEvent(input)` strictly validates known event types such as `email.received`
-- malformed known events return `*WebhookValidationError`
-- unknown future event types are returned as `UnknownEvent`
-
-## JSON Schema
-
-The webhook payload contract is defined by the canonical JSON schema in the repository and is embedded in the Go package as generated source.
-
-The SDK uses that schema to drive:
-
-- the embedded schema artifact
-- runtime validation
-- shared cross-SDK compatibility checks
-
-## Error Handling
-
-All SDK-specific runtime errors include a stable error code.
+### Forward an inbound email
 
 ```go
-import (
-	"errors"
-	"log"
-
-	primitive "github.com/primitivedotdev/sdks/sdk-go"
-)
-
-if err != nil {
-	var webhookErr *primitive.PrimitiveWebhookError
-	if errors.As(err, &webhookErr) {
-		log.Println(webhookErr.Code(), webhookErr.Message())
-	}
-}
+_, err = client.Forward(context.Background(), email, primitive.ForwardParams{
+	To:   "ops@example.com",
+	Text: "Can you take this one?",
+})
 ```
+
+## The normalized email object
+
+`primitive.Receive(...)` returns a normalized inbound email object with fields
+such as:
+
+```go
+email.Sender.Address
+email.ReceivedBy
+email.ReplyTarget.Address
+email.ReplySubject
+email.ForwardSubject
+email.Subject
+email.Text
+email.Thread.MessageID
+email.Thread.References
+email.Raw
+```
+
+## Advanced usage
+
+### Generated API package
+
+Use the sibling `api` package when you want the full generated HTTP API surface.
+
+```go
+import primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+
+client, err := primitiveapi.NewAPIClient("prim_test")
+```
+
+### Lower-level webhook helpers
+
+Advanced users can still work directly with:
+
+- `HandleWebhook(...)`
+- `HandleWebhookEvent(...)`
+- `ParseWebhookEvent(...)`
+- `VerifyWebhookSignature(...)`
 
 ## Development
 
 From `sdks/sdk-go`:
 
 ```bash
-make -C .. go-generate
 go test ./...
 go test -run TestSharedCompatibilityFixtures ./...
 gofmt -w .
@@ -221,22 +135,5 @@ Or from repo root `sdks/`:
 ```bash
 make go-generate
 make go-check
-```
-
-## Repository Layout
-
-```text
-sdks/
-  json-schema/
-    email-received-event.schema.json
-  sdk-go/
-    api/
-    webhook.go
-    validation.go
-    schema.go
-    schema_generated.go
-    types.go
-    scripts/
-      generate_api_client.py
-      generate_schema_module.py
+make go-build
 ```

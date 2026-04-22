@@ -135,6 +135,7 @@
     "ajv": "^8.17.1",
     "isomorphic-dompurify": "^3.8.0",
     "mailparser": "^3.9.0",
+    "nodemailer": "^7.0.10",
     "tar-stream": "^3.1.8"
   },
   "devDependencies": {
