@@ -2183,6 +2183,9 @@ const (
 	ErrorResponseErrorCodeInternalError     ErrorResponseErrorCode = "internal_error"
 	ErrorResponseErrorCodeConflict          ErrorResponseErrorCode = "conflict"
 	ErrorResponseErrorCodeMxConflict        ErrorResponseErrorCode = "mx_conflict"
+	ErrorResponseErrorCodePayloadTooLarge   ErrorResponseErrorCode = "payload_too_large"
+	ErrorResponseErrorCodeBadGateway        ErrorResponseErrorCode = "bad_gateway"
+	ErrorResponseErrorCodeGatewayTimeout    ErrorResponseErrorCode = "gateway_timeout"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -2196,6 +2199,9 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeInternalError,
 		ErrorResponseErrorCodeConflict,
 		ErrorResponseErrorCodeMxConflict,
+		ErrorResponseErrorCodePayloadTooLarge,
+		ErrorResponseErrorCodeBadGateway,
+		ErrorResponseErrorCodeGatewayTimeout,
 	}
 }
 
@@ -2217,6 +2223,12 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeConflict:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeMxConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePayloadTooLarge:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeBadGateway:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeGatewayTimeout:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -2249,6 +2261,15 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeMxConflict:
 		*s = ErrorResponseErrorCodeMxConflict
+		return nil
+	case ErrorResponseErrorCodePayloadTooLarge:
+		*s = ErrorResponseErrorCodePayloadTooLarge
+		return nil
+	case ErrorResponseErrorCodeBadGateway:
+		*s = ErrorResponseErrorCodeBadGateway
+		return nil
+	case ErrorResponseErrorCodeGatewayTimeout:
+		*s = ErrorResponseErrorCodeGatewayTimeout
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -2882,6 +2903,51 @@ func (s *ListFiltersOK) SetData(val []Filter) {
 }
 
 func (*ListFiltersOK) listFiltersRes() {}
+
+// NewNilInt returns new NilInt with value set to v.
+func NewNilInt(v int) NilInt {
+	return NilInt{
+		Value: v,
+	}
+}
+
+// NilInt is nullable int.
+type NilInt struct {
+	Value int
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilInt) SetTo(v int) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilInt) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilInt) SetToNull() {
+	o.Null = true
+	var v int
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilInt) Get() (v int, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
 
 // NewNilString returns new NilString with value set to v.
 func NewNilString(v string) NilString {
@@ -4190,6 +4256,263 @@ func (*RotateWebhookSecretOK) rotateWebhookSecretRes() {}
 type RotateWebhookSecretUnauthorized ErrorResponse
 
 func (*RotateWebhookSecretUnauthorized) rotateWebhookSecretRes() {}
+
+type SendEmailBadGateway ErrorResponse
+
+func (*SendEmailBadGateway) sendEmailRes() {}
+
+type SendEmailBadRequest ErrorResponse
+
+func (*SendEmailBadRequest) sendEmailRes() {}
+
+type SendEmailForbidden ErrorResponse
+
+func (*SendEmailForbidden) sendEmailRes() {}
+
+type SendEmailGatewayTimeout ErrorResponse
+
+func (*SendEmailGatewayTimeout) sendEmailRes() {}
+
+// Merged schema.
+type SendEmailOK struct {
+	Success bool       `json:"success"`
+	Data    SendResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SendEmailOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SendEmailOK) GetData() SendResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SendEmailOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SendEmailOK) SetData(val SendResult) {
+	s.Data = val
+}
+
+func (*SendEmailOK) sendEmailRes() {}
+
+type SendEmailRequestEntityTooLarge ErrorResponse
+
+func (*SendEmailRequestEntityTooLarge) sendEmailRes() {}
+
+type SendEmailUnauthorized ErrorResponse
+
+func (*SendEmailUnauthorized) sendEmailRes() {}
+
+// Ref: #/components/schemas/SendInput
+type SendInput struct {
+	// Active sender address on a domain owned by your organization.
+	From string `json:"from"`
+	// Exact recipient address that previously sent your org an authenticated inbound email.
+	To string `json:"to"`
+	// Subject line for the outbound message.
+	Subject string `json:"subject"`
+	// Plain-text message body. Maximum size is 65536 UTF-8 bytes.
+	Text string `json:"text"`
+	// Message-ID of the direct parent email when sending a threaded reply.
+	InReplyTo OptString `json:"in_reply_to"`
+	// Full ordered message-id chain for the thread.
+	References []string `json:"references"`
+}
+
+// GetFrom returns the value of From.
+func (s *SendInput) GetFrom() string {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *SendInput) GetTo() string {
+	return s.To
+}
+
+// GetSubject returns the value of Subject.
+func (s *SendInput) GetSubject() string {
+	return s.Subject
+}
+
+// GetText returns the value of Text.
+func (s *SendInput) GetText() string {
+	return s.Text
+}
+
+// GetInReplyTo returns the value of InReplyTo.
+func (s *SendInput) GetInReplyTo() OptString {
+	return s.InReplyTo
+}
+
+// GetReferences returns the value of References.
+func (s *SendInput) GetReferences() []string {
+	return s.References
+}
+
+// SetFrom sets the value of From.
+func (s *SendInput) SetFrom(val string) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *SendInput) SetTo(val string) {
+	s.To = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *SendInput) SetSubject(val string) {
+	s.Subject = val
+}
+
+// SetText sets the value of Text.
+func (s *SendInput) SetText(val string) {
+	s.Text = val
+}
+
+// SetInReplyTo sets the value of InReplyTo.
+func (s *SendInput) SetInReplyTo(val OptString) {
+	s.InReplyTo = val
+}
+
+// SetReferences sets the value of References.
+func (s *SendInput) SetReferences(val []string) {
+	s.References = val
+}
+
+// Ref: #/components/schemas/SendResult
+type SendResult struct {
+	ID     uuid.UUID        `json:"id"`
+	Status SendResultStatus `json:"status"`
+	// Final SMTP status code reported by the downstream SMTP transaction.
+	SMTPCode NilInt `json:"smtp_code"`
+	// Final SMTP status message, if available.
+	SMTPMessage NilString `json:"smtp_message"`
+	// Recipient MX host contacted for the SMTP transaction.
+	RemoteHost NilString `json:"remote_host"`
+	// Message identifier assigned by Primitive's outbound SMTP service.
+	ServiceMessageID NilString `json:"service_message_id"`
+}
+
+// GetID returns the value of ID.
+func (s *SendResult) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *SendResult) GetStatus() SendResultStatus {
+	return s.Status
+}
+
+// GetSMTPCode returns the value of SMTPCode.
+func (s *SendResult) GetSMTPCode() NilInt {
+	return s.SMTPCode
+}
+
+// GetSMTPMessage returns the value of SMTPMessage.
+func (s *SendResult) GetSMTPMessage() NilString {
+	return s.SMTPMessage
+}
+
+// GetRemoteHost returns the value of RemoteHost.
+func (s *SendResult) GetRemoteHost() NilString {
+	return s.RemoteHost
+}
+
+// GetServiceMessageID returns the value of ServiceMessageID.
+func (s *SendResult) GetServiceMessageID() NilString {
+	return s.ServiceMessageID
+}
+
+// SetID sets the value of ID.
+func (s *SendResult) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *SendResult) SetStatus(val SendResultStatus) {
+	s.Status = val
+}
+
+// SetSMTPCode sets the value of SMTPCode.
+func (s *SendResult) SetSMTPCode(val NilInt) {
+	s.SMTPCode = val
+}
+
+// SetSMTPMessage sets the value of SMTPMessage.
+func (s *SendResult) SetSMTPMessage(val NilString) {
+	s.SMTPMessage = val
+}
+
+// SetRemoteHost sets the value of RemoteHost.
+func (s *SendResult) SetRemoteHost(val NilString) {
+	s.RemoteHost = val
+}
+
+// SetServiceMessageID sets the value of ServiceMessageID.
+func (s *SendResult) SetServiceMessageID(val NilString) {
+	s.ServiceMessageID = val
+}
+
+type SendResultStatus string
+
+const (
+	SendResultStatusAccepted   SendResultStatus = "accepted"
+	SendResultStatusRejected   SendResultStatus = "rejected"
+	SendResultStatusTempfailed SendResultStatus = "tempfailed"
+	SendResultStatusFailed     SendResultStatus = "failed"
+)
+
+// AllValues returns all SendResultStatus values.
+func (SendResultStatus) AllValues() []SendResultStatus {
+	return []SendResultStatus{
+		SendResultStatusAccepted,
+		SendResultStatusRejected,
+		SendResultStatusTempfailed,
+		SendResultStatusFailed,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SendResultStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case SendResultStatusAccepted:
+		return []byte(s), nil
+	case SendResultStatusRejected:
+		return []byte(s), nil
+	case SendResultStatusTempfailed:
+		return []byte(s), nil
+	case SendResultStatusFailed:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SendResultStatus) UnmarshalText(data []byte) error {
+	switch SendResultStatus(data) {
+	case SendResultStatusAccepted:
+		*s = SendResultStatusAccepted
+		return nil
+	case SendResultStatusRejected:
+		*s = SendResultStatusRejected
+		return nil
+	case SendResultStatusTempfailed:
+		*s = SendResultStatusTempfailed
+		return nil
+	case SendResultStatusFailed:
+		*s = SendResultStatusFailed
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // Ref: #/components/schemas/StorageStats
 type StorageStats struct {

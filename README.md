@@ -2,16 +2,14 @@
 
 [![SDK Checks](https://github.com/primitivedotdev/sdks/actions/workflows/sdk-checks.yml/badge.svg?branch=main)](https://github.com/primitivedotdev/sdks/actions/workflows/sdk-checks.yml)
 
-Monorepo for Primitive SDKs.
+Monorepo for the Primitive SDKs.
 
-The repository currently contains:
+Primitive is an inbound and outbound email platform. The SDKs are centered on a
+small default workflow:
 
-- `sdk-node/` for the Node.js SDK
-- `sdk-python/` for the Python SDK
-- `sdk-go/` for the Go SDK
-- `openapi/` for the canonical Primitive API specification
-- `json-schema/` for the canonical webhook schema
-- `test-fixtures/` for shared cross-SDK compatibility fixtures
+1. receive an inbound email
+2. inspect a normalized email object
+3. send, reply, or forward synchronously
 
 ## SDKs
 
@@ -21,21 +19,51 @@ The repository currently contains:
 | Python | `pip install primitivedotdev` | `sdk-python/README.md` |
 | Go | `go get github.com/primitivedotdev/sdks/sdk-go@latest` | `sdk-go/README.md` |
 
-## Purpose
+## Default API shape
 
-Each SDK exposes a webhook module and an API module:
+Across the SDKs, the default story is:
 
-- `webhook` handles inbound Primitive webhook verification and parsing
-- `api` handles outbound calls to the Primitive HTTP API
+- receive inbound mail with `receive(...)`
+- create an outbound client with `client(...)`
+- send new mail with `send(...)`
+- continue a thread with `reply(...)`
+- forward a message with `forward(...)`
 
-The Node SDK also ships:
+The Node.js end-state looks like this:
 
-- `@primitivedotdev/sdk/openapi` for the canonical OpenAPI document
-- `@primitivedotdev/sdk/contract` for producer-side webhook construction
-- `@primitivedotdev/sdk/parser` for raw email parsing helpers
-- the `primitive` CLI powered by `oclif`
+```ts
+import primitive from "@primitivedotdev/sdk";
 
-## Repository Layout
+const client = primitive.client({
+  apiKey: process.env.PRIMITIVE_API_KEY!,
+});
+
+export async function POST(req: Request) {
+  const email = await primitive.receive(req, {
+    secret: process.env.PRIMITIVE_WEBHOOK_SECRET!,
+  });
+
+  await client.reply(email, "Thank you for your email.");
+
+  return Response.json({ ok: true });
+}
+```
+
+## Advanced surfaces
+
+The low-level and generated APIs still exist for advanced use cases:
+
+- webhook verification/parsing helpers
+- generated HTTP API packages
+- OpenAPI exports
+- contract tooling
+- raw MIME parsing helpers
+- CLI
+
+The SDK refresh keeps those escape hatches available, but the primary docs story
+focuses on the inbound/outbound automation flow above.
+
+## Repository layout
 
 ```text
 sdks/
@@ -53,14 +81,14 @@ sdks/
 Use the root `Makefile` as the main task interface:
 
 ```bash
-make check
 make node-generate python-generate go-generate
-make shared-check
+make check
 make build
-make release-check
+make shared-check
 ```
 
-The `Makefile` wraps each SDK's native commands. You can still run them directly from each SDK directory when needed:
+The `Makefile` wraps each SDK's native commands. You can still run them directly
+ from each SDK directory when needed:
 
 ```bash
 cd sdk-node && pnpm typecheck && pnpm test
@@ -68,18 +96,9 @@ cd sdk-python && uv sync --dev && uv run pytest && uv run ruff check . && uv run
 cd sdk-go && go test ./... && go test -run TestSharedCompatibilityFixtures ./...
 ```
 
-## CI
-
-`.github/workflows/sdk-checks.yml` runs:
-
-- Node SDK checks
-- Python SDK checks
-- Go SDK checks
-- shared fixture compatibility checks across all three SDKs
-
 ## Documentation
 
-- `docs/architecture.md` gives the high-level repository architecture and workflow model
-- `docs/schema-generation.md` documents the canonical schema and generated artifacts in each SDK
-- `docs/repo-model.md` documents the monorepo task model and package boundaries
-- `RELEASE.md` documents the current manual release process for each SDK
+- `docs/architecture.md` gives the repository architecture and package layout
+- `docs/schema-generation.md` documents schema/codegen flow
+- `docs/repo-model.md` documents the monorepo task model
+- `RELEASE.md` documents the release process

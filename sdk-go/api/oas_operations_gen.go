@@ -27,6 +27,7 @@ const (
 	ReplayDeliveryOperation      OperationName = "ReplayDelivery"
 	ReplayEmailWebhooksOperation OperationName = "ReplayEmailWebhooks"
 	RotateWebhookSecretOperation OperationName = "RotateWebhookSecret"
+	SendEmailOperation           OperationName = "SendEmail"
 	TestEndpointOperation        OperationName = "TestEndpoint"
 	UpdateAccountOperation       OperationName = "UpdateAccount"
 	UpdateDomainOperation        OperationName = "UpdateDomain"

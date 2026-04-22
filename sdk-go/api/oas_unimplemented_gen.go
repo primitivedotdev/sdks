@@ -227,6 +227,17 @@ func (UnimplementedHandler) RotateWebhookSecret(ctx context.Context) (r RotateWe
 	return r, ht.ErrNotImplemented
 }
 
+// SendEmail implements sendEmail operation.
+//
+// Sends a plain-text outbound email synchronously. The request stays
+// open until Primitive's downstream SMTP service completes the SMTP
+// transaction.
+//
+// POST /send
+func (UnimplementedHandler) SendEmail(ctx context.Context, req *SendInput) (r SendEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // TestEndpoint implements testEndpoint operation.
 //
 // Sends a sample `email.received` event to the endpoint. The request

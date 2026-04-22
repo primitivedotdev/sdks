@@ -6,6 +6,6 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src/oclif/**/*"],
+  "include": ["src/oclif/**/*", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -608,6 +608,22 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "send-email",
+    "description": "Sends a plain-text outbound email synchronously. The request stays\nopen until Primitive's downstream SMTP service completes the SMTP\ntransaction.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "sendEmail",
+    "path": "/send",
+    "pathParams": [],
+    "queryParams": [],
+    "sdkName": "sendEmail",
+    "summary": "Send outbound email",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-deliveries",
     "description": "Returns a paginated list of webhook delivery attempts. Each delivery\nincludes a nested `email` object with sender, recipient, and subject.\n",
