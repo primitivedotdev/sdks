@@ -472,20 +472,22 @@ describe("validation", () => {
       throw new Error("expected validation to fail");
     } catch (error) {
       const validationError = error as WebhookValidationError;
-      expect(validationError.message).toContain("must be a valid HTTPS URL");
+      expect(validationError.message).toContain(
+        "must be a valid http:// or https:// URL",
+      );
       expect(validationError.suggestion).toContain(
-        "complete URL including the scheme",
+        "complete URL including the http:// or https:// scheme",
       );
     }
   });
 
-  it("surfaces HTTPS-specific pattern guidance for url fields", async () => {
+  it("surfaces http(s)-specific pattern guidance for url fields", async () => {
     const mockedValidator = Object.assign(() => false, {
       errors: [
         {
           instancePath: "/email/content/download/url",
           keyword: "pattern",
-          params: { pattern: "^https://" },
+          params: { pattern: "^https?://" },
           schemaPath: "",
         },
       ],
@@ -502,7 +504,7 @@ describe("validation", () => {
     );
 
     expect(() => validateWithMock(validPayload)).toThrowError(
-      /valid HTTPS URL/,
+      /http:\/\/ or https:\/\/ URL/,
     );
   });
 
@@ -970,7 +972,7 @@ describe("validation", () => {
     );
   });
 
-  it("rejects http URLs in attachments_download_url", () => {
+  it("accepts http URLs in attachments_download_url (self-host)", () => {
     expect(() =>
       validateEmailReceivedEvent({
         ...validPayload,
@@ -978,7 +980,23 @@ describe("validation", () => {
           ...validPayload.email,
           parsed: {
             ...validPayload.email.parsed,
-            attachments_download_url: "http://example.com/attachments",
+            attachments_download_url:
+              "http://localhost:4001/attachments/em_1?token=x",
+          },
+        },
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects non-http(s) schemes in attachments_download_url", () => {
+    expect(() =>
+      validateEmailReceivedEvent({
+        ...validPayload,
+        email: {
+          ...validPayload.email,
+          parsed: {
+            ...validPayload.email.parsed,
+            attachments_download_url: "ftp://example.com/attachments",
           },
         },
       }),

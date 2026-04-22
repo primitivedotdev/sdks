@@ -134,13 +134,13 @@ def _patch_generated_models() -> None:
     text = _replace_once(
         text,
         "    url: Annotated[\n        AnyUrl,\n",
-        "    url: Annotated[\n        Annotated[AnyUrl, UrlConstraints(allowed_schemes=[\"https\"])],\n",
+        "    url: Annotated[\n        Annotated[AnyUrl, UrlConstraints(allowed_schemes=[\"http\", \"https\"])],\n",
     )
 
     text = _replace_once(
         text,
         "    attachments_download_url: Annotated[\n        AnyUrl | None,\n",
-        "    attachments_download_url: Annotated[\n        Annotated[AnyUrl, UrlConstraints(allowed_schemes=[\"https\"])] | None,\n",
+        "    attachments_download_url: Annotated[\n        Annotated[AnyUrl, UrlConstraints(allowed_schemes=[\"http\", \"https\"])] | None,\n",
     )
 
     text = _replace_once(

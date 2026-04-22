@@ -1,0 +1,36 @@
+{
+  "cases": [
+    {
+      "name": "primitive_raw_download",
+      "email_id": "email_test_12345",
+      "expires_at": 1800000000,
+      "audience": "primitive:raw-download",
+      "secret": "whsec_test_download_secret",
+      "expected_token": "eyJlbWFpbF9pZCI6ImVtYWlsX3Rlc3RfMTIzNDUiLCJleHAiOjE4MDAwMDAwMDAsImF1ZCI6InByaW1pdGl2ZTpyYXctZG93bmxvYWQifQ.k_d5JD6tU33_73Ar17rhHFdEujlteANA3UV70U1pxtA"
+    },
+    {
+      "name": "primitive_attachments_download",
+      "email_id": "email_test_12345",
+      "expires_at": 1800000000,
+      "audience": "primitive:attachments-download",
+      "secret": "whsec_test_download_secret",
+      "expected_token": "eyJlbWFpbF9pZCI6ImVtYWlsX3Rlc3RfMTIzNDUiLCJleHAiOjE4MDAwMDAwMDAsImF1ZCI6InByaW1pdGl2ZTphdHRhY2htZW50cy1kb3dubG9hZCJ9.1e7jsNCV6mUICZHd0EJZ2N5jRaIr6BzHezY06CYCtb0"
+    },
+    {
+      "name": "legacy_mymx_audience",
+      "email_id": "em_abc_def_99",
+      "expires_at": 1700000000,
+      "audience": "mymx:raw-download",
+      "secret": "a-different-secret",
+      "expected_token": "eyJlbWFpbF9pZCI6ImVtX2FiY19kZWZfOTkiLCJleHAiOjE3MDAwMDAwMDAsImF1ZCI6Im15bXg6cmF3LWRvd25sb2FkIn0.vHabedZbtm0iSgzuW_cJwguYXEiF7LZ2ZHti748_Ctc"
+    },
+    {
+      "name": "minimal_inputs",
+      "email_id": "e",
+      "expires_at": 1,
+      "audience": "x",
+      "secret": "k",
+      "expected_token": "eyJlbWFpbF9pZCI6ImUiLCJleHAiOjEsImF1ZCI6IngifQ.HFWavMu5T150u2I_me1I6NJ6j97h_8beG6tmaggTEaU"
+    }
+  ]
+}

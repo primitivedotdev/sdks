@@ -2,9 +2,14 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import * as contractPackage from "../../src/contract/index.js";
 import {
+  type BuildEventFromParsedDataOptions,
   buildEmailReceivedEvent,
+  buildEventFromParsedData,
+  type EmailAnalysis,
+  type EmailAuth,
   type EmailReceivedEventInput,
   generateEventId,
+  type ParsedDataComplete,
   type ParsedInputComplete,
   type ParsedInputFailed,
   RAW_EMAIL_INLINE_THRESHOLD,
@@ -110,13 +115,11 @@ describe("contract", () => {
 
     it("builds valid EmailReceivedEvent", () => {
       const event = buildEmailReceivedEvent(baseInput, {
-        event_id:
-          "evt_fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
         attempted_at: "2025-01-01T12:01:00Z",
       });
 
       expect(event.id).toBe(
-        "evt_fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+        generateEventId(baseInput.endpoint_id, baseInput.email_id),
       );
       expect(event.event).toBe("email.received");
       expect(event.version).toBe("2025-12-14");
@@ -752,6 +755,229 @@ describe("contract", () => {
           /not a valid date/,
         );
       });
+    });
+  });
+
+  describe("buildEventFromParsedData", () => {
+    const rawBytes = Buffer.from(
+      "From: from@example.com\r\nTo: to@example.com\r\n\r\nTest body",
+    );
+
+    const emptyParsed: ParsedDataComplete = {
+      status: "complete",
+      error: null,
+      body_text: "Test body",
+      body_html: null,
+      reply_to: null,
+      cc: null,
+      bcc: null,
+      in_reply_to: null,
+      references: null,
+      attachments: [],
+      attachments_download_url: null,
+    };
+
+    const auth: EmailAuth = {
+      spf: "pass",
+      dmarc: "pass",
+      dmarcPolicy: "reject",
+      dmarcFromDomain: "example.com",
+      dmarcSpfAligned: true,
+      dmarcDkimAligned: true,
+      dmarcSpfStrict: false,
+      dmarcDkimStrict: false,
+      dkimSignatures: [],
+    };
+
+    const analysis: EmailAnalysis = {};
+
+    const baseOptions: BuildEventFromParsedDataOptions = {
+      emailId: "email_self_host_1",
+      endpointId: "endpoint_local",
+      rawBytes,
+      parsed: emptyParsed,
+      messageId: "<abc@example.com>",
+      sender: "from@example.com",
+      recipient: "to@example.com",
+      subject: "Test Subject",
+      receivedAt: "2025-01-01T12:00:00Z",
+      smtpHelo: "mail.example.com",
+      smtpMailFrom: "from@example.com",
+      smtpRcptTo: ["to@example.com"],
+      auth,
+      analysis,
+      downloadUrl: "https://example.com/download/email-123",
+      downloadExpiresAt: "2025-01-02T12:00:00Z",
+      attachmentsDownloadUrl: null,
+      attemptCount: 1,
+      dateHeader: "Wed, 1 Jan 2025 12:00:00 +0000",
+    };
+
+    it("builds a schema-valid event for a plain text email with no attachments", () => {
+      const event = buildEventFromParsedData(baseOptions);
+      expect(validateEmailReceivedEvent(event)).toEqual(event);
+      expect(event.email.parsed.status).toBe("complete");
+      if (event.email.parsed.status === "complete") {
+        expect(event.email.parsed.attachments).toEqual([]);
+        expect(event.email.parsed.attachments_download_url).toBeNull();
+      }
+    });
+
+    it("populates content.attachments and attachmentsDownloadUrl together", () => {
+      const withAttachment: ParsedDataComplete = {
+        ...emptyParsed,
+        attachments: [
+          {
+            filename: "doc.pdf",
+            content_type: "application/pdf",
+            size_bytes: 1024,
+            sha256: "c".repeat(64),
+            part_index: 0,
+            tar_path: "0_doc.pdf",
+          },
+        ],
+        attachments_download_url:
+          "https://example.com/attachments/email-123.tar.gz",
+      };
+
+      const event = buildEventFromParsedData({
+        ...baseOptions,
+        parsed: withAttachment,
+        attachmentsDownloadUrl:
+          "https://example.com/attachments/email-123.tar.gz",
+      });
+
+      expect(event.email.parsed.status).toBe("complete");
+      if (event.email.parsed.status === "complete") {
+        expect(event.email.parsed.attachments).toHaveLength(1);
+        expect(event.email.parsed.attachments[0].filename).toBe("doc.pdf");
+        expect(event.email.parsed.attachments_download_url).toBe(
+          "https://example.com/attachments/email-123.tar.gz",
+        );
+      }
+    });
+
+    it("omits raw.data for emails over the inline threshold", () => {
+      const large = Buffer.alloc(RAW_EMAIL_INLINE_THRESHOLD + 1, "x");
+      const event = buildEventFromParsedData({
+        ...baseOptions,
+        rawBytes: large,
+      });
+
+      expect(event.email.content.raw.included).toBe(false);
+      expect(event.email.content.download.url).toBe(baseOptions.downloadUrl);
+      if (!event.email.content.raw.included) {
+        expect("data" in event.email.content.raw).toBe(false);
+      }
+    });
+
+    it("includes both raw.data and download.url for emails under the threshold", () => {
+      const event = buildEventFromParsedData(baseOptions);
+
+      expect(event.email.content.raw.included).toBe(true);
+      expect(event.email.content.download.url).toBe(baseOptions.downloadUrl);
+      if (event.email.content.raw.included) {
+        expect(event.email.content.raw.data).toBe(rawBytes.toString("base64"));
+        const expectedSha = createHash("sha256").update(rawBytes).digest("hex");
+        expect(event.email.content.raw.sha256).toBe(expectedSha);
+      }
+    });
+
+    it("accepts messageId === null without crashing", () => {
+      const event = buildEventFromParsedData({
+        ...baseOptions,
+        messageId: null,
+      });
+      expect(event.email.headers.message_id).toBeNull();
+    });
+
+    it("preserves non-ASCII subject text", () => {
+      const subject = "Résumé from 山田太郎 — ★ 2025";
+      const event = buildEventFromParsedData({
+        ...baseOptions,
+        subject,
+      });
+      expect(event.email.headers.subject).toBe(subject);
+    });
+
+    it("produces the expected rcpt_to array for multiple recipients", () => {
+      const event = buildEventFromParsedData({
+        ...baseOptions,
+        smtpRcptTo: ["first@example.com", "second@example.com"],
+      });
+      expect(event.email.smtp.rcpt_to).toEqual([
+        "first@example.com",
+        "second@example.com",
+      ]);
+    });
+
+    it("throws when attachmentsDownloadUrl is non-null with zero attachments", () => {
+      expect(() =>
+        buildEventFromParsedData({
+          ...baseOptions,
+          attachmentsDownloadUrl: "https://example.com/should-not-be-set",
+        }),
+      ).toThrow(/attachments/i);
+    });
+
+    it("throws when attachmentsDownloadUrl is null with attachments present", () => {
+      const withAttachment: ParsedDataComplete = {
+        ...emptyParsed,
+        attachments: [
+          {
+            filename: "doc.pdf",
+            content_type: "application/pdf",
+            size_bytes: 1024,
+            sha256: "c".repeat(64),
+            part_index: 0,
+            tar_path: "0_doc.pdf",
+          },
+        ],
+        attachments_download_url: null,
+      };
+
+      expect(() =>
+        buildEventFromParsedData({
+          ...baseOptions,
+          parsed: withAttachment,
+          attachmentsDownloadUrl: null,
+        }),
+      ).toThrow(/attachments/i);
+    });
+
+    it("throws when smtpRcptTo is empty (runtime guard for untyped callers)", () => {
+      // The tuple type `[string, ...string[]]` catches this at compile time for
+      // typed callers; the cast simulates a JS or type-cast caller slipping past.
+      expect(() =>
+        buildEventFromParsedData({
+          ...baseOptions,
+          smtpRcptTo: [] as unknown as [string, ...string[]],
+        }),
+      ).toThrow(/smtpRcptTo/);
+    });
+
+    it("computes raw_size_bytes and raw_sha256 from the raw bytes", () => {
+      const event = buildEventFromParsedData(baseOptions);
+      const expectedSha = createHash("sha256").update(rawBytes).digest("hex");
+
+      expect(event.email.content.raw.size_bytes).toBe(rawBytes.length);
+      expect(event.email.content.raw.sha256).toBe(expectedSha);
+    });
+
+    it("forwards buildOptions to the underlying builder", () => {
+      const event = buildEventFromParsedData({
+        ...baseOptions,
+        buildOptions: {
+          attempted_at: "2025-01-01T12:01:00Z",
+        },
+      });
+      expect(event.delivery.attempted_at).toBe("2025-01-01T12:01:00Z");
+    });
+
+    it("is re-exported from the contract package root", () => {
+      expect(contractPackage.buildEventFromParsedData).toBe(
+        buildEventFromParsedData,
+      );
     });
   });
 });

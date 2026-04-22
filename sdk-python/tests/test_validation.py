@@ -149,7 +149,29 @@ def test_validate_email_received_event_rejects_javascript_download_url(
         )
 
 
-def test_validate_email_received_event_rejects_http_attachments_download_url(
+def test_validate_email_received_event_accepts_http_attachments_download_url(
+    valid_payload: dict[str, Any],
+) -> None:
+    # Self-host deployments may issue http:// URLs that resolve on a local
+    # network. Receivers that want to refuse plaintext downloads should
+    # check the scheme explicitly — the SDK no longer enforces it.
+    validate_email_received_event(
+        {
+            **valid_payload,
+            "email": {
+                **valid_payload["email"],
+                "parsed": {
+                    **valid_payload["email"]["parsed"],
+                    "attachments_download_url": (
+                        "http://localhost:4001/attachments/em_1?token=x"
+                    ),
+                },
+            },
+        }
+    )
+
+
+def test_validate_email_received_event_rejects_non_http_schemes_in_attachments_download_url(
     valid_payload: dict[str, Any],
 ) -> None:
     with pytest.raises(WebhookValidationError):
@@ -160,7 +182,7 @@ def test_validate_email_received_event_rejects_http_attachments_download_url(
                     **valid_payload["email"],
                     "parsed": {
                         **valid_payload["email"]["parsed"],
-                        "attachments_download_url": "http://example.com/attachments",
+                        "attachments_download_url": "ftp://example.com/attachments",
                     },
                 },
             }
@@ -187,7 +209,28 @@ def test_validate_email_received_event_accepts_https_attachments_download_url(
     assert event.id == "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 
-def test_email_received_event_model_rejects_http_download_url(
+def test_email_received_event_model_accepts_http_download_url(
+    valid_payload: dict[str, Any],
+) -> None:
+    # Self-host deployments may issue http:// URLs — Pydantic no longer rejects.
+    EmailReceivedEvent.model_validate(
+        {
+            **valid_payload,
+            "email": {
+                **valid_payload["email"],
+                "content": {
+                    **valid_payload["email"]["content"],
+                    "download": {
+                        **valid_payload["email"]["content"]["download"],
+                        "url": "http://localhost:4001/raw/em_1?token=x",
+                    },
+                },
+            },
+        }
+    )
+
+
+def test_email_received_event_model_rejects_non_http_schemes_in_download_url(
     valid_payload: dict[str, Any],
 ) -> None:
     with pytest.raises(ValidationError):
@@ -200,7 +243,7 @@ def test_email_received_event_model_rejects_http_download_url(
                         **valid_payload["email"]["content"],
                         "download": {
                             **valid_payload["email"]["content"]["download"],
-                            "url": "http://example.com/raw",
+                            "url": "ftp://example.com/raw",
                         },
                     },
                 },
@@ -208,22 +251,23 @@ def test_email_received_event_model_rejects_http_download_url(
         )
 
 
-def test_email_received_event_model_rejects_http_attachments_download_url(
+def test_email_received_event_model_accepts_http_attachments_download_url(
     valid_payload: dict[str, Any],
 ) -> None:
-    with pytest.raises(ValidationError):
-        EmailReceivedEvent.model_validate(
-            {
-                **valid_payload,
-                "email": {
-                    **valid_payload["email"],
-                    "parsed": {
-                        **valid_payload["email"]["parsed"],
-                        "attachments_download_url": "http://example.com/attachments",
-                    },
+    EmailReceivedEvent.model_validate(
+        {
+            **valid_payload,
+            "email": {
+                **valid_payload["email"],
+                "parsed": {
+                    **valid_payload["email"]["parsed"],
+                    "attachments_download_url": (
+                        "http://localhost:4001/attachments/em_1?token=x"
+                    ),
                 },
-            }
-        )
+            },
+        }
+    )
 
 
 def test_email_received_event_model_rejects_null_alignment_flags(
