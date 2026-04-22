@@ -1,3 +1,4 @@
+from .client import PrimitiveAPIError, PrimitiveClient, create_client
 from .errors import (
     PAYLOAD_ERRORS,
     RAW_EMAIL_ERRORS,
@@ -121,6 +122,8 @@ __all__ = [
     "ParsedDataFailed",
     "ParsedError",
     "ParsedStatus",
+    "PrimitiveAPIError",
+    "PrimitiveClient",
     "PrimitiveWebhookError",
     "RAW_EMAIL_ERRORS",
     "RawContent",
@@ -147,6 +150,7 @@ __all__ = [
     "WebhookValidationError",
     "WebhookVerificationError",
     "confirmed_headers",
+    "create_client",
     "decode_raw_email",
     "email_received_event_json_schema",
     "get_download_time_remaining",

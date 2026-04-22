@@ -45,6 +45,10 @@ export const openapiDocument: Record<string, unknown> = {
       "description": "List, inspect, and manage received emails"
     },
     {
+      "name": "Sending",
+      "description": "Send outbound emails through the Primitive API"
+    },
+    {
       "name": "Endpoints",
       "description": "Manage webhook endpoints that receive email events"
     },
@@ -1428,6 +1432,68 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       }
+    },
+    "/send": {
+      "post": {
+        "operationId": "sendEmail",
+        "summary": "Send outbound email",
+        "description": "Sends a plain-text outbound email synchronously. The request stays\nopen until Primitive's downstream SMTP service completes the SMTP\ntransaction.\n",
+        "tags": [
+          "Sending"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SMTP transaction result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SendResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeout"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1493,6 +1559,23 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       },
+      "Forbidden": {
+        "description": "Authenticated caller lacks permission for the operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "forbidden",
+                "message": "Insufficient permissions"
+              }
+            }
+          }
+        }
+      },
       "NotFound": {
         "description": "Resource not found",
         "content": {
@@ -1527,6 +1610,23 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       },
+      "PayloadTooLarge": {
+        "description": "Request body exceeds the supported size limit",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "payload_too_large",
+                "message": "Body must be 65536 bytes or smaller"
+              }
+            }
+          }
+        }
+      },
       "RateLimited": {
         "description": "Rate limit exceeded",
         "headers": {
@@ -1547,6 +1647,40 @@ export const openapiDocument: Record<string, unknown> = {
               "error": {
                 "code": "rate_limit_exceeded",
                 "message": "Rate limit exceeded"
+              }
+            }
+          }
+        }
+      },
+      "BadGateway": {
+        "description": "Primitive could not complete the downstream SMTP request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "bad_gateway",
+                "message": "Outbound SMTP service request failed"
+              }
+            }
+          }
+        }
+      },
+      "GatewayTimeout": {
+        "description": "Primitive timed out waiting for the downstream SMTP request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "gateway_timeout",
+                "message": "Outbound SMTP service timed out"
               }
             }
           }
@@ -1660,7 +1794,10 @@ export const openapiDocument: Record<string, unknown> = {
                   "rate_limit_exceeded",
                   "internal_error",
                   "conflict",
-                  "mx_conflict"
+                  "mx_conflict",
+                  "payload_too_large",
+                  "bad_gateway",
+                  "gateway_timeout"
                 ]
               },
               "message": {
@@ -2336,6 +2473,99 @@ export const openapiDocument: Record<string, unknown> = {
           "webhook_attempt_count",
           "from_email",
           "to_email"
+        ]
+      },
+      "SendInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "email",
+            "minLength": 1,
+            "maxLength": 320,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            "description": "Active sender address on a domain owned by your organization"
+          },
+          "to": {
+            "type": "string",
+            "format": "email",
+            "minLength": 1,
+            "maxLength": 320,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            "description": "Exact recipient address that previously sent your org an authenticated inbound email"
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 998,
+            "description": "Subject line for the outbound message"
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Plain-text message body. Maximum size is 65536 UTF-8 bytes."
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "subject",
+          "body"
+        ]
+      },
+      "SendResult": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "rejected",
+              "tempfailed",
+              "failed"
+            ]
+          },
+          "smtp_code": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Final SMTP status code reported by the downstream SMTP transaction"
+          },
+          "smtp_message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Final SMTP status message, if available"
+          },
+          "remote_host": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Recipient MX host contacted for the SMTP transaction"
+          },
+          "service_message_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Message identifier assigned by Primitive's outbound SMTP service"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "smtp_code",
+          "smtp_message",
+          "remote_host",
+          "service_message_id"
         ]
       },
       "Endpoint": {

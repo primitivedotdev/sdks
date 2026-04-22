@@ -18,7 +18,8 @@ import (
 )
 
 var regexMap = map[string]ogenregex.Regexp{
-	"^\\d+$": ogenregex.MustCompile("^\\d+$"),
+	"^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$": ogenregex.MustCompile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"),
+	"^\\d+$":                         ogenregex.MustCompile("^\\d+$"),
 }
 var (
 	// Allocate option closure once.

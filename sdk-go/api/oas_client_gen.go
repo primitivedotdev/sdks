@@ -179,6 +179,14 @@ type Invoker interface {
 	//
 	// POST /account/webhook-secret/rotate
 	RotateWebhookSecret(ctx context.Context) (RotateWebhookSecretRes, error)
+	// SendEmail invokes sendEmail operation.
+	//
+	// Sends a plain-text outbound email synchronously. The request stays
+	// open until Primitive's downstream SMTP service completes the SMTP
+	// transaction.
+	//
+	// POST /send
+	SendEmail(ctx context.Context, request *SendInput) (SendEmailRes, error)
 	// TestEndpoint invokes testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -3002,6 +3010,118 @@ func (c *Client) sendRotateWebhookSecret(ctx context.Context) (res RotateWebhook
 
 	stage = "DecodeResponse"
 	result, err := decodeRotateWebhookSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// SendEmail invokes sendEmail operation.
+//
+// Sends a plain-text outbound email synchronously. The request stays
+// open until Primitive's downstream SMTP service completes the SMTP
+// transaction.
+//
+// POST /send
+func (c *Client) SendEmail(ctx context.Context, request *SendInput) (SendEmailRes, error) {
+	res, err := c.sendSendEmail(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendSendEmail(ctx context.Context, request *SendInput) (res SendEmailRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("sendEmail"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/send"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, SendEmailOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/send"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeSendEmailRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, SendEmailOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSendEmailResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

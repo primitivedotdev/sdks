@@ -31,7 +31,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'payload_too_large' | 'bad_gateway' | 'gateway_timeout';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -247,6 +247,46 @@ export type EmailDetail = {
      * Parsed to address (same as recipient)
      */
     to_email: string;
+};
+
+export type SendInput = {
+    /**
+     * Active sender address on a domain owned by your organization
+     */
+    from: string;
+    /**
+     * Exact recipient address that previously sent your org an authenticated inbound email
+     */
+    to: string;
+    /**
+     * Subject line for the outbound message
+     */
+    subject: string;
+    /**
+     * Plain-text message body. Maximum size is 65536 UTF-8 bytes.
+     */
+    body: string;
+};
+
+export type SendResult = {
+    id: string;
+    status: 'accepted' | 'rejected' | 'tempfailed' | 'failed';
+    /**
+     * Final SMTP status code reported by the downstream SMTP transaction
+     */
+    smtp_code: number | null;
+    /**
+     * Final SMTP status message, if available
+     */
+    smtp_message: string | null;
+    /**
+     * Recipient MX host contacted for the SMTP transaction
+     */
+    remote_host: string | null;
+    /**
+     * Message identifier assigned by Primitive's outbound SMTP service
+     */
+    service_message_id: string | null;
 };
 
 export type Endpoint = {
@@ -1480,3 +1520,50 @@ export type ReplayDeliveryResponses = {
 };
 
 export type ReplayDeliveryResponse = ReplayDeliveryResponses[keyof ReplayDeliveryResponses];
+
+export type SendEmailData = {
+    body: SendInput;
+    path?: never;
+    query?: never;
+    url: '/send';
+};
+
+export type SendEmailErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Request body exceeds the supported size limit
+     */
+    413: ErrorResponse;
+    /**
+     * Primitive could not complete the downstream SMTP request
+     */
+    502: ErrorResponse;
+    /**
+     * Primitive timed out waiting for the downstream SMTP request
+     */
+    504: ErrorResponse;
+};
+
+export type SendEmailError = SendEmailErrors[keyof SendEmailErrors];
+
+export type SendEmailResponses = {
+    /**
+     * SMTP transaction result
+     */
+    200: SuccessEnvelope & {
+        data?: SendResult;
+    };
+};
+
+export type SendEmailResponse = SendEmailResponses[keyof SendEmailResponses];

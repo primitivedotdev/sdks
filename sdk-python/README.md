@@ -45,6 +45,24 @@ def webhook_handler(body: bytes, headers: dict[str, str]) -> dict[str, object]:
 
 ## Core API
 
+### Convenience client
+
+Use `PrimitiveClient` for the simple outbound send flow.
+
+```python
+from primitive import PrimitiveClient
+
+client = PrimitiveClient("prim_test")
+result = client.send(
+    from_email="support@example.com",
+    to="alice@example.com",
+    subject="Hello",
+    body="Hi there",
+)
+
+print(result.status.value)
+```
+
 ### API module
 
 Use `primitive.api` for outbound calls to the Primitive HTTP API.

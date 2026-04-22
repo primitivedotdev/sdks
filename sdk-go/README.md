@@ -58,6 +58,40 @@ func deref(value *string) string {
 
 ## Core API
 
+### Convenience client
+
+Use `primitive.NewClient` when you want a small `.Send()` helper instead of the full generated API package.
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+
+	primitive "github.com/primitivedotdev/sdks/sdk-go"
+)
+
+func main() {
+	client, err := primitive.NewClient("prim_test")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := client.Send(context.Background(), primitive.SendParams{
+		From:    "support@example.com",
+		To:      "alice@example.com",
+		Subject: "Hello",
+		Body:    "Hi there",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println(result.Status)
+}
+```
+
 ### API package
 
 Use the generated `api` package for outbound calls to the Primitive HTTP API.

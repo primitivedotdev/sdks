@@ -28,6 +28,12 @@ Each SDK exposes a webhook module and an API module:
 - `webhook` handles inbound Primitive webhook verification and parsing
 - `api` handles outbound calls to the Primitive HTTP API
 
+Each SDK now also includes a small convenience send client on its main surface:
+
+- Node: `new PrimitiveClient(...).send(...)`
+- Python: `PrimitiveClient(...).send(...)`
+- Go: `primitive.NewClient(...).Send(...)`
+
 The Node SDK also ships:
 
 - `@primitivedotdev/sdk/openapi` for the canonical OpenAPI document

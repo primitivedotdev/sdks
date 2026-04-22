@@ -85,6 +85,10 @@ type RotateWebhookSecretRes interface {
 	rotateWebhookSecretRes()
 }
 
+type SendEmailRes interface {
+	sendEmailRes()
+}
+
 type TestEndpointRes interface {
 	testEndpointRes()
 }

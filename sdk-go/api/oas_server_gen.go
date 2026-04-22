@@ -159,6 +159,14 @@ type Handler interface {
 	//
 	// POST /account/webhook-secret/rotate
 	RotateWebhookSecret(ctx context.Context) (RotateWebhookSecretRes, error)
+	// SendEmail implements sendEmail operation.
+	//
+	// Sends a plain-text outbound email synchronously. The request stays
+	// open until Primitive's downstream SMTP service completes the SMTP
+	// transaction.
+	//
+	// POST /send
+	SendEmail(ctx context.Context, req *SendInput) (SendEmailRes, error)
 	// TestEndpoint implements testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request

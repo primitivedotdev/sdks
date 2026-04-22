@@ -26,9 +26,25 @@ npm install @primitivedotdev/sdk
 
 ## Modules
 
-### Webhook
+### Root Convenience Client
 
-The root entrypoint remains webhook-focused.
+The root entrypoint now also exposes `PrimitiveClient` for simple outbound sends.
+
+```ts
+import { PrimitiveClient } from "@primitivedotdev/sdk";
+
+const client = new PrimitiveClient({ apiKey: process.env.PRIMITIVE_API_KEY });
+const result = await client.send({
+  from: "support@example.com",
+  to: "alice@example.com",
+  subject: "Hello",
+  body: "Hi there",
+});
+
+console.log(result.status);
+```
+
+### Webhook
 
 ```ts
 import { handleWebhook, PrimitiveWebhookError } from "@primitivedotdev/sdk";
@@ -85,6 +101,8 @@ if (result.error) {
 
 console.log(result.data.id);
 ```
+
+If you only need the send flow, `PrimitiveClient#send()` is the smaller wrapper around this generated API module.
 
 The package also ships a generated CLI bin named `primitive`.
 

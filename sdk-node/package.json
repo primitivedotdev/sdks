@@ -68,6 +68,9 @@
       "emails": {
         "description": "List, inspect, and manage received emails"
       },
+      "sending": {
+        "description": "Send outbound emails through the Primitive API"
+      },
       "endpoints": {
         "description": "Manage webhook endpoints that receive email events"
       },

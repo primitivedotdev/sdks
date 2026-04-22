@@ -59,6 +59,7 @@ var operationRolesBearerAuth = map[string][]string{
 	ReplayDeliveryOperation:      []string{},
 	ReplayEmailWebhooksOperation: []string{},
 	RotateWebhookSecretOperation: []string{},
+	SendEmailOperation:           []string{},
 	TestEndpointOperation:        []string{},
 	UpdateAccountOperation:       []string{},
 	UpdateDomainOperation:        []string{},
