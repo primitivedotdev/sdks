@@ -10,50 +10,47 @@ describe("parseFromHeader (strict)", () => {
       const r = parseFromHeader("user@example.com");
       expect(r).toEqual({
         ok: true,
-        value: { address: "user@example.com", name: null },
+        value: { address: "user@example.com" },
       });
     });
 
-    it("parses display name + angle-bracketed address", () => {
+    it("extracts the address from a display-name + angle-bracket form", () => {
       const r = parseFromHeader("Plain Name <user@example.com>");
       expect(r).toEqual({
         ok: true,
-        value: { address: "user@example.com", name: "Plain Name" },
+        value: { address: "user@example.com" },
       });
     });
 
-    it("parses quoted display name", () => {
+    it("extracts the address from a quoted display name", () => {
       const r = parseFromHeader('"Quoted Name" <user@example.com>');
       expect(r).toEqual({
         ok: true,
-        value: { address: "user@example.com", name: "Quoted Name" },
+        value: { address: "user@example.com" },
       });
     });
 
-    it("parses angle-bracketed address with no display name", () => {
+    it("extracts the address with no display name", () => {
       const r = parseFromHeader("<user@example.com>");
       expect(r).toEqual({
         ok: true,
-        value: { address: "user@example.com", name: null },
+        value: { address: "user@example.com" },
       });
     });
 
-    it("preserves an RFC 2047 encoded-word display name verbatim", () => {
-      // We do NOT decode encoded words: name is informational, address is
-      // the security-bearing field.
+    it("extracts the address from an RFC 2047 encoded-word display name", () => {
       const r = parseFromHeader("=?utf-8?B?5pel5pys?= <user@example.com>");
-      expect(r.ok).toBe(true);
-      if (r.ok) {
-        expect(r.value.address).toBe("user@example.com");
-        expect(r.value.name).toBe("=?utf-8?B?5pel5pys?=");
-      }
+      expect(r).toEqual({
+        ok: true,
+        value: { address: "user@example.com" },
+      });
     });
 
-    it("handles a display name that contains angle brackets", () => {
+    it("extracts the address when display name contains angle brackets", () => {
       const r = parseFromHeader('"Re: <ticket>" <user@example.com>');
       expect(r).toEqual({
         ok: true,
-        value: { address: "user@example.com", name: "Re: <ticket>" },
+        value: { address: "user@example.com" },
       });
     });
 
@@ -61,7 +58,7 @@ describe("parseFromHeader (strict)", () => {
       const r = parseFromHeader("User <USER@Example.COM>");
       expect(r).toEqual({
         ok: true,
-        value: { address: "user@example.com", name: "User" },
+        value: { address: "user@example.com" },
       });
     });
 
@@ -70,15 +67,17 @@ describe("parseFromHeader (strict)", () => {
       // Plus-aliasing is a receive-side convention; senders almost never
       // get to choose the From's local-part.
       const r = parseFromHeader("Joe <joe+work@example.com>");
-      expect(r.ok).toBe(true);
-      if (r.ok) expect(r.value.address).toBe("joe+work@example.com");
+      expect(r).toEqual({
+        ok: true,
+        value: { address: "joe+work@example.com" },
+      });
     });
 
     it("trims surrounding whitespace before parsing", () => {
       const r = parseFromHeader("   user@example.com   ");
       expect(r).toEqual({
         ok: true,
-        value: { address: "user@example.com", name: null },
+        value: { address: "user@example.com" },
       });
     });
 
@@ -87,8 +86,10 @@ describe("parseFromHeader (strict)", () => {
       // realistic internationalized addresses. 5 chars of 3 bytes each
       // plus '@example.com' is 27 bytes total, well under both caps.
       const r = parseFromHeader("用户名 <用户名@example.com>");
-      expect(r.ok).toBe(true);
-      if (r.ok) expect(r.value.address).toBe("用户名@example.com");
+      expect(r).toEqual({
+        ok: true,
+        value: { address: "用户名@example.com" },
+      });
     });
 
     it("accepts an IPv4 address literal in the domain", () => {
@@ -97,8 +98,48 @@ describe("parseFromHeader (strict)", () => {
       // reject the [n.n.n.n] form, which legitimately contains dots
       // but is bracketed.
       const r = parseFromHeader("user@[192.168.1.1]");
-      expect(r.ok).toBe(true);
-      if (r.ok) expect(r.value.address).toBe("user@[192.168.1.1]");
+      expect(r).toEqual({
+        ok: true,
+        value: { address: "user@[192.168.1.1]" },
+      });
+    });
+
+    it("accepts trailing junk but does not surface it (no name field)", () => {
+      // Strict drops the name field entirely, so addressparser's
+      // recovery (`name: "extra"` from `user@example.com extra`) cannot
+      // leak into the result. The address is correct, which is what the
+      // gate decision needs; the trailing token is silently discarded.
+      const r = parseFromHeader("user@example.com extra");
+      expect(r).toEqual({
+        ok: true,
+        value: { address: "user@example.com" },
+      });
+    });
+
+    it("ignores a second bracketed address that addressparser folds into the name", () => {
+      // For input like `Name <user@x.com> <attacker@y.com>`, addressparser
+      // returns one entry whose name is `Name attacker@y.com`. The name is
+      // never surfaced by strict, so the address-confusion vector is
+      // closed: the gate sees only `user@x.com`, which is what the
+      // canonical From-header parse defines as the sender identity.
+      const r = parseFromHeader(
+        "Name <user@example.com> <attacker@example.net>",
+      );
+      expect(r).toEqual({
+        ok: true,
+        value: { address: "user@example.com" },
+      });
+    });
+
+    it("ignores an embedded CRLF in a quoted display name", () => {
+      // addressparser collapses CR/LF in quoted strings to spaces and
+      // strict drops the name anyway, so a header-injection attempt via
+      // the name field cannot survive into the result.
+      const r = parseFromHeader('"Name\r\n Bcc: x" <user@example.com>');
+      expect(r).toEqual({
+        ok: true,
+        value: { address: "user@example.com" },
+      });
     });
   });
 

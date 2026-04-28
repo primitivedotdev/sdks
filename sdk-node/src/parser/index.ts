@@ -5,6 +5,7 @@ export type {
   ParsedAddress,
   ParseFromHeaderFailureReason,
   ParseFromHeaderResult,
+  ValidatedAddress,
 } from "./address-parser.js";
 export {
   parseFromHeader,

@@ -25,16 +25,31 @@ const IS_EMAIL_OPTIONS = {
 } as const;
 
 /**
- * A parsed RFC 5322 address with its display name.
+ * A validated RFC 5322 address. Returned by the strict parser, which
+ * deliberately does not expose a display name.
  *
  * `address` is normalized to lowercase. Both the local-part and the
  * domain are lowercased: RFC 5321 §2.4 permits case-sensitive local-
  * parts, but every consumer mailbox in practice treats them as
  * case-insensitive, and a case-sensitive grant key would split
  * `Bob@x.com` from `bob@x.com` into separate rows and defeat the
- * primary-key index on lookup. The display name is preserved as
- * provided (after addressparser's quote / encoded-word handling), or
- * null if the header had no display name.
+ * primary-key index on lookup.
+ */
+export interface ValidatedAddress {
+  address: string;
+}
+
+/**
+ * A parsed RFC 5322 address with its display name. Returned by the
+ * loose parser for display-only call sites.
+ *
+ * `address` is lowercased on the same rationale as
+ * {@link ValidatedAddress}. The display name is preserved as provided
+ * (after addressparser's quote / encoded-word handling), or null if the
+ * header had no display name. Names from the loose parser are NOT
+ * trustworthy for downstream mail building: addressparser's recovery
+ * mode can fold trailing tokens or a second bracketed address into the
+ * name field. Treat as opaque text, sanitize before re-emitting.
  */
 export interface ParsedAddress {
   address: string;
@@ -53,7 +68,7 @@ export type ParseFromHeaderFailureReason =
   | "invalid_address";
 
 export type ParseFromHeaderResult =
-  | { ok: true; value: ParsedAddress }
+  | { ok: true; value: ValidatedAddress }
   | { ok: false; reason: ParseFromHeaderFailureReason };
 
 /**
@@ -71,11 +86,18 @@ export type ParseFromHeaderResult =
  *     hostname-label rules, TLD requirement, and other RFC 5321/5322
  *     conformance checks.
  *
+ * Returns ONLY the validated address, with no display name. Strict
+ * exists for gating decisions, where the address is the security-
+ * bearing field. Display names from addressparser are not trustworthy
+ * here: weird inputs like `Name <user@x.com> <attacker@y.com>` get
+ * parsed as a single entry whose `name` silently includes the second
+ * address. Surfacing that as a "parsed name" would invite downstream
+ * misuse, so we drop it. If you need the name, call
+ * {@link parseFromHeaderLoose} alongside (it returns null on failure
+ * anyway, so you can still gate on strict's Result).
+ *
  * Returns a typed Result so callers can map the failure reason to
  * stable error codes without inspecting message text.
- *
- * For display-only use cases (inbox UI, log lines), prefer
- * {@link parseFromHeaderLoose}.
  */
 export function parseFromHeader(
   header: string | null | undefined,
@@ -116,24 +138,25 @@ export function parseFromHeader(
 
   return {
     ok: true,
-    value: {
-      address: entry.address.toLowerCase(),
-      name: entry.name && entry.name.length > 0 ? entry.name : null,
-    },
+    value: { address: entry.address.toLowerCase() },
   };
 }
 
 /**
  * Lenient parser for display-only call sites (inbox card "from",
- * log lines, debugging). Returns the first parseable address or null.
+ * log lines, debugging). Returns the first parseable address with its
+ * display name, or null.
  *
  * Differences from {@link parseFromHeader}:
  *   - Multi-address From returns the first address instead of rejecting
  *   - Group syntax is flattened into its member addresses
  *   - Returns null instead of a typed reason on failure
+ *   - Includes the parsed display name in the result
  *
  * Do not use for permission gates or any decision that grants access.
- * That is what {@link parseFromHeader} is for.
+ * That is what {@link parseFromHeader} is for. Names returned here can
+ * include addressparser's recovery output (trailing tokens, garbage
+ * before the address); treat as opaque text for display.
  */
 export function parseFromHeaderLoose(
   header: string | null | undefined,
