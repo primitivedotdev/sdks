@@ -81,6 +81,25 @@ describe("parseFromHeader (strict)", () => {
         value: { address: "user@example.com", name: null },
       });
     });
+
+    it("accepts a normal-size SMTPUTF8 address with multi-byte chars", () => {
+      // Locks in that byte-counted length checks do not false-reject
+      // realistic internationalized addresses. 5 chars of 3 bytes each
+      // plus '@example.com' is 27 bytes total, well under both caps.
+      const r = parseFromHeader("用户名 <用户名@example.com>");
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.value.address).toBe("用户名@example.com");
+    });
+
+    it("accepts an IPv4 address literal in the domain", () => {
+      // RFC 5321 §4.1.3 allows [IPv4] address literals in the domain
+      // part. The dot/leading-dot/trailing-dot domain checks must not
+      // reject the [n.n.n.n] form, which legitimately contains dots
+      // but is bracketed.
+      const r = parseFromHeader("user@[192.168.1.1]");
+      expect(r.ok).toBe(true);
+      if (r.ok) expect(r.value.address).toBe("user@[192.168.1.1]");
+    });
   });
 
   describe("rejection paths", () => {
@@ -256,6 +275,12 @@ describe("parseFromHeaderLoose", () => {
 
   it("returns null for over-long input", () => {
     expect(parseFromHeaderLoose(`${"a".repeat(1000)}@example.com`)).toBeNull();
+  });
+
+  it("returns null when bytes exceed the cap even if chars do not", () => {
+    // Mirror of the strict-path test. 'é' is one JS code unit but two
+    // UTF-8 bytes, so 600 chars is 1200 bytes.
+    expect(parseFromHeaderLoose("é".repeat(600))).toBeNull();
   });
 
   it("returns the FIRST address from a multi-address header", () => {
