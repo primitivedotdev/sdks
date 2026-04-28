@@ -6,7 +6,7 @@
 
 #### Node SDK
 
-- `parseFromHeader` and `parseFromHeaderLoose` at `@primitivedotdev/sdk/parser`: structured parsers for RFC 5322 From-style headers, built on `nodemailer/lib/addressparser` (the same parser mailparser and mailauth use under the hood). The strict variant returns a typed `Result` and rejects multi-address headers, group syntax, malformed addresses, and over-long input — intended for security-bearing callers like permission gates. The loose variant returns the first parseable address or null and is intended for display-only uses (inbox UI, log lines). Both lowercase the address and bound input length. Node-only because parsing is a hosting-side concern.
+- `parseFromHeader` and `parseFromHeaderLoose` at `@primitivedotdev/sdk/parser`: structured parsers for RFC 5322 From-style headers, built on `nodemailer/lib/addressparser` (the same parser mailparser and mailauth use under the hood). The strict variant returns a typed `Result` and rejects multi-address headers, group syntax, malformed addresses, and over-long input. It is intended for security-bearing callers like permission gates. The loose variant returns the first parseable address or null and is intended for display-only uses (inbox UI, log lines). Both lowercase the address and bound input length. Node-only because parsing is a hosting-side concern.
 
 ## 0.6.0
 

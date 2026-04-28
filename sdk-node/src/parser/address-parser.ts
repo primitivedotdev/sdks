@@ -1,7 +1,7 @@
 import addressparser from "nodemailer/lib/addressparser/index.js";
 
 // Per RFC 5322 §2.1.1, header lines are bounded at 998 octets. Reject
-// anything beyond that as malformed without parsing — a longer From
+// anything beyond that as malformed without parsing. A longer From
 // field is either a header-injection probe or a corrupt feed.
 const MAX_HEADER_LENGTH = 998;
 
