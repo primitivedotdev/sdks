@@ -114,6 +114,17 @@ describe("parseFromHeader (strict)", () => {
       });
     });
 
+    it("rejects headers over 998 bytes when chars alone are under the cap", () => {
+      // 'é' is one JS code unit but two UTF-8 bytes. 600 of them is 600
+      // chars but 1200 bytes, so a char-counted check would let it pass
+      // while a byte-counted check correctly rejects it.
+      const huge = "é".repeat(600);
+      expect(parseFromHeader(huge)).toEqual({
+        ok: false,
+        reason: "too_long",
+      });
+    });
+
     it("rejects multi-address From", () => {
       expect(parseFromHeader("a@example.com, b@example.com")).toEqual({
         ok: false,
@@ -197,6 +208,15 @@ describe("parseFromHeader (strict)", () => {
       // Long enough to be a clearly invalid address but still under the
       // 998-octet header cap so it reaches the address-shape check.
       const local = "a".repeat(310);
+      const r = parseFromHeader(`Display <${local}@example.com>`);
+      expect(r).toEqual({ ok: false, reason: "invalid_address" });
+    });
+
+    it("rejects addr-spec over 320 bytes when chars alone are under the cap", () => {
+      // 200 'é' chars in the local-part is 200 JS code units but 400
+      // UTF-8 bytes, so the addr-spec is well over 320 bytes while
+      // staying under 320 chars.
+      const local = "é".repeat(200);
       const r = parseFromHeader(`Display <${local}@example.com>`);
       expect(r).toEqual({ ok: false, reason: "invalid_address" });
     });

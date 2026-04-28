@@ -1,14 +1,17 @@
 import addressparser from "nodemailer/lib/addressparser/index.js";
 
-// Per RFC 5322 §2.1.1, header lines are bounded at 998 octets. Reject
-// anything beyond that as malformed without parsing. A longer From
-// field is either a header-injection probe or a corrupt feed.
+// Per RFC 5322 §2.1.1, header lines are bounded at 998 octets. We measure
+// in UTF-8 bytes, not JS code units, so SMTPUTF8 (RFC 6531) headers with
+// multi-byte characters cannot bypass the cap by being short on chars but
+// long on bytes. Reject anything beyond as malformed without parsing: a
+// longer From field is either a header-injection probe or a corrupt feed.
 const MAX_HEADER_LENGTH = 998;
 
 // Per RFC 5321 §4.5.3.1, the local-part is at most 64 octets and the
-// domain at most 255, so the addr-spec is at most 320 (plus the '@').
-// We use 320 as the cap on the address portion only; the display name
-// can use the rest of the 998.
+// domain at most 255, so the addr-spec (including the '@') is at most
+// 320 octets total (64 + 1 + 255). Cap applies to the address portion
+// only; the display name can use the rest of the 998. Like the header
+// cap, measured in UTF-8 bytes for SMTPUTF8 safety.
 const MAX_ADDRESS_LENGTH = 320;
 
 /**
@@ -30,7 +33,6 @@ export interface ParsedAddress {
 export type ParseFromHeaderFailureReason =
   | "empty"
   | "too_long"
-  | "unparseable"
   | "multiple_addresses"
   | "group_syntax"
   | "invalid_address";
@@ -46,7 +48,6 @@ export type ParseFromHeaderResult =
  * Rejects, without falling back to a "best guess":
  *   - empty / whitespace-only input
  *   - inputs longer than RFC 5322's 998-octet line limit
- *   - inputs that addressparser cannot extract any address from
  *   - multi-address From (RFC 5322 allows it but it is vanishingly
  *     rare and ambiguous as an identity)
  *   - group syntax ("Friends: a@b.com, c@d.com;")
@@ -70,21 +71,26 @@ export function parseFromHeader(
   if (trimmed.length === 0) {
     return { ok: false, reason: "empty" };
   }
-  if (trimmed.length > MAX_HEADER_LENGTH) {
+  if (Buffer.byteLength(trimmed, "utf8") > MAX_HEADER_LENGTH) {
     return { ok: false, reason: "too_long" };
   }
 
   // Default (no flatten) so group entries surface as { name, group: [] }
   // rather than being silently merged into the address list.
   const parsed = addressparser(trimmed);
-  if (parsed.length === 0) {
-    return { ok: false, reason: "unparseable" };
-  }
+  // addressparser returns a single entry with empty `address` for raw
+  // garbage rather than an empty array, so an empty result is only
+  // possible for inputs that already failed our trim/empty check above.
+  // The defensive fall-through below maps any future regression to
+  // invalid_address rather than crashing on parsed[0].
   if (parsed.length > 1) {
     return { ok: false, reason: "multiple_addresses" };
   }
 
   const entry = parsed[0];
+  if (entry === undefined) {
+    return { ok: false, reason: "invalid_address" };
+  }
   if ("group" in entry) {
     return { ok: false, reason: "group_syntax" };
   }
@@ -120,17 +126,16 @@ export function parseFromHeaderLoose(
     return null;
   }
   const trimmed = header.trim();
-  if (trimmed.length === 0 || trimmed.length > MAX_HEADER_LENGTH) {
+  if (
+    trimmed.length === 0 ||
+    Buffer.byteLength(trimmed, "utf8") > MAX_HEADER_LENGTH
+  ) {
     return null;
   }
 
   const parsed = addressparser(trimmed, { flatten: true });
-  if (parsed.length === 0) {
-    return null;
-  }
-
   const entry = parsed[0];
-  if (!isValidAddress(entry.address)) {
+  if (entry === undefined || !isValidAddress(entry.address)) {
     return null;
   }
 
@@ -141,7 +146,10 @@ export function parseFromHeaderLoose(
 }
 
 function isValidAddress(address: string): boolean {
-  if (address.length === 0 || address.length > MAX_ADDRESS_LENGTH) {
+  if (
+    address.length === 0 ||
+    Buffer.byteLength(address, "utf8") > MAX_ADDRESS_LENGTH
+  ) {
     return false;
   }
   const at = address.indexOf("@");
