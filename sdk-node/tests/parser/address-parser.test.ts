@@ -239,6 +239,48 @@ describe("parseFromHeader (strict)", () => {
       const r = parseFromHeader(`Display <${local}@example.com>`);
       expect(r).toEqual({ ok: false, reason: "invalid_address" });
     });
+
+    it("rejects local-part with leading dot", () => {
+      expect(parseFromHeader(".user@example.com")).toEqual({
+        ok: false,
+        reason: "invalid_address",
+      });
+    });
+
+    it("rejects local-part with trailing dot", () => {
+      expect(parseFromHeader("user.@example.com")).toEqual({
+        ok: false,
+        reason: "invalid_address",
+      });
+    });
+
+    it("rejects local-part with consecutive dots", () => {
+      expect(parseFromHeader("us..er@example.com")).toEqual({
+        ok: false,
+        reason: "invalid_address",
+      });
+    });
+
+    it("rejects domain label with leading hyphen", () => {
+      expect(parseFromHeader("user@-example.com")).toEqual({
+        ok: false,
+        reason: "invalid_address",
+      });
+    });
+
+    it("rejects domain label with trailing hyphen", () => {
+      expect(parseFromHeader("user@example-.com")).toEqual({
+        ok: false,
+        reason: "invalid_address",
+      });
+    });
+
+    it("rejects underscore in domain label", () => {
+      expect(parseFromHeader("user@example_com.com")).toEqual({
+        ok: false,
+        reason: "invalid_address",
+      });
+    });
   });
 });
 

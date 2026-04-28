@@ -1,4 +1,5 @@
 import addressparser from "nodemailer/lib/addressparser/index.js";
+import isEmail from "validator/lib/isEmail.js";
 
 // Per RFC 5322 §2.1.1, header lines are bounded at 998 octets. We measure
 // in UTF-8 bytes, not JS code units, so SMTPUTF8 (RFC 6531) headers with
@@ -7,19 +8,33 @@ import addressparser from "nodemailer/lib/addressparser/index.js";
 // longer From field is either a header-injection probe or a corrupt feed.
 const MAX_HEADER_LENGTH = 998;
 
-// Per RFC 5321 §4.5.3.1, the local-part is at most 64 octets and the
-// domain at most 255, so the addr-spec (including the '@') is at most
-// 320 octets total (64 + 1 + 255). Cap applies to the address portion
-// only; the display name can use the rest of the 998. Like the header
-// cap, measured in UTF-8 bytes for SMTPUTF8 safety.
-const MAX_ADDRESS_LENGTH = 320;
+// Options for validator's isEmail. The per-part length limits (64-octet
+// local-part, 255-octet domain), dot-atom rules, hostname-label rules,
+// and TLD requirement are all enforced inside isEmail. We choose:
+//   allow_ip_domain: true     -- accept user@[192.168.1.1] address-literals
+//   require_tld: true         -- reject user@localhost
+//   allow_display_name: false -- we already extracted the address with
+//                                addressparser, so isEmail only sees the
+//                                bare addr-spec
+//   allow_utf8_local_part: true -- accept SMTPUTF8 / EAI local-parts
+const IS_EMAIL_OPTIONS = {
+  allow_ip_domain: true,
+  require_tld: true,
+  allow_display_name: false,
+  allow_utf8_local_part: true,
+} as const;
 
 /**
  * A parsed RFC 5322 address with its display name.
  *
- * `address` is normalized to lowercase. The display name is preserved as
- * provided (after addressparser's quote/encoded-word handling), or null
- * if the header had no display name.
+ * `address` is normalized to lowercase. Both the local-part and the
+ * domain are lowercased: RFC 5321 §2.4 permits case-sensitive local-
+ * parts, but every consumer mailbox in practice treats them as
+ * case-insensitive, and a case-sensitive grant key would split
+ * `Bob@x.com` from `bob@x.com` into separate rows and defeat the
+ * primary-key index on lookup. The display name is preserved as
+ * provided (after addressparser's quote / encoded-word handling), or
+ * null if the header had no display name.
  */
 export interface ParsedAddress {
   address: string;
@@ -51,9 +66,10 @@ export type ParseFromHeaderResult =
  *   - multi-address From (RFC 5322 allows it but it is vanishingly
  *     rare and ambiguous as an identity)
  *   - group syntax ("Friends: a@b.com, c@d.com;")
- *   - addresses without exactly one '@', with empty halves, or with a
- *     domain that lacks a dot / starts or ends with '.' / contains '..'
- *   - addresses whose addr-spec exceeds 320 octets
+ *   - any address that fails validator's isEmail check with our chosen
+ *     options. That covers per-part length limits, dot-atom rules,
+ *     hostname-label rules, TLD requirement, and other RFC 5321/5322
+ *     conformance checks.
  *
  * Returns a typed Result so callers can map the failure reason to
  * stable error codes without inspecting message text.
@@ -78,23 +94,23 @@ export function parseFromHeader(
   // Default (no flatten) so group entries surface as { name, group: [] }
   // rather than being silently merged into the address list.
   const parsed = addressparser(trimmed);
-  // addressparser returns a single entry with empty `address` for raw
-  // garbage rather than an empty array, so an empty result is only
-  // possible for inputs that already failed our trim/empty check above.
-  // The defensive fall-through below maps any future regression to
-  // invalid_address rather than crashing on parsed[0].
   if (parsed.length > 1) {
     return { ok: false, reason: "multiple_addresses" };
   }
 
   const entry = parsed[0];
+  // addressparser returns a single entry with empty `address` for raw
+  // garbage rather than an empty array, so an empty result is only
+  // possible for inputs that already failed our trim/empty check above.
+  // The defensive fall-through maps any future regression to
+  // invalid_address rather than crashing on parsed[0].
   if (entry === undefined) {
     return { ok: false, reason: "invalid_address" };
   }
   if ("group" in entry) {
     return { ok: false, reason: "group_syntax" };
   }
-  if (!isValidAddress(entry.address)) {
+  if (!isEmail(entry.address, IS_EMAIL_OPTIONS)) {
     return { ok: false, reason: "invalid_address" };
   }
 
@@ -135,7 +151,7 @@ export function parseFromHeaderLoose(
 
   const parsed = addressparser(trimmed, { flatten: true });
   const entry = parsed[0];
-  if (entry === undefined || !isValidAddress(entry.address)) {
+  if (entry === undefined || !isEmail(entry.address, IS_EMAIL_OPTIONS)) {
     return null;
   }
 
@@ -143,31 +159,4 @@ export function parseFromHeaderLoose(
     address: entry.address.toLowerCase(),
     name: entry.name && entry.name.length > 0 ? entry.name : null,
   };
-}
-
-function isValidAddress(address: string): boolean {
-  if (
-    address.length === 0 ||
-    Buffer.byteLength(address, "utf8") > MAX_ADDRESS_LENGTH
-  ) {
-    return false;
-  }
-  const at = address.indexOf("@");
-  if (at < 0 || at !== address.lastIndexOf("@")) {
-    return false;
-  }
-  const local = address.slice(0, at);
-  const domain = address.slice(at + 1);
-  if (local.length === 0 || domain.length === 0) {
-    return false;
-  }
-  if (
-    !domain.includes(".") ||
-    domain.startsWith(".") ||
-    domain.endsWith(".") ||
-    domain.includes("..")
-  ) {
-    return false;
-  }
-  return true;
 }

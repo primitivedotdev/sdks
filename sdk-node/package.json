@@ -133,7 +133,8 @@
     "isomorphic-dompurify": "^3.8.0",
     "mailparser": "^3.9.0",
     "nodemailer": "^8.0.7",
-    "tar-stream": "^3.1.8"
+    "tar-stream": "^3.1.8",
+    "validator": "^13.15.35"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
@@ -143,6 +144,7 @@
     "@types/node": "^22.10.2",
     "@types/nodemailer": "^8.0.0",
     "@types/tar-stream": "^3.1.4",
+    "@types/validator": "^13.15.10",
     "@vitest/coverage-v8": "^4.1.4",
     "json-schema-to-typescript": "^15.0.4",
     "oclif": "^4.23.0",
