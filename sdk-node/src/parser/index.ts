@@ -1,5 +1,15 @@
 // attachment-parser: main email+attachment parser and utilities
 
+// address-parser: RFC 5322 From-header parsers (strict + loose variants)
+export type {
+  ParsedAddress,
+  ParseFromHeaderFailureReason,
+  ParseFromHeaderResult,
+} from "./address-parser.js";
+export {
+  parseFromHeader,
+  parseFromHeaderLoose,
+} from "./address-parser.js";
 export type {
   AttachmentMetadata,
   BundleResult,
