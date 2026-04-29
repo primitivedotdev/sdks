@@ -175,7 +175,8 @@ export function parseFromHeaderLoose(
 
   const parsed = addressparser(trimmed);
   for (const entry of parsed) {
-    const candidates = "group" in entry ? entry.group : [entry];
+    const candidates =
+      "group" in entry && Array.isArray(entry.group) ? entry.group : [entry];
     for (const candidate of candidates) {
       const address = candidate.address;
       if (address !== undefined && isEmail(address, IS_EMAIL_OPTIONS)) {
