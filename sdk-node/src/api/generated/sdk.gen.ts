@@ -393,14 +393,13 @@ export const replayDelivery = <ThrowOnError extends boolean = false>(options: Op
 /**
  * Send outbound email
  *
- * Sends a plain-text outbound email synchronously. The request stays
- * open until Primitive's downstream SMTP service completes the SMTP
- * transaction.
+ * Sends an outbound email synchronously. The request stays open until
+ * Primitive's outbound relay accepts or rejects the message.
  *
  */
 export const sendEmail = <ThrowOnError extends boolean = false>(options: Options<SendEmailData, ThrowOnError>) => (options.client ?? client).post<SendEmailResponses, SendEmailErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/send',
+    url: '/send-mail',
     ...options,
     headers: {
         'Content-Type': 'application/json',

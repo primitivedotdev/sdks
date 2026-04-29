@@ -252,7 +252,7 @@ func (s *Server) decodeCreateFilterRequest(r *http.Request) (
 }
 
 func (s *Server) decodeSendEmailRequest(r *http.Request) (
-	req *SendInput,
+	req *SendMailInput,
 	rawBody []byte,
 	close func() error,
 	rerr error,
@@ -299,7 +299,7 @@ func (s *Server) decodeSendEmailRequest(r *http.Request) (
 		rawBody = append(rawBody, buf...)
 		d := jx.DecodeBytes(buf)
 
-		var request SendInput
+		var request SendMailInput
 		if err := func() error {
 			if err := request.Decode(d); err != nil {
 				return err

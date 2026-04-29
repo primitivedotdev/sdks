@@ -181,12 +181,11 @@ type Invoker interface {
 	RotateWebhookSecret(ctx context.Context) (RotateWebhookSecretRes, error)
 	// SendEmail invokes sendEmail operation.
 	//
-	// Sends a plain-text outbound email synchronously. The request stays
-	// open until Primitive's downstream SMTP service completes the SMTP
-	// transaction.
+	// Sends an outbound email synchronously. The request stays open until
+	// Primitive's outbound relay accepts or rejects the message.
 	//
-	// POST /send
-	SendEmail(ctx context.Context, request *SendInput) (SendEmailRes, error)
+	// POST /send-mail
+	SendEmail(ctx context.Context, request *SendMailInput) (SendEmailRes, error)
 	// TestEndpoint invokes testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -3019,21 +3018,20 @@ func (c *Client) sendRotateWebhookSecret(ctx context.Context) (res RotateWebhook
 
 // SendEmail invokes sendEmail operation.
 //
-// Sends a plain-text outbound email synchronously. The request stays
-// open until Primitive's downstream SMTP service completes the SMTP
-// transaction.
+// Sends an outbound email synchronously. The request stays open until
+// Primitive's outbound relay accepts or rejects the message.
 //
-// POST /send
-func (c *Client) SendEmail(ctx context.Context, request *SendInput) (SendEmailRes, error) {
+// POST /send-mail
+func (c *Client) SendEmail(ctx context.Context, request *SendMailInput) (SendEmailRes, error) {
 	res, err := c.sendSendEmail(ctx, request)
 	return res, err
 }
 
-func (c *Client) sendSendEmail(ctx context.Context, request *SendInput) (res SendEmailRes, err error) {
+func (c *Client) sendSendEmail(ctx context.Context, request *SendMailInput) (res SendEmailRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("sendEmail"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.URLTemplateKey.String("/send"),
+		semconv.URLTemplateKey.String("/send-mail"),
 	}
 	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
@@ -3067,7 +3065,7 @@ func (c *Client) sendSendEmail(ctx context.Context, request *SendInput) (res Sen
 	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [1]string
-	pathParts[0] = "/send"
+	pathParts[0] = "/send-mail"
 	uri.AddPathParts(u, pathParts[:]...)
 
 	stage = "EncodeRequest"

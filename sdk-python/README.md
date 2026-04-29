@@ -56,10 +56,10 @@ result = client.send(
     from_email="support@example.com",
     to="alice@example.com",
     subject="Hello",
-    text="Hi there",
+    body_text="Hi there",
 )
 
-print(result.status.value)
+print(result.queue_id, result.accepted, result.rejected)
 ```
 
 ### Forward an inbound email
@@ -68,7 +68,7 @@ print(result.status.value)
 client.forward(
     email,
     to="ops@example.com",
-    text="Can you take this one?",
+    body_text="Can you take this one?",
 )
 ```
 

@@ -10,27 +10,27 @@ from ..types import UNSET, Unset
 
 from typing import cast
 
-if TYPE_CHECKING:
-  from ..models.send_mail_result import SendMailResult
 
 
 
 
 
-T = TypeVar("T", bound="SendEmailResponse200")
+T = TypeVar("T", bound="SendMailResult")
 
 
 
 @_attrs_define
-class SendEmailResponse200:
+class SendMailResult:
     """ 
         Attributes:
-            success (bool):
-            data (SendMailResult | Unset):
+            accepted (list[str]): Recipient addresses accepted by the relay.
+            rejected (list[str]): Recipient addresses rejected by the relay.
+            queue_id (str | Unset): Message identifier assigned by Primitive's outbound relay, when available.
      """
 
-    success: bool
-    data: SendMailResult | Unset = UNSET
+    accepted: list[str]
+    rejected: list[str]
+    queue_id: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,21 +38,25 @@ class SendEmailResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.send_mail_result import SendMailResult
-        success = self.success
+        accepted = self.accepted
 
-        data: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.data, Unset):
-            data = self.data.to_dict()
+
+
+        rejected = self.rejected
+
+
+
+        queue_id = self.queue_id
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
-            "success": success,
+            "accepted": accepted,
+            "rejected": rejected,
         })
-        if data is not UNSET:
-            field_dict["data"] = data
+        if queue_id is not UNSET:
+            field_dict["queue_id"] = queue_id
 
         return field_dict
 
@@ -60,28 +64,24 @@ class SendEmailResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.send_mail_result import SendMailResult
         d = dict(src_dict)
-        success = d.pop("success")
-
-        _data = d.pop("data", UNSET)
-        data: SendMailResult | Unset
-        if isinstance(_data,  Unset):
-            data = UNSET
-        else:
-            data = SendMailResult.from_dict(_data)
+        accepted = cast(list[str], d.pop("accepted"))
 
 
+        rejected = cast(list[str], d.pop("rejected"))
 
 
-        send_email_response_200 = cls(
-            success=success,
-            data=data,
+        queue_id = d.pop("queue_id", UNSET)
+
+        send_mail_result = cls(
+            accepted=accepted,
+            rejected=rejected,
+            queue_id=queue_id,
         )
 
 
-        send_email_response_200.additional_properties = d
-        return send_email_response_200
+        send_mail_result.additional_properties = d
+        return send_mail_result
 
     @property
     def additional_keys(self) -> list[str]:

@@ -1433,11 +1433,11 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
-    "/send": {
+    "/send-mail": {
       "post": {
         "operationId": "sendEmail",
         "summary": "Send outbound email",
-        "description": "Sends a plain-text outbound email synchronously. The request stays\nopen until Primitive's downstream SMTP service completes the SMTP\ntransaction.\n",
+        "description": "Sends an outbound email synchronously. The request stays open until\nPrimitive's outbound relay accepts or rejects the message.\n",
         "tags": [
           "Sending"
         ],
@@ -1446,14 +1446,14 @@ export const openapiDocument: Record<string, unknown> = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SendInput"
+                "$ref": "#/components/schemas/SendMailInput"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "SMTP transaction result",
+            "description": "Outbound relay result",
             "content": {
               "application/json": {
                 "schema": {
@@ -1465,7 +1465,7 @@ export const openapiDocument: Record<string, unknown> = {
                       "type": "object",
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/SendResult"
+                          "$ref": "#/components/schemas/SendMailResult"
                         }
                       }
                     }
@@ -2475,25 +2475,21 @@ export const openapiDocument: Record<string, unknown> = {
           "to_email"
         ]
       },
-      "SendInput": {
+      "SendMailInput": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
           "from": {
             "type": "string",
-            "format": "email",
-            "minLength": 1,
-            "maxLength": 320,
-            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
-            "description": "Active sender address on a domain owned by your organization"
+            "minLength": 3,
+            "maxLength": 998,
+            "description": "RFC 5322 From header. The sender domain must be a verified outbound domain for your organization."
           },
           "to": {
             "type": "string",
-            "format": "email",
-            "minLength": 1,
+            "minLength": 3,
             "maxLength": 320,
-            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
-            "description": "Exact recipient address that previously sent your org an authenticated inbound email"
+            "description": "Recipient address. Recipient eligibility depends on your account's outbound entitlements."
           },
           "subject": {
             "type": "string",
@@ -2501,84 +2497,66 @@ export const openapiDocument: Record<string, unknown> = {
             "maxLength": 998,
             "description": "Subject line for the outbound message"
           },
-          "text": {
+          "body_text": {
             "type": "string",
-            "minLength": 1,
-            "description": "Plain-text message body. Maximum size is 65536 UTF-8 bytes."
+            "maxLength": 81920,
+            "description": "Plain-text message body. At least one of body_text or body_html is required."
+          },
+          "body_html": {
+            "type": "string",
+            "maxLength": 81920,
+            "description": "HTML message body. At least one of body_text or body_html is required."
           },
           "in_reply_to": {
             "type": "string",
             "minLength": 1,
+            "maxLength": 998,
+            "pattern": "^[^\\x00-\\x1F\\x7F]+$",
             "description": "Message-ID of the direct parent email when sending a threaded reply."
           },
           "references": {
             "type": "array",
+            "maxItems": 100,
             "description": "Full ordered message-id chain for the thread.",
             "items": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 998,
+              "pattern": "^[^\\x00-\\x1F\\x7F]+$"
             }
           }
         },
         "required": [
           "from",
           "to",
-          "subject",
-          "text"
+          "subject"
         ]
       },
-      "SendResult": {
+      "SendMailResult": {
         "type": "object",
         "properties": {
-          "id": {
+          "queue_id": {
             "type": "string",
-            "format": "uuid"
+            "description": "Message identifier assigned by Primitive's outbound relay, when available."
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "accepted",
-              "rejected",
-              "tempfailed",
-              "failed"
-            ]
+          "accepted": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Recipient addresses accepted by the relay."
           },
-          "smtp_code": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "description": "Final SMTP status code reported by the downstream SMTP transaction"
-          },
-          "smtp_message": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Final SMTP status message, if available"
-          },
-          "remote_host": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Recipient MX host contacted for the SMTP transaction"
-          },
-          "service_message_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Message identifier assigned by Primitive's outbound SMTP service"
+          "rejected": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Recipient addresses rejected by the relay."
           }
         },
         "required": [
-          "id",
-          "status",
-          "smtp_code",
-          "smtp_message",
-          "remote_host",
-          "service_message_id"
+          "accepted",
+          "rejected"
         ]
       },
       "Endpoint": {

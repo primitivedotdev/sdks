@@ -14,13 +14,15 @@ import {
   type Config as GeneratedConfig,
 } from "./generated/client/index.js";
 import type {
-  SendInput as GeneratedSendInput,
-  SendResult as GeneratedSendResult,
+  SendMailInput as GeneratedSendMailInput,
+  SendMailResult as GeneratedSendMailResult,
 } from "./generated/index.js";
 import * as generatedOperations from "./generated/sdk.gen.js";
 
 export const DEFAULT_BASE_URL = "https://www.primitive.dev/api/v1";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_THREAD_REFERENCES = 100;
+const MAX_THREAD_HEADER_BYTES = 8 * 1024;
 
 export interface PrimitiveApiClientOptions
   extends Omit<GeneratedConfig, "auth" | "baseUrl"> {
@@ -54,7 +56,8 @@ export interface SendInput {
   from: string;
   to: string;
   subject: string;
-  text: string;
+  bodyText?: string;
+  bodyHtml?: string;
   thread?: SendThreadInput;
 }
 
@@ -67,18 +70,32 @@ export type ReplyInput =
 
 export interface ForwardInput {
   to: string;
-  text?: string;
+  bodyText?: string;
   subject?: string;
   from?: string;
 }
 
 export interface SendResult {
-  id: string;
-  status: GeneratedSendResult["status"];
-  smtpCode: number | null;
-  smtpMessage: string | null;
-  remoteHost: string | null;
-  serviceMessageId: string | null;
+  queueId?: string;
+  accepted: string[];
+  rejected: string[];
+}
+
+function validateThreadHeaderValue(field: string, value: string): void {
+  if (value.trim().length === 0) {
+    throw new TypeError(`${field} must be a non-empty string`);
+  }
+  if (
+    [...value].some((char) => {
+      const code = char.charCodeAt(0);
+      return code <= 0x1f || code === 0x7f;
+    })
+  ) {
+    throw new TypeError(`${field} must not contain control characters`);
+  }
+  if (value.length > 998) {
+    throw new TypeError(`${field} must be at most 998 characters`);
+  }
 }
 
 function validateSendInput(input: SendInput): void {
@@ -89,8 +106,28 @@ function validateSendInput(input: SendInput): void {
     throw new TypeError("subject must be a non-empty string");
   }
 
-  if (input.text.length === 0) {
-    throw new TypeError("text must be a non-empty string");
+  if (!input.bodyText && !input.bodyHtml) {
+    throw new TypeError("one of bodyText or bodyHtml is required");
+  }
+
+  if (input.thread?.inReplyTo) {
+    validateThreadHeaderValue("thread.inReplyTo", input.thread.inReplyTo);
+  }
+
+  if (input.thread?.references) {
+    if (input.thread.references.length > MAX_THREAD_REFERENCES) {
+      throw new TypeError(
+        `thread.references must contain at most ${MAX_THREAD_REFERENCES} values`,
+      );
+    }
+    for (const [index, reference] of input.thread.references.entries()) {
+      validateThreadHeaderValue(`thread.references[${index}]`, reference);
+    }
+    if (input.thread.references.join(" ").length > MAX_THREAD_HEADER_BYTES) {
+      throw new TypeError(
+        `thread.references header must be at most ${MAX_THREAD_HEADER_BYTES} characters`,
+      );
+    }
   }
 }
 
@@ -166,11 +203,12 @@ export class PrimitiveClient extends PrimitiveApiClient {
   async send(input: SendInput): Promise<SendResult> {
     validateSendInput(input);
 
-    const body: GeneratedSendInput = {
+    const body: GeneratedSendMailInput = {
       from: input.from,
       to: input.to,
       subject: input.subject,
-      text: input.text,
+      ...(input.bodyText !== undefined ? { body_text: input.bodyText } : {}),
+      ...(input.bodyHtml !== undefined ? { body_html: input.bodyHtml } : {}),
       ...(input.thread?.inReplyTo
         ? { in_reply_to: input.thread.inReplyTo }
         : {}),
@@ -210,7 +248,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
       from: email.receivedBy,
       to: email.replyTarget.address,
       subject: resolved.subject ?? email.replySubject,
-      text: resolved.text,
+      bodyText: resolved.text,
       thread: {
         ...(email.thread.messageId
           ? { inReplyTo: email.thread.messageId }
@@ -232,7 +270,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
       from: input.from ?? email.receivedBy,
       to: input.to,
       subject: input.subject ?? email.forwardSubject,
-      text: buildForwardText(email, input.text),
+      bodyText: buildForwardText(email, input.bodyText),
     });
   }
 }
@@ -257,14 +295,11 @@ function buildForwardText(email: ReceivedEmail, intro?: string): string {
   return lines.join("\n").trimEnd();
 }
 
-function mapSendResult(result: GeneratedSendResult): SendResult {
+function mapSendResult(result: GeneratedSendMailResult): SendResult {
   return {
-    id: result.id,
-    status: result.status,
-    smtpCode: result.smtp_code,
-    smtpMessage: result.smtp_message,
-    remoteHost: result.remote_host,
-    serviceMessageId: result.service_message_id,
+    ...(result.queue_id !== undefined ? { queueId: result.queue_id } : {}),
+    accepted: result.accepted,
+    rejected: result.rejected,
   };
 }
 

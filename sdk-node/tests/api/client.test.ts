@@ -94,7 +94,7 @@ describe("PrimitiveClient", () => {
         from: "support@example.com",
         to: "not-an-email",
         subject: "Hello",
-        text: "Hi",
+        bodyText: "Hi",
       }),
     ).rejects.toThrow("to must be a valid email address");
 
@@ -104,25 +104,22 @@ describe("PrimitiveClient", () => {
   it("posts the send payload and returns the normalized send result", async () => {
     const fetchMock = vi.fn<typeof fetch>(async (input) => {
       const request = input as Request;
-      expect(request.url).toBe("https://example.test/api/v1/send");
+      expect(request.url).toBe("https://example.test/api/v1/send-mail");
       expect(request.headers.get("authorization")).toBe("Bearer prim_test");
       expect(await request.json()).toEqual({
         from: "support@example.com",
         to: "alice@example.com",
         subject: "Hello",
-        text: "Hi there",
+        body_text: "Hi there",
       });
 
       return new Response(
         JSON.stringify({
           success: true,
           data: {
-            id: "00000000-0000-0000-0000-000000000001",
-            status: "accepted",
-            smtp_code: 250,
-            smtp_message: "queued",
-            remote_host: "mx.example.net",
-            service_message_id: "svc-123",
+            queue_id: "qid-123",
+            accepted: ["alice@example.com"],
+            rejected: [],
           },
         }),
         {
@@ -143,15 +140,39 @@ describe("PrimitiveClient", () => {
         from: "support@example.com",
         to: "alice@example.com",
         subject: "Hello",
-        text: "Hi there",
+        bodyText: "Hi there",
       }),
     ).resolves.toEqual({
-      id: "00000000-0000-0000-0000-000000000001",
-      status: "accepted",
-      smtpCode: 250,
-      smtpMessage: "queued",
-      remoteHost: "mx.example.net",
-      serviceMessageId: "svc-123",
+      queueId: "qid-123",
+      accepted: ["alice@example.com"],
+      rejected: [],
+    });
+  });
+
+  it("posts html-only send payloads", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: vi.fn<typeof fetch>(async (input) => {
+        const request = input as Request;
+        expect(await request.json()).toMatchObject({
+          body_html: "<p>Hello</p>",
+        });
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { accepted: ["alice@example.com"], rejected: [] },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }) as typeof fetch,
+    });
+
+    await client.send({
+      from: "support@example.com",
+      to: "alice@example.com",
+      subject: "Hello",
+      bodyHtml: "<p>Hello</p>",
     });
   });
 
@@ -165,7 +186,7 @@ describe("PrimitiveClient", () => {
           from: "support@example.com",
           to: "alice@example.com",
           subject: "Re: Hello",
-          text: "Thank you for your email.",
+          body_text: "Thank you for your email.",
           in_reply_to: "<parent@example.com>",
           references: ["<root@example.com>", "<parent@example.com>"],
         });
@@ -174,12 +195,9 @@ describe("PrimitiveClient", () => {
           JSON.stringify({
             success: true,
             data: {
-              id: "reply-1",
-              status: "accepted",
-              smtp_code: 250,
-              smtp_message: "queued",
-              remote_host: "mx.example.net",
-              service_message_id: "svc-123",
+              queue_id: "reply-1",
+              accepted: ["alice@example.com"],
+              rejected: [],
             },
           }),
           { status: 200, headers: { "content-type": "application/json" } },
@@ -201,22 +219,19 @@ describe("PrimitiveClient", () => {
         expect(payload.from).toBe("support@example.com");
         expect(payload.to).toBe("ops@example.com");
         expect(payload.subject).toBe("Fwd: Hello");
-        expect(payload.text).toContain("Can you take this one?");
-        expect(payload.text).toContain(
+        expect(payload.body_text).toContain("Can you take this one?");
+        expect(payload.body_text).toContain(
           "---------- Forwarded message ----------",
         );
-        expect(payload.text).toContain("From: Alice <alice@example.com>");
+        expect(payload.body_text).toContain("From: Alice <alice@example.com>");
 
         return new Response(
           JSON.stringify({
             success: true,
             data: {
-              id: "forward-1",
-              status: "accepted",
-              smtp_code: 250,
-              smtp_message: "queued",
-              remote_host: "mx.example.net",
-              service_message_id: "svc-123",
+              queue_id: "forward-1",
+              accepted: ["ops@example.com"],
+              rejected: [],
             },
           }),
           { status: 200, headers: { "content-type": "application/json" } },
@@ -226,7 +241,7 @@ describe("PrimitiveClient", () => {
 
     await client.forward(RECEIVED_EMAIL, {
       to: "ops@example.com",
-      text: "Can you take this one?",
+      bodyText: "Can you take this one?",
     });
   });
 
@@ -258,7 +273,7 @@ describe("PrimitiveClient", () => {
         from: "support@example.com",
         to: "alice@example.com",
         subject: "Hello",
-        text: "Hi there",
+        bodyText: "Hi there",
       }),
     ).rejects.toMatchObject({
       name: "PrimitiveApiError",

@@ -3970,18 +3970,17 @@ func (s *Server) handleRotateWebhookSecretRequest(args [0]string, argsEscaped bo
 
 // handleSendEmailRequest handles sendEmail operation.
 //
-// Sends a plain-text outbound email synchronously. The request stays
-// open until Primitive's downstream SMTP service completes the SMTP
-// transaction.
+// Sends an outbound email synchronously. The request stays open until
+// Primitive's outbound relay accepts or rejects the message.
 //
-// POST /send
+// POST /send-mail
 func (s *Server) handleSendEmailRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("sendEmail"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/send"),
+		semconv.HTTPRouteKey.String("/send-mail"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -4122,7 +4121,7 @@ func (s *Server) handleSendEmailRequest(args [0]string, argsEscaped bool, w http
 		}
 
 		type (
-			Request  = *SendInput
+			Request  = *SendMailInput
 			Params   = struct{}
 			Response = SendEmailRes
 		)

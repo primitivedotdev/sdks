@@ -60,9 +60,8 @@ from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
 from .send_email_response_200 import SendEmailResponse200
-from .send_input import SendInput
-from .send_result import SendResult
-from .send_result_status import SendResultStatus
+from .send_mail_input import SendMailInput
+from .send_mail_result import SendMailResult
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
 from .test_endpoint_response_200 import TestEndpointResponse200
@@ -142,9 +141,8 @@ __all__ = (
     "ReplayResult",
     "RotateWebhookSecretResponse200",
     "SendEmailResponse200",
-    "SendInput",
-    "SendResult",
-    "SendResultStatus",
+    "SendMailInput",
+    "SendMailResult",
     "StorageStats",
     "SuccessEnvelope",
     "TestEndpointResponse200",

@@ -249,13 +249,13 @@ export type EmailDetail = {
     to_email: string;
 };
 
-export type SendInput = {
+export type SendMailInput = {
     /**
-     * Active sender address on a domain owned by your organization
+     * RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
      */
     from: string;
     /**
-     * Exact recipient address that previously sent your org an authenticated inbound email
+     * Recipient address. Recipient eligibility depends on your account's outbound entitlements.
      */
     to: string;
     /**
@@ -263,9 +263,13 @@ export type SendInput = {
      */
     subject: string;
     /**
-     * Plain-text message body. Maximum size is 65536 UTF-8 bytes.
+     * Plain-text message body. At least one of body_text or body_html is required.
      */
-    text: string;
+    body_text?: string;
+    /**
+     * HTML message body. At least one of body_text or body_html is required.
+     */
+    body_html?: string;
     /**
      * Message-ID of the direct parent email when sending a threaded reply.
      */
@@ -276,25 +280,19 @@ export type SendInput = {
     references?: Array<string>;
 };
 
-export type SendResult = {
-    id: string;
-    status: 'accepted' | 'rejected' | 'tempfailed' | 'failed';
+export type SendMailResult = {
     /**
-     * Final SMTP status code reported by the downstream SMTP transaction
+     * Message identifier assigned by Primitive's outbound relay, when available.
      */
-    smtp_code: number | null;
+    queue_id?: string;
     /**
-     * Final SMTP status message, if available
+     * Recipient addresses accepted by the relay.
      */
-    smtp_message: string | null;
+    accepted: Array<string>;
     /**
-     * Recipient MX host contacted for the SMTP transaction
+     * Recipient addresses rejected by the relay.
      */
-    remote_host: string | null;
-    /**
-     * Message identifier assigned by Primitive's outbound SMTP service
-     */
-    service_message_id: string | null;
+    rejected: Array<string>;
 };
 
 export type Endpoint = {
@@ -1530,10 +1528,10 @@ export type ReplayDeliveryResponses = {
 export type ReplayDeliveryResponse = ReplayDeliveryResponses[keyof ReplayDeliveryResponses];
 
 export type SendEmailData = {
-    body: SendInput;
+    body: SendMailInput;
     path?: never;
     query?: never;
-    url: '/send';
+    url: '/send-mail';
 };
 
 export type SendEmailErrors = {
@@ -1567,10 +1565,10 @@ export type SendEmailError = SendEmailErrors[keyof SendEmailErrors];
 
 export type SendEmailResponses = {
     /**
-     * SMTP transaction result
+     * Outbound relay result
      */
     200: SuccessEnvelope & {
-        data?: SendResult;
+        data?: SendMailResult;
     };
 };
 

@@ -70,7 +70,7 @@ def test_send_validates_recipient_before_request(monkeypatch: pytest.MonkeyPatch
             from_email="support@example.com",
             to="not-an-email",
             subject="Hello",
-            text="Hi",
+            body_text="Hi",
         )
 
     assert called is False
@@ -90,12 +90,9 @@ def test_send_posts_payload_and_returns_send_result(
                 {
                     "success": True,
                     "data": {
-                        "id": "00000000-0000-0000-0000-000000000001",
-                        "status": "accepted",
-                        "smtp_code": 250,
-                        "smtp_message": "queued",
-                        "remote_host": "mx.example.net",
-                        "service_message_id": "svc-123",
+                        "queue_id": "qid-123",
+                        "accepted": ["alice@example.com"],
+                        "rejected": [],
                     },
                 }
             ),
@@ -109,7 +106,7 @@ def test_send_posts_payload_and_returns_send_result(
         from_email="support@example.com",
         to="alice@example.com",
         subject="Hello",
-        text="Hi there",
+        body_text="Hi there",
     )
 
     assert captured == {
@@ -118,12 +115,12 @@ def test_send_posts_payload_and_returns_send_result(
             "from": "support@example.com",
             "to": "alice@example.com",
             "subject": "Hello",
-            "text": "Hi there",
+            "body_text": "Hi there",
         },
     }
-    assert str(result.id) == "00000000-0000-0000-0000-000000000001"
-    assert result.smtp_code == 250
-    assert result.smtp_message == "queued"
+    assert result.queue_id == "qid-123"
+    assert result.accepted == ["alice@example.com"]
+    assert result.rejected == []
 
 
 def test_reply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -138,12 +135,9 @@ def test_reply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> None:
                 {
                         "success": True,
                         "data": {
-                            "id": "00000000-0000-0000-0000-000000000002",
-                            "status": "accepted",
-                        "smtp_code": 250,
-                        "smtp_message": "queued",
-                        "remote_host": "mx.example.net",
-                        "service_message_id": "svc-123",
+                            "queue_id": "reply-1",
+                            "accepted": ["alice@example.com"],
+                            "rejected": [],
                     },
                 }
             ),
@@ -159,7 +153,7 @@ def test_reply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> None:
         "from": "support@example.com",
         "to": "alice@example.com",
         "subject": "Re: Hello",
-        "text": "Thank you for your email.",
+        "body_text": "Thank you for your email.",
         "in_reply_to": "<parent@example.com>",
         "references": ["<root@example.com>", "<parent@example.com>"],
     }
@@ -177,12 +171,9 @@ def test_forward_builds_send(monkeypatch: pytest.MonkeyPatch) -> None:
                 {
                         "success": True,
                         "data": {
-                            "id": "00000000-0000-0000-0000-000000000003",
-                            "status": "accepted",
-                        "smtp_code": 250,
-                        "smtp_message": "queued",
-                        "remote_host": "mx.example.net",
-                        "service_message_id": "svc-123",
+                            "queue_id": "forward-1",
+                            "accepted": ["ops@example.com"],
+                            "rejected": [],
                     },
                 }
             ),
@@ -192,14 +183,14 @@ def test_forward_builds_send(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(client_module, "send_email_sync_detailed", fake_send_email_sync_detailed)
 
     client = PrimitiveClient("prim_test")
-    client.forward(RECEIVED_EMAIL, to="ops@example.com", text="Can you take this one?")
+    client.forward(RECEIVED_EMAIL, to="ops@example.com", body_text="Can you take this one?")
 
     body = cast(dict[str, Any], captured["body"])
     assert body["from"] == "support@example.com"
     assert body["to"] == "ops@example.com"
     assert body["subject"] == "Fwd: Hello"
-    assert "Can you take this one?" in body["text"]
-    assert "---------- Forwarded message ----------" in body["text"]
+    assert "Can you take this one?" in body["body_text"]
+    assert "---------- Forwarded message ----------" in body["body_text"]
 
 
 def test_send_accepts_thread_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -214,12 +205,9 @@ def test_send_accepts_thread_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
                 {
                         "success": True,
                         "data": {
-                            "id": "00000000-0000-0000-0000-000000000004",
-                            "status": "accepted",
-                        "smtp_code": 250,
-                        "smtp_message": "queued",
-                        "remote_host": "mx.example.net",
-                        "service_message_id": "svc-123",
+                            "queue_id": "send-1",
+                            "accepted": ["alice@example.com"],
+                            "rejected": [],
                     },
                 }
             ),
@@ -233,7 +221,7 @@ def test_send_accepts_thread_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
         from_email="support@example.com",
         to="alice@example.com",
         subject="Hello",
-        text="Hi there",
+        body_text="Hi there",
         thread=SendThread(
             in_reply_to="<parent@example.com>",
             references=["<root@example.com>", "<parent@example.com>"],
@@ -244,7 +232,7 @@ def test_send_accepts_thread_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
         "from": "support@example.com",
         "to": "alice@example.com",
         "subject": "Hello",
-        "text": "Hi there",
+        "body_text": "Hi there",
         "in_reply_to": "<parent@example.com>",
         "references": ["<root@example.com>", "<parent@example.com>"],
     }
@@ -276,7 +264,7 @@ def test_send_wraps_api_errors(monkeypatch: pytest.MonkeyPatch) -> None:
             from_email="support@example.com",
             to="alice@example.com",
             subject="Hello",
-            text="Hi there",
+            body_text="Hi there",
         )
 
     assert exc_info.value.status_code == 400

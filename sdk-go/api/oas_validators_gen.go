@@ -1360,7 +1360,7 @@ func (s *SendEmailUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *SendInput) Validate() error {
+func (s *SendMailInput) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
@@ -1368,13 +1368,13 @@ func (s *SendInput) Validate() error {
 	var failures []validate.FieldError
 	if err := func() error {
 		if err := (validate.String{
-			MinLength:     1,
+			MinLength:     3,
 			MinLengthSet:  true,
-			MaxLength:     320,
+			MaxLength:     998,
 			MaxLengthSet:  true,
-			Email:         true,
+			Email:         false,
 			Hostname:      false,
-			Regex:         regexMap["^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"],
+			Regex:         nil,
 			MinNumeric:    0,
 			MinNumericSet: false,
 			MaxNumeric:    0,
@@ -1391,13 +1391,13 @@ func (s *SendInput) Validate() error {
 	}
 	if err := func() error {
 		if err := (validate.String{
-			MinLength:     1,
+			MinLength:     3,
 			MinLengthSet:  true,
 			MaxLength:     320,
 			MaxLengthSet:  true,
-			Email:         true,
+			Email:         false,
 			Hostname:      false,
-			Regex:         regexMap["^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"],
+			Regex:         nil,
 			MinNumeric:    0,
 			MinNumericSet: false,
 			MaxNumeric:    0,
@@ -1436,25 +1436,62 @@ func (s *SendInput) Validate() error {
 		})
 	}
 	if err := func() error {
-		if err := (validate.String{
-			MinLength:     1,
-			MinLengthSet:  true,
-			MaxLength:     0,
-			MaxLengthSet:  false,
-			Email:         false,
-			Hostname:      false,
-			Regex:         nil,
-			MinNumeric:    0,
-			MinNumericSet: false,
-			MaxNumeric:    0,
-			MaxNumericSet: false,
-		}).Validate(string(s.Text)); err != nil {
-			return errors.Wrap(err, "string")
+		if value, ok := s.BodyText.Get(); ok {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     81920,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(value)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "text",
+			Name:  "body_text",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.BodyHTML.Get(); ok {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     81920,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(value)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "body_html",
 			Error: err,
 		})
 	}
@@ -1464,11 +1501,11 @@ func (s *SendInput) Validate() error {
 				if err := (validate.String{
 					MinLength:     1,
 					MinLengthSet:  true,
-					MaxLength:     0,
-					MaxLengthSet:  false,
+					MaxLength:     998,
+					MaxLengthSet:  true,
 					Email:         false,
 					Hostname:      false,
-					Regex:         nil,
+					Regex:         regexMap["^[^\\x00-\\x1F\\x7F]+$"],
 					MinNumeric:    0,
 					MinNumericSet: false,
 					MaxNumeric:    0,
@@ -1489,17 +1526,28 @@ func (s *SendInput) Validate() error {
 		})
 	}
 	if err := func() error {
+		if s.References == nil {
+			return nil // optional
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    100,
+			MaxLengthSet: true,
+		}).ValidateLength(len(s.References)); err != nil {
+			return errors.Wrap(err, "array")
+		}
 		var failures []validate.FieldError
 		for i, elem := range s.References {
 			if err := func() error {
 				if err := (validate.String{
 					MinLength:     1,
 					MinLengthSet:  true,
-					MaxLength:     0,
-					MaxLengthSet:  false,
+					MaxLength:     998,
+					MaxLengthSet:  true,
 					Email:         false,
 					Hostname:      false,
-					Regex:         nil,
+					Regex:         regexMap["^[^\\x00-\\x1F\\x7F]+$"],
 					MinNumeric:    0,
 					MinNumericSet: false,
 					MaxNumeric:    0,
@@ -1531,20 +1579,31 @@ func (s *SendInput) Validate() error {
 	return nil
 }
 
-func (s *SendResult) Validate() error {
+func (s *SendMailResult) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
 
 	var failures []validate.FieldError
 	if err := func() error {
-		if err := s.Status.Validate(); err != nil {
-			return err
+		if s.Accepted == nil {
+			return errors.New("nil is invalid value")
 		}
 		return nil
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
-			Name:  "status",
+			Name:  "accepted",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Rejected == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "rejected",
 			Error: err,
 		})
 	}
@@ -1552,21 +1611,6 @@ func (s *SendResult) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
-}
-
-func (s SendResultStatus) Validate() error {
-	switch s {
-	case "accepted":
-		return nil
-	case "rejected":
-		return nil
-	case "tempfailed":
-		return nil
-	case "failed":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
 }
 
 func (s *StorageStats) Validate() error {

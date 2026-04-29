@@ -700,9 +700,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 				}
 
-			case 's': // Prefix: "send"
+			case 's': // Prefix: "send-mail"
 
-				if l := len("send"); len(elem) >= l && elem[0:l] == "send" {
+				if l := len("send-mail"); len(elem) >= l && elem[0:l] == "send-mail" {
 					elem = elem[l:]
 				} else {
 					break
@@ -1499,9 +1499,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 
 				}
 
-			case 's': // Prefix: "send"
+			case 's': // Prefix: "send-mail"
 
-				if l := len("send"); len(elem) >= l && elem[0:l] == "send" {
+				if l := len("send-mail"); len(elem) >= l && elem[0:l] == "send-mail" {
 					elem = elem[l:]
 				} else {
 					break
@@ -1515,7 +1515,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						r.summary = "Send outbound email"
 						r.operationID = "sendEmail"
 						r.operationGroup = ""
-						r.pathPattern = "/send"
+						r.pathPattern = "/send-mail"
 						r.args = args
 						r.count = 0
 						return r, true

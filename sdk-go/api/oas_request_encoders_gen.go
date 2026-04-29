@@ -53,7 +53,7 @@ func encodeCreateFilterRequest(
 }
 
 func encodeSendEmailRequest(
-	req *SendInput,
+	req *SendMailInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

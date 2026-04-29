@@ -15,18 +15,19 @@ from typing import cast
 
 
 
-T = TypeVar("T", bound="SendInput")
+T = TypeVar("T", bound="SendMailInput")
 
 
 
 @_attrs_define
-class SendInput:
+class SendMailInput:
     """ 
         Attributes:
-            from_ (str): Active sender address on a domain owned by your organization
-            to (str): Exact recipient address that previously sent your org an authenticated inbound email
+            from_ (str): RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
+            to (str): Recipient address. Recipient eligibility depends on your account's outbound entitlements.
             subject (str): Subject line for the outbound message
-            text (str): Plain-text message body. Maximum size is 65536 UTF-8 bytes.
+            body_text (str | Unset): Plain-text message body. At least one of body_text or body_html is required.
+            body_html (str | Unset): HTML message body. At least one of body_text or body_html is required.
             in_reply_to (str | Unset): Message-ID of the direct parent email when sending a threaded reply.
             references (list[str] | Unset): Full ordered message-id chain for the thread.
      """
@@ -34,7 +35,8 @@ class SendInput:
     from_: str
     to: str
     subject: str
-    text: str
+    body_text: str | Unset = UNSET
+    body_html: str | Unset = UNSET
     in_reply_to: str | Unset = UNSET
     references: list[str] | Unset = UNSET
 
@@ -49,7 +51,9 @@ class SendInput:
 
         subject = self.subject
 
-        text = self.text
+        body_text = self.body_text
+
+        body_html = self.body_html
 
         in_reply_to = self.in_reply_to
 
@@ -66,8 +70,11 @@ class SendInput:
             "from": from_,
             "to": to,
             "subject": subject,
-            "text": text,
         })
+        if body_text is not UNSET:
+            field_dict["body_text"] = body_text
+        if body_html is not UNSET:
+            field_dict["body_html"] = body_html
         if in_reply_to is not UNSET:
             field_dict["in_reply_to"] = in_reply_to
         if references is not UNSET:
@@ -86,21 +93,24 @@ class SendInput:
 
         subject = d.pop("subject")
 
-        text = d.pop("text")
+        body_text = d.pop("body_text", UNSET)
+
+        body_html = d.pop("body_html", UNSET)
 
         in_reply_to = d.pop("in_reply_to", UNSET)
 
         references = cast(list[str], d.pop("references", UNSET))
 
 
-        send_input = cls(
+        send_mail_input = cls(
             from_=from_,
             to=to,
             subject=subject,
-            text=text,
+            body_text=body_text,
+            body_html=body_html,
             in_reply_to=in_reply_to,
             references=references,
         )
 
-        return send_input
+        return send_mail_input
 

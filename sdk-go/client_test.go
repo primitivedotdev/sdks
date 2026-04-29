@@ -5,18 +5,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
 )
 
 type stubSendAPI struct {
 	called  bool
-	request *primitiveapi.SendInput
+	request *primitiveapi.SendMailInput
 	result  primitiveapi.SendEmailRes
 	err     error
 }
 
-func (s *stubSendAPI) SendEmail(_ context.Context, request *primitiveapi.SendInput) (primitiveapi.SendEmailRes, error) {
+func (s *stubSendAPI) SendEmail(_ context.Context, request *primitiveapi.SendMailInput) (primitiveapi.SendEmailRes, error) {
 	s.called = true
 	s.request = request
 	return s.result, s.err
@@ -57,10 +56,10 @@ func TestClientSendValidatesRecipientBeforeRequest(t *testing.T) {
 	client := NewClientFromAPI(stub)
 
 	_, err := client.Send(context.Background(), SendParams{
-		From:    "support@example.com",
-		To:      "not-an-email",
-		Subject: "Hello",
-		Text:    "Hi",
+		From:     "support@example.com",
+		To:       "not-an-email",
+		Subject:  "Hello",
+		BodyText: "Hi",
 	})
 	if err == nil || err.Error() != "to must be a valid email address" {
 		t.Fatalf("unexpected error: %v", err)
@@ -71,27 +70,23 @@ func TestClientSendValidatesRecipientBeforeRequest(t *testing.T) {
 }
 
 func TestClientSendReturnsSendResult(t *testing.T) {
-	messageID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 	stub := &stubSendAPI{
 		result: &primitiveapi.SendEmailOK{
 			Success: true,
-			Data: primitiveapi.SendResult{
-				ID:               messageID,
-				Status:           primitiveapi.SendResultStatusAccepted,
-				SMTPCode:         primitiveapi.NewNilInt(250),
-				SMTPMessage:      primitiveapi.NewNilString("queued"),
-				RemoteHost:       primitiveapi.NewNilString("mx.example.net"),
-				ServiceMessageID: primitiveapi.NewNilString("svc-123"),
+			Data: primitiveapi.SendMailResult{
+				QueueID:  primitiveapi.NewOptString("qid-123"),
+				Accepted: []string{"alice@example.com"},
+				Rejected: []string{},
 			},
 		},
 	}
 	client := NewClientFromAPI(stub)
 
 	result, err := client.Send(context.Background(), SendParams{
-		From:    "support@example.com",
-		To:      "alice@example.com",
-		Subject: "Hello",
-		Text:    "Hi there",
+		From:     "support@example.com",
+		To:       "alice@example.com",
+		Subject:  "Hello",
+		BodyText: "Hi there",
 	})
 	if err != nil {
 		t.Fatalf("Send returned error: %v", err)
@@ -99,24 +94,24 @@ func TestClientSendReturnsSendResult(t *testing.T) {
 	if !stub.called || stub.request == nil {
 		t.Fatal("SendEmail was not called")
 	}
-	if stub.request.From != "support@example.com" || stub.request.To != "alice@example.com" || stub.request.Text != "Hi there" {
+	if bodyText, ok := stub.request.BodyText.Get(); stub.request.From != "support@example.com" || stub.request.To != "alice@example.com" || !ok || bodyText != "Hi there" {
 		t.Fatalf("unexpected request payload: %#v", stub.request)
 	}
-	if result.ID != messageID {
-		t.Fatalf("unexpected result ID: %v", result.ID)
+	if queueID, ok := result.QueueID.Get(); !ok || queueID != "qid-123" {
+		t.Fatalf("unexpected queue ID: %#v", result.QueueID)
 	}
-	if result.Status != primitiveapi.SendResultStatusAccepted {
-		t.Fatalf("unexpected result status: %v", result.Status)
+	if len(result.Accepted) != 1 || result.Accepted[0] != "alice@example.com" || len(result.Rejected) != 0 {
+		t.Fatalf("unexpected result recipients: %#v", result)
 	}
 }
 
 func TestClientReplyBuildsThreadedSend(t *testing.T) {
 	stub := &stubSendAPI{
-		result: &primitiveapi.SendEmailOK{Success: true, Data: primitiveapi.SendResult{}},
+		result: &primitiveapi.SendEmailOK{Success: true, Data: primitiveapi.SendMailResult{Accepted: []string{}, Rejected: []string{}}},
 	}
 	client := NewClientFromAPI(stub)
 
-	_, err := client.Reply(context.Background(), receivedEmailFixture(), ReplyParams{Text: "Thanks"})
+	_, err := client.Reply(context.Background(), receivedEmailFixture(), ReplyParams{BodyText: "Thanks"})
 	if err != nil {
 		t.Fatalf("Reply returned error: %v", err)
 	}
@@ -126,7 +121,7 @@ func TestClientReplyBuildsThreadedSend(t *testing.T) {
 	if stub.request.From != "support@example.com" || stub.request.To != "alice@example.com" {
 		t.Fatalf("unexpected request payload: %#v", stub.request)
 	}
-	if stub.request.Subject != "Re: Hello" || stub.request.Text != "Thanks" {
+	if bodyText, ok := stub.request.BodyText.Get(); stub.request.Subject != "Re: Hello" || !ok || bodyText != "Thanks" {
 		t.Fatalf("unexpected reply request: %#v", stub.request)
 	}
 	if value, ok := stub.request.InReplyTo.Get(); !ok || value != "<parent@example.com>" {
@@ -139,13 +134,13 @@ func TestClientReplyBuildsThreadedSend(t *testing.T) {
 
 func TestClientForwardBuildsSend(t *testing.T) {
 	stub := &stubSendAPI{
-		result: &primitiveapi.SendEmailOK{Success: true, Data: primitiveapi.SendResult{}},
+		result: &primitiveapi.SendEmailOK{Success: true, Data: primitiveapi.SendMailResult{Accepted: []string{}, Rejected: []string{}}},
 	}
 	client := NewClientFromAPI(stub)
 
 	_, err := client.Forward(context.Background(), receivedEmailFixture(), ForwardParams{
-		To:   "ops@example.com",
-		Text: "Can you take this one?",
+		To:       "ops@example.com",
+		BodyText: "Can you take this one?",
 	})
 	if err != nil {
 		t.Fatalf("Forward returned error: %v", err)
@@ -159,8 +154,8 @@ func TestClientForwardBuildsSend(t *testing.T) {
 	if stub.request.Subject != "Fwd: Hello" {
 		t.Fatalf("unexpected forward subject: %q", stub.request.Subject)
 	}
-	if !strings.Contains(stub.request.Text, "---------- Forwarded message ----------") {
-		t.Fatalf("unexpected forward body: %q", stub.request.Text)
+	if bodyText, ok := stub.request.BodyText.Get(); !ok || !strings.Contains(bodyText, "---------- Forwarded message ----------") {
+		t.Fatalf("unexpected forward body: %#v", stub.request.BodyText)
 	}
 }
 
@@ -177,10 +172,10 @@ func TestClientSendWrapsAPIErrors(t *testing.T) {
 	client := NewClientFromAPI(stub)
 
 	_, err := client.Send(context.Background(), SendParams{
-		From:    "support@example.com",
-		To:      "alice@example.com",
-		Subject: "Hello",
-		Text:    "Hi there",
+		From:     "support@example.com",
+		To:       "alice@example.com",
+		Subject:  "Hello",
+		BodyText: "Hi there",
 	})
 	if err == nil {
 		t.Fatal("expected error")

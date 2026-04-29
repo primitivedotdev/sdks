@@ -63,10 +63,10 @@ const result = await client.send({
   from: "support@example.com",
   to: "alice@example.com",
   subject: "Hello",
-  text: "Hi there",
+  bodyText: "Hi there",
 });
 
-console.log(result.status);
+console.log(result.queueId, result.accepted, result.rejected);
 ```
 
 ### Forward an inbound email
@@ -74,7 +74,7 @@ console.log(result.status);
 ```ts
 await client.forward(email, {
   to: "ops@example.com",
-  text: "Can you take this one?",
+  bodyText: "Can you take this one?",
 });
 ```
 

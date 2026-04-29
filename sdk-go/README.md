@@ -54,7 +54,7 @@ func handle(ctx context.Context, body []byte, headers map[string]string) {
 		log.Fatal(err)
 	}
 
-	_, err = client.Reply(ctx, email, primitive.ReplyParams{Text: "Thank you for your email."})
+	_, err = client.Reply(ctx, email, primitive.ReplyParams{BodyText: "Thank you for your email."})
 	if err != nil {
 		log.Printf("reply failed: %v", err)
 	}
@@ -68,7 +68,7 @@ result, err := client.Send(context.Background(), primitive.SendParams{
 	From:    "support@example.com",
 	To:      "alice@example.com",
 	Subject: "Hello",
-	Text:    "Hi there",
+	BodyText: "Hi there",
 })
 ```
 
@@ -76,8 +76,8 @@ result, err := client.Send(context.Background(), primitive.SendParams{
 
 ```go
 _, err = client.Forward(context.Background(), email, primitive.ForwardParams{
-	To:   "ops@example.com",
-	Text: "Can you take this one?",
+	To:       "ops@example.com",
+	BodyText: "Can you take this one?",
 })
 ```
 

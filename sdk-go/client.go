@@ -6,14 +6,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/uuid"
 	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
 )
 
 var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 
 type sendAPI interface {
-	SendEmail(ctx context.Context, request *primitiveapi.SendInput) (primitiveapi.SendEmailRes, error)
+	SendEmail(ctx context.Context, request *primitiveapi.SendMailInput) (primitiveapi.SendEmailRes, error)
 }
 
 type SendThread struct {
@@ -22,32 +21,30 @@ type SendThread struct {
 }
 
 type SendParams struct {
-	From    string
-	To      string
-	Subject string
-	Text    string
-	Thread  *SendThread
+	From     string
+	To       string
+	Subject  string
+	BodyText string
+	BodyHTML string
+	Thread   *SendThread
 }
 
 type ReplyParams struct {
-	Text    string
-	Subject string
+	BodyText string
+	Subject  string
 }
 
 type ForwardParams struct {
-	To      string
-	Text    string
-	Subject string
-	From    string
+	To       string
+	BodyText string
+	Subject  string
+	From     string
 }
 
 type SendResult struct {
-	ID               uuid.UUID
-	Status           primitiveapi.SendResultStatus
-	SMTPCode         primitiveapi.NilInt
-	SMTPMessage      primitiveapi.NilString
-	RemoteHost       primitiveapi.NilString
-	ServiceMessageID primitiveapi.NilString
+	QueueID  primitiveapi.OptString
+	Accepted []string
+	Rejected []string
 }
 
 type APIError struct {
@@ -98,8 +95,8 @@ func validateSendParams(params SendParams) error {
 	if strings.TrimSpace(params.Subject) == "" {
 		return fmt.Errorf("subject must be a non-empty string")
 	}
-	if params.Text == "" {
-		return fmt.Errorf("text must be a non-empty string")
+	if params.BodyText == "" && params.BodyHTML == "" {
+		return fmt.Errorf("one of body text or body html is required")
 	}
 	return nil
 }
@@ -160,11 +157,16 @@ func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error
 		return zero, err
 	}
 
-	request := &primitiveapi.SendInput{
+	request := &primitiveapi.SendMailInput{
 		From:    params.From,
 		To:      params.To,
 		Subject: params.Subject,
-		Text:    params.Text,
+	}
+	if params.BodyText != "" {
+		request.BodyText = primitiveapi.NewOptString(params.BodyText)
+	}
+	if params.BodyHTML != "" {
+		request.BodyHTML = primitiveapi.NewOptString(params.BodyHTML)
 	}
 	if params.Thread != nil {
 		if params.Thread.InReplyTo != "" {
@@ -183,12 +185,9 @@ func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error
 	switch v := res.(type) {
 	case *primitiveapi.SendEmailOK:
 		return SendResult{
-			ID:               v.Data.ID,
-			Status:           v.Data.Status,
-			SMTPCode:         v.Data.SMTPCode,
-			SMTPMessage:      v.Data.SMTPMessage,
-			RemoteHost:       v.Data.RemoteHost,
-			ServiceMessageID: v.Data.ServiceMessageID,
+			QueueID:  v.Data.QueueID,
+			Accepted: v.Data.Accepted,
+			Rejected: v.Data.Rejected,
 		}, nil
 	default:
 		return zero, mapSendError(res)
@@ -207,10 +206,10 @@ func (c *Client) Reply(ctx context.Context, email *ReceivedEmail, input ReplyPar
 	}
 
 	return c.Send(ctx, SendParams{
-		From:    email.ReceivedBy,
-		To:      email.ReplyTarget.Address,
-		Subject: firstNonEmpty(input.Subject, email.ReplySubject),
-		Text:    input.Text,
+		From:     email.ReceivedBy,
+		To:       email.ReplyTarget.Address,
+		Subject:  firstNonEmpty(input.Subject, email.ReplySubject),
+		BodyText: input.BodyText,
 		Thread: &SendThread{
 			InReplyTo:  email.Thread.MessageID,
 			References: references,
@@ -228,10 +227,10 @@ func (c *Client) Forward(ctx context.Context, email *ReceivedEmail, input Forwar
 	}
 
 	return c.Send(ctx, SendParams{
-		From:    firstNonEmpty(input.From, email.ReceivedBy),
-		To:      input.To,
-		Subject: firstNonEmpty(input.Subject, email.ForwardSubject),
-		Text:    buildForwardText(*email, input.Text),
+		From:     firstNonEmpty(input.From, email.ReceivedBy),
+		To:       input.To,
+		Subject:  firstNonEmpty(input.Subject, email.ForwardSubject),
+		BodyText: buildForwardText(*email, input.BodyText),
 	})
 }
 

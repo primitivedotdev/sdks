@@ -7202,52 +7202,6 @@ func (s *ListFiltersOK) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes int as json.
-func (o NilInt) Encode(e *jx.Encoder) {
-	if o.Null {
-		e.Null()
-		return
-	}
-	e.Int(int(o.Value))
-}
-
-// Decode decodes int from json.
-func (o *NilInt) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode NilInt to nil")
-	}
-	if d.Next() == jx.Null {
-		if err := d.Null(); err != nil {
-			return err
-		}
-
-		var v int
-		o.Value = v
-		o.Null = true
-		return nil
-	}
-	o.Null = false
-	v, err := d.Int()
-	if err != nil {
-		return err
-	}
-	o.Value = int(v)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s NilInt) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *NilInt) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes string as json.
 func (o NilString) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -9202,14 +9156,14 @@ func (s *SendEmailUnauthorized) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
-func (s *SendInput) Encode(e *jx.Encoder) {
+func (s *SendMailInput) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
 	e.ObjEnd()
 }
 
 // encodeFields encodes fields.
-func (s *SendInput) encodeFields(e *jx.Encoder) {
+func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("from")
 		e.Str(s.From)
@@ -9223,8 +9177,16 @@ func (s *SendInput) encodeFields(e *jx.Encoder) {
 		e.Str(s.Subject)
 	}
 	{
-		e.FieldStart("text")
-		e.Str(s.Text)
+		if s.BodyText.Set {
+			e.FieldStart("body_text")
+			s.BodyText.Encode(e)
+		}
+	}
+	{
+		if s.BodyHTML.Set {
+			e.FieldStart("body_html")
+			s.BodyHTML.Encode(e)
+		}
 	}
 	{
 		if s.InReplyTo.Set {
@@ -9244,19 +9206,20 @@ func (s *SendInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSendInput = [6]string{
+var jsonFieldsNameOfSendMailInput = [7]string{
 	0: "from",
 	1: "to",
 	2: "subject",
-	3: "text",
-	4: "in_reply_to",
-	5: "references",
+	3: "body_text",
+	4: "body_html",
+	5: "in_reply_to",
+	6: "references",
 }
 
-// Decode decodes SendInput from json.
-func (s *SendInput) Decode(d *jx.Decoder) error {
+// Decode decodes SendMailInput from json.
+func (s *SendMailInput) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode SendInput to nil")
+		return errors.New("invalid: unable to decode SendMailInput to nil")
 	}
 	var requiredBitSet [1]uint8
 
@@ -9298,17 +9261,25 @@ func (s *SendInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"subject\"")
 			}
-		case "text":
-			requiredBitSet[0] |= 1 << 3
+		case "body_text":
 			if err := func() error {
-				v, err := d.Str()
-				s.Text = string(v)
-				if err != nil {
+				s.BodyText.Reset()
+				if err := s.BodyText.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"text\"")
+				return errors.Wrap(err, "decode field \"body_text\"")
+			}
+		case "body_html":
+			if err := func() error {
+				s.BodyHTML.Reset()
+				if err := s.BodyHTML.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"body_html\"")
 			}
 		case "in_reply_to":
 			if err := func() error {
@@ -9344,12 +9315,12 @@ func (s *SendInput) Decode(d *jx.Decoder) error {
 		}
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "decode SendInput")
+		return errors.Wrap(err, "decode SendMailInput")
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00001111,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -9361,8 +9332,8 @@ func (s *SendInput) Decode(d *jx.Decoder) error {
 				bitIdx := bits.TrailingZeros8(result)
 				fieldIdx := i*8 + bitIdx
 				var name string
-				if fieldIdx < len(jsonFieldsNameOfSendInput) {
-					name = jsonFieldsNameOfSendInput[fieldIdx]
+				if fieldIdx < len(jsonFieldsNameOfSendMailInput) {
+					name = jsonFieldsNameOfSendMailInput[fieldIdx]
 				} else {
 					name = strconv.Itoa(fieldIdx)
 				}
@@ -9383,144 +9354,127 @@ func (s *SendInput) Decode(d *jx.Decoder) error {
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s *SendInput) MarshalJSON() ([]byte, error) {
+func (s *SendMailInput) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *SendInput) UnmarshalJSON(data []byte) error {
+func (s *SendMailInput) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
 
 // Encode implements json.Marshaler.
-func (s *SendResult) Encode(e *jx.Encoder) {
+func (s *SendMailResult) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
 	e.ObjEnd()
 }
 
 // encodeFields encodes fields.
-func (s *SendResult) encodeFields(e *jx.Encoder) {
+func (s *SendMailResult) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("id")
-		json.EncodeUUID(e, s.ID)
+		if s.QueueID.Set {
+			e.FieldStart("queue_id")
+			s.QueueID.Encode(e)
+		}
 	}
 	{
-		e.FieldStart("status")
-		s.Status.Encode(e)
+		e.FieldStart("accepted")
+		e.ArrStart()
+		for _, elem := range s.Accepted {
+			e.Str(elem)
+		}
+		e.ArrEnd()
 	}
 	{
-		e.FieldStart("smtp_code")
-		s.SMTPCode.Encode(e)
-	}
-	{
-		e.FieldStart("smtp_message")
-		s.SMTPMessage.Encode(e)
-	}
-	{
-		e.FieldStart("remote_host")
-		s.RemoteHost.Encode(e)
-	}
-	{
-		e.FieldStart("service_message_id")
-		s.ServiceMessageID.Encode(e)
+		e.FieldStart("rejected")
+		e.ArrStart()
+		for _, elem := range s.Rejected {
+			e.Str(elem)
+		}
+		e.ArrEnd()
 	}
 }
 
-var jsonFieldsNameOfSendResult = [6]string{
-	0: "id",
-	1: "status",
-	2: "smtp_code",
-	3: "smtp_message",
-	4: "remote_host",
-	5: "service_message_id",
+var jsonFieldsNameOfSendMailResult = [3]string{
+	0: "queue_id",
+	1: "accepted",
+	2: "rejected",
 }
 
-// Decode decodes SendResult from json.
-func (s *SendResult) Decode(d *jx.Decoder) error {
+// Decode decodes SendMailResult from json.
+func (s *SendMailResult) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode SendResult to nil")
+		return errors.New("invalid: unable to decode SendMailResult to nil")
 	}
 	var requiredBitSet [1]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "id":
-			requiredBitSet[0] |= 1 << 0
+		case "queue_id":
 			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.ID = v
-				if err != nil {
+				s.QueueID.Reset()
+				if err := s.QueueID.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"id\"")
+				return errors.Wrap(err, "decode field \"queue_id\"")
 			}
-		case "status":
+		case "accepted":
 			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				if err := s.Status.Decode(d); err != nil {
+				s.Accepted = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Accepted = append(s.Accepted, elem)
+					return nil
+				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"status\"")
+				return errors.Wrap(err, "decode field \"accepted\"")
 			}
-		case "smtp_code":
+		case "rejected":
 			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				if err := s.SMTPCode.Decode(d); err != nil {
+				s.Rejected = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Rejected = append(s.Rejected, elem)
+					return nil
+				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"smtp_code\"")
-			}
-		case "smtp_message":
-			requiredBitSet[0] |= 1 << 3
-			if err := func() error {
-				if err := s.SMTPMessage.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"smtp_message\"")
-			}
-		case "remote_host":
-			requiredBitSet[0] |= 1 << 4
-			if err := func() error {
-				if err := s.RemoteHost.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"remote_host\"")
-			}
-		case "service_message_id":
-			requiredBitSet[0] |= 1 << 5
-			if err := func() error {
-				if err := s.ServiceMessageID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"service_message_id\"")
+				return errors.Wrap(err, "decode field \"rejected\"")
 			}
 		default:
 			return d.Skip()
 		}
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "decode SendResult")
+		return errors.Wrap(err, "decode SendMailResult")
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00111111,
+		0b00000110,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -9532,8 +9486,8 @@ func (s *SendResult) Decode(d *jx.Decoder) error {
 				bitIdx := bits.TrailingZeros8(result)
 				fieldIdx := i*8 + bitIdx
 				var name string
-				if fieldIdx < len(jsonFieldsNameOfSendResult) {
-					name = jsonFieldsNameOfSendResult[fieldIdx]
+				if fieldIdx < len(jsonFieldsNameOfSendMailResult) {
+					name = jsonFieldsNameOfSendMailResult[fieldIdx]
 				} else {
 					name = strconv.Itoa(fieldIdx)
 				}
@@ -9554,58 +9508,14 @@ func (s *SendResult) Decode(d *jx.Decoder) error {
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s *SendResult) MarshalJSON() ([]byte, error) {
+func (s *SendMailResult) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *SendResult) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes SendResultStatus as json.
-func (s SendResultStatus) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes SendResultStatus from json.
-func (s *SendResultStatus) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode SendResultStatus to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch SendResultStatus(v) {
-	case SendResultStatusAccepted:
-		*s = SendResultStatusAccepted
-	case SendResultStatusRejected:
-		*s = SendResultStatusRejected
-	case SendResultStatusTempfailed:
-		*s = SendResultStatusTempfailed
-	case SendResultStatusFailed:
-		*s = SendResultStatusFailed
-	default:
-		*s = SendResultStatus(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s SendResultStatus) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *SendResultStatus) UnmarshalJSON(data []byte) error {
+func (s *SendMailResult) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

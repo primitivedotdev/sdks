@@ -10,14 +10,14 @@ from ... import errors
 
 from ...models.error_response import ErrorResponse
 from ...models.send_email_response_200 import SendEmailResponse200
-from ...models.send_input import SendInput
+from ...models.send_mail_input import SendMailInput
 from typing import cast
 
 
 
 def _get_kwargs(
     *,
-    body: SendInput,
+    body: SendMailInput,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
@@ -29,7 +29,7 @@ def _get_kwargs(
 
     _kwargs: dict[str, Any] = {
         "method": "post",
-        "url": "/send",
+        "url": "/send-mail",
     }
 
     _kwargs["json"] = body.to_dict()
@@ -110,17 +110,16 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: SendInput,
+    body: SendMailInput,
 
 ) -> Response[ErrorResponse | SendEmailResponse200]:
     """ Send outbound email
 
-     Sends a plain-text outbound email synchronously. The request stays
-    open until Primitive's downstream SMTP service completes the SMTP
-    transaction.
+     Sends an outbound email synchronously. The request stays open until
+    Primitive's outbound relay accepts or rejects the message.
 
     Args:
-        body (SendInput):
+        body (SendMailInput):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -145,17 +144,16 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
-    body: SendInput,
+    body: SendMailInput,
 
 ) -> ErrorResponse | SendEmailResponse200 | None:
     """ Send outbound email
 
-     Sends a plain-text outbound email synchronously. The request stays
-    open until Primitive's downstream SMTP service completes the SMTP
-    transaction.
+     Sends an outbound email synchronously. The request stays open until
+    Primitive's outbound relay accepts or rejects the message.
 
     Args:
-        body (SendInput):
+        body (SendMailInput):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -175,17 +173,16 @@ body=body,
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: SendInput,
+    body: SendMailInput,
 
 ) -> Response[ErrorResponse | SendEmailResponse200]:
     """ Send outbound email
 
-     Sends a plain-text outbound email synchronously. The request stays
-    open until Primitive's downstream SMTP service completes the SMTP
-    transaction.
+     Sends an outbound email synchronously. The request stays open until
+    Primitive's outbound relay accepts or rejects the message.
 
     Args:
-        body (SendInput):
+        body (SendMailInput):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -210,17 +207,16 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-    body: SendInput,
+    body: SendMailInput,
 
 ) -> ErrorResponse | SendEmailResponse200 | None:
     """ Send outbound email
 
-     Sends a plain-text outbound email synchronously. The request stays
-    open until Primitive's downstream SMTP service completes the SMTP
-    transaction.
+     Sends an outbound email synchronously. The request stays open until
+    Primitive's outbound relay accepts or rejects the message.
 
     Args:
-        body (SendInput):
+        body (SendMailInput):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

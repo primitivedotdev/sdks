@@ -12,8 +12,8 @@ from .api.api.sending.send_email import (
 from .api.api.sending.send_email import sync_detailed as send_email_sync_detailed
 from .api.models.error_response import ErrorResponse
 from .api.models.send_email_response_200 import SendEmailResponse200
-from .api.models.send_input import SendInput as ApiSendInput
-from .api.models.send_result import SendResult as ApiSendResult
+from .api.models.send_mail_input import SendMailInput as ApiSendMailInput
+from .api.models.send_mail_result import SendMailResult as ApiSendMailResult
 from .api.types import UNSET
 from .received_email import ReceivedEmail, format_address
 
@@ -28,12 +28,9 @@ class SendThread:
 
 @dataclass(frozen=True)
 class SendResult:
-    id: Any
-    status: Any
-    smtp_code: int | None
-    smtp_message: str | None
-    remote_host: str | None
-    service_message_id: str | None
+    accepted: list[str]
+    rejected: list[str]
+    queue_id: str | None = None
 
 
 class PrimitiveAPIError(Exception):
@@ -61,24 +58,28 @@ def _build_send_input(
     from_email: str,
     to: str,
     subject: str,
-    text: str,
+    body_text: str | None = None,
+    body_html: str | None = None,
     thread: SendThread | None = None,
-) -> ApiSendInput:
+) -> ApiSendMailInput:
     _validate_email_address("from", from_email)
     _validate_email_address("to", to)
 
     if subject.strip() == "":
         raise TypeError("subject must be a non-empty string")
 
-    if text == "":
-        raise TypeError("text must be a non-empty string")
+    if not body_text and not body_html:
+        raise TypeError("one of body_text or body_html is required")
 
     payload: dict[str, Any] = {
         "from": from_email,
         "to": to,
         "subject": subject,
-        "text": text,
     }
+    if body_text is not None:
+        payload["body_text"] = body_text
+    if body_html is not None:
+        payload["body_html"] = body_html
 
     if thread is not None:
         if thread.in_reply_to:
@@ -86,7 +87,7 @@ def _build_send_input(
         if thread.references:
             payload["references"] = thread.references
 
-    return ApiSendInput.from_dict(payload)
+    return ApiSendMailInput.from_dict(payload)
 
 
 def _raise_api_error(status_code: int, parsed: Any) -> None:
@@ -105,14 +106,12 @@ def _raise_api_error(status_code: int, parsed: Any) -> None:
     )
 
 
-def _map_send_result(result: ApiSendResult) -> SendResult:
+def _map_send_result(result: ApiSendMailResult) -> SendResult:
+    queue_id: str | None = None if result.queue_id is UNSET else cast(str, result.queue_id)
     return SendResult(
-        id=result.id,
-        status=result.status,
-        smtp_code=result.smtp_code,
-        smtp_message=result.smtp_message,
-        remote_host=result.remote_host,
-        service_message_id=result.service_message_id,
+        accepted=result.accepted,
+        rejected=result.rejected,
+        queue_id=queue_id,
     )
 
 
@@ -159,7 +158,8 @@ class PrimitiveClient:
         from_email: str,
         to: str,
         subject: str,
-        text: str,
+        body_text: str | None = None,
+        body_html: str | None = None,
         thread: SendThread | None = None,
     ) -> SendResult:
         response = send_email_sync_detailed(
@@ -168,7 +168,8 @@ class PrimitiveClient:
                 from_email=from_email,
                 to=to,
                 subject=subject,
-                text=text,
+                body_text=body_text,
+                body_html=body_html,
                 thread=thread,
             ),
         )
@@ -183,7 +184,7 @@ class PrimitiveClient:
                     status_code=int(response.status_code),
                     payload=response.content,
                 )
-            return _map_send_result(cast(ApiSendResult, response.parsed.data))
+            return _map_send_result(cast(ApiSendMailResult, response.parsed.data))
 
         _raise_api_error(int(response.status_code), response.parsed)
         raise AssertionError("unreachable")
@@ -194,7 +195,8 @@ class PrimitiveClient:
         from_email: str,
         to: str,
         subject: str,
-        text: str,
+        body_text: str | None = None,
+        body_html: str | None = None,
         thread: SendThread | None = None,
     ) -> SendResult:
         response = await send_email_async_detailed(
@@ -203,7 +205,8 @@ class PrimitiveClient:
                 from_email=from_email,
                 to=to,
                 subject=subject,
-                text=text,
+                body_text=body_text,
+                body_html=body_html,
                 thread=thread,
             ),
         )
@@ -218,7 +221,7 @@ class PrimitiveClient:
                     status_code=int(response.status_code),
                     payload=response.content,
                 )
-            return _map_send_result(cast(ApiSendResult, response.parsed.data))
+            return _map_send_result(cast(ApiSendMailResult, response.parsed.data))
 
         _raise_api_error(int(response.status_code), response.parsed)
         raise AssertionError("unreachable")
@@ -233,7 +236,7 @@ class PrimitiveClient:
             from_email=email.received_by,
             to=email.reply_target.address,
             subject=payload.get("subject") or email.reply_subject,
-            text=payload["text"],
+            body_text=payload["text"],
             thread=SendThread(
                 in_reply_to=email.thread.message_id,
                 references=(
@@ -254,7 +257,7 @@ class PrimitiveClient:
             from_email=email.received_by,
             to=email.reply_target.address,
             subject=payload.get("subject") or email.reply_subject,
-            text=payload["text"],
+            body_text=payload["text"],
             thread=SendThread(
                 in_reply_to=email.thread.message_id,
                 references=(
@@ -270,7 +273,7 @@ class PrimitiveClient:
         email: ReceivedEmail,
         *,
         to: str,
-        text: str | None = None,
+            body_text: str | None = None,
         subject: str | None = None,
         from_email: str | None = None,
     ) -> SendResult:
@@ -278,7 +281,7 @@ class PrimitiveClient:
             from_email=from_email or email.received_by,
             to=to,
             subject=subject or email.forward_subject,
-            text=_build_forward_text(email, text),
+            body_text=_build_forward_text(email, body_text),
         )
 
     async def aforward(
@@ -286,7 +289,7 @@ class PrimitiveClient:
         email: ReceivedEmail,
         *,
         to: str,
-        text: str | None = None,
+        body_text: str | None = None,
         subject: str | None = None,
         from_email: str | None = None,
     ) -> SendResult:
@@ -294,7 +297,7 @@ class PrimitiveClient:
             from_email=from_email or email.received_by,
             to=to,
             subject=subject or email.forward_subject,
-            text=_build_forward_text(email, text),
+            body_text=_build_forward_text(email, body_text),
         )
 
 
