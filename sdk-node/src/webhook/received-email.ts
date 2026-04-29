@@ -39,6 +39,11 @@ export interface ReceivedEmail {
 export function normalizeReceivedEmail(
   event: EmailReceivedEvent,
 ): ReceivedEmail {
+  const receivedBy = event.email.smtp.rcpt_to[0];
+  if (!receivedBy) {
+    throw new Error("email.smtp.rcpt_to must contain at least one recipient");
+  }
+
   const sender = parseHeaderAddress(event.email.headers.from) ?? {
     address: event.email.smtp.mail_from.trim().toLowerCase(),
     name: null,
@@ -56,7 +61,7 @@ export function normalizeReceivedEmail(
     receivedAt: event.email.received_at,
     sender,
     replyTarget,
-    receivedBy: event.email.smtp.rcpt_to[0],
+    receivedBy,
     receivedByAll: [...event.email.smtp.rcpt_to],
     subject,
     replySubject: buildReplySubject(subject),

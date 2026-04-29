@@ -59,6 +59,9 @@ def receive(
 
 
 def normalize_received_email(event: EmailReceivedEvent) -> ReceivedEmail:
+    if not event.email.smtp.rcpt_to:
+        raise ValueError("email.smtp.rcpt_to must contain at least one recipient")
+
     sender = _parse_address(event.email.headers.from_) or ReceivedEmailAddress(
         address=event.email.smtp.mail_from.strip().lower(),
         name=None,

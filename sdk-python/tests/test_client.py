@@ -14,6 +14,7 @@ from primitive.received_email import (
     ReceivedEmail,
     ReceivedEmailAddress,
     ReceivedEmailThread,
+    normalize_received_email,
 )
 
 client_module = importlib.import_module("primitive.client")
@@ -50,6 +51,39 @@ RECEIVED_EMAIL = ReceivedEmail(
         ),
     ),
 )
+
+
+def test_normalize_received_email_rejects_empty_smtp_recipients() -> None:
+    event = cast(
+        Any,
+        SimpleNamespace(
+            id="evt-1",
+            email=SimpleNamespace(
+                id="email-1",
+                received_at="2026-01-01T00:00:00.000Z",
+                smtp=SimpleNamespace(mail_from="bounce@example.com", rcpt_to=[]),
+                headers=SimpleNamespace(
+                    from_="Alice <alice@example.com>",
+                    subject="Hello",
+                    message_id="<parent@example.com>",
+                ),
+                parsed=SimpleNamespace(
+                    reply_to=[],
+                    references=[],
+                    body_text="Hi there",
+                    in_reply_to=[],
+                    attachments=[],
+                ),
+                auth=cast(Any, SimpleNamespace()),
+                analysis=cast(Any, SimpleNamespace()),
+            ),
+        ),
+    )
+
+    with pytest.raises(
+        ValueError, match="email.smtp.rcpt_to must contain at least one recipient"
+    ):
+        normalize_received_email(event)
 
 
 def test_send_validates_recipient_before_request(monkeypatch: pytest.MonkeyPatch) -> None:

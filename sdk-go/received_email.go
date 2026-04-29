@@ -78,6 +78,10 @@ func ReceiveFromHTTPRequest(request *http.Request, options ReceiveRequestOptions
 }
 
 func NormalizeReceivedEmail(event EmailReceivedEvent) *ReceivedEmail {
+	if len(event.Email.SMTP.RcptTo) == 0 {
+		panic("email.smtp.rcpt_to must contain at least one recipient")
+	}
+
 	sender := parseHeaderAddress(event.Email.Headers.From)
 	if sender == nil {
 		sender = &ReceivedEmailAddress{Address: strings.ToLower(strings.TrimSpace(event.Email.SMTP.MailFrom))}

@@ -51,6 +51,31 @@ func receivedEmailFixture() *ReceivedEmail {
 	}
 }
 
+func TestNormalizeReceivedEmailRejectsEmptySMTPRecipients(t *testing.T) {
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatal("expected NormalizeReceivedEmail to panic")
+		}
+		if recovered != "email.smtp.rcpt_to must contain at least one recipient" {
+			t.Fatalf("unexpected panic: %v", recovered)
+		}
+	}()
+
+	NormalizeReceivedEmail(EmailReceivedEvent{
+		ID: "evt-1",
+		Email: Email{
+			ID:         "email-1",
+			ReceivedAt: "2026-01-01T00:00:00.000Z",
+			SMTP: SMTPEnvelope{
+				MailFrom: "bounce@example.com",
+				RcptTo:   []string{},
+			},
+			Headers: EmailHeaders{From: "Alice <alice@example.com>"},
+		},
+	})
+}
+
 func TestClientSendValidatesRecipientBeforeRequest(t *testing.T) {
 	stub := &stubSendAPI{}
 	client := NewClientFromAPI(stub)

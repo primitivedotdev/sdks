@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import primitive, {
+  type EmailReceivedEvent,
   type PrimitiveApiError,
   PrimitiveClient,
   type ReceivedEmail,
 } from "../../src/index.js";
+import { normalizeReceivedEmail } from "../../src/webhook/received-email.js";
 
 const RECEIVED_EMAIL: ReceivedEmail = {
   id: "email-1",
@@ -81,6 +83,15 @@ const RECEIVED_EMAIL: ReceivedEmail = {
 };
 
 describe("PrimitiveClient", () => {
+  it("rejects received emails without SMTP recipients", () => {
+    const event = structuredClone(RECEIVED_EMAIL.raw as EmailReceivedEvent);
+    event.email.smtp.rcpt_to = [] as unknown as [string, ...string[]];
+
+    expect(() => normalizeReceivedEmail(event)).toThrow(
+      "email.smtp.rcpt_to must contain at least one recipient",
+    );
+  });
+
   it("validates email addresses before making the request", async () => {
     const fetchMock = vi.fn<typeof fetch>() as typeof fetch;
     const client = new PrimitiveClient({
