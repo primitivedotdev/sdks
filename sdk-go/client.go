@@ -147,6 +147,9 @@ func mapSendError(res primitiveapi.SendEmailRes) error {
 	}
 }
 
+// Send sends an outbound email. The request remains open until Primitive's
+// downstream SMTP transaction completes, so callers should pass a context with
+// a deadline long enough for SMTP delivery, typically 30-60 seconds.
 func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error) {
 	var zero SendResult
 

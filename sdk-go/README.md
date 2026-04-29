@@ -34,6 +34,7 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	primitive "github.com/primitivedotdev/sdks/sdk-go"
 )
@@ -64,13 +65,20 @@ func handle(ctx context.Context, body []byte, headers map[string]string) {
 ### Send a new email
 
 ```go
-result, err := client.Send(context.Background(), primitive.SendParams{
+ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+defer cancel()
+
+result, err := client.Send(ctx, primitive.SendParams{
 	From:    "support@example.com",
 	To:      "alice@example.com",
 	Subject: "Hello",
 	BodyText: "Hi there",
 })
 ```
+
+`Send`, `Reply`, and `Forward` keep the HTTP request open until Primitive's
+downstream SMTP transaction completes. Use a context deadline long enough for
+SMTP delivery, typically 30-60 seconds.
 
 ### Forward an inbound email
 

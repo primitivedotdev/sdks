@@ -69,6 +69,11 @@ const result = await client.send({
 console.log(result.queueId, result.accepted, result.rejected);
 ```
 
+`send`, `reply`, and `forward` keep the HTTP request open until Primitive's
+downstream SMTP transaction completes. In production, configure your runtime or
+transport with a request timeout long enough for SMTP delivery, typically 30-60
+seconds.
+
 ### Forward an inbound email
 
 ```ts
