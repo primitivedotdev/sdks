@@ -23,6 +23,8 @@ export const DEFAULT_BASE_URL = "https://www.primitive.dev/api/v1";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_THREAD_REFERENCES = 100;
 const MAX_THREAD_HEADER_BYTES = 8 * 1024;
+const MAX_FROM_HEADER_LENGTH = 998;
+const MAX_TO_HEADER_LENGTH = 320;
 
 export interface PrimitiveApiClientOptions
   extends Omit<GeneratedConfig, "auth" | "baseUrl"> {
@@ -41,8 +43,24 @@ function createDefaultAuth(apiKey?: string): GeneratedConfig["auth"] {
   };
 }
 
-function validateEmailAddress(field: "from" | "to", value: string): void {
-  if (!EMAIL_REGEX.test(value)) {
+function validateAddressHeader(field: "from" | "to", value: string): void {
+  const trimmed = value.trim();
+  const maxLength =
+    field === "from" ? MAX_FROM_HEADER_LENGTH : MAX_TO_HEADER_LENGTH;
+
+  if (trimmed.length < 3) {
+    throw new TypeError(`${field} must be at least 3 characters`);
+  }
+  if (trimmed.length > maxLength) {
+    throw new TypeError(`${field} must be at most ${maxLength} characters`);
+  }
+}
+
+function validateEmailAddress(field: "to", value: string): void {
+  if (
+    !EMAIL_REGEX.test(value) &&
+    !/^.+<[^\s@]+@[^\s@]+\.[^\s@]+>$/.test(value)
+  ) {
     throw new TypeError(`${field} must be a valid email address`);
   }
 }
@@ -59,6 +77,9 @@ export interface SendInput {
   bodyText?: string;
   bodyHtml?: string;
   thread?: SendThreadInput;
+  wait?: boolean;
+  waitTimeoutMs?: number;
+  idempotencyKey?: string;
 }
 
 export type ReplyInput =
@@ -76,9 +97,17 @@ export interface ForwardInput {
 }
 
 export interface SendResult {
-  queueId?: string;
+  id: string;
+  status: GeneratedSendMailResult["status"];
+  queueId: string | null;
   accepted: string[];
   rejected: string[];
+  clientIdempotencyKey: string;
+  requestId: string;
+  contentHash: string;
+  deliveryStatus?: GeneratedSendMailResult["delivery_status"];
+  smtpResponseCode?: number | null;
+  smtpResponseText?: string;
 }
 
 function validateThreadHeaderValue(field: string, value: string): void {
@@ -99,7 +128,8 @@ function validateThreadHeaderValue(field: string, value: string): void {
 }
 
 function validateSendInput(input: SendInput): void {
-  validateEmailAddress("from", input.from);
+  validateAddressHeader("from", input.from);
+  validateAddressHeader("to", input.to);
   validateEmailAddress("to", input.to);
 
   if (input.subject.trim().length === 0) {
@@ -127,6 +157,15 @@ function validateSendInput(input: SendInput): void {
       throw new TypeError(
         `thread.references header must be at most ${MAX_THREAD_HEADER_BYTES} characters`,
       );
+    }
+  }
+
+  if (input.waitTimeoutMs !== undefined) {
+    if (!Number.isInteger(input.waitTimeoutMs)) {
+      throw new TypeError("waitTimeoutMs must be an integer");
+    }
+    if (input.waitTimeoutMs < 1000 || input.waitTimeoutMs > 30000) {
+      throw new TypeError("waitTimeoutMs must be between 1000 and 30000");
     }
   }
 }
@@ -215,10 +254,17 @@ export class PrimitiveClient extends PrimitiveApiClient {
       ...(input.thread?.references?.length
         ? { references: input.thread.references }
         : {}),
+      ...(input.wait !== undefined ? { wait: input.wait } : {}),
+      ...(input.waitTimeoutMs !== undefined
+        ? { wait_timeout_ms: input.waitTimeoutMs }
+        : {}),
     };
 
     const result = await generatedOperations.sendEmail({
       body,
+      ...(input.idempotencyKey
+        ? { headers: { "Idempotency-Key": input.idempotencyKey } }
+        : {}),
       client: this.client,
       responseStyle: "fields",
     });
@@ -297,9 +343,23 @@ function buildForwardText(email: ReceivedEmail, intro?: string): string {
 
 function mapSendResult(result: GeneratedSendMailResult): SendResult {
   return {
-    ...(result.queue_id !== undefined ? { queueId: result.queue_id } : {}),
+    id: result.id,
+    status: result.status,
+    queueId: result.queue_id,
     accepted: result.accepted,
     rejected: result.rejected,
+    clientIdempotencyKey: result.client_idempotency_key,
+    requestId: result.request_id,
+    contentHash: result.content_hash,
+    ...(result.delivery_status !== undefined
+      ? { deliveryStatus: result.delivery_status }
+      : {}),
+    ...(result.smtp_response_code !== undefined
+      ? { smtpResponseCode: result.smtp_response_code }
+      : {}),
+    ...(result.smtp_response_text !== undefined
+      ? { smtpResponseText: result.smtp_response_text }
+      : {}),
   };
 }
 

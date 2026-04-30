@@ -1437,9 +1437,23 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "sendEmail",
         "summary": "Send outbound email",
-        "description": "Sends an outbound email synchronously. The request stays open until\nPrimitive's outbound relay accepts or rejects the message.\n",
+        "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n",
         "tags": [
           "Sending"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^[\\x21-\\x7E]+$"
+            },
+            "description": "Optional customer-supplied idempotency key. If omitted, Primitive\nderives one from the canonical request payload and echoes the\neffective value in the `Idempotency-Key` response header.\n"
+          }
         ],
         "requestBody": {
           "required": true,
@@ -1486,8 +1500,14 @@ export const openapiDocument: Record<string, unknown> = {
           "413": {
             "$ref": "#/components/responses/PayloadTooLarge"
           },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
           "502": {
             "$ref": "#/components/responses/BadGateway"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           },
           "504": {
             "$ref": "#/components/responses/GatewayTimeout"
@@ -1669,6 +1689,40 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       },
+      "ServiceUnavailable": {
+        "description": "Primitive is temporarily unable to process the request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "outbound_capacity_exhausted",
+                "message": "Outbound capacity is temporarily exhausted"
+              }
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Primitive encountered an internal error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "internal_error",
+                "message": "Internal server error"
+              }
+            }
+          }
+        }
+      },
       "GatewayTimeout": {
         "description": "Primitive timed out waiting for the downstream SMTP request",
         "content": {
@@ -1797,7 +1851,16 @@ export const openapiDocument: Record<string, unknown> = {
                   "mx_conflict",
                   "payload_too_large",
                   "bad_gateway",
-                  "gateway_timeout"
+                  "gateway_timeout",
+                  "outbound_disabled",
+                  "cannot_send_from_domain",
+                  "recipient_not_allowed",
+                  "outbound_key_missing",
+                  "outbound_unreachable",
+                  "outbound_key_invalid",
+                  "outbound_capacity_exhausted",
+                  "outbound_response_malformed",
+                  "outbound_relay_failed"
                 ]
               },
               "message": {
@@ -1825,8 +1888,38 @@ export const openapiDocument: Record<string, unknown> = {
                         "description": "Subdomain to try instead (e.g. \"mail\" for `mail.example.com`)."
                       }
                     }
+                  },
+                  "required_entitlements": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Entitlements that would allow a denied send when no recipient-scope gate was granted."
+                  },
+                  "sent_email_id": {
+                    "type": "string",
+                    "description": "ID of the persisted sent-email attempt associated with the error."
+                  },
+                  "content_hash": {
+                    "type": "string",
+                    "description": "Content hash of the original request on idempotency cache-hit errors."
+                  },
+                  "client_idempotency_key": {
+                    "type": "string",
+                    "description": "Effective idempotency key associated with the original request."
                   }
                 }
+              },
+              "gates": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/GateDenial"
+                },
+                "description": "Structured per-gate denial detail for recipient-scope send-mail failures."
+              },
+              "request_id": {
+                "type": "string",
+                "description": "Server-issued request identifier for support and tracing."
               }
             },
             "required": [
@@ -1838,6 +1931,71 @@ export const openapiDocument: Record<string, unknown> = {
         "required": [
           "success",
           "error"
+        ]
+      },
+      "GateDenial": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "send_to_confirmed_domains",
+              "send_to_known_addresses"
+            ],
+            "description": "Public recipient-scope gate name that denied the send."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "domain_not_confirmed",
+              "recipient_unauthenticated",
+              "recipient_not_known"
+            ],
+            "description": "Stable machine-readable denial reason."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable explanation of the gate denial."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Domain or address the gate evaluated."
+          },
+          "fix": {
+            "$ref": "#/components/schemas/GateFix"
+          },
+          "docs_url": {
+            "type": "string",
+            "description": "Public docs URL with more context."
+          }
+        },
+        "required": [
+          "name",
+          "reason",
+          "message",
+          "subject"
+        ]
+      },
+      "GateFix": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "confirm_domain",
+              "sender_must_fix_authentication",
+              "wait_for_inbound"
+            ],
+            "description": "Suggested next action for the caller."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Entity the action applies to."
+          }
+        },
+        "required": [
+          "action",
+          "subject"
         ]
       },
       "Account": {
@@ -2499,13 +2657,11 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "body_text": {
             "type": "string",
-            "maxLength": 81920,
-            "description": "Plain-text message body. At least one of body_text or body_html is required."
+            "description": "Plain-text message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes."
           },
           "body_html": {
             "type": "string",
-            "maxLength": 81920,
-            "description": "HTML message body. At least one of body_text or body_html is required."
+            "description": "HTML message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes."
           },
           "in_reply_to": {
             "type": "string",
@@ -2524,6 +2680,16 @@ export const openapiDocument: Record<string, unknown> = {
               "maxLength": 998,
               "pattern": "^[^\\x00-\\x1F\\x7F]+$"
             }
+          },
+          "wait": {
+            "type": "boolean",
+            "description": "When true, wait for the first downstream SMTP delivery outcome before returning."
+          },
+          "wait_timeout_ms": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 30000,
+            "description": "Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000."
           }
         },
         "required": [
@@ -2532,11 +2698,43 @@ export const openapiDocument: Record<string, unknown> = {
           "subject"
         ]
       },
+      "SentEmailStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "submitted_to_agent",
+          "agent_failed",
+          "unknown",
+          "delivered",
+          "bounced",
+          "deferred",
+          "wait_timeout"
+        ]
+      },
+      "DeliveryStatus": {
+        "type": "string",
+        "enum": [
+          "delivered",
+          "bounced",
+          "deferred",
+          "wait_timeout"
+        ]
+      },
       "SendMailResult": {
         "type": "object",
         "properties": {
-          "queue_id": {
+          "id": {
             "type": "string",
+            "description": "Persisted sent-email attempt ID."
+          },
+          "status": {
+            "$ref": "#/components/schemas/SentEmailStatus"
+          },
+          "queue_id": {
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Message identifier assigned by Primitive's outbound relay, when available."
           },
           "accepted": {
@@ -2552,11 +2750,43 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string"
             },
             "description": "Recipient addresses rejected by the relay."
+          },
+          "client_idempotency_key": {
+            "type": "string",
+            "description": "Effective idempotency key used for this send."
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Server-issued request identifier for support and tracing."
+          },
+          "content_hash": {
+            "type": "string",
+            "description": "Stable hash of the canonical send payload."
+          },
+          "delivery_status": {
+            "$ref": "#/components/schemas/DeliveryStatus"
+          },
+          "smtp_response_code": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "SMTP response code from the first downstream delivery outcome when wait is true."
+          },
+          "smtp_response_text": {
+            "type": "string",
+            "description": "SMTP response text from the first downstream delivery outcome when wait is true."
           }
         },
         "required": [
+          "id",
+          "status",
+          "queue_id",
           "accepted",
-          "rejected"
+          "rejected",
+          "client_idempotency_key",
+          "request_id",
+          "content_hash"
         ]
       },
       "Endpoint": {

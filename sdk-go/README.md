@@ -64,11 +64,15 @@ func handle(ctx context.Context, body []byte, headers map[string]string) {
 ### Send a new email
 
 ```go
+wait := true
 result, err := client.Send(context.Background(), primitive.SendParams{
-	From:    "support@example.com",
-	To:      "alice@example.com",
-	Subject: "Hello",
-	BodyText: "Hi there",
+	From:           "Support <support@example.com>",
+	To:             "alice@example.com",
+	Subject:        "Hello",
+	BodyText:       "Hi there",
+	IdempotencyKey: "customer-key-123",
+	Wait:           &wait,
+	WaitTimeoutMs:  5000,
 })
 ```
 

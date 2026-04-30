@@ -26,10 +26,14 @@ class SendMailInput:
             from_ (str): RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
             to (str): Recipient address. Recipient eligibility depends on your account's outbound entitlements.
             subject (str): Subject line for the outbound message
-            body_text (str | Unset): Plain-text message body. At least one of body_text or body_html is required.
-            body_html (str | Unset): HTML message body. At least one of body_text or body_html is required.
+            body_text (str | Unset): Plain-text message body. At least one of body_text or body_html is required. The
+                combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes.
+            body_html (str | Unset): HTML message body. At least one of body_text or body_html is required. The combined
+                UTF-8 byte length of body_text and body_html must be at most 262144 bytes.
             in_reply_to (str | Unset): Message-ID of the direct parent email when sending a threaded reply.
             references (list[str] | Unset): Full ordered message-id chain for the thread.
+            wait (bool | Unset): When true, wait for the first downstream SMTP delivery outcome before returning.
+            wait_timeout_ms (int | Unset): Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
      """
 
     from_: str
@@ -39,6 +43,8 @@ class SendMailInput:
     body_html: str | Unset = UNSET
     in_reply_to: str | Unset = UNSET
     references: list[str] | Unset = UNSET
+    wait: bool | Unset = UNSET
+    wait_timeout_ms: int | Unset = UNSET
 
 
 
@@ -63,6 +69,10 @@ class SendMailInput:
 
 
 
+        wait = self.wait
+
+        wait_timeout_ms = self.wait_timeout_ms
+
 
         field_dict: dict[str, Any] = {}
 
@@ -79,6 +89,10 @@ class SendMailInput:
             field_dict["in_reply_to"] = in_reply_to
         if references is not UNSET:
             field_dict["references"] = references
+        if wait is not UNSET:
+            field_dict["wait"] = wait
+        if wait_timeout_ms is not UNSET:
+            field_dict["wait_timeout_ms"] = wait_timeout_ms
 
         return field_dict
 
@@ -102,6 +116,10 @@ class SendMailInput:
         references = cast(list[str], d.pop("references", UNSET))
 
 
+        wait = d.pop("wait", UNSET)
+
+        wait_timeout_ms = d.pop("wait_timeout_ms", UNSET)
+
         send_mail_input = cls(
             from_=from_,
             to=to,
@@ -110,6 +128,8 @@ class SendMailInput:
             body_html=body_html,
             in_reply_to=in_reply_to,
             references=references,
+            wait=wait,
+            wait_timeout_ms=wait_timeout_ms,
         )
 
         return send_mail_input

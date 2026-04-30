@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.send_email_response_200 import SendEmailResponse200
 from ...models.send_mail_input import SendMailInput
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: SendMailInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
     
@@ -78,12 +83,26 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_413
 
+    if response.status_code == 500:
+        response_500 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_500
+
     if response.status_code == 502:
         response_502 = ErrorResponse.from_dict(response.json())
 
 
 
         return response_502
+
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
 
     if response.status_code == 504:
         response_504 = ErrorResponse.from_dict(response.json())
@@ -111,14 +130,17 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: SendMailInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SendEmailResponse200]:
     """ Send outbound email
 
-     Sends an outbound email synchronously. The request stays open until
-    Primitive's outbound relay accepts or rejects the message.
+     Sends an outbound email through Primitive's outbound relay. By default
+    the request returns once the relay accepts the message for delivery.
+    Set `wait: true` to wait for the first downstream SMTP delivery outcome.
 
     Args:
+        idempotency_key (str | Unset):
         body (SendMailInput):
 
     Raises:
@@ -132,6 +154,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -145,14 +168,17 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: SendMailInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | SendEmailResponse200 | None:
     """ Send outbound email
 
-     Sends an outbound email synchronously. The request stays open until
-    Primitive's outbound relay accepts or rejects the message.
+     Sends an outbound email through Primitive's outbound relay. By default
+    the request returns once the relay accepts the message for delivery.
+    Set `wait: true` to wait for the first downstream SMTP delivery outcome.
 
     Args:
+        idempotency_key (str | Unset):
         body (SendMailInput):
 
     Raises:
@@ -167,6 +193,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -174,14 +201,17 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: SendMailInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SendEmailResponse200]:
     """ Send outbound email
 
-     Sends an outbound email synchronously. The request stays open until
-    Primitive's outbound relay accepts or rejects the message.
+     Sends an outbound email through Primitive's outbound relay. By default
+    the request returns once the relay accepts the message for delivery.
+    Set `wait: true` to wait for the first downstream SMTP delivery outcome.
 
     Args:
+        idempotency_key (str | Unset):
         body (SendMailInput):
 
     Raises:
@@ -195,6 +225,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -208,14 +239,17 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: SendMailInput,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | SendEmailResponse200 | None:
     """ Send outbound email
 
-     Sends an outbound email synchronously. The request stays open until
-    Primitive's outbound relay accepts or rejects the message.
+     Sends an outbound email through Primitive's outbound relay. By default
+    the request returns once the relay accepts the message for delivery.
+    Set `wait: true` to wait for the first downstream SMTP delivery outcome.
 
     Args:
+        idempotency_key (str | Unset):
         body (SendMailInput):
 
     Raises:
@@ -230,5 +264,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

@@ -53,13 +53,16 @@ import primitive
 client = primitive.client(api_key="prim_test")
 
 result = client.send(
-    from_email="support@example.com",
+    from_email="Support <support@example.com>",
     to="alice@example.com",
     subject="Hello",
     body_text="Hi there",
+    idempotency_key="customer-key-123",
+    wait=True,
+    wait_timeout_ms=5000,
 )
 
-print(result.queue_id, result.accepted, result.rejected)
+print(result.id, result.status, result.queue_id, result.delivery_status)
 ```
 
 ### Forward an inbound email
