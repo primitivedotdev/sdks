@@ -591,6 +591,62 @@ func (s *DeletedData) SetDeleted(val bool) {
 	s.Deleted = val
 }
 
+// Ref: #/components/schemas/DeliveryStatus
+type DeliveryStatus string
+
+const (
+	DeliveryStatusDelivered   DeliveryStatus = "delivered"
+	DeliveryStatusBounced     DeliveryStatus = "bounced"
+	DeliveryStatusDeferred    DeliveryStatus = "deferred"
+	DeliveryStatusWaitTimeout DeliveryStatus = "wait_timeout"
+)
+
+// AllValues returns all DeliveryStatus values.
+func (DeliveryStatus) AllValues() []DeliveryStatus {
+	return []DeliveryStatus{
+		DeliveryStatusDelivered,
+		DeliveryStatusBounced,
+		DeliveryStatusDeferred,
+		DeliveryStatusWaitTimeout,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s DeliveryStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case DeliveryStatusDelivered:
+		return []byte(s), nil
+	case DeliveryStatusBounced:
+		return []byte(s), nil
+	case DeliveryStatusDeferred:
+		return []byte(s), nil
+	case DeliveryStatusWaitTimeout:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *DeliveryStatus) UnmarshalText(data []byte) error {
+	switch DeliveryStatus(data) {
+	case DeliveryStatusDelivered:
+		*s = DeliveryStatusDelivered
+		return nil
+	case DeliveryStatusBounced:
+		*s = DeliveryStatusBounced
+		return nil
+	case DeliveryStatusDeferred:
+		*s = DeliveryStatusDeferred
+		return nil
+	case DeliveryStatusWaitTimeout:
+		*s = DeliveryStatusWaitTimeout
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/DeliverySummary
 type DeliverySummary struct {
 	// Delivery ID (numeric string).
@@ -2140,6 +2196,10 @@ type ErrorResponseError struct {
 	// from the error. The fields present depend on `code`. Additional
 	// keys may be added over time without a major-version bump.
 	Details OptErrorResponseErrorDetails `json:"details"`
+	// Structured per-gate denial detail for recipient-scope send-mail failures.
+	Gates []GateDenial `json:"gates"`
+	// Server-issued request identifier for support and tracing.
+	RequestID OptString `json:"request_id"`
 }
 
 // GetCode returns the value of Code.
@@ -2157,6 +2217,16 @@ func (s *ErrorResponseError) GetDetails() OptErrorResponseErrorDetails {
 	return s.Details
 }
 
+// GetGates returns the value of Gates.
+func (s *ErrorResponseError) GetGates() []GateDenial {
+	return s.Gates
+}
+
+// GetRequestID returns the value of RequestID.
+func (s *ErrorResponseError) GetRequestID() OptString {
+	return s.RequestID
+}
+
 // SetCode sets the value of Code.
 func (s *ErrorResponseError) SetCode(val ErrorResponseErrorCode) {
 	s.Code = val
@@ -2172,20 +2242,39 @@ func (s *ErrorResponseError) SetDetails(val OptErrorResponseErrorDetails) {
 	s.Details = val
 }
 
+// SetGates sets the value of Gates.
+func (s *ErrorResponseError) SetGates(val []GateDenial) {
+	s.Gates = val
+}
+
+// SetRequestID sets the value of RequestID.
+func (s *ErrorResponseError) SetRequestID(val OptString) {
+	s.RequestID = val
+}
+
 type ErrorResponseErrorCode string
 
 const (
-	ErrorResponseErrorCodeUnauthorized      ErrorResponseErrorCode = "unauthorized"
-	ErrorResponseErrorCodeForbidden         ErrorResponseErrorCode = "forbidden"
-	ErrorResponseErrorCodeNotFound          ErrorResponseErrorCode = "not_found"
-	ErrorResponseErrorCodeValidationError   ErrorResponseErrorCode = "validation_error"
-	ErrorResponseErrorCodeRateLimitExceeded ErrorResponseErrorCode = "rate_limit_exceeded"
-	ErrorResponseErrorCodeInternalError     ErrorResponseErrorCode = "internal_error"
-	ErrorResponseErrorCodeConflict          ErrorResponseErrorCode = "conflict"
-	ErrorResponseErrorCodeMxConflict        ErrorResponseErrorCode = "mx_conflict"
-	ErrorResponseErrorCodePayloadTooLarge   ErrorResponseErrorCode = "payload_too_large"
-	ErrorResponseErrorCodeBadGateway        ErrorResponseErrorCode = "bad_gateway"
-	ErrorResponseErrorCodeGatewayTimeout    ErrorResponseErrorCode = "gateway_timeout"
+	ErrorResponseErrorCodeUnauthorized              ErrorResponseErrorCode = "unauthorized"
+	ErrorResponseErrorCodeForbidden                 ErrorResponseErrorCode = "forbidden"
+	ErrorResponseErrorCodeNotFound                  ErrorResponseErrorCode = "not_found"
+	ErrorResponseErrorCodeValidationError           ErrorResponseErrorCode = "validation_error"
+	ErrorResponseErrorCodeRateLimitExceeded         ErrorResponseErrorCode = "rate_limit_exceeded"
+	ErrorResponseErrorCodeInternalError             ErrorResponseErrorCode = "internal_error"
+	ErrorResponseErrorCodeConflict                  ErrorResponseErrorCode = "conflict"
+	ErrorResponseErrorCodeMxConflict                ErrorResponseErrorCode = "mx_conflict"
+	ErrorResponseErrorCodePayloadTooLarge           ErrorResponseErrorCode = "payload_too_large"
+	ErrorResponseErrorCodeBadGateway                ErrorResponseErrorCode = "bad_gateway"
+	ErrorResponseErrorCodeGatewayTimeout            ErrorResponseErrorCode = "gateway_timeout"
+	ErrorResponseErrorCodeOutboundDisabled          ErrorResponseErrorCode = "outbound_disabled"
+	ErrorResponseErrorCodeCannotSendFromDomain      ErrorResponseErrorCode = "cannot_send_from_domain"
+	ErrorResponseErrorCodeRecipientNotAllowed       ErrorResponseErrorCode = "recipient_not_allowed"
+	ErrorResponseErrorCodeOutboundKeyMissing        ErrorResponseErrorCode = "outbound_key_missing"
+	ErrorResponseErrorCodeOutboundUnreachable       ErrorResponseErrorCode = "outbound_unreachable"
+	ErrorResponseErrorCodeOutboundKeyInvalid        ErrorResponseErrorCode = "outbound_key_invalid"
+	ErrorResponseErrorCodeOutboundCapacityExhausted ErrorResponseErrorCode = "outbound_capacity_exhausted"
+	ErrorResponseErrorCodeOutboundResponseMalformed ErrorResponseErrorCode = "outbound_response_malformed"
+	ErrorResponseErrorCodeOutboundRelayFailed       ErrorResponseErrorCode = "outbound_relay_failed"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -2202,6 +2291,15 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodePayloadTooLarge,
 		ErrorResponseErrorCodeBadGateway,
 		ErrorResponseErrorCodeGatewayTimeout,
+		ErrorResponseErrorCodeOutboundDisabled,
+		ErrorResponseErrorCodeCannotSendFromDomain,
+		ErrorResponseErrorCodeRecipientNotAllowed,
+		ErrorResponseErrorCodeOutboundKeyMissing,
+		ErrorResponseErrorCodeOutboundUnreachable,
+		ErrorResponseErrorCodeOutboundKeyInvalid,
+		ErrorResponseErrorCodeOutboundCapacityExhausted,
+		ErrorResponseErrorCodeOutboundResponseMalformed,
+		ErrorResponseErrorCodeOutboundRelayFailed,
 	}
 }
 
@@ -2229,6 +2327,24 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeBadGateway:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeGatewayTimeout:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundDisabled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeCannotSendFromDomain:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRecipientNotAllowed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundKeyMissing:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundUnreachable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundKeyInvalid:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundCapacityExhausted:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundResponseMalformed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundRelayFailed:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -2271,6 +2387,33 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeGatewayTimeout:
 		*s = ErrorResponseErrorCodeGatewayTimeout
 		return nil
+	case ErrorResponseErrorCodeOutboundDisabled:
+		*s = ErrorResponseErrorCodeOutboundDisabled
+		return nil
+	case ErrorResponseErrorCodeCannotSendFromDomain:
+		*s = ErrorResponseErrorCodeCannotSendFromDomain
+		return nil
+	case ErrorResponseErrorCodeRecipientNotAllowed:
+		*s = ErrorResponseErrorCodeRecipientNotAllowed
+		return nil
+	case ErrorResponseErrorCodeOutboundKeyMissing:
+		*s = ErrorResponseErrorCodeOutboundKeyMissing
+		return nil
+	case ErrorResponseErrorCodeOutboundUnreachable:
+		*s = ErrorResponseErrorCodeOutboundUnreachable
+		return nil
+	case ErrorResponseErrorCodeOutboundKeyInvalid:
+		*s = ErrorResponseErrorCodeOutboundKeyInvalid
+		return nil
+	case ErrorResponseErrorCodeOutboundCapacityExhausted:
+		*s = ErrorResponseErrorCodeOutboundCapacityExhausted
+		return nil
+	case ErrorResponseErrorCodeOutboundResponseMalformed:
+		*s = ErrorResponseErrorCodeOutboundResponseMalformed
+		return nil
+	case ErrorResponseErrorCodeOutboundRelayFailed:
+		*s = ErrorResponseErrorCodeOutboundRelayFailed
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -2281,13 +2424,41 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 // keys may be added over time without a major-version bump.
 type ErrorResponseErrorDetails struct {
 	// Present when `code == mx_conflict`.
-	MxConflict      OptErrorResponseErrorDetailsMxConflict `json:"mx_conflict"`
-	AdditionalProps ErrorResponseErrorDetailsAdditional
+	MxConflict OptErrorResponseErrorDetailsMxConflict `json:"mx_conflict"`
+	// Entitlements that would allow a denied send when no recipient-scope gate was granted.
+	RequiredEntitlements []string `json:"required_entitlements"`
+	// ID of the persisted sent-email attempt associated with the error.
+	SentEmailID OptString `json:"sent_email_id"`
+	// Content hash of the original request on idempotency cache-hit errors.
+	ContentHash OptString `json:"content_hash"`
+	// Effective idempotency key associated with the original request.
+	ClientIdempotencyKey OptString `json:"client_idempotency_key"`
+	AdditionalProps      ErrorResponseErrorDetailsAdditional
 }
 
 // GetMxConflict returns the value of MxConflict.
 func (s *ErrorResponseErrorDetails) GetMxConflict() OptErrorResponseErrorDetailsMxConflict {
 	return s.MxConflict
+}
+
+// GetRequiredEntitlements returns the value of RequiredEntitlements.
+func (s *ErrorResponseErrorDetails) GetRequiredEntitlements() []string {
+	return s.RequiredEntitlements
+}
+
+// GetSentEmailID returns the value of SentEmailID.
+func (s *ErrorResponseErrorDetails) GetSentEmailID() OptString {
+	return s.SentEmailID
+}
+
+// GetContentHash returns the value of ContentHash.
+func (s *ErrorResponseErrorDetails) GetContentHash() OptString {
+	return s.ContentHash
+}
+
+// GetClientIdempotencyKey returns the value of ClientIdempotencyKey.
+func (s *ErrorResponseErrorDetails) GetClientIdempotencyKey() OptString {
+	return s.ClientIdempotencyKey
 }
 
 // GetAdditionalProps returns the value of AdditionalProps.
@@ -2298,6 +2469,26 @@ func (s *ErrorResponseErrorDetails) GetAdditionalProps() ErrorResponseErrorDetai
 // SetMxConflict sets the value of MxConflict.
 func (s *ErrorResponseErrorDetails) SetMxConflict(val OptErrorResponseErrorDetailsMxConflict) {
 	s.MxConflict = val
+}
+
+// SetRequiredEntitlements sets the value of RequiredEntitlements.
+func (s *ErrorResponseErrorDetails) SetRequiredEntitlements(val []string) {
+	s.RequiredEntitlements = val
+}
+
+// SetSentEmailID sets the value of SentEmailID.
+func (s *ErrorResponseErrorDetails) SetSentEmailID(val OptString) {
+	s.SentEmailID = val
+}
+
+// SetContentHash sets the value of ContentHash.
+func (s *ErrorResponseErrorDetails) SetContentHash(val OptString) {
+	s.ContentHash = val
+}
+
+// SetClientIdempotencyKey sets the value of ClientIdempotencyKey.
+func (s *ErrorResponseErrorDetails) SetClientIdempotencyKey(val OptString) {
+	s.ClientIdempotencyKey = val
 }
 
 // SetAdditionalProps sets the value of AdditionalProps.
@@ -2462,6 +2653,249 @@ func (s *FilterType) UnmarshalText(data []byte) error {
 		return nil
 	case FilterTypeBlocklist:
 		*s = FilterTypeBlocklist
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/GateDenial
+type GateDenial struct {
+	// Public recipient-scope gate name that denied the send.
+	Name GateDenialName `json:"name"`
+	// Stable machine-readable denial reason.
+	Reason GateDenialReason `json:"reason"`
+	// Human-readable explanation of the gate denial.
+	Message string `json:"message"`
+	// Domain or address the gate evaluated.
+	Subject string     `json:"subject"`
+	Fix     OptGateFix `json:"fix"`
+	// Public docs URL with more context.
+	DocsURL OptString `json:"docs_url"`
+}
+
+// GetName returns the value of Name.
+func (s *GateDenial) GetName() GateDenialName {
+	return s.Name
+}
+
+// GetReason returns the value of Reason.
+func (s *GateDenial) GetReason() GateDenialReason {
+	return s.Reason
+}
+
+// GetMessage returns the value of Message.
+func (s *GateDenial) GetMessage() string {
+	return s.Message
+}
+
+// GetSubject returns the value of Subject.
+func (s *GateDenial) GetSubject() string {
+	return s.Subject
+}
+
+// GetFix returns the value of Fix.
+func (s *GateDenial) GetFix() OptGateFix {
+	return s.Fix
+}
+
+// GetDocsURL returns the value of DocsURL.
+func (s *GateDenial) GetDocsURL() OptString {
+	return s.DocsURL
+}
+
+// SetName sets the value of Name.
+func (s *GateDenial) SetName(val GateDenialName) {
+	s.Name = val
+}
+
+// SetReason sets the value of Reason.
+func (s *GateDenial) SetReason(val GateDenialReason) {
+	s.Reason = val
+}
+
+// SetMessage sets the value of Message.
+func (s *GateDenial) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *GateDenial) SetSubject(val string) {
+	s.Subject = val
+}
+
+// SetFix sets the value of Fix.
+func (s *GateDenial) SetFix(val OptGateFix) {
+	s.Fix = val
+}
+
+// SetDocsURL sets the value of DocsURL.
+func (s *GateDenial) SetDocsURL(val OptString) {
+	s.DocsURL = val
+}
+
+// Public recipient-scope gate name that denied the send.
+type GateDenialName string
+
+const (
+	GateDenialNameSendToConfirmedDomains GateDenialName = "send_to_confirmed_domains"
+	GateDenialNameSendToKnownAddresses   GateDenialName = "send_to_known_addresses"
+)
+
+// AllValues returns all GateDenialName values.
+func (GateDenialName) AllValues() []GateDenialName {
+	return []GateDenialName{
+		GateDenialNameSendToConfirmedDomains,
+		GateDenialNameSendToKnownAddresses,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GateDenialName) MarshalText() ([]byte, error) {
+	switch s {
+	case GateDenialNameSendToConfirmedDomains:
+		return []byte(s), nil
+	case GateDenialNameSendToKnownAddresses:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GateDenialName) UnmarshalText(data []byte) error {
+	switch GateDenialName(data) {
+	case GateDenialNameSendToConfirmedDomains:
+		*s = GateDenialNameSendToConfirmedDomains
+		return nil
+	case GateDenialNameSendToKnownAddresses:
+		*s = GateDenialNameSendToKnownAddresses
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Stable machine-readable denial reason.
+type GateDenialReason string
+
+const (
+	GateDenialReasonDomainNotConfirmed       GateDenialReason = "domain_not_confirmed"
+	GateDenialReasonRecipientUnauthenticated GateDenialReason = "recipient_unauthenticated"
+	GateDenialReasonRecipientNotKnown        GateDenialReason = "recipient_not_known"
+)
+
+// AllValues returns all GateDenialReason values.
+func (GateDenialReason) AllValues() []GateDenialReason {
+	return []GateDenialReason{
+		GateDenialReasonDomainNotConfirmed,
+		GateDenialReasonRecipientUnauthenticated,
+		GateDenialReasonRecipientNotKnown,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GateDenialReason) MarshalText() ([]byte, error) {
+	switch s {
+	case GateDenialReasonDomainNotConfirmed:
+		return []byte(s), nil
+	case GateDenialReasonRecipientUnauthenticated:
+		return []byte(s), nil
+	case GateDenialReasonRecipientNotKnown:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GateDenialReason) UnmarshalText(data []byte) error {
+	switch GateDenialReason(data) {
+	case GateDenialReasonDomainNotConfirmed:
+		*s = GateDenialReasonDomainNotConfirmed
+		return nil
+	case GateDenialReasonRecipientUnauthenticated:
+		*s = GateDenialReasonRecipientUnauthenticated
+		return nil
+	case GateDenialReasonRecipientNotKnown:
+		*s = GateDenialReasonRecipientNotKnown
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/GateFix
+type GateFix struct {
+	// Suggested next action for the caller.
+	Action GateFixAction `json:"action"`
+	// Entity the action applies to.
+	Subject string `json:"subject"`
+}
+
+// GetAction returns the value of Action.
+func (s *GateFix) GetAction() GateFixAction {
+	return s.Action
+}
+
+// GetSubject returns the value of Subject.
+func (s *GateFix) GetSubject() string {
+	return s.Subject
+}
+
+// SetAction sets the value of Action.
+func (s *GateFix) SetAction(val GateFixAction) {
+	s.Action = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *GateFix) SetSubject(val string) {
+	s.Subject = val
+}
+
+// Suggested next action for the caller.
+type GateFixAction string
+
+const (
+	GateFixActionConfirmDomain               GateFixAction = "confirm_domain"
+	GateFixActionSenderMustFixAuthentication GateFixAction = "sender_must_fix_authentication"
+	GateFixActionWaitForInbound              GateFixAction = "wait_for_inbound"
+)
+
+// AllValues returns all GateFixAction values.
+func (GateFixAction) AllValues() []GateFixAction {
+	return []GateFixAction{
+		GateFixActionConfirmDomain,
+		GateFixActionSenderMustFixAuthentication,
+		GateFixActionWaitForInbound,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GateFixAction) MarshalText() ([]byte, error) {
+	switch s {
+	case GateFixActionConfirmDomain:
+		return []byte(s), nil
+	case GateFixActionSenderMustFixAuthentication:
+		return []byte(s), nil
+	case GateFixActionWaitForInbound:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GateFixAction) UnmarshalText(data []byte) error {
+	switch GateFixAction(data) {
+	case GateFixActionConfirmDomain:
+		*s = GateFixActionConfirmDomain
+		return nil
+	case GateFixActionSenderMustFixAuthentication:
+		*s = GateFixActionSenderMustFixAuthentication
+		return nil
+	case GateFixActionWaitForInbound:
+		*s = GateFixActionWaitForInbound
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -3041,6 +3475,52 @@ func (o OptDateTime) Or(d time.Time) time.Time {
 	return d
 }
 
+// NewOptDeliveryStatus returns new OptDeliveryStatus with value set to v.
+func NewOptDeliveryStatus(v DeliveryStatus) OptDeliveryStatus {
+	return OptDeliveryStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptDeliveryStatus is optional DeliveryStatus.
+type OptDeliveryStatus struct {
+	Value DeliveryStatus
+	Set   bool
+}
+
+// IsSet returns true if OptDeliveryStatus was set.
+func (o OptDeliveryStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptDeliveryStatus) Reset() {
+	var v DeliveryStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptDeliveryStatus) SetTo(v DeliveryStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptDeliveryStatus) Get() (v DeliveryStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptDeliveryStatus) Or(d DeliveryStatus) DeliveryStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptErrorResponseErrorDetails returns new OptErrorResponseErrorDetails with value set to v.
 func NewOptErrorResponseErrorDetails(v ErrorResponseErrorDetails) OptErrorResponseErrorDetails {
 	return OptErrorResponseErrorDetails{
@@ -3127,6 +3607,52 @@ func (o OptErrorResponseErrorDetailsMxConflict) Get() (v ErrorResponseErrorDetai
 
 // Or returns value if set, or given parameter if does not.
 func (o OptErrorResponseErrorDetailsMxConflict) Or(d ErrorResponseErrorDetailsMxConflict) ErrorResponseErrorDetailsMxConflict {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptGateFix returns new OptGateFix with value set to v.
+func NewOptGateFix(v GateFix) OptGateFix {
+	return OptGateFix{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGateFix is optional GateFix.
+type OptGateFix struct {
+	Value GateFix
+	Set   bool
+}
+
+// IsSet returns true if OptGateFix was set.
+func (o OptGateFix) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGateFix) Reset() {
+	var v GateFix
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGateFix) SetTo(v GateFix) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGateFix) Get() (v GateFix, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGateFix) Or(d GateFix) GateFix {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -4228,6 +4754,10 @@ type SendEmailGatewayTimeout ErrorResponse
 
 func (*SendEmailGatewayTimeout) sendEmailRes() {}
 
+type SendEmailInternalServerError ErrorResponse
+
+func (*SendEmailInternalServerError) sendEmailRes() {}
+
 // Merged schema.
 type SendEmailOK struct {
 	Success bool           `json:"success"`
@@ -4260,6 +4790,10 @@ type SendEmailRequestEntityTooLarge ErrorResponse
 
 func (*SendEmailRequestEntityTooLarge) sendEmailRes() {}
 
+type SendEmailServiceUnavailable ErrorResponse
+
+func (*SendEmailServiceUnavailable) sendEmailRes() {}
+
 type SendEmailUnauthorized ErrorResponse
 
 func (*SendEmailUnauthorized) sendEmailRes() {}
@@ -4272,14 +4806,20 @@ type SendMailInput struct {
 	To string `json:"to"`
 	// Subject line for the outbound message.
 	Subject string `json:"subject"`
-	// Plain-text message body. At least one of body_text or body_html is required.
+	// Plain-text message body. At least one of body_text or body_html is required. The combined UTF-8
+	// byte length of body_text and body_html must be at most 262144 bytes.
 	BodyText OptString `json:"body_text"`
-	// HTML message body. At least one of body_text or body_html is required.
+	// HTML message body. At least one of body_text or body_html is required. The combined UTF-8 byte
+	// length of body_text and body_html must be at most 262144 bytes.
 	BodyHTML OptString `json:"body_html"`
 	// Message-ID of the direct parent email when sending a threaded reply.
 	InReplyTo OptString `json:"in_reply_to"`
 	// Full ordered message-id chain for the thread.
 	References []string `json:"references"`
+	// When true, wait for the first downstream SMTP delivery outcome before returning.
+	Wait OptBool `json:"wait"`
+	// Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
+	WaitTimeoutMs OptInt `json:"wait_timeout_ms"`
 }
 
 // GetFrom returns the value of From.
@@ -4317,6 +4857,16 @@ func (s *SendMailInput) GetReferences() []string {
 	return s.References
 }
 
+// GetWait returns the value of Wait.
+func (s *SendMailInput) GetWait() OptBool {
+	return s.Wait
+}
+
+// GetWaitTimeoutMs returns the value of WaitTimeoutMs.
+func (s *SendMailInput) GetWaitTimeoutMs() OptInt {
+	return s.WaitTimeoutMs
+}
+
 // SetFrom sets the value of From.
 func (s *SendMailInput) SetFrom(val string) {
 	s.From = val
@@ -4352,18 +4902,52 @@ func (s *SendMailInput) SetReferences(val []string) {
 	s.References = val
 }
 
+// SetWait sets the value of Wait.
+func (s *SendMailInput) SetWait(val OptBool) {
+	s.Wait = val
+}
+
+// SetWaitTimeoutMs sets the value of WaitTimeoutMs.
+func (s *SendMailInput) SetWaitTimeoutMs(val OptInt) {
+	s.WaitTimeoutMs = val
+}
+
 // Ref: #/components/schemas/SendMailResult
 type SendMailResult struct {
+	// Persisted sent-email attempt ID.
+	ID     string          `json:"id"`
+	Status SentEmailStatus `json:"status"`
 	// Message identifier assigned by Primitive's outbound relay, when available.
-	QueueID OptString `json:"queue_id"`
+	QueueID NilString `json:"queue_id"`
 	// Recipient addresses accepted by the relay.
 	Accepted []string `json:"accepted"`
 	// Recipient addresses rejected by the relay.
 	Rejected []string `json:"rejected"`
+	// Effective idempotency key used for this send.
+	ClientIdempotencyKey string `json:"client_idempotency_key"`
+	// Server-issued request identifier for support and tracing.
+	RequestID string `json:"request_id"`
+	// Stable hash of the canonical send payload.
+	ContentHash    string            `json:"content_hash"`
+	DeliveryStatus OptDeliveryStatus `json:"delivery_status"`
+	// SMTP response code from the first downstream delivery outcome when wait is true.
+	SMTPResponseCode OptNilInt `json:"smtp_response_code"`
+	// SMTP response text from the first downstream delivery outcome when wait is true.
+	SMTPResponseText OptString `json:"smtp_response_text"`
+}
+
+// GetID returns the value of ID.
+func (s *SendMailResult) GetID() string {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *SendMailResult) GetStatus() SentEmailStatus {
+	return s.Status
 }
 
 // GetQueueID returns the value of QueueID.
-func (s *SendMailResult) GetQueueID() OptString {
+func (s *SendMailResult) GetQueueID() NilString {
 	return s.QueueID
 }
 
@@ -4377,8 +4961,48 @@ func (s *SendMailResult) GetRejected() []string {
 	return s.Rejected
 }
 
+// GetClientIdempotencyKey returns the value of ClientIdempotencyKey.
+func (s *SendMailResult) GetClientIdempotencyKey() string {
+	return s.ClientIdempotencyKey
+}
+
+// GetRequestID returns the value of RequestID.
+func (s *SendMailResult) GetRequestID() string {
+	return s.RequestID
+}
+
+// GetContentHash returns the value of ContentHash.
+func (s *SendMailResult) GetContentHash() string {
+	return s.ContentHash
+}
+
+// GetDeliveryStatus returns the value of DeliveryStatus.
+func (s *SendMailResult) GetDeliveryStatus() OptDeliveryStatus {
+	return s.DeliveryStatus
+}
+
+// GetSMTPResponseCode returns the value of SMTPResponseCode.
+func (s *SendMailResult) GetSMTPResponseCode() OptNilInt {
+	return s.SMTPResponseCode
+}
+
+// GetSMTPResponseText returns the value of SMTPResponseText.
+func (s *SendMailResult) GetSMTPResponseText() OptString {
+	return s.SMTPResponseText
+}
+
+// SetID sets the value of ID.
+func (s *SendMailResult) SetID(val string) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *SendMailResult) SetStatus(val SentEmailStatus) {
+	s.Status = val
+}
+
 // SetQueueID sets the value of QueueID.
-func (s *SendMailResult) SetQueueID(val OptString) {
+func (s *SendMailResult) SetQueueID(val NilString) {
 	s.QueueID = val
 }
 
@@ -4390,6 +5014,120 @@ func (s *SendMailResult) SetAccepted(val []string) {
 // SetRejected sets the value of Rejected.
 func (s *SendMailResult) SetRejected(val []string) {
 	s.Rejected = val
+}
+
+// SetClientIdempotencyKey sets the value of ClientIdempotencyKey.
+func (s *SendMailResult) SetClientIdempotencyKey(val string) {
+	s.ClientIdempotencyKey = val
+}
+
+// SetRequestID sets the value of RequestID.
+func (s *SendMailResult) SetRequestID(val string) {
+	s.RequestID = val
+}
+
+// SetContentHash sets the value of ContentHash.
+func (s *SendMailResult) SetContentHash(val string) {
+	s.ContentHash = val
+}
+
+// SetDeliveryStatus sets the value of DeliveryStatus.
+func (s *SendMailResult) SetDeliveryStatus(val OptDeliveryStatus) {
+	s.DeliveryStatus = val
+}
+
+// SetSMTPResponseCode sets the value of SMTPResponseCode.
+func (s *SendMailResult) SetSMTPResponseCode(val OptNilInt) {
+	s.SMTPResponseCode = val
+}
+
+// SetSMTPResponseText sets the value of SMTPResponseText.
+func (s *SendMailResult) SetSMTPResponseText(val OptString) {
+	s.SMTPResponseText = val
+}
+
+// Ref: #/components/schemas/SentEmailStatus
+type SentEmailStatus string
+
+const (
+	SentEmailStatusQueued           SentEmailStatus = "queued"
+	SentEmailStatusSubmittedToAgent SentEmailStatus = "submitted_to_agent"
+	SentEmailStatusAgentFailed      SentEmailStatus = "agent_failed"
+	SentEmailStatusUnknown          SentEmailStatus = "unknown"
+	SentEmailStatusDelivered        SentEmailStatus = "delivered"
+	SentEmailStatusBounced          SentEmailStatus = "bounced"
+	SentEmailStatusDeferred         SentEmailStatus = "deferred"
+	SentEmailStatusWaitTimeout      SentEmailStatus = "wait_timeout"
+)
+
+// AllValues returns all SentEmailStatus values.
+func (SentEmailStatus) AllValues() []SentEmailStatus {
+	return []SentEmailStatus{
+		SentEmailStatusQueued,
+		SentEmailStatusSubmittedToAgent,
+		SentEmailStatusAgentFailed,
+		SentEmailStatusUnknown,
+		SentEmailStatusDelivered,
+		SentEmailStatusBounced,
+		SentEmailStatusDeferred,
+		SentEmailStatusWaitTimeout,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SentEmailStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case SentEmailStatusQueued:
+		return []byte(s), nil
+	case SentEmailStatusSubmittedToAgent:
+		return []byte(s), nil
+	case SentEmailStatusAgentFailed:
+		return []byte(s), nil
+	case SentEmailStatusUnknown:
+		return []byte(s), nil
+	case SentEmailStatusDelivered:
+		return []byte(s), nil
+	case SentEmailStatusBounced:
+		return []byte(s), nil
+	case SentEmailStatusDeferred:
+		return []byte(s), nil
+	case SentEmailStatusWaitTimeout:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SentEmailStatus) UnmarshalText(data []byte) error {
+	switch SentEmailStatus(data) {
+	case SentEmailStatusQueued:
+		*s = SentEmailStatusQueued
+		return nil
+	case SentEmailStatusSubmittedToAgent:
+		*s = SentEmailStatusSubmittedToAgent
+		return nil
+	case SentEmailStatusAgentFailed:
+		*s = SentEmailStatusAgentFailed
+		return nil
+	case SentEmailStatusUnknown:
+		*s = SentEmailStatusUnknown
+		return nil
+	case SentEmailStatusDelivered:
+		*s = SentEmailStatusDelivered
+		return nil
+	case SentEmailStatusBounced:
+		*s = SentEmailStatusBounced
+		return nil
+	case SentEmailStatusDeferred:
+		*s = SentEmailStatusDeferred
+		return nil
+	case SentEmailStatusWaitTimeout:
+		*s = SentEmailStatusWaitTimeout
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/StorageStats

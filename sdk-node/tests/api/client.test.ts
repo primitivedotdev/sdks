@@ -82,6 +82,28 @@ const RECEIVED_EMAIL: ReceivedEmail = {
   } as never,
 };
 
+const SEND_RESULT = {
+  id: "sent-123",
+  status: "submitted_to_agent",
+  queue_id: "qid-123",
+  accepted: ["alice@example.com"],
+  rejected: [],
+  client_idempotency_key: "idem-123",
+  request_id: "req-123",
+  content_hash: "hash-123",
+} as const;
+
+const NORMALIZED_SEND_RESULT = {
+  id: "sent-123",
+  status: "submitted_to_agent",
+  queueId: "qid-123",
+  accepted: ["alice@example.com"],
+  rejected: [],
+  clientIdempotencyKey: "idem-123",
+  requestId: "req-123",
+  contentHash: "hash-123",
+} as const;
+
 describe("PrimitiveClient", () => {
   it("rejects received emails without SMTP recipients", () => {
     const event = structuredClone(RECEIVED_EMAIL.raw as EmailReceivedEvent);
@@ -127,11 +149,7 @@ describe("PrimitiveClient", () => {
       return new Response(
         JSON.stringify({
           success: true,
-          data: {
-            queue_id: "qid-123",
-            accepted: ["alice@example.com"],
-            rejected: [],
-          },
+          data: SEND_RESULT,
         }),
         {
           status: 200,
@@ -153,10 +171,78 @@ describe("PrimitiveClient", () => {
         subject: "Hello",
         bodyText: "Hi there",
       }),
-    ).resolves.toEqual({
-      queueId: "qid-123",
-      accepted: ["alice@example.com"],
-      rejected: [],
+    ).resolves.toEqual(NORMALIZED_SEND_RESULT);
+  });
+
+  it("accepts RFC 5322 display-name From headers", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: vi.fn<typeof fetch>(async (input) => {
+        const request = input as Request;
+        expect(await request.json()).toMatchObject({
+          from: "Support Team <support@example.com>",
+        });
+        return new Response(
+          JSON.stringify({ success: true, data: SEND_RESULT }),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      }) as typeof fetch,
+    });
+
+    await client.send({
+      from: "Support Team <support@example.com>",
+      to: "alice@example.com",
+      subject: "Hello",
+      bodyText: "Hi there",
+    });
+  });
+
+  it("sends wait options and idempotency key", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: vi.fn<typeof fetch>(async (input) => {
+        const request = input as Request;
+        expect(request.headers.get("idempotency-key")).toBe("customer-key");
+        expect(await request.json()).toMatchObject({
+          wait: true,
+          wait_timeout_ms: 5000,
+        });
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              ...SEND_RESULT,
+              status: "delivered",
+              delivery_status: "delivered",
+              smtp_response_code: 250,
+              smtp_response_text: "250 OK",
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }) as typeof fetch,
+    });
+
+    await expect(
+      client.send({
+        from: "support@example.com",
+        to: "alice@example.com",
+        subject: "Hello",
+        bodyText: "Hi there",
+        wait: true,
+        waitTimeoutMs: 5000,
+        idempotencyKey: "customer-key",
+      }),
+    ).resolves.toMatchObject({
+      status: "delivered",
+      deliveryStatus: "delivered",
+      smtpResponseCode: 250,
+      smtpResponseText: "250 OK",
     });
   });
 
@@ -172,7 +258,7 @@ describe("PrimitiveClient", () => {
         return new Response(
           JSON.stringify({
             success: true,
-            data: { accepted: ["alice@example.com"], rejected: [] },
+            data: SEND_RESULT,
           }),
           { status: 200, headers: { "content-type": "application/json" } },
         );
@@ -206,6 +292,7 @@ describe("PrimitiveClient", () => {
           JSON.stringify({
             success: true,
             data: {
+              ...SEND_RESULT,
               queue_id: "reply-1",
               accepted: ["alice@example.com"],
               rejected: [],
@@ -240,6 +327,7 @@ describe("PrimitiveClient", () => {
           JSON.stringify({
             success: true,
             data: {
+              ...SEND_RESULT,
               queue_id: "forward-1",
               accepted: ["ops@example.com"],
               rejected: [],

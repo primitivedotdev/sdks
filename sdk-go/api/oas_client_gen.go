@@ -181,11 +181,12 @@ type Invoker interface {
 	RotateWebhookSecret(ctx context.Context) (RotateWebhookSecretRes, error)
 	// SendEmail invokes sendEmail operation.
 	//
-	// Sends an outbound email synchronously. The request stays open until
-	// Primitive's outbound relay accepts or rejects the message.
+	// Sends an outbound email through Primitive's outbound relay. By default
+	// the request returns once the relay accepts the message for delivery.
+	// Set `wait: true` to wait for the first downstream SMTP delivery outcome.
 	//
 	// POST /send-mail
-	SendEmail(ctx context.Context, request *SendMailInput) (SendEmailRes, error)
+	SendEmail(ctx context.Context, request *SendMailInput, params SendEmailParams) (SendEmailRes, error)
 	// TestEndpoint invokes testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -3018,16 +3019,17 @@ func (c *Client) sendRotateWebhookSecret(ctx context.Context) (res RotateWebhook
 
 // SendEmail invokes sendEmail operation.
 //
-// Sends an outbound email synchronously. The request stays open until
-// Primitive's outbound relay accepts or rejects the message.
+// Sends an outbound email through Primitive's outbound relay. By default
+// the request returns once the relay accepts the message for delivery.
+// Set `wait: true` to wait for the first downstream SMTP delivery outcome.
 //
 // POST /send-mail
-func (c *Client) SendEmail(ctx context.Context, request *SendMailInput) (SendEmailRes, error) {
-	res, err := c.sendSendEmail(ctx, request)
+func (c *Client) SendEmail(ctx context.Context, request *SendMailInput, params SendEmailParams) (SendEmailRes, error) {
+	res, err := c.sendSendEmail(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendSendEmail(ctx context.Context, request *SendMailInput) (res SendEmailRes, err error) {
+func (c *Client) sendSendEmail(ctx context.Context, request *SendMailInput, params SendEmailParams) (res SendEmailRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("sendEmail"),
 		semconv.HTTPRequestMethodKey.String("POST"),
@@ -3075,6 +3077,23 @@ func (c *Client) sendSendEmail(ctx context.Context, request *SendMailInput) (res
 	}
 	if err := encodeSendEmailRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
 	}
 
 	{

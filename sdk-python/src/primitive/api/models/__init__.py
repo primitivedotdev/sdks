@@ -18,6 +18,7 @@ from .delete_endpoint_response_200 import DeleteEndpointResponse200
 from .delete_endpoint_response_200_data import DeleteEndpointResponse200Data
 from .delete_filter_response_200 import DeleteFilterResponse200
 from .delete_filter_response_200_data import DeleteFilterResponse200Data
+from .delivery_status import DeliveryStatus
 from .delivery_summary import DeliverySummary
 from .delivery_summary_email_type_0 import DeliverySummaryEmailType0
 from .delivery_summary_status import DeliverySummaryStatus
@@ -42,6 +43,11 @@ from .error_response_error_details import ErrorResponseErrorDetails
 from .error_response_error_details_mx_conflict import ErrorResponseErrorDetailsMxConflict
 from .filter_ import Filter
 from .filter_type import FilterType
+from .gate_denial import GateDenial
+from .gate_denial_name import GateDenialName
+from .gate_denial_reason import GateDenialReason
+from .gate_fix import GateFix
+from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
 from .get_email_response_200 import GetEmailResponse200
 from .get_storage_stats_response_200 import GetStorageStatsResponse200
@@ -62,6 +68,7 @@ from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
 from .send_email_response_200 import SendEmailResponse200
 from .send_mail_input import SendMailInput
 from .send_mail_result import SendMailResult
+from .sent_email_status import SentEmailStatus
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
 from .test_endpoint_response_200 import TestEndpointResponse200
@@ -99,6 +106,7 @@ __all__ = (
     "DeleteEndpointResponse200Data",
     "DeleteFilterResponse200",
     "DeleteFilterResponse200Data",
+    "DeliveryStatus",
     "DeliverySummary",
     "DeliverySummaryEmailType0",
     "DeliverySummaryStatus",
@@ -123,6 +131,11 @@ __all__ = (
     "ErrorResponseErrorDetailsMxConflict",
     "Filter",
     "FilterType",
+    "GateDenial",
+    "GateDenialName",
+    "GateDenialReason",
+    "GateFix",
+    "GateFixAction",
     "GetAccountResponse200",
     "GetEmailResponse200",
     "GetStorageStatsResponse200",
@@ -143,6 +156,7 @@ __all__ = (
     "SendEmailResponse200",
     "SendMailInput",
     "SendMailResult",
+    "SentEmailStatus",
     "StorageStats",
     "SuccessEnvelope",
     "TestEndpointResponse200",

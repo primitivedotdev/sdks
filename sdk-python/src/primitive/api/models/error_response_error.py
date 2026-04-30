@@ -13,6 +13,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.error_response_error_details import ErrorResponseErrorDetails
+  from ..models.gate_denial import GateDenial
 
 
 
@@ -31,11 +32,15 @@ class ErrorResponseError:
             details (ErrorResponseErrorDetails | Unset): Optional structured data that callers can inspect to recover
                 from the error. The fields present depend on `code`. Additional
                 keys may be added over time without a major-version bump.
+            gates (list[GateDenial] | Unset): Structured per-gate denial detail for recipient-scope send-mail failures.
+            request_id (str | Unset): Server-issued request identifier for support and tracing.
      """
 
     code: ErrorResponseErrorCode
     message: str
     details: ErrorResponseErrorDetails | Unset = UNSET
+    gates: list[GateDenial] | Unset = UNSET
+    request_id: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -44,6 +49,7 @@ class ErrorResponseError:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.error_response_error_details import ErrorResponseErrorDetails
+        from ..models.gate_denial import GateDenial
         code = self.code.value
 
         message = self.message
@@ -51,6 +57,17 @@ class ErrorResponseError:
         details: dict[str, Any] | Unset = UNSET
         if not isinstance(self.details, Unset):
             details = self.details.to_dict()
+
+        gates: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.gates, Unset):
+            gates = []
+            for gates_item_data in self.gates:
+                gates_item = gates_item_data.to_dict()
+                gates.append(gates_item)
+
+
+
+        request_id = self.request_id
 
 
         field_dict: dict[str, Any] = {}
@@ -61,6 +78,10 @@ class ErrorResponseError:
         })
         if details is not UNSET:
             field_dict["details"] = details
+        if gates is not UNSET:
+            field_dict["gates"] = gates
+        if request_id is not UNSET:
+            field_dict["request_id"] = request_id
 
         return field_dict
 
@@ -69,6 +90,7 @@ class ErrorResponseError:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.error_response_error_details import ErrorResponseErrorDetails
+        from ..models.gate_denial import GateDenial
         d = dict(src_dict)
         code = ErrorResponseErrorCode(d.pop("code"))
 
@@ -87,10 +109,26 @@ class ErrorResponseError:
 
 
 
+        _gates = d.pop("gates", UNSET)
+        gates: list[GateDenial] | Unset = UNSET
+        if _gates is not UNSET:
+            gates = []
+            for gates_item_data in _gates:
+                gates_item = GateDenial.from_dict(gates_item_data)
+
+
+
+                gates.append(gates_item)
+
+
+        request_id = d.pop("request_id", UNSET)
+
         error_response_error = cls(
             code=code,
             message=message,
             details=details,
+            gates=gates,
+            request_id=request_id,
         )
 
 

@@ -60,13 +60,16 @@ const client = primitive.client({
 });
 
 const result = await client.send({
-  from: "support@example.com",
+  from: "Support <support@example.com>",
   to: "alice@example.com",
   subject: "Hello",
   bodyText: "Hi there",
+  idempotencyKey: "customer-key-123",
+  wait: true,
+  waitTimeoutMs: 5000,
 });
 
-console.log(result.queueId, result.accepted, result.rejected);
+console.log(result.id, result.status, result.queueId, result.deliveryStatus);
 ```
 
 `send`, `reply`, and `forward` keep the HTTP request open until Primitive's

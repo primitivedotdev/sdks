@@ -18,6 +18,9 @@ from .api.types import UNSET
 from .received_email import ReceivedEmail, format_address
 
 EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+DISPLAY_EMAIL_REGEX = re.compile(r"^.+<[^\s@]+@[^\s@]+\.[^\s@]+>$")
+MAX_FROM_HEADER_LENGTH = 998
+MAX_TO_HEADER_LENGTH = 320
 
 
 @dataclass(frozen=True)
@@ -28,9 +31,17 @@ class SendThread:
 
 @dataclass(frozen=True)
 class SendResult:
+    id: str
+    status: str
     accepted: list[str]
     rejected: list[str]
-    queue_id: str | None = None
+    client_idempotency_key: str
+    request_id: str
+    content_hash: str
+    queue_id: str | None
+    delivery_status: str | None = None
+    smtp_response_code: int | None = None
+    smtp_response_text: str | None = None
 
 
 class PrimitiveAPIError(Exception):
@@ -48,8 +59,17 @@ class PrimitiveAPIError(Exception):
         self.payload = payload
 
 
+def _validate_address_header(field: str, value: str) -> None:
+    value_length = len(value.strip())
+    max_length = MAX_FROM_HEADER_LENGTH if field == "from" else MAX_TO_HEADER_LENGTH
+    if value_length < 3:
+        raise TypeError(f"{field} must be at least 3 characters")
+    if value_length > max_length:
+        raise TypeError(f"{field} must be at most {max_length} characters")
+
+
 def _validate_email_address(field: str, value: str) -> None:
-    if not EMAIL_REGEX.fullmatch(value):
+    if not EMAIL_REGEX.fullmatch(value) and not DISPLAY_EMAIL_REGEX.fullmatch(value):
         raise TypeError(f"{field} must be a valid email address")
 
 
@@ -61,8 +81,11 @@ def _build_send_input(
     body_text: str | None = None,
     body_html: str | None = None,
     thread: SendThread | None = None,
+    wait: bool | None = None,
+    wait_timeout_ms: int | None = None,
 ) -> ApiSendMailInput:
-    _validate_email_address("from", from_email)
+    _validate_address_header("from", from_email)
+    _validate_address_header("to", to)
     _validate_email_address("to", to)
 
     if subject.strip() == "":
@@ -70,6 +93,9 @@ def _build_send_input(
 
     if not body_text and not body_html:
         raise TypeError("one of body_text or body_html is required")
+
+    if wait_timeout_ms is not None and not 1000 <= wait_timeout_ms <= 30000:
+        raise TypeError("wait_timeout_ms must be between 1000 and 30000")
 
     payload: dict[str, Any] = {
         "from": from_email,
@@ -86,6 +112,10 @@ def _build_send_input(
             payload["in_reply_to"] = thread.in_reply_to
         if thread.references:
             payload["references"] = thread.references
+    if wait is not None:
+        payload["wait"] = wait
+    if wait_timeout_ms is not None:
+        payload["wait_timeout_ms"] = wait_timeout_ms
 
     return ApiSendMailInput.from_dict(payload)
 
@@ -107,11 +137,36 @@ def _raise_api_error(status_code: int, parsed: Any) -> None:
 
 
 def _map_send_result(result: ApiSendMailResult) -> SendResult:
-    queue_id: str | None = None if result.queue_id is UNSET else cast(str, result.queue_id)
+    queue_id: str | None = (
+        None if result.queue_id is UNSET else cast(str, result.queue_id)
+    )
+    delivery_status: str | None = (
+        None
+        if result.delivery_status is UNSET
+        else cast(Any, result.delivery_status).value
+    )
+    smtp_response_code: int | None = (
+        None
+        if result.smtp_response_code is UNSET
+        else cast(int | None, result.smtp_response_code)
+    )
+    smtp_response_text: str | None = (
+        None
+        if result.smtp_response_text is UNSET
+        else cast(str, result.smtp_response_text)
+    )
     return SendResult(
+        id=result.id,
+        status=result.status.value,
         accepted=result.accepted,
         rejected=result.rejected,
+        client_idempotency_key=result.client_idempotency_key,
+        request_id=result.request_id,
+        content_hash=result.content_hash,
         queue_id=queue_id,
+        delivery_status=delivery_status,
+        smtp_response_code=smtp_response_code,
+        smtp_response_text=smtp_response_text,
     )
 
 
@@ -161,9 +216,13 @@ class PrimitiveClient:
         body_text: str | None = None,
         body_html: str | None = None,
         thread: SendThread | None = None,
+        wait: bool | None = None,
+        wait_timeout_ms: int | None = None,
+        idempotency_key: str | None = None,
     ) -> SendResult:
         response = send_email_sync_detailed(
             client=self.api_client,
+            **({"idempotency_key": idempotency_key} if idempotency_key else {}),
             body=_build_send_input(
                 from_email=from_email,
                 to=to,
@@ -171,6 +230,8 @@ class PrimitiveClient:
                 body_text=body_text,
                 body_html=body_html,
                 thread=thread,
+                wait=wait,
+                wait_timeout_ms=wait_timeout_ms,
             ),
         )
 
@@ -198,9 +259,13 @@ class PrimitiveClient:
         body_text: str | None = None,
         body_html: str | None = None,
         thread: SendThread | None = None,
+        wait: bool | None = None,
+        wait_timeout_ms: int | None = None,
+        idempotency_key: str | None = None,
     ) -> SendResult:
         response = await send_email_async_detailed(
             client=self.api_client,
+            **({"idempotency_key": idempotency_key} if idempotency_key else {}),
             body=_build_send_input(
                 from_email=from_email,
                 to=to,
@@ -208,6 +273,8 @@ class PrimitiveClient:
                 body_text=body_text,
                 body_html=body_html,
                 thread=thread,
+                wait=wait,
+                wait_timeout_ms=wait_timeout_ms,
             ),
         )
 
@@ -247,7 +314,9 @@ class PrimitiveClient:
             ),
         )
 
-    async def areply(self, email: ReceivedEmail, text: str | dict[str, str]) -> SendResult:
+    async def areply(
+        self, email: ReceivedEmail, text: str | dict[str, str]
+    ) -> SendResult:
         if isinstance(text, str):
             payload = {"text": text}
         else:
@@ -273,7 +342,7 @@ class PrimitiveClient:
         email: ReceivedEmail,
         *,
         to: str,
-            body_text: str | None = None,
+        body_text: str | None = None,
         subject: str | None = None,
         from_email: str | None = None,
     ) -> SendResult:

@@ -3970,8 +3970,9 @@ func (s *Server) handleRotateWebhookSecretRequest(args [0]string, argsEscaped bo
 
 // handleSendEmailRequest handles sendEmail operation.
 //
-// Sends an outbound email synchronously. The request stays open until
-// Primitive's outbound relay accepts or rejects the message.
+// Sends an outbound email through Primitive's outbound relay. By default
+// the request returns once the relay accepts the message for delivery.
+// Set `wait: true` to wait for the first downstream SMTP delivery outcome.
 //
 // POST /send-mail
 func (s *Server) handleSendEmailRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -4089,6 +4090,16 @@ func (s *Server) handleSendEmailRequest(args [0]string, argsEscaped bool, w http
 			return
 		}
 	}
+	params, err := decodeSendEmailParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
 
 	var rawBody []byte
 	request, rawBody, close, err := s.decodeSendEmailRequest(r)
@@ -4116,13 +4127,18 @@ func (s *Server) handleSendEmailRequest(args [0]string, argsEscaped bool, w http
 			OperationID:      "sendEmail",
 			Body:             request,
 			RawBody:          rawBody,
-			Params:           middleware.Parameters{},
-			Raw:              r,
+			Params: middleware.Parameters{
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
 		}
 
 		type (
 			Request  = *SendMailInput
-			Params   = struct{}
+			Params   = SendEmailParams
 			Response = SendEmailRes
 		)
 		response, err = middleware.HookMiddleware[
@@ -4132,14 +4148,14 @@ func (s *Server) handleSendEmailRequest(args [0]string, argsEscaped bool, w http
 		](
 			m,
 			mreq,
-			nil,
+			unpackSendEmailParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.SendEmail(ctx, request)
+				response, err = s.h.SendEmail(ctx, request, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.SendEmail(ctx, request)
+		response, err = s.h.SendEmail(ctx, request, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)

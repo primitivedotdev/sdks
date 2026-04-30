@@ -393,8 +393,9 @@ export const replayDelivery = <ThrowOnError extends boolean = false>(options: Op
 /**
  * Send outbound email
  *
- * Sends an outbound email synchronously. The request stays open until
- * Primitive's outbound relay accepts or rejects the message.
+ * Sends an outbound email through Primitive's outbound relay. By default
+ * the request returns once the relay accepts the message for delivery.
+ * Set `wait: true` to wait for the first downstream SMTP delivery outcome.
  *
  */
 export const sendEmail = <ThrowOnError extends boolean = false>(options: Options<SendEmailData, ThrowOnError>) => (options.client ?? client).post<SendEmailResponses, SendEmailErrors, ThrowOnError>({

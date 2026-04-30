@@ -67,12 +67,16 @@ func handle(ctx context.Context, body []byte, headers map[string]string) {
 ```go
 ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 defer cancel()
+wait := true
 
 result, err := client.Send(ctx, primitive.SendParams{
-	From:    "support@example.com",
-	To:      "alice@example.com",
-	Subject: "Hello",
-	BodyText: "Hi there",
+	From:           "Support <support@example.com>",
+	To:             "alice@example.com",
+	Subject:        "Hello",
+	BodyText:       "Hi there",
+	IdempotencyKey: "customer-key-123",
+	Wait:           &wait,
+	WaitTimeoutMs:  5000,
 })
 ```
 

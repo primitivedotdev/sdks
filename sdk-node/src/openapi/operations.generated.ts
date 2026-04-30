@@ -610,7 +610,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "send-email",
-    "description": "Sends an outbound email synchronously. The request stays open until\nPrimitive's outbound relay accepts or rejects the message.\n",
+    "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "sendEmail",
