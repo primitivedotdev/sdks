@@ -567,4 +567,73 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("header address parser", func(t *testing.T) {
+		type expected struct {
+			Address string  `json:"address"`
+			Name    *string `json:"name"`
+		}
+		type parserCase struct {
+			Name     string    `json:"name"`
+			Input    string    `json:"input"`
+			Expected *expected `json:"expected"`
+		}
+		fixtures := loadFixtureCases[struct {
+			Cases []parserCase `json:"cases"`
+		}](t, "header-address-parser", "cases.json")
+
+		for _, testCase := range fixtures.Cases {
+			got := ParseHeaderAddress(testCase.Input)
+			if testCase.Expected == nil {
+				if got != nil {
+					t.Fatalf("%s: expected nil, got %+v", testCase.Name, got)
+				}
+				continue
+			}
+			if got == nil {
+				t.Fatalf("%s: expected address, got nil", testCase.Name)
+			}
+			if got.Address != testCase.Expected.Address {
+				t.Fatalf("%s: address %q, want %q", testCase.Name, got.Address, testCase.Expected.Address)
+			}
+			wantName := ""
+			if testCase.Expected.Name != nil {
+				wantName = *testCase.Expected.Name
+			}
+			if got.Name != wantName {
+				t.Fatalf("%s: name %q, want %q", testCase.Name, got.Name, wantName)
+			}
+		}
+	})
+
+	t.Run("subject builders", func(t *testing.T) {
+		type subjectCase struct {
+			Input    *string `json:"input"`
+			Expected string  `json:"expected"`
+		}
+		fixtures := loadFixtureCases[struct {
+			Reply   []subjectCase `json:"reply"`
+			Forward []subjectCase `json:"forward"`
+		}](t, "subject-builders", "cases.json")
+
+		input := func(c subjectCase) string {
+			if c.Input == nil {
+				return ""
+			}
+			return *c.Input
+		}
+
+		for _, testCase := range fixtures.Reply {
+			got := BuildReplySubject(input(testCase))
+			if got != testCase.Expected {
+				t.Fatalf("BuildReplySubject(%q) = %q, want %q", input(testCase), got, testCase.Expected)
+			}
+		}
+		for _, testCase := range fixtures.Forward {
+			got := BuildForwardSubject(input(testCase))
+			if got != testCase.Expected {
+				t.Fatalf("BuildForwardSubject(%q) = %q, want %q", input(testCase), got, testCase.Expected)
+			}
+		}
+	})
 }

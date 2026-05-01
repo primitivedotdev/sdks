@@ -132,13 +132,14 @@ export function parseFromHeader(
   if ("group" in entry) {
     return { ok: false, reason: "group_syntax" };
   }
-  if (!isEmail(entry.address, IS_EMAIL_OPTIONS)) {
+  const address = entry.address;
+  if (address === undefined || !isEmail(address, IS_EMAIL_OPTIONS)) {
     return { ok: false, reason: "invalid_address" };
   }
 
   return {
     ok: true,
-    value: { address: entry.address.toLowerCase() },
+    value: { address: address.toLowerCase() },
   };
 }
 
@@ -172,14 +173,20 @@ export function parseFromHeaderLoose(
     return null;
   }
 
-  const parsed = addressparser(trimmed, { flatten: true });
-  const entry = parsed[0];
-  if (entry === undefined || !isEmail(entry.address, IS_EMAIL_OPTIONS)) {
-    return null;
+  const parsed = addressparser(trimmed);
+  for (const entry of parsed) {
+    const candidates =
+      "group" in entry && Array.isArray(entry.group) ? entry.group : [entry];
+    for (const candidate of candidates) {
+      const address = candidate.address;
+      if (address !== undefined && isEmail(address, IS_EMAIL_OPTIONS)) {
+        return {
+          address: address.toLowerCase(),
+          name:
+            candidate.name && candidate.name.length > 0 ? candidate.name : null,
+        };
+      }
+    }
   }
-
-  return {
-    address: entry.address.toLowerCase(),
-    name: entry.name && entry.name.length > 0 ? entry.name : null,
-  };
+  return null;
 }

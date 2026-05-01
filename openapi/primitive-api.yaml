@@ -71,6 +71,8 @@ tags:
     description: Claim, verify, and manage email domains
   - name: Emails
     description: List, inspect, and manage received emails
+  - name: Sending
+    description: Send outbound emails through the Primitive API
   - name: Endpoints
     description: Manage webhook endpoints that receive email events
   - name: Filters
@@ -968,6 +970,64 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  # ---------------------------------------------------------------------------
+  # Sending
+  # ---------------------------------------------------------------------------
+  /send-mail:
+    post:
+      operationId: sendEmail
+      summary: Send outbound email
+      description: |
+        Sends an outbound email through Primitive's outbound relay. By default
+        the request returns once the relay accepts the message for delivery.
+        Set `wait: true` to wait for the first downstream SMTP delivery outcome.
+      tags: [Sending]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+            pattern: '^[\x21-\x7E]+$'
+          description: |
+            Optional customer-supplied idempotency key. If omitted, Primitive
+            derives one from the canonical request payload and echoes the
+            effective value in the `Idempotency-Key` response header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMailInput'
+      responses:
+        '200':
+          description: Outbound relay result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SendMailResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
 # =============================================================================
 # Components
 # =============================================================================
@@ -1026,6 +1086,18 @@ components:
               code: unauthorized
               message: Invalid or missing API key
 
+    Forbidden:
+      description: Authenticated caller lacks permission for the operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: forbidden
+              message: Insufficient permissions
+
     NotFound:
       description: Resource not found
       content:
@@ -1066,6 +1138,42 @@ components:
             error:
               code: rate_limit_exceeded
               message: Rate limit exceeded
+
+    BadGateway:
+      description: Primitive could not complete the downstream SMTP request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: bad_gateway
+              message: Outbound SMTP service request failed
+
+    ServiceUnavailable:
+      description: Primitive is temporarily unable to process the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: outbound_capacity_exhausted
+              message: Outbound capacity is temporarily exhausted
+
+    InternalError:
+      description: Primitive encountered an internal error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: internal_error
+              message: Internal server error
 
     Deleted:
       description: Resource deleted
@@ -1140,6 +1248,16 @@ components:
                 - internal_error
                 - conflict
                 - mx_conflict
+                - bad_gateway
+                - outbound_disabled
+                - cannot_send_from_domain
+                - recipient_not_allowed
+                - outbound_key_missing
+                - outbound_unreachable
+                - outbound_key_invalid
+                - outbound_capacity_exhausted
+                - outbound_response_malformed
+                - outbound_relay_failed
             message:
               type: string
             details:
@@ -1161,8 +1279,66 @@ components:
                     suggested_subdomain:
                       type: string
                       description: Subdomain to try instead (e.g. "mail" for `mail.example.com`).
+                required_entitlements:
+                  type: array
+                  items:
+                    type: string
+                  description: Entitlements that would allow a denied send when no recipient-scope gate was granted.
+                sent_email_id:
+                  type: string
+                  description: ID of the persisted sent-email attempt associated with the error.
+                content_hash:
+                  type: string
+                  description: Content hash of the original request on idempotency cache-hit errors.
+                client_idempotency_key:
+                  type: string
+                  description: Effective idempotency key associated with the original request.
+            gates:
+              type: array
+              items:
+                $ref: '#/components/schemas/GateDenial'
+              description: Structured per-gate denial detail for recipient-scope send-mail failures.
+            request_id:
+              type: string
+              description: Server-issued request identifier for support and tracing.
           required: [code, message]
       required: [success, error]
+
+    GateDenial:
+      type: object
+      properties:
+        name:
+          type: string
+          enum: [send_to_confirmed_domains, send_to_known_addresses]
+          description: Public recipient-scope gate name that denied the send.
+        reason:
+          type: string
+          enum: [domain_not_confirmed, recipient_unauthenticated, recipient_not_known]
+          description: Stable machine-readable denial reason.
+        message:
+          type: string
+          description: Human-readable explanation of the gate denial.
+        subject:
+          type: string
+          description: Domain or address the gate evaluated.
+        fix:
+          $ref: '#/components/schemas/GateFix'
+        docs_url:
+          type: string
+          description: Public docs URL with more context.
+      required: [name, reason, message, subject]
+
+    GateFix:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [confirm_domain, sender_must_fix_authentication, wait_for_inbound]
+          description: Suggested next action for the caller.
+        subject:
+          type: string
+          description: Entity the action applies to.
+      required: [action, subject]
 
     # -------------------------------------------------------------------------
     # Account
@@ -1519,6 +1695,107 @@ components:
         - webhook_attempt_count
         - from_email
         - to_email
+
+    # -------------------------------------------------------------------------
+    # Sending
+    # -------------------------------------------------------------------------
+    SendMailInput:
+      type: object
+      additionalProperties: false
+      properties:
+        from:
+          type: string
+          minLength: 3
+          maxLength: 998
+          description: RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
+        to:
+          type: string
+          minLength: 3
+          maxLength: 320
+          description: Recipient address. Recipient eligibility depends on your account's outbound entitlements.
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 998
+          description: Subject line for the outbound message
+        body_text:
+          type: string
+          description: Plain-text message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes.
+        body_html:
+          type: string
+          description: HTML message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes.
+        in_reply_to:
+          type: string
+          minLength: 1
+          maxLength: 998
+          pattern: '^[^\x00-\x1F\x7F]+$'
+          description: Message-ID of the direct parent email when sending a threaded reply.
+        references:
+          type: array
+          maxItems: 100
+          description: Full ordered message-id chain for the thread.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 998
+            pattern: '^[^\x00-\x1F\x7F]+$'
+        wait:
+          type: boolean
+          description: When true, wait for the first downstream SMTP delivery outcome before returning.
+        wait_timeout_ms:
+          type: integer
+          minimum: 1000
+          maximum: 30000
+          description: Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
+      required: [from, to, subject]
+
+    SentEmailStatus:
+      type: string
+      enum: [queued, submitted_to_agent, agent_failed, unknown, delivered, bounced, deferred, wait_timeout]
+
+    DeliveryStatus:
+      type: string
+      enum: [delivered, bounced, deferred, wait_timeout]
+
+    SendMailResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Persisted sent-email attempt ID.
+        status:
+          $ref: '#/components/schemas/SentEmailStatus'
+        queue_id:
+          type: [string, 'null']
+          description: Message identifier assigned by Primitive's outbound relay, when available.
+        accepted:
+          type: array
+          items:
+            type: string
+          description: Recipient addresses accepted by the relay.
+        rejected:
+          type: array
+          items:
+            type: string
+          description: Recipient addresses rejected by the relay.
+        client_idempotency_key:
+          type: string
+          description: Effective idempotency key used for this send.
+        request_id:
+          type: string
+          description: Server-issued request identifier for support and tracing.
+        content_hash:
+          type: string
+          description: Stable hash of the canonical send payload.
+        delivery_status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        smtp_response_code:
+          type: [integer, 'null']
+          description: SMTP response code from the first downstream delivery outcome when wait is true.
+        smtp_response_text:
+          type: string
+          description: SMTP response text from the first downstream delivery outcome when wait is true.
+      required: [id, status, queue_id, accepted, rejected, client_idempotency_key, request_id, content_hash]
 
     # -------------------------------------------------------------------------
     # Endpoints

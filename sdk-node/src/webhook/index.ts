@@ -61,6 +61,16 @@ export {
   WebhookVerificationError,
   type WebhookVerificationErrorCode,
 } from "./errors.js";
+export {
+  buildForwardSubject,
+  buildReplySubject,
+  formatAddress,
+  normalizeReceivedEmail,
+  parseHeaderAddress,
+  type ReceivedEmail,
+  type ReceivedEmailAddress,
+  type ReceivedEmailThread,
+} from "./received-email.js";
 // Signing & Verification
 export {
   LEGACY_CONFIRMED_HEADER,
@@ -161,6 +171,10 @@ import {
   WebhookVerificationError,
 } from "./errors.js";
 import { parseJsonBody } from "./parsing.js";
+import {
+  normalizeReceivedEmail,
+  type ReceivedEmail,
+} from "./received-email.js";
 
 /**
  * Parse a webhook payload, returning typed events for known types
@@ -500,6 +514,50 @@ export function handleWebhook(
 
   // Step 3: Validate against JSON Schema
   return validateEmailReceivedEvent(parsed);
+}
+
+export interface ReceiveRequestOptions {
+  secret: string;
+  toleranceSeconds?: number;
+}
+
+export function receive(options: HandleWebhookOptions): ReceivedEmail;
+export function receive(
+  request: Request,
+  options: ReceiveRequestOptions,
+): Promise<ReceivedEmail>;
+export function receive(
+  input: HandleWebhookOptions | Request,
+  options?: ReceiveRequestOptions,
+): ReceivedEmail | Promise<ReceivedEmail> {
+  if (input instanceof Request) {
+    return receiveFromRequest(input, options);
+  }
+
+  return normalizeReceivedEmail(handleWebhook(input));
+}
+
+async function receiveFromRequest(
+  request: Request,
+  options?: ReceiveRequestOptions,
+): Promise<ReceivedEmail> {
+  if (!options?.secret) {
+    throw new WebhookVerificationError(
+      "MISSING_SECRET",
+      "Webhook secret is required but was empty or not provided",
+    );
+  }
+
+  const body = Buffer.from(await request.arrayBuffer());
+
+  return normalizeReceivedEmail(
+    handleWebhook({
+      body,
+      headers: request.headers,
+      secret: options.secret,
+      toleranceSeconds: options.toleranceSeconds,
+    }),
+  );
 }
 
 // -----------------------------------------------------------------------------

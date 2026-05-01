@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/sdk",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Official Primitive Node.js SDK — webhook, api, openapi, contract, and parser modules",
   "type": "module",
   "module": "./dist/index.js",
@@ -67,6 +67,9 @@
       },
       "emails": {
         "description": "List, inspect, and manage received emails"
+      },
+      "sending": {
+        "description": "Send outbound emails through the Primitive API"
       },
       "endpoints": {
         "description": "Manage webhook endpoints that receive email events"

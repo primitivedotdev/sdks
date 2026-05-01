@@ -31,7 +31,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'bad_gateway' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -53,9 +53,68 @@ export type ErrorResponse = {
                  */
                 suggested_subdomain: string;
             };
+            /**
+             * Entitlements that would allow a denied send when no recipient-scope gate was granted.
+             */
+            required_entitlements?: Array<string>;
+            /**
+             * ID of the persisted sent-email attempt associated with the error.
+             */
+            sent_email_id?: string;
+            /**
+             * Content hash of the original request on idempotency cache-hit errors.
+             */
+            content_hash?: string;
+            /**
+             * Effective idempotency key associated with the original request.
+             */
+            client_idempotency_key?: string;
             [key: string]: unknown;
         };
+        /**
+         * Structured per-gate denial detail for recipient-scope send-mail failures.
+         */
+        gates?: Array<GateDenial>;
+        /**
+         * Server-issued request identifier for support and tracing.
+         */
+        request_id?: string;
     };
+};
+
+export type GateDenial = {
+    /**
+     * Public recipient-scope gate name that denied the send.
+     */
+    name: 'send_to_confirmed_domains' | 'send_to_known_addresses';
+    /**
+     * Stable machine-readable denial reason.
+     */
+    reason: 'domain_not_confirmed' | 'recipient_unauthenticated' | 'recipient_not_known';
+    /**
+     * Human-readable explanation of the gate denial.
+     */
+    message: string;
+    /**
+     * Domain or address the gate evaluated.
+     */
+    subject: string;
+    fix?: GateFix;
+    /**
+     * Public docs URL with more context.
+     */
+    docs_url?: string;
+};
+
+export type GateFix = {
+    /**
+     * Suggested next action for the caller.
+     */
+    action: 'confirm_domain' | 'sender_must_fix_authentication' | 'wait_for_inbound';
+    /**
+     * Entity the action applies to.
+     */
+    subject: string;
 };
 
 export type Account = {
@@ -247,6 +306,90 @@ export type EmailDetail = {
      * Parsed to address (same as recipient)
      */
     to_email: string;
+};
+
+export type SendMailInput = {
+    /**
+     * RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
+     */
+    from: string;
+    /**
+     * Recipient address. Recipient eligibility depends on your account's outbound entitlements.
+     */
+    to: string;
+    /**
+     * Subject line for the outbound message
+     */
+    subject: string;
+    /**
+     * Plain-text message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes.
+     */
+    body_text?: string;
+    /**
+     * HTML message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes.
+     */
+    body_html?: string;
+    /**
+     * Message-ID of the direct parent email when sending a threaded reply.
+     */
+    in_reply_to?: string;
+    /**
+     * Full ordered message-id chain for the thread.
+     */
+    references?: Array<string>;
+    /**
+     * When true, wait for the first downstream SMTP delivery outcome before returning.
+     */
+    wait?: boolean;
+    /**
+     * Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
+     */
+    wait_timeout_ms?: number;
+};
+
+export type SentEmailStatus = 'queued' | 'submitted_to_agent' | 'agent_failed' | 'unknown' | 'delivered' | 'bounced' | 'deferred' | 'wait_timeout';
+
+export type DeliveryStatus = 'delivered' | 'bounced' | 'deferred' | 'wait_timeout';
+
+export type SendMailResult = {
+    /**
+     * Persisted sent-email attempt ID.
+     */
+    id: string;
+    status: SentEmailStatus;
+    /**
+     * Message identifier assigned by Primitive's outbound relay, when available.
+     */
+    queue_id: string | null;
+    /**
+     * Recipient addresses accepted by the relay.
+     */
+    accepted: Array<string>;
+    /**
+     * Recipient addresses rejected by the relay.
+     */
+    rejected: Array<string>;
+    /**
+     * Effective idempotency key used for this send.
+     */
+    client_idempotency_key: string;
+    /**
+     * Server-issued request identifier for support and tracing.
+     */
+    request_id: string;
+    /**
+     * Stable hash of the canonical send payload.
+     */
+    content_hash: string;
+    delivery_status?: DeliveryStatus;
+    /**
+     * SMTP response code from the first downstream delivery outcome when wait is true.
+     */
+    smtp_response_code?: number | null;
+    /**
+     * SMTP response text from the first downstream delivery outcome when wait is true.
+     */
+    smtp_response_text?: string;
 };
 
 export type Endpoint = {
@@ -1480,3 +1623,63 @@ export type ReplayDeliveryResponses = {
 };
 
 export type ReplayDeliveryResponse = ReplayDeliveryResponses[keyof ReplayDeliveryResponses];
+
+export type SendEmailData = {
+    body: SendMailInput;
+    headers?: {
+        /**
+         * Optional customer-supplied idempotency key. If omitted, Primitive
+         * derives one from the canonical request payload and echoes the
+         * effective value in the `Idempotency-Key` response header.
+         *
+         */
+        'Idempotency-Key'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/send-mail';
+};
+
+export type SendEmailErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+    /**
+     * Primitive encountered an internal error
+     */
+    500: ErrorResponse;
+    /**
+     * Primitive could not complete the downstream SMTP request
+     */
+    502: ErrorResponse;
+    /**
+     * Primitive is temporarily unable to process the request
+     */
+    503: ErrorResponse;
+};
+
+export type SendEmailError = SendEmailErrors[keyof SendEmailErrors];
+
+export type SendEmailResponses = {
+    /**
+     * Outbound relay result
+     */
+    200: SuccessEnvelope & {
+        data?: SendMailResult;
+    };
+};
+
+export type SendEmailResponse = SendEmailResponses[keyof SendEmailResponses];

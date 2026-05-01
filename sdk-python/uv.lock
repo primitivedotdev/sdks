@@ -994,7 +994,7 @@ wheels = [
 
 [[package]]
 name = "primitivedotdev"
-version = "0.5.1"
+version = "0.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },
@@ -1007,6 +1007,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "anyio" },
     { name = "basedpyright" },
     { name = "build" },
     { name = "datamodel-code-generator" },
@@ -1030,6 +1031,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "anyio", specifier = ">=4,<5" },
     { name = "basedpyright", specifier = ">=1.31.0,<2" },
     { name = "build", specifier = ">=1.2.2,<2" },
     { name = "datamodel-code-generator", specifier = ">=0.31.0,<1" },
