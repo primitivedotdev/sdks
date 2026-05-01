@@ -63,14 +63,14 @@ def _validate_address_header(field: str, value: str) -> None:
     value_length = len(value.strip())
     max_length = MAX_FROM_HEADER_LENGTH if field == "from" else MAX_TO_HEADER_LENGTH
     if value_length < 3:
-        raise TypeError(f"{field} must be at least 3 characters")
+        raise ValueError(f"{field} must be at least 3 characters")
     if value_length > max_length:
-        raise TypeError(f"{field} must be at most {max_length} characters")
+        raise ValueError(f"{field} must be at most {max_length} characters")
 
 
 def _validate_email_address(field: str, value: str) -> None:
     if not EMAIL_REGEX.fullmatch(value) and not DISPLAY_EMAIL_REGEX.fullmatch(value):
-        raise TypeError(f"{field} must be a valid email address")
+        raise ValueError(f"{field} must be a valid email address")
 
 
 def _build_send_input(
@@ -89,13 +89,13 @@ def _build_send_input(
     _validate_email_address("to", to)
 
     if subject.strip() == "":
-        raise TypeError("subject must be a non-empty string")
+        raise ValueError("subject must be a non-empty string")
 
     if not body_text and not body_html:
-        raise TypeError("one of body_text or body_html is required")
+        raise ValueError("one of body_text or body_html is required")
 
     if wait_timeout_ms is not None and not 1000 <= wait_timeout_ms <= 30000:
-        raise TypeError("wait_timeout_ms must be between 1000 and 30000")
+        raise ValueError("wait_timeout_ms must be between 1000 and 30000")
 
     payload: dict[str, Any] = {
         "from": from_email,
@@ -191,6 +191,13 @@ def _build_forward_text(email: ReceivedEmail, intro: str | None) -> str:
 
     parts.extend(["", email.text or ""])
     return "\n".join(parts).rstrip()
+
+
+def _resolve_reply_payload(text: str | dict[str, str]) -> dict[str, str]:
+    payload = {"text": text} if isinstance(text, str) else text
+    if not payload.get("text"):
+        raise ValueError("text is required when using dict input")
+    return payload
 
 
 class PrimitiveClient:
@@ -294,10 +301,7 @@ class PrimitiveClient:
         raise AssertionError("unreachable")
 
     def reply(self, email: ReceivedEmail, text: str | dict[str, str]) -> SendResult:
-        if isinstance(text, str):
-            payload = {"text": text}
-        else:
-            payload = text
+        payload = _resolve_reply_payload(text)
 
         return self.send(
             from_email=email.received_by,
@@ -317,10 +321,7 @@ class PrimitiveClient:
     async def areply(
         self, email: ReceivedEmail, text: str | dict[str, str]
     ) -> SendResult:
-        if isinstance(text, str):
-            payload = {"text": text}
-        else:
-            payload = text
+        payload = _resolve_reply_payload(text)
 
         return await self.asend(
             from_email=email.received_by,

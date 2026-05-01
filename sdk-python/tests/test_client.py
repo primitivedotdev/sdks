@@ -19,6 +19,12 @@ from primitive.received_email import (
 
 client_module = importlib.import_module("primitive.client")
 
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"
+
+
 RECEIVED_EMAIL = ReceivedEmail(
     id="email-1",
     event_id="evt-1",
@@ -63,6 +69,7 @@ SEND_RESULT = {
     "content_hash": "hash-123",
 }
 
+
 def test_normalize_received_email_rejects_empty_smtp_recipients() -> None:
     event = cast(
         Any,
@@ -96,7 +103,9 @@ def test_normalize_received_email_rejects_empty_smtp_recipients() -> None:
         normalize_received_email(event)
 
 
-def test_send_validates_recipient_before_request(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_send_validates_recipient_before_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     called = False
 
     def fake_send_email_sync_detailed(*, client, body):
@@ -111,7 +120,7 @@ def test_send_validates_recipient_before_request(monkeypatch: pytest.MonkeyPatch
 
     client = PrimitiveClient("prim_test")
 
-    with pytest.raises(TypeError, match="to must be a valid email address"):
+    with pytest.raises(ValueError, match="to must be a valid email address"):
         client.send(
             from_email="support@example.com",
             to="not-an-email",
@@ -170,6 +179,52 @@ def test_send_posts_payload_and_returns_send_result(
     assert result.client_idempotency_key == "idem-123"
     assert result.request_id == "req-123"
     assert result.content_hash == "hash-123"
+
+
+@pytest.mark.anyio
+async def test_asend_posts_payload_and_returns_send_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    async def fake_send_email_async_detailed(*, client, body):
+        captured["token"] = client.token
+        captured["body"] = body.to_dict()
+        return SimpleNamespace(
+            status_code=HTTPStatus.OK,
+            parsed=SendEmailResponse200.from_dict(
+                {
+                    "success": True,
+                    "data": SEND_RESULT,
+                }
+            ),
+            content=b"",
+        )
+
+    monkeypatch.setattr(
+        client_module, "send_email_async_detailed", fake_send_email_async_detailed
+    )
+
+    client = PrimitiveClient("prim_test", base_url="https://example.test/api/v1")
+    result = await client.asend(
+        from_email="support@example.com",
+        to="alice@example.com",
+        subject="Hello",
+        body_text="Hi there",
+    )
+
+    assert captured == {
+        "token": "prim_test",
+        "body": {
+            "from": "support@example.com",
+            "to": "alice@example.com",
+            "subject": "Hello",
+            "body_text": "Hi there",
+        },
+    }
+    assert result.id == "sent-123"
+    assert result.queue_id == "qid-123"
+    assert result.status == "submitted_to_agent"
 
 
 def test_send_accepts_display_name_from(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -288,6 +343,59 @@ def test_reply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> None:
         "in_reply_to": "<parent@example.com>",
         "references": ["<root@example.com>", "<parent@example.com>"],
     }
+
+
+def test_reply_requires_text_for_dict_input() -> None:
+    client = PrimitiveClient("prim_test")
+
+    with pytest.raises(ValueError, match="text is required when using dict input"):
+        client.reply(RECEIVED_EMAIL, {"subject": "Custom subject"})
+
+
+@pytest.mark.anyio
+async def test_areply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    async def fake_send_email_async_detailed(*, client, body):
+        del client
+        captured["body"] = body.to_dict()
+        return SimpleNamespace(
+            status_code=HTTPStatus.OK,
+            parsed=SendEmailResponse200.from_dict(
+                {
+                    "success": True,
+                    "data": {
+                        **SEND_RESULT,
+                        "queue_id": "reply-1",
+                    },
+                }
+            ),
+            content=b"",
+        )
+
+    monkeypatch.setattr(
+        client_module, "send_email_async_detailed", fake_send_email_async_detailed
+    )
+
+    client = PrimitiveClient("prim_test")
+    await client.areply(RECEIVED_EMAIL, {"text": "Thank you.", "subject": "Custom"})
+
+    assert captured["body"] == {
+        "from": "support@example.com",
+        "to": "alice@example.com",
+        "subject": "Custom",
+        "body_text": "Thank you.",
+        "in_reply_to": "<parent@example.com>",
+        "references": ["<root@example.com>", "<parent@example.com>"],
+    }
+
+
+@pytest.mark.anyio
+async def test_areply_requires_text_for_dict_input() -> None:
+    client = PrimitiveClient("prim_test")
+
+    with pytest.raises(ValueError, match="text is required when using dict input"):
+        await client.areply(RECEIVED_EMAIL, {"subject": "Custom subject"})
 
 
 def test_forward_builds_send(monkeypatch: pytest.MonkeyPatch) -> None:
