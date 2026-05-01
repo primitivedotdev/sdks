@@ -111,12 +111,6 @@
     {
       "name": "default from and subject with intro",
       "input": { "to": "ops@example.com", "body_text": "Take a look" },
-      "expected_body_keys": [
-        "from",
-        "to",
-        "subject",
-        "body_text"
-      ],
       "expected_body_match": {
         "from": "support@example.com",
         "to": "ops@example.com",

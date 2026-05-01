@@ -135,7 +135,7 @@ func loadSendPayloadFixture(t *testing.T) sendPayloadFixture {
 	return f
 }
 
-func deferenceString(p *string) string {
+func dereferenceString(p *string) string {
 	if p == nil {
 		return ""
 	}
@@ -143,10 +143,10 @@ func deferenceString(p *string) string {
 }
 
 func buildCanonicalReceivedEmail(c canonicalInbound) *ReceivedEmail {
-	subject := deferenceString(c.Subject)
-	messageID := deferenceString(c.Thread.MessageID)
-	senderName := deferenceString(c.Sender.Name)
-	replyTargetName := deferenceString(c.ReplyTarget.Name)
+	subject := dereferenceString(c.Subject)
+	messageID := dereferenceString(c.Thread.MessageID)
+	senderName := dereferenceString(c.Sender.Name)
+	replyTargetName := dereferenceString(c.ReplyTarget.Name)
 	rawDate := c.RawDateHeader
 
 	senderHeader := c.Sender.Address
@@ -165,7 +165,7 @@ func buildCanonicalReceivedEmail(c canonicalInbound) *ReceivedEmail {
 		Subject:        subject,
 		ReplySubject:   c.ReplySubject,
 		ForwardSubject: c.ForwardSubject,
-		Text:           deferenceString(c.Text),
+		Text:           dereferenceString(c.Text),
 		Thread: ReceivedEmailThread{
 			MessageID:  messageID,
 			InReplyTo:  append([]string{}, c.Thread.InReplyTo...),

@@ -35,11 +35,6 @@ def _fixtures_root() -> Path:
 FIXTURE = json.loads((_fixtures_root() / "send-payloads" / "cases.json").read_text())
 
 
-@pytest.fixture
-def anyio_backend() -> str:
-    return "asyncio"
-
-
 SUCCESS_RESPONSE = {
     "success": True,
     "data": {
