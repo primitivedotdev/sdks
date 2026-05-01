@@ -1,0 +1,149 @@
+{
+  "$comment": "Cross-SDK send / reply / forward wire-payload fixtures. Each SDK loads this file, builds its native input shape from `input`, calls the corresponding client method against a captured fake transport, and asserts the captured JSON request body matches `expected_body`. The Idempotency-Key request header (when present) is asserted against `expected_idempotency_key`. Forward bodies use `expected_body_contains` because they include rendered free-form text that is not stable for exact-match comparison.",
+  "canonical_inbound": {
+    "id": "email-1",
+    "event_id": "evt-1",
+    "received_at": "2026-01-01T00:00:00.000Z",
+    "sender": { "address": "alice@example.com", "name": "Alice" },
+    "reply_target": { "address": "alice@example.com", "name": "Alice" },
+    "received_by": "support@example.com",
+    "received_by_all": ["support@example.com"],
+    "subject": "Hello",
+    "reply_subject": "Re: Hello",
+    "forward_subject": "Fwd: Hello",
+    "text": "Hi there",
+    "thread": {
+      "message_id": "<parent@example.com>",
+      "in_reply_to": [],
+      "references": ["<root@example.com>"]
+    },
+    "raw_to_header": "support@example.com",
+    "raw_date_header": "Tue, 01 Jan 2026 00:00:00 +0000"
+  },
+  "send": [
+    {
+      "name": "minimal text body",
+      "input": {
+        "from": "support@example.com",
+        "to": "alice@example.com",
+        "subject": "Hello",
+        "body_text": "Hi there"
+      },
+      "expected_body": {
+        "from": "support@example.com",
+        "to": "alice@example.com",
+        "subject": "Hello",
+        "body_text": "Hi there"
+      },
+      "expected_idempotency_key": null
+    },
+    {
+      "name": "html body only",
+      "input": {
+        "from": "support@example.com",
+        "to": "alice@example.com",
+        "subject": "Hello",
+        "body_html": "<p>Hi</p>"
+      },
+      "expected_body": {
+        "from": "support@example.com",
+        "to": "alice@example.com",
+        "subject": "Hello",
+        "body_html": "<p>Hi</p>"
+      },
+      "expected_idempotency_key": null
+    },
+    {
+      "name": "thread metadata + wait + idempotency key",
+      "input": {
+        "from": "support@example.com",
+        "to": "alice@example.com",
+        "subject": "Hello",
+        "body_text": "Hi",
+        "in_reply_to": "<a@b.example>",
+        "references": ["<r@b.example>"],
+        "wait": true,
+        "wait_timeout_ms": 5000,
+        "idempotency_key": "k1"
+      },
+      "expected_body": {
+        "from": "support@example.com",
+        "to": "alice@example.com",
+        "subject": "Hello",
+        "body_text": "Hi",
+        "in_reply_to": "<a@b.example>",
+        "references": ["<r@b.example>"],
+        "wait": true,
+        "wait_timeout_ms": 5000
+      },
+      "expected_idempotency_key": "k1"
+    }
+  ],
+  "reply": [
+    {
+      "name": "default subject and from",
+      "input": { "text": "Thanks!" },
+      "expected_body": {
+        "from": "support@example.com",
+        "to": "alice@example.com",
+        "subject": "Re: Hello",
+        "body_text": "Thanks!",
+        "in_reply_to": "<parent@example.com>",
+        "references": ["<root@example.com>", "<parent@example.com>"]
+      },
+      "expected_idempotency_key": null
+    },
+    {
+      "name": "with from override and custom subject",
+      "input": { "text": "Thanks", "from": "ops@example.com", "subject": "Custom" },
+      "expected_body": {
+        "from": "ops@example.com",
+        "to": "alice@example.com",
+        "subject": "Custom",
+        "body_text": "Thanks",
+        "in_reply_to": "<parent@example.com>",
+        "references": ["<root@example.com>", "<parent@example.com>"]
+      },
+      "expected_idempotency_key": null
+    }
+  ],
+  "forward": [
+    {
+      "name": "default from and subject with intro",
+      "input": { "to": "ops@example.com", "body_text": "Take a look" },
+      "expected_body_keys": [
+        "from",
+        "to",
+        "subject",
+        "body_text"
+      ],
+      "expected_body_match": {
+        "from": "support@example.com",
+        "to": "ops@example.com",
+        "subject": "Fwd: Hello"
+      },
+      "expected_body_text_contains": [
+        "Take a look",
+        "---------- Forwarded message ----------",
+        "From: Alice <alice@example.com>",
+        "To: support@example.com",
+        "Subject: Hello"
+      ],
+      "expected_idempotency_key": null
+    },
+    {
+      "name": "from override",
+      "input": { "to": "ops@example.com", "body_text": "Heads up", "from": "notifications@example.com" },
+      "expected_body_match": {
+        "from": "notifications@example.com",
+        "to": "ops@example.com",
+        "subject": "Fwd: Hello"
+      },
+      "expected_body_text_contains": [
+        "Heads up",
+        "---------- Forwarded message ----------"
+      ],
+      "expected_idempotency_key": null
+    }
+  ]
+}

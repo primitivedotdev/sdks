@@ -803,8 +803,6 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "mx_conflict":
 		return nil
-	case "bad_gateway":
-		return nil
 	case "outbound_disabled":
 		return nil
 	case "cannot_send_from_domain":

@@ -1,7 +1,6 @@
 from enum import Enum
 
 class ErrorResponseErrorCode(str, Enum):
-    BAD_GATEWAY = "bad_gateway"
     CANNOT_SEND_FROM_DOMAIN = "cannot_send_from_domain"
     CONFLICT = "conflict"
     FORBIDDEN = "forbidden"

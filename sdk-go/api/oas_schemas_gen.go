@@ -2263,7 +2263,6 @@ const (
 	ErrorResponseErrorCodeInternalError             ErrorResponseErrorCode = "internal_error"
 	ErrorResponseErrorCodeConflict                  ErrorResponseErrorCode = "conflict"
 	ErrorResponseErrorCodeMxConflict                ErrorResponseErrorCode = "mx_conflict"
-	ErrorResponseErrorCodeBadGateway                ErrorResponseErrorCode = "bad_gateway"
 	ErrorResponseErrorCodeOutboundDisabled          ErrorResponseErrorCode = "outbound_disabled"
 	ErrorResponseErrorCodeCannotSendFromDomain      ErrorResponseErrorCode = "cannot_send_from_domain"
 	ErrorResponseErrorCodeRecipientNotAllowed       ErrorResponseErrorCode = "recipient_not_allowed"
@@ -2286,7 +2285,6 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeInternalError,
 		ErrorResponseErrorCodeConflict,
 		ErrorResponseErrorCodeMxConflict,
-		ErrorResponseErrorCodeBadGateway,
 		ErrorResponseErrorCodeOutboundDisabled,
 		ErrorResponseErrorCodeCannotSendFromDomain,
 		ErrorResponseErrorCodeRecipientNotAllowed,
@@ -2317,8 +2315,6 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeConflict:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeMxConflict:
-		return []byte(s), nil
-	case ErrorResponseErrorCodeBadGateway:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		return []byte(s), nil
@@ -2369,9 +2365,6 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeMxConflict:
 		*s = ErrorResponseErrorCodeMxConflict
-		return nil
-	case ErrorResponseErrorCodeBadGateway:
-		*s = ErrorResponseErrorCodeBadGateway
 		return nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		*s = ErrorResponseErrorCodeOutboundDisabled
