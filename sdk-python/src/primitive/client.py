@@ -193,11 +193,12 @@ def _build_forward_text(email: ReceivedEmail, intro: str | None) -> str:
     return "\n".join(parts).rstrip()
 
 
-def _resolve_reply_payload(text: str | dict[str, str]) -> dict[str, str]:
+def _resolve_reply_payload(text: str | dict[str, str]) -> tuple[str, str | None]:
     payload = {"text": text} if isinstance(text, str) else text
-    if not payload.get("text"):
+    body_text = payload.get("text")
+    if not body_text:
         raise ValueError("text is required when using dict input")
-    return payload
+    return body_text, payload.get("subject")
 
 
 class PrimitiveClient:
@@ -301,13 +302,13 @@ class PrimitiveClient:
         raise AssertionError("unreachable")
 
     def reply(self, email: ReceivedEmail, text: str | dict[str, str]) -> SendResult:
-        payload = _resolve_reply_payload(text)
+        body_text, subject = _resolve_reply_payload(text)
 
         return self.send(
             from_email=email.received_by,
             to=email.reply_target.address,
-            subject=payload.get("subject") or email.reply_subject,
-            body_text=payload["text"],
+            subject=subject or email.reply_subject,
+            body_text=body_text,
             thread=SendThread(
                 in_reply_to=email.thread.message_id,
                 references=(
@@ -321,13 +322,13 @@ class PrimitiveClient:
     async def areply(
         self, email: ReceivedEmail, text: str | dict[str, str]
     ) -> SendResult:
-        payload = _resolve_reply_payload(text)
+        body_text, subject = _resolve_reply_payload(text)
 
         return await self.asend(
             from_email=email.received_by,
             to=email.reply_target.address,
-            subject=payload.get("subject") or email.reply_subject,
-            body_text=payload["text"],
+            subject=subject or email.reply_subject,
+            body_text=body_text,
             thread=SendThread(
                 in_reply_to=email.thread.message_id,
                 references=(
