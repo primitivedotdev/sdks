@@ -57,7 +57,9 @@ result = client.send(
     to="alice@example.com",
     subject="Hello",
     body_text="Hi there",
-    idempotency_key="customer-key-123",
+    # Use a unique key per logical send. Reusing a key returns the original
+    # response from the first send, which is how retries are deduplicated.
+    idempotency_key="customer-key-abc123",
     wait=True,
     wait_timeout_ms=5000,
 )
@@ -71,6 +73,31 @@ a request timeout long enough for SMTP delivery, typically 30-60 seconds:
 
 ```python
 client = primitive.client(api_key="prim_test", timeout=60.0)
+```
+
+### About `wait` mode
+
+When `wait=True`, the call returns the first downstream SMTP outcome (or
+`wait_timeout_ms`, default 30000). Possible terminal `delivery_status` values:
+
+- `delivered` accepted by the receiving MTA
+- `bounced` rejected by the receiving MTA (the response is still 200 OK)
+- `deferred` temporary failure, the receiving MTA may retry
+- `wait_timeout` no outcome was observed in time. Treat as "outcome unknown."
+  The send may still complete after the response returns.
+
+### Reply from a different address
+
+`reply()` defaults the From address to the inbound recipient (the address that
+received the email). When your verified outbound domain differs from your
+inbound domain, pass `from_email` explicitly:
+
+```python
+client.reply(
+    email,
+    "Thanks for your email.",
+    from_email="notifications@outbound.example.com",
+)
 ```
 
 ### Forward an inbound email

@@ -5,8 +5,24 @@ import (
 	"io"
 	"net/http"
 	"net/mail"
+	"regexp"
 	"strings"
 )
+
+var (
+	replyPrefixRe   = regexp.MustCompile(`(?i)^re\s*:`)
+	forwardPrefixRe = regexp.MustCompile(`(?i)^(fwd?|fw)\s*:`)
+	// Conservative addr-spec check: local-part @ domain . tld with no
+	// whitespace, brackets, or `@` inside any of the parts. Mirrors the
+	// validator/isEmail behaviour the Node SDK uses (require_tld) so all
+	// three SDKs agree on what counts as a parseable header address.
+	headerAddressRe   = regexp.MustCompile(`^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$`)
+	angleAddressRe    = regexp.MustCompile(`<([^<>@\s]+@[^<>@\s]+\.[^<>@\s]+)>?\s*$`)
+	bareAddressRe     = regexp.MustCompile(`^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$`)
+	displayNamePrefix = regexp.MustCompile(`^(.+?)\s*<[^>]*>?\s*$`)
+)
+
+const maxHeaderBytes = 998
 
 type ReceivedEmailAddress struct {
 	Address string
@@ -49,7 +65,7 @@ func Receive(options HandleWebhookOptions) (*ReceivedEmail, error) {
 		return nil, err
 	}
 
-	return NormalizeReceivedEmail(*event), nil
+	return NormalizeReceivedEmail(*event)
 }
 
 func ReceiveFromHTTPRequest(request *http.Request, options ReceiveRequestOptions) (*ReceivedEmail, error) {
@@ -77,12 +93,17 @@ func ReceiveFromHTTPRequest(request *http.Request, options ReceiveRequestOptions
 	})
 }
 
-func NormalizeReceivedEmail(event EmailReceivedEvent) *ReceivedEmail {
+// NormalizeReceivedEmail builds a ReceivedEmail from a validated webhook
+// event. It returns an error rather than panicking when required fields
+// (SMTP recipients) are missing so callers running with hand-built events,
+// replays, or test fixtures get a recoverable failure instead of a process
+// crash.
+func NormalizeReceivedEmail(event EmailReceivedEvent) (*ReceivedEmail, error) {
 	if len(event.Email.SMTP.RcptTo) == 0 {
-		panic("email.smtp.rcpt_to must contain at least one recipient")
+		return nil, fmt.Errorf("email.smtp.rcpt_to must contain at least one recipient")
 	}
 
-	sender := parseHeaderAddress(event.Email.Headers.From)
+	sender := ParseHeaderAddress(event.Email.Headers.From)
 	if sender == nil {
 		sender = &ReceivedEmailAddress{Address: strings.ToLower(strings.TrimSpace(event.Email.SMTP.MailFrom))}
 	}
@@ -119,7 +140,7 @@ func NormalizeReceivedEmail(event EmailReceivedEvent) *ReceivedEmail {
 		Auth:        event.Email.Auth,
 		Analysis:    event.Email.Analysis,
 		Raw:         event,
-	}
+	}, nil
 }
 
 func BuildReplySubject(subject string) string {
@@ -127,7 +148,7 @@ func BuildReplySubject(subject string) string {
 	if trimmed == "" {
 		return "Re:"
 	}
-	if strings.HasPrefix(strings.ToLower(trimmed), "re:") {
+	if replyPrefixRe.MatchString(trimmed) {
 		return trimmed
 	}
 	return "Re: " + trimmed
@@ -138,8 +159,7 @@ func BuildForwardSubject(subject string) string {
 	if trimmed == "" {
 		return "Fwd:"
 	}
-	lowered := strings.ToLower(trimmed)
-	if strings.HasPrefix(lowered, "fwd:") || strings.HasPrefix(lowered, "fw:") {
+	if forwardPrefixRe.MatchString(trimmed) {
 		return trimmed
 	}
 	return "Fwd: " + trimmed
@@ -152,16 +172,60 @@ func FormatAddress(address ReceivedEmailAddress) string {
 	return fmt.Sprintf("%s <%s>", address.Name, address.Address)
 }
 
-func parseHeaderAddress(value string) *ReceivedEmailAddress {
-	addresses, err := mail.ParseAddressList(value)
-	if err != nil || len(addresses) == 0 {
+// ParseHeaderAddress parses a single RFC 5322 header address (From, Sender,
+// Reply-To). Lenient about quirky headers (unquoted commas in display names,
+// missing closing angle brackets) but strict about the resulting address: the
+// extracted addr-spec must look like a real email or this returns nil and the
+// normalizer falls back to the SMTP envelope sender.
+func ParseHeaderAddress(value string) *ReceivedEmailAddress {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" || len(trimmed) > maxHeaderBytes {
 		return nil
 	}
 
-	return &ReceivedEmailAddress{
-		Address: strings.ToLower(strings.TrimSpace(addresses[0].Address)),
-		Name:    strings.TrimSpace(addresses[0].Name),
+	if addrs, err := mail.ParseAddressList(trimmed); err == nil {
+		for _, addr := range addrs {
+			candidate := strings.TrimSpace(addr.Address)
+			if headerAddressRe.MatchString(candidate) {
+				return &ReceivedEmailAddress{
+					Address: strings.ToLower(candidate),
+					Name:    strings.TrimSpace(addr.Name),
+				}
+			}
+		}
 	}
+
+	if m := angleAddressRe.FindStringSubmatch(trimmed); len(m) == 2 {
+		candidate := m[1]
+		if headerAddressRe.MatchString(candidate) {
+			return &ReceivedEmailAddress{
+				Address: strings.ToLower(candidate),
+				Name:    extractDisplayNamePrefix(trimmed),
+			}
+		}
+	}
+
+	if bareAddressRe.MatchString(trimmed) {
+		return &ReceivedEmailAddress{
+			Address: strings.ToLower(trimmed),
+			Name:    "",
+		}
+	}
+
+	return nil
+}
+
+func extractDisplayNamePrefix(value string) string {
+	m := displayNamePrefix.FindStringSubmatch(value)
+	if len(m) != 2 {
+		return ""
+	}
+	return strings.Trim(strings.TrimSpace(m[1]), `"`)
+}
+
+// parseHeaderAddress preserves the prior internal entry point.
+func parseHeaderAddress(value string) *ReceivedEmailAddress {
+	return ParseHeaderAddress(value)
 }
 
 func deref(value *string) string {

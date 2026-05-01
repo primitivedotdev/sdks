@@ -1,11 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
 import primitive, {
-  type EmailReceivedEvent,
+  type EmailAnalysis,
+  type EmailAuth,
   type PrimitiveApiError,
   PrimitiveClient,
   type ReceivedEmail,
 } from "../../src/index.js";
 import { normalizeReceivedEmail } from "../../src/webhook/received-email.js";
+
+const TEST_AUTH: EmailAuth = {
+  spf: "pass",
+  dmarc: "pass",
+  dmarcPolicy: "reject",
+  dmarcFromDomain: "example.com",
+  dmarcSpfAligned: true,
+  dmarcDkimAligned: true,
+  dmarcSpfStrict: false,
+  dmarcDkimStrict: false,
+  dkimSignatures: [],
+};
+
+const TEST_ANALYSIS: EmailAnalysis = {};
 
 const RECEIVED_EMAIL: ReceivedEmail = {
   id: "email-1",
@@ -25,8 +40,8 @@ const RECEIVED_EMAIL: ReceivedEmail = {
     references: ["<root@example.com>"],
   },
   attachments: [],
-  auth: {} as never,
-  analysis: {} as never,
+  auth: TEST_AUTH,
+  analysis: TEST_ANALYSIS,
   raw: {
     id: "evt-1",
     event: "email.received",
@@ -66,6 +81,7 @@ const RECEIVED_EMAIL: ReceivedEmail = {
       },
       parsed: {
         status: "complete",
+        error: null,
         body_text: "Hi there",
         body_html: null,
         reply_to: [],
@@ -76,10 +92,10 @@ const RECEIVED_EMAIL: ReceivedEmail = {
         attachments: [],
         attachments_download_url: null,
       },
-      analysis: {} as never,
-      auth: {} as never,
+      analysis: TEST_ANALYSIS,
+      auth: TEST_AUTH,
     },
-  } as never,
+  },
 };
 
 const SEND_RESULT = {
@@ -106,8 +122,12 @@ const NORMALIZED_SEND_RESULT = {
 
 describe("PrimitiveClient", () => {
   it("rejects received emails without SMTP recipients", () => {
-    const event = structuredClone(RECEIVED_EMAIL.raw as EmailReceivedEvent);
-    event.email.smtp.rcpt_to = [] as unknown as [string, ...string[]];
+    const event = structuredClone(RECEIVED_EMAIL.raw);
+    // The schema's rcpt_to is a non-empty tuple [string, ...string[]]. To
+    // exercise the runtime guard for the invariant violation we have to
+    // bypass the type system; this cast is the test-only equivalent of a
+    // hand-built malformed event, not silenced production code.
+    (event.email.smtp as { rcpt_to: string[] }).rcpt_to = [];
 
     expect(() => normalizeReceivedEmail(event)).toThrow(
       "email.smtp.rcpt_to must contain at least one recipient",
@@ -385,5 +405,130 @@ describe("PrimitiveClient", () => {
   it("exposes a small default root surface", () => {
     expect(typeof primitive.receive).toBe("function");
     expect(typeof primitive.client).toBe("function");
+  });
+
+  it("honors a from override on reply()", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      expect(await request.json()).toMatchObject({
+        from: "notifications@example.com",
+        to: "alice@example.com",
+        subject: "Re: Hello",
+      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: { ...SEND_RESULT, queue_id: "reply-2" },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    await client.reply(RECEIVED_EMAIL, {
+      text: "Thanks!",
+      from: "notifications@example.com",
+    });
+  });
+
+  it("surfaces gates, code, requestId, and details on 403 recipient_not_allowed", async () => {
+    const errorBody = {
+      success: false,
+      error: {
+        code: "recipient_not_allowed",
+        message: "cannot send to alice@example.com",
+        request_id: "req_test_123",
+        details: {
+          sent_email_id: "se_abc",
+          required_entitlements: ["send_to_confirmed_domains"],
+        },
+        gates: [
+          {
+            name: "send_to_known_addresses",
+            reason: "recipient_not_known",
+            subject: "alice@example.com",
+            message: "alice@example.com has not previously sent mail",
+            fix: { action: "wait_for_inbound", subject: "alice@example.com" },
+          },
+        ],
+      },
+    } as const;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: vi.fn<typeof fetch>(
+        async () =>
+          new Response(JSON.stringify(errorBody), {
+            status: 403,
+            headers: { "content-type": "application/json" },
+          }),
+      ) as typeof fetch,
+    });
+
+    let captured: PrimitiveApiError | undefined;
+    try {
+      await client.send({
+        from: "support@example.com",
+        to: "alice@example.com",
+        subject: "Hello",
+        bodyText: "Hi",
+      });
+    } catch (err) {
+      captured = err as PrimitiveApiError;
+    }
+
+    expect(captured).toBeDefined();
+    expect(captured?.status).toBe(403);
+    expect(captured?.code).toBe("recipient_not_allowed");
+    expect(captured?.requestId).toBe("req_test_123");
+    expect(captured?.gates).toHaveLength(1);
+    expect(captured?.gates?.[0]?.reason).toBe("recipient_not_known");
+    expect(captured?.details?.sent_email_id).toBe("se_abc");
+  });
+
+  it("surfaces retry-after header on 429 rate_limit_exceeded", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: vi.fn<typeof fetch>(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: false,
+              error: {
+                code: "rate_limit_exceeded",
+                message: "Rate limit exceeded",
+              },
+            }),
+            {
+              status: 429,
+              headers: {
+                "content-type": "application/json",
+                "retry-after": "12",
+              },
+            },
+          ),
+      ) as typeof fetch,
+    });
+
+    await expect(
+      client.send({
+        from: "support@example.com",
+        to: "alice@example.com",
+        subject: "Hello",
+        bodyText: "Hi",
+      }),
+    ).rejects.toMatchObject({
+      name: "PrimitiveApiError",
+      status: 429,
+      code: "rate_limit_exceeded",
+      retryAfter: 12,
+    } satisfies Partial<PrimitiveApiError>);
   });
 });

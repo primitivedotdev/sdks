@@ -2263,9 +2263,7 @@ const (
 	ErrorResponseErrorCodeInternalError             ErrorResponseErrorCode = "internal_error"
 	ErrorResponseErrorCodeConflict                  ErrorResponseErrorCode = "conflict"
 	ErrorResponseErrorCodeMxConflict                ErrorResponseErrorCode = "mx_conflict"
-	ErrorResponseErrorCodePayloadTooLarge           ErrorResponseErrorCode = "payload_too_large"
 	ErrorResponseErrorCodeBadGateway                ErrorResponseErrorCode = "bad_gateway"
-	ErrorResponseErrorCodeGatewayTimeout            ErrorResponseErrorCode = "gateway_timeout"
 	ErrorResponseErrorCodeOutboundDisabled          ErrorResponseErrorCode = "outbound_disabled"
 	ErrorResponseErrorCodeCannotSendFromDomain      ErrorResponseErrorCode = "cannot_send_from_domain"
 	ErrorResponseErrorCodeRecipientNotAllowed       ErrorResponseErrorCode = "recipient_not_allowed"
@@ -2288,9 +2286,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeInternalError,
 		ErrorResponseErrorCodeConflict,
 		ErrorResponseErrorCodeMxConflict,
-		ErrorResponseErrorCodePayloadTooLarge,
 		ErrorResponseErrorCodeBadGateway,
-		ErrorResponseErrorCodeGatewayTimeout,
 		ErrorResponseErrorCodeOutboundDisabled,
 		ErrorResponseErrorCodeCannotSendFromDomain,
 		ErrorResponseErrorCodeRecipientNotAllowed,
@@ -2322,11 +2318,7 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorResponseErrorCodeMxConflict:
 		return []byte(s), nil
-	case ErrorResponseErrorCodePayloadTooLarge:
-		return []byte(s), nil
 	case ErrorResponseErrorCodeBadGateway:
-		return []byte(s), nil
-	case ErrorResponseErrorCodeGatewayTimeout:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		return []byte(s), nil
@@ -2378,14 +2370,8 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeMxConflict:
 		*s = ErrorResponseErrorCodeMxConflict
 		return nil
-	case ErrorResponseErrorCodePayloadTooLarge:
-		*s = ErrorResponseErrorCodePayloadTooLarge
-		return nil
 	case ErrorResponseErrorCodeBadGateway:
 		*s = ErrorResponseErrorCodeBadGateway
-		return nil
-	case ErrorResponseErrorCodeGatewayTimeout:
-		*s = ErrorResponseErrorCodeGatewayTimeout
 		return nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		*s = ErrorResponseErrorCodeOutboundDisabled
@@ -4588,6 +4574,7 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 func (*RateLimitedHeaders) replayDeliveryRes()      {}
 func (*RateLimitedHeaders) replayEmailWebhooksRes() {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes() {}
+func (*RateLimitedHeaders) sendEmailRes()           {}
 func (*RateLimitedHeaders) testEndpointRes()        {}
 
 type ReplayDeliveryBadRequest ErrorResponse
@@ -4750,10 +4737,6 @@ type SendEmailForbidden ErrorResponse
 
 func (*SendEmailForbidden) sendEmailRes() {}
 
-type SendEmailGatewayTimeout ErrorResponse
-
-func (*SendEmailGatewayTimeout) sendEmailRes() {}
-
 type SendEmailInternalServerError ErrorResponse
 
 func (*SendEmailInternalServerError) sendEmailRes() {}
@@ -4785,10 +4768,6 @@ func (s *SendEmailOK) SetData(val SendMailResult) {
 }
 
 func (*SendEmailOK) sendEmailRes() {}
-
-type SendEmailRequestEntityTooLarge ErrorResponse
-
-func (*SendEmailRequestEntityTooLarge) sendEmailRes() {}
 
 type SendEmailServiceUnavailable ErrorResponse
 

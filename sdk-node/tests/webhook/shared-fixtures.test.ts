@@ -3,11 +3,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  buildForwardSubject,
+  buildReplySubject,
   decodeRawEmail,
   type EmailReceivedEvent,
   handleWebhook,
   isRawIncluded,
   PrimitiveWebhookError,
+  parseHeaderAddress,
   parseWebhookEvent,
   RawEmailDecodeError,
   safeValidateEmailReceivedEvent,
@@ -469,6 +472,48 @@ describe("shared compatibility fixtures", () => {
           testCase.expected.error_code,
         );
       }
+    }
+  });
+
+  it("parses header addresses identically across SDKs", () => {
+    const fixtures = loadJson<{
+      cases: Array<{
+        name: string;
+        input: string;
+        expected: { address: string; name: string | null } | null;
+      }>;
+    }>("header-address-parser", "cases.json");
+
+    for (const testCase of fixtures.cases) {
+      const got = parseHeaderAddress(testCase.input);
+      if (testCase.expected === null) {
+        expect(got, testCase.name).toBeNull();
+      } else {
+        expect(got, testCase.name).not.toBeNull();
+        expect(got?.address, testCase.name).toBe(testCase.expected.address);
+        expect(got?.name, testCase.name).toBe(testCase.expected.name);
+      }
+    }
+  });
+
+  it("builds reply and forward subjects identically across SDKs", () => {
+    const fixtures = loadJson<{
+      reply: Array<{ input: string | null; expected: string }>;
+      forward: Array<{ input: string | null; expected: string }>;
+    }>("subject-builders", "cases.json");
+
+    for (const testCase of fixtures.reply) {
+      expect(
+        buildReplySubject(testCase.input),
+        `reply input=${JSON.stringify(testCase.input)}`,
+      ).toBe(testCase.expected);
+    }
+
+    for (const testCase of fixtures.forward) {
+      expect(
+        buildForwardSubject(testCase.input),
+        `forward input=${JSON.stringify(testCase.input)}`,
+      ).toBe(testCase.expected);
     }
   });
 });

@@ -1,0 +1,31 @@
+{
+  "$comment": "Shared cross-SDK subject builder cases. The reply/forward subject builders must produce identical output across all three SDKs for every input here.",
+  "reply": [
+    { "input": null, "expected": "Re:" },
+    { "input": "", "expected": "Re:" },
+    { "input": "   ", "expected": "Re:" },
+    { "input": "Hello", "expected": "Re: Hello" },
+    { "input": "Re: Hello", "expected": "Re: Hello" },
+    { "input": "RE: Hello", "expected": "RE: Hello" },
+    { "input": "re:Hello", "expected": "re:Hello" },
+    { "input": "Re : Hello", "expected": "Re : Hello" },
+    { "input": "RE  : Hello", "expected": "RE  : Hello" },
+    { "input": "  Re: Hello  ", "expected": "Re: Hello" },
+    { "input": "Reply: Hello", "expected": "Re: Reply: Hello" }
+  ],
+  "forward": [
+    { "input": null, "expected": "Fwd:" },
+    { "input": "", "expected": "Fwd:" },
+    { "input": "   ", "expected": "Fwd:" },
+    { "input": "Hello", "expected": "Fwd: Hello" },
+    { "input": "Fwd: Hello", "expected": "Fwd: Hello" },
+    { "input": "FWD: Hello", "expected": "FWD: Hello" },
+    { "input": "Fw: Hello", "expected": "Fw: Hello" },
+    { "input": "FW: Hello", "expected": "FW: Hello" },
+    { "input": "fwd:Hello", "expected": "fwd:Hello" },
+    { "input": "Fw : Hello", "expected": "Fw : Hello" },
+    { "input": "FWD  : Hello", "expected": "FWD  : Hello" },
+    { "input": "  Fwd: Hello  ", "expected": "Fwd: Hello" },
+    { "input": "Forward: Hello", "expected": "Fwd: Forward: Hello" }
+  ]
+}

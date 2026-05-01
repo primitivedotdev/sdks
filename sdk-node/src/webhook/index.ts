@@ -66,6 +66,7 @@ export {
   buildReplySubject,
   formatAddress,
   normalizeReceivedEmail,
+  parseHeaderAddress,
   type ReceivedEmail,
   type ReceivedEmailAddress,
   type ReceivedEmailThread,

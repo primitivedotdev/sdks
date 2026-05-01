@@ -1497,8 +1497,8 @@ export const openapiDocument: Record<string, unknown> = {
           "403": {
             "$ref": "#/components/responses/Forbidden"
           },
-          "413": {
-            "$ref": "#/components/responses/PayloadTooLarge"
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           },
           "500": {
             "$ref": "#/components/responses/InternalError"
@@ -1508,9 +1508,6 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "503": {
             "$ref": "#/components/responses/ServiceUnavailable"
-          },
-          "504": {
-            "$ref": "#/components/responses/GatewayTimeout"
           }
         }
       }
@@ -1630,23 +1627,6 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       },
-      "PayloadTooLarge": {
-        "description": "Request body exceeds the supported size limit",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            },
-            "example": {
-              "success": false,
-              "error": {
-                "code": "payload_too_large",
-                "message": "Body must be 65536 bytes or smaller"
-              }
-            }
-          }
-        }
-      },
       "RateLimited": {
         "description": "Rate limit exceeded",
         "headers": {
@@ -1718,23 +1698,6 @@ export const openapiDocument: Record<string, unknown> = {
               "error": {
                 "code": "internal_error",
                 "message": "Internal server error"
-              }
-            }
-          }
-        }
-      },
-      "GatewayTimeout": {
-        "description": "Primitive timed out waiting for the downstream SMTP request",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            },
-            "example": {
-              "success": false,
-              "error": {
-                "code": "gateway_timeout",
-                "message": "Outbound SMTP service timed out"
               }
             }
           }
@@ -1849,9 +1812,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "internal_error",
                   "conflict",
                   "mx_conflict",
-                  "payload_too_large",
                   "bad_gateway",
-                  "gateway_timeout",
                   "outbound_disabled",
                   "cannot_send_from_domain",
                   "recipient_not_allowed",

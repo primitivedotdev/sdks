@@ -13,9 +13,12 @@ from primitive import (
     UnknownEvent,
     WebhookValidationError,
     WebhookVerificationError,
+    build_forward_subject,
+    build_reply_subject,
     decode_raw_email,
     handle_webhook,
     is_raw_included,
+    parse_header_address,
     parse_webhook_event,
     safe_validate_email_received_event,
     sign_standard_webhooks_payload,
@@ -274,3 +277,28 @@ def test_shared_standard_webhooks_handle_webhook_cases() -> None:
                 tolerance_seconds=case.get("tolerance_seconds"),
             )
         assert error.value.code == expected["error_code"]
+
+
+def test_shared_subject_builder_cases() -> None:
+    cases = _load_json("subject-builders", "cases.json")
+    for case in cases["reply"]:
+        assert build_reply_subject(case["input"]) == case["expected"], (
+            f"reply input={case['input']!r}"
+        )
+    for case in cases["forward"]:
+        assert build_forward_subject(case["input"]) == case["expected"], (
+            f"forward input={case['input']!r}"
+        )
+
+
+def test_shared_header_address_parser_cases() -> None:
+    fixture = _load_json("header-address-parser", "cases.json")
+    for case in fixture["cases"]:
+        result = parse_header_address(case["input"])
+        expected = case["expected"]
+        if expected is None:
+            assert result is None, f"{case['name']}: expected None, got {result!r}"
+            continue
+        assert result is not None, f"{case['name']}: expected address, got None"
+        assert result.address == expected["address"], case["name"]
+        assert result.name == expected["name"], case["name"]

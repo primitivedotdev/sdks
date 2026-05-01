@@ -1339,13 +1339,33 @@ func encodeSendEmailResponse(response SendEmailRes, w http.ResponseWriter, span 
 
 		return nil
 
-	case *SendEmailRequestEntityTooLarge:
+	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(413)
-		span.SetStatus(codes.Error, http.StatusText(413))
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		// Encoding response headers.
+		{
+			h := uri.NewHeaderEncoder(w.Header())
+			// Encode "Retry-After" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Retry-After",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RetryAfter.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+		}
+		w.WriteHeader(429)
+		span.SetStatus(codes.Error, http.StatusText(429))
 
 		e := new(jx.Encoder)
-		response.Encode(e)
+		response.Response.Encode(e)
 		if _, err := e.WriteTo(w); err != nil {
 			return errors.Wrap(err, "write")
 		}
@@ -1382,19 +1402,6 @@ func encodeSendEmailResponse(response SendEmailRes, w http.ResponseWriter, span 
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(503)
 		span.SetStatus(codes.Error, http.StatusText(503))
-
-		e := new(jx.Encoder)
-		response.Encode(e)
-		if _, err := e.WriteTo(w); err != nil {
-			return errors.Wrap(err, "write")
-		}
-
-		return nil
-
-	case *SendEmailGatewayTimeout:
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(504)
-		span.SetStatus(codes.Error, http.StatusText(504))
 
 		e := new(jx.Encoder)
 		response.Encode(e)

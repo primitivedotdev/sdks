@@ -1,10 +1,13 @@
-import addressparser from "nodemailer/lib/addressparser/index.js";
+import { parseFromHeaderLoose } from "../parser/address-parser.js";
 import type {
   EmailAnalysis,
   EmailAuth,
   EmailReceivedEvent,
   WebhookAttachment,
 } from "../types.js";
+
+const REPLY_PREFIX_RE = /^re\s*:/i;
+const FORWARD_PREFIX_RE = /^(fwd?|fw)\s*:/i;
 
 export interface ReceivedEmailAddress {
   address: string;
@@ -84,7 +87,7 @@ export function buildReplySubject(subject: string | null | undefined): string {
   if (trimmed.length === 0) {
     return "Re:";
   }
-  return /^re\s*:/i.test(trimmed) ? trimmed : `Re: ${trimmed}`;
+  return REPLY_PREFIX_RE.test(trimmed) ? trimmed : `Re: ${trimmed}`;
 }
 
 export function buildForwardSubject(
@@ -94,7 +97,7 @@ export function buildForwardSubject(
   if (trimmed.length === 0) {
     return "Fwd:";
   }
-  return /^(fwd?|fw)\s*:/i.test(trimmed) ? trimmed : `Fwd: ${trimmed}`;
+  return FORWARD_PREFIX_RE.test(trimmed) ? trimmed : `Fwd: ${trimmed}`;
 }
 
 export function formatAddress(address: ReceivedEmailAddress): string {
@@ -117,16 +120,19 @@ function firstStructuredAddress(
   };
 }
 
-function parseHeaderAddress(value: string): ReceivedEmailAddress | null {
-  const parsed = addressparser(value).find(
-    (entry) => typeof entry.address === "string",
-  );
-  if (!parsed?.address) {
+// Lenient about quirky headers (unquoted commas in display names, missing
+// closing angle brackets) but strict about the resulting address: it must
+// validate as an email, otherwise the normalizer falls back to the SMTP
+// envelope sender. Exported so cross-SDK fixtures can exercise it directly.
+export function parseHeaderAddress(
+  value: string | null | undefined,
+): ReceivedEmailAddress | null {
+  const parsed = parseFromHeaderLoose(value);
+  if (!parsed) {
     return null;
   }
-
   return {
-    address: parsed.address.trim().toLowerCase(),
+    address: parsed.address,
     name: parsed.name?.trim() || null,
   };
 }

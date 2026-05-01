@@ -24,6 +24,7 @@ from .received_email import (
     build_reply_subject,
     format_address,
     normalize_received_email,
+    parse_header_address,
     receive,
 )
 from .schema import email_received_event_json_schema
@@ -185,6 +186,7 @@ __all__ = [
     "is_email_received_event",
     "is_raw_included",
     "normalize_received_email",
+    "parse_header_address",
     "parse_json_body",
     "parse_webhook_event",
     "receive",

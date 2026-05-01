@@ -1,0 +1,60 @@
+{
+  "$comment": "Shared cross-SDK header-address parser cases. parseHeaderAddress / _parse_address / parseHeaderAddress (Go) must produce identical results across all three SDKs. Each case has the input header value and the expected normalized address (lowercased, trimmed) or null when the header is unparseable.",
+  "cases": [
+    {
+      "name": "bare address",
+      "input": "alice@example.com",
+      "expected": { "address": "alice@example.com", "name": null }
+    },
+    {
+      "name": "display name + angle addr",
+      "input": "Alice <alice@example.com>",
+      "expected": { "address": "alice@example.com", "name": "Alice" }
+    },
+    {
+      "name": "angle addr without display name",
+      "input": "<bare@example.com>",
+      "expected": { "address": "bare@example.com", "name": null }
+    },
+    {
+      "name": "uppercase normalized to lowercase",
+      "input": "Bob <BOB@EXAMPLE.COM>",
+      "expected": { "address": "bob@example.com", "name": "Bob" }
+    },
+    {
+      "name": "quoted display name with comma",
+      "input": "\"Foo, Inc.\" <foo@bar.com>",
+      "expected": { "address": "foo@bar.com", "name": "Foo, Inc." }
+    },
+    {
+      "name": "unterminated angle bracket",
+      "input": "Unterminated <foo@bar.com",
+      "expected": { "address": "foo@bar.com", "name": "Unterminated" }
+    },
+    {
+      "name": "leading whitespace",
+      "input": "   alice@example.com   ",
+      "expected": { "address": "alice@example.com", "name": null }
+    },
+    {
+      "name": "empty string",
+      "input": "",
+      "expected": null
+    },
+    {
+      "name": "whitespace only",
+      "input": "   ",
+      "expected": null
+    },
+    {
+      "name": "garbage no @",
+      "input": "random garbage",
+      "expected": null
+    },
+    {
+      "name": "no TLD",
+      "input": "alice@localhost",
+      "expected": null
+    }
+  ]
+}

@@ -41,6 +41,7 @@ type SendParams struct {
 type ReplyParams struct {
 	BodyText string
 	Subject  string
+	From     string
 }
 
 type ForwardParams struct {
@@ -68,6 +69,10 @@ type APIError struct {
 	StatusCode int
 	Code       string
 	Message    string
+	RetryAfter *int
+	Gates      []primitiveapi.GateDenial
+	RequestID  string
+	Details    *primitiveapi.ErrorResponseErrorDetails
 	Payload    any
 }
 
@@ -155,12 +160,23 @@ func validateForwardParams(params ForwardParams) error {
 }
 
 func apiErrorFromErrorResponse(status int, response primitiveapi.ErrorResponse) *APIError {
-	return &APIError{
+	err := &APIError{
 		StatusCode: status,
 		Code:       string(response.Error.Code),
 		Message:    response.Error.Message,
 		Payload:    response,
 	}
+	if len(response.Error.Gates) > 0 {
+		err.Gates = append([]primitiveapi.GateDenial(nil), response.Error.Gates...)
+	}
+	if requestID, ok := response.Error.RequestID.Get(); ok {
+		err.RequestID = requestID
+	}
+	if details, ok := response.Error.Details.Get(); ok {
+		copied := details
+		err.Details = &copied
+	}
+	return err
 }
 
 func mapSendError(res primitiveapi.SendEmailRes) error {
@@ -171,12 +187,18 @@ func mapSendError(res primitiveapi.SendEmailRes) error {
 		return apiErrorFromErrorResponse(400, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.SendEmailForbidden:
 		return apiErrorFromErrorResponse(403, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.SendEmailGatewayTimeout:
-		return apiErrorFromErrorResponse(504, primitiveapi.ErrorResponse(*v))
-	case *primitiveapi.SendEmailRequestEntityTooLarge:
-		return apiErrorFromErrorResponse(413, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SendEmailInternalServerError:
+		return apiErrorFromErrorResponse(500, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SendEmailServiceUnavailable:
+		return apiErrorFromErrorResponse(503, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.SendEmailUnauthorized:
 		return apiErrorFromErrorResponse(401, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.RateLimitedHeaders:
+		err := apiErrorFromErrorResponse(429, v.Response)
+		if retryAfter, ok := v.RetryAfter.Get(); ok {
+			err.RetryAfter = &retryAfter
+		}
+		return err
 	default:
 		return &APIError{
 			Message: fmt.Sprintf("primitive API send failed: %T", res),
@@ -266,7 +288,7 @@ func (c *Client) Reply(ctx context.Context, email *ReceivedEmail, input ReplyPar
 	}
 
 	return c.Send(ctx, SendParams{
-		From:     email.ReceivedBy,
+		From:     firstNonEmpty(input.From, email.ReceivedBy),
 		To:       email.ReplyTarget.Address,
 		Subject:  firstNonEmpty(input.Subject, email.ReplySubject),
 		BodyText: input.BodyText,

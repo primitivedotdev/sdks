@@ -803,11 +803,7 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "mx_conflict":
 		return nil
-	case "payload_too_large":
-		return nil
 	case "bad_gateway":
-		return nil
-	case "gateway_timeout":
 		return nil
 	case "outbound_disabled":
 		return nil
@@ -1483,14 +1479,6 @@ func (s *SendEmailForbidden) Validate() error {
 	return nil
 }
 
-func (s *SendEmailGatewayTimeout) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *SendEmailInternalServerError) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -1518,14 +1506,6 @@ func (s *SendEmailOK) Validate() error {
 	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *SendEmailRequestEntityTooLarge) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
 	}
 	return nil
 }

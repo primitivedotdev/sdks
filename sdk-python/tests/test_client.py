@@ -348,7 +348,7 @@ def test_reply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_reply_requires_text_for_dict_input() -> None:
     client = PrimitiveClient("prim_test")
 
-    with pytest.raises(ValueError, match="text is required when using dict input"):
+    with pytest.raises(ValueError, match="reply text must be a non-empty string"):
         client.reply(RECEIVED_EMAIL, {"subject": "Custom subject"})
 
 
@@ -394,7 +394,7 @@ async def test_areply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> N
 async def test_areply_requires_text_for_dict_input() -> None:
     client = PrimitiveClient("prim_test")
 
-    with pytest.raises(ValueError, match="text is required when using dict input"):
+    with pytest.raises(ValueError, match="reply text must be a non-empty string"):
         await client.areply(RECEIVED_EMAIL, {"subject": "Custom subject"})
 
 
@@ -518,3 +518,158 @@ def test_send_wraps_api_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     assert str(exc_info.value) == (
         "We haven't received an authenticated email from this address yet"
     )
+
+
+def test_send_surfaces_gates_request_id_and_details(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    error_body = {
+        "success": False,
+        "error": {
+            "code": "recipient_not_allowed",
+            "message": "cannot send to alice@example.com",
+            "request_id": "req_test_123",
+            "details": {
+                "sent_email_id": "se_abc",
+                "required_entitlements": ["send_to_confirmed_domains"],
+            },
+            "gates": [
+                {
+                    "name": "send_to_known_addresses",
+                    "reason": "recipient_not_known",
+                    "subject": "alice@example.com",
+                    "message": "alice@example.com has not previously sent mail",
+                    "fix": {
+                        "action": "wait_for_inbound",
+                        "subject": "alice@example.com",
+                    },
+                }
+            ],
+        },
+    }
+
+    def fake_send_email_sync_detailed(*, client, body):
+        del client, body
+        return SimpleNamespace(
+            status_code=HTTPStatus.FORBIDDEN,
+            parsed=ErrorResponse.from_dict(error_body),
+            content=b"",
+            headers={},
+        )
+
+    monkeypatch.setattr(
+        client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
+    )
+
+    client = PrimitiveClient("prim_test")
+
+    with pytest.raises(PrimitiveAPIError) as exc_info:
+        client.send(
+            from_email="support@example.com",
+            to="alice@example.com",
+            subject="Hello",
+            body_text="Hi",
+        )
+
+    err = exc_info.value
+    assert err.status_code == 403
+    assert err.code == "recipient_not_allowed"
+    assert err.request_id == "req_test_123"
+    assert err.gates is not None and len(err.gates) == 1
+    assert err.gates[0]["reason"] == "recipient_not_known"
+    assert err.details is not None
+    assert err.details.get("sent_email_id") == "se_abc"
+
+
+def test_send_surfaces_retry_after(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_send_email_sync_detailed(*, client, body):
+        del client, body
+        return SimpleNamespace(
+            status_code=HTTPStatus.TOO_MANY_REQUESTS,
+            parsed=ErrorResponse.from_dict(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "rate_limit_exceeded",
+                        "message": "Rate limit exceeded",
+                    },
+                }
+            ),
+            content=b"",
+            headers={"Retry-After": "12"},
+        )
+
+    monkeypatch.setattr(
+        client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
+    )
+
+    client = PrimitiveClient("prim_test")
+
+    with pytest.raises(PrimitiveAPIError) as exc_info:
+        client.send(
+            from_email="support@example.com",
+            to="alice@example.com",
+            subject="Hello",
+            body_text="Hi",
+        )
+
+    assert exc_info.value.status_code == 429
+    assert exc_info.value.code == "rate_limit_exceeded"
+    assert exc_info.value.retry_after == 12
+
+
+def test_reply_honors_from_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_send_email_sync_detailed(*, client, body):
+        del client
+        captured["body"] = body.to_dict()
+        return SimpleNamespace(
+            status_code=HTTPStatus.OK,
+            parsed=SendEmailResponse200.from_dict(
+                {"success": True, "data": SEND_RESULT}
+            ),
+            content=b"",
+        )
+
+    monkeypatch.setattr(
+        client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
+    )
+
+    client = PrimitiveClient("prim_test")
+    client.reply(
+        RECEIVED_EMAIL,
+        "Thanks!",
+        from_email="notifications@example.com",
+    )
+
+    assert (
+        cast(dict[str, Any], captured["body"])["from"]
+        == "notifications@example.com"
+    )
+
+
+def test_reply_dict_from_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_send_email_sync_detailed(*, client, body):
+        del client
+        captured["body"] = body.to_dict()
+        return SimpleNamespace(
+            status_code=HTTPStatus.OK,
+            parsed=SendEmailResponse200.from_dict(
+                {"success": True, "data": SEND_RESULT}
+            ),
+            content=b"",
+        )
+
+    monkeypatch.setattr(
+        client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
+    )
+
+    client = PrimitiveClient("prim_test")
+    client.reply(RECEIVED_EMAIL, {"text": "Thanks!", "from": "ops@example.com"})
+
+    assert cast(dict[str, Any], captured["body"])["from"] == "ops@example.com"

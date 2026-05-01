@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from http import HTTPStatus
@@ -51,11 +52,19 @@ class PrimitiveAPIError(Exception):
         *,
         status_code: int | None = None,
         code: str | None = None,
+        gates: list[dict[str, Any]] | None = None,
+        request_id: str | None = None,
+        retry_after: int | None = None,
+        details: dict[str, Any] | None = None,
         payload: Any = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.code = code
+        self.gates = gates
+        self.request_id = request_id
+        self.retry_after = retry_after
+        self.details = details
         self.payload = payload
 
 
@@ -120,19 +129,93 @@ def _build_send_input(
     return ApiSendMailInput.from_dict(payload)
 
 
-def _raise_api_error(status_code: int, parsed: Any) -> None:
+def _coerce_error_payload(content: Any) -> dict[str, Any] | None:
+    """Best-effort fallback for response shapes the generated client did not parse.
+
+    The generated SDK only typed the status codes declared in the OpenAPI spec.
+    Anything else (today, the most common one is 429) lands here as raw bytes
+    and would otherwise raise an opaque "Primitive API request failed".
+    """
+    if content is None:
+        return None
+    raw = bytes(content) if not isinstance(content, (str, bytes)) else content
+    if isinstance(raw, str):
+        raw = raw.encode("utf-8", errors="replace")
+    if not raw:
+        return None
+    try:
+        decoded = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        return None
+    return decoded if isinstance(decoded, dict) else None
+
+
+def _retry_after_from_headers(headers: Any) -> int | None:
+    if headers is None:
+        return None
+    try:
+        raw = headers.get("retry-after") or headers.get("Retry-After")
+    except AttributeError:
+        return None
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _raise_api_error(response: Any) -> None:
+    status_code = int(response.status_code)
+    parsed = response.parsed
+    retry_after = _retry_after_from_headers(getattr(response, "headers", None))
+
     if isinstance(parsed, ErrorResponse):
+        gates = (
+            [gate.to_dict() for gate in parsed.error.gates]
+            if parsed.error.gates is not UNSET and parsed.error.gates
+            else None
+        )
+        request_id = (
+            cast(str, parsed.error.request_id)
+            if parsed.error.request_id is not UNSET
+            else None
+        )
+        details = (
+            cast(Any, parsed.error.details).to_dict()
+            if parsed.error.details is not UNSET
+            else None
+        )
         raise PrimitiveAPIError(
             parsed.error.message,
             status_code=status_code,
             code=parsed.error.code.value,
+            gates=gates,
+            request_id=request_id,
+            retry_after=retry_after,
+            details=details,
             payload=parsed.to_dict(),
+        )
+
+    fallback = _coerce_error_payload(getattr(response, "content", None))
+    if fallback is not None and isinstance(fallback.get("error"), dict):
+        err = fallback["error"]
+        raise PrimitiveAPIError(
+            str(err.get("message") or "Primitive API request failed"),
+            status_code=status_code,
+            code=err.get("code"),
+            gates=err.get("gates"),
+            request_id=err.get("request_id"),
+            retry_after=retry_after,
+            details=err.get("details"),
+            payload=fallback,
         )
 
     raise PrimitiveAPIError(
         "Primitive API request failed",
         status_code=status_code,
-        payload=parsed,
+        retry_after=retry_after,
+        payload=fallback if fallback is not None else parsed,
     )
 
 
@@ -193,12 +276,14 @@ def _build_forward_text(email: ReceivedEmail, intro: str | None) -> str:
     return "\n".join(parts).rstrip()
 
 
-def _resolve_reply_payload(text: str | dict[str, str]) -> tuple[str, str | None]:
+def _resolve_reply_payload(
+    text: str | dict[str, str],
+) -> tuple[str, str | None, str | None]:
     payload = {"text": text} if isinstance(text, str) else text
     body_text = payload.get("text")
     if not body_text:
-        raise ValueError("text is required when using dict input")
-    return body_text, payload.get("subject")
+        raise ValueError("reply text must be a non-empty string")
+    return body_text, payload.get("subject"), payload.get("from")
 
 
 class PrimitiveClient:
@@ -255,7 +340,7 @@ class PrimitiveClient:
                 )
             return _map_send_result(cast(ApiSendMailResult, response.parsed.data))
 
-        _raise_api_error(int(response.status_code), response.parsed)
+        _raise_api_error(response)
         raise AssertionError("unreachable")
 
     async def asend(
@@ -298,14 +383,20 @@ class PrimitiveClient:
                 )
             return _map_send_result(cast(ApiSendMailResult, response.parsed.data))
 
-        _raise_api_error(int(response.status_code), response.parsed)
+        _raise_api_error(response)
         raise AssertionError("unreachable")
 
-    def reply(self, email: ReceivedEmail, text: str | dict[str, str]) -> SendResult:
-        body_text, subject = _resolve_reply_payload(text)
+    def reply(
+        self,
+        email: ReceivedEmail,
+        text: str | dict[str, str],
+        *,
+        from_email: str | None = None,
+    ) -> SendResult:
+        body_text, subject, dict_from = _resolve_reply_payload(text)
 
         return self.send(
-            from_email=email.received_by,
+            from_email=from_email or dict_from or email.received_by,
             to=email.reply_target.address,
             subject=subject or email.reply_subject,
             body_text=body_text,
@@ -320,12 +411,16 @@ class PrimitiveClient:
         )
 
     async def areply(
-        self, email: ReceivedEmail, text: str | dict[str, str]
+        self,
+        email: ReceivedEmail,
+        text: str | dict[str, str],
+        *,
+        from_email: str | None = None,
     ) -> SendResult:
-        body_text, subject = _resolve_reply_payload(text)
+        body_text, subject, dict_from = _resolve_reply_payload(text)
 
         return await self.asend(
-            from_email=email.received_by,
+            from_email=from_email or dict_from or email.received_by,
             to=email.reply_target.address,
             subject=subject or email.reply_subject,
             body_text=body_text,

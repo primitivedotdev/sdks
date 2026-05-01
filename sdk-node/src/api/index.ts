@@ -14,6 +14,8 @@ import {
   type Config as GeneratedConfig,
 } from "./generated/client/index.js";
 import type {
+  GateDenial,
+  ErrorResponse as GeneratedErrorResponse,
   SendMailInput as GeneratedSendMailInput,
   SendMailResult as GeneratedSendMailResult,
 } from "./generated/index.js";
@@ -87,6 +89,7 @@ export type ReplyInput =
   | {
       text: string;
       subject?: string;
+      from?: string;
     };
 
 export interface ForwardInput {
@@ -178,38 +181,104 @@ function validateForwardInput(input: ForwardInput): void {
   }
 }
 
-function extractApiErrorMessage(payload: unknown): string {
+export type PrimitiveApiErrorDetails = NonNullable<
+  GeneratedErrorResponse["error"]["details"]
+>;
+
+interface ParsedApiError {
+  message: string;
+  code: string | undefined;
+  gates: GateDenial[] | undefined;
+  requestId: string | undefined;
+  details: PrimitiveApiErrorDetails | undefined;
+}
+
+function parseApiErrorPayload(payload: unknown): ParsedApiError {
+  const fallback: ParsedApiError = {
+    message: "Primitive API request failed",
+    code: undefined,
+    gates: undefined,
+    requestId: undefined,
+    details: undefined,
+  };
+
   if (!payload || typeof payload !== "object") {
-    return "Primitive API request failed";
+    return fallback;
   }
 
   if (
     "error" in payload &&
     payload.error &&
-    typeof payload.error === "object" &&
-    "message" in payload.error &&
-    typeof payload.error.message === "string"
+    typeof payload.error === "object"
   ) {
-    return payload.error.message;
+    const err = payload.error as {
+      message?: unknown;
+      code?: unknown;
+      gates?: unknown;
+      request_id?: unknown;
+      details?: unknown;
+    };
+    return {
+      message: typeof err.message === "string" ? err.message : fallback.message,
+      code: typeof err.code === "string" ? err.code : undefined,
+      gates: Array.isArray(err.gates) ? (err.gates as GateDenial[]) : undefined,
+      requestId:
+        typeof err.request_id === "string" ? err.request_id : undefined,
+      details:
+        err.details && typeof err.details === "object"
+          ? (err.details as PrimitiveApiErrorDetails)
+          : undefined,
+    };
   }
 
   if ("message" in payload && typeof payload.message === "string") {
-    return payload.message;
+    return { ...fallback, message: payload.message };
   }
 
-  return "Primitive API request failed";
+  return fallback;
 }
 
 export class PrimitiveApiError extends Error {
   readonly status: number | undefined;
+  readonly code: string | undefined;
+  readonly gates: GateDenial[] | undefined;
+  readonly requestId: string | undefined;
+  readonly retryAfter: number | undefined;
+  readonly details: PrimitiveApiErrorDetails | undefined;
   readonly payload: unknown;
 
-  constructor(message: string, options: { payload: unknown; status?: number }) {
+  constructor(
+    message: string,
+    options: {
+      payload: unknown;
+      status?: number;
+      code?: string;
+      gates?: GateDenial[];
+      requestId?: string;
+      retryAfter?: number;
+      details?: PrimitiveApiErrorDetails;
+    },
+  ) {
     super(message);
     this.name = "PrimitiveApiError";
     this.payload = options.payload;
     this.status = options.status;
+    this.code = options.code;
+    this.gates = options.gates;
+    this.requestId = options.requestId;
+    this.retryAfter = options.retryAfter;
+    this.details = options.details;
   }
+}
+
+function parseRetryAfterHeader(
+  response: Response | undefined,
+): number | undefined {
+  if (!response) return undefined;
+  const raw = response.headers.get("retry-after");
+  if (!raw) return undefined;
+  const seconds = Number.parseInt(raw, 10);
+  return Number.isFinite(seconds) ? seconds : undefined;
 }
 
 export class PrimitiveApiClient {
@@ -271,9 +340,15 @@ export class PrimitiveClient extends PrimitiveApiClient {
     const response = (result as { response?: Response }).response;
 
     if (result.error) {
-      throw new PrimitiveApiError(extractApiErrorMessage(result.error), {
+      const parsed = parseApiErrorPayload(result.error);
+      throw new PrimitiveApiError(parsed.message, {
         payload: result.error,
         status: response?.status,
+        code: parsed.code,
+        gates: parsed.gates,
+        requestId: parsed.requestId,
+        retryAfter: parseRetryAfterHeader(response),
+        details: parsed.details,
       });
     }
 
@@ -291,7 +366,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
     const resolved = typeof input === "string" ? { text: input } : input;
 
     return this.send({
-      from: email.receivedBy,
+      from: resolved.from ?? email.receivedBy,
       to: email.replyTarget.address,
       subject: resolved.subject ?? email.replySubject,
       bodyText: resolved.text,

@@ -64,7 +64,9 @@ const result = await client.send({
   to: "alice@example.com",
   subject: "Hello",
   bodyText: "Hi there",
-  idempotencyKey: "customer-key-123",
+  // Use a unique key per logical send. Reusing a key returns the original
+  // response from the first send, which is how retries are deduplicated.
+  idempotencyKey: "customer-key-abc123",
   wait: true,
   waitTimeoutMs: 5000,
 });
@@ -76,6 +78,30 @@ console.log(result.id, result.status, result.queueId, result.deliveryStatus);
 downstream SMTP transaction completes. In production, configure your runtime or
 transport with a request timeout long enough for SMTP delivery, typically 30-60
 seconds.
+
+### About `wait` mode
+
+When `wait: true`, the call returns the first downstream SMTP outcome (or
+`waitTimeoutMs`, default 30000). Possible terminal `deliveryStatus` values:
+
+- `delivered` accepted by the receiving MTA
+- `bounced` rejected by the receiving MTA (the response is still 200 OK)
+- `deferred` temporary failure, the receiving MTA may retry
+- `wait_timeout` no outcome was observed in time. Treat as "outcome unknown."
+  The send may still complete after the response returns.
+
+### Reply from a different address
+
+`reply()` defaults the From address to the inbound recipient (the address that
+received the email). When your verified outbound domain differs from your
+inbound domain, pass `from` explicitly:
+
+```ts
+await client.reply(email, {
+  text: "Thanks for your email.",
+  from: "notifications@outbound.example.com",
+});
+```
 
 ### Forward an inbound email
 

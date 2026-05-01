@@ -67,17 +67,7 @@ func receivedEmailFixture() *ReceivedEmail {
 }
 
 func TestNormalizeReceivedEmailRejectsEmptySMTPRecipients(t *testing.T) {
-	defer func() {
-		recovered := recover()
-		if recovered == nil {
-			t.Fatal("expected NormalizeReceivedEmail to panic")
-		}
-		if recovered != "email.smtp.rcpt_to must contain at least one recipient" {
-			t.Fatalf("unexpected panic: %v", recovered)
-		}
-	}()
-
-	NormalizeReceivedEmail(EmailReceivedEvent{
+	got, err := NormalizeReceivedEmail(EmailReceivedEvent{
 		ID: "evt-1",
 		Email: Email{
 			ID:         "email-1",
@@ -89,6 +79,13 @@ func TestNormalizeReceivedEmailRejectsEmptySMTPRecipients(t *testing.T) {
 			Headers: EmailHeaders{From: "Alice <alice@example.com>"},
 		},
 	})
+	if got != nil {
+		t.Fatalf("expected nil ReceivedEmail, got %#v", got)
+	}
+	if err == nil ||
+		err.Error() != "email.smtp.rcpt_to must contain at least one recipient" {
+		t.Fatalf("unexpected error: %v", err)
+	}
 }
 
 func TestClientSendValidatesRecipientBeforeRequest(t *testing.T) {
@@ -282,5 +279,123 @@ func TestClientSendWrapsAPIErrors(t *testing.T) {
 	}
 	if apiErr.Message != "We haven't received an authenticated email from this address yet" {
 		t.Fatalf("unexpected error message: %q", apiErr.Message)
+	}
+}
+
+func TestClientSendSurfacesGatesAndRequestID(t *testing.T) {
+	details := primitiveapi.ErrorResponseErrorDetails{}
+	details.SentEmailID = primitiveapi.NewOptString("se_abc")
+	details.RequiredEntitlements = []string{"send_to_confirmed_domains"}
+
+	respErr := primitiveapi.ErrorResponseError{
+		Code:    primitiveapi.ErrorResponseErrorCodeRecipientNotAllowed,
+		Message: "cannot send to alice@example.com",
+		Details: primitiveapi.NewOptErrorResponseErrorDetails(details),
+		Gates: []primitiveapi.GateDenial{
+			{
+				Name:    primitiveapi.GateDenialNameSendToKnownAddresses,
+				Reason:  primitiveapi.GateDenialReasonRecipientNotKnown,
+				Subject: "alice@example.com",
+				Message: "alice@example.com has not previously sent mail",
+				Fix: primitiveapi.NewOptGateFix(primitiveapi.GateFix{
+					Action:  primitiveapi.GateFixActionWaitForInbound,
+					Subject: "alice@example.com",
+				}),
+			},
+		},
+		RequestID: primitiveapi.NewOptString("req_test_123"),
+	}
+
+	stub := &stubSendAPI{
+		result: &primitiveapi.SendEmailForbidden{
+			Success: false,
+			Error:   respErr,
+		},
+	}
+	client := NewClientFromAPI(stub)
+
+	_, err := client.Send(context.Background(), SendParams{
+		From:     "support@example.com",
+		To:       "alice@example.com",
+		Subject:  "Hello",
+		BodyText: "Hi",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected APIError, got %T", err)
+	}
+	if apiErr.StatusCode != 403 || apiErr.Code != "recipient_not_allowed" {
+		t.Fatalf("unexpected API error: %#v", apiErr)
+	}
+	if apiErr.RequestID != "req_test_123" {
+		t.Fatalf("missing request id: %q", apiErr.RequestID)
+	}
+	if len(apiErr.Gates) != 1 ||
+		apiErr.Gates[0].Reason != primitiveapi.GateDenialReasonRecipientNotKnown {
+		t.Fatalf("unexpected gates: %#v", apiErr.Gates)
+	}
+	if apiErr.Details == nil {
+		t.Fatal("missing details")
+	}
+	if got, ok := apiErr.Details.SentEmailID.Get(); !ok || got != "se_abc" {
+		t.Fatalf("missing sent_email_id: %#v", apiErr.Details.SentEmailID)
+	}
+}
+
+func TestClientSendSurfacesRetryAfterOn429(t *testing.T) {
+	retryAfter := 12
+	stub := &stubSendAPI{
+		result: &primitiveapi.RateLimitedHeaders{
+			RetryAfter: primitiveapi.NewOptInt(retryAfter),
+			Response: primitiveapi.ErrorResponse{
+				Success: false,
+				Error: primitiveapi.ErrorResponseError{
+					Code:    primitiveapi.ErrorResponseErrorCodeRateLimitExceeded,
+					Message: "Rate limit exceeded",
+				},
+			},
+		},
+	}
+	client := NewClientFromAPI(stub)
+
+	_, err := client.Send(context.Background(), SendParams{
+		From:     "support@example.com",
+		To:       "alice@example.com",
+		Subject:  "Hello",
+		BodyText: "Hi",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected APIError, got %T", err)
+	}
+	if apiErr.StatusCode != 429 || apiErr.Code != "rate_limit_exceeded" {
+		t.Fatalf("unexpected API error: %#v", apiErr)
+	}
+	if apiErr.RetryAfter == nil || *apiErr.RetryAfter != 12 {
+		t.Fatalf("unexpected retry-after: %#v", apiErr.RetryAfter)
+	}
+}
+
+func TestClientReplyHonorsFromOverride(t *testing.T) {
+	stub := &stubSendAPI{
+		result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()},
+	}
+	client := NewClientFromAPI(stub)
+
+	_, err := client.Reply(context.Background(), receivedEmailFixture(), ReplyParams{
+		BodyText: "Thanks",
+		From:     "notifications@example.com",
+	})
+	if err != nil {
+		t.Fatalf("Reply returned error: %v", err)
+	}
+	if stub.request.From != "notifications@example.com" {
+		t.Fatalf("expected from override, got %q", stub.request.From)
 	}
 }
