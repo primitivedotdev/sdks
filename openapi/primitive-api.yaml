@@ -1148,7 +1148,7 @@ components:
           example:
             success: false
             error:
-              code: bad_gateway
+              code: outbound_unreachable
               message: Outbound SMTP service request failed
 
     ServiceUnavailable:
@@ -1248,7 +1248,6 @@ components:
                 - internal_error
                 - conflict
                 - mx_conflict
-                - bad_gateway
                 - outbound_disabled
                 - cannot_send_from_domain
                 - recipient_not_allowed

@@ -1662,7 +1662,7 @@ export const openapiDocument: Record<string, unknown> = {
             "example": {
               "success": false,
               "error": {
-                "code": "bad_gateway",
+                "code": "outbound_unreachable",
                 "message": "Outbound SMTP service request failed"
               }
             }
@@ -1812,7 +1812,6 @@ export const openapiDocument: Record<string, unknown> = {
                   "internal_error",
                   "conflict",
                   "mx_conflict",
-                  "bad_gateway",
                   "outbound_disabled",
                   "cannot_send_from_domain",
                   "recipient_not_allowed",
