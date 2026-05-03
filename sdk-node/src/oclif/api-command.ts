@@ -66,7 +66,7 @@ function renderRequestSchemaSummary(
       } else if (Array.isArray(t)) {
         // Nullable shorthand the codegen normalizes to e.g. ["string","null"].
         const nonNull = (t as unknown[]).filter((s) => s !== "null");
-        type = nonNull.length === 1 ? `${nonNull[0]}?` : t.join("|");
+        type = nonNull.length === 1 ? `${nonNull[0]}?` : nonNull.join("|");
       }
       const description =
         typeof propSchema.description === "string"
@@ -91,12 +91,16 @@ function renderRequestSchemaSummary(
     Math.max(...entries.map((e) => e.name.length)),
   );
   const lines = ["Body fields (JSON --body):"];
+  const descMax = 78;
   for (const e of entries) {
     const flag = e.required ? " *" : "  ";
     const padName = e.name.padEnd(nameWidth);
-    const desc = e.description ? `  ${e.description}` : "";
-    const truncated = desc.length > 80 ? `${desc.slice(0, 77)}...` : desc;
-    lines.push(`${flag} ${padName}  ${e.type}${truncated}`);
+    const trimmedDesc =
+      e.description.length > descMax
+        ? `${e.description.slice(0, descMax - 3)}...`
+        : e.description;
+    const desc = trimmedDesc ? `  ${trimmedDesc}` : "";
+    lines.push(`${flag} ${padName}  ${e.type}${desc}`);
   }
   lines.push("(* = required)");
   return lines.join("\n");
