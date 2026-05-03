@@ -44,6 +44,10 @@ class EmailDetail:
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
             subject (None | str | Unset):
+            body_text (None | str | Unset): Plain-text body parsed from the inbound MIME, matching the
+                `email.parsed.body_text` field on the webhook payload. Null when the message had no text part or parsing failed.
+            body_html (None | str | Unset): HTML body parsed from the inbound MIME, matching the `email.parsed.body_html`
+                field on the webhook payload. Null when the message had no HTML part or parsing failed.
             spam_score (float | None | Unset):
             raw_size_bytes (int | None | Unset):
             raw_sha256 (None | str | Unset):
@@ -76,6 +80,8 @@ class EmailDetail:
     domain_id: None | Unset | UUID = UNSET
     org_id: None | Unset | UUID = UNSET
     subject: None | str | Unset = UNSET
+    body_text: None | str | Unset = UNSET
+    body_html: None | str | Unset = UNSET
     spam_score: float | None | Unset = UNSET
     raw_size_bytes: int | None | Unset = UNSET
     raw_sha256: None | str | Unset = UNSET
@@ -145,6 +151,18 @@ class EmailDetail:
             subject = UNSET
         else:
             subject = self.subject
+
+        body_text: None | str | Unset
+        if isinstance(self.body_text, Unset):
+            body_text = UNSET
+        else:
+            body_text = self.body_text
+
+        body_html: None | str | Unset
+        if isinstance(self.body_html, Unset):
+            body_html = UNSET
+        else:
+            body_html = self.body_html
 
         spam_score: float | None | Unset
         if isinstance(self.spam_score, Unset):
@@ -275,6 +293,10 @@ class EmailDetail:
             field_dict["org_id"] = org_id
         if subject is not UNSET:
             field_dict["subject"] = subject
+        if body_text is not UNSET:
+            field_dict["body_text"] = body_text
+        if body_html is not UNSET:
+            field_dict["body_html"] = body_html
         if spam_score is not UNSET:
             field_dict["spam_score"] = spam_score
         if raw_size_bytes is not UNSET:
@@ -403,6 +425,26 @@ class EmailDetail:
             return cast(None | str | Unset, data)
 
         subject = _parse_subject(d.pop("subject", UNSET))
+
+
+        def _parse_body_text(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        body_text = _parse_body_text(d.pop("body_text", UNSET))
+
+
+        def _parse_body_html(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        body_html = _parse_body_html(d.pop("body_html", UNSET))
 
 
         def _parse_spam_score(data: object) -> float | None | Unset:
@@ -638,6 +680,8 @@ class EmailDetail:
             domain_id=domain_id,
             org_id=org_id,
             subject=subject,
+            body_text=body_text,
+            body_html=body_html,
             spam_score=spam_score,
             raw_size_bytes=raw_size_bytes,
             raw_sha256=raw_sha256,

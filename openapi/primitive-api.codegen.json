@@ -2391,6 +2391,16 @@
             "type": "string",
             "nullable": true
           },
+          "body_text": {
+            "type": "string",
+            "description": "Plain-text body parsed from the inbound MIME, matching the `email.parsed.body_text` field on the webhook payload. Null when the message had no text part or parsing failed.",
+            "nullable": true
+          },
+          "body_html": {
+            "type": "string",
+            "description": "HTML body parsed from the inbound MIME, matching the `email.parsed.body_html` field on the webhook payload. Null when the message had no HTML part or parsing failed.",
+            "nullable": true
+          },
           "status": {
             "type": "string",
             "enum": [
