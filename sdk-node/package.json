@@ -152,7 +152,7 @@
     "json-schema-to-typescript": "^15.0.4",
     "oclif": "^4.23.0",
     "shx": "^0.3.4",
-    "tsdown": "^0.9.1",
+    "tsdown": "^0.21.10",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^8.0.8",
