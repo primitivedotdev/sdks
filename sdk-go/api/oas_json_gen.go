@@ -3443,6 +3443,18 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.BodyText.Set {
+			e.FieldStart("body_text")
+			s.BodyText.Encode(e)
+		}
+	}
+	{
+		if s.BodyHTML.Set {
+			e.FieldStart("body_html")
+			s.BodyHTML.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("status")
 		s.Status.Encode(e)
 	}
@@ -3562,7 +3574,7 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailDetail = [29]string{
+var jsonFieldsNameOfEmailDetail = [31]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -3570,28 +3582,30 @@ var jsonFieldsNameOfEmailDetail = [29]string{
 	4:  "sender",
 	5:  "recipient",
 	6:  "subject",
-	7:  "status",
-	8:  "domain",
-	9:  "spam_score",
-	10: "raw_size_bytes",
-	11: "raw_sha256",
-	12: "created_at",
-	13: "received_at",
-	14: "rejection_reason",
-	15: "webhook_status",
-	16: "webhook_attempt_count",
-	17: "webhook_last_attempt_at",
-	18: "webhook_last_status_code",
-	19: "webhook_last_error",
-	20: "webhook_fired_at",
-	21: "smtp_helo",
-	22: "smtp_mail_from",
-	23: "smtp_rcpt_to",
-	24: "from_header",
-	25: "content_discarded_at",
-	26: "content_discarded_by_delivery_id",
-	27: "from_email",
-	28: "to_email",
+	7:  "body_text",
+	8:  "body_html",
+	9:  "status",
+	10: "domain",
+	11: "spam_score",
+	12: "raw_size_bytes",
+	13: "raw_sha256",
+	14: "created_at",
+	15: "received_at",
+	16: "rejection_reason",
+	17: "webhook_status",
+	18: "webhook_attempt_count",
+	19: "webhook_last_attempt_at",
+	20: "webhook_last_status_code",
+	21: "webhook_last_error",
+	22: "webhook_fired_at",
+	23: "smtp_helo",
+	24: "smtp_mail_from",
+	25: "smtp_rcpt_to",
+	26: "from_header",
+	27: "content_discarded_at",
+	28: "content_discarded_by_delivery_id",
+	29: "from_email",
+	30: "to_email",
 }
 
 // Decode decodes EmailDetail from json.
@@ -3679,8 +3693,28 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"subject\"")
 			}
+		case "body_text":
+			if err := func() error {
+				s.BodyText.Reset()
+				if err := s.BodyText.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"body_text\"")
+			}
+		case "body_html":
+			if err := func() error {
+				s.BodyHTML.Reset()
+				if err := s.BodyHTML.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"body_html\"")
+			}
 		case "status":
-			requiredBitSet[0] |= 1 << 7
+			requiredBitSet[1] |= 1 << 1
 			if err := func() error {
 				if err := s.Status.Decode(d); err != nil {
 					return err
@@ -3690,7 +3724,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"status\"")
 			}
 		case "domain":
-			requiredBitSet[1] |= 1 << 0
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.Domain = string(v)
@@ -3732,7 +3766,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"raw_sha256\"")
 			}
 		case "created_at":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 6
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -3744,7 +3778,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "received_at":
-			requiredBitSet[1] |= 1 << 5
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.ReceivedAt = v
@@ -3776,7 +3810,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"webhook_status\"")
 			}
 		case "webhook_attempt_count":
-			requiredBitSet[2] |= 1 << 0
+			requiredBitSet[2] |= 1 << 2
 			if err := func() error {
 				v, err := d.Int()
 				s.WebhookAttemptCount = int(v)
@@ -3888,7 +3922,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"content_discarded_by_delivery_id\"")
 			}
 		case "from_email":
-			requiredBitSet[3] |= 1 << 3
+			requiredBitSet[3] |= 1 << 5
 			if err := func() error {
 				v, err := d.Str()
 				s.FromEmail = string(v)
@@ -3900,7 +3934,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"from_email\"")
 			}
 		case "to_email":
-			requiredBitSet[3] |= 1 << 4
+			requiredBitSet[3] |= 1 << 6
 			if err := func() error {
 				v, err := d.Str()
 				s.ToEmail = string(v)
@@ -3921,10 +3955,10 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [4]uint8{
-		0b10110001,
 		0b00110001,
-		0b00000001,
-		0b00011000,
+		0b11000110,
+		0b00000100,
+		0b01100000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

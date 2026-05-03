@@ -278,6 +278,14 @@ export type EmailDetail = {
     sender: string;
     recipient: string;
     subject?: string | null;
+    /**
+     * Plain-text body parsed from the inbound MIME, matching the `email.parsed.body_text` field on the webhook payload. Null when the message had no text part or parsing failed.
+     */
+    body_text?: string | null;
+    /**
+     * HTML body parsed from the inbound MIME, matching the `email.parsed.body_html` field on the webhook payload. Null when the message had no HTML part or parsing failed.
+     */
+    body_html?: string | null;
     status: 'pending' | 'accepted' | 'completed' | 'rejected';
     domain: string;
     spam_score?: number | null;

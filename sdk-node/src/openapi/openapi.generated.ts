@@ -2444,6 +2444,20 @@ export const openapiDocument: Record<string, unknown> = {
               "null"
             ]
           },
+          "body_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain-text body parsed from the inbound MIME, matching the `email.parsed.body_text` field on the webhook payload. Null when the message had no text part or parsing failed."
+          },
+          "body_html": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "HTML body parsed from the inbound MIME, matching the `email.parsed.body_html` field on the webhook payload. Null when the message had no HTML part or parsing failed."
+          },
           "status": {
             "type": "string",
             "enum": [

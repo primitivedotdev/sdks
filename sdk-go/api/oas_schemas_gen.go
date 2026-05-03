@@ -1244,13 +1244,19 @@ func (s *DownloadToken) SetRoles(val []string) {
 
 // Ref: #/components/schemas/EmailDetail
 type EmailDetail struct {
-	ID                           uuid.UUID                      `json:"id"`
-	MessageID                    OptNilString                   `json:"message_id"`
-	DomainID                     OptNilUUID                     `json:"domain_id"`
-	OrgID                        OptNilUUID                     `json:"org_id"`
-	Sender                       string                         `json:"sender"`
-	Recipient                    string                         `json:"recipient"`
-	Subject                      OptNilString                   `json:"subject"`
+	ID        uuid.UUID    `json:"id"`
+	MessageID OptNilString `json:"message_id"`
+	DomainID  OptNilUUID   `json:"domain_id"`
+	OrgID     OptNilUUID   `json:"org_id"`
+	Sender    string       `json:"sender"`
+	Recipient string       `json:"recipient"`
+	Subject   OptNilString `json:"subject"`
+	// Plain-text body parsed from the inbound MIME, matching the `email.parsed.body_text` field on the
+	// webhook payload. Null when the message had no text part or parsing failed.
+	BodyText OptNilString `json:"body_text"`
+	// HTML body parsed from the inbound MIME, matching the `email.parsed.body_html` field on the webhook
+	// payload. Null when the message had no HTML part or parsing failed.
+	BodyHTML                     OptNilString                   `json:"body_html"`
 	Status                       EmailDetailStatus              `json:"status"`
 	Domain                       string                         `json:"domain"`
 	SpamScore                    OptNilFloat64                  `json:"spam_score"`
@@ -1310,6 +1316,16 @@ func (s *EmailDetail) GetRecipient() string {
 // GetSubject returns the value of Subject.
 func (s *EmailDetail) GetSubject() OptNilString {
 	return s.Subject
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *EmailDetail) GetBodyText() OptNilString {
+	return s.BodyText
+}
+
+// GetBodyHTML returns the value of BodyHTML.
+func (s *EmailDetail) GetBodyHTML() OptNilString {
+	return s.BodyHTML
 }
 
 // GetStatus returns the value of Status.
@@ -1455,6 +1471,16 @@ func (s *EmailDetail) SetRecipient(val string) {
 // SetSubject sets the value of Subject.
 func (s *EmailDetail) SetSubject(val OptNilString) {
 	s.Subject = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *EmailDetail) SetBodyText(val OptNilString) {
+	s.BodyText = val
+}
+
+// SetBodyHTML sets the value of BodyHTML.
+func (s *EmailDetail) SetBodyHTML(val OptNilString) {
+	s.BodyHTML = val
 }
 
 // SetStatus sets the value of Status.
