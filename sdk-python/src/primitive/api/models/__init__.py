@@ -25,6 +25,7 @@ from .delivery_summary_status import DeliverySummaryStatus
 from .domain_verify_result_type_0 import DomainVerifyResultType0
 from .domain_verify_result_type_1 import DomainVerifyResultType1
 from .email_detail import EmailDetail
+from .email_detail_reply import EmailDetailReply
 from .email_detail_status import EmailDetailStatus
 from .email_detail_webhook_status_type_1 import EmailDetailWebhookStatusType1
 from .email_detail_webhook_status_type_2_type_1 import EmailDetailWebhookStatusType2Type1
@@ -64,6 +65,8 @@ from .pagination_meta import PaginationMeta
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
 from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
+from .reply_input import ReplyInput
+from .reply_to_email_response_200 import ReplyToEmailResponse200
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
 from .send_email_response_200 import SendEmailResponse200
 from .send_mail_input import SendMailInput
@@ -113,6 +116,7 @@ __all__ = (
     "DomainVerifyResultType0",
     "DomainVerifyResultType1",
     "EmailDetail",
+    "EmailDetailReply",
     "EmailDetailStatus",
     "EmailDetailWebhookStatusType1",
     "EmailDetailWebhookStatusType2Type1",
@@ -152,6 +156,8 @@ __all__ = (
     "ReplayDeliveryResponse200",
     "ReplayEmailWebhooksResponse200",
     "ReplayResult",
+    "ReplyInput",
+    "ReplyToEmailResponse200",
     "RotateWebhookSecretResponse200",
     "SendEmailResponse200",
     "SendMailInput",

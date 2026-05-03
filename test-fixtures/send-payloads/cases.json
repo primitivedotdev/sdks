@@ -1,7 +1,7 @@
 {
   "$comment": "Cross-SDK send / reply / forward wire-payload fixtures. Each SDK loads this file, builds its native input shape from `input`, calls the corresponding client method against a captured fake transport, and asserts the captured JSON request body matches `expected_body`. The Idempotency-Key request header (when present) is asserted against `expected_idempotency_key`. Forward bodies use `expected_body_contains` because they include rendered free-form text that is not stable for exact-match comparison.",
   "canonical_inbound": {
-    "id": "email-1",
+    "id": "00000000-0000-0000-0000-000000000001",
     "event_id": "evt-1",
     "received_at": "2026-01-01T00:00:00.000Z",
     "sender": { "address": "alice@example.com", "name": "Alice" },
@@ -79,30 +79,53 @@
       "expected_idempotency_key": "k1"
     }
   ],
+  "$reply_comment": "Reply test cases. The SDK's reply() now POSTs to /emails/{id}/reply instead of synthesizing a /send-mail payload client-side; recipients, subject, and threading headers are derived server-side. The captured request body is the new ReplyInput shape, NOT the SendMailInput shape. Fixtures pin both the URL path (expected_path) and body so a regression that hits the wrong endpoint or sends the old shape both fail loudly. Subject-override cases were removed because the new endpoint rejects subject (Gmail breaks threading on custom subjects).",
   "reply": [
     {
-      "name": "default subject and from",
+      "name": "default body only",
       "input": { "text": "Thanks!" },
+      "expected_path": "/emails/00000000-0000-0000-0000-000000000001/reply",
       "expected_body": {
-        "from": "support@example.com",
-        "to": "alice@example.com",
-        "subject": "Re: Hello",
-        "body_text": "Thanks!",
-        "in_reply_to": "<parent@example.com>",
-        "references": ["<root@example.com>", "<parent@example.com>"]
+        "body_text": "Thanks!"
       },
       "expected_idempotency_key": null
     },
     {
-      "name": "with from override and custom subject",
-      "input": { "text": "Thanks", "from": "ops@example.com", "subject": "Custom" },
+      "name": "with from override",
+      "input": { "text": "Thanks", "from": "ops@example.com" },
+      "expected_path": "/emails/00000000-0000-0000-0000-000000000001/reply",
       "expected_body": {
-        "from": "ops@example.com",
-        "to": "alice@example.com",
-        "subject": "Custom",
         "body_text": "Thanks",
-        "in_reply_to": "<parent@example.com>",
-        "references": ["<root@example.com>", "<parent@example.com>"]
+        "from": "ops@example.com"
+      },
+      "expected_idempotency_key": null
+    },
+    {
+      "name": "html body only",
+      "input": { "html": "<p>Thanks!</p>" },
+      "expected_path": "/emails/00000000-0000-0000-0000-000000000001/reply",
+      "expected_body": {
+        "body_html": "<p>Thanks!</p>"
+      },
+      "expected_idempotency_key": null
+    },
+    {
+      "name": "text and html together",
+      "input": { "text": "Thanks!", "html": "<p>Thanks!</p>" },
+      "expected_path": "/emails/00000000-0000-0000-0000-000000000001/reply",
+      "expected_body": {
+        "body_text": "Thanks!",
+        "body_html": "<p>Thanks!</p>"
+      },
+      "expected_idempotency_key": null
+    },
+    {
+      "name": "with wait flag",
+      "input": { "text": "Thanks!", "wait": true },
+      "expected_path": "/emails/00000000-0000-0000-0000-000000000001/reply",
+      "expected_body": {
+        "body_text": "Thanks!",
+        "wait": true
       },
       "expected_idempotency_key": null
     }

@@ -103,6 +103,28 @@ await client.reply(email, {
 });
 ```
 
+### HTML replies and waiting on the delivery outcome
+
+`reply()` accepts `html` as a sibling of `text`, plus the same `wait` flag the
+top-level `send()` takes:
+
+```ts
+await client.reply(email, {
+  text: "Thanks for your email.",
+  html: "<p>Thanks for your email.</p>",
+  wait: true,
+});
+```
+
+`subject` is intentionally not accepted on `reply()`. Gmail's Conversation View
+needs both a References match and a normalized-subject match to thread, so a
+custom subject silently breaks the thread for half the recipient population.
+Use `client.send(...)` if you need full subject control.
+
+If the inbound row is not in a state we can reply to (no `Message-Id` recorded,
+or content was discarded), the API returns `inbound_not_repliable` (HTTP 422)
+and the SDK throws.
+
 ### Forward an inbound email
 
 ```ts

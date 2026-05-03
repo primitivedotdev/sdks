@@ -16,6 +16,7 @@ import {
 import type {
   GateDenial,
   ErrorResponse as GeneratedErrorResponse,
+  ReplyInput as GeneratedReplyInput,
   SendMailInput as GeneratedSendMailInput,
   SendMailResult as GeneratedSendMailResult,
 } from "./generated/index.js";
@@ -84,12 +85,36 @@ export interface SendInput {
   idempotencyKey?: string;
 }
 
+/**
+ * Input shape for `client.reply(email, input)`.
+ *
+ * Can be a bare string (treated as `text`) or an object. The reply
+ * operation calls the server's `/emails/{id}/reply` endpoint, which
+ * derives recipients, subject (`Re: <parent>`), and threading headers
+ * from the inbound row. The shape here is the small subset of fields
+ * the customer can still control:
+ *
+ * - `text` / `html`: the reply body. At least one is required.
+ * - `from`: optional override for the From header. Defaults server-
+ *   side to the address that received the inbound. Use to add a
+ *   display name (`"Acme Support" <agent@company.com>`) or to reply
+ *   from a different verified outbound address. The from-domain must
+ *   be a verified outbound domain for your org.
+ * - `wait`: when true, wait for the first downstream SMTP delivery
+ *   outcome before resolving. Mirrors send-mail's `wait` semantics.
+ *
+ * `subject` is intentionally not accepted: a custom subject silently
+ * breaks Gmail's threading because Gmail's Conversation View requires
+ * both a References match and a normalized-subject match. Always
+ * sends `Re: <parent>` with idempotent prefixing.
+ */
 export type ReplyInput =
   | string
   | {
-      text: string;
-      subject?: string;
+      text?: string;
+      html?: string;
       from?: string;
+      wait?: boolean;
     };
 
 export interface ForwardInput {
@@ -108,6 +133,12 @@ export interface SendResult {
   clientIdempotencyKey: string;
   requestId: string;
   contentHash: string;
+  /**
+   * True when the response replays a previously-recorded send keyed by
+   * `clientIdempotencyKey` (same key, same canonical payload). False on
+   * a fresh send and on gate-denied responses.
+   */
+  idempotentReplay: boolean;
   deliveryStatus?: GeneratedSendMailResult["delivery_status"];
   smtpResponseCode?: number | null;
   smtpResponseText?: string;
@@ -337,48 +368,55 @@ export class PrimitiveClient extends PrimitiveApiClient {
       client: this.client,
       responseStyle: "fields",
     });
-    const response = (result as { response?: Response }).response;
-
-    if (result.error) {
-      const parsed = parseApiErrorPayload(result.error);
-      throw new PrimitiveApiError(parsed.message, {
-        payload: result.error,
-        status: response?.status,
-        code: parsed.code,
-        gates: parsed.gates,
-        requestId: parsed.requestId,
-        retryAfter: parseRetryAfterHeader(response),
-        details: parsed.details,
-      });
-    }
-
-    if (!result.data?.data) {
-      throw new PrimitiveApiError("Primitive API returned no send result", {
-        payload: result,
-        status: response?.status,
-      });
-    }
-
-    return mapSendResult(result.data.data);
+    return unwrapSendResult(result);
   }
 
+  /**
+   * Reply to an inbound email.
+   *
+   * Calls `POST /emails/{id}/reply`. The server derives recipients
+   * (Reply-To, then From, then sender), subject (`Re: <parent>` with
+   * idempotent prefix), and threading headers (`In-Reply-To`,
+   * `References`) from the stored inbound row. The customer controls
+   * only the body, an optional `from` override, and the `wait` flag.
+   *
+   * Subject overrides are intentionally not supported: Gmail's
+   * Conversation View needs both a References match and a normalized-
+   * subject match to thread, so a custom subject silently breaks the
+   * thread for half the recipient population.
+   */
   async reply(email: ReceivedEmail, input: ReplyInput): Promise<SendResult> {
     const resolved = typeof input === "string" ? { text: input } : input;
+    // Reject the subject override at runtime so a JS caller (no TS
+    // types) gets the same loud error as a TS caller. Without this,
+    // `client.reply(email, { text, subject: "Custom" })` silently
+    // dropped subject and sent a "Re:" reply, breaking Gmail
+    // threading without telling the caller. Mirrors Python's
+    // ValueError. Checked before the empty-body check so passing
+    // ONLY a subject surfaces the more informative error.
+    if ("subject" in resolved) {
+      throw new TypeError(
+        "reply does not support a subject override; the server prepends 'Re:' to the parent's subject for thread continuity",
+      );
+    }
+    if (!resolved.text && !resolved.html) {
+      throw new TypeError("reply requires text or html");
+    }
 
-    return this.send({
-      from: resolved.from ?? email.receivedBy,
-      to: email.replyTarget.address,
-      subject: resolved.subject ?? email.replySubject,
-      bodyText: resolved.text,
-      thread: {
-        ...(email.thread.messageId
-          ? { inReplyTo: email.thread.messageId }
-          : {}),
-        references: email.thread.messageId
-          ? [...email.thread.references, email.thread.messageId]
-          : email.thread.references,
-      },
+    const body: GeneratedReplyInput = {
+      ...(resolved.text !== undefined ? { body_text: resolved.text } : {}),
+      ...(resolved.html !== undefined ? { body_html: resolved.html } : {}),
+      ...(resolved.from !== undefined ? { from: resolved.from } : {}),
+      ...(resolved.wait !== undefined ? { wait: resolved.wait } : {}),
+    };
+
+    const result = await generatedOperations.replyToEmail({
+      body,
+      path: { id: email.id },
+      client: this.client,
+      responseStyle: "fields",
     });
+    return unwrapSendResult(result);
   }
 
   async forward(
@@ -416,6 +454,42 @@ function buildForwardText(email: ReceivedEmail, intro?: string): string {
   return lines.join("\n").trimEnd();
 }
 
+/**
+ * Shared response handler for `send`, `reply`, and any future
+ * operation that returns a SendMailResult envelope. Unifies the
+ * error-mapping path so the network call sites only have to invoke
+ * the generated operation.
+ */
+function unwrapSendResult(result: {
+  data?: { data?: GeneratedSendMailResult } | undefined;
+  error?: GeneratedErrorResponse | unknown;
+  response?: Response;
+}): SendResult {
+  const response = (result as { response?: Response }).response;
+
+  if (result.error) {
+    const parsed = parseApiErrorPayload(result.error);
+    throw new PrimitiveApiError(parsed.message, {
+      payload: result.error,
+      status: response?.status,
+      code: parsed.code,
+      gates: parsed.gates,
+      requestId: parsed.requestId,
+      retryAfter: parseRetryAfterHeader(response),
+      details: parsed.details,
+    });
+  }
+
+  if (!result.data?.data) {
+    throw new PrimitiveApiError("Primitive API returned no send result", {
+      payload: result,
+      status: response?.status,
+    });
+  }
+
+  return mapSendResult(result.data.data);
+}
+
 function mapSendResult(result: GeneratedSendMailResult): SendResult {
   return {
     id: result.id,
@@ -426,6 +500,10 @@ function mapSendResult(result: GeneratedSendMailResult): SendResult {
     clientIdempotencyKey: result.client_idempotency_key,
     requestId: result.request_id,
     contentHash: result.content_hash,
+    // Default to false if the server omits the field (old-format
+    // response, mocked partial response in a customer's tests). The
+    // type signature claims `boolean`, so undefined would be a lie.
+    idempotentReplay: result.idempotent_replay ?? false,
     ...(result.delivery_status !== undefined
       ? { deliveryStatus: result.delivery_status }
       : {}),

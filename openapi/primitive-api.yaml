@@ -585,6 +585,76 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /emails/{id}/reply:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    post:
+      operationId: replyToEmail
+      summary: Reply to an inbound email
+      description: |
+        Sends an outbound reply to the inbound email identified by `id`.
+        Threading headers (`In-Reply-To`, `References`), recipient
+        derivation (Reply-To, then From, then bare sender), and the
+        `Re:` subject prefix are all derived server-side from the
+        stored inbound row. The request body carries only the message
+        body and optional `wait` flag; passing any header or recipient
+        override is rejected by the schema (`additionalProperties:
+        false`).
+
+        Forwards through the same gates as `/send-mail`: the response
+        status, error envelope, and `idempotent_replay` flag mirror
+        the send-mail contract verbatim.
+      tags: [Sending]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplyInput'
+      responses:
+        '200':
+          description: Outbound relay result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SendMailResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: |
+            Inbound is not repliable: the row exists but lacks a
+            `message_id` (no thread anchor) or a `recipient` (cannot
+            derive the From address).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: inbound_not_repliable
+                  message: inbound has no Message-ID; cannot anchor a reply thread
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
   /emails/{id}/replay:
     parameters:
       - $ref: '#/components/parameters/ResourceId'
@@ -1257,6 +1327,7 @@ components:
                 - outbound_capacity_exhausted
                 - outbound_response_malformed
                 - outbound_relay_failed
+                - inbound_not_repliable
             message:
               type: string
             details:
@@ -1689,6 +1760,25 @@ components:
         to_email:
           type: string
           description: Parsed to address (same as recipient)
+        from_known_address:
+          type: boolean
+          description: |
+            True when the inbound's sender address has a matching grant
+            in the org's known-send-addresses list. Advisory: a true
+            value does not by itself guarantee that a reply will be
+            accepted by send-mail's gates; the per-send check at send
+            time remains authoritative.
+        replies:
+          type: array
+          description: |
+            Sent emails recorded as replies to this inbound, in send
+            order (ascending). Populated when a customer's send-mail
+            request carries an `in_reply_to` Message-ID that matches
+            this inbound's `message_id` in the same org. Includes
+            attempts that were gate-denied, so the array reflects every
+            recorded reply attempt regardless of outcome.
+          items:
+            $ref: '#/components/schemas/EmailDetailReply'
       required:
         - id
         - sender
@@ -1700,6 +1790,29 @@ components:
         - webhook_attempt_count
         - from_email
         - to_email
+        - replies
+
+    EmailDetailReply:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Sent-email row id.
+        status:
+          $ref: '#/components/schemas/SentEmailStatus'
+        to_address:
+          type: string
+          description: Recipient address as recorded on the sent_emails row.
+        subject:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+        queue_id:
+          type: [string, 'null']
+          description: Outbound relay queue identifier when available.
+      required: [id, status, to_address, created_at]
 
     # -------------------------------------------------------------------------
     # Sending
@@ -1762,6 +1875,43 @@ components:
       type: string
       enum: [delivered, bounced, deferred, wait_timeout]
 
+    ReplyInput:
+      type: object
+      additionalProperties: false
+      description: |
+        Body shape for `/emails/{id}/reply`. Intentionally narrow:
+        recipients (`to`), subject, and threading headers
+        (`in_reply_to`, `references`) are derived server-side from
+        the inbound row referenced by the path id and are rejected by
+        `additionalProperties` if passed (returns 400).
+
+        `from` IS allowed because of legitimate use cases (display-name
+        addition, replying from a different verified outbound address,
+        multi-team triage). Send-mail's per-send `canSendFrom` gate
+        validates the from-domain regardless, so the override carries
+        no extra privilege.
+      properties:
+        body_text:
+          type: string
+          description: Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail).
+        body_html:
+          type: string
+          description: HTML reply body. At least one of body_text or body_html is required.
+        from:
+          type: string
+          minLength: 3
+          maxLength: 998
+          description: |
+            Optional override for the reply's From header. Defaults to
+            the inbound's recipient. Use to add a display name (`"Acme
+            Support" <agent@company.com>`) or to reply from a different
+            verified outbound address (e.g. multi-team routing where
+            support@ triages to billing@). The from-domain must be a
+            verified outbound domain for your org, same as send-mail.
+        wait:
+          type: boolean
+          description: When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics.
+
     SendMailResult:
       type: object
       properties:
@@ -1800,7 +1950,15 @@ components:
         smtp_response_text:
           type: string
           description: SMTP response text from the first downstream delivery outcome when wait is true.
-      required: [id, status, queue_id, accepted, rejected, client_idempotency_key, request_id, content_hash]
+        idempotent_replay:
+          type: boolean
+          description: |
+            True when the response replays a previously-recorded send
+            keyed by `client_idempotency_key` (same key, same canonical
+            payload). False on a fresh send and on gate-denied
+            responses. Lets callers branch on cache state without
+            diffing fields.
+      required: [id, status, queue_id, accepted, rejected, client_idempotency_key, request_id, content_hash, idempotent_replay]
 
     # -------------------------------------------------------------------------
     # Endpoints

@@ -23,7 +23,7 @@ const TEST_AUTH: EmailAuth = {
 const TEST_ANALYSIS: EmailAnalysis = {};
 
 const RECEIVED_EMAIL: ReceivedEmail = {
-  id: "email-1",
+  id: "00000000-0000-0000-0000-000000000001",
   eventId: "evt-1",
   receivedAt: "2026-01-01T00:00:00.000Z",
   sender: { address: "alice@example.com", name: "Alice" },
@@ -52,7 +52,7 @@ const RECEIVED_EMAIL: ReceivedEmail = {
       attempted_at: "2026-01-01T00:00:00.000Z",
     },
     email: {
-      id: "email-1",
+      id: "00000000-0000-0000-0000-000000000001",
       received_at: "2026-01-01T00:00:00.000Z",
       smtp: {
         helo: null,
@@ -107,6 +107,7 @@ const SEND_RESULT = {
   client_idempotency_key: "idem-123",
   request_id: "req-123",
   content_hash: "hash-123",
+  idempotent_replay: false,
 } as const;
 
 const NORMALIZED_SEND_RESULT = {
@@ -118,6 +119,7 @@ const NORMALIZED_SEND_RESULT = {
   clientIdempotencyKey: "idem-123",
   requestId: "req-123",
   contentHash: "hash-123",
+  idempotentReplay: false,
 } as const;
 
 describe("PrimitiveClient", () => {
@@ -293,19 +295,22 @@ describe("PrimitiveClient", () => {
     });
   });
 
-  it("builds threaded replies through send", async () => {
+  it("posts to /emails/{id}/reply with the new ReplyInput shape", async () => {
+    // The high-level reply() now forwards to the server's
+    // /emails/{id}/reply endpoint. Threading derivation, recipient
+    // lookup, and Re: prefix are all server-side. The captured
+    // request body is the small ReplyInput shape, not the synthesized
+    // send-mail payload the SDK used to build itself.
     const client = new PrimitiveClient({
       apiKey: "prim_test",
       baseUrl: "https://example.test/api/v1",
       fetch: vi.fn<typeof fetch>(async (input) => {
         const request = input as Request;
+        expect(new URL(request.url).pathname).toBe(
+          "/api/v1/emails/00000000-0000-0000-0000-000000000001/reply",
+        );
         expect(await request.json()).toEqual({
-          from: "support@example.com",
-          to: "alice@example.com",
-          subject: "Re: Hello",
           body_text: "Thank you for your email.",
-          in_reply_to: "<parent@example.com>",
-          references: ["<root@example.com>", "<parent@example.com>"],
         });
 
         return new Response(
@@ -407,13 +412,19 @@ describe("PrimitiveClient", () => {
     expect(typeof primitive.client).toBe("function");
   });
 
-  it("honors a from override on reply()", async () => {
+  it("forwards a from override to the reply endpoint", async () => {
+    // Server-side reply derives from from inbound.recipient by default;
+    // the customer can override (display-name addition, multi-team
+    // routing). The SDK forwards the override verbatim. Subject stays
+    // server-derived; the ReplyInput type doesn't accept it.
     const fetchMock = vi.fn<typeof fetch>(async (input) => {
       const request = input as Request;
-      expect(await request.json()).toMatchObject({
+      expect(new URL(request.url).pathname).toBe(
+        "/api/v1/emails/00000000-0000-0000-0000-000000000001/reply",
+      );
+      expect(await request.json()).toEqual({
+        body_text: "Thanks!",
         from: "notifications@example.com",
-        to: "alice@example.com",
-        subject: "Re: Hello",
       });
       return new Response(
         JSON.stringify({

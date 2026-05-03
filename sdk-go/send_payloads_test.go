@@ -75,9 +75,10 @@ type replyCase struct {
 }
 
 type replyInputCase struct {
-	Text    string  `json:"text"`
-	Subject *string `json:"subject"`
-	From    *string `json:"from"`
+	Text *string `json:"text"`
+	HTML *string `json:"html"`
+	From *string `json:"from"`
+	Wait *bool   `json:"wait"`
 }
 
 type forwardCase struct {
@@ -96,14 +97,34 @@ type forwardInputCase struct {
 }
 
 type capturingSendAPI struct {
-	request *primitiveapi.SendMailInput
-	params  primitiveapi.SendEmailParams
+	request      *primitiveapi.SendMailInput
+	params       primitiveapi.SendEmailParams
+	replyRequest *primitiveapi.ReplyInput
+	replyParams  primitiveapi.ReplyToEmailParams
 }
 
 func (s *capturingSendAPI) SendEmail(_ context.Context, request *primitiveapi.SendMailInput, params primitiveapi.SendEmailParams) (primitiveapi.SendEmailRes, error) {
 	s.request = request
 	s.params = params
 	return &primitiveapi.SendEmailOK{
+		Success: true,
+		Data: primitiveapi.SendMailResult{
+			ID:                   "sent-x",
+			Status:               primitiveapi.SentEmailStatusSubmittedToAgent,
+			QueueID:              primitiveapi.NilString{Null: true},
+			Accepted:             []string{},
+			Rejected:             []string{},
+			ClientIdempotencyKey: "auto",
+			RequestID:            "req",
+			ContentHash:          "h",
+		},
+	}, nil
+}
+
+func (s *capturingSendAPI) ReplyToEmail(_ context.Context, request *primitiveapi.ReplyInput, params primitiveapi.ReplyToEmailParams) (primitiveapi.ReplyToEmailRes, error) {
+	s.replyRequest = request
+	s.replyParams = params
+	return &primitiveapi.ReplyToEmailOK{
 		Success: true,
 		Data: primitiveapi.SendMailResult{
 			ID:                   "sent-x",
@@ -201,6 +222,19 @@ func captureRequestBody(t *testing.T, req *primitiveapi.SendMailInput) map[strin
 	return out
 }
 
+func captureReplyBody(t *testing.T, req *primitiveapi.ReplyInput) map[string]any {
+	t.Helper()
+	bytes, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal reply request: %v", err)
+	}
+	var out map[string]any
+	if err := json.Unmarshal(bytes, &out); err != nil {
+		t.Fatalf("unmarshal reply request: %v", err)
+	}
+	return out
+}
+
 func TestSharedSendPayloadFixtures(t *testing.T) {
 	fixture := loadSendPayloadFixture(t)
 
@@ -258,21 +292,36 @@ func TestSharedSendPayloadFixtures(t *testing.T) {
 				client := NewClientFromAPI(stub)
 				email := buildCanonicalReceivedEmail(fixture.CanonicalInbound)
 
-				rp := ReplyParams{BodyText: testCase.Input.Text}
-				if testCase.Input.Subject != nil {
-					rp.Subject = *testCase.Input.Subject
+				rp := ReplyParams{}
+				if testCase.Input.Text != nil {
+					rp.BodyText = *testCase.Input.Text
+				}
+				if testCase.Input.HTML != nil {
+					rp.BodyHTML = *testCase.Input.HTML
 				}
 				if testCase.Input.From != nil {
 					rp.From = *testCase.Input.From
+				}
+				if testCase.Input.Wait != nil {
+					rp.Wait = testCase.Input.Wait
 				}
 
 				if _, err := client.Reply(context.Background(), email, rp); err != nil {
 					t.Fatalf("Reply returned error: %v", err)
 				}
 
-				body := captureRequestBody(t, stub.request)
+				// Path is implicitly verified: the capturingSendAPI's
+				// ReplyToEmail method was hit (otherwise replyRequest
+				// would be nil and the body assertion below blows up).
+				// The id assertion pins which inbound the reply targets.
+				if stub.replyRequest == nil {
+					t.Fatal("ReplyToEmail was not called")
+				}
+				if stub.replyParams.ID.String() != fixture.CanonicalInbound.ID {
+					t.Fatalf("unexpected reply id: %v", stub.replyParams.ID)
+				}
+				body := captureReplyBody(t, stub.replyRequest)
 				assertBodyEquals(t, body, testCase.ExpectedBody)
-				assertIdempotencyKey(t, stub.params, testCase.ExpectedIdempotencyKey)
 			})
 		}
 	})

@@ -217,6 +217,25 @@ func (UnimplementedHandler) ReplayEmailWebhooks(ctx context.Context, params Repl
 	return r, ht.ErrNotImplemented
 }
 
+// ReplyToEmail implements replyToEmail operation.
+//
+// Sends an outbound reply to the inbound email identified by `id`.
+// Threading headers (`In-Reply-To`, `References`), recipient
+// derivation (Reply-To, then From, then bare sender), and the
+// `Re:` subject prefix are all derived server-side from the
+// stored inbound row. The request body carries only the message
+// body and optional `wait` flag; passing any header or recipient
+// override is rejected by the schema (`additionalProperties:
+// false`).
+// Forwards through the same gates as `/send-mail`: the response
+// status, error envelope, and `idempotent_replay` flag mirror
+// the send-mail contract verbatim.
+//
+// POST /emails/{id}/reply
+func (UnimplementedHandler) ReplyToEmail(ctx context.Context, req *ReplyInput, params ReplyToEmailParams) (r ReplyToEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // RotateWebhookSecret implements rotateWebhookSecret operation.
 //
 // Generates a new webhook signing secret, replacing the current one.

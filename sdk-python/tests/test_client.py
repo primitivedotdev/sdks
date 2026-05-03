@@ -8,6 +8,7 @@ from typing import Any, cast
 import pytest
 
 from primitive.api.models.error_response import ErrorResponse
+from primitive.api.models.reply_to_email_response_200 import ReplyToEmailResponse200
 from primitive.api.models.send_email_response_200 import SendEmailResponse200
 from primitive.client import PrimitiveAPIError, PrimitiveClient, SendThread
 from primitive.received_email import (
@@ -26,7 +27,7 @@ def anyio_backend() -> str:
 
 
 RECEIVED_EMAIL = ReceivedEmail(
-    id="email-1",
+    id="00000000-0000-0000-0000-000000000001",
     event_id="evt-1",
     received_at="2026-01-01T00:00:00.000Z",
     sender=ReceivedEmailAddress(address="alice@example.com", name="Alice"),
@@ -67,6 +68,7 @@ SEND_RESULT = {
     "client_idempotency_key": "idem-123",
     "request_id": "req-123",
     "content_hash": "hash-123",
+    "idempotent_replay": False,
 }
 
 
@@ -76,7 +78,7 @@ def test_normalize_received_email_rejects_empty_smtp_recipients() -> None:
         SimpleNamespace(
             id="evt-1",
             email=SimpleNamespace(
-                id="email-1",
+                id="00000000-0000-0000-0000-000000000001",
                 received_at="2026-01-01T00:00:00.000Z",
                 smtp=SimpleNamespace(mail_from="bounce@example.com", rcpt_to=[]),
                 headers=SimpleNamespace(
@@ -308,15 +310,18 @@ def test_send_passes_wait_options_and_idempotency_key(
     assert result.smtp_response_text == "250 OK"
 
 
-def test_reply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_reply_posts_to_reply_endpoint_with_minimal_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The high-level reply() forwards to /emails/{id}/reply with the
+    small ReplyInput shape; threading and recipients are server-derived."""
     captured: dict[str, object] = {}
 
-    def fake_send_email_sync_detailed(*, client, body):
+    def fake_reply_to_email_sync_detailed(*, id, client, body):
         del client
+        captured["id"] = str(id)
         captured["body"] = body.to_dict()
         return SimpleNamespace(
             status_code=HTTPStatus.OK,
-            parsed=SendEmailResponse200.from_dict(
+            parsed=ReplyToEmailResponse200.from_dict(
                 {
                     "success": True,
                     "data": {
@@ -329,39 +334,45 @@ def test_reply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> None:
         )
 
     monkeypatch.setattr(
-        client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
+        client_module,
+        "reply_to_email_sync_detailed",
+        fake_reply_to_email_sync_detailed,
     )
 
     client = PrimitiveClient("prim_test")
     client.reply(RECEIVED_EMAIL, "Thank you for your email.")
 
-    assert captured["body"] == {
-        "from": "support@example.com",
-        "to": "alice@example.com",
-        "subject": "Re: Hello",
-        "body_text": "Thank you for your email.",
-        "in_reply_to": "<parent@example.com>",
-        "references": ["<root@example.com>", "<parent@example.com>"],
-    }
+    assert captured["id"] == RECEIVED_EMAIL.id
+    assert captured["body"] == {"body_text": "Thank you for your email."}
 
 
-def test_reply_requires_text_for_dict_input() -> None:
+def test_reply_rejects_subject_override() -> None:
+    """Custom subject would silently break Gmail threading; rejected
+    at the SDK layer rather than letting the request hit the server."""
     client = PrimitiveClient("prim_test")
 
-    with pytest.raises(ValueError, match="reply text must be a non-empty string"):
-        client.reply(RECEIVED_EMAIL, {"subject": "Custom subject"})
+    with pytest.raises(ValueError, match="subject overrides are not supported"):
+        client.reply(RECEIVED_EMAIL, {"text": "Thanks", "subject": "Custom subject"})
+
+
+def test_reply_requires_text_or_html() -> None:
+    client = PrimitiveClient("prim_test")
+
+    with pytest.raises(ValueError, match="reply requires text or html"):
+        client.reply(RECEIVED_EMAIL, {})
 
 
 @pytest.mark.anyio
-async def test_areply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_areply_posts_to_reply_endpoint_with_minimal_body(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, object] = {}
 
-    async def fake_send_email_async_detailed(*, client, body):
+    async def fake_reply_to_email_async_detailed(*, id, client, body):
         del client
+        captured["id"] = str(id)
         captured["body"] = body.to_dict()
         return SimpleNamespace(
             status_code=HTTPStatus.OK,
-            parsed=SendEmailResponse200.from_dict(
+            parsed=ReplyToEmailResponse200.from_dict(
                 {
                     "success": True,
                     "data": {
@@ -374,28 +385,24 @@ async def test_areply_builds_threaded_send(monkeypatch: pytest.MonkeyPatch) -> N
         )
 
     monkeypatch.setattr(
-        client_module, "send_email_async_detailed", fake_send_email_async_detailed
+        client_module,
+        "reply_to_email_async_detailed",
+        fake_reply_to_email_async_detailed,
     )
 
     client = PrimitiveClient("prim_test")
-    await client.areply(RECEIVED_EMAIL, {"text": "Thank you.", "subject": "Custom"})
+    await client.areply(RECEIVED_EMAIL, {"text": "Thank you.", "wait": True})
 
-    assert captured["body"] == {
-        "from": "support@example.com",
-        "to": "alice@example.com",
-        "subject": "Custom",
-        "body_text": "Thank you.",
-        "in_reply_to": "<parent@example.com>",
-        "references": ["<root@example.com>", "<parent@example.com>"],
-    }
+    assert captured["id"] == RECEIVED_EMAIL.id
+    assert captured["body"] == {"body_text": "Thank you.", "wait": True}
 
 
 @pytest.mark.anyio
-async def test_areply_requires_text_for_dict_input() -> None:
+async def test_areply_requires_text_or_html() -> None:
     client = PrimitiveClient("prim_test")
 
-    with pytest.raises(ValueError, match="reply text must be a non-empty string"):
-        await client.areply(RECEIVED_EMAIL, {"subject": "Custom subject"})
+    with pytest.raises(ValueError, match="reply requires text or html"):
+        await client.areply(RECEIVED_EMAIL, {})
 
 
 def test_forward_builds_send(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -621,21 +628,26 @@ def test_send_surfaces_retry_after(
 
 
 def test_reply_honors_from_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Customer-supplied from is forwarded to the server. Server-side
+    canSendFrom validates the domain regardless, so the override
+    carries no extra privilege."""
     captured: dict[str, object] = {}
 
-    def fake_send_email_sync_detailed(*, client, body):
-        del client
+    def fake_reply_to_email_sync_detailed(*, id, client, body):
+        del id, client
         captured["body"] = body.to_dict()
         return SimpleNamespace(
             status_code=HTTPStatus.OK,
-            parsed=SendEmailResponse200.from_dict(
+            parsed=ReplyToEmailResponse200.from_dict(
                 {"success": True, "data": SEND_RESULT}
             ),
             content=b"",
         )
 
     monkeypatch.setattr(
-        client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
+        client_module,
+        "reply_to_email_sync_detailed",
+        fake_reply_to_email_sync_detailed,
     )
 
     client = PrimitiveClient("prim_test")
@@ -654,19 +666,21 @@ def test_reply_honors_from_override(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_reply_dict_from_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, object] = {}
 
-    def fake_send_email_sync_detailed(*, client, body):
-        del client
+    def fake_reply_to_email_sync_detailed(*, id, client, body):
+        del id, client
         captured["body"] = body.to_dict()
         return SimpleNamespace(
             status_code=HTTPStatus.OK,
-            parsed=SendEmailResponse200.from_dict(
+            parsed=ReplyToEmailResponse200.from_dict(
                 {"success": True, "data": SEND_RESULT}
             ),
             content=b"",
         )
 
     monkeypatch.setattr(
-        client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
+        client_module,
+        "reply_to_email_sync_detailed",
+        fake_reply_to_email_sync_detailed,
     )
 
     client = PrimitiveClient("prim_test")

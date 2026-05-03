@@ -31,7 +31,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'inbound_not_repliable';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -314,6 +314,43 @@ export type EmailDetail = {
      * Parsed to address (same as recipient)
      */
     to_email: string;
+    /**
+     * True when the inbound's sender address has a matching grant
+     * in the org's known-send-addresses list. Advisory: a true
+     * value does not by itself guarantee that a reply will be
+     * accepted by send-mail's gates; the per-send check at send
+     * time remains authoritative.
+     *
+     */
+    from_known_address?: boolean;
+    /**
+     * Sent emails recorded as replies to this inbound, in send
+     * order (ascending). Populated when a customer's send-mail
+     * request carries an `in_reply_to` Message-ID that matches
+     * this inbound's `message_id` in the same org. Includes
+     * attempts that were gate-denied, so the array reflects every
+     * recorded reply attempt regardless of outcome.
+     *
+     */
+    replies: Array<EmailDetailReply>;
+};
+
+export type EmailDetailReply = {
+    /**
+     * Sent-email row id.
+     */
+    id: string;
+    status: SentEmailStatus;
+    /**
+     * Recipient address as recorded on the sent_emails row.
+     */
+    to_address: string;
+    subject?: string | null;
+    created_at: string;
+    /**
+     * Outbound relay queue identifier when available.
+     */
+    queue_id?: string | null;
 };
 
 export type SendMailInput = {
@@ -359,6 +396,45 @@ export type SentEmailStatus = 'queued' | 'submitted_to_agent' | 'agent_failed' |
 
 export type DeliveryStatus = 'delivered' | 'bounced' | 'deferred' | 'wait_timeout';
 
+/**
+ * Body shape for `/emails/{id}/reply`. Intentionally narrow:
+ * recipients (`to`), subject, and threading headers
+ * (`in_reply_to`, `references`) are derived server-side from
+ * the inbound row referenced by the path id and are rejected by
+ * `additionalProperties` if passed (returns 400).
+ *
+ * `from` IS allowed because of legitimate use cases (display-name
+ * addition, replying from a different verified outbound address,
+ * multi-team triage). Send-mail's per-send `canSendFrom` gate
+ * validates the from-domain regardless, so the override carries
+ * no extra privilege.
+ *
+ */
+export type ReplyInput = {
+    /**
+     * Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail).
+     */
+    body_text?: string;
+    /**
+     * HTML reply body. At least one of body_text or body_html is required.
+     */
+    body_html?: string;
+    /**
+     * Optional override for the reply's From header. Defaults to
+     * the inbound's recipient. Use to add a display name (`"Acme
+     * Support" <agent@company.com>`) or to reply from a different
+     * verified outbound address (e.g. multi-team routing where
+     * support@ triages to billing@). The from-domain must be a
+     * verified outbound domain for your org, same as send-mail.
+     *
+     */
+    from?: string;
+    /**
+     * When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics.
+     */
+    wait?: boolean;
+};
+
 export type SendMailResult = {
     /**
      * Persisted sent-email attempt ID.
@@ -398,6 +474,15 @@ export type SendMailResult = {
      * SMTP response text from the first downstream delivery outcome when wait is true.
      */
     smtp_response_text?: string;
+    /**
+     * True when the response replays a previously-recorded send
+     * keyed by `client_idempotency_key` (same key, same canonical
+     * payload). False on a fresh send and on gate-denied
+     * responses. Lets callers branch on cache state without
+     * diffing fields.
+     *
+     */
+    idempotent_replay: boolean;
 };
 
 export type Endpoint = {
@@ -1157,6 +1242,73 @@ export type DownloadAttachmentsResponses = {
 };
 
 export type DownloadAttachmentsResponse = DownloadAttachmentsResponses[keyof DownloadAttachmentsResponses];
+
+export type ReplyToEmailData = {
+    body: ReplyInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/emails/{id}/reply';
+};
+
+export type ReplyToEmailErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Inbound is not repliable: the row exists but lacks a
+     * `message_id` (no thread anchor) or a `recipient` (cannot
+     * derive the From address).
+     *
+     */
+    422: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+    /**
+     * Primitive encountered an internal error
+     */
+    500: ErrorResponse;
+    /**
+     * Primitive could not complete the downstream SMTP request
+     */
+    502: ErrorResponse;
+    /**
+     * Primitive is temporarily unable to process the request
+     */
+    503: ErrorResponse;
+};
+
+export type ReplyToEmailError = ReplyToEmailErrors[keyof ReplyToEmailErrors];
+
+export type ReplyToEmailResponses = {
+    /**
+     * Outbound relay result
+     */
+    200: SuccessEnvelope & {
+        data?: SendMailResult;
+    };
+};
+
+export type ReplyToEmailResponse = ReplyToEmailResponses[keyof ReplyToEmailResponses];
 
 export type ReplayEmailWebhooksData = {
     body?: never;

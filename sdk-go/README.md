@@ -110,6 +110,29 @@ _, err = client.Reply(ctx, email, primitive.ReplyParams{
 })
 ```
 
+### HTML replies and waiting on the delivery outcome
+
+`Reply` accepts `BodyHTML` as a sibling of `BodyText`, plus the same `Wait`
+flag the top-level `Send` takes:
+
+```go
+wait := true
+_, err = client.Reply(ctx, email, primitive.ReplyParams{
+	BodyText: "Thanks for your email.",
+	BodyHTML: "<p>Thanks for your email.</p>",
+	Wait:     &wait,
+})
+```
+
+A subject override is intentionally not exposed on `ReplyParams`. Gmail's
+Conversation View needs both a References match and a normalized-subject match
+to thread, so a custom subject silently breaks the thread for half the
+recipient population. Use `client.Send(...)` if you need full subject control.
+
+If the inbound row is not in a state we can reply to (no `Message-Id` recorded,
+or content was discarded), the API returns `inbound_not_repliable` (HTTP 422)
+and the SDK returns an error.
+
 ### Forward an inbound email
 
 ```go

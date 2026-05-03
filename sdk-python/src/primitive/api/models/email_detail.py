@@ -17,6 +17,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.email_detail_reply import EmailDetailReply
 
 
 
@@ -40,6 +42,12 @@ class EmailDetail:
             webhook_attempt_count (int):
             from_email (str): Parsed from address (from_header or sender fallback)
             to_email (str): Parsed to address (same as recipient)
+            replies (list[EmailDetailReply]): Sent emails recorded as replies to this inbound, in send
+                order (ascending). Populated when a customer's send-mail
+                request carries an `in_reply_to` Message-ID that matches
+                this inbound's `message_id` in the same org. Includes
+                attempts that were gate-denied, so the array reflects every
+                recorded reply attempt regardless of outcome.
             message_id (None | str | Unset):
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
@@ -64,6 +72,11 @@ class EmailDetail:
             from_header (None | str | Unset):
             content_discarded_at (datetime.datetime | None | Unset):
             content_discarded_by_delivery_id (None | str | Unset):
+            from_known_address (bool | Unset): True when the inbound's sender address has a matching grant
+                in the org's known-send-addresses list. Advisory: a true
+                value does not by itself guarantee that a reply will be
+                accepted by send-mail's gates; the per-send check at send
+                time remains authoritative.
      """
 
     id: UUID
@@ -76,6 +89,7 @@ class EmailDetail:
     webhook_attempt_count: int
     from_email: str
     to_email: str
+    replies: list[EmailDetailReply]
     message_id: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     org_id: None | Unset | UUID = UNSET
@@ -97,6 +111,7 @@ class EmailDetail:
     from_header: None | str | Unset = UNSET
     content_discarded_at: datetime.datetime | None | Unset = UNSET
     content_discarded_by_delivery_id: None | str | Unset = UNSET
+    from_known_address: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -104,6 +119,7 @@ class EmailDetail:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_detail_reply import EmailDetailReply
         id = str(self.id)
 
         sender = self.sender
@@ -123,6 +139,13 @@ class EmailDetail:
         from_email = self.from_email
 
         to_email = self.to_email
+
+        replies = []
+        for replies_item_data in self.replies:
+            replies_item = replies_item_data.to_dict()
+            replies.append(replies_item)
+
+
 
         message_id: None | str | Unset
         if isinstance(self.message_id, Unset):
@@ -270,6 +293,8 @@ class EmailDetail:
         else:
             content_discarded_by_delivery_id = self.content_discarded_by_delivery_id
 
+        from_known_address = self.from_known_address
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -284,6 +309,7 @@ class EmailDetail:
             "webhook_attempt_count": webhook_attempt_count,
             "from_email": from_email,
             "to_email": to_email,
+            "replies": replies,
         })
         if message_id is not UNSET:
             field_dict["message_id"] = message_id
@@ -327,6 +353,8 @@ class EmailDetail:
             field_dict["content_discarded_at"] = content_discarded_at
         if content_discarded_by_delivery_id is not UNSET:
             field_dict["content_discarded_by_delivery_id"] = content_discarded_by_delivery_id
+        if from_known_address is not UNSET:
+            field_dict["from_known_address"] = from_known_address
 
         return field_dict
 
@@ -334,6 +362,7 @@ class EmailDetail:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_detail_reply import EmailDetailReply
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -366,6 +395,16 @@ class EmailDetail:
         from_email = d.pop("from_email")
 
         to_email = d.pop("to_email")
+
+        replies = []
+        _replies = d.pop("replies")
+        for replies_item_data in (_replies):
+            replies_item = EmailDetailReply.from_dict(replies_item_data)
+
+
+
+            replies.append(replies_item)
+
 
         def _parse_message_id(data: object) -> None | str | Unset:
             if data is None:
@@ -665,6 +704,8 @@ class EmailDetail:
         content_discarded_by_delivery_id = _parse_content_discarded_by_delivery_id(d.pop("content_discarded_by_delivery_id", UNSET))
 
 
+        from_known_address = d.pop("from_known_address", UNSET)
+
         email_detail = cls(
             id=id,
             sender=sender,
@@ -676,6 +717,7 @@ class EmailDetail:
             webhook_attempt_count=webhook_attempt_count,
             from_email=from_email,
             to_email=to_email,
+            replies=replies,
             message_id=message_id,
             domain_id=domain_id,
             org_id=org_id,
@@ -697,6 +739,7 @@ class EmailDetail:
             from_header=from_header,
             content_discarded_at=content_discarded_at,
             content_discarded_by_delivery_id=content_discarded_by_delivery_id,
+            from_known_address=from_known_address,
         )
 
 

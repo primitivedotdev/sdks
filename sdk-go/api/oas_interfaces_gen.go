@@ -81,6 +81,10 @@ type ReplayEmailWebhooksRes interface {
 	replayEmailWebhooksRes()
 }
 
+type ReplyToEmailRes interface {
+	replyToEmailRes()
+}
+
 type RotateWebhookSecretRes interface {
 	rotateWebhookSecretRes()
 }

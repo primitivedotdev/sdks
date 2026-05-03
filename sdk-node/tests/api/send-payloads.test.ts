@@ -50,9 +50,10 @@ interface SendInputCase {
 }
 
 interface ReplyInputCase {
-  text: string;
-  subject?: string;
+  text?: string;
+  html?: string;
   from?: string;
+  wait?: boolean;
 }
 
 interface ForwardInputCase {
@@ -72,6 +73,7 @@ interface SendCase {
 interface ReplyCase {
   name: string;
   input: ReplyInputCase;
+  expected_path: string;
   expected_body: Record<string, unknown>;
   expected_idempotency_key: string | null;
 }
@@ -198,22 +200,26 @@ const SUCCESS_RESPONSE = {
     client_idempotency_key: "auto",
     request_id: "req",
     content_hash: "h",
+    idempotent_replay: false,
   },
 };
 
 function captureFetch(): {
   fetch: typeof fetch;
   captured: {
+    path: string | null;
     body: Record<string, unknown> | null;
     idempotencyKey: string | null;
   };
 } {
   const captured: {
+    path: string | null;
     body: Record<string, unknown> | null;
     idempotencyKey: string | null;
-  } = { body: null, idempotencyKey: null };
+  } = { path: null, body: null, idempotencyKey: null };
   const fetchMock = vi.fn<typeof fetch>(async (input) => {
     const request = input as Request;
+    captured.path = new URL(request.url).pathname;
     captured.body = (await request.json()) as Record<string, unknown>;
     captured.idempotencyKey = request.headers.get("idempotency-key");
     return new Response(JSON.stringify(SUCCESS_RESPONSE), {
@@ -285,15 +291,25 @@ describe("shared send/reply/forward payloads", () => {
       const email = buildReceivedEmail(FIXTURE.canonical_inbound);
 
       await client.reply(email, {
-        text: testCase.input.text,
-        ...(testCase.input.subject !== undefined
-          ? { subject: testCase.input.subject }
+        ...(testCase.input.text !== undefined
+          ? { text: testCase.input.text }
+          : {}),
+        ...(testCase.input.html !== undefined
+          ? { html: testCase.input.html }
           : {}),
         ...(testCase.input.from !== undefined
           ? { from: testCase.input.from }
           : {}),
+        ...(testCase.input.wait !== undefined
+          ? { wait: testCase.input.wait }
+          : {}),
       });
 
+      // Path matters now: reply hits /emails/{id}/reply, not /send-mail.
+      // A regression that wires reply back to send-mail would silently
+      // build the wrong shape; the path assertion catches it before the
+      // body assertion can give a misleading diff.
+      expect(captured.path).toBe(`/api/v1${testCase.expected_path}`);
       expect(captured.body).toEqual(testCase.expected_body);
       expect(captured.idempotencyKey).toBe(testCase.expected_idempotency_key);
     });

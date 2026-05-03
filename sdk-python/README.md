@@ -100,6 +100,31 @@ client.reply(
 )
 ```
 
+### HTML replies and waiting on the delivery outcome
+
+`reply()` accepts a dict with `html` as a sibling of `text`, plus the same
+`wait` flag the top-level `send()` takes:
+
+```python
+client.reply(
+    email,
+    {
+        "text": "Thanks for your email.",
+        "html": "<p>Thanks for your email.</p>",
+        "wait": True,
+    },
+)
+```
+
+`subject` is intentionally not accepted on `reply()`. Gmail's Conversation View
+needs both a References match and a normalized-subject match to thread, so a
+custom subject silently breaks the thread for half the recipient population.
+Use `client.send(...)` if you need full subject control.
+
+If the inbound row is not in a state we can reply to (no `Message-Id` recorded,
+or content was discarded), the API returns `inbound_not_repliable` (HTTP 422)
+and the SDK raises.
+
 ### Forward an inbound email
 
 ```python
