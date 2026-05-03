@@ -1327,6 +1327,7 @@ components:
                 - outbound_capacity_exhausted
                 - outbound_response_malformed
                 - outbound_relay_failed
+                - inbound_not_repliable
             message:
               type: string
             details:

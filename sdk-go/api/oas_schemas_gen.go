@@ -2404,6 +2404,7 @@ const (
 	ErrorResponseErrorCodeOutboundCapacityExhausted ErrorResponseErrorCode = "outbound_capacity_exhausted"
 	ErrorResponseErrorCodeOutboundResponseMalformed ErrorResponseErrorCode = "outbound_response_malformed"
 	ErrorResponseErrorCodeOutboundRelayFailed       ErrorResponseErrorCode = "outbound_relay_failed"
+	ErrorResponseErrorCodeInboundNotRepliable       ErrorResponseErrorCode = "inbound_not_repliable"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -2426,6 +2427,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeOutboundCapacityExhausted,
 		ErrorResponseErrorCodeOutboundResponseMalformed,
 		ErrorResponseErrorCodeOutboundRelayFailed,
+		ErrorResponseErrorCodeInboundNotRepliable,
 	}
 }
 
@@ -2465,6 +2467,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeOutboundResponseMalformed:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeOutboundRelayFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInboundNotRepliable:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -2524,6 +2528,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeOutboundRelayFailed:
 		*s = ErrorResponseErrorCodeOutboundRelayFailed
+		return nil
+	case ErrorResponseErrorCodeInboundNotRepliable:
+		*s = ErrorResponseErrorCodeInboundNotRepliable
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

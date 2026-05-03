@@ -872,6 +872,8 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "outbound_relay_failed":
 		return nil
+	case "inbound_not_repliable":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}

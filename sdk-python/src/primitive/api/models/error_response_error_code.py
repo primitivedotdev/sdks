@@ -4,6 +4,7 @@ class ErrorResponseErrorCode(str, Enum):
     CANNOT_SEND_FROM_DOMAIN = "cannot_send_from_domain"
     CONFLICT = "conflict"
     FORBIDDEN = "forbidden"
+    INBOUND_NOT_REPLIABLE = "inbound_not_repliable"
     INTERNAL_ERROR = "internal_error"
     MX_CONFLICT = "mx_conflict"
     NOT_FOUND = "not_found"

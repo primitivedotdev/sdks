@@ -1910,7 +1910,8 @@ export const openapiDocument: Record<string, unknown> = {
                   "outbound_key_invalid",
                   "outbound_capacity_exhausted",
                   "outbound_response_malformed",
-                  "outbound_relay_failed"
+                  "outbound_relay_failed",
+                  "inbound_not_repliable"
                 ]
               },
               "message": {
