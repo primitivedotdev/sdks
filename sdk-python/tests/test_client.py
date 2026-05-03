@@ -67,6 +67,7 @@ SEND_RESULT = {
     "client_idempotency_key": "idem-123",
     "request_id": "req-123",
     "content_hash": "hash-123",
+    "idempotent_replay": False,
 }
 
 

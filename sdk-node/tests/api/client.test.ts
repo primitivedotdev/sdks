@@ -107,6 +107,7 @@ const SEND_RESULT = {
   client_idempotency_key: "idem-123",
   request_id: "req-123",
   content_hash: "hash-123",
+  idempotent_replay: false,
 } as const;
 
 const NORMALIZED_SEND_RESULT = {
@@ -118,6 +119,7 @@ const NORMALIZED_SEND_RESULT = {
   clientIdempotencyKey: "idem-123",
   requestId: "req-123",
   contentHash: "hash-123",
+  idempotentReplay: false,
 } as const;
 
 describe("PrimitiveClient", () => {

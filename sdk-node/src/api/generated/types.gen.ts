@@ -314,6 +314,43 @@ export type EmailDetail = {
      * Parsed to address (same as recipient)
      */
     to_email: string;
+    /**
+     * True when the inbound's sender address has a matching grant
+     * in the org's known-send-addresses list. Advisory: a true
+     * value does not by itself guarantee that a reply will be
+     * accepted by send-mail's gates; the per-send check at send
+     * time remains authoritative.
+     *
+     */
+    from_known_address?: boolean;
+    /**
+     * Sent emails recorded as replies to this inbound, in send
+     * order (ascending). Populated when a customer's send-mail
+     * request carries an `in_reply_to` Message-ID that matches
+     * this inbound's `message_id` in the same org. Includes
+     * attempts that were gate-denied, so the array reflects every
+     * recorded reply attempt regardless of outcome.
+     *
+     */
+    replies: Array<EmailDetailReply>;
+};
+
+export type EmailDetailReply = {
+    /**
+     * Sent-email row id.
+     */
+    id: string;
+    status: SentEmailStatus;
+    /**
+     * Recipient address as recorded on the sent_emails row.
+     */
+    to_address: string;
+    subject?: string | null;
+    created_at: string;
+    /**
+     * Outbound relay queue identifier when available.
+     */
+    queue_id?: string | null;
 };
 
 export type SendMailInput = {
@@ -359,6 +396,30 @@ export type SentEmailStatus = 'queued' | 'submitted_to_agent' | 'agent_failed' |
 
 export type DeliveryStatus = 'delivered' | 'bounced' | 'deferred' | 'wait_timeout';
 
+/**
+ * Body shape for `/emails/{id}/reply`. Intentionally narrow:
+ * recipients, sender, subject, and threading headers are derived
+ * server-side from the inbound row referenced by the path id.
+ * Passing any of `to`, `from`, `subject`, `in_reply_to`,
+ * `references`, or `reply_to` is rejected by `additionalProperties`
+ * (returns 400).
+ *
+ */
+export type ReplyInput = {
+    /**
+     * Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail).
+     */
+    body_text?: string;
+    /**
+     * HTML reply body. At least one of body_text or body_html is required.
+     */
+    body_html?: string;
+    /**
+     * When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics.
+     */
+    wait?: boolean;
+};
+
 export type SendMailResult = {
     /**
      * Persisted sent-email attempt ID.
@@ -398,6 +459,15 @@ export type SendMailResult = {
      * SMTP response text from the first downstream delivery outcome when wait is true.
      */
     smtp_response_text?: string;
+    /**
+     * True when the response replays a previously-recorded send
+     * keyed by `client_idempotency_key` (same key, same canonical
+     * payload). False on a fresh send and on gate-denied
+     * responses. Lets callers branch on cache state without
+     * diffing fields.
+     *
+     */
+    idempotent_replay: boolean;
 };
 
 export type Endpoint = {
@@ -1157,6 +1227,73 @@ export type DownloadAttachmentsResponses = {
 };
 
 export type DownloadAttachmentsResponse = DownloadAttachmentsResponses[keyof DownloadAttachmentsResponses];
+
+export type ReplyToEmailData = {
+    body: ReplyInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/emails/{id}/reply';
+};
+
+export type ReplyToEmailErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Inbound is not repliable: the row exists but lacks a
+     * `message_id` (no thread anchor) or a `recipient` (cannot
+     * derive the From address).
+     *
+     */
+    422: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+    /**
+     * Primitive encountered an internal error
+     */
+    500: ErrorResponse;
+    /**
+     * Primitive could not complete the downstream SMTP request
+     */
+    502: ErrorResponse;
+    /**
+     * Primitive is temporarily unable to process the request
+     */
+    503: ErrorResponse;
+};
+
+export type ReplyToEmailError = ReplyToEmailErrors[keyof ReplyToEmailErrors];
+
+export type ReplyToEmailResponses = {
+    /**
+     * Outbound relay result
+     */
+    200: SuccessEnvelope & {
+        data?: SendMailResult;
+    };
+};
+
+export type ReplyToEmailResponse = ReplyToEmailResponses[keyof ReplyToEmailResponses];
 
 export type ReplayEmailWebhooksData = {
     body?: never;

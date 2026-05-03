@@ -33,6 +33,11 @@ class SendMailResult:
             client_idempotency_key (str): Effective idempotency key used for this send.
             request_id (str): Server-issued request identifier for support and tracing.
             content_hash (str): Stable hash of the canonical send payload.
+            idempotent_replay (bool): True when the response replays a previously-recorded send
+                keyed by `client_idempotency_key` (same key, same canonical
+                payload). False on a fresh send and on gate-denied
+                responses. Lets callers branch on cache state without
+                diffing fields.
             delivery_status (DeliveryStatus | Unset):
             smtp_response_code (int | None | Unset): SMTP response code from the first downstream delivery outcome when wait
                 is true.
@@ -48,6 +53,7 @@ class SendMailResult:
     client_idempotency_key: str
     request_id: str
     content_hash: str
+    idempotent_replay: bool
     delivery_status: DeliveryStatus | Unset = UNSET
     smtp_response_code: int | None | Unset = UNSET
     smtp_response_text: str | Unset = UNSET
@@ -79,6 +85,8 @@ class SendMailResult:
 
         content_hash = self.content_hash
 
+        idempotent_replay = self.idempotent_replay
+
         delivery_status: str | Unset = UNSET
         if not isinstance(self.delivery_status, Unset):
             delivery_status = self.delivery_status.value
@@ -104,6 +112,7 @@ class SendMailResult:
             "client_idempotency_key": client_idempotency_key,
             "request_id": request_id,
             "content_hash": content_hash,
+            "idempotent_replay": idempotent_replay,
         })
         if delivery_status is not UNSET:
             field_dict["delivery_status"] = delivery_status
@@ -146,6 +155,8 @@ class SendMailResult:
 
         content_hash = d.pop("content_hash")
 
+        idempotent_replay = d.pop("idempotent_replay")
+
         _delivery_status = d.pop("delivery_status", UNSET)
         delivery_status: DeliveryStatus | Unset
         if isinstance(_delivery_status,  Unset):
@@ -177,6 +188,7 @@ class SendMailResult:
             client_idempotency_key=client_idempotency_key,
             request_id=request_id,
             content_hash=content_hash,
+            idempotent_replay=idempotent_replay,
             delivery_status=delivery_status,
             smtp_response_code=smtp_response_code,
             smtp_response_text=smtp_response_text,

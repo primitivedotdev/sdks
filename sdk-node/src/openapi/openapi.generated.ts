@@ -843,6 +843,96 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/emails/{id}/reply": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "operationId": "replyToEmail",
+        "summary": "Reply to an inbound email",
+        "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody and optional `wait` flag; passing any header or recipient\noverride is rejected by the schema (`additionalProperties:\nfalse`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
+        "tags": [
+          "Sending"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Outbound relay result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SendMailResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "description": "Inbound is not repliable: the row exists but lacks a\n`message_id` (no thread anchor) or a `recipient` (cannot\nderive the From address).\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "inbound_not_repliable",
+                    "message": "inbound has no Message-ID; cannot anchor a reply thread"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
     "/emails/{id}/replay": {
       "parameters": [
         {
@@ -2592,6 +2682,17 @@ export const openapiDocument: Record<string, unknown> = {
           "to_email": {
             "type": "string",
             "description": "Parsed to address (same as recipient)"
+          },
+          "from_known_address": {
+            "type": "boolean",
+            "description": "True when the inbound's sender address has a matching grant\nin the org's known-send-addresses list. Advisory: a true\nvalue does not by itself guarantee that a reply will be\naccepted by send-mail's gates; the per-send check at send\ntime remains authoritative.\n"
+          },
+          "replies": {
+            "type": "array",
+            "description": "Sent emails recorded as replies to this inbound, in send\norder (ascending). Populated when a customer's send-mail\nrequest carries an `in_reply_to` Message-ID that matches\nthis inbound's `message_id` in the same org. Includes\nattempts that were gate-denied, so the array reflects every\nrecorded reply attempt regardless of outcome.\n",
+            "items": {
+              "$ref": "#/components/schemas/EmailDetailReply"
+            }
           }
         },
         "required": [
@@ -2604,7 +2705,48 @@ export const openapiDocument: Record<string, unknown> = {
           "received_at",
           "webhook_attempt_count",
           "from_email",
-          "to_email"
+          "to_email",
+          "replies"
+        ]
+      },
+      "EmailDetailReply": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Sent-email row id."
+          },
+          "status": {
+            "$ref": "#/components/schemas/SentEmailStatus"
+          },
+          "to_address": {
+            "type": "string",
+            "description": "Recipient address as recorded on the sent_emails row."
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "queue_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Outbound relay queue identifier when available."
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "to_address",
+          "created_at"
         ]
       },
       "SendMailInput": {
@@ -2694,6 +2836,25 @@ export const openapiDocument: Record<string, unknown> = {
           "wait_timeout"
         ]
       },
+      "ReplyInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Body shape for `/emails/{id}/reply`. Intentionally narrow:\nrecipients, sender, subject, and threading headers are derived\nserver-side from the inbound row referenced by the path id.\nPassing any of `to`, `from`, `subject`, `in_reply_to`,\n`references`, or `reply_to` is rejected by `additionalProperties`\n(returns 400).\n",
+        "properties": {
+          "body_text": {
+            "type": "string",
+            "description": "Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail)."
+          },
+          "body_html": {
+            "type": "string",
+            "description": "HTML reply body. At least one of body_text or body_html is required."
+          },
+          "wait": {
+            "type": "boolean",
+            "description": "When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics."
+          }
+        }
+      },
       "SendMailResult": {
         "type": "object",
         "properties": {
@@ -2750,6 +2911,10 @@ export const openapiDocument: Record<string, unknown> = {
           "smtp_response_text": {
             "type": "string",
             "description": "SMTP response text from the first downstream delivery outcome when wait is true."
+          },
+          "idempotent_replay": {
+            "type": "boolean",
+            "description": "True when the response replays a previously-recorded send\nkeyed by `client_idempotency_key` (same key, same canonical\npayload). False on a fresh send and on gate-denied\nresponses. Lets callers branch on cache state without\ndiffing fields.\n"
           }
         },
         "required": [
@@ -2760,7 +2925,8 @@ export const openapiDocument: Record<string, unknown> = {
           "rejected",
           "client_idempotency_key",
           "request_id",
-          "content_hash"
+          "content_hash",
+          "idempotent_replay"
         ]
       },
       "Endpoint": {

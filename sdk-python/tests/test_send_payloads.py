@@ -46,6 +46,7 @@ SUCCESS_RESPONSE = {
         "client_idempotency_key": "auto",
         "request_id": "req",
         "content_hash": "h",
+        "idempotent_replay": False,
     },
 }
 

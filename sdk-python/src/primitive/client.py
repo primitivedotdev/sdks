@@ -40,6 +40,10 @@ class SendResult:
     request_id: str
     content_hash: str
     queue_id: str | None
+    # True when the response replays a previously-recorded send keyed
+    # by ``client_idempotency_key`` (same key, same canonical payload).
+    # False on a fresh send and on gate-denied responses.
+    idempotent_replay: bool = False
     delivery_status: str | None = None
     smtp_response_code: int | None = None
     smtp_response_text: str | None = None
@@ -247,6 +251,7 @@ def _map_send_result(result: ApiSendMailResult) -> SendResult:
         request_id=result.request_id,
         content_hash=result.content_hash,
         queue_id=queue_id,
+        idempotent_replay=result.idempotent_replay,
         delivery_status=delivery_status,
         smtp_response_code=smtp_response_code,
         smtp_response_text=smtp_response_text,

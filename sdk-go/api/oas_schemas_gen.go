@@ -1281,6 +1281,19 @@ type EmailDetail struct {
 	FromEmail string `json:"from_email"`
 	// Parsed to address (same as recipient).
 	ToEmail string `json:"to_email"`
+	// True when the inbound's sender address has a matching grant
+	// in the org's known-send-addresses list. Advisory: a true
+	// value does not by itself guarantee that a reply will be
+	// accepted by send-mail's gates; the per-send check at send
+	// time remains authoritative.
+	FromKnownAddress OptBool `json:"from_known_address"`
+	// Sent emails recorded as replies to this inbound, in send
+	// order (ascending). Populated when a customer's send-mail
+	// request carries an `in_reply_to` Message-ID that matches
+	// this inbound's `message_id` in the same org. Includes
+	// attempts that were gate-denied, so the array reflects every
+	// recorded reply attempt regardless of outcome.
+	Replies []EmailDetailReply `json:"replies"`
 }
 
 // GetID returns the value of ID.
@@ -1438,6 +1451,16 @@ func (s *EmailDetail) GetToEmail() string {
 	return s.ToEmail
 }
 
+// GetFromKnownAddress returns the value of FromKnownAddress.
+func (s *EmailDetail) GetFromKnownAddress() OptBool {
+	return s.FromKnownAddress
+}
+
+// GetReplies returns the value of Replies.
+func (s *EmailDetail) GetReplies() []EmailDetailReply {
+	return s.Replies
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -1591,6 +1614,89 @@ func (s *EmailDetail) SetFromEmail(val string) {
 // SetToEmail sets the value of ToEmail.
 func (s *EmailDetail) SetToEmail(val string) {
 	s.ToEmail = val
+}
+
+// SetFromKnownAddress sets the value of FromKnownAddress.
+func (s *EmailDetail) SetFromKnownAddress(val OptBool) {
+	s.FromKnownAddress = val
+}
+
+// SetReplies sets the value of Replies.
+func (s *EmailDetail) SetReplies(val []EmailDetailReply) {
+	s.Replies = val
+}
+
+// Ref: #/components/schemas/EmailDetailReply
+type EmailDetailReply struct {
+	// Sent-email row id.
+	ID     uuid.UUID       `json:"id"`
+	Status SentEmailStatus `json:"status"`
+	// Recipient address as recorded on the sent_emails row.
+	ToAddress string       `json:"to_address"`
+	Subject   OptNilString `json:"subject"`
+	CreatedAt time.Time    `json:"created_at"`
+	// Outbound relay queue identifier when available.
+	QueueID OptNilString `json:"queue_id"`
+}
+
+// GetID returns the value of ID.
+func (s *EmailDetailReply) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *EmailDetailReply) GetStatus() SentEmailStatus {
+	return s.Status
+}
+
+// GetToAddress returns the value of ToAddress.
+func (s *EmailDetailReply) GetToAddress() string {
+	return s.ToAddress
+}
+
+// GetSubject returns the value of Subject.
+func (s *EmailDetailReply) GetSubject() OptNilString {
+	return s.Subject
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *EmailDetailReply) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *EmailDetailReply) GetQueueID() OptNilString {
+	return s.QueueID
+}
+
+// SetID sets the value of ID.
+func (s *EmailDetailReply) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *EmailDetailReply) SetStatus(val SentEmailStatus) {
+	s.Status = val
+}
+
+// SetToAddress sets the value of ToAddress.
+func (s *EmailDetailReply) SetToAddress(val string) {
+	s.ToAddress = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *EmailDetailReply) SetSubject(val OptNilString) {
+	s.Subject = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *EmailDetailReply) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *EmailDetailReply) SetQueueID(val OptNilString) {
+	s.QueueID = val
 }
 
 type EmailDetailStatus string
@@ -4592,6 +4698,7 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 
 func (*RateLimitedHeaders) replayDeliveryRes()      {}
 func (*RateLimitedHeaders) replayEmailWebhooksRes() {}
+func (*RateLimitedHeaders) replyToEmailRes()        {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes() {}
 func (*RateLimitedHeaders) sendEmailRes()           {}
 func (*RateLimitedHeaders) testEndpointRes()        {}
@@ -4703,6 +4810,114 @@ func (s *ReplayResult) SetDelivered(val int) {
 func (s *ReplayResult) SetFailed(val int) {
 	s.Failed = val
 }
+
+// Body shape for `/emails/{id}/reply`. Intentionally narrow:
+// recipients, sender, subject, and threading headers are derived
+// server-side from the inbound row referenced by the path id.
+// Passing any of `to`, `from`, `subject`, `in_reply_to`,
+// `references`, or `reply_to` is rejected by `additionalProperties`
+// (returns 400).
+// Ref: #/components/schemas/ReplyInput
+type ReplyInput struct {
+	// Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte
+	// length of body_text and body_html must be at most 262144 bytes (same cap as send-mail).
+	BodyText OptString `json:"body_text"`
+	// HTML reply body. At least one of body_text or body_html is required.
+	BodyHTML OptString `json:"body_html"`
+	// When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the
+	// send-mail `wait` semantics.
+	Wait OptBool `json:"wait"`
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *ReplyInput) GetBodyText() OptString {
+	return s.BodyText
+}
+
+// GetBodyHTML returns the value of BodyHTML.
+func (s *ReplyInput) GetBodyHTML() OptString {
+	return s.BodyHTML
+}
+
+// GetWait returns the value of Wait.
+func (s *ReplyInput) GetWait() OptBool {
+	return s.Wait
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *ReplyInput) SetBodyText(val OptString) {
+	s.BodyText = val
+}
+
+// SetBodyHTML sets the value of BodyHTML.
+func (s *ReplyInput) SetBodyHTML(val OptString) {
+	s.BodyHTML = val
+}
+
+// SetWait sets the value of Wait.
+func (s *ReplyInput) SetWait(val OptBool) {
+	s.Wait = val
+}
+
+type ReplyToEmailBadGateway ErrorResponse
+
+func (*ReplyToEmailBadGateway) replyToEmailRes() {}
+
+type ReplyToEmailBadRequest ErrorResponse
+
+func (*ReplyToEmailBadRequest) replyToEmailRes() {}
+
+type ReplyToEmailForbidden ErrorResponse
+
+func (*ReplyToEmailForbidden) replyToEmailRes() {}
+
+type ReplyToEmailInternalServerError ErrorResponse
+
+func (*ReplyToEmailInternalServerError) replyToEmailRes() {}
+
+type ReplyToEmailNotFound ErrorResponse
+
+func (*ReplyToEmailNotFound) replyToEmailRes() {}
+
+// Merged schema.
+type ReplyToEmailOK struct {
+	Success bool           `json:"success"`
+	Data    SendMailResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ReplyToEmailOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ReplyToEmailOK) GetData() SendMailResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ReplyToEmailOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ReplyToEmailOK) SetData(val SendMailResult) {
+	s.Data = val
+}
+
+func (*ReplyToEmailOK) replyToEmailRes() {}
+
+type ReplyToEmailServiceUnavailable ErrorResponse
+
+func (*ReplyToEmailServiceUnavailable) replyToEmailRes() {}
+
+type ReplyToEmailUnauthorized ErrorResponse
+
+func (*ReplyToEmailUnauthorized) replyToEmailRes() {}
+
+type ReplyToEmailUnprocessableEntity ErrorResponse
+
+func (*ReplyToEmailUnprocessableEntity) replyToEmailRes() {}
 
 type RotateWebhookSecretBadRequest ErrorResponse
 
@@ -4932,6 +5147,12 @@ type SendMailResult struct {
 	SMTPResponseCode OptNilInt `json:"smtp_response_code"`
 	// SMTP response text from the first downstream delivery outcome when wait is true.
 	SMTPResponseText OptString `json:"smtp_response_text"`
+	// True when the response replays a previously-recorded send
+	// keyed by `client_idempotency_key` (same key, same canonical
+	// payload). False on a fresh send and on gate-denied
+	// responses. Lets callers branch on cache state without
+	// diffing fields.
+	IdempotentReplay bool `json:"idempotent_replay"`
 }
 
 // GetID returns the value of ID.
@@ -4989,6 +5210,11 @@ func (s *SendMailResult) GetSMTPResponseText() OptString {
 	return s.SMTPResponseText
 }
 
+// GetIdempotentReplay returns the value of IdempotentReplay.
+func (s *SendMailResult) GetIdempotentReplay() bool {
+	return s.IdempotentReplay
+}
+
 // SetID sets the value of ID.
 func (s *SendMailResult) SetID(val string) {
 	s.ID = val
@@ -5042,6 +5268,11 @@ func (s *SendMailResult) SetSMTPResponseCode(val OptNilInt) {
 // SetSMTPResponseText sets the value of SMTPResponseText.
 func (s *SendMailResult) SetSMTPResponseText(val OptString) {
 	s.SMTPResponseText = val
+}
+
+// SetIdempotentReplay sets the value of IdempotentReplay.
+func (s *SendMailResult) SetIdempotentReplay(val bool) {
+	s.IdempotentReplay = val
 }
 
 // Ref: #/components/schemas/SentEmailStatus

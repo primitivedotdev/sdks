@@ -108,6 +108,12 @@ export interface SendResult {
   clientIdempotencyKey: string;
   requestId: string;
   contentHash: string;
+  /**
+   * True when the response replays a previously-recorded send keyed by
+   * `clientIdempotencyKey` (same key, same canonical payload). False on
+   * a fresh send and on gate-denied responses.
+   */
+  idempotentReplay: boolean;
   deliveryStatus?: GeneratedSendMailResult["delivery_status"];
   smtpResponseCode?: number | null;
   smtpResponseText?: string;
@@ -426,6 +432,7 @@ function mapSendResult(result: GeneratedSendMailResult): SendResult {
     clientIdempotencyKey: result.client_idempotency_key,
     requestId: result.request_id,
     contentHash: result.content_hash,
+    idempotentReplay: result.idempotent_replay,
     ...(result.delivery_status !== undefined
       ? { deliveryStatus: result.delivery_status }
       : {}),
