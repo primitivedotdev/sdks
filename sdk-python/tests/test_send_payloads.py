@@ -110,6 +110,11 @@ def _make_capturing_sync_reply(captured: dict[str, Any]) -> Any:
     def fake(**kwargs: Any) -> Any:
         captured["id"] = str(kwargs["id"])
         captured["body"] = kwargs["body"].to_dict()
+        # Capture idempotency_key even though reply() doesn't pass it
+        # today, so the symmetry with send/forward holds and a future
+        # change that wires reply idempotency without updating
+        # fixtures fails loudly.
+        captured["idempotency_key"] = kwargs.get("idempotency_key")
         return SimpleNamespace(
             status_code=HTTPStatus.OK,
             parsed=ReplyToEmailResponse200.from_dict(SUCCESS_RESPONSE),
@@ -171,9 +176,15 @@ def test_reply_payloads_match_fixture(
     client = PrimitiveClient("prim_test")
     email = _build_received_email(FIXTURE["canonical_inbound"])
 
-    reply_input: dict[str, Any] = {"text": case["input"]["text"]}
+    reply_input: dict[str, Any] = {}
+    if "text" in case["input"]:
+        reply_input["text"] = case["input"]["text"]
+    if "html" in case["input"]:
+        reply_input["html"] = case["input"]["html"]
     if "from" in case["input"]:
         reply_input["from"] = case["input"]["from"]
+    if "wait" in case["input"]:
+        reply_input["wait"] = case["input"]["wait"]
 
     client.reply(email, reply_input)
 
@@ -182,6 +193,11 @@ def test_reply_payloads_match_fixture(
     # The id assertion pins which inbound the reply targets.
     assert captured["id"] == FIXTURE["canonical_inbound"]["id"]
     assert captured["body"] == case["expected_body"]
+    # Reply does not currently send an Idempotency-Key header, so all
+    # expected values are null today. Asserting still pins the
+    # behavior so a future change that wires up reply idempotency
+    # without updating the fixtures fails loudly here.
+    assert captured.get("idempotency_key") == case["expected_idempotency_key"]
 
 
 @pytest.mark.parametrize("case", FIXTURE["forward"], ids=lambda c: c["name"])

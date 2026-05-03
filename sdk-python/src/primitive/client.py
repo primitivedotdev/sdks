@@ -345,15 +345,19 @@ def _resolve_reply_payload(
     normalized-subject match in addition to References.
     """
     payload = {"text": text} if isinstance(text, str) else text
-    body_text = payload.get("text")
-    body_html = payload.get("html")
-    if not body_text and not body_html:
-        raise ValueError("reply requires text or html")
+    # Reject subject before the empty-body check so a caller passing
+    # ONLY a subject (e.g. `client.reply(email, {"subject": "X"})`)
+    # gets the informative subject-rejection message instead of the
+    # generic "reply requires text or html".
     if "subject" in payload:
         raise ValueError(
             "subject overrides are not supported on reply: a custom subject "
             "breaks Gmail's threading. Use client.send() if you need full control.",
         )
+    body_text = payload.get("text")
+    body_html = payload.get("html")
+    if not body_text and not body_html:
+        raise ValueError("reply requires text or html")
     raw_from = payload.get("from")
     raw_wait = payload.get("wait")
     return (
@@ -518,7 +522,7 @@ class PrimitiveClient:
         wait: bool | None,
     ) -> SendResult:
         response = reply_to_email_sync_detailed(
-            id=cast(UUID, email_id),
+            id=UUID(email_id),
             client=self.api_client,
             body=_build_reply_input(
                 body_text=body_text,
@@ -539,7 +543,7 @@ class PrimitiveClient:
         wait: bool | None,
     ) -> SendResult:
         response = await reply_to_email_async_detailed(
-            id=cast(UUID, email_id),
+            id=UUID(email_id),
             client=self.api_client,
             body=_build_reply_input(
                 body_text=body_text,

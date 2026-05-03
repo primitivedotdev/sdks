@@ -75,8 +75,10 @@ type replyCase struct {
 }
 
 type replyInputCase struct {
-	Text string  `json:"text"`
+	Text *string `json:"text"`
+	HTML *string `json:"html"`
 	From *string `json:"from"`
+	Wait *bool   `json:"wait"`
 }
 
 type forwardCase struct {
@@ -290,9 +292,18 @@ func TestSharedSendPayloadFixtures(t *testing.T) {
 				client := NewClientFromAPI(stub)
 				email := buildCanonicalReceivedEmail(fixture.CanonicalInbound)
 
-				rp := ReplyParams{BodyText: testCase.Input.Text}
+				rp := ReplyParams{}
+				if testCase.Input.Text != nil {
+					rp.BodyText = *testCase.Input.Text
+				}
+				if testCase.Input.HTML != nil {
+					rp.BodyHTML = *testCase.Input.HTML
+				}
 				if testCase.Input.From != nil {
 					rp.From = *testCase.Input.From
+				}
+				if testCase.Input.Wait != nil {
+					rp.Wait = testCase.Input.Wait
 				}
 
 				if _, err := client.Reply(context.Background(), email, rp); err != nil {

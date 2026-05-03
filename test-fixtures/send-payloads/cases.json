@@ -99,6 +99,35 @@
         "from": "ops@example.com"
       },
       "expected_idempotency_key": null
+    },
+    {
+      "name": "html body only",
+      "input": { "html": "<p>Thanks!</p>" },
+      "expected_path": "/emails/00000000-0000-0000-0000-000000000001/reply",
+      "expected_body": {
+        "body_html": "<p>Thanks!</p>"
+      },
+      "expected_idempotency_key": null
+    },
+    {
+      "name": "text and html together",
+      "input": { "text": "Thanks!", "html": "<p>Thanks!</p>" },
+      "expected_path": "/emails/00000000-0000-0000-0000-000000000001/reply",
+      "expected_body": {
+        "body_text": "Thanks!",
+        "body_html": "<p>Thanks!</p>"
+      },
+      "expected_idempotency_key": null
+    },
+    {
+      "name": "with wait flag",
+      "input": { "text": "Thanks!", "wait": true },
+      "expected_path": "/emails/00000000-0000-0000-0000-000000000001/reply",
+      "expected_body": {
+        "body_text": "Thanks!",
+        "wait": true
+      },
+      "expected_idempotency_key": null
     }
   ],
   "forward": [

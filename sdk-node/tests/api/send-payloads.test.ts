@@ -50,8 +50,10 @@ interface SendInputCase {
 }
 
 interface ReplyInputCase {
-  text: string;
+  text?: string;
+  html?: string;
   from?: string;
+  wait?: boolean;
 }
 
 interface ForwardInputCase {
@@ -289,9 +291,17 @@ describe("shared send/reply/forward payloads", () => {
       const email = buildReceivedEmail(FIXTURE.canonical_inbound);
 
       await client.reply(email, {
-        text: testCase.input.text,
+        ...(testCase.input.text !== undefined
+          ? { text: testCase.input.text }
+          : {}),
+        ...(testCase.input.html !== undefined
+          ? { html: testCase.input.html }
+          : {}),
         ...(testCase.input.from !== undefined
           ? { from: testCase.input.from }
+          : {}),
+        ...(testCase.input.wait !== undefined
+          ? { wait: testCase.input.wait }
           : {}),
       });
 

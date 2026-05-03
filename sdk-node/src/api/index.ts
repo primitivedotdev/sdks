@@ -387,6 +387,18 @@ export class PrimitiveClient extends PrimitiveApiClient {
    */
   async reply(email: ReceivedEmail, input: ReplyInput): Promise<SendResult> {
     const resolved = typeof input === "string" ? { text: input } : input;
+    // Reject the subject override at runtime so a JS caller (no TS
+    // types) gets the same loud error as a TS caller. Without this,
+    // `client.reply(email, { text, subject: "Custom" })` silently
+    // dropped subject and sent a "Re:" reply, breaking Gmail
+    // threading without telling the caller. Mirrors Python's
+    // ValueError. Checked before the empty-body check so passing
+    // ONLY a subject surfaces the more informative error.
+    if ("subject" in resolved) {
+      throw new TypeError(
+        "reply does not support a subject override; the server prepends 'Re:' to the parent's subject for thread continuity",
+      );
+    }
     if (!resolved.text && !resolved.html) {
       throw new TypeError("reply requires text or html");
     }
@@ -488,7 +500,10 @@ function mapSendResult(result: GeneratedSendMailResult): SendResult {
     clientIdempotencyKey: result.client_idempotency_key,
     requestId: result.request_id,
     contentHash: result.content_hash,
-    idempotentReplay: result.idempotent_replay,
+    // Default to false if the server omits the field (old-format
+    // response, mocked partial response in a customer's tests). The
+    // type signature claims `boolean`, so undefined would be a lie.
+    idempotentReplay: result.idempotent_replay ?? false,
     ...(result.delivery_status !== undefined
       ? { deliveryStatus: result.delivery_status }
       : {}),
