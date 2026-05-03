@@ -5,13 +5,22 @@ import re
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any, cast
+from uuid import UUID
 
 from .api import DEFAULT_BASE_URL, AuthenticatedClient
+from .api.api.sending.reply_to_email import (
+    asyncio_detailed as reply_to_email_async_detailed,
+)
+from .api.api.sending.reply_to_email import (
+    sync_detailed as reply_to_email_sync_detailed,
+)
 from .api.api.sending.send_email import (
     asyncio_detailed as send_email_async_detailed,
 )
 from .api.api.sending.send_email import sync_detailed as send_email_sync_detailed
 from .api.models.error_response import ErrorResponse
+from .api.models.reply_input import ReplyInput as ApiReplyInput
+from .api.models.reply_to_email_response_200 import ReplyToEmailResponse200
 from .api.models.send_email_response_200 import SendEmailResponse200
 from .api.models.send_mail_input import SendMailInput as ApiSendMailInput
 from .api.models.send_mail_result import SendMailResult as ApiSendMailResult
@@ -84,6 +93,49 @@ def _validate_address_header(field: str, value: str) -> None:
 def _validate_email_address(field: str, value: str) -> None:
     if not EMAIL_REGEX.fullmatch(value) and not DISPLAY_EMAIL_REGEX.fullmatch(value):
         raise ValueError(f"{field} must be a valid email address")
+
+
+def _build_reply_input(
+    *,
+    body_text: str | None,
+    body_html: str | None,
+    from_email: str | None,
+    wait: bool | None,
+) -> ApiReplyInput:
+    """Build the small ReplyInput body the server's reply endpoint expects.
+
+    Recipients, subject, and threading headers are derived server-side
+    from the inbound row, so this body is intentionally tiny.
+    """
+    return ApiReplyInput(
+        body_text=body_text if body_text is not None else UNSET,
+        body_html=body_html if body_html is not None else UNSET,
+        from_=from_email if from_email is not None else UNSET,
+        wait=wait if wait is not None else UNSET,
+    )
+
+
+def _unwrap_reply_response(response: Any) -> SendResult:
+    """Map a reply_to_email response into the public SendResult shape.
+
+    Reply responses share the SendMailResult envelope with send_email,
+    so the success path delegates to _map_send_result for a single
+    source of truth on field-name normalization.
+    """
+    if response.status_code == HTTPStatus.OK and isinstance(
+        response.parsed,
+        ReplyToEmailResponse200,
+    ):
+        if response.parsed.data is UNSET:
+            raise PrimitiveAPIError(
+                "Primitive API returned no send result",
+                status_code=int(response.status_code),
+                payload=response.content,
+            )
+        return _map_send_result(cast(ApiSendMailResult, response.parsed.data))
+
+    _raise_api_error(response)
+    raise AssertionError("unreachable")
 
 
 def _build_send_input(
@@ -282,13 +334,34 @@ def _build_forward_text(email: ReceivedEmail, intro: str | None) -> str:
 
 
 def _resolve_reply_payload(
-    text: str | dict[str, str],
-) -> tuple[str, str | None, str | None]:
+    text: str | dict[str, str | bool],
+) -> tuple[str | None, str | None, str | None, bool | None]:
+    """Normalize a reply input into ``(body_text, body_html, from, wait)``.
+
+    The high-level ``reply()`` accepts either a bare string (treated as
+    text) or a dict with ``text`` / ``html`` / ``from`` / ``wait``.
+    ``subject`` is intentionally not accepted; a custom subject silently
+    breaks Gmail's threading because Gmail's Conversation View needs a
+    normalized-subject match in addition to References.
+    """
     payload = {"text": text} if isinstance(text, str) else text
     body_text = payload.get("text")
-    if not body_text:
-        raise ValueError("reply text must be a non-empty string")
-    return body_text, payload.get("subject"), payload.get("from")
+    body_html = payload.get("html")
+    if not body_text and not body_html:
+        raise ValueError("reply requires text or html")
+    if "subject" in payload:
+        raise ValueError(
+            "subject overrides are not supported on reply: a custom subject "
+            "breaks Gmail's threading. Use client.send() if you need full control.",
+        )
+    raw_from = payload.get("from")
+    raw_wait = payload.get("wait")
+    return (
+        body_text if isinstance(body_text, str) else None,
+        body_html if isinstance(body_html, str) else None,
+        raw_from if isinstance(raw_from, str) else None,
+        raw_wait if isinstance(raw_wait, bool) else None,
+    )
 
 
 class PrimitiveClient:
@@ -394,50 +467,88 @@ class PrimitiveClient:
     def reply(
         self,
         email: ReceivedEmail,
-        text: str | dict[str, str],
+        text: str | dict[str, str | bool],
         *,
         from_email: str | None = None,
     ) -> SendResult:
-        body_text, subject, dict_from = _resolve_reply_payload(text)
+        """Reply to an inbound email.
 
-        return self.send(
-            from_email=from_email or dict_from or email.received_by,
-            to=email.reply_target.address,
-            subject=subject or email.reply_subject,
+        Calls ``POST /emails/{id}/reply`` on the server. Recipients,
+        subject (``Re: <parent>``), and threading headers are derived
+        server-side from the inbound row. ``text`` can be a bare
+        string or a dict with ``text`` / ``html`` / ``from`` / ``wait``.
+        ``from_email`` is a kwarg shorthand for the same override.
+        ``subject`` is intentionally not accepted because Gmail's
+        threading needs a normalized-subject match in addition to
+        References.
+        """
+        body_text, body_html, dict_from, wait = _resolve_reply_payload(text)
+        return self._do_reply(
+            email_id=email.id,
             body_text=body_text,
-            thread=SendThread(
-                in_reply_to=email.thread.message_id,
-                references=(
-                    [*email.thread.references, email.thread.message_id]
-                    if email.thread.message_id is not None
-                    else list(email.thread.references)
-                ),
-            ),
+            body_html=body_html,
+            from_email=from_email or dict_from,
+            wait=wait,
         )
 
     async def areply(
         self,
         email: ReceivedEmail,
-        text: str | dict[str, str],
+        text: str | dict[str, str | bool],
         *,
         from_email: str | None = None,
     ) -> SendResult:
-        body_text, subject, dict_from = _resolve_reply_payload(text)
-
-        return await self.asend(
-            from_email=from_email or dict_from or email.received_by,
-            to=email.reply_target.address,
-            subject=subject or email.reply_subject,
+        """Async version of :meth:`reply`."""
+        body_text, body_html, dict_from, wait = _resolve_reply_payload(text)
+        return await self._ado_reply(
+            email_id=email.id,
             body_text=body_text,
-            thread=SendThread(
-                in_reply_to=email.thread.message_id,
-                references=(
-                    [*email.thread.references, email.thread.message_id]
-                    if email.thread.message_id is not None
-                    else list(email.thread.references)
-                ),
+            body_html=body_html,
+            from_email=from_email or dict_from,
+            wait=wait,
+        )
+
+    def _do_reply(
+        self,
+        *,
+        email_id: str,
+        body_text: str | None,
+        body_html: str | None,
+        from_email: str | None,
+        wait: bool | None,
+    ) -> SendResult:
+        response = reply_to_email_sync_detailed(
+            id=cast(UUID, email_id),
+            client=self.api_client,
+            body=_build_reply_input(
+                body_text=body_text,
+                body_html=body_html,
+                from_email=from_email,
+                wait=wait,
             ),
         )
+        return _unwrap_reply_response(response)
+
+    async def _ado_reply(
+        self,
+        *,
+        email_id: str,
+        body_text: str | None,
+        body_html: str | None,
+        from_email: str | None,
+        wait: bool | None,
+    ) -> SendResult:
+        response = await reply_to_email_async_detailed(
+            id=cast(UUID, email_id),
+            client=self.api_client,
+            body=_build_reply_input(
+                body_text=body_text,
+                body_html=body_html,
+                from_email=from_email,
+                wait=wait,
+            ),
+        )
+        return _unwrap_reply_response(response)
 
     def forward(
         self,

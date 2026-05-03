@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/google/uuid"
 	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
 )
 
@@ -19,6 +20,7 @@ const (
 
 type sendAPI interface {
 	SendEmail(ctx context.Context, request *primitiveapi.SendMailInput, params primitiveapi.SendEmailParams) (primitiveapi.SendEmailRes, error)
+	ReplyToEmail(ctx context.Context, request *primitiveapi.ReplyInput, params primitiveapi.ReplyToEmailParams) (primitiveapi.ReplyToEmailRes, error)
 }
 
 type SendThread struct {
@@ -38,10 +40,19 @@ type SendParams struct {
 	IdempotencyKey string
 }
 
+// ReplyParams is the input shape for [Client.Reply].
+//
+// Recipients (To), subject ("Re: <parent>"), and threading headers
+// (In-Reply-To, References) are derived server-side from the inbound
+// row referenced by the email's ID. Subject overrides are not
+// supported because Gmail's Conversation View needs both a References
+// match and a normalized-subject match to thread, and a custom
+// subject silently breaks that.
 type ReplyParams struct {
 	BodyText string
-	Subject  string
+	BodyHTML string
 	From     string
+	Wait     *bool
 }
 
 type ForwardParams struct {
@@ -179,6 +190,38 @@ func apiErrorFromErrorResponse(status int, response primitiveapi.ErrorResponse) 
 	return err
 }
 
+func mapReplyError(res primitiveapi.ReplyToEmailRes) error {
+	switch v := res.(type) {
+	case *primitiveapi.ReplyToEmailBadGateway:
+		return apiErrorFromErrorResponse(502, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailBadRequest:
+		return apiErrorFromErrorResponse(400, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailForbidden:
+		return apiErrorFromErrorResponse(403, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailInternalServerError:
+		return apiErrorFromErrorResponse(500, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailNotFound:
+		return apiErrorFromErrorResponse(404, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailServiceUnavailable:
+		return apiErrorFromErrorResponse(503, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailUnauthorized:
+		return apiErrorFromErrorResponse(401, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.ReplyToEmailUnprocessableEntity:
+		return apiErrorFromErrorResponse(422, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.RateLimitedHeaders:
+		err := apiErrorFromErrorResponse(429, v.Response)
+		if retryAfter, ok := v.RetryAfter.Get(); ok {
+			err.RetryAfter = &retryAfter
+		}
+		return err
+	default:
+		return &APIError{
+			Message: fmt.Sprintf("primitive API reply failed: %T", res),
+			Payload: res,
+		}
+	}
+}
+
 func mapSendError(res primitiveapi.SendEmailRes) error {
 	switch v := res.(type) {
 	case *primitiveapi.SendEmailBadGateway:
@@ -276,27 +319,62 @@ func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error
 	}
 }
 
+// Reply sends an outbound reply to an inbound email.
+//
+// Calls POST /emails/{id}/reply on the server. Recipients, subject,
+// and threading headers are derived server-side from the inbound row
+// identified by email.ID. The customer controls the body, an optional
+// From override, and an optional Wait flag.
 func (c *Client) Reply(ctx context.Context, email *ReceivedEmail, input ReplyParams) (SendResult, error) {
 	var zero SendResult
 	if email == nil {
 		return zero, fmt.Errorf("email is required")
 	}
-
-	references := append([]string{}, email.Thread.References...)
-	if email.Thread.MessageID != "" {
-		references = append(references, email.Thread.MessageID)
+	if strings.TrimSpace(input.BodyText) == "" && strings.TrimSpace(input.BodyHTML) == "" {
+		return zero, fmt.Errorf("reply requires BodyText or BodyHTML")
 	}
 
-	return c.Send(ctx, SendParams{
-		From:     firstNonEmpty(input.From, email.ReceivedBy),
-		To:       email.ReplyTarget.Address,
-		Subject:  firstNonEmpty(input.Subject, email.ReplySubject),
-		BodyText: input.BodyText,
-		Thread: &SendThread{
-			InReplyTo:  email.Thread.MessageID,
-			References: references,
-		},
-	})
+	emailID, err := uuid.Parse(email.ID)
+	if err != nil {
+		return zero, fmt.Errorf("invalid email id %q: %w", email.ID, err)
+	}
+
+	body := &primitiveapi.ReplyInput{}
+	if input.BodyText != "" {
+		body.SetBodyText(primitiveapi.NewOptString(input.BodyText))
+	}
+	if input.BodyHTML != "" {
+		body.SetBodyHTML(primitiveapi.NewOptString(input.BodyHTML))
+	}
+	if input.From != "" {
+		body.SetFrom(primitiveapi.NewOptString(input.From))
+	}
+	if input.Wait != nil {
+		body.SetWait(primitiveapi.NewOptBool(*input.Wait))
+	}
+
+	res, err := c.api.ReplyToEmail(ctx, body, primitiveapi.ReplyToEmailParams{ID: emailID})
+	if err != nil {
+		return zero, err
+	}
+	switch v := res.(type) {
+	case *primitiveapi.ReplyToEmailOK:
+		return SendResult{
+			ID:                   v.Data.ID,
+			Status:               v.Data.Status,
+			QueueID:              v.Data.QueueID,
+			Accepted:             v.Data.Accepted,
+			Rejected:             v.Data.Rejected,
+			ClientIdempotencyKey: v.Data.ClientIdempotencyKey,
+			RequestID:            v.Data.RequestID,
+			ContentHash:          v.Data.ContentHash,
+			DeliveryStatus:       v.Data.DeliveryStatus,
+			SMTPResponseCode:     v.Data.SMTPResponseCode,
+			SMTPResponseText:     v.Data.SMTPResponseText,
+		}, nil
+	default:
+		return zero, mapReplyError(res)
+	}
 }
 
 func (c *Client) Forward(ctx context.Context, email *ReceivedEmail, input ForwardParams) (SendResult, error) {

@@ -9531,6 +9531,12 @@ func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.From.Set {
+			e.FieldStart("from")
+			s.From.Encode(e)
+		}
+	}
+	{
 		if s.Wait.Set {
 			e.FieldStart("wait")
 			s.Wait.Encode(e)
@@ -9538,10 +9544,11 @@ func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfReplyInput = [3]string{
+var jsonFieldsNameOfReplyInput = [4]string{
 	0: "body_text",
 	1: "body_html",
-	2: "wait",
+	2: "from",
+	3: "wait",
 }
 
 // Decode decodes ReplyInput from json.
@@ -9571,6 +9578,16 @@ func (s *ReplyInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"body_html\"")
+			}
+		case "from":
+			if err := func() error {
+				s.From.Reset()
+				if err := s.From.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from\"")
 			}
 		case "wait":
 			if err := func() error {

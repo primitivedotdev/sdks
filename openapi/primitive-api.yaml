@@ -1879,11 +1879,16 @@ components:
       additionalProperties: false
       description: |
         Body shape for `/emails/{id}/reply`. Intentionally narrow:
-        recipients, sender, subject, and threading headers are derived
-        server-side from the inbound row referenced by the path id.
-        Passing any of `to`, `from`, `subject`, `in_reply_to`,
-        `references`, or `reply_to` is rejected by `additionalProperties`
-        (returns 400).
+        recipients (`to`), subject, and threading headers
+        (`in_reply_to`, `references`) are derived server-side from
+        the inbound row referenced by the path id and are rejected by
+        `additionalProperties` if passed (returns 400).
+
+        `from` IS allowed because of legitimate use cases (display-name
+        addition, replying from a different verified outbound address,
+        multi-team triage). Send-mail's per-send `canSendFrom` gate
+        validates the from-domain regardless, so the override carries
+        no extra privilege.
       properties:
         body_text:
           type: string
@@ -1891,6 +1896,17 @@ components:
         body_html:
           type: string
           description: HTML reply body. At least one of body_text or body_html is required.
+        from:
+          type: string
+          minLength: 3
+          maxLength: 998
+          description: |
+            Optional override for the reply's From header. Defaults to
+            the inbound's recipient. Use to add a display name (`"Acme
+            Support" <agent@company.com>`) or to reply from a different
+            verified outbound address (e.g. multi-team routing where
+            support@ triages to billing@). The from-domain must be a
+            verified outbound domain for your org, same as send-mail.
         wait:
           type: boolean
           description: When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics.

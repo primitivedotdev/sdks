@@ -398,11 +398,16 @@ export type DeliveryStatus = 'delivered' | 'bounced' | 'deferred' | 'wait_timeou
 
 /**
  * Body shape for `/emails/{id}/reply`. Intentionally narrow:
- * recipients, sender, subject, and threading headers are derived
- * server-side from the inbound row referenced by the path id.
- * Passing any of `to`, `from`, `subject`, `in_reply_to`,
- * `references`, or `reply_to` is rejected by `additionalProperties`
- * (returns 400).
+ * recipients (`to`), subject, and threading headers
+ * (`in_reply_to`, `references`) are derived server-side from
+ * the inbound row referenced by the path id and are rejected by
+ * `additionalProperties` if passed (returns 400).
+ *
+ * `from` IS allowed because of legitimate use cases (display-name
+ * addition, replying from a different verified outbound address,
+ * multi-team triage). Send-mail's per-send `canSendFrom` gate
+ * validates the from-domain regardless, so the override carries
+ * no extra privilege.
  *
  */
 export type ReplyInput = {
@@ -414,6 +419,16 @@ export type ReplyInput = {
      * HTML reply body. At least one of body_text or body_html is required.
      */
     body_html?: string;
+    /**
+     * Optional override for the reply's From header. Defaults to
+     * the inbound's recipient. Use to add a display name (`"Acme
+     * Support" <agent@company.com>`) or to reply from a different
+     * verified outbound address (e.g. multi-team routing where
+     * support@ triages to billing@). The from-domain must be a
+     * verified outbound domain for your org, same as send-mail.
+     *
+     */
+    from?: string;
     /**
      * When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics.
      */

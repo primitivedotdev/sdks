@@ -155,11 +155,16 @@ def sync_detailed(
     Args:
         id (UUID):
         body (ReplyInput): Body shape for `/emails/{id}/reply`. Intentionally narrow:
-            recipients, sender, subject, and threading headers are derived
-            server-side from the inbound row referenced by the path id.
-            Passing any of `to`, `from`, `subject`, `in_reply_to`,
-            `references`, or `reply_to` is rejected by `additionalProperties`
-            (returns 400).
+            recipients (`to`), subject, and threading headers
+            (`in_reply_to`, `references`) are derived server-side from
+            the inbound row referenced by the path id and are rejected by
+            `additionalProperties` if passed (returns 400).
+
+            `from` IS allowed because of legitimate use cases (display-name
+            addition, replying from a different verified outbound address,
+            multi-team triage). Send-mail's per-send `canSendFrom` gate
+            validates the from-domain regardless, so the override carries
+            no extra privilege.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -207,11 +212,16 @@ def sync(
     Args:
         id (UUID):
         body (ReplyInput): Body shape for `/emails/{id}/reply`. Intentionally narrow:
-            recipients, sender, subject, and threading headers are derived
-            server-side from the inbound row referenced by the path id.
-            Passing any of `to`, `from`, `subject`, `in_reply_to`,
-            `references`, or `reply_to` is rejected by `additionalProperties`
-            (returns 400).
+            recipients (`to`), subject, and threading headers
+            (`in_reply_to`, `references`) are derived server-side from
+            the inbound row referenced by the path id and are rejected by
+            `additionalProperties` if passed (returns 400).
+
+            `from` IS allowed because of legitimate use cases (display-name
+            addition, replying from a different verified outbound address,
+            multi-team triage). Send-mail's per-send `canSendFrom` gate
+            validates the from-domain regardless, so the override carries
+            no extra privilege.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -254,11 +264,16 @@ async def asyncio_detailed(
     Args:
         id (UUID):
         body (ReplyInput): Body shape for `/emails/{id}/reply`. Intentionally narrow:
-            recipients, sender, subject, and threading headers are derived
-            server-side from the inbound row referenced by the path id.
-            Passing any of `to`, `from`, `subject`, `in_reply_to`,
-            `references`, or `reply_to` is rejected by `additionalProperties`
-            (returns 400).
+            recipients (`to`), subject, and threading headers
+            (`in_reply_to`, `references`) are derived server-side from
+            the inbound row referenced by the path id and are rejected by
+            `additionalProperties` if passed (returns 400).
+
+            `from` IS allowed because of legitimate use cases (display-name
+            addition, replying from a different verified outbound address,
+            multi-team triage). Send-mail's per-send `canSendFrom` gate
+            validates the from-domain regardless, so the override carries
+            no extra privilege.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -306,11 +321,16 @@ async def asyncio(
     Args:
         id (UUID):
         body (ReplyInput): Body shape for `/emails/{id}/reply`. Intentionally narrow:
-            recipients, sender, subject, and threading headers are derived
-            server-side from the inbound row referenced by the path id.
-            Passing any of `to`, `from`, `subject`, `in_reply_to`,
-            `references`, or `reply_to` is rejected by `additionalProperties`
-            (returns 400).
+            recipients (`to`), subject, and threading headers
+            (`in_reply_to`, `references`) are derived server-side from
+            the inbound row referenced by the path id and are rejected by
+            `additionalProperties` if passed (returns 400).
+
+            `from` IS allowed because of legitimate use cases (display-name
+            addition, replying from a different verified outbound address,
+            multi-team triage). Send-mail's per-send `canSendFrom` gate
+            validates the from-domain regardless, so the override carries
+            no extra privilege.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

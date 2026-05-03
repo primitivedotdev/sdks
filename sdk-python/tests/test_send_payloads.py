@@ -9,6 +9,7 @@ from typing import Any, cast
 
 import pytest
 
+from primitive.api.models.reply_to_email_response_200 import ReplyToEmailResponse200
 from primitive.api.models.send_email_response_200 import SendEmailResponse200
 from primitive.client import PrimitiveClient, SendThread
 from primitive.received_email import (
@@ -102,6 +103,22 @@ def _make_capturing_sync_send(captured: dict[str, Any]) -> Any:
     return fake
 
 
+def _make_capturing_sync_reply(captured: dict[str, Any]) -> Any:
+    """Reply uses the reply_to_email endpoint, which has a different
+    response envelope (ReplyToEmailResponse200) than send_email even
+    though the inner data shape is the same SendMailResult."""
+    def fake(**kwargs: Any) -> Any:
+        captured["id"] = str(kwargs["id"])
+        captured["body"] = kwargs["body"].to_dict()
+        return SimpleNamespace(
+            status_code=HTTPStatus.OK,
+            parsed=ReplyToEmailResponse200.from_dict(SUCCESS_RESPONSE),
+            content=b"",
+        )
+
+    return fake
+
+
 @pytest.mark.parametrize("case", FIXTURE["send"], ids=lambda c: c["name"])
 def test_send_payloads_match_fixture(
     case: dict[str, Any], monkeypatch: pytest.MonkeyPatch
@@ -147,23 +164,24 @@ def test_reply_payloads_match_fixture(
     captured: dict[str, Any] = {}
     monkeypatch.setattr(
         client_module,
-        "send_email_sync_detailed",
-        _make_capturing_sync_send(captured),
+        "reply_to_email_sync_detailed",
+        _make_capturing_sync_reply(captured),
     )
 
     client = PrimitiveClient("prim_test")
     email = _build_received_email(FIXTURE["canonical_inbound"])
 
-    reply_input = {"text": case["input"]["text"]}
-    if "subject" in case["input"]:
-        reply_input["subject"] = case["input"]["subject"]
+    reply_input: dict[str, Any] = {"text": case["input"]["text"]}
     if "from" in case["input"]:
         reply_input["from"] = case["input"]["from"]
 
     client.reply(email, reply_input)
 
+    # Path is implicitly verified: reply_to_email_sync_detailed was
+    # patched, so any call that lands there hit /emails/{id}/reply.
+    # The id assertion pins which inbound the reply targets.
+    assert captured["id"] == FIXTURE["canonical_inbound"]["id"]
     assert captured["body"] == case["expected_body"]
-    assert captured.get("idempotency_key") == case["expected_idempotency_key"]
 
 
 @pytest.mark.parametrize("case", FIXTURE["forward"], ids=lambda c: c["name"])

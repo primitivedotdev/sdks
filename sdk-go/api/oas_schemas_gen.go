@@ -4812,11 +4812,15 @@ func (s *ReplayResult) SetFailed(val int) {
 }
 
 // Body shape for `/emails/{id}/reply`. Intentionally narrow:
-// recipients, sender, subject, and threading headers are derived
-// server-side from the inbound row referenced by the path id.
-// Passing any of `to`, `from`, `subject`, `in_reply_to`,
-// `references`, or `reply_to` is rejected by `additionalProperties`
-// (returns 400).
+// recipients (`to`), subject, and threading headers
+// (`in_reply_to`, `references`) are derived server-side from
+// the inbound row referenced by the path id and are rejected by
+// `additionalProperties` if passed (returns 400).
+// `from` IS allowed because of legitimate use cases (display-name
+// addition, replying from a different verified outbound address,
+// multi-team triage). Send-mail's per-send `canSendFrom` gate
+// validates the from-domain regardless, so the override carries
+// no extra privilege.
 // Ref: #/components/schemas/ReplyInput
 type ReplyInput struct {
 	// Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte
@@ -4824,6 +4828,13 @@ type ReplyInput struct {
 	BodyText OptString `json:"body_text"`
 	// HTML reply body. At least one of body_text or body_html is required.
 	BodyHTML OptString `json:"body_html"`
+	// Optional override for the reply's From header. Defaults to
+	// the inbound's recipient. Use to add a display name (`"Acme
+	// Support" <agent@company.com>`) or to reply from a different
+	// verified outbound address (e.g. multi-team routing where
+	// support@ triages to billing@). The from-domain must be a
+	// verified outbound domain for your org, same as send-mail.
+	From OptString `json:"from"`
 	// When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the
 	// send-mail `wait` semantics.
 	Wait OptBool `json:"wait"`
@@ -4839,6 +4850,11 @@ func (s *ReplyInput) GetBodyHTML() OptString {
 	return s.BodyHTML
 }
 
+// GetFrom returns the value of From.
+func (s *ReplyInput) GetFrom() OptString {
+	return s.From
+}
+
 // GetWait returns the value of Wait.
 func (s *ReplyInput) GetWait() OptBool {
 	return s.Wait
@@ -4852,6 +4868,11 @@ func (s *ReplyInput) SetBodyText(val OptString) {
 // SetBodyHTML sets the value of BodyHTML.
 func (s *ReplyInput) SetBodyHTML(val OptString) {
 	s.BodyHTML = val
+}
+
+// SetFrom sets the value of From.
+func (s *ReplyInput) SetFrom(val OptString) {
+	s.From = val
 }
 
 // SetWait sets the value of Wait.

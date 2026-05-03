@@ -2748,7 +2748,7 @@
       "ReplyInput": {
         "type": "object",
         "additionalProperties": false,
-        "description": "Body shape for `/emails/{id}/reply`. Intentionally narrow:\nrecipients, sender, subject, and threading headers are derived\nserver-side from the inbound row referenced by the path id.\nPassing any of `to`, `from`, `subject`, `in_reply_to`,\n`references`, or `reply_to` is rejected by `additionalProperties`\n(returns 400).\n",
+        "description": "Body shape for `/emails/{id}/reply`. Intentionally narrow:\nrecipients (`to`), subject, and threading headers\n(`in_reply_to`, `references`) are derived server-side from\nthe inbound row referenced by the path id and are rejected by\n`additionalProperties` if passed (returns 400).\n\n`from` IS allowed because of legitimate use cases (display-name\naddition, replying from a different verified outbound address,\nmulti-team triage). Send-mail's per-send `canSendFrom` gate\nvalidates the from-domain regardless, so the override carries\nno extra privilege.\n",
         "properties": {
           "body_text": {
             "type": "string",
@@ -2757,6 +2757,12 @@
           "body_html": {
             "type": "string",
             "description": "HTML reply body. At least one of body_text or body_html is required."
+          },
+          "from": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 998,
+            "description": "Optional override for the reply's From header. Defaults to\nthe inbound's recipient. Use to add a display name (`\"Acme\nSupport\" <agent@company.com>`) or to reply from a different\nverified outbound address (e.g. multi-team routing where\nsupport@ triages to billing@). The from-domain must be a\nverified outbound domain for your org, same as send-mail.\n"
           },
           "wait": {
             "type": "boolean",

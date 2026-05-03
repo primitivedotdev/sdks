@@ -9,11 +9,16 @@ import (
 )
 
 type stubSendAPI struct {
-	called  bool
-	request *primitiveapi.SendMailInput
-	params  primitiveapi.SendEmailParams
-	result  primitiveapi.SendEmailRes
-	err     error
+	called       bool
+	request      *primitiveapi.SendMailInput
+	params       primitiveapi.SendEmailParams
+	result       primitiveapi.SendEmailRes
+	err          error
+	replyCalled  bool
+	replyRequest *primitiveapi.ReplyInput
+	replyParams  primitiveapi.ReplyToEmailParams
+	replyResult  primitiveapi.ReplyToEmailRes
+	replyErr     error
 }
 
 func (s *stubSendAPI) SendEmail(_ context.Context, request *primitiveapi.SendMailInput, params primitiveapi.SendEmailParams) (primitiveapi.SendEmailRes, error) {
@@ -21,6 +26,13 @@ func (s *stubSendAPI) SendEmail(_ context.Context, request *primitiveapi.SendMai
 	s.request = request
 	s.params = params
 	return s.result, s.err
+}
+
+func (s *stubSendAPI) ReplyToEmail(_ context.Context, request *primitiveapi.ReplyInput, params primitiveapi.ReplyToEmailParams) (primitiveapi.ReplyToEmailRes, error) {
+	s.replyCalled = true
+	s.replyRequest = request
+	s.replyParams = params
+	return s.replyResult, s.replyErr
 }
 
 func sendMailResult() primitiveapi.SendMailResult {
@@ -41,7 +53,7 @@ func receivedEmailFixture() *ReceivedEmail {
 	date := "Tue, 01 Jan 2026 00:00:00 +0000"
 	messageID := "<parent@example.com>"
 	return &ReceivedEmail{
-		ID:             "email-1",
+		ID:             "00000000-0000-0000-0000-000000000001",
 		EventID:        "evt-1",
 		ReceivedAt:     "2026-01-01T00:00:00.000Z",
 		Sender:         ReceivedEmailAddress{Address: "alice@example.com", Name: "Alice"},
@@ -195,9 +207,13 @@ func TestClientSendPassesWaitOptionsAndIdempotencyKey(t *testing.T) {
 	}
 }
 
-func TestClientReplyBuildsThreadedSend(t *testing.T) {
+func TestClientReplyPostsToReplyEndpointWithMinimalBody(t *testing.T) {
+	// Reply now forwards to /emails/{id}/reply on the server. The
+	// captured request is the small ReplyInput shape; threading,
+	// recipients, and the Re: subject are all server-derived. The
+	// path id assertion pins which inbound the reply targets.
 	stub := &stubSendAPI{
-		result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()},
+		replyResult: &primitiveapi.ReplyToEmailOK{Success: true, Data: sendMailResult()},
 	}
 	client := NewClientFromAPI(stub)
 
@@ -205,20 +221,20 @@ func TestClientReplyBuildsThreadedSend(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Reply returned error: %v", err)
 	}
-	if stub.request == nil {
-		t.Fatal("SendEmail was not called")
+	if !stub.replyCalled {
+		t.Fatal("ReplyToEmail was not called")
 	}
-	if stub.request.From != "support@example.com" || stub.request.To != "alice@example.com" {
-		t.Fatalf("unexpected request payload: %#v", stub.request)
+	if stub.replyParams.ID.String() != receivedEmailFixture().ID {
+		t.Fatalf("unexpected reply id: %v", stub.replyParams.ID)
 	}
-	if bodyText, ok := stub.request.BodyText.Get(); stub.request.Subject != "Re: Hello" || !ok || bodyText != "Thanks" {
-		t.Fatalf("unexpected reply request: %#v", stub.request)
+	if stub.replyRequest == nil {
+		t.Fatal("ReplyToEmail request was nil")
 	}
-	if value, ok := stub.request.InReplyTo.Get(); !ok || value != "<parent@example.com>" {
-		t.Fatalf("unexpected in_reply_to: %#v", stub.request.InReplyTo)
+	if bodyText, ok := stub.replyRequest.BodyText.Get(); !ok || bodyText != "Thanks" {
+		t.Fatalf("unexpected reply body_text: %#v", stub.replyRequest.BodyText)
 	}
-	if len(stub.request.References) != 2 {
-		t.Fatalf("unexpected references: %#v", stub.request.References)
+	if _, ok := stub.replyRequest.From.Get(); ok {
+		t.Fatalf("from should be unset when not overridden, got: %#v", stub.replyRequest.From)
 	}
 }
 
@@ -384,7 +400,7 @@ func TestClientSendSurfacesRetryAfterOn429(t *testing.T) {
 
 func TestClientReplyHonorsFromOverride(t *testing.T) {
 	stub := &stubSendAPI{
-		result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()},
+		replyResult: &primitiveapi.ReplyToEmailOK{Success: true, Data: sendMailResult()},
 	}
 	client := NewClientFromAPI(stub)
 
@@ -395,7 +411,7 @@ func TestClientReplyHonorsFromOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Reply returned error: %v", err)
 	}
-	if stub.request.From != "notifications@example.com" {
-		t.Fatalf("expected from override, got %q", stub.request.From)
+	if value, ok := stub.replyRequest.From.Get(); !ok || value != "notifications@example.com" {
+		t.Fatalf("expected from override, got %#v", stub.replyRequest.From)
 	}
 }
