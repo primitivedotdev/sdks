@@ -21,6 +21,91 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
   return parameter.description ?? parameter.name;
 }
 
+/**
+ * Render a one-shot description of a JSON Schema's top-level
+ * properties so an agent reading `<command> --help` can build a
+ * valid `--body` payload without probing the server. Pulled from
+ * the resolved request schema embedded on the manifest.
+ *
+ * Format prioritizes scanability over completeness: required
+ * fields first, each line is `<name> <type> [- description]`
+ * truncated to a reasonable width. Callers who need the full
+ * schema can run `primitive list-operations | jq` and read
+ * `requestSchema` directly.
+ */
+function renderRequestSchemaSummary(
+  schema: Record<string, unknown> | null,
+): string | null {
+  if (!schema || typeof schema !== "object") return null;
+  const properties = schema.properties;
+  if (!properties || typeof properties !== "object") return null;
+  const requiredArr = Array.isArray(schema.required)
+    ? (schema.required as unknown[]).filter(
+        (k): k is string => typeof k === "string",
+      )
+    : [];
+  const required = new Set(requiredArr);
+
+  const entries = Object.entries(properties as Record<string, unknown>)
+    .map(([name, raw]) => {
+      const propSchema =
+        raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+      let type = "any";
+      const t = propSchema.type;
+      if (typeof t === "string") {
+        type = t;
+        if (type === "array") {
+          const items = propSchema.items;
+          if (items && typeof items === "object") {
+            const itemType = (items as Record<string, unknown>).type;
+            if (typeof itemType === "string") {
+              type = `array<${itemType}>`;
+            }
+          }
+        }
+      } else if (Array.isArray(t)) {
+        // Nullable shorthand the codegen normalizes to e.g. ["string","null"].
+        const nonNull = (t as unknown[]).filter((s) => s !== "null");
+        type = nonNull.length === 1 ? `${nonNull[0]}?` : nonNull.join("|");
+      }
+      const description =
+        typeof propSchema.description === "string"
+          ? propSchema.description.split("\n")[0].trim()
+          : "";
+      return {
+        name,
+        type,
+        description,
+        required: required.has(name),
+      };
+    })
+    .sort((a, b) => {
+      if (a.required !== b.required) return a.required ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+  if (entries.length === 0) return null;
+
+  const nameWidth = Math.min(
+    24,
+    Math.max(...entries.map((e) => e.name.length)),
+  );
+  const lines = ["Body fields (JSON --body):"];
+  const descMax = 78;
+  for (const e of entries) {
+    const flag = e.required ? " *" : "  ";
+    const padName = e.name.padEnd(nameWidth);
+    const trimmedDesc =
+      e.description.length > descMax
+        ? `${e.description.slice(0, descMax - 3)}...`
+        : e.description;
+    const desc = trimmedDesc ? `  ${trimmedDesc}` : "";
+    lines.push(`${flag} ${padName}  ${e.type}${desc}`);
+  }
+  lines.push("(* = required)");
+  return lines.join("\n");
+}
+
 export function flagForParameter(
   parameter: PrimitiveParameterManifest,
 ): unknown {
@@ -230,9 +315,22 @@ export function createOperationCommand(
 ): typeof Command {
   const flags = buildFlags(operation) as Record<string, unknown>;
 
+  // Append a "Body fields" summary to the description so agents
+  // running `<command> --help` learn the JSON shape immediately.
+  // Without this, `--help` only said "JSON request body" and agents
+  // had to probe the server with malformed payloads to discover
+  // required fields. (CLI agent walkthrough surfaced this.)
+  const baseDescription =
+    operation.description ?? `${operation.method} ${operation.path}`;
+  const schemaSummary = operation.hasJsonBody
+    ? renderRequestSchemaSummary(operation.requestSchema)
+    : null;
+  const fullDescription = schemaSummary
+    ? `${baseDescription}\n\n${schemaSummary}`
+    : baseDescription;
+
   class OperationCommand extends Command {
-    static description =
-      operation.description ?? `${operation.method} ${operation.path}`;
+    static description = fullDescription;
 
     static flags = flags as never;
 

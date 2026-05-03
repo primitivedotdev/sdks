@@ -24,6 +24,11 @@ export type PrimitiveOperationManifest = {
   path: string;
   pathParams: PrimitiveParameterManifest[];
   queryParams: PrimitiveParameterManifest[];
+  /**
+   * Resolved JSON Schema for the request body when `hasJsonBody` is
+   * true. `$ref`s into the OpenAPI components are inlined.
+   */
+  requestSchema: Record<string, unknown> | null;
   sdkName: string;
   summary: string | null;
   tag: string;
@@ -42,6 +47,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "getAccount",
     "summary": "Get account info",
     "tag": "Account",
@@ -58,6 +64,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account/storage",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "getStorageStats",
     "summary": "Get storage usage",
     "tag": "Account",
@@ -74,6 +81,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account/webhook-secret",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "getWebhookSecret",
     "summary": "Get webhook signing secret",
     "tag": "Account",
@@ -90,6 +98,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account/webhook-secret/rotate",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "rotateWebhookSecret",
     "summary": "Rotate webhook signing secret",
     "tag": "Account",
@@ -106,6 +115,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spam_threshold": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 15,
+          "description": "Global spam score threshold (0-15). Emails scoring above this are rejected. Set to null to disable."
+        },
+        "discard_content_on_webhook_confirmed": {
+          "type": "boolean",
+          "description": "Whether to discard email content after the webhook endpoint confirms receipt."
+        }
+      },
+      "minProperties": 1
+    },
     "sdkName": "updateAccount",
     "summary": "Update account settings",
     "tag": "Account",
@@ -122,6 +151,21 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/domains",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "description": "The domain name to claim (e.g. \"example.com\")"
+        }
+      },
+      "required": [
+        "domain"
+      ]
+    },
     "sdkName": "addDomain",
     "summary": "Claim a new domain",
     "tag": "Domains",
@@ -146,6 +190,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "deleteDomain",
     "summary": "Delete a domain",
     "tag": "Domains",
@@ -162,6 +207,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/domains",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "listDomains",
     "summary": "List all domains",
     "tag": "Domains",
@@ -186,6 +232,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "is_active": {
+          "type": "boolean",
+          "description": "Whether the domain accepts incoming emails"
+        },
+        "spam_threshold": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 15,
+          "description": "Per-domain spam threshold override (Pro plan required)"
+        }
+      },
+      "minProperties": 1
+    },
     "sdkName": "updateDomain",
     "summary": "Update domain settings",
     "tag": "Domains",
@@ -210,6 +276,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "verifyDomain",
     "summary": "Verify domain ownership",
     "tag": "Domains",
@@ -234,6 +301,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "deleteEmail",
     "summary": "Delete an email",
     "tag": "Emails",
@@ -266,6 +334,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "requestSchema": null,
     "sdkName": "downloadAttachments",
     "summary": "Download email attachments",
     "tag": "Emails",
@@ -298,6 +367,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "requestSchema": null,
     "sdkName": "downloadRawEmail",
     "summary": "Download raw email",
     "tag": "Emails",
@@ -322,6 +392,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "getEmail",
     "summary": "Get email details",
     "tag": "Emails",
@@ -393,6 +464,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "requestSchema": null,
     "sdkName": "listEmails",
     "summary": "List emails",
     "tag": "Emails",
@@ -417,6 +489,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "replayEmailWebhooks",
     "summary": "Replay email webhooks",
     "tag": "Emails",
@@ -433,6 +506,37 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/endpoints",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The webhook URL to deliver events to"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the endpoint is active"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restrict to emails from a specific domain"
+        },
+        "rules": {
+          "type": "object",
+          "description": "Endpoint-specific filtering rules"
+        }
+      },
+      "required": [
+        "url"
+      ]
+    },
     "sdkName": "createEndpoint",
     "summary": "Create a webhook endpoint",
     "tag": "Endpoints",
@@ -457,6 +561,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "deleteEndpoint",
     "summary": "Delete a webhook endpoint",
     "tag": "Endpoints",
@@ -473,6 +578,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/endpoints",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "listEndpoints",
     "summary": "List webhook endpoints",
     "tag": "Endpoints",
@@ -497,6 +603,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "testEndpoint",
     "summary": "Send a test webhook",
     "tag": "Endpoints",
@@ -521,6 +628,31 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "description": "New webhook URL (triggers endpoint rotation)"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "rules": {
+          "type": "object"
+        }
+      },
+      "minProperties": 1
+    },
     "sdkName": "updateEndpoint",
     "summary": "Update a webhook endpoint",
     "tag": "Endpoints",
@@ -537,6 +669,37 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/filters",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "whitelist",
+            "blocklist"
+          ]
+        },
+        "pattern": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Email address or pattern to filter"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restrict filter to a specific domain (Pro plan required)"
+        }
+      },
+      "required": [
+        "type",
+        "pattern"
+      ]
+    },
     "sdkName": "createFilter",
     "summary": "Create a filter rule",
     "tag": "Filters",
@@ -561,6 +724,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "deleteFilter",
     "summary": "Delete a filter rule",
     "tag": "Filters",
@@ -577,6 +741,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/filters",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "listFilters",
     "summary": "List filter rules",
     "tag": "Filters",
@@ -601,6 +766,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
     "sdkName": "updateFilter",
     "summary": "Update a filter rule",
     "tag": "Filters",
@@ -617,6 +794,71 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/send-mail",
     "pathParams": [],
     "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 998,
+          "description": "RFC 5322 From header. The sender domain must be a verified outbound domain for your organization."
+        },
+        "to": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 320,
+          "description": "Recipient address. Recipient eligibility depends on your account's outbound entitlements."
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 998,
+          "description": "Subject line for the outbound message"
+        },
+        "body_text": {
+          "type": "string",
+          "description": "Plain-text message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes."
+        },
+        "body_html": {
+          "type": "string",
+          "description": "HTML message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes."
+        },
+        "in_reply_to": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 998,
+          "pattern": "^[^\\x00-\\x1F\\x7F]+$",
+          "description": "Message-ID of the direct parent email when sending a threaded reply."
+        },
+        "references": {
+          "type": "array",
+          "maxItems": 100,
+          "description": "Full ordered message-id chain for the thread.",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 998,
+            "pattern": "^[^\\x00-\\x1F\\x7F]+$"
+          }
+        },
+        "wait": {
+          "type": "boolean",
+          "description": "When true, wait for the first downstream SMTP delivery outcome before returning."
+        },
+        "wait_timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 30000,
+          "description": "Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000."
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "subject"
+      ]
+    },
     "sdkName": "sendEmail",
     "summary": "Send outbound email",
     "tag": "Sending",
@@ -681,6 +923,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "requestSchema": null,
     "sdkName": "listDeliveries",
     "summary": "List webhook deliveries",
     "tag": "Webhook Deliveries",
@@ -705,6 +948,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "requestSchema": null,
     "sdkName": "replayDelivery",
     "summary": "Replay a webhook delivery",
     "tag": "Webhook Deliveries",

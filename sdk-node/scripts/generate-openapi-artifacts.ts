@@ -74,6 +74,20 @@ type PrimitiveOperationManifest = {
   path: string;
   pathParams: PrimitiveParameterManifest[];
   queryParams: PrimitiveParameterManifest[];
+  /**
+   * Resolved JSON Schema for the request body when `hasJsonBody` is
+   * true. All `$ref` references into `components/schemas` and
+   * `components/parameters` are inlined so the schema can be
+   * inspected without re-parsing the OpenAPI document.
+   *
+   * Surfaced for AGX: a CLI agent walkthrough showed that without
+   * this field on `list-operations`, agents have no way to learn
+   * the body shape short of probing the server with deliberately-
+   * malformed payloads. Now `primitive list-operations | jq '.[] |
+   * select(.command == "send-email") | .requestSchema'` produces a
+   * full schema dump in one call.
+   */
+  requestSchema: Record<string, unknown> | null;
   sdkName: string;
   summary: string | null;
   tag: string;
@@ -233,6 +247,53 @@ function hasJsonBody(operation: OpenApiOperation): boolean {
   return Boolean(requestBody.content["application/json"]?.schema);
 }
 
+/**
+ * Recursively inline every `$ref` in a JSON Schema fragment so the
+ * result is self-contained. Cycles are broken by leaving the cyclic
+ * reference as `{ $ref: "..." }` rather than infinite-recursing;
+ * this is rare in practice for our spec but keeps the helper safe.
+ */
+function inlineSchemaRefs(
+  doc: Record<string, unknown>,
+  schema: unknown,
+  seen: Set<string> = new Set(),
+): unknown {
+  if (Array.isArray(schema)) {
+    return schema.map((item) => inlineSchemaRefs(doc, item, seen));
+  }
+  if (!schema || typeof schema !== "object") {
+    return schema;
+  }
+  const obj = schema as Record<string, unknown>;
+  const ref = typeof obj.$ref === "string" ? obj.$ref : null;
+  if (ref) {
+    if (seen.has(ref)) {
+      return { $ref: ref };
+    }
+    const next = new Set(seen);
+    next.add(ref);
+    const resolved = resolveLocalRef(doc, ref);
+    return inlineSchemaRefs(doc, resolved, next);
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    out[key] = inlineSchemaRefs(doc, value, seen);
+  }
+  return out;
+}
+
+function getRequestSchema(
+  doc: Record<string, unknown>,
+  operation: OpenApiOperation,
+): Record<string, unknown> | null {
+  const schema = operation.requestBody?.content?.["application/json"]?.schema;
+  if (!schema) return null;
+  const inlined = inlineSchemaRefs(doc, schema);
+  return inlined && typeof inlined === "object"
+    ? (inlined as Record<string, unknown>)
+    : null;
+}
+
 function hasBinaryResponse(operation: OpenApiOperation): boolean {
   const responses = operation.responses ?? {};
 
@@ -278,6 +339,7 @@ function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest
         path,
         pathParams: manifestParameters(parameters, "path"),
         queryParams: manifestParameters(parameters, "query"),
+        requestSchema: getRequestSchema(doc, operation),
         sdkName: operation.operationId,
         summary: operation.summary ?? null,
         tag,
@@ -346,6 +408,11 @@ export type PrimitiveOperationManifest = {
   path: string;
   pathParams: PrimitiveParameterManifest[];
   queryParams: PrimitiveParameterManifest[];
+  /**
+   * Resolved JSON Schema for the request body when \`hasJsonBody\` is
+   * true. \`$ref\`s into the OpenAPI components are inlined.
+   */
+  requestSchema: Record<string, unknown> | null;
   sdkName: string;
   summary: string | null;
   tag: string;
