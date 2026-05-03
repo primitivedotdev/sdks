@@ -364,9 +364,15 @@ function bodyFieldFlag(field: BodyFieldDescriptor): unknown {
   return Flags.string(common);
 }
 
-function buildFlags(
-  operation: PrimitiveOperationManifest,
-): Record<string, unknown> {
+function buildFlags(operation: PrimitiveOperationManifest): {
+  flags: Record<string, unknown>;
+  // Map of flag-name (kebab-case) -> body field name (snake_case)
+  // for the body fields that buildFlags actually registered as
+  // standalone flags. Used by the run() handler to safely collect
+  // overrides without misreading values from a colliding path or
+  // query param flag with the same kebab-cased name.
+  bodyFieldFlagToProperty: Map<string, string>;
+} {
   const flags: Record<string, unknown> = {
     "api-key": Flags.string({
       description: "Primitive API key (defaults to PRIMITIVE_API_KEY)",
@@ -381,6 +387,8 @@ function buildFlags(
   for (const parameter of [...operation.pathParams, ...operation.queryParams]) {
     flags[flagName(parameter.name)] = flagForParameter(parameter);
   }
+
+  const bodyFieldFlagToProperty = new Map<string, string>();
 
   if (operation.hasJsonBody) {
     flags.body = Flags.string({
@@ -398,6 +406,12 @@ function buildFlags(
     // the requestSchema embedded on the manifest. Skip flags that
     // collide with reserved names or with path/query params already
     // added above; those collisions fall back to --body.
+    //
+    // Collisions are tracked in the returned map so the run()
+    // handler doesn't misread a path/query param's value as a
+    // body-field override. (A naive "look up parsedFlags[name]"
+    // pass would happily pick up the path param's value and
+    // silently write it into the body.)
     const bodyFields = extractBodyFields(operation.requestSchema);
     for (const field of bodyFields) {
       if (field.kind === "complex") continue;
@@ -405,6 +419,7 @@ function buildFlags(
       if (RESERVED_FLAG_NAMES.has(name)) continue;
       if (flags[name] !== undefined) continue;
       flags[name] = bodyFieldFlag(field);
+      bodyFieldFlagToProperty.set(name, field.name);
     }
   }
 
@@ -414,25 +429,30 @@ function buildFlags(
     });
   }
 
-  return flags;
+  return { flags, bodyFieldFlagToProperty };
 }
 
 // Pull body field values out of the parsed CLI flags. Returns
 // only fields the user actually supplied (omits undefined). Used
 // to override / extend the JSON --body when both forms are
 // present (per-field flags take precedence on key conflicts).
+//
+// The `bodyFieldFlagToProperty` allowlist comes from buildFlags and
+// records ONLY the flags actually registered as body-field flags.
+// Without it, this function would naively read parsedFlags by
+// kebab-cased field name and pick up values from a colliding path
+// or query param flag, silently writing them into the body under
+// the body-field key. The allowlist keeps the merge honest: only
+// flags this CLI generator owns end up in the body.
 function collectBodyFieldFlags(
-  schema: Record<string, unknown> | null,
   parsedFlags: Record<string, unknown>,
+  bodyFieldFlagToProperty: Map<string, string>,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  for (const field of extractBodyFields(schema)) {
-    if (field.kind === "complex") continue;
-    const name = flagName(field.name);
-    if (RESERVED_FLAG_NAMES.has(name)) continue;
-    const value = parsedFlags[name];
+  for (const [flag, property] of bodyFieldFlagToProperty) {
+    const value = parsedFlags[flag];
     if (value === undefined) continue;
-    result[field.name] = value;
+    result[property] = value;
   }
   return result;
 }
@@ -459,7 +479,7 @@ function collectValues(
 export function createOperationCommand(
   operation: PrimitiveOperationManifest,
 ): typeof Command {
-  const flags = buildFlags(operation) as Record<string, unknown>;
+  const { flags, bodyFieldFlagToProperty } = buildFlags(operation);
 
   // Append a "Body fields" summary to the description so agents
   // running `<command> --help` learn the JSON shape immediately.
@@ -506,26 +526,38 @@ export function createOperationCommand(
       if (operation.hasJsonBody) {
         const explicit = readJsonBody(parsedFlags);
         const overrides = collectBodyFieldFlags(
-          operation.requestSchema,
           parsedFlags,
+          bodyFieldFlagToProperty,
         );
 
         if (Object.keys(overrides).length > 0) {
-          if (
-            explicit !== undefined &&
+          if (explicit === undefined) {
+            body = overrides;
+          } else if (
             explicit !== null &&
             typeof explicit === "object" &&
             !Array.isArray(explicit)
           ) {
             body = { ...(explicit as Record<string, unknown>), ...overrides };
-          } else if (explicit === undefined) {
-            body = overrides;
           } else {
-            // Caller passed --body as a non-object (string, number,
-            // array). Per-field flags can't merge into that shape,
-            // so the explicit body wins. The server-side validator
-            // will reject the mismatched shape with a clear error.
-            body = explicit;
+            // Caller passed --body as null, an array, or a
+            // primitive AND also passed per-field flags. We can't
+            // merge per-field overrides into a non-object body
+            // shape, and silently dropping either source would
+            // leave the caller's actual intent unclear. Refuse
+            // loudly so the next attempt is unambiguous.
+            const explicitKind =
+              explicit === null
+                ? "null"
+                : Array.isArray(explicit)
+                  ? "array"
+                  : typeof explicit;
+            const overrideFlags = Object.keys(overrides)
+              .map((p) => `--${flagName(p)}`)
+              .join(", ");
+            throw new Errors.CLIError(
+              `--body must be a JSON object when also passing per-field flags (got ${explicitKind}); supplied per-field flags: ${overrideFlags}. Either drop --body and rely on the per-field flags, or move every field into the JSON --body and drop the flags.`,
+            );
           }
         } else {
           body = explicit;
