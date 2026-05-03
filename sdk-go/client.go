@@ -71,9 +71,14 @@ type SendResult struct {
 	ClientIdempotencyKey string
 	RequestID            string
 	ContentHash          string
-	DeliveryStatus       primitiveapi.OptDeliveryStatus
-	SMTPResponseCode     primitiveapi.OptNilInt
-	SMTPResponseText     primitiveapi.OptString
+	// IdempotentReplay is true when the response replays a previously
+	// recorded send keyed by ClientIdempotencyKey (same key, same
+	// canonical payload). False on a fresh send and on gate-denied
+	// responses.
+	IdempotentReplay bool
+	DeliveryStatus   primitiveapi.OptDeliveryStatus
+	SMTPResponseCode primitiveapi.OptNilInt
+	SMTPResponseText primitiveapi.OptString
 }
 
 type APIError struct {
@@ -301,21 +306,32 @@ func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error
 
 	switch v := res.(type) {
 	case *primitiveapi.SendEmailOK:
-		return SendResult{
-			ID:                   v.Data.ID,
-			Status:               v.Data.Status,
-			QueueID:              v.Data.QueueID,
-			Accepted:             v.Data.Accepted,
-			Rejected:             v.Data.Rejected,
-			ClientIdempotencyKey: v.Data.ClientIdempotencyKey,
-			RequestID:            v.Data.RequestID,
-			ContentHash:          v.Data.ContentHash,
-			DeliveryStatus:       v.Data.DeliveryStatus,
-			SMTPResponseCode:     v.Data.SMTPResponseCode,
-			SMTPResponseText:     v.Data.SMTPResponseText,
-		}, nil
+		return mapSendMailResult(v.Data), nil
 	default:
 		return zero, mapSendError(res)
+	}
+}
+
+// mapSendMailResult converts the generated SendMailResult shape into
+// the hand-written SendResult exposed to callers. Shared between Send
+// and Reply because both endpoints return the same envelope; keeping
+// it in one place avoids the kind of drift Greptile caught when
+// IdempotentReplay was added on the server but missed in the Go copy
+// sites.
+func mapSendMailResult(data primitiveapi.SendMailResult) SendResult {
+	return SendResult{
+		ID:                   data.ID,
+		Status:               data.Status,
+		QueueID:              data.QueueID,
+		Accepted:             data.Accepted,
+		Rejected:             data.Rejected,
+		ClientIdempotencyKey: data.ClientIdempotencyKey,
+		RequestID:            data.RequestID,
+		ContentHash:          data.ContentHash,
+		IdempotentReplay:     data.IdempotentReplay,
+		DeliveryStatus:       data.DeliveryStatus,
+		SMTPResponseCode:     data.SMTPResponseCode,
+		SMTPResponseText:     data.SMTPResponseText,
 	}
 }
 
@@ -359,19 +375,7 @@ func (c *Client) Reply(ctx context.Context, email *ReceivedEmail, input ReplyPar
 	}
 	switch v := res.(type) {
 	case *primitiveapi.ReplyToEmailOK:
-		return SendResult{
-			ID:                   v.Data.ID,
-			Status:               v.Data.Status,
-			QueueID:              v.Data.QueueID,
-			Accepted:             v.Data.Accepted,
-			Rejected:             v.Data.Rejected,
-			ClientIdempotencyKey: v.Data.ClientIdempotencyKey,
-			RequestID:            v.Data.RequestID,
-			ContentHash:          v.Data.ContentHash,
-			DeliveryStatus:       v.Data.DeliveryStatus,
-			SMTPResponseCode:     v.Data.SMTPResponseCode,
-			SMTPResponseText:     v.Data.SMTPResponseText,
-		}, nil
+		return mapSendMailResult(v.Data), nil
 	default:
 		return zero, mapReplyError(res)
 	}

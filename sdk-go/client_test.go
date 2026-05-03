@@ -238,6 +238,52 @@ func TestClientReplyPostsToReplyEndpointWithMinimalBody(t *testing.T) {
 	}
 }
 
+func TestClientSendForwardsIdempotentReplay(t *testing.T) {
+	// Pin that the IdempotentReplay field on the generated
+	// SendMailResult lands on the public SendResult. Earlier the
+	// hand-written struct missed it, so a cache-hit response read as
+	// IdempotentReplay=false on every Go caller. The shared
+	// mapSendMailResult helper now copies it over for both Send and
+	// Reply; this test covers Send and TestClientReplyForwardsIdempotentReplay
+	// covers Reply.
+	data := sendMailResult()
+	data.IdempotentReplay = true
+	stub := &stubSendAPI{result: &primitiveapi.SendEmailOK{Success: true, Data: data}}
+	client := NewClientFromAPI(stub)
+
+	result, err := client.Send(context.Background(), SendParams{
+		From:     "support@example.com",
+		To:       "alice@example.com",
+		Subject:  "Hello",
+		BodyText: "Hi",
+	})
+	if err != nil {
+		t.Fatalf("Send returned error: %v", err)
+	}
+	if !result.IdempotentReplay {
+		t.Fatalf("expected IdempotentReplay=true on cache-hit response, got false")
+	}
+}
+
+func TestClientReplyForwardsIdempotentReplay(t *testing.T) {
+	data := sendMailResult()
+	data.IdempotentReplay = true
+	stub := &stubSendAPI{
+		replyResult: &primitiveapi.ReplyToEmailOK{Success: true, Data: data},
+	}
+	client := NewClientFromAPI(stub)
+
+	result, err := client.Reply(context.Background(), receivedEmailFixture(), ReplyParams{
+		BodyText: "Thanks",
+	})
+	if err != nil {
+		t.Fatalf("Reply returned error: %v", err)
+	}
+	if !result.IdempotentReplay {
+		t.Fatalf("expected IdempotentReplay=true on cache-hit response, got false")
+	}
+}
+
 func TestClientForwardBuildsSend(t *testing.T) {
 	stub := &stubSendAPI{
 		result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()},
