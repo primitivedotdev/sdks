@@ -21,24 +21,32 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
   return parameter.description ?? parameter.name;
 }
 
-/**
- * Render a one-shot description of a JSON Schema's top-level
- * properties so an agent reading `<command> --help` can build a
- * valid `--body` payload without probing the server. Pulled from
- * the resolved request schema embedded on the manifest.
- *
- * Format prioritizes scanability over completeness: required
- * fields first, each line is `<name> <type> [- description]`
- * truncated to a reasonable width. Callers who need the full
- * schema can run `primitive list-operations | jq` and read
- * `requestSchema` directly.
- */
-function renderRequestSchemaSummary(
+// Description of a single top-level body property, normalized
+// from the JSON Schema on the operation manifest. `kind` tells the
+// CLI generator whether to expose the field as an individual
+// `--flag` (scalar) or leave it to `--body` JSON (non-scalar).
+interface BodyFieldDescriptor {
+  name: string;
+  description: string;
+  required: boolean;
+  // Pretty-printed type for help text (e.g. "string", "integer",
+  // "string?", "array<string>"). Always set.
+  displayType: string;
+  // Either a CLI flag-able scalar kind or "complex" (array, object,
+  // mixed-non-nullable, unknown). Complex fields cannot be
+  // expressed as a single CLI flag and must go through --body.
+  kind: "string" | "integer" | "boolean" | "complex";
+  // Restricted-string enum, when the schema had `enum: [...]` and
+  // the type is string. Used to bound the generated flag.
+  enumValues?: readonly string[];
+}
+
+function extractBodyFields(
   schema: Record<string, unknown> | null,
-): string | null {
-  if (!schema || typeof schema !== "object") return null;
+): BodyFieldDescriptor[] {
+  if (!schema || typeof schema !== "object") return [];
   const properties = schema.properties;
-  if (!properties || typeof properties !== "object") return null;
+  if (!properties || typeof properties !== "object") return [];
   const requiredArr = Array.isArray(schema.required)
     ? (schema.required as unknown[]).filter(
         (k): k is string => typeof k === "string",
@@ -46,63 +54,123 @@ function renderRequestSchemaSummary(
     : [];
   const required = new Set(requiredArr);
 
-  const entries = Object.entries(properties as Record<string, unknown>)
-    .map(([name, raw]) => {
-      const propSchema =
-        raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-      let type = "any";
-      const t = propSchema.type;
-      if (typeof t === "string") {
-        type = t;
-        if (type === "array") {
-          const items = propSchema.items;
-          if (items && typeof items === "object") {
-            const itemType = (items as Record<string, unknown>).type;
-            if (typeof itemType === "string") {
-              type = `array<${itemType}>`;
-            }
+  const fields: BodyFieldDescriptor[] = [];
+  for (const [name, raw] of Object.entries(
+    properties as Record<string, unknown>,
+  )) {
+    const propSchema =
+      raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+    const t = propSchema.type;
+
+    let displayType = "any";
+    let kind: BodyFieldDescriptor["kind"] = "complex";
+    if (typeof t === "string") {
+      displayType = t;
+      if (t === "string") kind = "string";
+      else if (t === "integer" || t === "number") kind = "integer";
+      else if (t === "boolean") kind = "boolean";
+      else if (t === "array") {
+        const items = propSchema.items;
+        if (items && typeof items === "object") {
+          const itemType = (items as Record<string, unknown>).type;
+          if (typeof itemType === "string") {
+            displayType = `array<${itemType}>`;
           }
         }
-      } else if (Array.isArray(t)) {
-        // Nullable shorthand the codegen normalizes to e.g. ["string","null"].
-        const nonNull = (t as unknown[]).filter((s) => s !== "null");
-        type = nonNull.length === 1 ? `${nonNull[0]}?` : nonNull.join("|");
+        kind = "complex";
+      } else {
+        kind = "complex";
       }
-      const description =
-        typeof propSchema.description === "string"
-          ? propSchema.description.split("\n")[0].trim()
-          : "";
-      return {
-        name,
-        type,
-        description,
-        required: required.has(name),
-      };
-    })
-    .sort((a, b) => {
-      if (a.required !== b.required) return a.required ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
+    } else if (Array.isArray(t)) {
+      // Nullable shorthand the codegen normalizes to e.g.
+      // ["string","null"]. If exactly one non-null member, surface
+      // it as that scalar with a trailing `?`.
+      const nonNull = (t as unknown[]).filter((s) => s !== "null");
+      if (nonNull.length === 1) {
+        const single = nonNull[0];
+        displayType = `${single}?`;
+        if (single === "string") kind = "string";
+        else if (single === "integer" || single === "number") kind = "integer";
+        else if (single === "boolean") kind = "boolean";
+        else kind = "complex";
+      } else {
+        displayType = nonNull.join("|");
+        kind = "complex";
+      }
+    }
 
-  if (entries.length === 0) return null;
+    const description =
+      typeof propSchema.description === "string"
+        ? propSchema.description.split("\n")[0].trim()
+        : "";
+
+    const enumRaw = propSchema.enum;
+    const enumValues =
+      kind === "string" && Array.isArray(enumRaw)
+        ? enumRaw.filter((e): e is string => typeof e === "string")
+        : undefined;
+
+    fields.push({
+      name,
+      description,
+      required: required.has(name),
+      displayType,
+      kind,
+      ...(enumValues && enumValues.length > 0 ? { enumValues } : {}),
+    });
+  }
+  return fields.sort((a, b) => {
+    if (a.required !== b.required) return a.required ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+/**
+ * Render a "Body fields" summary for the per-command help.
+ *
+ * Most scalar fields are exposed as individual `--flag` flags,
+ * which oclif auto-renders in the FLAGS section above. To avoid
+ * duplicating that, the summary here only documents fields that
+ * MUST go through `--body` (complex types: arrays, objects,
+ * mixed-non-nullable). When an operation has only scalars, the
+ * summary is omitted entirely and oclif's FLAGS section is the
+ * full story.
+ *
+ * For operations with mixed scalar and complex fields, we also
+ * include a short header pointing the agent at the flag form so
+ * the natural reading is "use the flags above; --body for the
+ * leftovers below."
+ */
+function renderRequestSchemaSummary(
+  schema: Record<string, unknown> | null,
+): string | null {
+  const fields = extractBodyFields(schema);
+  if (fields.length === 0) return null;
+
+  const complex = fields.filter((f) => f.kind === "complex");
+  if (complex.length === 0) return null;
 
   const nameWidth = Math.min(
     24,
-    Math.max(...entries.map((e) => e.name.length)),
+    Math.max(...complex.map((f) => f.name.length)),
   );
-  const lines = ["Body fields (JSON --body):"];
   const descMax = 78;
-  for (const e of entries) {
-    const flag = e.required ? " *" : "  ";
-    const padName = e.name.padEnd(nameWidth);
+  const lines = [
+    "Body fields requiring --body JSON (these are not exposed as flags):",
+  ];
+  for (const f of complex) {
+    const marker = f.required ? " *" : "  ";
+    const padName = f.name.padEnd(nameWidth);
     const trimmedDesc =
-      e.description.length > descMax
-        ? `${e.description.slice(0, descMax - 3)}...`
-        : e.description;
+      f.description.length > descMax
+        ? `${f.description.slice(0, descMax - 3)}...`
+        : f.description;
     const desc = trimmedDesc ? `  ${trimmedDesc}` : "";
-    lines.push(`${flag} ${padName}  ${e.type}${desc}`);
+    lines.push(`${marker} ${padName}  ${f.displayType}${desc}`);
   }
-  lines.push("(* = required)");
+  lines.push(
+    "(* = required. Scalar body fields are exposed as individual --flag-name flags; see FLAGS above.)",
+  );
   return lines.join("\n");
 }
 
@@ -257,6 +325,45 @@ export function formatErrorPayload(payload: unknown): string {
   return JSON.stringify(payload, null, 2);
 }
 
+// Reserved flag names the body-field expander must never overwrite.
+// `--body` and `--body-file` are the JSON escape hatches.
+// `--api-key`, `--base-url`, `--output` are infra. Path and query
+// params get added before body fields and take precedence.
+const RESERVED_FLAG_NAMES = new Set([
+  "api-key",
+  "base-url",
+  "body",
+  "body-file",
+  "output",
+]);
+
+function bodyFieldFlag(field: BodyFieldDescriptor): unknown {
+  // Flag descriptions cap at 80 chars so oclif's --help output
+  // stays readable; the schema's full description is also visible
+  // via `primitive list-operations | jq`.
+  const descMax = 80;
+  const trimmedDesc =
+    field.description.length > descMax
+      ? `${field.description.slice(0, descMax - 3)}...`
+      : field.description;
+  // Field-flag UX choice: do NOT mark scalar body fields as
+  // required at the oclif level even when the JSON Schema marks
+  // them required. Reason: a caller can satisfy the requirement
+  // either via the individual flag OR via --body / --body-file.
+  // Marking the flag required would force the individual-flag
+  // form. The runtime body merger validates the final assembled
+  // body against the same server-side schema either way.
+  const common = {
+    description: trimmedDesc || field.name,
+  };
+  if (field.kind === "boolean") return Flags.boolean(common);
+  if (field.kind === "integer") return Flags.integer(common);
+  if (field.enumValues) {
+    return Flags.string({ ...common, options: field.enumValues });
+  }
+  return Flags.string(common);
+}
+
 function buildFlags(
   operation: PrimitiveOperationManifest,
 ): Record<string, unknown> {
@@ -276,10 +383,29 @@ function buildFlags(
   }
 
   if (operation.hasJsonBody) {
-    flags.body = Flags.string({ description: "JSON request body" });
-    flags["body-file"] = Flags.string({
-      description: "Path to a JSON file used as the request body",
+    flags.body = Flags.string({
+      description:
+        "Full request body as JSON. Prefer per-field flags (e.g. --to, --from, --body-text) when available; --body is the escape hatch for nested or complex fields.",
     });
+    flags["body-file"] = Flags.string({
+      description:
+        "Path to a JSON file used as the request body. Same role as --body for callers passing a saved payload.",
+    });
+
+    // Expand top-level scalar body fields into individual flags so
+    // `primitive sending:send-email --to alice@x --from support@x
+    // --body-text "hi"` works without constructing JSON. Driven by
+    // the requestSchema embedded on the manifest. Skip flags that
+    // collide with reserved names or with path/query params already
+    // added above; those collisions fall back to --body.
+    const bodyFields = extractBodyFields(operation.requestSchema);
+    for (const field of bodyFields) {
+      if (field.kind === "complex") continue;
+      const name = flagName(field.name);
+      if (RESERVED_FLAG_NAMES.has(name)) continue;
+      if (flags[name] !== undefined) continue;
+      flags[name] = bodyFieldFlag(field);
+    }
   }
 
   if (operation.binaryResponse) {
@@ -289,6 +415,26 @@ function buildFlags(
   }
 
   return flags;
+}
+
+// Pull body field values out of the parsed CLI flags. Returns
+// only fields the user actually supplied (omits undefined). Used
+// to override / extend the JSON --body when both forms are
+// present (per-field flags take precedence on key conflicts).
+function collectBodyFieldFlags(
+  schema: Record<string, unknown> | null,
+  parsedFlags: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const field of extractBodyFields(schema)) {
+    if (field.kind === "complex") continue;
+    const name = flagName(field.name);
+    if (RESERVED_FLAG_NAMES.has(name)) continue;
+    const value = parsedFlags[name];
+    if (value === undefined) continue;
+    result[field.name] = value;
+  }
+  return result;
 }
 
 function collectValues(
@@ -351,12 +497,44 @@ export function createOperationCommand(
             : undefined,
       });
 
-      const body = operation.hasJsonBody
-        ? readJsonBody(parsedFlags)
-        : undefined;
+      // Two body sources, merged: explicit JSON via --body /
+      // --body-file (the base) plus per-field flags (the
+      // overrides). Per-field flag values take precedence on key
+      // conflicts so a caller can pass a base payload via --body
+      // and override one field on the command line.
+      let body: unknown;
+      if (operation.hasJsonBody) {
+        const explicit = readJsonBody(parsedFlags);
+        const overrides = collectBodyFieldFlags(
+          operation.requestSchema,
+          parsedFlags,
+        );
+
+        if (Object.keys(overrides).length > 0) {
+          if (
+            explicit !== undefined &&
+            explicit !== null &&
+            typeof explicit === "object" &&
+            !Array.isArray(explicit)
+          ) {
+            body = { ...(explicit as Record<string, unknown>), ...overrides };
+          } else if (explicit === undefined) {
+            body = overrides;
+          } else {
+            // Caller passed --body as a non-object (string, number,
+            // array). Per-field flags can't merge into that shape,
+            // so the explicit body wins. The server-side validator
+            // will reject the mismatched shape with a clear error.
+            body = explicit;
+          }
+        } else {
+          body = explicit;
+        }
+      }
+
       if (operation.bodyRequired && body === undefined) {
         throw new Errors.CLIError(
-          `Operation ${operation.operationId} requires --body or --body-file`,
+          `Operation ${operation.operationId} requires a body. Pass each field as a --flag (see --help) or supply JSON via --body / --body-file.`,
         );
       }
 
