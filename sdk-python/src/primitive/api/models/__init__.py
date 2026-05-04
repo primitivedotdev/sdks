@@ -51,6 +51,7 @@ from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
 from .get_email_response_200 import GetEmailResponse200
+from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_storage_stats_response_200 import GetStorageStatsResponse200
 from .get_webhook_secret_response_200 import GetWebhookSecretResponse200
 from .list_deliveries_response_200 import ListDeliveriesResponse200
@@ -71,6 +72,15 @@ from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
 from .send_email_response_200 import SendEmailResponse200
 from .send_mail_input import SendMailInput
 from .send_mail_result import SendMailResult
+from .send_permission_address import SendPermissionAddress
+from .send_permission_address_type import SendPermissionAddressType
+from .send_permission_any_recipient import SendPermissionAnyRecipient
+from .send_permission_any_recipient_type import SendPermissionAnyRecipientType
+from .send_permission_managed_zone import SendPermissionManagedZone
+from .send_permission_managed_zone_type import SendPermissionManagedZoneType
+from .send_permission_your_domain import SendPermissionYourDomain
+from .send_permission_your_domain_type import SendPermissionYourDomainType
+from .send_permissions_meta import SendPermissionsMeta
 from .sent_email_status import SentEmailStatus
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
@@ -142,6 +152,7 @@ __all__ = (
     "GateFixAction",
     "GetAccountResponse200",
     "GetEmailResponse200",
+    "GetSendPermissionsResponse200",
     "GetStorageStatsResponse200",
     "GetWebhookSecretResponse200",
     "ListDeliveriesResponse200",
@@ -162,6 +173,15 @@ __all__ = (
     "SendEmailResponse200",
     "SendMailInput",
     "SendMailResult",
+    "SendPermissionAddress",
+    "SendPermissionAddressType",
+    "SendPermissionAnyRecipient",
+    "SendPermissionAnyRecipientType",
+    "SendPermissionManagedZone",
+    "SendPermissionManagedZoneType",
+    "SendPermissionsMeta",
+    "SendPermissionYourDomain",
+    "SendPermissionYourDomainType",
     "SentEmailStatus",
     "StorageStats",
     "SuccessEnvelope",
