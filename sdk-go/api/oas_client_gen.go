@@ -135,6 +135,17 @@ type Invoker interface {
 	//
 	// GET /send-permissions
 	GetSendPermissions(ctx context.Context) (GetSendPermissionsRes, error)
+	// GetSentEmail invokes getSentEmail operation.
+	//
+	// Returns the full sent-email record by id, including
+	// `body_text` and `body_html` (omitted from the listing
+	// endpoint to keep paginated responses small). Use this when
+	// diagnosing a specific send, e.g. inspecting the receiver's
+	// SMTP response on a `bounced` row or pulling the gate
+	// denial detail on a `gate_denied` row.
+	//
+	// GET /sent-emails/{id}
+	GetSentEmail(ctx context.Context, params GetSentEmailParams) (GetSentEmailRes, error)
 	// GetStorageStats invokes getStorageStats operation.
 	//
 	// Get storage usage.
@@ -186,6 +197,26 @@ type Invoker interface {
 	//
 	// GET /filters
 	ListFilters(ctx context.Context) (ListFiltersRes, error)
+	// ListSentEmails invokes listSentEmails operation.
+	//
+	// Returns a paginated list of OUTBOUND emails the caller's
+	// org has sent via /send-mail (and /emails/{id}/reply, which
+	// forwards through /send-mail). Includes every recorded
+	// attempt, including gate-denied attempts that the agent
+	// never called and rows still in `queued` state.
+	// For inbound mail received at your verified domains, see
+	// /emails. There is no unified send/receive history endpoint;
+	// the two surfaces are intentionally separate because the
+	// underlying tables, statuses, and lifecycle differ.
+	// Email bodies (`body_text`, `body_html`) are NOT included on
+	// list rows so a 50-row page can't balloon into a multi-MB
+	// response when sends are near the 5MB body cap. Use
+	// /sent-emails/{id} to fetch a single row with bodies, or
+	// cross-reference by `client_idempotency_key` if the caller
+	// already has the body locally.
+	//
+	// GET /sent-emails
+	ListSentEmails(ctx context.Context, params ListSentEmailsParams) (ListSentEmailsRes, error)
 	// ReplayDelivery invokes replayDelivery operation.
 	//
 	// Re-sends the stored webhook payload from a previous delivery attempt.
@@ -1847,6 +1878,136 @@ func (c *Client) sendGetSendPermissions(ctx context.Context) (res GetSendPermiss
 	return result, nil
 }
 
+// GetSentEmail invokes getSentEmail operation.
+//
+// Returns the full sent-email record by id, including
+// `body_text` and `body_html` (omitted from the listing
+// endpoint to keep paginated responses small). Use this when
+// diagnosing a specific send, e.g. inspecting the receiver's
+// SMTP response on a `bounced` row or pulling the gate
+// denial detail on a `gate_denied` row.
+//
+// GET /sent-emails/{id}
+func (c *Client) GetSentEmail(ctx context.Context, params GetSentEmailParams) (GetSentEmailRes, error) {
+	res, err := c.sendGetSentEmail(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetSentEmail(ctx context.Context, params GetSentEmailParams) (res GetSentEmailRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSentEmail"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/sent-emails/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSentEmailOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/sent-emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetSentEmailOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetSentEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetStorageStats invokes getStorageStats operation.
 //
 // Get storage usage.
@@ -2827,6 +2988,250 @@ func (c *Client) sendListFilters(ctx context.Context) (res ListFiltersRes, err e
 
 	stage = "DecodeResponse"
 	result, err := decodeListFiltersResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListSentEmails invokes listSentEmails operation.
+//
+// Returns a paginated list of OUTBOUND emails the caller's
+// org has sent via /send-mail (and /emails/{id}/reply, which
+// forwards through /send-mail). Includes every recorded
+// attempt, including gate-denied attempts that the agent
+// never called and rows still in `queued` state.
+// For inbound mail received at your verified domains, see
+// /emails. There is no unified send/receive history endpoint;
+// the two surfaces are intentionally separate because the
+// underlying tables, statuses, and lifecycle differ.
+// Email bodies (`body_text`, `body_html`) are NOT included on
+// list rows so a 50-row page can't balloon into a multi-MB
+// response when sends are near the 5MB body cap. Use
+// /sent-emails/{id} to fetch a single row with bodies, or
+// cross-reference by `client_idempotency_key` if the caller
+// already has the body locally.
+//
+// GET /sent-emails
+func (c *Client) ListSentEmails(ctx context.Context, params ListSentEmailsParams) (ListSentEmailsRes, error) {
+	res, err := c.sendListSentEmails(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListSentEmails(ctx context.Context, params ListSentEmailsParams) (res ListSentEmailsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listSentEmails"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/sent-emails"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListSentEmailsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/sent-emails"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "status" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "status",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Status.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "request_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "request_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.RequestID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "idempotency_key" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "idempotency_key",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "date_from" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "date_from",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.DateFrom.Get(); ok {
+				return e.EncodeValue(conv.DateTimeToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "date_to" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "date_to",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.DateTo.Get(); ok {
+				return e.EncodeValue(conv.DateTimeToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListSentEmailsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListSentEmailsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

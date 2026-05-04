@@ -62,6 +62,7 @@ RECEIVED_EMAIL = ReceivedEmail(
 SEND_RESULT = {
     "id": "sent-123",
     "status": "submitted_to_agent",
+    "from": "sender@example.com",
     "queue_id": "qid-123",
     "accepted": ["alice@example.com"],
     "rejected": [],
