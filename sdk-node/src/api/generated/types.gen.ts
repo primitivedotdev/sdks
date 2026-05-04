@@ -258,6 +258,18 @@ export type EmailSummary = {
     domain_id?: string | null;
     org_id?: string | null;
     status: 'pending' | 'accepted' | 'completed' | 'rejected';
+    /**
+     * SMTP envelope sender (return-path) the inbound mail server
+     * accepted. For most legitimate mail this equals the bare
+     * address in the From header; for mailing lists, bounce
+     * handlers, and forwarders it is typically the bounce address
+     * rather than the human-visible sender.
+     *
+     * For the parsed From-header value (with display name handling
+     * and a sender-fallback when the header is unparseable), GET
+     * the email by id and use `from_email`.
+     *
+     */
     sender: string;
     recipient: string;
     subject?: string | null;
@@ -275,6 +287,20 @@ export type EmailDetail = {
     message_id?: string | null;
     domain_id?: string | null;
     org_id?: string | null;
+    /**
+     * SMTP envelope sender (return-path) the inbound mail server
+     * accepted. Same value as `smtp_mail_from`; both fields exist
+     * so protocol-aware tooling can use whichever name it expects.
+     *
+     * For most legitimate mail this equals `from_email`; for
+     * mailing lists, bounce handlers, and forwarders it is
+     * typically the bounce-handling address rather than the
+     * human-visible sender.
+     *
+     * **For the canonical "who sent this email" value, use
+     * `from_email`.**
+     *
+     */
     sender: string;
     recipient: string;
     subject?: string | null;
@@ -301,13 +327,43 @@ export type EmailDetail = {
     webhook_last_error?: string | null;
     webhook_fired_at?: string | null;
     smtp_helo?: string | null;
+    /**
+     * SMTP envelope MAIL FROM (return-path), as accepted by the
+     * inbound mail server. Same value as `sender`; both fields
+     * exist so protocol-aware tooling can use whichever name it
+     * expects.
+     *
+     * For the canonical "who sent this email" value (display name
+     * stripped, From-header preferred), use `from_email`.
+     *
+     */
     smtp_mail_from?: string | null;
     smtp_rcpt_to?: Array<string> | null;
+    /**
+     * Raw `From:` header from the message body, including any
+     * display name (e.g. `"Alice Example" <alice@example.com>`).
+     * Use this when you need the display name for rendering.
+     *
+     * For the bare email address (display name stripped), use
+     * `from_email`.
+     *
+     */
     from_header?: string | null;
     content_discarded_at?: string | null;
     content_discarded_by_delivery_id?: string | null;
     /**
-     * Parsed from address (from_header or sender fallback)
+     * Bare email address parsed from the `From:` header, with
+     * display name stripped (e.g. `alice@example.com`). Falls
+     * back to `sender` (the SMTP envelope MAIL FROM) when the
+     * `From:` header cannot be parsed.
+     *
+     * **This is the canonical "who sent this email" field for
+     * most use cases**, including comparing against allowlists,
+     * routing replies, or displaying the sender to a user. Use
+     * `from_header` when you specifically need the display name,
+     * or `sender`/`smtp_mail_from` when you need the SMTP
+     * envelope value (e.g. to follow a bounce).
+     *
      */
     from_email: string;
     /**

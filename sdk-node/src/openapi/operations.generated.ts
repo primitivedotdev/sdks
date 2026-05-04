@@ -402,7 +402,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-emails",
-    "description": "Returns a paginated list of received emails. Supports filtering by\ndomain, status, date range, and free-text search across subject,\nsender, and recipient fields.\n",
+    "description": "Returns a paginated list of INBOUND emails received at your\nverified domains. Outbound messages sent via /send-mail are not\nincluded; this endpoint is the inbox view, not a unified\nsend/receive history.\n\nSupports filtering by domain, status, date range, and free-text\nsearch across subject, sender, and recipient fields.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmails",
@@ -466,7 +466,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "requestSchema": null,
     "sdkName": "listEmails",
-    "summary": "List emails",
+    "summary": "List inbound emails",
     "tag": "Emails",
     "tagCommand": "emails"
   },

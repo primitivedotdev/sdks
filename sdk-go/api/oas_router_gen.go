@@ -1198,7 +1198,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						switch method {
 						case "GET":
 							r.name = ListEmailsOperation
-							r.summary = "List emails"
+							r.summary = "List inbound emails"
 							r.operationID = "listEmails"
 							r.operationGroup = ""
 							r.pathPattern = "/emails"
