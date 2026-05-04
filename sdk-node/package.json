@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/sdk",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Official Primitive Node.js SDK — webhook, api, openapi, contract, and parser modules",
   "type": "module",
   "module": "./dist/index.js",
@@ -66,10 +66,10 @@
         "description": "Claim, verify, and manage email domains"
       },
       "emails": {
-        "description": "List, inspect, and manage received emails"
+        "description": "List, inspect, and manage received emails. Use `primitive emails:latest` for a one-line-per-email summary of recent inbound mail."
       },
       "sending": {
-        "description": "Send outbound emails through the Primitive API"
+        "description": "Send outbound emails. For replies to inbound mail, use `sending:reply-to-email --id <inbound-id>` (threading and Re: subject derived server-side); for fresh sends, use `sending:send-email` or the `primitive send` shortcut."
       },
       "endpoints": {
         "description": "Manage webhook endpoints that receive email events"

@@ -43,7 +43,15 @@ import {
 // don't need swaks's `--server` / `--auth-*` flags because the
 // HTTPS API key is the auth and the server is implicit.
 
-const SUBJECT_MAX_LENGTH = 70;
+// 200 chars is a generous cap that almost never trips on natural
+// first-line subjects (a sentence is typically <120 chars). The
+// previous 70-char limit was tight enough that legitimate one-line
+// bodies routinely produced ellipsis-truncated subjects in inbox
+// listings, e.g. `"this is the simplest possible send: agent typed
+// two flags and hit\\n e..."` from the AGX walkthrough. Real spam
+// scoring engines don't penalize subjects under ~200 chars, so 200
+// is both more useful and still well under the practical wire limit.
+const SUBJECT_MAX_LENGTH = 200;
 
 function deriveSubject(body: string): string {
   for (const line of body.split("\n")) {
