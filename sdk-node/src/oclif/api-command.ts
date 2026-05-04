@@ -716,10 +716,11 @@ export function createOperationCommand(
 // back to no hint (silent empty array, same as before).
 const EMPTY_RESULT_HINTS: Record<string, string> = {
   listDeliveries:
-    "(no results) Often means no webhook endpoints are configured to receive deliveries. Run `primitive endpoints:list-endpoints` to check.",
+    "(no results) No webhook deliveries logged yet. If you have an endpoint configured but expected to see test fires here: test deliveries from `primitive endpoints:test-endpoint` are NOT logged in this list, they're synchronous and visible only in the test-endpoint command's response. Real deliveries are logged when an inbound `email.received` event fans out to your endpoints. If you have no endpoints, run `primitive endpoints:list-endpoints` to check.",
   listEndpoints:
     "(no results) No webhook endpoints configured. Add one with `primitive endpoints:create-endpoint --url <your-url>`.",
-  listEmails: "(no results) No inbound emails received yet on this account.",
+  listEmails:
+    "(no results) No inbound emails received yet on this account. Send one to a verified domain to populate this list. For a compact view, prefer `primitive emails:latest`.",
   listDomains:
     "(no results) No domains on this account. Add one with `primitive domains:add-domain --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",

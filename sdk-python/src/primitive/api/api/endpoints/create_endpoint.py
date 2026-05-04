@@ -85,11 +85,24 @@ def sync_detailed(
     body: CreateEndpointInput,
 
 ) -> Response[CreateEndpointResponse201 | ErrorResponse]:
-    """ Create a webhook endpoint
+    r""" Create a webhook endpoint
 
-     Creates a new webhook endpoint. If a deactivated endpoint with the
-    same URL and domain exists, it is reactivated instead.
-    Subject to plan limits on the number of active endpoints.
+     Creates a new webhook endpoint. If a deactivated endpoint
+    with the same URL and domain exists, it is reactivated
+    instead. Subject to plan limits on the number of active
+    endpoints.
+
+    **Signing is account-scoped, not per-endpoint.** This call
+    does not return any signing material; every endpoint on the
+    account uses the same webhook secret, fetched via
+    `GET /account/webhook-secret`. See the API-level \"Webhook
+    signing\" section for the full wire format (header name,
+    signed string, hash algo, secret format, tolerance) and a
+    language-agnostic verification recipe.
+
+    After creating the endpoint, fire a test delivery against
+    it via `POST /endpoints/{id}/test` to confirm your verifier
+    accepts the signature.
 
     Args:
         body (CreateEndpointInput):
@@ -120,11 +133,24 @@ def sync(
     body: CreateEndpointInput,
 
 ) -> CreateEndpointResponse201 | ErrorResponse | None:
-    """ Create a webhook endpoint
+    r""" Create a webhook endpoint
 
-     Creates a new webhook endpoint. If a deactivated endpoint with the
-    same URL and domain exists, it is reactivated instead.
-    Subject to plan limits on the number of active endpoints.
+     Creates a new webhook endpoint. If a deactivated endpoint
+    with the same URL and domain exists, it is reactivated
+    instead. Subject to plan limits on the number of active
+    endpoints.
+
+    **Signing is account-scoped, not per-endpoint.** This call
+    does not return any signing material; every endpoint on the
+    account uses the same webhook secret, fetched via
+    `GET /account/webhook-secret`. See the API-level \"Webhook
+    signing\" section for the full wire format (header name,
+    signed string, hash algo, secret format, tolerance) and a
+    language-agnostic verification recipe.
+
+    After creating the endpoint, fire a test delivery against
+    it via `POST /endpoints/{id}/test` to confirm your verifier
+    accepts the signature.
 
     Args:
         body (CreateEndpointInput):
@@ -150,11 +176,24 @@ async def asyncio_detailed(
     body: CreateEndpointInput,
 
 ) -> Response[CreateEndpointResponse201 | ErrorResponse]:
-    """ Create a webhook endpoint
+    r""" Create a webhook endpoint
 
-     Creates a new webhook endpoint. If a deactivated endpoint with the
-    same URL and domain exists, it is reactivated instead.
-    Subject to plan limits on the number of active endpoints.
+     Creates a new webhook endpoint. If a deactivated endpoint
+    with the same URL and domain exists, it is reactivated
+    instead. Subject to plan limits on the number of active
+    endpoints.
+
+    **Signing is account-scoped, not per-endpoint.** This call
+    does not return any signing material; every endpoint on the
+    account uses the same webhook secret, fetched via
+    `GET /account/webhook-secret`. See the API-level \"Webhook
+    signing\" section for the full wire format (header name,
+    signed string, hash algo, secret format, tolerance) and a
+    language-agnostic verification recipe.
+
+    After creating the endpoint, fire a test delivery against
+    it via `POST /endpoints/{id}/test` to confirm your verifier
+    accepts the signature.
 
     Args:
         body (CreateEndpointInput):
@@ -185,11 +224,24 @@ async def asyncio(
     body: CreateEndpointInput,
 
 ) -> CreateEndpointResponse201 | ErrorResponse | None:
-    """ Create a webhook endpoint
+    r""" Create a webhook endpoint
 
-     Creates a new webhook endpoint. If a deactivated endpoint with the
-    same URL and domain exists, it is reactivated instead.
-    Subject to plan limits on the number of active endpoints.
+     Creates a new webhook endpoint. If a deactivated endpoint
+    with the same URL and domain exists, it is reactivated
+    instead. Subject to plan limits on the number of active
+    endpoints.
+
+    **Signing is account-scoped, not per-endpoint.** This call
+    does not return any signing material; every endpoint on the
+    account uses the same webhook secret, fetched via
+    `GET /account/webhook-secret`. See the API-level \"Webhook
+    signing\" section for the full wire format (header name,
+    signed string, hash algo, secret format, tolerance) and a
+    language-agnostic verification recipe.
+
+    After creating the endpoint, fire a test delivery against
+    it via `POST /endpoints/{id}/test` to confirm your verifier
+    accepts the signature.
 
     Args:
         body (CreateEndpointInput):

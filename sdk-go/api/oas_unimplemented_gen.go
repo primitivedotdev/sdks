@@ -26,9 +26,20 @@ func (UnimplementedHandler) AddDomain(ctx context.Context, req *AddDomainInput) 
 
 // CreateEndpoint implements createEndpoint operation.
 //
-// Creates a new webhook endpoint. If a deactivated endpoint with the
-// same URL and domain exists, it is reactivated instead.
-// Subject to plan limits on the number of active endpoints.
+// Creates a new webhook endpoint. If a deactivated endpoint
+// with the same URL and domain exists, it is reactivated
+// instead. Subject to plan limits on the number of active
+// endpoints.
+// **Signing is account-scoped, not per-endpoint.** This call
+// does not return any signing material; every endpoint on the
+// account uses the same webhook secret, fetched via
+// `GET /account/webhook-secret`. See the API-level "Webhook
+// signing" section for the full wire format (header name,
+// signed string, hash algo, secret format, tolerance) and a
+// language-agnostic verification recipe.
+// After creating the endpoint, fire a test delivery against
+// it via `POST /endpoints/{id}/test` to confirm your verifier
+// accepts the signature.
 //
 // POST /endpoints
 func (UnimplementedHandler) CreateEndpoint(ctx context.Context, req *CreateEndpointInput) (r CreateEndpointRes, _ error) {
@@ -219,8 +230,22 @@ func (UnimplementedHandler) GetStorageStats(ctx context.Context) (r GetStorageSt
 
 // GetWebhookSecret implements getWebhookSecret operation.
 //
-// Returns the webhook signing secret for your account. If no secret
-// exists yet, one is generated automatically on first access.
+// Returns the webhook signing secret for your account. If no
+// secret exists yet, one is generated automatically on first
+// access.
+// Signing is account-scoped, not per-endpoint. Every webhook
+// delivery from any of your registered endpoints is signed
+// with this single secret. Rotate via
+// `POST /account/webhook-secret/rotate`.
+// **Secret format**: the returned string looks base64-shaped
+// (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
+// Use it AS-IS as a UTF-8 string when computing HMAC over a
+// delivery body. Base64-decoding before HMAC will silently
+// produce mismatched signatures.
+// See the API-level "Webhook signing" section for the full
+// wire format (header name, signed string shape, hash algo,
+// tolerance) including a language-agnostic verification
+// recipe.
 //
 // GET /account/webhook-secret
 func (UnimplementedHandler) GetWebhookSecret(ctx context.Context) (r GetWebhookSecretRes, _ error) {
@@ -251,11 +276,18 @@ func (UnimplementedHandler) ListDomains(ctx context.Context) (r ListDomainsRes, 
 // ListEmails implements listEmails operation.
 //
 // Returns a paginated list of INBOUND emails received at your
-// verified domains. Outbound messages sent via /send-mail are not
-// included; this endpoint is the inbox view, not a unified
-// send/receive history.
-// Supports filtering by domain, status, date range, and free-text
-// search across subject, sender, and recipient fields.
+// verified domains. Outbound messages sent via /send-mail are
+// not included; this endpoint is the inbox view, not a
+// unified send/receive history.
+// Supports filtering by domain, status, date range, and
+// free-text search across subject, sender, and recipient
+// fields.
+// For a compact text-table summary of the most recent N
+// inbounds (no filters, no cursor pagination), the CLI ships
+// `primitive emails:latest` as a one-line-per-email shortcut.
+// It's TTY-aware so id columns are full UUIDs when piped, and
+// a `--json` flag returns the same envelope this endpoint
+// does. Use whichever fits the call site.
 //
 // GET /emails
 func (UnimplementedHandler) ListEmails(ctx context.Context, params ListEmailsParams) (r ListEmailsRes, _ error) {

@@ -50,6 +50,68 @@ info:
       "error": { "code": "not_found", "message": "Email not found" }
     }
     ```
+
+    ## Webhook signing
+
+    Outbound webhook deliveries (configured via the `endpoints` API)
+    are signed so receivers can verify they came from Primitive and
+    have not been tampered with in transit. The signing scheme is
+    deliberately simple so it can be reimplemented in any language
+    in a few lines. The Node SDK's `verifyWebhookSignature` helper
+    is the reference implementation; the wire details below let you
+    write a verifier in Python, Go, Ruby, etc. without reading our
+    source.
+
+    **Header**: `Primitive-Signature: t=<unix-seconds>,v1=<hex>`
+
+    A legacy `MyMX-Signature` header is also sent on every delivery
+    with the same value, retained for back-compatibility with
+    integrations written before the rename. New code should read
+    `Primitive-Signature`.
+
+    **Signed string**: `${timestamp}.${rawBody}` where `timestamp`
+    is the Unix-seconds integer from the `t=` parameter and
+    `rawBody` is the exact bytes of the HTTP request body BEFORE
+    any JSON decoding. Verify against the raw body, not a
+    re-serialized parse, or you will silently mismatch on
+    insignificant whitespace.
+
+    **Signature**: HMAC-SHA256 of the signed string, hex-encoded
+    (lowercase). Use the account's webhook secret as the HMAC key,
+    as a UTF-8 byte sequence.
+
+    **Secret**: returned by `GET /account/webhook-secret`. The
+    string looks base64-shaped (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`)
+    but is NOT base64; use it AS-IS as a UTF-8 string for the HMAC
+    key. Base64-decoding before HMAC will silently produce
+    mismatched signatures.
+
+    **Tolerance**: by convention, reject deliveries whose `t=`
+    timestamp is more than 5 minutes off your wall-clock to defend
+    against replay attacks. The Node SDK's helper enforces this by
+    default.
+
+    **Verification recipe** (any language):
+
+    ```
+    1. Read the raw HTTP body (do not parse).
+    2. Read `Primitive-Signature: t=<ts>,v1=<sig>`.
+    3. Reject if abs(now - ts) > 300 seconds.
+    4. expected = HMAC_SHA256_hex(secret_utf8, f"{ts}.{rawBody}")
+    5. Constant-time compare expected to sig. Reject if not equal.
+    ```
+
+    For Node, use `verifyWebhookSignature` from
+    `@primitivedotdev/sdk/webhook` (or the higher-level
+    `handleWebhook` helper if you want a one-liner). For other
+    languages, the recipe above is everything you need.
+
+    Test deliveries: `POST /endpoints/{id}/test` triggers a fake
+    delivery to your endpoint URL, signed with your real account
+    secret, so you can confirm verification end-to-end without
+    needing real inbound mail. The test response carries the exact
+    `signature` header value sent on the wire so you can compare
+    strings directly.
   contact:
     name: Primitive
     url: https://primitive.dev
@@ -162,8 +224,25 @@ paths:
       operationId: getWebhookSecret
       summary: Get webhook signing secret
       description: |
-        Returns the webhook signing secret for your account. If no secret
-        exists yet, one is generated automatically on first access.
+        Returns the webhook signing secret for your account. If no
+        secret exists yet, one is generated automatically on first
+        access.
+
+        Signing is account-scoped, not per-endpoint. Every webhook
+        delivery from any of your registered endpoints is signed
+        with this single secret. Rotate via
+        `POST /account/webhook-secret/rotate`.
+
+        **Secret format**: the returned string looks base64-shaped
+        (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
+        Use it AS-IS as a UTF-8 string when computing HMAC over a
+        delivery body. Base64-decoding before HMAC will silently
+        produce mismatched signatures.
+
+        See the API-level "Webhook signing" section for the full
+        wire format (header name, signed string shape, hash algo,
+        tolerance) including a language-agnostic verification
+        recipe.
       tags: [Account]
       responses:
         '200':
@@ -395,12 +474,20 @@ paths:
       summary: List inbound emails
       description: |
         Returns a paginated list of INBOUND emails received at your
-        verified domains. Outbound messages sent via /send-mail are not
-        included; this endpoint is the inbox view, not a unified
-        send/receive history.
+        verified domains. Outbound messages sent via /send-mail are
+        not included; this endpoint is the inbox view, not a
+        unified send/receive history.
 
-        Supports filtering by domain, status, date range, and free-text
-        search across subject, sender, and recipient fields.
+        Supports filtering by domain, status, date range, and
+        free-text search across subject, sender, and recipient
+        fields.
+
+        For a compact text-table summary of the most recent N
+        inbounds (no filters, no cursor pagination), the CLI ships
+        `primitive emails:latest` as a one-line-per-email shortcut.
+        It's TTY-aware so id columns are full UUIDs when piped, and
+        a `--json` flag returns the same envelope this endpoint
+        does. Use whichever fits the call site.
       tags: [Emails]
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -798,9 +885,22 @@ paths:
       operationId: createEndpoint
       summary: Create a webhook endpoint
       description: |
-        Creates a new webhook endpoint. If a deactivated endpoint with the
-        same URL and domain exists, it is reactivated instead.
-        Subject to plan limits on the number of active endpoints.
+        Creates a new webhook endpoint. If a deactivated endpoint
+        with the same URL and domain exists, it is reactivated
+        instead. Subject to plan limits on the number of active
+        endpoints.
+
+        **Signing is account-scoped, not per-endpoint.** This call
+        does not return any signing material; every endpoint on the
+        account uses the same webhook secret, fetched via
+        `GET /account/webhook-secret`. See the API-level "Webhook
+        signing" section for the full wire format (header name,
+        signed string, hash algo, secret format, tolerance) and a
+        language-agnostic verification recipe.
+
+        After creating the endpoint, fire a test delivery against
+        it via `POST /endpoints/{id}/test` to confirm your verifier
+        accepts the signature.
       tags: [Endpoints]
       requestBody:
         required: true
