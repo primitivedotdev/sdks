@@ -356,6 +356,13 @@ describe("formatElapsed", () => {
   it("formats sub-second durations with 2 decimals", () => {
     expect(formatElapsed(180)).toBe("0.18s");
     expect(formatElapsed(0)).toBe("0.00s");
+  });
+
+  it("rounds up to 1.00s at the sub-second/second boundary", () => {
+    // 999ms is numerically sub-second, but toFixed(2) rounds 0.999
+    // to 1.00, so the rendered string crosses the second boundary.
+    // Pinned in its own test to make the rounding behavior explicit
+    // rather than burying it in the sub-second group.
     expect(formatElapsed(999)).toBe("1.00s");
   });
 
@@ -405,7 +412,11 @@ describe("runWithTiming", () => {
     const result = await runWithTiming(true, async () => "done");
     expect(result).toBe("done");
     expect(writes).toHaveLength(1);
-    expect(writes[0]).toMatch(/^\[time: \d+\.\d{2}s\]\n$/);
+    // Pattern accepts both second-format (`0.18s`) and minute-format
+    // (`1m 23.50s`); tests run in milliseconds so the minute branch
+    // is essentially unreachable, but matching it future-proofs the
+    // assertion against any future format change.
+    expect(writes[0]).toMatch(/^\[time: (?:\d+m )?\d+\.\d{2}s\]\n$/);
   });
 
   it("writes the timing line even if the function throws (so errors are still timed)", async () => {
@@ -415,6 +426,10 @@ describe("runWithTiming", () => {
       }),
     ).rejects.toThrow("boom");
     expect(writes).toHaveLength(1);
-    expect(writes[0]).toMatch(/^\[time: \d+\.\d{2}s\]\n$/);
+    // Pattern accepts both second-format (`0.18s`) and minute-format
+    // (`1m 23.50s`); tests run in milliseconds so the minute branch
+    // is essentially unreachable, but matching it future-proofs the
+    // assertion against any future format change.
+    expect(writes[0]).toMatch(/^\[time: (?:\d+m )?\d+\.\d{2}s\]\n$/);
   });
 });
