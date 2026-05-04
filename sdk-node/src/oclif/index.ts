@@ -4,6 +4,7 @@ import {
   type PrimitiveOperationManifest,
 } from "../openapi/index.js";
 import { createOperationCommand } from "./api-command.js";
+import SendCommand from "./commands/send.js";
 import { renderFishCompletion } from "./fish-completion.js";
 
 class ListOperationsCommand extends Command {
@@ -56,5 +57,10 @@ const generatedCommands = Object.fromEntries(
 export const COMMANDS: Record<string, typeof Command> = {
   completion: CompletionCommand,
   "list-operations": ListOperationsCommand,
+  // `send` is the agent-grade shortcut for sending:send-email with
+  // sensible defaults (auto from-address, auto subject). The full
+  // operation stays available under sending:send-email for callers
+  // who want every flag.
+  send: SendCommand,
   ...generatedCommands,
 };
