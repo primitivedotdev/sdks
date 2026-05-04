@@ -392,11 +392,15 @@ paths:
   /emails:
     get:
       operationId: listEmails
-      summary: List emails
+      summary: List inbound emails
       description: |
-        Returns a paginated list of received emails. Supports filtering by
-        domain, status, date range, and free-text search across subject,
-        sender, and recipient fields.
+        Returns a paginated list of INBOUND emails received at your
+        verified domains. Outbound messages sent via /send-mail are not
+        included; this endpoint is the inbox view, not a unified
+        send/receive history.
+
+        Supports filtering by domain, status, date range, and free-text
+        search across subject, sender, and recipient fields.
       tags: [Emails]
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -1648,6 +1652,16 @@ components:
           enum: [pending, accepted, completed, rejected]
         sender:
           type: string
+          description: |
+            SMTP envelope sender (return-path) the inbound mail server
+            accepted. For most legitimate mail this equals the bare
+            address in the From header; for mailing lists, bounce
+            handlers, and forwarders it is typically the bounce address
+            rather than the human-visible sender.
+
+            For the parsed From-header value (with display name handling
+            and a sender-fallback when the header is unparseable), GET
+            the email by id and use `from_email`.
         recipient:
           type: string
         subject:
@@ -1695,6 +1709,18 @@ components:
           format: uuid
         sender:
           type: string
+          description: |
+            SMTP envelope sender (return-path) the inbound mail server
+            accepted. Same value as `smtp_mail_from`; both fields exist
+            so protocol-aware tooling can use whichever name it expects.
+
+            For most legitimate mail this equals `from_email`; for
+            mailing lists, bounce handlers, and forwarders it is
+            typically the bounce-handling address rather than the
+            human-visible sender.
+
+            **For the canonical "who sent this email" value, use
+            `from_email`.**
         recipient:
           type: string
         subject:
@@ -1743,12 +1769,27 @@ components:
           type: [string, 'null']
         smtp_mail_from:
           type: [string, 'null']
+          description: |
+            SMTP envelope MAIL FROM (return-path), as accepted by the
+            inbound mail server. Same value as `sender`; both fields
+            exist so protocol-aware tooling can use whichever name it
+            expects.
+
+            For the canonical "who sent this email" value (display name
+            stripped, From-header preferred), use `from_email`.
         smtp_rcpt_to:
           type: [array, 'null']
           items:
             type: string
         from_header:
           type: [string, 'null']
+          description: |
+            Raw `From:` header from the message body, including any
+            display name (e.g. `"Alice Example" <alice@example.com>`).
+            Use this when you need the display name for rendering.
+
+            For the bare email address (display name stripped), use
+            `from_email`.
         content_discarded_at:
           type: [string, 'null']
           format: date-time
@@ -1756,7 +1797,18 @@ components:
           type: [string, 'null']
         from_email:
           type: string
-          description: Parsed from address (from_header or sender fallback)
+          description: |
+            Bare email address parsed from the `From:` header, with
+            display name stripped (e.g. `alice@example.com`). Falls
+            back to `sender` (the SMTP envelope MAIL FROM) when the
+            `From:` header cannot be parsed.
+
+            **This is the canonical "who sent this email" field for
+            most use cases**, including comparing against allowlists,
+            routing replies, or displaying the sender to a user. Use
+            `from_header` when you specifically need the display name,
+            or `sender`/`smtp_mail_from` when you need the SMTP
+            envelope value (e.g. to follow a bounce).
         to_email:
           type: string
           description: Parsed to address (same as recipient)
