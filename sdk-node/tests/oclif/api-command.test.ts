@@ -138,8 +138,8 @@ describe("readJsonBody", () => {
     expect(readJsonBody({})).toBeUndefined();
   });
 
-  it("parses a valid --body string", () => {
-    expect(readJsonBody({ body: '{"ok":true}' })).toEqual({ ok: true });
+  it("parses a valid --raw-body string", () => {
+    expect(readJsonBody({ "raw-body": '{"ok":true}' })).toEqual({ ok: true });
   });
 
   it("parses a valid --body-file contents", () => {
@@ -149,10 +149,12 @@ describe("readJsonBody", () => {
     expect(readJsonBody({ "body-file": path })).toEqual({ from: "file" });
   });
 
-  it("throws a friendly CLIError on invalid --body JSON", () => {
-    expect(() => readJsonBody({ body: "not json" })).toThrow(Errors.CLIError);
-    expect(() => readJsonBody({ body: "not json" })).toThrow(
-      /--body is not valid JSON/,
+  it("throws a friendly CLIError on invalid --raw-body JSON", () => {
+    expect(() => readJsonBody({ "raw-body": "not json" })).toThrow(
+      Errors.CLIError,
+    );
+    expect(() => readJsonBody({ "raw-body": "not json" })).toThrow(
+      /--raw-body is not valid JSON/,
     );
   });
 
@@ -174,10 +176,19 @@ describe("readJsonBody", () => {
     );
   });
 
-  it("rejects combining --body and --body-file", () => {
+  it("rejects combining --raw-body and --body-file", () => {
     expect(() =>
-      readJsonBody({ body: "{}", "body-file": "/tmp/x.json" }),
-    ).toThrow(/Use either --body or --body-file/);
+      readJsonBody({ "raw-body": "{}", "body-file": "/tmp/x.json" }),
+    ).toThrow(/Use either --raw-body or --body-file/);
+  });
+
+  it("ignores the legacy --body flag (no longer the JSON escape hatch)", () => {
+    // Pre-0.12 the JSON escape hatch was --body. To make `primitive
+    // send --body "..."` mean the message body consistently
+    // everywhere, that escape hatch was renamed to --raw-body.
+    // The CLI no longer reads --body as JSON; if someone passes
+    // it on a generated command, it's just an unknown flag.
+    expect(readJsonBody({ body: '{"ok":true}' })).toBeUndefined();
   });
 });
 
