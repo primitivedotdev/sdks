@@ -208,7 +208,7 @@ type Invoker interface {
 	// /emails. There is no unified send/receive history endpoint;
 	// the two surfaces are intentionally separate because the
 	// underlying tables, statuses, and lifecycle differ.
-	// Body bodies (`body_text`, `body_html`) are NOT included on
+	// Email bodies (`body_text`, `body_html`) are NOT included on
 	// list rows so a 50-row page can't balloon into a multi-MB
 	// response when sends are near the 5MB body cap. Use
 	// /sent-emails/{id} to fetch a single row with bodies, or
@@ -3006,7 +3006,7 @@ func (c *Client) sendListFilters(ctx context.Context) (res ListFiltersRes, err e
 // /emails. There is no unified send/receive history endpoint;
 // the two surfaces are intentionally separate because the
 // underlying tables, statuses, and lifecycle differ.
-// Body bodies (`body_text`, `body_html`) are NOT included on
+// Email bodies (`body_text`, `body_html`) are NOT included on
 // list rows so a 50-row page can't balloon into a multi-MB
 // response when sends are near the 5MB body cap. Use
 // /sent-emails/{id} to fetch a single row with bodies, or
