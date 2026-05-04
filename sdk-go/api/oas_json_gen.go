@@ -4228,92 +4228,46 @@ func (s *EmailDetailReply) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes EmailDetailStatus as json.
-func (s EmailDetailStatus) Encode(e *jx.Encoder) {
+// Encode encodes EmailStatus as json.
+func (s EmailStatus) Encode(e *jx.Encoder) {
 	e.Str(string(s))
 }
 
-// Decode decodes EmailDetailStatus from json.
-func (s *EmailDetailStatus) Decode(d *jx.Decoder) error {
+// Decode decodes EmailStatus from json.
+func (s *EmailStatus) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode EmailDetailStatus to nil")
+		return errors.New("invalid: unable to decode EmailStatus to nil")
 	}
 	v, err := d.StrBytes()
 	if err != nil {
 		return err
 	}
 	// Try to use constant string.
-	switch EmailDetailStatus(v) {
-	case EmailDetailStatusPending:
-		*s = EmailDetailStatusPending
-	case EmailDetailStatusAccepted:
-		*s = EmailDetailStatusAccepted
-	case EmailDetailStatusCompleted:
-		*s = EmailDetailStatusCompleted
-	case EmailDetailStatusRejected:
-		*s = EmailDetailStatusRejected
+	switch EmailStatus(v) {
+	case EmailStatusPending:
+		*s = EmailStatusPending
+	case EmailStatusAccepted:
+		*s = EmailStatusAccepted
+	case EmailStatusCompleted:
+		*s = EmailStatusCompleted
+	case EmailStatusRejected:
+		*s = EmailStatusRejected
 	default:
-		*s = EmailDetailStatus(v)
+		*s = EmailStatus(v)
 	}
 
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s EmailDetailStatus) MarshalJSON() ([]byte, error) {
+func (s EmailStatus) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *EmailDetailStatus) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes EmailDetailWebhookStatus as json.
-func (s EmailDetailWebhookStatus) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes EmailDetailWebhookStatus from json.
-func (s *EmailDetailWebhookStatus) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode EmailDetailWebhookStatus to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch EmailDetailWebhookStatus(v) {
-	case EmailDetailWebhookStatusPending:
-		*s = EmailDetailWebhookStatusPending
-	case EmailDetailWebhookStatusInFlight:
-		*s = EmailDetailWebhookStatusInFlight
-	case EmailDetailWebhookStatusFired:
-		*s = EmailDetailWebhookStatusFired
-	case EmailDetailWebhookStatusFailed:
-		*s = EmailDetailWebhookStatusFailed
-	case EmailDetailWebhookStatusExhausted:
-		*s = EmailDetailWebhookStatusExhausted
-	default:
-		*s = EmailDetailWebhookStatus(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s EmailDetailWebhookStatus) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *EmailDetailWebhookStatus) UnmarshalJSON(data []byte) error {
+func (s *EmailStatus) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -4651,92 +4605,48 @@ func (s *EmailSummary) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes EmailSummaryStatus as json.
-func (s EmailSummaryStatus) Encode(e *jx.Encoder) {
+// Encode encodes EmailWebhookStatus as json.
+func (s EmailWebhookStatus) Encode(e *jx.Encoder) {
 	e.Str(string(s))
 }
 
-// Decode decodes EmailSummaryStatus from json.
-func (s *EmailSummaryStatus) Decode(d *jx.Decoder) error {
+// Decode decodes EmailWebhookStatus from json.
+func (s *EmailWebhookStatus) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode EmailSummaryStatus to nil")
+		return errors.New("invalid: unable to decode EmailWebhookStatus to nil")
 	}
 	v, err := d.StrBytes()
 	if err != nil {
 		return err
 	}
 	// Try to use constant string.
-	switch EmailSummaryStatus(v) {
-	case EmailSummaryStatusPending:
-		*s = EmailSummaryStatusPending
-	case EmailSummaryStatusAccepted:
-		*s = EmailSummaryStatusAccepted
-	case EmailSummaryStatusCompleted:
-		*s = EmailSummaryStatusCompleted
-	case EmailSummaryStatusRejected:
-		*s = EmailSummaryStatusRejected
+	switch EmailWebhookStatus(v) {
+	case EmailWebhookStatusPending:
+		*s = EmailWebhookStatusPending
+	case EmailWebhookStatusInFlight:
+		*s = EmailWebhookStatusInFlight
+	case EmailWebhookStatusFired:
+		*s = EmailWebhookStatusFired
+	case EmailWebhookStatusFailed:
+		*s = EmailWebhookStatusFailed
+	case EmailWebhookStatusExhausted:
+		*s = EmailWebhookStatusExhausted
 	default:
-		*s = EmailSummaryStatus(v)
+		*s = EmailWebhookStatus(v)
 	}
 
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s EmailSummaryStatus) MarshalJSON() ([]byte, error) {
+func (s EmailWebhookStatus) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *EmailSummaryStatus) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes EmailSummaryWebhookStatus as json.
-func (s EmailSummaryWebhookStatus) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes EmailSummaryWebhookStatus from json.
-func (s *EmailSummaryWebhookStatus) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode EmailSummaryWebhookStatus to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch EmailSummaryWebhookStatus(v) {
-	case EmailSummaryWebhookStatusPending:
-		*s = EmailSummaryWebhookStatusPending
-	case EmailSummaryWebhookStatusInFlight:
-		*s = EmailSummaryWebhookStatusInFlight
-	case EmailSummaryWebhookStatusFired:
-		*s = EmailSummaryWebhookStatusFired
-	case EmailSummaryWebhookStatusFailed:
-		*s = EmailSummaryWebhookStatusFailed
-	case EmailSummaryWebhookStatusExhausted:
-		*s = EmailSummaryWebhookStatusExhausted
-	default:
-		*s = EmailSummaryWebhookStatus(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s EmailSummaryWebhookStatus) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *EmailSummaryWebhookStatus) UnmarshalJSON(data []byte) error {
+func (s *EmailWebhookStatus) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -9032,8 +8942,8 @@ func (s *OptNilDeliverySummaryEmail) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes EmailDetailWebhookStatus as json.
-func (o OptNilEmailDetailWebhookStatus) Encode(e *jx.Encoder) {
+// Encode encodes EmailWebhookStatus as json.
+func (o OptNilEmailWebhookStatus) Encode(e *jx.Encoder) {
 	if !o.Set {
 		return
 	}
@@ -9044,17 +8954,17 @@ func (o OptNilEmailDetailWebhookStatus) Encode(e *jx.Encoder) {
 	e.Str(string(o.Value))
 }
 
-// Decode decodes EmailDetailWebhookStatus from json.
-func (o *OptNilEmailDetailWebhookStatus) Decode(d *jx.Decoder) error {
+// Decode decodes EmailWebhookStatus from json.
+func (o *OptNilEmailWebhookStatus) Decode(d *jx.Decoder) error {
 	if o == nil {
-		return errors.New("invalid: unable to decode OptNilEmailDetailWebhookStatus to nil")
+		return errors.New("invalid: unable to decode OptNilEmailWebhookStatus to nil")
 	}
 	if d.Next() == jx.Null {
 		if err := d.Null(); err != nil {
 			return err
 		}
 
-		var v EmailDetailWebhookStatus
+		var v EmailWebhookStatus
 		o.Value = v
 		o.Set = true
 		o.Null = true
@@ -9069,63 +8979,14 @@ func (o *OptNilEmailDetailWebhookStatus) Decode(d *jx.Decoder) error {
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s OptNilEmailDetailWebhookStatus) MarshalJSON() ([]byte, error) {
+func (s OptNilEmailWebhookStatus) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptNilEmailDetailWebhookStatus) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes EmailSummaryWebhookStatus as json.
-func (o OptNilEmailSummaryWebhookStatus) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	if o.Null {
-		e.Null()
-		return
-	}
-	e.Str(string(o.Value))
-}
-
-// Decode decodes EmailSummaryWebhookStatus from json.
-func (o *OptNilEmailSummaryWebhookStatus) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptNilEmailSummaryWebhookStatus to nil")
-	}
-	if d.Next() == jx.Null {
-		if err := d.Null(); err != nil {
-			return err
-		}
-
-		var v EmailSummaryWebhookStatus
-		o.Value = v
-		o.Set = true
-		o.Null = true
-		return nil
-	}
-	o.Set = true
-	o.Null = false
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptNilEmailSummaryWebhookStatus) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptNilEmailSummaryWebhookStatus) UnmarshalJSON(data []byte) error {
+func (s *OptNilEmailWebhookStatus) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

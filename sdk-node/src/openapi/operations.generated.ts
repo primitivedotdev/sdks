@@ -29,6 +29,12 @@ export type PrimitiveOperationManifest = {
    * true. `$ref`s into the OpenAPI components are inlined.
    */
   requestSchema: Record<string, unknown> | null;
+  /**
+   * Resolved JSON Schema for the 200/201 response body's `data`
+   * envelope contents. Same shape as `requestSchema`: `$ref`s
+   * inlined. Null on operations without a 200/201 JSON response.
+   */
+  responseSchema: Record<string, unknown> | null;
   sdkName: string;
   summary: string | null;
   tag: string;
@@ -48,6 +54,78 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "email": {
+          "type": "string"
+        },
+        "plan": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "onboarding_completed": {
+          "type": "boolean"
+        },
+        "onboarding_step": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stripe_subscription_status": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subscription_current_period_end": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "subscription_cancel_at_period_end": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "spam_threshold": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 15
+        },
+        "discard_content_on_webhook_confirmed": {
+          "type": "boolean"
+        },
+        "webhook_secret_rotated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "plan",
+        "created_at",
+        "discard_content_on_webhook_confirmed"
+      ]
+    },
     "sdkName": "getAccount",
     "summary": "Get account info",
     "tag": "Account",
@@ -65,6 +143,43 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "used_bytes": {
+          "type": "integer",
+          "description": "Total storage used in bytes"
+        },
+        "used_kb": {
+          "type": "number",
+          "description": "Total storage used in kilobytes (1 decimal)"
+        },
+        "used_mb": {
+          "type": "number",
+          "description": "Total storage used in megabytes (2 decimals)"
+        },
+        "quota_mb": {
+          "type": "number",
+          "description": "Storage quota in megabytes (based on plan)"
+        },
+        "percentage": {
+          "type": "number",
+          "description": "Percentage of quota used (1 decimal)"
+        },
+        "emails_count": {
+          "type": "integer",
+          "description": "Number of stored emails"
+        }
+      },
+      "required": [
+        "used_bytes",
+        "used_kb",
+        "used_mb",
+        "quota_mb",
+        "percentage",
+        "emails_count"
+      ]
+    },
     "sdkName": "getStorageStats",
     "summary": "Get storage usage",
     "tag": "Account",
@@ -82,6 +197,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "secret": {
+          "type": "string",
+          "description": "The webhook signing secret value"
+        }
+      },
+      "required": [
+        "secret"
+      ]
+    },
     "sdkName": "getWebhookSecret",
     "summary": "Get webhook signing secret",
     "tag": "Account",
@@ -99,6 +226,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "secret": {
+          "type": "string",
+          "description": "The webhook signing secret value"
+        }
+      },
+      "required": [
+        "secret"
+      ]
+    },
     "sdkName": "rotateWebhookSecret",
     "summary": "Rotate webhook signing secret",
     "tag": "Account",
@@ -135,6 +274,38 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       "minProperties": 1
     },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "email": {
+          "type": "string"
+        },
+        "plan": {
+          "type": "string"
+        },
+        "spam_threshold": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 15
+        },
+        "discard_content_on_webhook_confirmed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "plan",
+        "discard_content_on_webhook_confirmed"
+      ]
+    },
     "sdkName": "updateAccount",
     "summary": "Update account settings",
     "tag": "Account",
@@ -166,6 +337,42 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "domain"
       ]
     },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "verified": {
+          "type": "boolean",
+          "const": false
+        },
+        "verification_token": {
+          "type": "string",
+          "description": "Add this value as a TXT record to verify ownership"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "org_id",
+        "domain",
+        "verified",
+        "verification_token",
+        "created_at"
+      ]
+    },
     "sdkName": "addDomain",
     "summary": "Claim a new domain",
     "tag": "Domains",
@@ -191,6 +398,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": null,
     "sdkName": "deleteDomain",
     "summary": "Delete a domain",
     "tag": "Domains",
@@ -208,6 +416,99 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "description": "A domain can be either verified or unverified. Verified domains have\n`is_active` and `spam_threshold` fields. Unverified domains have a\n`verification_token` for DNS verification.\n",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "org_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "verified": {
+                "type": "boolean",
+                "const": true
+              },
+              "is_active": {
+                "type": "boolean"
+              },
+              "spam_threshold": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 15
+              },
+              "verification_token": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "org_id",
+              "domain",
+              "verified",
+              "is_active",
+              "created_at"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "org_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "verified": {
+                "type": "boolean",
+                "const": false
+              },
+              "verification_token": {
+                "type": "string",
+                "description": "Add this value as a TXT record to verify ownership"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "org_id",
+              "domain",
+              "verified",
+              "verification_token",
+              "created_at"
+            ]
+          }
+        ]
+      }
+    },
     "sdkName": "listDomains",
     "summary": "List all domains",
     "tag": "Domains",
@@ -252,6 +553,55 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       "minProperties": 1
     },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "verified": {
+          "type": "boolean",
+          "const": true
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "spam_threshold": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 15
+        },
+        "verification_token": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "org_id",
+        "domain",
+        "verified",
+        "is_active",
+        "created_at"
+      ]
+    },
     "sdkName": "updateDomain",
     "summary": "Update domain settings",
     "tag": "Domains",
@@ -277,6 +627,49 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "verified": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "verified"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "verified": {
+              "type": "boolean",
+              "const": false
+            },
+            "mxFound": {
+              "type": "boolean",
+              "description": "Whether MX records point to Primitive"
+            },
+            "txtFound": {
+              "type": "boolean",
+              "description": "Whether the TXT verification record was found"
+            },
+            "error": {
+              "type": "string",
+              "description": "Human-readable verification failure reason"
+            }
+          },
+          "required": [
+            "verified",
+            "mxFound",
+            "txtFound",
+            "error"
+          ]
+        }
+      ]
+    },
     "sdkName": "verifyDomain",
     "summary": "Verify domain ownership",
     "tag": "Domains",
@@ -302,6 +695,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": null,
     "sdkName": "deleteEmail",
     "summary": "Delete an email",
     "tag": "Emails",
@@ -335,6 +729,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "requestSchema": null,
+    "responseSchema": null,
     "sdkName": "downloadAttachments",
     "summary": "Download email attachments",
     "tag": "Emails",
@@ -368,6 +763,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "requestSchema": null,
+    "responseSchema": null,
     "sdkName": "downloadRawEmail",
     "summary": "Download raw email",
     "tag": "Emails",
@@ -377,7 +773,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-email",
-    "description": null,
+    "description": "Returns the full record for an inbound email received at one\nof your verified domains, including the parsed text and HTML\nbodies, threading metadata, SMTP envelope detail, webhook\ndelivery state, and a `replies` array for any outbound sends\nrecorded as replies to this inbound.\n\nFor listing inbound emails (with cursor pagination, status\nand date filters, and free-text search), use\n`/emails`. Outbound (sent) email records are NOT returned\nhere; use `/sent-emails/{id}` for those.\n\nThe response carries four sender-shaped fields whose\nmeanings overlap. `from_email` is the canonical \"who sent\nthis\" field for most use cases (parsed bare address from\nthe `From:` header, with a `sender` fallback). `from_header`\nis the raw header including any display name. `sender` and\n`smtp_mail_from` both carry the SMTP envelope MAIL FROM\n(return-path) and are equal by construction; `sender` is\nthe older field name retained for compatibility. See\n`primitive describe emails:get-email | jq '.responseSchema.properties'`\nfor per-field detail.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getEmail",
@@ -393,8 +789,276 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "message_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "sender": {
+          "type": "string",
+          "description": "SMTP envelope sender (return-path) the inbound mail server\naccepted. Same value as `smtp_mail_from`; both fields exist\nso protocol-aware tooling can use whichever name it expects.\n\nFor most legitimate mail this equals `from_email`; for\nmailing lists, bounce handlers, and forwarders it is\ntypically the bounce-handling address rather than the\nhuman-visible sender.\n\n**For the canonical \"who sent this email\" value, use\n`from_email`.**\n"
+        },
+        "recipient": {
+          "type": "string"
+        },
+        "subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "body_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Plain-text body parsed from the inbound MIME, matching the `email.parsed.body_text` field on the webhook payload. Null when the message had no text part or parsing failed."
+        },
+        "body_html": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "HTML body parsed from the inbound MIME, matching the `email.parsed.body_html` field on the webhook payload. Null when the message had no HTML part or parsing failed."
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle status of an INBOUND email (a row in the `emails`\ntable). Distinct from `SentEmailStatus`, which describes\nthe OUTBOUND lifecycle (the `sent_emails` table) and uses\na different vocabulary because the lifecycles differ.\nPossible values:\n\n  - `pending`: the row was inserted at ingestion (mx_main)\n    and has not yet completed the spam / filter / auth\n    pipeline. Body and parsed fields are present; webhook\n    delivery is not yet scheduled. Most rows transition out\n    of `pending` within seconds.\n  - `accepted`: the inbound passed the policy gates and is\n    queued for webhook delivery. The `webhook_status` field\n    tracks the separate webhook-delivery lifecycle from\n    this point.\n  - `completed`: terminal success. Webhook delivery\n    attempted and acknowledged by every active endpoint, OR\n    no endpoints are configured, so the row is durably\n    archived.\n  - `rejected`: terminal failure at ingestion (spam, blocked\n    sender, filter rule, malformed). The body and metadata\n    are stored for auditing but no webhook fires and the\n    row is not repliable.\n\nSee also `webhook_status` (separate enum tracking the\nwebhook-delivery state machine) and `SentEmailStatus` (the\noutbound vocabulary).\n",
+          "enum": [
+            "pending",
+            "accepted",
+            "completed",
+            "rejected"
+          ]
+        },
+        "domain": {
+          "type": "string"
+        },
+        "spam_score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "raw_size_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "raw_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rejection_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "webhook_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Webhook-delivery state for an inbound email. Tracks a\nSEPARATE lifecycle from the email's `status` field; the\nsame row carries both. Possible values:\n\n  - `pending`: ingestion is past `pending` (the email itself\n    is `accepted`) but the webhook fan-out has not yet\n    started for this row.\n  - `in_flight`: at least one delivery attempt is in flight.\n  - `fired`: terminal success. Every active endpoint\n    acknowledged the delivery (or accepted it after retries).\n  - `failed`: terminal partial-failure. At least one endpoint\n    exhausted its retry budget; some endpoints may still\n    have succeeded.\n  - `exhausted`: terminal failure. Every endpoint exhausted\n    its retry budget without success.\n  - `null`: no endpoints configured, so no webhook lifecycle\n    applies.\n\nNote that the value `pending` here does NOT mean the email\nis `pending`; it means the email is past ingestion but\nwebhook delivery has not yet begun. Two overlapping uses\nof the word `pending` for distinct lifecycle phases.\n",
+          "enum": [
+            "pending",
+            "in_flight",
+            "fired",
+            "failed",
+            "exhausted",
+            null
+          ]
+        },
+        "webhook_attempt_count": {
+          "type": "integer"
+        },
+        "webhook_last_attempt_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "webhook_last_status_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "webhook_last_error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "webhook_fired_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "smtp_helo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "smtp_mail_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "SMTP envelope MAIL FROM (return-path), as accepted by the\ninbound mail server. Same value as `sender`; both fields\nexist so protocol-aware tooling can use whichever name it\nexpects.\n\nFor the canonical \"who sent this email\" value (display name\nstripped, From-header preferred), use `from_email`.\n"
+        },
+        "smtp_rcpt_to": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "from_header": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Raw `From:` header from the message body, including any\ndisplay name (e.g. `\"Alice Example\" <alice@example.com>`).\nUse this when you need the display name for rendering.\n\nFor the bare email address (display name stripped), use\n`from_email`.\n"
+        },
+        "content_discarded_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "content_discarded_by_delivery_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from_email": {
+          "type": "string",
+          "description": "Bare email address parsed from the `From:` header, with\ndisplay name stripped (e.g. `alice@example.com`). Falls\nback to `sender` (the SMTP envelope MAIL FROM) when the\n`From:` header cannot be parsed.\n\n**This is the canonical \"who sent this email\" field for\nmost use cases**, including comparing against allowlists,\nrouting replies, or displaying the sender to a user. Use\n`from_header` when you specifically need the display name,\nor `sender`/`smtp_mail_from` when you need the SMTP\nenvelope value (e.g. to follow a bounce).\n"
+        },
+        "to_email": {
+          "type": "string",
+          "description": "Parsed to address (same as recipient)"
+        },
+        "from_known_address": {
+          "type": "boolean",
+          "description": "True when the inbound's sender address has a matching grant\nin the org's known-send-addresses list. Advisory: a true\nvalue does not by itself guarantee that a reply will be\naccepted by send-mail's gates; the per-send check at send\ntime remains authoritative.\n"
+        },
+        "replies": {
+          "type": "array",
+          "description": "Sent emails recorded as replies to this inbound, in send\norder (ascending). Populated when a customer's send-mail\nrequest carries an `in_reply_to` Message-ID that matches\nthis inbound's `message_id` in the same org. Includes\nattempts that were gate-denied, so the array reflects every\nrecorded reply attempt regardless of outcome.\n",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Sent-email row id."
+              },
+              "status": {
+                "type": "string",
+                "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+                "enum": [
+                  "queued",
+                  "submitted_to_agent",
+                  "agent_failed",
+                  "gate_denied",
+                  "unknown",
+                  "delivered",
+                  "bounced",
+                  "deferred",
+                  "wait_timeout"
+                ]
+              },
+              "to_address": {
+                "type": "string",
+                "description": "Recipient address as recorded on the sent_emails row."
+              },
+              "subject": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "queue_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Outbound relay queue identifier when available."
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "to_address",
+              "created_at"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "sender",
+        "recipient",
+        "status",
+        "domain",
+        "created_at",
+        "received_at",
+        "webhook_attempt_count",
+        "from_email",
+        "to_email",
+        "replies"
+      ]
+    },
     "sdkName": "getEmail",
-    "summary": "Get email details",
+    "summary": "Get inbound email by id",
     "tag": "Emails",
     "tagCommand": "emails"
   },
@@ -431,13 +1095,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Filter by email status",
-        "enum": [
-          "pending",
-          "accepted",
-          "completed",
-          "rejected"
-        ],
+        "description": "Filter inbound rows by lifecycle status. See `EmailStatus`\nfor what each value means. Note that the webhook delivery\nstate is a SEPARATE lifecycle on the same row; filter by\n`webhook_status` semantics is not currently supported on\nthis endpoint.\n",
+        "enum": null,
         "name": "status",
         "required": false,
         "type": "string"
@@ -465,6 +1124,112 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "domain_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "Lifecycle status of an INBOUND email (a row in the `emails`\ntable). Distinct from `SentEmailStatus`, which describes\nthe OUTBOUND lifecycle (the `sent_emails` table) and uses\na different vocabulary because the lifecycles differ.\nPossible values:\n\n  - `pending`: the row was inserted at ingestion (mx_main)\n    and has not yet completed the spam / filter / auth\n    pipeline. Body and parsed fields are present; webhook\n    delivery is not yet scheduled. Most rows transition out\n    of `pending` within seconds.\n  - `accepted`: the inbound passed the policy gates and is\n    queued for webhook delivery. The `webhook_status` field\n    tracks the separate webhook-delivery lifecycle from\n    this point.\n  - `completed`: terminal success. Webhook delivery\n    attempted and acknowledged by every active endpoint, OR\n    no endpoints are configured, so the row is durably\n    archived.\n  - `rejected`: terminal failure at ingestion (spam, blocked\n    sender, filter rule, malformed). The body and metadata\n    are stored for auditing but no webhook fires and the\n    row is not repliable.\n\nSee also `webhook_status` (separate enum tracking the\nwebhook-delivery state machine) and `SentEmailStatus` (the\noutbound vocabulary).\n",
+            "enum": [
+              "pending",
+              "accepted",
+              "completed",
+              "rejected"
+            ]
+          },
+          "sender": {
+            "type": "string",
+            "description": "SMTP envelope sender (return-path) the inbound mail server\naccepted. For most legitimate mail this equals the bare\naddress in the From header; for mailing lists, bounce\nhandlers, and forwarders it is typically the bounce address\nrather than the human-visible sender.\n\nFor the parsed From-header value (with display name handling\nand a sender-fallback when the header is unparseable), GET\nthe email by id and use `from_email`.\n"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "domain": {
+            "type": "string"
+          },
+          "spam_score": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "raw_size_bytes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "webhook_status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Webhook-delivery state for an inbound email. Tracks a\nSEPARATE lifecycle from the email's `status` field; the\nsame row carries both. Possible values:\n\n  - `pending`: ingestion is past `pending` (the email itself\n    is `accepted`) but the webhook fan-out has not yet\n    started for this row.\n  - `in_flight`: at least one delivery attempt is in flight.\n  - `fired`: terminal success. Every active endpoint\n    acknowledged the delivery (or accepted it after retries).\n  - `failed`: terminal partial-failure. At least one endpoint\n    exhausted its retry budget; some endpoints may still\n    have succeeded.\n  - `exhausted`: terminal failure. Every endpoint exhausted\n    its retry budget without success.\n  - `null`: no endpoints configured, so no webhook lifecycle\n    applies.\n\nNote that the value `pending` here does NOT mean the email\nis `pending`; it means the email is past ingestion but\nwebhook delivery has not yet begun. Two overlapping uses\nof the word `pending` for distinct lifecycle phases.\n",
+            "enum": [
+              "pending",
+              "in_flight",
+              "fired",
+              "failed",
+              "exhausted",
+              null
+            ]
+          },
+          "webhook_attempt_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "sender",
+          "recipient",
+          "domain",
+          "created_at",
+          "received_at",
+          "webhook_attempt_count"
+        ]
+      }
+    },
     "sdkName": "listEmails",
     "summary": "List inbound emails",
     "tag": "Emails",
@@ -490,6 +1255,23 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "delivered": {
+          "type": "integer",
+          "description": "Number of successful deliveries"
+        },
+        "failed": {
+          "type": "integer",
+          "description": "Number of failed deliveries"
+        }
+      },
+      "required": [
+        "delivered",
+        "failed"
+      ]
+    },
     "sdkName": "replayEmailWebhooks",
     "summary": "Replay email webhooks",
     "tag": "Emails",
@@ -537,6 +1319,104 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "url"
       ]
     },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restrict this endpoint to emails from a specific domain"
+        },
+        "rules": {
+          "type": "object",
+          "description": "Endpoint-specific filtering rules"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "delivery_count": {
+          "type": "integer",
+          "description": "Total webhook deliveries attempted"
+        },
+        "success_count": {
+          "type": "integer",
+          "description": "Successful deliveries"
+        },
+        "failure_count": {
+          "type": "integer",
+          "description": "Failed deliveries"
+        },
+        "consecutive_fails": {
+          "type": "integer",
+          "description": "Current streak of consecutive failures"
+        },
+        "last_delivery_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "last_success_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "last_failure_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "deactivated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "org_id",
+        "enabled",
+        "rules",
+        "created_at",
+        "updated_at",
+        "delivery_count",
+        "success_count",
+        "failure_count",
+        "consecutive_fails"
+      ]
+    },
     "sdkName": "createEndpoint",
     "summary": "Create a webhook endpoint",
     "tag": "Endpoints",
@@ -562,6 +1442,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": null,
     "sdkName": "deleteEndpoint",
     "summary": "Delete a webhook endpoint",
     "tag": "Endpoints",
@@ -579,6 +1460,107 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "domain_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Restrict this endpoint to emails from a specific domain"
+          },
+          "rules": {
+            "type": "object",
+            "description": "Endpoint-specific filtering rules"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "delivery_count": {
+            "type": "integer",
+            "description": "Total webhook deliveries attempted"
+          },
+          "success_count": {
+            "type": "integer",
+            "description": "Successful deliveries"
+          },
+          "failure_count": {
+            "type": "integer",
+            "description": "Failed deliveries"
+          },
+          "consecutive_fails": {
+            "type": "integer",
+            "description": "Current streak of consecutive failures"
+          },
+          "last_delivery_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_success_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_failure_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "deactivated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "enabled",
+          "rules",
+          "created_at",
+          "updated_at",
+          "delivery_count",
+          "success_count",
+          "failure_count",
+          "consecutive_fails"
+        ]
+      }
+    },
     "sdkName": "listEndpoints",
     "summary": "List webhook endpoints",
     "tag": "Endpoints",
@@ -604,6 +1586,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "integer",
+          "description": "HTTP status code returned by the endpoint"
+        },
+        "body": {
+          "type": "string",
+          "description": "Response body (truncated to 1000 characters)"
+        },
+        "signature": {
+          "type": "string",
+          "description": "The signature header value sent (if webhook secret is configured)"
+        }
+      },
+      "required": [
+        "status",
+        "body"
+      ]
+    },
     "sdkName": "testEndpoint",
     "summary": "Send a test webhook",
     "tag": "Endpoints",
@@ -653,6 +1656,104 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       "minProperties": 1
     },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Restrict this endpoint to emails from a specific domain"
+        },
+        "rules": {
+          "type": "object",
+          "description": "Endpoint-specific filtering rules"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "delivery_count": {
+          "type": "integer",
+          "description": "Total webhook deliveries attempted"
+        },
+        "success_count": {
+          "type": "integer",
+          "description": "Successful deliveries"
+        },
+        "failure_count": {
+          "type": "integer",
+          "description": "Failed deliveries"
+        },
+        "consecutive_fails": {
+          "type": "integer",
+          "description": "Current streak of consecutive failures"
+        },
+        "last_delivery_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "last_success_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "last_failure_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "deactivated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "org_id",
+        "enabled",
+        "rules",
+        "created_at",
+        "updated_at",
+        "delivery_count",
+        "success_count",
+        "failure_count",
+        "consecutive_fails"
+      ]
+    },
     "sdkName": "updateEndpoint",
     "summary": "Update a webhook endpoint",
     "tag": "Endpoints",
@@ -700,6 +1801,53 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "pattern"
       ]
     },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "If set, filter applies only to this domain"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "whitelist",
+            "blocklist"
+          ]
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Email address or pattern to match (stored lowercase)"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "org_id",
+        "type",
+        "pattern",
+        "enabled",
+        "created_at"
+      ]
+    },
     "sdkName": "createFilter",
     "summary": "Create a filter rule",
     "tag": "Filters",
@@ -725,6 +1873,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": null,
     "sdkName": "deleteFilter",
     "summary": "Delete a filter rule",
     "tag": "Filters",
@@ -742,6 +1891,56 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "If set, filter applies only to this domain"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "whitelist",
+              "blocklist"
+            ]
+          },
+          "pattern": {
+            "type": "string",
+            "description": "Email address or pattern to match (stored lowercase)"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "type",
+          "pattern",
+          "enabled",
+          "created_at"
+        ]
+      }
+    },
     "sdkName": "listFilters",
     "summary": "List filter rules",
     "tag": "Filters",
@@ -778,6 +1977,53 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "enabled"
       ]
     },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "If set, filter applies only to this domain"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "whitelist",
+            "blocklist"
+          ]
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Email address or pattern to match (stored lowercase)"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "org_id",
+        "type",
+        "pattern",
+        "enabled",
+        "created_at"
+      ]
+    },
     "sdkName": "updateFilter",
     "summary": "Update a filter rule",
     "tag": "Filters",
@@ -795,6 +2041,129 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "description": "One recipient-scope rule describing a destination the caller\nmay send to. Discriminated on `type`. Each rule carries a\nhuman-prose `description` field intended for display.\n\nRule kinds are stable within an SDK release. A response\ncontaining a `type` value not enumerated in this schema\nmeans the server is running a newer version than the SDK;\nupgrade the SDK to the release that matches the server's\nschema. Strict-parsing SDKs (Go, Python) will raise a\ndecode error in that case rather than silently dropping\nthe unknown rule, since silent drops would let an outbound\nagent reason from an incomplete view of its own permissions.\n",
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "any_recipient": "#/components/schemas/SendPermissionAnyRecipient",
+            "managed_zone": "#/components/schemas/SendPermissionManagedZone",
+            "your_domain": "#/components/schemas/SendPermissionYourDomain",
+            "address": "#/components/schemas/SendPermissionAddress"
+          }
+        },
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The caller can send to any recipient. When this rule is\npresent, every other rule in the response is redundant.\n",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "any_recipient"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-prose summary of the rule."
+              }
+            },
+            "required": [
+              "type",
+              "description"
+            ]
+          },
+          {
+            "type": "object",
+            "description": "The caller can send to any address at the named\nPrimitive-managed zone. Always emitted (no entitlement\nrequired) because Primitive owns the zone and every mailbox\nbelongs to a Primitive customer by construction.\n",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "managed_zone"
+                ]
+              },
+              "zone": {
+                "type": "string",
+                "description": "The managed apex domain. Sends are accepted to any\naddress at the apex itself or any subdomain (e.g.\n`alice@primitive.email` and `alice@acme.primitive.email`\nboth match the `primitive.email` zone rule).\n"
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-prose summary of the rule."
+              }
+            },
+            "required": [
+              "type",
+              "zone",
+              "description"
+            ]
+          },
+          {
+            "type": "object",
+            "description": "The caller can send to any address at one of their own\nverified outbound domains. Emitted once per active row in\nthe org's `domains` table.\n",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "your_domain"
+                ]
+              },
+              "domain": {
+                "type": "string",
+                "description": "A verified outbound domain owned by the caller's org."
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-prose summary of the rule."
+              }
+            },
+            "required": [
+              "type",
+              "domain",
+              "description"
+            ]
+          },
+          {
+            "type": "object",
+            "description": "The caller can send to a specific address that has\nauthenticated inbound mail to the org. Emitted once per row\nin the org's `known_send_addresses` table, capped at\n`meta.address_cap`.\n",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "address"
+                ]
+              },
+              "address": {
+                "type": "string",
+                "description": "The bare email address this rule grants sends to."
+              },
+              "last_received_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Most recent inbound email from this address that\nauthenticated successfully (DMARC pass + DKIM/SPF\nalignment). Updated on each new authenticated receipt.\n"
+              },
+              "received_count": {
+                "type": "integer",
+                "description": "Total number of authenticated inbound emails from this\naddress. Increments only when `last_received_at` advances.\n"
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-prose summary of the rule."
+              }
+            },
+            "required": [
+              "type",
+              "address",
+              "last_received_at",
+              "received_count",
+              "description"
+            ]
+          }
+        ]
+      }
+    },
     "sdkName": "getSendPermissions",
     "summary": "List send-permission rules",
     "tag": "Sending",
@@ -820,6 +2189,285 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
+      "allOf": [
+        {
+          "type": "object",
+          "description": "List-row projection of a sent-email record. Drops\n`body_text` and `body_html` to keep paginated responses\nsmall; fetch /sent-emails/{id} for the full record with\nbodies.\n",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+              "enum": [
+                "queued",
+                "submitted_to_agent",
+                "agent_failed",
+                "gate_denied",
+                "unknown",
+                "delivered",
+                "bounced",
+                "deferred",
+                "wait_timeout"
+              ]
+            },
+            "status_changed_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Timestamp of the most recent status transition.\nPolling clients should treat `status='queued'` AND\n`status_changed_at` older than 5 minutes as\n\"stuck-queued\" (the post-tx UPDATE failed and the\nactual delivery state is recoverable from on-box logs\nvia `queue_id` when populated, or `request_id`).\n"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "client_idempotency_key": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Effective idempotency key used for this send. If the\ncaller passed the `Idempotency-Key` header, this is\nthat value; otherwise it's a server-derived hash of\nthe canonical request payload.\n"
+            },
+            "content_hash": {
+              "type": "string",
+              "description": "Stable hash of the canonical send payload."
+            },
+            "from_header": {
+              "type": "string",
+              "description": "Raw `From:` header as sent on the wire, including any\ndisplay name (e.g. `\"Acme Support\" <agent@acme.test>`).\n"
+            },
+            "from_address": {
+              "type": "string",
+              "description": "Bare email address parsed from `from_header`."
+            },
+            "to_header": {
+              "type": "string",
+              "description": "Raw `To:` header as sent on the wire, including any\ndisplay name.\n"
+            },
+            "to_address": {
+              "type": "string",
+              "description": "Bare email address parsed from `to_header`."
+            },
+            "subject": {
+              "type": "string"
+            },
+            "body_size_bytes": {
+              "type": "integer",
+              "description": "Total UTF-8 byte length of `body_text` + `body_html`.\nSurfaced on the list endpoint so callers can see \"this\nrow has a 4MB body\" without fetching it.\n"
+            },
+            "content_discarded_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Timestamp at which the bodies were discarded by an\nentitlement-driven retention policy. Null when bodies\nare still present. The detail endpoint returns\nnull-valued `body_text`/`body_html` for discarded rows.\n"
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level Message-ID assigned to the outbound message\n(RFC 5322). Null on rows that never reached signing\n(queued, gate_denied, agent_failed before signing).\n"
+            },
+            "in_reply_to": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level In-Reply-To header value, when this send\nwas a reply.\n"
+            },
+            "email_references": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level References header value, when this send\nwas a reply.\n"
+            },
+            "in_reply_to_email_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Reference to the inbound `emails.id` that this send\nreplied to, when known. Populated when the caller used\n/emails/{id}/reply or when /send-mail's `in_reply_to`\nmatched a stored inbound message_id in the same org.\n"
+            },
+            "queue_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Message identifier assigned by Primitive's outbound\nrelay once the agent accepts the message. Null on\nqueued, gate_denied, and agent_failed rows.\n"
+            },
+            "smtp_response_code": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Receiver's 3-digit SMTP code (e.g. 250, 550, 451).\nPopulated on terminal delivery statuses; may be null\non a deferred where the agent never got an SMTP-level\nresponse (TCP refused, DNS failed, TLS handshake\nfailed). `smtp_response_text` still carries Postfix's\ndescriptive text in those cases.\n"
+            },
+            "smtp_response_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Free-form text portion of the receiver's SMTP\nresponse. The most useful debugging signal on a\n`bounced` or `deferred` row.\n"
+            },
+            "smtp_enhanced_status_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "RFC 3463 enhanced status code (e.g. `5.1.1` for \"Bad\ndestination mailbox address\"). Distinct from\n`smtp_response_code`: the basic 3-digit code is coarse\n(550 = \"permanent failure\"), the enhanced code is\nfiner-grained.\n"
+            },
+            "dkim_selector": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "DKIM selector used to sign the outbound message.\nPublic DNS data; useful for diagnosing why a downstream\nverifier rejected the signature.\n"
+            },
+            "dkim_domain": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "DKIM signing domain."
+            },
+            "error_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Stable public error code on `agent_failed` rows. The\nagent's internal codes are remapped to a stable public\ntaxonomy (see `publicAgentError` in the server) so this\nfield is safe to branch on across agent versions.\n"
+            },
+            "error_message": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Free-form error message accompanying `error_code`."
+            },
+            "gates": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "enum": [
+                      "send_to_confirmed_domains",
+                      "send_to_known_addresses"
+                    ],
+                    "description": "Public recipient-scope gate name that denied the send."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "domain_not_confirmed",
+                      "recipient_unauthenticated",
+                      "recipient_not_known"
+                    ],
+                    "description": "Stable machine-readable denial reason."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Human-readable explanation of the gate denial."
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "Domain or address the gate evaluated."
+                  },
+                  "fix": {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "confirm_domain",
+                          "sender_must_fix_authentication",
+                          "wait_for_inbound"
+                        ],
+                        "description": "Suggested next action for the caller."
+                      },
+                      "subject": {
+                        "type": "string",
+                        "description": "Entity the action applies to."
+                      }
+                    },
+                    "required": [
+                      "action",
+                      "subject"
+                    ]
+                  },
+                  "docs_url": {
+                    "type": "string",
+                    "description": "Public docs URL with more context."
+                  }
+                },
+                "required": [
+                  "name",
+                  "reason",
+                  "message",
+                  "subject"
+                ]
+              },
+              "description": "Gate-denial detail on `gate_denied` rows. Mirrors the\nsynchronous /send-mail 403 contract so a caller's\nGateDenial handler is the same across live denies and\nhistorical lookups. Null on every other status.\n"
+            },
+            "request_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n"
+            }
+          },
+          "required": [
+            "id",
+            "status",
+            "status_changed_at",
+            "created_at",
+            "updated_at",
+            "content_hash",
+            "from_header",
+            "from_address",
+            "to_header",
+            "to_address",
+            "subject",
+            "body_size_bytes"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+            },
+            "body_html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            }
+          }
+        }
+      ]
+    },
     "sdkName": "getSentEmail",
     "summary": "Get a sent email by id",
     "tag": "Sending",
@@ -887,6 +2535,264 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "List-row projection of a sent-email record. Drops\n`body_text` and `body_html` to keep paginated responses\nsmall; fetch /sent-emails/{id} for the full record with\nbodies.\n",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+            "enum": [
+              "queued",
+              "submitted_to_agent",
+              "agent_failed",
+              "gate_denied",
+              "unknown",
+              "delivered",
+              "bounced",
+              "deferred",
+              "wait_timeout"
+            ]
+          },
+          "status_changed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the most recent status transition.\nPolling clients should treat `status='queued'` AND\n`status_changed_at` older than 5 minutes as\n\"stuck-queued\" (the post-tx UPDATE failed and the\nactual delivery state is recoverable from on-box logs\nvia `queue_id` when populated, or `request_id`).\n"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "client_idempotency_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Effective idempotency key used for this send. If the\ncaller passed the `Idempotency-Key` header, this is\nthat value; otherwise it's a server-derived hash of\nthe canonical request payload.\n"
+          },
+          "content_hash": {
+            "type": "string",
+            "description": "Stable hash of the canonical send payload."
+          },
+          "from_header": {
+            "type": "string",
+            "description": "Raw `From:` header as sent on the wire, including any\ndisplay name (e.g. `\"Acme Support\" <agent@acme.test>`).\n"
+          },
+          "from_address": {
+            "type": "string",
+            "description": "Bare email address parsed from `from_header`."
+          },
+          "to_header": {
+            "type": "string",
+            "description": "Raw `To:` header as sent on the wire, including any\ndisplay name.\n"
+          },
+          "to_address": {
+            "type": "string",
+            "description": "Bare email address parsed from `to_header`."
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body_size_bytes": {
+            "type": "integer",
+            "description": "Total UTF-8 byte length of `body_text` + `body_html`.\nSurfaced on the list endpoint so callers can see \"this\nrow has a 4MB body\" without fetching it.\n"
+          },
+          "content_discarded_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Timestamp at which the bodies were discarded by an\nentitlement-driven retention policy. Null when bodies\nare still present. The detail endpoint returns\nnull-valued `body_text`/`body_html` for discarded rows.\n"
+          },
+          "message_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Wire-level Message-ID assigned to the outbound message\n(RFC 5322). Null on rows that never reached signing\n(queued, gate_denied, agent_failed before signing).\n"
+          },
+          "in_reply_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Wire-level In-Reply-To header value, when this send\nwas a reply.\n"
+          },
+          "email_references": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Wire-level References header value, when this send\nwas a reply.\n"
+          },
+          "in_reply_to_email_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Reference to the inbound `emails.id` that this send\nreplied to, when known. Populated when the caller used\n/emails/{id}/reply or when /send-mail's `in_reply_to`\nmatched a stored inbound message_id in the same org.\n"
+          },
+          "queue_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Message identifier assigned by Primitive's outbound\nrelay once the agent accepts the message. Null on\nqueued, gate_denied, and agent_failed rows.\n"
+          },
+          "smtp_response_code": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Receiver's 3-digit SMTP code (e.g. 250, 550, 451).\nPopulated on terminal delivery statuses; may be null\non a deferred where the agent never got an SMTP-level\nresponse (TCP refused, DNS failed, TLS handshake\nfailed). `smtp_response_text` still carries Postfix's\ndescriptive text in those cases.\n"
+          },
+          "smtp_response_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Free-form text portion of the receiver's SMTP\nresponse. The most useful debugging signal on a\n`bounced` or `deferred` row.\n"
+          },
+          "smtp_enhanced_status_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "RFC 3463 enhanced status code (e.g. `5.1.1` for \"Bad\ndestination mailbox address\"). Distinct from\n`smtp_response_code`: the basic 3-digit code is coarse\n(550 = \"permanent failure\"), the enhanced code is\nfiner-grained.\n"
+          },
+          "dkim_selector": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "DKIM selector used to sign the outbound message.\nPublic DNS data; useful for diagnosing why a downstream\nverifier rejected the signature.\n"
+          },
+          "dkim_domain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "DKIM signing domain."
+          },
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Stable public error code on `agent_failed` rows. The\nagent's internal codes are remapped to a stable public\ntaxonomy (see `publicAgentError` in the server) so this\nfield is safe to branch on across agent versions.\n"
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Free-form error message accompanying `error_code`."
+          },
+          "gates": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": [
+                    "send_to_confirmed_domains",
+                    "send_to_known_addresses"
+                  ],
+                  "description": "Public recipient-scope gate name that denied the send."
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "domain_not_confirmed",
+                    "recipient_unauthenticated",
+                    "recipient_not_known"
+                  ],
+                  "description": "Stable machine-readable denial reason."
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Human-readable explanation of the gate denial."
+                },
+                "subject": {
+                  "type": "string",
+                  "description": "Domain or address the gate evaluated."
+                },
+                "fix": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "confirm_domain",
+                        "sender_must_fix_authentication",
+                        "wait_for_inbound"
+                      ],
+                      "description": "Suggested next action for the caller."
+                    },
+                    "subject": {
+                      "type": "string",
+                      "description": "Entity the action applies to."
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "subject"
+                  ]
+                },
+                "docs_url": {
+                  "type": "string",
+                  "description": "Public docs URL with more context."
+                }
+              },
+              "required": [
+                "name",
+                "reason",
+                "message",
+                "subject"
+              ]
+            },
+            "description": "Gate-denial detail on `gate_denied` rows. Mirrors the\nsynchronous /send-mail 403 contract so a caller's\nGateDenial handler is the same across live denies and\nhistorical lookups. Null on every other status.\n"
+          },
+          "request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "status_changed_at",
+          "created_at",
+          "updated_at",
+          "content_hash",
+          "from_header",
+          "from_address",
+          "to_header",
+          "to_address",
+          "subject",
+          "body_size_bytes"
+        ]
+      }
+    },
     "sdkName": "listSentEmails",
     "summary": "List outbound sent emails",
     "tag": "Sending",
@@ -935,6 +2841,103 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics."
         }
       }
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persisted sent-email attempt ID."
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+          "enum": [
+            "queued",
+            "submitted_to_agent",
+            "agent_failed",
+            "gate_denied",
+            "unknown",
+            "delivered",
+            "bounced",
+            "deferred",
+            "wait_timeout"
+          ]
+        },
+        "from": {
+          "type": "string",
+          "description": "Bare from-address actually written on the wire. Echoed\non every success branch so callers can confirm what\nwent out, particularly useful for the /emails/{id}/reply\npath where `from` is server-derived from the inbound's\nrecipient when the caller doesn't override.\n\nFor sends where the caller passed a from-header that\nincluded a display name (e.g. `\"Acme Support\" <support@acme.test>`),\nthis field is the parsed bare address (`support@acme.test`).\nThe display name was sent on the wire intact; this field\njust makes the address easy to compare against allowlists.\n"
+        },
+        "queue_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Message identifier assigned by Primitive's outbound relay, when available."
+        },
+        "accepted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Recipient addresses accepted by the relay."
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Recipient addresses rejected by the relay."
+        },
+        "client_idempotency_key": {
+          "type": "string",
+          "description": "Effective idempotency key used for this send."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Server-issued request identifier for support and tracing."
+        },
+        "content_hash": {
+          "type": "string",
+          "description": "Stable hash of the canonical send payload."
+        },
+        "delivery_status": {
+          "type": "string",
+          "enum": [
+            "delivered",
+            "bounced",
+            "deferred",
+            "wait_timeout"
+          ]
+        },
+        "smtp_response_code": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "SMTP response code from the first downstream delivery outcome when wait is true."
+        },
+        "smtp_response_text": {
+          "type": "string",
+          "description": "SMTP response text from the first downstream delivery outcome when wait is true."
+        },
+        "idempotent_replay": {
+          "type": "boolean",
+          "description": "True when the response replays a previously-recorded send\nkeyed by `client_idempotency_key` (same key, same canonical\npayload). False on a fresh send and on gate-denied\nresponses. Lets callers branch on cache state without\ndiffing fields.\n"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "from",
+        "queue_id",
+        "accepted",
+        "rejected",
+        "client_idempotency_key",
+        "request_id",
+        "content_hash",
+        "idempotent_replay"
+      ]
     },
     "sdkName": "replyToEmail",
     "summary": "Reply to an inbound email",
@@ -1017,6 +3020,103 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "subject"
       ]
     },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persisted sent-email attempt ID."
+        },
+        "status": {
+          "type": "string",
+          "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+          "enum": [
+            "queued",
+            "submitted_to_agent",
+            "agent_failed",
+            "gate_denied",
+            "unknown",
+            "delivered",
+            "bounced",
+            "deferred",
+            "wait_timeout"
+          ]
+        },
+        "from": {
+          "type": "string",
+          "description": "Bare from-address actually written on the wire. Echoed\non every success branch so callers can confirm what\nwent out, particularly useful for the /emails/{id}/reply\npath where `from` is server-derived from the inbound's\nrecipient when the caller doesn't override.\n\nFor sends where the caller passed a from-header that\nincluded a display name (e.g. `\"Acme Support\" <support@acme.test>`),\nthis field is the parsed bare address (`support@acme.test`).\nThe display name was sent on the wire intact; this field\njust makes the address easy to compare against allowlists.\n"
+        },
+        "queue_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Message identifier assigned by Primitive's outbound relay, when available."
+        },
+        "accepted": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Recipient addresses accepted by the relay."
+        },
+        "rejected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Recipient addresses rejected by the relay."
+        },
+        "client_idempotency_key": {
+          "type": "string",
+          "description": "Effective idempotency key used for this send."
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Server-issued request identifier for support and tracing."
+        },
+        "content_hash": {
+          "type": "string",
+          "description": "Stable hash of the canonical send payload."
+        },
+        "delivery_status": {
+          "type": "string",
+          "enum": [
+            "delivered",
+            "bounced",
+            "deferred",
+            "wait_timeout"
+          ]
+        },
+        "smtp_response_code": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "SMTP response code from the first downstream delivery outcome when wait is true."
+        },
+        "smtp_response_text": {
+          "type": "string",
+          "description": "SMTP response text from the first downstream delivery outcome when wait is true."
+        },
+        "idempotent_replay": {
+          "type": "boolean",
+          "description": "True when the response replays a previously-recorded send\nkeyed by `client_idempotency_key` (same key, same canonical\npayload). False on a fresh send and on gate-denied\nresponses. Lets callers branch on cache state without\ndiffing fields.\n"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "from",
+        "queue_id",
+        "accepted",
+        "rejected",
+        "client_idempotency_key",
+        "request_id",
+        "content_hash",
+        "idempotent_replay"
+      ]
+    },
     "sdkName": "sendEmail",
     "summary": "Send outbound email",
     "tag": "Sending",
@@ -1082,6 +3182,100 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Delivery ID (numeric string)"
+          },
+          "email_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "endpoint_url": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "delivered",
+              "header_confirmed",
+              "failed"
+            ]
+          },
+          "attempt_count": {
+            "type": "integer"
+          },
+          "duration_ms": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "email": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "sender": {
+                "type": "string"
+              },
+              "recipient": {
+                "type": "string"
+              },
+              "subject": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "sender",
+              "recipient"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email_id",
+          "org_id",
+          "endpoint_id",
+          "endpoint_url",
+          "status",
+          "attempt_count",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    },
     "sdkName": "listDeliveries",
     "summary": "List webhook deliveries",
     "tag": "Webhook Deliveries",
@@ -1107,6 +3301,23 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [],
     "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "delivered": {
+          "type": "integer",
+          "description": "Number of successful deliveries"
+        },
+        "failed": {
+          "type": "integer",
+          "description": "Number of failed deliveries"
+        }
+      },
+      "required": [
+        "delivered",
+        "failed"
+      ]
+    },
     "sdkName": "replayDelivery",
     "summary": "Replay a webhook delivery",
     "tag": "Webhook Deliveries",

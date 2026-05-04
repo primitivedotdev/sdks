@@ -85,7 +85,29 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetEmailResponse200]:
-    """ Get email details
+    r""" Get inbound email by id
+
+     Returns the full record for an inbound email received at one
+    of your verified domains, including the parsed text and HTML
+    bodies, threading metadata, SMTP envelope detail, webhook
+    delivery state, and a `replies` array for any outbound sends
+    recorded as replies to this inbound.
+
+    For listing inbound emails (with cursor pagination, status
+    and date filters, and free-text search), use
+    `/emails`. Outbound (sent) email records are NOT returned
+    here; use `/sent-emails/{id}` for those.
+
+    The response carries four sender-shaped fields whose
+    meanings overlap. `from_email` is the canonical \"who sent
+    this\" field for most use cases (parsed bare address from
+    the `From:` header, with a `sender` fallback). `from_header`
+    is the raw header including any display name. `sender` and
+    `smtp_mail_from` both carry the SMTP envelope MAIL FROM
+    (return-path) and are equal by construction; `sender` is
+    the older field name retained for compatibility. See
+    `primitive describe emails:get-email | jq '.responseSchema.properties'`
+    for per-field detail.
 
     Args:
         id (UUID):
@@ -116,7 +138,29 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetEmailResponse200 | None:
-    """ Get email details
+    r""" Get inbound email by id
+
+     Returns the full record for an inbound email received at one
+    of your verified domains, including the parsed text and HTML
+    bodies, threading metadata, SMTP envelope detail, webhook
+    delivery state, and a `replies` array for any outbound sends
+    recorded as replies to this inbound.
+
+    For listing inbound emails (with cursor pagination, status
+    and date filters, and free-text search), use
+    `/emails`. Outbound (sent) email records are NOT returned
+    here; use `/sent-emails/{id}` for those.
+
+    The response carries four sender-shaped fields whose
+    meanings overlap. `from_email` is the canonical \"who sent
+    this\" field for most use cases (parsed bare address from
+    the `From:` header, with a `sender` fallback). `from_header`
+    is the raw header including any display name. `sender` and
+    `smtp_mail_from` both carry the SMTP envelope MAIL FROM
+    (return-path) and are equal by construction; `sender` is
+    the older field name retained for compatibility. See
+    `primitive describe emails:get-email | jq '.responseSchema.properties'`
+    for per-field detail.
 
     Args:
         id (UUID):
@@ -142,7 +186,29 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetEmailResponse200]:
-    """ Get email details
+    r""" Get inbound email by id
+
+     Returns the full record for an inbound email received at one
+    of your verified domains, including the parsed text and HTML
+    bodies, threading metadata, SMTP envelope detail, webhook
+    delivery state, and a `replies` array for any outbound sends
+    recorded as replies to this inbound.
+
+    For listing inbound emails (with cursor pagination, status
+    and date filters, and free-text search), use
+    `/emails`. Outbound (sent) email records are NOT returned
+    here; use `/sent-emails/{id}` for those.
+
+    The response carries four sender-shaped fields whose
+    meanings overlap. `from_email` is the canonical \"who sent
+    this\" field for most use cases (parsed bare address from
+    the `From:` header, with a `sender` fallback). `from_header`
+    is the raw header including any display name. `sender` and
+    `smtp_mail_from` both carry the SMTP envelope MAIL FROM
+    (return-path) and are equal by construction; `sender` is
+    the older field name retained for compatibility. See
+    `primitive describe emails:get-email | jq '.responseSchema.properties'`
+    for per-field detail.
 
     Args:
         id (UUID):
@@ -173,7 +239,29 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetEmailResponse200 | None:
-    """ Get email details
+    r""" Get inbound email by id
+
+     Returns the full record for an inbound email received at one
+    of your verified domains, including the parsed text and HTML
+    bodies, threading metadata, SMTP envelope detail, webhook
+    delivery state, and a `replies` array for any outbound sends
+    recorded as replies to this inbound.
+
+    For listing inbound emails (with cursor pagination, status
+    and date filters, and free-text search), use
+    `/emails`. Outbound (sent) email records are NOT returned
+    here; use `/sent-emails/{id}` for those.
+
+    The response carries four sender-shaped fields whose
+    meanings overlap. `from_email` is the canonical \"who sent
+    this\" field for most use cases (parsed bare address from
+    the `From:` header, with a `sender` fallback). `from_header`
+    is the raw header including any display name. `sender` and
+    `smtp_mail_from` both carry the SMTP envelope MAIL FROM
+    (return-path) and are equal by construction; `sender` is
+    the older field name retained for compatibility. See
+    `primitive describe emails:get-email | jq '.responseSchema.properties'`
+    for per-field detail.
 
     Args:
         id (UUID):

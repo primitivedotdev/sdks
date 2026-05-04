@@ -551,15 +551,9 @@
             "name": "status",
             "in": "query",
             "schema": {
-              "type": "string",
-              "enum": [
-                "pending",
-                "accepted",
-                "completed",
-                "rejected"
-              ]
+              "$ref": "#/components/schemas/EmailStatus"
             },
-            "description": "Filter by email status"
+            "description": "Filter inbound rows by lifecycle status. See `EmailStatus`\nfor what each value means. Note that the webhook delivery\nstate is a SEPARATE lifecycle on the same row; filter by\n`webhook_status` semantics is not currently supported on\nthis endpoint.\n"
           },
           {
             "name": "search",
@@ -632,7 +626,8 @@
       ],
       "get": {
         "operationId": "getEmail",
-        "summary": "Get email details",
+        "summary": "Get inbound email by id",
+        "description": "Returns the full record for an inbound email received at one\nof your verified domains, including the parsed text and HTML\nbodies, threading metadata, SMTP envelope detail, webhook\ndelivery state, and a `replies` array for any outbound sends\nrecorded as replies to this inbound.\n\nFor listing inbound emails (with cursor pagination, status\nand date filters, and free-text search), use\n`/emails`. Outbound (sent) email records are NOT returned\nhere; use `/sent-emails/{id}` for those.\n\nThe response carries four sender-shaped fields whose\nmeanings overlap. `from_email` is the canonical \"who sent\nthis\" field for most use cases (parsed bare address from\nthe `From:` header, with a `sender` fallback). `from_header`\nis the raw header including any display name. `sender` and\n`smtp_mail_from` both carry the SMTP envelope MAIL FROM\n(return-path) and are equal by construction; `sender` is\nthe older field name retained for compatibility. See\n`primitive describe emails:get-email | jq '.responseSchema.properties'`\nfor per-field detail.\n",
         "tags": [
           "Emails"
         ],
@@ -2578,13 +2573,7 @@
             "nullable": true
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "accepted",
-              "completed",
-              "rejected"
-            ]
+            "$ref": "#/components/schemas/EmailStatus"
           },
           "sender": {
             "type": "string",
@@ -2617,16 +2606,7 @@
             "nullable": true
           },
           "webhook_status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "in_flight",
-              "fired",
-              "failed",
-              "exhausted",
-              null
-            ],
-            "nullable": true
+            "$ref": "#/components/schemas/EmailWebhookStatus"
           },
           "webhook_attempt_count": {
             "type": "integer"
@@ -2686,13 +2666,7 @@
             "nullable": true
           },
           "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "accepted",
-              "completed",
-              "rejected"
-            ]
+            "$ref": "#/components/schemas/EmailStatus"
           },
           "domain": {
             "type": "string"
@@ -2722,16 +2696,7 @@
             "nullable": true
           },
           "webhook_status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "in_flight",
-              "fired",
-              "failed",
-              "exhausted",
-              null
-            ],
-            "nullable": true
+            "$ref": "#/components/schemas/EmailWebhookStatus"
           },
           "webhook_attempt_count": {
             "type": "integer"
@@ -2918,6 +2883,29 @@
           "to",
           "subject"
         ]
+      },
+      "EmailStatus": {
+        "type": "string",
+        "description": "Lifecycle status of an INBOUND email (a row in the `emails`\ntable). Distinct from `SentEmailStatus`, which describes\nthe OUTBOUND lifecycle (the `sent_emails` table) and uses\na different vocabulary because the lifecycles differ.\nPossible values:\n\n  - `pending`: the row was inserted at ingestion (mx_main)\n    and has not yet completed the spam / filter / auth\n    pipeline. Body and parsed fields are present; webhook\n    delivery is not yet scheduled. Most rows transition out\n    of `pending` within seconds.\n  - `accepted`: the inbound passed the policy gates and is\n    queued for webhook delivery. The `webhook_status` field\n    tracks the separate webhook-delivery lifecycle from\n    this point.\n  - `completed`: terminal success. Webhook delivery\n    attempted and acknowledged by every active endpoint, OR\n    no endpoints are configured, so the row is durably\n    archived.\n  - `rejected`: terminal failure at ingestion (spam, blocked\n    sender, filter rule, malformed). The body and metadata\n    are stored for auditing but no webhook fires and the\n    row is not repliable.\n\nSee also `webhook_status` (separate enum tracking the\nwebhook-delivery state machine) and `SentEmailStatus` (the\noutbound vocabulary).\n",
+        "enum": [
+          "pending",
+          "accepted",
+          "completed",
+          "rejected"
+        ]
+      },
+      "EmailWebhookStatus": {
+        "type": "string",
+        "description": "Webhook-delivery state for an inbound email. Tracks a\nSEPARATE lifecycle from the email's `status` field; the\nsame row carries both. Possible values:\n\n  - `pending`: ingestion is past `pending` (the email itself\n    is `accepted`) but the webhook fan-out has not yet\n    started for this row.\n  - `in_flight`: at least one delivery attempt is in flight.\n  - `fired`: terminal success. Every active endpoint\n    acknowledged the delivery (or accepted it after retries).\n  - `failed`: terminal partial-failure. At least one endpoint\n    exhausted its retry budget; some endpoints may still\n    have succeeded.\n  - `exhausted`: terminal failure. Every endpoint exhausted\n    its retry budget without success.\n  - `null`: no endpoints configured, so no webhook lifecycle\n    applies.\n\nNote that the value `pending` here does NOT mean the email\nis `pending`; it means the email is past ingestion but\nwebhook delivery has not yet begun. Two overlapping uses\nof the word `pending` for distinct lifecycle phases.\n",
+        "enum": [
+          "pending",
+          "in_flight",
+          "fired",
+          "failed",
+          "exhausted",
+          null
+        ],
+        "nullable": true
       },
       "SentEmailStatus": {
         "type": "string",

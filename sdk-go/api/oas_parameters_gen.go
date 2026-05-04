@@ -1030,8 +1030,12 @@ type ListEmailsParams struct {
 	Limit OptInt `json:",omitempty,omitzero"`
 	// Filter by domain ID.
 	DomainID OptUUID `json:",omitempty,omitzero"`
-	// Filter by email status.
-	Status OptListEmailsStatus `json:",omitempty,omitzero"`
+	// Filter inbound rows by lifecycle status. See `EmailStatus`
+	// for what each value means. Note that the webhook delivery
+	// state is a SEPARATE lifecycle on the same row; filter by
+	// `webhook_status` semantics is not currently supported on
+	// this endpoint.
+	Status OptEmailStatus `json:",omitempty,omitzero"`
 	// Search subject, sender, and recipient (case-insensitive).
 	Search OptString `json:",omitempty,omitzero"`
 	// Filter emails created on or after this timestamp.
@@ -1074,7 +1078,7 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.Status = v.(OptListEmailsStatus)
+			params.Status = v.(OptEmailStatus)
 		}
 	}
 	{
@@ -1272,7 +1276,7 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotStatusVal ListEmailsStatus
+				var paramsDotStatusVal EmailStatus
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -1284,7 +1288,7 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 						return err
 					}
 
-					paramsDotStatusVal = ListEmailsStatus(c)
+					paramsDotStatusVal = EmailStatus(c)
 					return nil
 				}(); err != nil {
 					return err

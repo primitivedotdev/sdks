@@ -1,6 +1,6 @@
 from enum import Enum
 
-class EmailSummaryWebhookStatusType1(str, Enum):
+class EmailWebhookStatusType3Type1(str, Enum):
     EXHAUSTED = "exhausted"
     FAILED = "failed"
     FIRED = "fired"

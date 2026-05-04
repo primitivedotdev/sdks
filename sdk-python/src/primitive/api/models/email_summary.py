@@ -8,10 +8,10 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.email_summary_status import EmailSummaryStatus
-from ..models.email_summary_webhook_status_type_1 import EmailSummaryWebhookStatusType1
-from ..models.email_summary_webhook_status_type_2_type_1 import EmailSummaryWebhookStatusType2Type1
-from ..models.email_summary_webhook_status_type_3_type_1 import EmailSummaryWebhookStatusType3Type1
+from ..models.email_status import EmailStatus
+from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
+from ..models.email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
+from ..models.email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
 from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
@@ -31,7 +31,33 @@ class EmailSummary:
     """ 
         Attributes:
             id (UUID):
-            status (EmailSummaryStatus):
+            status (EmailStatus): Lifecycle status of an INBOUND email (a row in the `emails`
+                table). Distinct from `SentEmailStatus`, which describes
+                the OUTBOUND lifecycle (the `sent_emails` table) and uses
+                a different vocabulary because the lifecycles differ.
+                Possible values:
+
+                  - `pending`: the row was inserted at ingestion (mx_main)
+                    and has not yet completed the spam / filter / auth
+                    pipeline. Body and parsed fields are present; webhook
+                    delivery is not yet scheduled. Most rows transition out
+                    of `pending` within seconds.
+                  - `accepted`: the inbound passed the policy gates and is
+                    queued for webhook delivery. The `webhook_status` field
+                    tracks the separate webhook-delivery lifecycle from
+                    this point.
+                  - `completed`: terminal success. Webhook delivery
+                    attempted and acknowledged by every active endpoint, OR
+                    no endpoints are configured, so the row is durably
+                    archived.
+                  - `rejected`: terminal failure at ingestion (spam, blocked
+                    sender, filter rule, malformed). The body and metadata
+                    are stored for auditing but no webhook fires and the
+                    row is not repliable.
+
+                See also `webhook_status` (separate enum tracking the
+                webhook-delivery state machine) and `SentEmailStatus` (the
+                outbound vocabulary).
             sender (str): SMTP envelope sender (return-path) the inbound mail server
                 accepted. For most legitimate mail this equals the bare
                 address in the From header; for mailing lists, bounce
@@ -52,12 +78,33 @@ class EmailSummary:
             subject (None | str | Unset):
             spam_score (float | None | Unset):
             raw_size_bytes (int | None | Unset):
-            webhook_status (EmailSummaryWebhookStatusType1 | EmailSummaryWebhookStatusType2Type1 |
-                EmailSummaryWebhookStatusType3Type1 | None | Unset):
+            webhook_status (EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None |
+                Unset): Webhook-delivery state for an inbound email. Tracks a
+                SEPARATE lifecycle from the email's `status` field; the
+                same row carries both. Possible values:
+
+                  - `pending`: ingestion is past `pending` (the email itself
+                    is `accepted`) but the webhook fan-out has not yet
+                    started for this row.
+                  - `in_flight`: at least one delivery attempt is in flight.
+                  - `fired`: terminal success. Every active endpoint
+                    acknowledged the delivery (or accepted it after retries).
+                  - `failed`: terminal partial-failure. At least one endpoint
+                    exhausted its retry budget; some endpoints may still
+                    have succeeded.
+                  - `exhausted`: terminal failure. Every endpoint exhausted
+                    its retry budget without success.
+                  - `null`: no endpoints configured, so no webhook lifecycle
+                    applies.
+
+                Note that the value `pending` here does NOT mean the email
+                is `pending`; it means the email is past ingestion but
+                webhook delivery has not yet begun. Two overlapping uses
+                of the word `pending` for distinct lifecycle phases.
      """
 
     id: UUID
-    status: EmailSummaryStatus
+    status: EmailStatus
     sender: str
     recipient: str
     domain: str
@@ -70,7 +117,7 @@ class EmailSummary:
     subject: None | str | Unset = UNSET
     spam_score: float | None | Unset = UNSET
     raw_size_bytes: int | None | Unset = UNSET
-    webhook_status: EmailSummaryWebhookStatusType1 | EmailSummaryWebhookStatusType2Type1 | EmailSummaryWebhookStatusType3Type1 | None | Unset = UNSET
+    webhook_status: EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -137,11 +184,11 @@ class EmailSummary:
         webhook_status: None | str | Unset
         if isinstance(self.webhook_status, Unset):
             webhook_status = UNSET
-        elif isinstance(self.webhook_status, EmailSummaryWebhookStatusType1):
+        elif isinstance(self.webhook_status, EmailWebhookStatusType1):
             webhook_status = self.webhook_status.value
-        elif isinstance(self.webhook_status, EmailSummaryWebhookStatusType2Type1):
+        elif isinstance(self.webhook_status, EmailWebhookStatusType2Type1):
             webhook_status = self.webhook_status.value
-        elif isinstance(self.webhook_status, EmailSummaryWebhookStatusType3Type1):
+        elif isinstance(self.webhook_status, EmailWebhookStatusType3Type1):
             webhook_status = self.webhook_status.value
         else:
             webhook_status = self.webhook_status
@@ -186,7 +233,7 @@ class EmailSummary:
 
 
 
-        status = EmailSummaryStatus(d.pop("status"))
+        status = EmailStatus(d.pop("status"))
 
 
 
@@ -289,7 +336,7 @@ class EmailSummary:
         raw_size_bytes = _parse_raw_size_bytes(d.pop("raw_size_bytes", UNSET))
 
 
-        def _parse_webhook_status(data: object) -> EmailSummaryWebhookStatusType1 | EmailSummaryWebhookStatusType2Type1 | EmailSummaryWebhookStatusType3Type1 | None | Unset:
+        def _parse_webhook_status(data: object) -> EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -297,34 +344,34 @@ class EmailSummary:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                webhook_status_type_1 = EmailSummaryWebhookStatusType1(data)
+                componentsschemas_email_webhook_status_type_1 = EmailWebhookStatusType1(data)
 
 
 
-                return webhook_status_type_1
+                return componentsschemas_email_webhook_status_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                webhook_status_type_2_type_1 = EmailSummaryWebhookStatusType2Type1(data)
+                componentsschemas_email_webhook_status_type_2_type_1 = EmailWebhookStatusType2Type1(data)
 
 
 
-                return webhook_status_type_2_type_1
+                return componentsschemas_email_webhook_status_type_2_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                webhook_status_type_3_type_1 = EmailSummaryWebhookStatusType3Type1(data)
+                componentsschemas_email_webhook_status_type_3_type_1 = EmailWebhookStatusType3Type1(data)
 
 
 
-                return webhook_status_type_3_type_1
+                return componentsschemas_email_webhook_status_type_3_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(EmailSummaryWebhookStatusType1 | EmailSummaryWebhookStatusType2Type1 | EmailSummaryWebhookStatusType3Type1 | None | Unset, data)
+            return cast(EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset, data)
 
         webhook_status = _parse_webhook_status(d.pop("webhook_status", UNSET))
 
