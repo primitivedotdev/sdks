@@ -7,7 +7,12 @@ import type {
   VerifiedDomain,
 } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
-import { extractErrorPayload, formatErrorPayload } from "../api-command.js";
+import {
+  extractErrorCode,
+  extractErrorPayload,
+  formatErrorPayload,
+  writeErrorWithHints,
+} from "../api-command.js";
 
 // `primitive send` is the agent-grade shortcut for the most common
 // case: send a fresh outbound email. It wraps `sending:send-email`
@@ -64,6 +69,23 @@ async function pickDefaultFromAddress(
   });
   if (result.error) {
     const errorPayload = extractErrorPayload(result.error);
+    // If the underlying failure is an auth problem, don't pretend
+    // --from will fix it: the actual sendEmail call would 401 too.
+    // Surface the auth hint via writeErrorWithHints and bail with
+    // a focused message instead of the verbose "underlying error"
+    // wrapping.
+    if (extractErrorCode(errorPayload) === "unauthorized") {
+      writeErrorWithHints(errorPayload);
+      // exit: 1 to match the run() unauthorized path (which uses
+      // `process.exitCode = 1`). oclif's CLIError defaults to 2,
+      // so without this override the same "unauthorized" condition
+      // exits 2 when surfaced from listDomains and 1 when surfaced
+      // from sendEmail, breaking callers that branch on exit code.
+      throw new Errors.CLIError(
+        "Cannot send: API key is missing or invalid (see hint above).",
+        { exit: 1 },
+      );
+    }
     throw new Errors.CLIError(
       `Could not look up your verified domains to default --from. Pass --from explicitly. Underlying error: ${formatErrorPayload(errorPayload)}`,
     );
@@ -184,8 +206,7 @@ class SendCommand extends Command {
     });
 
     if (result.error) {
-      const errorPayload = extractErrorPayload(result.error);
-      process.stderr.write(`${formatErrorPayload(errorPayload)}\n`);
+      writeErrorWithHints(extractErrorPayload(result.error));
       process.exitCode = 1;
       return;
     }
