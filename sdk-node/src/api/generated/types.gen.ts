@@ -488,8 +488,16 @@ export type SendMailResult = {
 /**
  * One recipient-scope rule describing a destination the caller
  * may send to. Discriminated on `type`. Each rule carries a
- * human-prose `description` so callers that don't recognize the
- * type can still pattern-match the prose.
+ * human-prose `description` field intended for display.
+ *
+ * Rule kinds are stable within an SDK release. A response
+ * containing a `type` value not enumerated in this schema
+ * means the server is running a newer version than the SDK;
+ * upgrade the SDK to the release that matches the server's
+ * schema. Strict-parsing SDKs (Go, Python) will raise a
+ * decode error in that case rather than silently dropping
+ * the unknown rule, since silent drops would let an outbound
+ * agent reason from an incomplete view of its own permissions.
  *
  */
 export type SendPermissionRule = ({
