@@ -31,7 +31,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'inbound_not_repliable';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -1148,6 +1148,23 @@ export type ReplayResult = {
     failed: number;
 };
 
+export type DiscardContentResult = {
+    /**
+     * Always `true` on a 2xx response. The content is either now
+     * discarded as a result of this call, or was already discarded
+     * before this call ran.
+     *
+     */
+    discarded: boolean;
+    /**
+     * `true` if the email's content was already discarded before
+     * this call ran (no work was done). `false` if this call was
+     * the one that performed the discard.
+     *
+     */
+    already_discarded: boolean;
+};
+
 /**
  * Resource UUID
  */
@@ -1869,6 +1886,58 @@ export type ReplayEmailWebhooksResponses = {
 };
 
 export type ReplayEmailWebhooksResponse = ReplayEmailWebhooksResponses[keyof ReplayEmailWebhooksResponses];
+
+export type DiscardEmailContentData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/emails/{id}/discard-content';
+};
+
+export type DiscardEmailContentErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+    /**
+     * Primitive encountered an internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DiscardEmailContentError = DiscardEmailContentErrors[keyof DiscardEmailContentErrors];
+
+export type DiscardEmailContentResponses = {
+    /**
+     * Discard result
+     */
+    200: SuccessEnvelope & {
+        data: DiscardContentResult;
+    };
+};
+
+export type DiscardEmailContentResponse = DiscardEmailContentResponses[keyof DiscardEmailContentResponses];
 
 export type ListEndpointsData = {
     body?: never;

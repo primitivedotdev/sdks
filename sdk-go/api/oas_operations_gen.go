@@ -13,6 +13,7 @@ const (
 	DeleteEmailOperation         OperationName = "DeleteEmail"
 	DeleteEndpointOperation      OperationName = "DeleteEndpoint"
 	DeleteFilterOperation        OperationName = "DeleteFilter"
+	DiscardEmailContentOperation OperationName = "DiscardEmailContent"
 	DownloadAttachmentsOperation OperationName = "DownloadAttachments"
 	DownloadRawEmailOperation    OperationName = "DownloadRawEmail"
 	GetAccountOperation          OperationName = "GetAccount"
