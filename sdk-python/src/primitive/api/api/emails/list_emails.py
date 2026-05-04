@@ -127,11 +127,15 @@ def sync_detailed(
     date_to: datetime.datetime | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
-    """ List emails
+    """ List inbound emails
 
-     Returns a paginated list of received emails. Supports filtering by
-    domain, status, date range, and free-text search across subject,
-    sender, and recipient fields.
+     Returns a paginated list of INBOUND emails received at your
+    verified domains. Outbound messages sent via /send-mail are not
+    included; this endpoint is the inbox view, not a unified
+    send/receive history.
+
+    Supports filtering by domain, status, date range, and free-text
+    search across subject, sender, and recipient fields.
 
     Args:
         cursor (str | Unset):
@@ -180,11 +184,15 @@ def sync(
     date_to: datetime.datetime | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
-    """ List emails
+    """ List inbound emails
 
-     Returns a paginated list of received emails. Supports filtering by
-    domain, status, date range, and free-text search across subject,
-    sender, and recipient fields.
+     Returns a paginated list of INBOUND emails received at your
+    verified domains. Outbound messages sent via /send-mail are not
+    included; this endpoint is the inbox view, not a unified
+    send/receive history.
+
+    Supports filtering by domain, status, date range, and free-text
+    search across subject, sender, and recipient fields.
 
     Args:
         cursor (str | Unset):
@@ -228,11 +236,15 @@ async def asyncio_detailed(
     date_to: datetime.datetime | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
-    """ List emails
+    """ List inbound emails
 
-     Returns a paginated list of received emails. Supports filtering by
-    domain, status, date range, and free-text search across subject,
-    sender, and recipient fields.
+     Returns a paginated list of INBOUND emails received at your
+    verified domains. Outbound messages sent via /send-mail are not
+    included; this endpoint is the inbox view, not a unified
+    send/receive history.
+
+    Supports filtering by domain, status, date range, and free-text
+    search across subject, sender, and recipient fields.
 
     Args:
         cursor (str | Unset):
@@ -281,11 +293,15 @@ async def asyncio(
     date_to: datetime.datetime | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
-    """ List emails
+    """ List inbound emails
 
-     Returns a paginated list of received emails. Supports filtering by
-    domain, status, date range, and free-text search across subject,
-    sender, and recipient fields.
+     Returns a paginated list of INBOUND emails received at your
+    verified domains. Outbound messages sent via /send-mail are not
+    included; this endpoint is the inbox view, not a unified
+    send/receive history.
+
+    Supports filtering by domain, status, date range, and free-text
+    search across subject, sender, and recipient fields.
 
     Args:
         cursor (str | Unset):

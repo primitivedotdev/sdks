@@ -2858,9 +2858,12 @@ func (s *Server) handleListDomainsRequest(args [0]string, argsEscaped bool, w ht
 
 // handleListEmailsRequest handles listEmails operation.
 //
-// Returns a paginated list of received emails. Supports filtering by
-// domain, status, date range, and free-text search across subject,
-// sender, and recipient fields.
+// Returns a paginated list of INBOUND emails received at your
+// verified domains. Outbound messages sent via /send-mail are not
+// included; this endpoint is the inbox view, not a unified
+// send/receive history.
+// Supports filtering by domain, status, date range, and free-text
+// search across subject, sender, and recipient fields.
 //
 // GET /emails
 func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -2996,7 +2999,7 @@ func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w htt
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListEmailsOperation,
-			OperationSummary: "List emails",
+			OperationSummary: "List inbound emails",
 			OperationID:      "listEmails",
 			Body:             nil,
 			RawBody:          rawBody,

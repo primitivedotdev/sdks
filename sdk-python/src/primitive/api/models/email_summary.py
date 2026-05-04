@@ -32,7 +32,15 @@ class EmailSummary:
         Attributes:
             id (UUID):
             status (EmailSummaryStatus):
-            sender (str):
+            sender (str): SMTP envelope sender (return-path) the inbound mail server
+                accepted. For most legitimate mail this equals the bare
+                address in the From header; for mailing lists, bounce
+                handlers, and forwarders it is typically the bounce address
+                rather than the human-visible sender.
+
+                For the parsed From-header value (with display name handling
+                and a sender-fallback when the header is unparseable), GET
+                the email by id and use `from_email`.
             recipient (str):
             domain (str):
             created_at (datetime.datetime):
