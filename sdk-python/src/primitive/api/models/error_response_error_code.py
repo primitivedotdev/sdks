@@ -3,6 +3,7 @@ from enum import Enum
 class ErrorResponseErrorCode(str, Enum):
     CANNOT_SEND_FROM_DOMAIN = "cannot_send_from_domain"
     CONFLICT = "conflict"
+    DISCARD_NOT_ENABLED = "discard_not_enabled"
     FORBIDDEN = "forbidden"
     INBOUND_NOT_REPLIABLE = "inbound_not_repliable"
     INTERNAL_ERROR = "internal_error"

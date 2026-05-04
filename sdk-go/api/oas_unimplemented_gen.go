@@ -82,6 +82,26 @@ func (UnimplementedHandler) DeleteFilter(ctx context.Context, params DeleteFilte
 	return r, ht.ErrNotImplemented
 }
 
+// DiscardEmailContent implements discardEmailContent operation.
+//
+// Permanently deletes the email's raw bytes, parsed body (text + HTML),
+// and attachments while preserving metadata (sender, recipient,
+// subject, timestamps, hashes, attachment manifest) for audit logs.
+// Idempotent: a second call returns success with
+// `already_discarded: true` and does no work.
+// **Gated** on the customer's discard-content opt-in (managed in the
+// dashboard at Settings > Webhooks). When the toggle is off, this
+// endpoint returns `403` with code `discard_not_enabled` and a
+// message pointing the human at the dashboard. There is intentionally
+// no API to flip this toggle — opting in to a destructive,
+// non-reversible operation must be a deliberate human click in the
+// UI.
+//
+// POST /emails/{id}/discard-content
+func (UnimplementedHandler) DiscardEmailContent(ctx context.Context, params DiscardEmailContentParams) (r DiscardEmailContentRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DownloadAttachments implements downloadAttachments operation.
 //
 // Downloads all attachments as a gzip-compressed tar archive.

@@ -702,6 +702,48 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "tagCommand": "emails"
   },
   {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "discard-email-content",
+    "description": "Permanently deletes the email's raw bytes, parsed body (text + HTML),\nand attachments while preserving metadata (sender, recipient,\nsubject, timestamps, hashes, attachment manifest) for audit logs.\nIdempotent: a second call returns success with\n`already_discarded: true` and does no work.\n\n**Gated** on the customer's discard-content opt-in (managed in the\ndashboard at Settings > Webhooks). When the toggle is off, this\nendpoint returns `403` with code `discard_not_enabled` and a\nmessage pointing the human at the dashboard. There is intentionally\nno API to flip this toggle — opting in to a destructive,\nnon-reversible operation must be a deliberate human click in the\nUI.\n",
+    "hasJsonBody": false,
+    "method": "POST",
+    "operationId": "discardEmailContent",
+    "path": "/emails/{id}/discard-content",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "discarded": {
+          "type": "boolean",
+          "description": "Always `true` on a 2xx response. The content is either now\ndiscarded as a result of this call, or was already discarded\nbefore this call ran.\n"
+        },
+        "already_discarded": {
+          "type": "boolean",
+          "description": "`true` if the email's content was already discarded before\nthis call ran (no work was done). `false` if this call was\nthe one that performed the discard.\n"
+        }
+      },
+      "required": [
+        "discarded",
+        "already_discarded"
+      ]
+    },
+    "sdkName": "discardEmailContent",
+    "summary": "Discard email content",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
     "binaryResponse": true,
     "bodyRequired": false,
     "command": "download-attachments",

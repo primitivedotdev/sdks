@@ -29,6 +29,10 @@ type DeleteFilterRes interface {
 	deleteFilterRes()
 }
 
+type DiscardEmailContentRes interface {
+	discardEmailContentRes()
+}
+
 type DownloadAttachmentsRes interface {
 	downloadAttachmentsRes()
 }

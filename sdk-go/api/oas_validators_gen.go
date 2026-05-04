@@ -452,6 +452,46 @@ func (s DeliverySummaryStatus) Validate() error {
 	}
 }
 
+func (s *DiscardEmailContentBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DiscardEmailContentForbidden) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DiscardEmailContentInternalServerError) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DiscardEmailContentNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DiscardEmailContentUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s Domain) Validate() error {
 	switch s.Type {
 	case VerifiedDomainDomain:
@@ -839,6 +879,8 @@ func (s ErrorResponseErrorCode) Validate() error {
 	case "outbound_response_malformed":
 		return nil
 	case "outbound_relay_failed":
+		return nil
+	case "discard_not_enabled":
 		return nil
 	case "inbound_not_repliable":
 		return nil
