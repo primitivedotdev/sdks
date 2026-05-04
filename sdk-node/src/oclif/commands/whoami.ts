@@ -2,7 +2,7 @@ import { Command, Errors, Flags } from "@oclif/core";
 import { getAccount } from "../../api/generated/sdk.gen.js";
 import type { Account } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
-import { extractErrorPayload, formatErrorPayload } from "../api-command.js";
+import { extractErrorPayload, writeErrorWithHints } from "../api-command.js";
 
 // `primitive whoami` is the credentials smoke-test the AGX
 // walkthrough kept asking for. Before this command, a user with a
@@ -51,8 +51,7 @@ class WhoamiCommand extends Command {
     });
 
     if (result.error) {
-      const errorPayload = extractErrorPayload(result.error);
-      process.stderr.write(`${formatErrorPayload(errorPayload)}\n`);
+      writeErrorWithHints(extractErrorPayload(result.error));
       process.exitCode = 1;
       return;
     }

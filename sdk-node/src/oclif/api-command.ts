@@ -99,9 +99,23 @@ function extractBodyFields(
       }
     }
 
+    // Pull the first paragraph of the schema description for use
+    // as the CLI flag's --help string. We split on a blank line
+    // (paragraph break) and then collapse any soft line wraps
+    // inside that paragraph to spaces. This avoids the previous
+    // bug where `split("\n")[0]` truncated wrapped prose like
+    //   "Optional override for ... Defaults to\nthe inbound's..."
+    // to "Optional override for ... Defaults to" - a sentence
+    // ending with "to" with nothing after it, which read as
+    // ellipsis truncation in --help. The remaining paragraphs
+    // are intentionally dropped so multi-paragraph schemas don't
+    // blow out the per-flag help block.
     const description =
       typeof propSchema.description === "string"
-        ? propSchema.description.split("\n")[0].trim()
+        ? propSchema.description
+            .split(/\n\s*\n/)[0]
+            .replace(/\s*\n\s*/g, " ")
+            .trim()
         : "";
 
     const enumRaw = propSchema.enum;
@@ -325,6 +339,57 @@ export function formatErrorPayload(payload: unknown): string {
   return JSON.stringify(payload, null, 2);
 }
 
+// Pull the top-level error code out of either a server response
+// payload (`{ error: { code: '...' } }` or `{ code: '...' }`) or a
+// thrown Error whose `cause.code` carries the value. Used to drive
+// `--api-key` and similar hints in writeErrorWithHints below.
+// Also exported so individual commands (send, whoami) can branch
+// on auth failures and avoid surfacing misleading "fix this flag"
+// guidance when the real problem is the API key.
+export function extractErrorCode(payload: unknown): string | undefined {
+  if (payload instanceof Error) {
+    const { code } = extractCauseDetails(
+      (payload as { cause?: unknown }).cause,
+    );
+    return code;
+  }
+  if (payload && typeof payload === "object") {
+    const inner = (payload as { error?: { code?: unknown } }).error;
+    if (inner && typeof inner === "object" && typeof inner.code === "string") {
+      return inner.code;
+    }
+    const direct = (payload as { code?: unknown }).code;
+    if (typeof direct === "string") return direct;
+  }
+  return undefined;
+}
+
+// Common-case actionable hints keyed by error code. The full
+// JSON envelope still goes to stderr unchanged for any caller
+// that wants to parse it; the hint is an extra trailing line so
+// a human reading the output sees "what to actually do next."
+// The AGX walkthrough flagged that an `unauthorized` envelope
+// alone left the agent without context for the env var or the
+// `--api-key` flag; this closes that gap without having to
+// special-case every command.
+const ERROR_CODE_HINTS: Record<string, string> = {
+  unauthorized:
+    "Hint: pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify a key is live.",
+};
+
+// Write a server / SDK error to stderr in the canonical envelope
+// shape, plus an actionable hint when the code is one we know how
+// to advise on. Replaces the bare
+// `process.stderr.write(${formatErrorPayload(p)}\n)` dance every
+// command was doing.
+export function writeErrorWithHints(payload: unknown): void {
+  process.stderr.write(`${formatErrorPayload(payload)}\n`);
+  const code = extractErrorCode(payload);
+  if (code && ERROR_CODE_HINTS[code]) {
+    process.stderr.write(`${ERROR_CODE_HINTS[code]}\n`);
+  }
+}
+
 // Reserved flag names the body-field expander must never overwrite.
 // `--raw-body` and `--body-file` are the JSON escape hatches.
 // `--api-key`, `--base-url`, `--output` are infra. Path and query
@@ -350,23 +415,23 @@ const RESERVED_FLAG_NAMES = new Set([
 ]);
 
 function bodyFieldFlag(field: BodyFieldDescriptor): unknown {
-  // Flag descriptions cap at 80 chars so oclif's --help output
-  // stays readable; the schema's full description is also visible
-  // via `primitive list-operations | jq`.
-  const descMax = 80;
-  const trimmedDesc =
-    field.description.length > descMax
-      ? `${field.description.slice(0, descMax - 3)}...`
-      : field.description;
+  // Pass the full first-line description through. oclif's --help
+  // renderer wraps long values across multiple lines on its own,
+  // so a fixed character cap here just produces ellipsis-truncated
+  // sentences ("body_html is required. Th...") that mislead the
+  // reader. extractBodyFields already normalizes by taking only
+  // the first paragraph of the schema description, so multi-
+  // paragraph fields don't blow out the help.
+  //
   // Field-flag UX choice: do NOT mark scalar body fields as
   // required at the oclif level even when the JSON Schema marks
   // them required. Reason: a caller can satisfy the requirement
-  // either via the individual flag OR via --body / --body-file.
+  // either via the individual flag OR via --raw-body / --body-file.
   // Marking the flag required would force the individual-flag
   // form. The runtime body merger validates the final assembled
   // body against the same server-side schema either way.
   const common = {
-    description: trimmedDesc || field.name,
+    description: field.description || field.name,
   };
   if (field.kind === "boolean") return Flags.boolean(common);
   if (field.kind === "integer") return Flags.integer(common);
@@ -595,8 +660,7 @@ export function createOperationCommand(
       });
 
       if (result.error) {
-        const errorPayload = extractErrorPayload(result.error);
-        process.stderr.write(`${formatErrorPayload(errorPayload)}\n`);
+        writeErrorWithHints(extractErrorPayload(result.error));
         process.exitCode = 1;
         return;
       }

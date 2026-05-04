@@ -2,12 +2,14 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Errors } from "@oclif/core";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  extractErrorCode,
   extractErrorPayload,
   flagForParameter,
   formatErrorPayload,
   readJsonBody,
+  writeErrorWithHints,
 } from "../../src/oclif/api-command.js";
 
 describe("formatErrorPayload", () => {
@@ -189,6 +191,119 @@ describe("readJsonBody", () => {
     // The CLI no longer reads --body as JSON; if someone passes
     // it on a generated command, it's just an unknown flag.
     expect(readJsonBody({ body: '{"ok":true}' })).toBeUndefined();
+  });
+});
+
+describe("extractErrorCode", () => {
+  it("reads code from a well-formed envelope", () => {
+    expect(
+      extractErrorCode({ error: { code: "unauthorized", message: "nope" } }),
+    ).toBe("unauthorized");
+  });
+
+  it("reads code from a flat payload", () => {
+    expect(extractErrorCode({ code: "validation_error" })).toBe(
+      "validation_error",
+    );
+  });
+
+  it("reads code from an Error's cause.code", () => {
+    const error = new TypeError("fetch failed");
+    Object.assign(error, { cause: { code: "ENOTFOUND" } });
+
+    expect(extractErrorCode(error)).toBe("ENOTFOUND");
+  });
+
+  it("returns undefined when no code is present", () => {
+    expect(extractErrorCode({ message: "no code here" })).toBeUndefined();
+    expect(extractErrorCode(new Error("no cause"))).toBeUndefined();
+  });
+
+  it("returns undefined for null, undefined, primitives", () => {
+    expect(extractErrorCode(null)).toBeUndefined();
+    expect(extractErrorCode(undefined)).toBeUndefined();
+    expect(extractErrorCode("oops")).toBeUndefined();
+    expect(extractErrorCode(42)).toBeUndefined();
+  });
+
+  it("ignores non-string code values", () => {
+    expect(extractErrorCode({ error: { code: 500 } })).toBeUndefined();
+    expect(extractErrorCode({ code: 42 })).toBeUndefined();
+  });
+
+  it("prefers the envelope-inner code over a same-level one", () => {
+    // `{ error: { code }, code }` is unusual but well-defined: the
+    // server envelope is the source of truth.
+    expect(
+      extractErrorCode({
+        code: "outer",
+        error: { code: "inner" },
+      }),
+    ).toBe("inner");
+  });
+});
+
+describe("writeErrorWithHints", () => {
+  let writes: string[];
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    writes = [];
+    writeSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: unknown) => {
+        writes.push(typeof chunk === "string" ? chunk : String(chunk));
+        return true;
+      });
+  });
+
+  afterEach(() => {
+    writeSpy.mockRestore();
+  });
+
+  it("writes the formatted payload to stderr", () => {
+    writeErrorWithHints({ code: "validation_error", message: "bad input" });
+
+    expect(writes).toHaveLength(1);
+    expect(JSON.parse(writes[0] ?? "")).toEqual({
+      code: "validation_error",
+      message: "bad input",
+    });
+  });
+
+  it("appends an unauthorized hint pointing at --api-key and whoami", () => {
+    writeErrorWithHints({
+      error: { code: "unauthorized", message: "Invalid API key" },
+    });
+
+    expect(writes).toHaveLength(2);
+    expect(writes[1]).toContain("--api-key");
+    expect(writes[1]).toContain("PRIMITIVE_API_KEY");
+    expect(writes[1]).toContain("whoami");
+  });
+
+  it("does not append a hint for codes without a registered message", () => {
+    writeErrorWithHints({
+      error: { code: "validation_error", message: "bad input" },
+    });
+
+    expect(writes).toHaveLength(1);
+  });
+
+  it("does not append a hint when no code can be extracted", () => {
+    writeErrorWithHints({ message: "mystery failure" });
+
+    expect(writes).toHaveLength(1);
+  });
+
+  it("appends the unauthorized hint when given an Error with cause.code=unauthorized", () => {
+    const error = new Error("Invalid API key");
+    Object.assign(error, { cause: { code: "unauthorized" } });
+
+    writeErrorWithHints(error);
+
+    expect(writes).toHaveLength(2);
+    expect(writes[1]).toContain("--api-key");
   });
 });
 
