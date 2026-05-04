@@ -2,8 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   formatReceivedAt,
   formatRow,
+  pickIdWidth,
   truncate,
 } from "../../src/oclif/commands/emails-latest.js";
+
+// Tests pass `idWidth` explicitly to formatRow; pickIdWidth's
+// branch is exercised in its own describe block. Use the real
+// short and full widths so renames stay caught.
+const ID_WIDTH_SHORT = 8;
+const ID_WIDTH_FULL = 36;
 
 describe("truncate", () => {
   it("right-pads short values to the requested width", () => {
@@ -80,8 +87,8 @@ describe("formatRow", () => {
     } as never;
   }
 
-  it("renders a basic row with the expected columns", () => {
-    const row = formatRow(makeEmail());
+  it("renders a basic row with the expected columns at short id width", () => {
+    const row = formatRow(makeEmail(), ID_WIDTH_SHORT);
     // ID column is the first 8 chars of the UUID.
     expect(row.startsWith("abc123de")).toBe(true);
     // Timestamp column is fixed-format UTC.
@@ -91,9 +98,18 @@ describe("formatRow", () => {
     expect(row).toContain("needle");
   });
 
+  it("renders the full UUID when called at full id width", () => {
+    const row = formatRow(
+      makeEmail({ id: "11111111-2222-3333-4444-555555555555" }),
+      ID_WIDTH_FULL,
+    );
+    expect(row.startsWith("11111111-2222-3333-4444-555555555555")).toBe(true);
+  });
+
   it("collapses internal whitespace in the subject so embedded newlines don't break the row", () => {
     const row = formatRow(
       makeEmail({ subject: "first line\nsecond line\twith tab" }),
+      ID_WIDTH_SHORT,
     );
     expect(row).not.toContain("\n");
     expect(row).not.toContain("\t");
@@ -103,21 +119,34 @@ describe("formatRow", () => {
   it("truncates a long subject with the ... sentinel", () => {
     const long =
       "this is a very long subject that should clearly exceed the display width and get cut off with ellipsis";
-    const row = formatRow(makeEmail({ subject: long }));
+    const row = formatRow(makeEmail({ subject: long }), ID_WIDTH_SHORT);
     expect(row).toContain("...");
     // Original long subject must NOT appear in full.
     expect(row).not.toContain("ellipsis");
   });
 
   it("renders empty addresses as padded blanks instead of throwing", () => {
-    const row = formatRow(makeEmail({ sender: null, recipient: null }));
+    const row = formatRow(
+      makeEmail({ sender: null, recipient: null }),
+      ID_WIDTH_SHORT,
+    );
     // Output should still be parseable as a row (no crash, no NaN).
     expect(row.length).toBeGreaterThan(0);
     expect(row).toContain("needle");
   });
 
   it("renders missing subject as empty (no crash)", () => {
-    const row = formatRow(makeEmail({ subject: null }));
+    const row = formatRow(makeEmail({ subject: null }), ID_WIDTH_SHORT);
     expect(row.length).toBeGreaterThan(0);
+  });
+});
+
+describe("pickIdWidth", () => {
+  it("returns the short width when stdout is a TTY (interactive humans)", () => {
+    expect(pickIdWidth(true)).toBe(ID_WIDTH_SHORT);
+  });
+
+  it("returns the full UUID width when stdout is piped or redirected", () => {
+    expect(pickIdWidth(false)).toBe(ID_WIDTH_FULL);
   });
 });

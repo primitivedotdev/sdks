@@ -22,7 +22,15 @@ const MAX_LIMIT = 100;
 // values wrap to "..." rather than blowing out terminal layout.
 const SUBJECT_DISPLAY_WIDTH = 50;
 const ADDRESS_DISPLAY_WIDTH = 32;
-const ID_DISPLAY_WIDTH = 8;
+// Two ID widths: the short prefix is for human eyes (interactive
+// TTY), the full UUID is for piped output (a script reading the row
+// as a feed). The short prefix is useless when piped because every
+// other operation requires the full UUID, so the AGX walkthrough
+// kept producing a re-run with `--json` just to recover the id.
+// Auto-switching by `process.stdout.isTTY` makes the common piped
+// case a one-call workflow.
+const ID_DISPLAY_WIDTH_SHORT = 8;
+const ID_DISPLAY_WIDTH_FULL = 36;
 const RECEIVED_DISPLAY_WIDTH = 19;
 
 // Truncate to width with right-padding; values longer than width are
@@ -51,8 +59,23 @@ export function formatReceivedAt(value: string | undefined | null): string {
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 }
 
-export function formatRow(email: EmailSummary): string {
-  const id = truncate(email.id.slice(0, ID_DISPLAY_WIDTH), ID_DISPLAY_WIDTH);
+// Decide whether to print the full UUID or the short 8-char prefix
+// based on whether stdout is a TTY. Piped/redirected stdout (the
+// caller is consuming the rows programmatically) gets full UUIDs;
+// interactive terminals get the compact prefix. Pulled out as a
+// helper so tests can drive the rendering branch without touching
+// process.stdout.
+export function pickIdWidth(isTty: boolean): number {
+  return isTty ? ID_DISPLAY_WIDTH_SHORT : ID_DISPLAY_WIDTH_FULL;
+}
+
+export function formatRow(email: EmailSummary, idWidth: number): string {
+  // idWidth is one of ID_DISPLAY_WIDTH_SHORT or ID_DISPLAY_WIDTH_FULL.
+  // For SHORT, slice the UUID to the prefix length and pad. For FULL,
+  // pad to the full UUID width (UUIDs are already 36 chars, so this
+  // is effectively just an alignment guarantee for any malformed
+  // shorter id).
+  const id = truncate(email.id.slice(0, idWidth), idWidth);
   const received = formatReceivedAt(email.received_at);
   const from = truncate(email.sender ?? "", ADDRESS_DISPLAY_WIDTH);
   const to = truncate(email.recipient ?? "", ADDRESS_DISPLAY_WIDTH);
@@ -65,15 +88,16 @@ class EmailsLatestCommand extends Command {
   static description =
     `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails:list-emails\` (full JSON envelope, cursor pagination, filters) or pass \`--json\` here for the same raw shape without pagination/filters.
 
-  The default text table truncates each row's id to the first ${ID_DISPLAY_WIDTH} characters for readability. Operations that take an id (\`emails:get-email\`, \`emails:delete-email\`, etc.) require the full UUID, so pass \`--json\` or use \`emails:list-emails\` when you need to feed an id back into another command.
+  ID display is TTY-aware. When STDOUT is a terminal, the table truncates each row's id to the first ${ID_DISPLAY_WIDTH_SHORT} characters for readability. When STDOUT is piped or redirected (the row stream is being consumed by another command), the full UUID is printed so the id can be fed straight back into \`emails:get-email\`, \`emails:delete-email\`, etc. without a separate \`--json\` round-trip.
 
-  Output streams: the column header line is written to STDERR so the row data on STDOUT stays grep/awk-friendly. \`--json\` writes everything (including the envelope) to STDOUT.`;
+  Output streams: the column header line is written to STDERR so the row data on STDOUT stays grep/awk-friendly. \`--json\` writes everything (including the envelope) to STDOUT and is equivalent to running \`emails:list-emails --limit N\` for the same N.`;
 
   static summary = "Show the most recent inbound emails as a compact table";
 
   static examples = [
     "<%= config.bin %> emails:latest",
     "<%= config.bin %> emails:latest --limit 25",
+    "<%= config.bin %> emails:latest | head -1 | awk '{print $1}'  # full UUID since piped",
     "<%= config.bin %> emails:latest --json | jq '.data[0].id'",
   ];
 
@@ -140,11 +164,13 @@ class EmailsLatestCommand extends Command {
       return;
     }
 
+    const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
+
     // Header on stderr so the table itself stays grep-friendly.
-    const header = `${"ID".padEnd(ID_DISPLAY_WIDTH)}  ${"RECEIVED (UTC)".padEnd(RECEIVED_DISPLAY_WIDTH)}  ${"FROM".padEnd(ADDRESS_DISPLAY_WIDTH)}  ${"TO".padEnd(ADDRESS_DISPLAY_WIDTH)}  SUBJECT`;
+    const header = `${"ID".padEnd(idWidth)}  ${"RECEIVED (UTC)".padEnd(RECEIVED_DISPLAY_WIDTH)}  ${"FROM".padEnd(ADDRESS_DISPLAY_WIDTH)}  ${"TO".padEnd(ADDRESS_DISPLAY_WIDTH)}  SUBJECT`;
     process.stderr.write(`${header}\n`);
     for (const row of rows) {
-      this.log(formatRow(row));
+      this.log(formatRow(row, idWidth));
     }
   }
 }
