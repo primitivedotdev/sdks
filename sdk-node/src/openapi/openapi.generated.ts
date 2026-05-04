@@ -3280,6 +3280,10 @@ export const openapiDocument: Record<string, unknown> = {
           "status": {
             "$ref": "#/components/schemas/SentEmailStatus"
           },
+          "from": {
+            "type": "string",
+            "description": "Bare from-address actually written on the wire. Echoed\non every success branch so callers can confirm what\nwent out, particularly useful for the /emails/{id}/reply\npath where `from` is server-derived from the inbound's\nrecipient when the caller doesn't override.\n\nFor sends where the caller passed a from-header that\nincluded a display name (e.g. `\"Acme Support\" <support@acme.test>`),\nthis field is the parsed bare address (`support@acme.test`).\nThe display name was sent on the wire intact; this field\njust makes the address easy to compare against allowlists.\n"
+          },
           "queue_id": {
             "type": [
               "string",
@@ -3335,6 +3339,7 @@ export const openapiDocument: Record<string, unknown> = {
         "required": [
           "id",
           "status",
+          "from",
           "queue_id",
           "accepted",
           "rejected",
