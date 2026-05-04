@@ -390,6 +390,49 @@ export function writeErrorWithHints(payload: unknown): void {
   }
 }
 
+// Format milliseconds as a short human-readable wall-clock duration.
+// Sub-second uses 2 decimal places (e.g. `0.18s`); seconds use 2
+// decimals up to 60s (`12.34s`); minute-plus uses `Mm SS.SSs`.
+// Display-only; the underlying ms value is what the caller computed.
+export function formatElapsed(ms: number): string {
+  const seconds = ms / 1000;
+  if (seconds < 60) return `${seconds.toFixed(2)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const rem = seconds - minutes * 60;
+  return `${minutes}m ${rem.toFixed(2)}s`;
+}
+
+// Run `fn` and, when `enabled` is true, write a one-line wall-clock
+// timing report to stderr after it completes. Stderr keeps the row
+// data on stdout grep/jq-friendly. The timer captures the full
+// duration of the function (HTTPS round trip, server-side gate +
+// agent + delivery, polling, etc.), not just the API call's
+// server-side processing.
+//
+// Used by every `--time` callsite across the CLI: generated
+// operation commands and hand-coded shortcuts (send, whoami,
+// emails:latest, describe). Pulled out as a helper so timing is
+// uniform across commands and a single render-format change
+// propagates everywhere.
+export async function runWithTiming<T>(
+  enabled: boolean | undefined,
+  fn: () => Promise<T>,
+): Promise<T> {
+  if (!enabled) return fn();
+  const start = Date.now();
+  try {
+    return await fn();
+  } finally {
+    process.stderr.write(`[time: ${formatElapsed(Date.now() - start)}]\n`);
+  }
+}
+
+// Shared `--time` flag definition every CLI command spreads into its
+// own static flags. Lives here so the flag's description and short
+// name stay consistent across the hand-coded and generated commands.
+export const TIME_FLAG_DESCRIPTION =
+  "Print the wall-clock duration of this command to stderr after it completes (e.g. `[time: 1.34s]`). Useful for measuring `--wait` send latency, comparing CLI overhead, or capturing timing in scripts.";
+
 // Reserved flag names the body-field expander must never overwrite.
 // `--raw-body` and `--body-file` are the JSON escape hatches.
 // `--api-key`, `--base-url`, `--output` are infra. Path and query
@@ -458,6 +501,9 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     "base-url": Flags.string({
       description: "API base URL (defaults to PRIMITIVE_API_URL or production)",
       env: "PRIMITIVE_API_URL",
+    }),
+    time: Flags.boolean({
+      description: TIME_FLAG_DESCRIPTION,
     }),
   };
 
@@ -583,125 +629,127 @@ export function createOperationCommand(
     async run(): Promise<void> {
       const { flags } = await this.parse(OperationCommand as never);
       const parsedFlags = flags as Record<string, unknown>;
-      const apiClient = new PrimitiveApiClient({
-        apiKey:
-          typeof parsedFlags["api-key"] === "string"
-            ? (parsedFlags["api-key"] as string)
-            : undefined,
-        baseUrl:
-          typeof parsedFlags["base-url"] === "string"
-            ? (parsedFlags["base-url"] as string)
-            : undefined,
-      });
+      await runWithTiming(parsedFlags.time === true, async () => {
+        const apiClient = new PrimitiveApiClient({
+          apiKey:
+            typeof parsedFlags["api-key"] === "string"
+              ? (parsedFlags["api-key"] as string)
+              : undefined,
+          baseUrl:
+            typeof parsedFlags["base-url"] === "string"
+              ? (parsedFlags["base-url"] as string)
+              : undefined,
+        });
 
-      // Two body sources, merged: explicit JSON via --body /
-      // --body-file (the base) plus per-field flags (the
-      // overrides). Per-field flag values take precedence on key
-      // conflicts so a caller can pass a base payload via --body
-      // and override one field on the command line.
-      let body: unknown;
-      if (operation.hasJsonBody) {
-        const explicit = readJsonBody(parsedFlags);
-        const overrides = collectBodyFieldFlags(
-          parsedFlags,
-          bodyFieldFlagToProperty,
-        );
+        // Two body sources, merged: explicit JSON via --body /
+        // --body-file (the base) plus per-field flags (the
+        // overrides). Per-field flag values take precedence on key
+        // conflicts so a caller can pass a base payload via --body
+        // and override one field on the command line.
+        let body: unknown;
+        if (operation.hasJsonBody) {
+          const explicit = readJsonBody(parsedFlags);
+          const overrides = collectBodyFieldFlags(
+            parsedFlags,
+            bodyFieldFlagToProperty,
+          );
 
-        if (Object.keys(overrides).length > 0) {
-          if (explicit === undefined) {
-            body = overrides;
-          } else if (
-            explicit !== null &&
-            typeof explicit === "object" &&
-            !Array.isArray(explicit)
-          ) {
-            body = { ...(explicit as Record<string, unknown>), ...overrides };
+          if (Object.keys(overrides).length > 0) {
+            if (explicit === undefined) {
+              body = overrides;
+            } else if (
+              explicit !== null &&
+              typeof explicit === "object" &&
+              !Array.isArray(explicit)
+            ) {
+              body = { ...(explicit as Record<string, unknown>), ...overrides };
+            } else {
+              // Caller passed --raw-body as null, an array, or a
+              // primitive AND also passed per-field flags. We can't
+              // merge per-field overrides into a non-object body
+              // shape, and silently dropping either source would
+              // leave the caller's actual intent unclear. Refuse
+              // loudly so the next attempt is unambiguous.
+              const explicitKind =
+                explicit === null
+                  ? "null"
+                  : Array.isArray(explicit)
+                    ? "array"
+                    : typeof explicit;
+              const overrideFlags = Object.keys(overrides)
+                .map((p) => `--${flagName(p)}`)
+                .join(", ");
+              throw new Errors.CLIError(
+                `--raw-body must be a JSON object when also passing per-field flags (got ${explicitKind}); supplied per-field flags: ${overrideFlags}. Either drop --raw-body and rely on the per-field flags, or move every field into the JSON --raw-body and drop the flags.`,
+              );
+            }
           } else {
-            // Caller passed --raw-body as null, an array, or a
-            // primitive AND also passed per-field flags. We can't
-            // merge per-field overrides into a non-object body
-            // shape, and silently dropping either source would
-            // leave the caller's actual intent unclear. Refuse
-            // loudly so the next attempt is unambiguous.
-            const explicitKind =
-              explicit === null
-                ? "null"
-                : Array.isArray(explicit)
-                  ? "array"
-                  : typeof explicit;
-            const overrideFlags = Object.keys(overrides)
-              .map((p) => `--${flagName(p)}`)
-              .join(", ");
-            throw new Errors.CLIError(
-              `--raw-body must be a JSON object when also passing per-field flags (got ${explicitKind}); supplied per-field flags: ${overrideFlags}. Either drop --raw-body and rely on the per-field flags, or move every field into the JSON --raw-body and drop the flags.`,
-            );
+            body = explicit;
           }
-        } else {
-          body = explicit;
         }
-      }
 
-      if (operation.bodyRequired && body === undefined) {
-        throw new Errors.CLIError(
-          `Operation ${operation.operationId} requires a body. Pass each field as a --flag (see --help) or supply JSON via --raw-body / --body-file.`,
-        );
-      }
+        if (operation.bodyRequired && body === undefined) {
+          throw new Errors.CLIError(
+            `Operation ${operation.operationId} requires a body. Pass each field as a --flag (see --help) or supply JSON via --raw-body / --body-file.`,
+          );
+        }
 
-      const operationFn = operations[
-        operation.sdkName as OperationName
-      ] as unknown as OperationExecutor;
-      const result = await operationFn({
-        body,
-        client: apiClient.client,
-        parseAs: operation.binaryResponse ? "blob" : "auto",
-        path: collectValues(operation.pathParams, parsedFlags),
-        query: collectValues(operation.queryParams, parsedFlags),
-        responseStyle: "fields",
-      });
+        const operationFn = operations[
+          operation.sdkName as OperationName
+        ] as unknown as OperationExecutor;
+        const result = await operationFn({
+          body,
+          client: apiClient.client,
+          parseAs: operation.binaryResponse ? "blob" : "auto",
+          path: collectValues(operation.pathParams, parsedFlags),
+          query: collectValues(operation.queryParams, parsedFlags),
+          responseStyle: "fields",
+        });
 
-      if (result.error) {
-        writeErrorWithHints(extractErrorPayload(result.error));
-        process.exitCode = 1;
-        return;
-      }
-
-      if (operation.binaryResponse) {
-        const blob = result.data as Blob | File;
-        const bytes = Buffer.from(await blob.arrayBuffer());
-        const output = parsedFlags.output;
-
-        if (typeof output === "string") {
-          writeFileSync(output, bytes);
+        if (result.error) {
+          writeErrorWithHints(extractErrorPayload(result.error));
+          process.exitCode = 1;
           return;
         }
 
-        process.stdout.write(bytes);
-        return;
-      }
+        if (operation.binaryResponse) {
+          const blob = result.data as Blob | File;
+          const bytes = Buffer.from(await blob.arrayBuffer());
+          const output = parsedFlags.output;
 
-      const envelope = result.data as
-        | { data?: unknown; meta?: { cursor?: string | null } }
-        | null
-        | undefined;
-      const cursor = envelope?.meta?.cursor;
-      if (cursor) {
-        process.stderr.write(`next cursor: ${cursor}\n`);
-      }
+          if (typeof output === "string") {
+            writeFileSync(output, bytes);
+            return;
+          }
 
-      // Empty-result hint. When a list-style operation returns
-      // an empty array, emit an operation-specific note to
-      // stderr so a naive caller can distinguish "nothing here"
-      // from "something isn't set up." Stdout still gets the
-      // raw `[]` so machine-readable output is unchanged. The
-      // AGX walkthrough flagged this: `list-deliveries` returning
-      // `[]` left the agent unsure whether they had an empty
-      // delivery log or no endpoints configured at all.
-      if (Array.isArray(envelope?.data) && envelope.data.length === 0) {
-        const hint = EMPTY_RESULT_HINTS[operation.sdkName];
-        if (hint) process.stderr.write(`${hint}\n`);
-      }
+          process.stdout.write(bytes);
+          return;
+        }
 
-      this.log(JSON.stringify(envelope?.data ?? null, null, 2));
+        const envelope = result.data as
+          | { data?: unknown; meta?: { cursor?: string | null } }
+          | null
+          | undefined;
+        const cursor = envelope?.meta?.cursor;
+        if (cursor) {
+          process.stderr.write(`next cursor: ${cursor}\n`);
+        }
+
+        // Empty-result hint. When a list-style operation returns
+        // an empty array, emit an operation-specific note to
+        // stderr so a naive caller can distinguish "nothing here"
+        // from "something isn't set up." Stdout still gets the
+        // raw `[]` so machine-readable output is unchanged. The
+        // AGX walkthrough flagged this: `list-deliveries` returning
+        // `[]` left the agent unsure whether they had an empty
+        // delivery log or no endpoints configured at all.
+        if (Array.isArray(envelope?.data) && envelope.data.length === 0) {
+          const hint = EMPTY_RESULT_HINTS[operation.sdkName];
+          if (hint) process.stderr.write(`${hint}\n`);
+        }
+
+        this.log(JSON.stringify(envelope?.data ?? null, null, 2));
+      });
     }
   }
 
