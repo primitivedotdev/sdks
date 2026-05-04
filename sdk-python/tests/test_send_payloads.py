@@ -41,6 +41,7 @@ SUCCESS_RESPONSE = {
     "data": {
         "id": "sent-x",
         "status": "submitted_to_agent",
+        "from": "sender@example.com",
         "queue_id": None,
         "accepted": [],
         "rejected": [],

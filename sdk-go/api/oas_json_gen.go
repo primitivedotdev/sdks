@@ -11574,6 +11574,10 @@ func (s *SendMailResult) encodeFields(e *jx.Encoder) {
 		s.Status.Encode(e)
 	}
 	{
+		e.FieldStart("from")
+		e.Str(s.From)
+	}
+	{
 		e.FieldStart("queue_id")
 		s.QueueID.Encode(e)
 	}
@@ -11629,19 +11633,20 @@ func (s *SendMailResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSendMailResult = [12]string{
+var jsonFieldsNameOfSendMailResult = [13]string{
 	0:  "id",
 	1:  "status",
-	2:  "queue_id",
-	3:  "accepted",
-	4:  "rejected",
-	5:  "client_idempotency_key",
-	6:  "request_id",
-	7:  "content_hash",
-	8:  "delivery_status",
-	9:  "smtp_response_code",
-	10: "smtp_response_text",
-	11: "idempotent_replay",
+	2:  "from",
+	3:  "queue_id",
+	4:  "accepted",
+	5:  "rejected",
+	6:  "client_idempotency_key",
+	7:  "request_id",
+	8:  "content_hash",
+	9:  "delivery_status",
+	10: "smtp_response_code",
+	11: "smtp_response_text",
+	12: "idempotent_replay",
 }
 
 // Decode decodes SendMailResult from json.
@@ -11675,8 +11680,20 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"status\"")
 			}
-		case "queue_id":
+		case "from":
 			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.From = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from\"")
+			}
+		case "queue_id":
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				if err := s.QueueID.Decode(d); err != nil {
 					return err
@@ -11686,7 +11703,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"queue_id\"")
 			}
 		case "accepted":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				s.Accepted = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -11706,7 +11723,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"accepted\"")
 			}
 		case "rejected":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				s.Rejected = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -11726,7 +11743,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"rejected\"")
 			}
 		case "client_idempotency_key":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := d.Str()
 				s.ClientIdempotencyKey = string(v)
@@ -11738,7 +11755,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"client_idempotency_key\"")
 			}
 		case "request_id":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				v, err := d.Str()
 				s.RequestID = string(v)
@@ -11750,7 +11767,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"request_id\"")
 			}
 		case "content_hash":
-			requiredBitSet[0] |= 1 << 7
+			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				v, err := d.Str()
 				s.ContentHash = string(v)
@@ -11792,7 +11809,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"smtp_response_text\"")
 			}
 		case "idempotent_replay":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				v, err := d.Bool()
 				s.IdempotentReplay = bool(v)
@@ -11814,7 +11831,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
 		0b11111111,
-		0b00001000,
+		0b00010001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

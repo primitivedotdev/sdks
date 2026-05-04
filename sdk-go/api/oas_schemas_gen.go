@@ -5431,6 +5431,17 @@ type SendMailResult struct {
 	// Persisted sent-email attempt ID.
 	ID     string          `json:"id"`
 	Status SentEmailStatus `json:"status"`
+	// Bare from-address actually written on the wire. Echoed
+	// on every success branch so callers can confirm what
+	// went out, particularly useful for the /emails/{id}/reply
+	// path where `from` is server-derived from the inbound's
+	// recipient when the caller doesn't override.
+	// For sends where the caller passed a from-header that
+	// included a display name (e.g. `"Acme Support" <support@acme.test>`),
+	// this field is the parsed bare address (`support@acme.test`).
+	// The display name was sent on the wire intact; this field
+	// just makes the address easy to compare against allowlists.
+	From string `json:"from"`
 	// Message identifier assigned by Primitive's outbound relay, when available.
 	QueueID NilString `json:"queue_id"`
 	// Recipient addresses accepted by the relay.
@@ -5464,6 +5475,11 @@ func (s *SendMailResult) GetID() string {
 // GetStatus returns the value of Status.
 func (s *SendMailResult) GetStatus() SentEmailStatus {
 	return s.Status
+}
+
+// GetFrom returns the value of From.
+func (s *SendMailResult) GetFrom() string {
+	return s.From
 }
 
 // GetQueueID returns the value of QueueID.
@@ -5524,6 +5540,11 @@ func (s *SendMailResult) SetID(val string) {
 // SetStatus sets the value of Status.
 func (s *SendMailResult) SetStatus(val SentEmailStatus) {
 	s.Status = val
+}
+
+// SetFrom sets the value of From.
+func (s *SendMailResult) SetFrom(val string) {
+	s.From = val
 }
 
 // SetQueueID sets the value of QueueID.

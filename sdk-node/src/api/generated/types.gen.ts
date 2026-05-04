@@ -712,6 +712,21 @@ export type SendMailResult = {
     id: string;
     status: SentEmailStatus;
     /**
+     * Bare from-address actually written on the wire. Echoed
+     * on every success branch so callers can confirm what
+     * went out, particularly useful for the /emails/{id}/reply
+     * path where `from` is server-derived from the inbound's
+     * recipient when the caller doesn't override.
+     *
+     * For sends where the caller passed a from-header that
+     * included a display name (e.g. `"Acme Support" <support@acme.test>`),
+     * this field is the parsed bare address (`support@acme.test`).
+     * The display name was sent on the wire intact; this field
+     * just makes the address easy to compare against allowlists.
+     *
+     */
+    from: string;
+    /**
      * Message identifier assigned by Primitive's outbound relay, when available.
      */
     queue_id: string | null;

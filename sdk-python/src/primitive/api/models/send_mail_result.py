@@ -43,6 +43,17 @@ class SendMailResult:
                     poller couldn't classify the receiver's response.
                   - `delivered` / `bounced` / `deferred` / `wait_timeout`:
                     terminal delivery outcomes (see DeliveryStatus).
+            from_ (str): Bare from-address actually written on the wire. Echoed
+                on every success branch so callers can confirm what
+                went out, particularly useful for the /emails/{id}/reply
+                path where `from` is server-derived from the inbound's
+                recipient when the caller doesn't override.
+
+                For sends where the caller passed a from-header that
+                included a display name (e.g. `"Acme Support" <support@acme.test>`),
+                this field is the parsed bare address (`support@acme.test`).
+                The display name was sent on the wire intact; this field
+                just makes the address easy to compare against allowlists.
             queue_id (None | str): Message identifier assigned by Primitive's outbound relay, when available.
             accepted (list[str]): Recipient addresses accepted by the relay.
             rejected (list[str]): Recipient addresses rejected by the relay.
@@ -63,6 +74,7 @@ class SendMailResult:
 
     id: str
     status: SentEmailStatus
+    from_: str
     queue_id: None | str
     accepted: list[str]
     rejected: list[str]
@@ -83,6 +95,8 @@ class SendMailResult:
         id = self.id
 
         status = self.status.value
+
+        from_ = self.from_
 
         queue_id: None | str
         queue_id = self.queue_id
@@ -122,6 +136,7 @@ class SendMailResult:
         field_dict.update({
             "id": id,
             "status": status,
+            "from": from_,
             "queue_id": queue_id,
             "accepted": accepted,
             "rejected": rejected,
@@ -150,6 +165,8 @@ class SendMailResult:
 
 
 
+
+        from_ = d.pop("from")
 
         def _parse_queue_id(data: object) -> None | str:
             if data is None:
@@ -198,6 +215,7 @@ class SendMailResult:
         send_mail_result = cls(
             id=id,
             status=status,
+            from_=from_,
             queue_id=queue_id,
             accepted=accepted,
             rejected=rejected,
