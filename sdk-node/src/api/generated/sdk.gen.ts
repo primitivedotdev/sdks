@@ -150,11 +150,15 @@ export const verifyDomain = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
- * List emails
+ * List inbound emails
  *
- * Returns a paginated list of received emails. Supports filtering by
- * domain, status, date range, and free-text search across subject,
- * sender, and recipient fields.
+ * Returns a paginated list of INBOUND emails received at your
+ * verified domains. Outbound messages sent via /send-mail are not
+ * included; this endpoint is the inbox view, not a unified
+ * send/receive history.
+ *
+ * Supports filtering by domain, status, date range, and free-text
+ * search across subject, sender, and recipient fields.
  *
  */
 export const listEmails = <ThrowOnError extends boolean = false>(options?: Options<ListEmailsData, ThrowOnError>) => (options?.client ?? client).get<ListEmailsResponses, ListEmailsErrors, ThrowOnError>({

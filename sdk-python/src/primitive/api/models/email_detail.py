@@ -33,14 +33,34 @@ class EmailDetail:
     """ 
         Attributes:
             id (UUID):
-            sender (str):
+            sender (str): SMTP envelope sender (return-path) the inbound mail server
+                accepted. Same value as `smtp_mail_from`; both fields exist
+                so protocol-aware tooling can use whichever name it expects.
+
+                For most legitimate mail this equals `from_email`; for
+                mailing lists, bounce handlers, and forwarders it is
+                typically the bounce-handling address rather than the
+                human-visible sender.
+
+                **For the canonical "who sent this email" value, use
+                `from_email`.**
             recipient (str):
             status (EmailDetailStatus):
             domain (str):
             created_at (datetime.datetime):
             received_at (datetime.datetime):
             webhook_attempt_count (int):
-            from_email (str): Parsed from address (from_header or sender fallback)
+            from_email (str): Bare email address parsed from the `From:` header, with
+                display name stripped (e.g. `alice@example.com`). Falls
+                back to `sender` (the SMTP envelope MAIL FROM) when the
+                `From:` header cannot be parsed.
+
+                **This is the canonical "who sent this email" field for
+                most use cases**, including comparing against allowlists,
+                routing replies, or displaying the sender to a user. Use
+                `from_header` when you specifically need the display name,
+                or `sender`/`smtp_mail_from` when you need the SMTP
+                envelope value (e.g. to follow a bounce).
             to_email (str): Parsed to address (same as recipient)
             replies (list[EmailDetailReply]): Sent emails recorded as replies to this inbound, in send
                 order (ascending). Populated when a customer's send-mail
@@ -67,9 +87,20 @@ class EmailDetail:
             webhook_last_error (None | str | Unset):
             webhook_fired_at (datetime.datetime | None | Unset):
             smtp_helo (None | str | Unset):
-            smtp_mail_from (None | str | Unset):
+            smtp_mail_from (None | str | Unset): SMTP envelope MAIL FROM (return-path), as accepted by the
+                inbound mail server. Same value as `sender`; both fields
+                exist so protocol-aware tooling can use whichever name it
+                expects.
+
+                For the canonical "who sent this email" value (display name
+                stripped, From-header preferred), use `from_email`.
             smtp_rcpt_to (list[str] | None | Unset):
-            from_header (None | str | Unset):
+            from_header (None | str | Unset): Raw `From:` header from the message body, including any
+                display name (e.g. `"Alice Example" <alice@example.com>`).
+                Use this when you need the display name for rendering.
+
+                For the bare email address (display name stripped), use
+                `from_email`.
             content_discarded_at (datetime.datetime | None | Unset):
             content_discarded_by_delivery_id (None | str | Unset):
             from_known_address (bool | Unset): True when the inbound's sender address has a matching grant

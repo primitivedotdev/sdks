@@ -1248,6 +1248,15 @@ type EmailDetail struct {
 	MessageID OptNilString `json:"message_id"`
 	DomainID  OptNilUUID   `json:"domain_id"`
 	OrgID     OptNilUUID   `json:"org_id"`
+	// SMTP envelope sender (return-path) the inbound mail server
+	// accepted. Same value as `smtp_mail_from`; both fields exist
+	// so protocol-aware tooling can use whichever name it expects.
+	// For most legitimate mail this equals `from_email`; for
+	// mailing lists, bounce handlers, and forwarders it is
+	// typically the bounce-handling address rather than the
+	// human-visible sender.
+	// **For the canonical "who sent this email" value, use
+	// `from_email`.**.
 	Sender    string       `json:"sender"`
 	Recipient string       `json:"recipient"`
 	Subject   OptNilString `json:"subject"`
@@ -1256,28 +1265,48 @@ type EmailDetail struct {
 	BodyText OptNilString `json:"body_text"`
 	// HTML body parsed from the inbound MIME, matching the `email.parsed.body_html` field on the webhook
 	// payload. Null when the message had no HTML part or parsing failed.
-	BodyHTML                     OptNilString                   `json:"body_html"`
-	Status                       EmailDetailStatus              `json:"status"`
-	Domain                       string                         `json:"domain"`
-	SpamScore                    OptNilFloat64                  `json:"spam_score"`
-	RawSizeBytes                 OptNilInt                      `json:"raw_size_bytes"`
-	RawSHA256                    OptNilString                   `json:"raw_sha256"`
-	CreatedAt                    time.Time                      `json:"created_at"`
-	ReceivedAt                   time.Time                      `json:"received_at"`
-	RejectionReason              OptNilString                   `json:"rejection_reason"`
-	WebhookStatus                OptNilEmailDetailWebhookStatus `json:"webhook_status"`
-	WebhookAttemptCount          int                            `json:"webhook_attempt_count"`
-	WebhookLastAttemptAt         OptNilDateTime                 `json:"webhook_last_attempt_at"`
-	WebhookLastStatusCode        OptNilInt                      `json:"webhook_last_status_code"`
-	WebhookLastError             OptNilString                   `json:"webhook_last_error"`
-	WebhookFiredAt               OptNilDateTime                 `json:"webhook_fired_at"`
-	SMTPHelo                     OptNilString                   `json:"smtp_helo"`
-	SMTPMailFrom                 OptNilString                   `json:"smtp_mail_from"`
-	SMTPRcptTo                   OptNilStringArray              `json:"smtp_rcpt_to"`
-	FromHeader                   OptNilString                   `json:"from_header"`
-	ContentDiscardedAt           OptNilDateTime                 `json:"content_discarded_at"`
-	ContentDiscardedByDeliveryID OptNilString                   `json:"content_discarded_by_delivery_id"`
-	// Parsed from address (from_header or sender fallback).
+	BodyHTML              OptNilString                   `json:"body_html"`
+	Status                EmailDetailStatus              `json:"status"`
+	Domain                string                         `json:"domain"`
+	SpamScore             OptNilFloat64                  `json:"spam_score"`
+	RawSizeBytes          OptNilInt                      `json:"raw_size_bytes"`
+	RawSHA256             OptNilString                   `json:"raw_sha256"`
+	CreatedAt             time.Time                      `json:"created_at"`
+	ReceivedAt            time.Time                      `json:"received_at"`
+	RejectionReason       OptNilString                   `json:"rejection_reason"`
+	WebhookStatus         OptNilEmailDetailWebhookStatus `json:"webhook_status"`
+	WebhookAttemptCount   int                            `json:"webhook_attempt_count"`
+	WebhookLastAttemptAt  OptNilDateTime                 `json:"webhook_last_attempt_at"`
+	WebhookLastStatusCode OptNilInt                      `json:"webhook_last_status_code"`
+	WebhookLastError      OptNilString                   `json:"webhook_last_error"`
+	WebhookFiredAt        OptNilDateTime                 `json:"webhook_fired_at"`
+	SMTPHelo              OptNilString                   `json:"smtp_helo"`
+	// SMTP envelope MAIL FROM (return-path), as accepted by the
+	// inbound mail server. Same value as `sender`; both fields
+	// exist so protocol-aware tooling can use whichever name it
+	// expects.
+	// For the canonical "who sent this email" value (display name
+	// stripped, From-header preferred), use `from_email`.
+	SMTPMailFrom OptNilString      `json:"smtp_mail_from"`
+	SMTPRcptTo   OptNilStringArray `json:"smtp_rcpt_to"`
+	// Raw `From:` header from the message body, including any
+	// display name (e.g. `"Alice Example" <alice@example.com>`).
+	// Use this when you need the display name for rendering.
+	// For the bare email address (display name stripped), use
+	// `from_email`.
+	FromHeader                   OptNilString   `json:"from_header"`
+	ContentDiscardedAt           OptNilDateTime `json:"content_discarded_at"`
+	ContentDiscardedByDeliveryID OptNilString   `json:"content_discarded_by_delivery_id"`
+	// Bare email address parsed from the `From:` header, with
+	// display name stripped (e.g. `alice@example.com`). Falls
+	// back to `sender` (the SMTP envelope MAIL FROM) when the
+	// `From:` header cannot be parsed.
+	// **This is the canonical "who sent this email" field for
+	// most use cases**, including comparing against allowlists,
+	// routing replies, or displaying the sender to a user. Use
+	// `from_header` when you specifically need the display name,
+	// or `sender`/`smtp_mail_from` when you need the SMTP
+	// envelope value (e.g. to follow a bounce).
 	FromEmail string `json:"from_email"`
 	// Parsed to address (same as recipient).
 	ToEmail string `json:"to_email"`
@@ -1818,11 +1847,19 @@ func (s *EmailDetailWebhookStatus) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/EmailSummary
 type EmailSummary struct {
-	ID                  uuid.UUID                       `json:"id"`
-	MessageID           OptNilString                    `json:"message_id"`
-	DomainID            OptNilUUID                      `json:"domain_id"`
-	OrgID               OptNilUUID                      `json:"org_id"`
-	Status              EmailSummaryStatus              `json:"status"`
+	ID        uuid.UUID          `json:"id"`
+	MessageID OptNilString       `json:"message_id"`
+	DomainID  OptNilUUID         `json:"domain_id"`
+	OrgID     OptNilUUID         `json:"org_id"`
+	Status    EmailSummaryStatus `json:"status"`
+	// SMTP envelope sender (return-path) the inbound mail server
+	// accepted. For most legitimate mail this equals the bare
+	// address in the From header; for mailing lists, bounce
+	// handlers, and forwarders it is typically the bounce address
+	// rather than the human-visible sender.
+	// For the parsed From-header value (with display name handling
+	// and a sender-fallback when the header is unparseable), GET
+	// the email by id and use `from_email`.
 	Sender              string                          `json:"sender"`
 	Recipient           string                          `json:"recipient"`
 	Subject             OptNilString                    `json:"subject"`

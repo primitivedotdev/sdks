@@ -533,8 +533,8 @@ export const openapiDocument: Record<string, unknown> = {
     "/emails": {
       "get": {
         "operationId": "listEmails",
-        "summary": "List emails",
-        "description": "Returns a paginated list of received emails. Supports filtering by\ndomain, status, date range, and free-text search across subject,\nsender, and recipient fields.\n",
+        "summary": "List inbound emails",
+        "description": "Returns a paginated list of INBOUND emails received at your\nverified domains. Outbound messages sent via /send-mail are not\nincluded; this endpoint is the inbox view, not a unified\nsend/receive history.\n\nSupports filtering by domain, status, date range, and free-text\nsearch across subject, sender, and recipient fields.\n",
         "tags": [
           "Emails"
         ],
@@ -2433,7 +2433,8 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "sender": {
-            "type": "string"
+            "type": "string",
+            "description": "SMTP envelope sender (return-path) the inbound mail server\naccepted. For most legitimate mail this equals the bare\naddress in the From header; for mailing lists, bounce\nhandlers, and forwarders it is typically the bounce address\nrather than the human-visible sender.\n\nFor the parsed From-header value (with display name handling\nand a sender-fallback when the header is unparseable), GET\nthe email by id and use `from_email`.\n"
           },
           "recipient": {
             "type": "string"
@@ -2524,7 +2525,8 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "uuid"
           },
           "sender": {
-            "type": "string"
+            "type": "string",
+            "description": "SMTP envelope sender (return-path) the inbound mail server\naccepted. Same value as `smtp_mail_from`; both fields exist\nso protocol-aware tooling can use whichever name it expects.\n\nFor most legitimate mail this equals `from_email`; for\nmailing lists, bounce handlers, and forwarders it is\ntypically the bounce-handling address rather than the\nhuman-visible sender.\n\n**For the canonical \"who sent this email\" value, use\n`from_email`.**\n"
           },
           "recipient": {
             "type": "string"
@@ -2646,7 +2648,8 @@ export const openapiDocument: Record<string, unknown> = {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "SMTP envelope MAIL FROM (return-path), as accepted by the\ninbound mail server. Same value as `sender`; both fields\nexist so protocol-aware tooling can use whichever name it\nexpects.\n\nFor the canonical \"who sent this email\" value (display name\nstripped, From-header preferred), use `from_email`.\n"
           },
           "smtp_rcpt_to": {
             "type": [
@@ -2661,7 +2664,8 @@ export const openapiDocument: Record<string, unknown> = {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Raw `From:` header from the message body, including any\ndisplay name (e.g. `\"Alice Example\" <alice@example.com>`).\nUse this when you need the display name for rendering.\n\nFor the bare email address (display name stripped), use\n`from_email`.\n"
           },
           "content_discarded_at": {
             "type": [
@@ -2678,7 +2682,7 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "from_email": {
             "type": "string",
-            "description": "Parsed from address (from_header or sender fallback)"
+            "description": "Bare email address parsed from the `From:` header, with\ndisplay name stripped (e.g. `alice@example.com`). Falls\nback to `sender` (the SMTP envelope MAIL FROM) when the\n`From:` header cannot be parsed.\n\n**This is the canonical \"who sent this email\" field for\nmost use cases**, including comparing against allowlists,\nrouting replies, or displaying the sender to a user. Use\n`from_header` when you specifically need the display name,\nor `sender`/`smtp_mail_from` when you need the SMTP\nenvelope value (e.g. to follow a bounce).\n"
           },
           "to_email": {
             "type": "string",

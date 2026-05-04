@@ -134,9 +134,12 @@ type Invoker interface {
 	ListDomains(ctx context.Context) (ListDomainsRes, error)
 	// ListEmails invokes listEmails operation.
 	//
-	// Returns a paginated list of received emails. Supports filtering by
-	// domain, status, date range, and free-text search across subject,
-	// sender, and recipient fields.
+	// Returns a paginated list of INBOUND emails received at your
+	// verified domains. Outbound messages sent via /send-mail are not
+	// included; this endpoint is the inbox view, not a unified
+	// send/receive history.
+	// Supports filtering by domain, status, date range, and free-text
+	// search across subject, sender, and recipient fields.
 	//
 	// GET /emails
 	ListEmails(ctx context.Context, params ListEmailsParams) (ListEmailsRes, error)
@@ -2221,9 +2224,12 @@ func (c *Client) sendListDomains(ctx context.Context) (res ListDomainsRes, err e
 
 // ListEmails invokes listEmails operation.
 //
-// Returns a paginated list of received emails. Supports filtering by
-// domain, status, date range, and free-text search across subject,
-// sender, and recipient fields.
+// Returns a paginated list of INBOUND emails received at your
+// verified domains. Outbound messages sent via /send-mail are not
+// included; this endpoint is the inbox view, not a unified
+// send/receive history.
+// Supports filtering by domain, status, date range, and free-text
+// search across subject, sender, and recipient fields.
 //
 // GET /emails
 func (c *Client) ListEmails(ctx context.Context, params ListEmailsParams) (ListEmailsRes, error) {
