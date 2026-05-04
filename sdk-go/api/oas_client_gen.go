@@ -104,6 +104,37 @@ type Invoker interface {
 	//
 	// GET /emails/{id}
 	GetEmail(ctx context.Context, params GetEmailParams) (GetEmailRes, error)
+	// GetSendPermissions invokes getSendPermissions operation.
+	//
+	// Returns a flat list of rules describing every recipient the
+	// caller may send to. Each rule has a `type`, a kind-specific
+	// payload, and a human-readable `description`. If any rule
+	// matches the recipient, /send-mail will accept the send under
+	// the recipient-scope check.
+	// The endpoint is the answer to "where can I send" without
+	// exposing internal entitlement names. Agents that don't
+	// recognize a `type` can still read the `description` prose
+	// and act on it.
+	// Rule kinds, ordered broadest-first so an agent can stop
+	// scanning at the first match:
+	// 1. `any_recipient` (one entry, only when the org can send
+	// anywhere): every other rule below it is redundant.
+	// 2. `managed_zone` (always emitted, one per Primitive-managed
+	// zone): sends to any address at *.primitive.email or
+	// *.email.works always succeed; no entitlement required.
+	// 3. `your_domain` (one per active verified outbound domain
+	// owned by the org): sends to that domain are approved.
+	// 4. `address` (one per address that has authenticated
+	// inbound mail to the org, capped at `meta.address_cap`):
+	// sends to that exact address are approved.
+	// The list is informational, not an authorization check.
+	// /send-mail remains the source of truth on whether an
+	// individual send will succeed (it also enforces the
+	// from-address and the `send_mail` entitlement, which are
+	// not recipient-scope concerns and are not represented here).
+	//
+	// GET /send-permissions
+	GetSendPermissions(ctx context.Context) (GetSendPermissionsRes, error)
 	// GetStorageStats invokes getStorageStats operation.
 	//
 	// Get storage usage.
@@ -1674,6 +1705,138 @@ func (c *Client) sendGetEmail(ctx context.Context, params GetEmailParams) (res G
 
 	stage = "DecodeResponse"
 	result, err := decodeGetEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetSendPermissions invokes getSendPermissions operation.
+//
+// Returns a flat list of rules describing every recipient the
+// caller may send to. Each rule has a `type`, a kind-specific
+// payload, and a human-readable `description`. If any rule
+// matches the recipient, /send-mail will accept the send under
+// the recipient-scope check.
+// The endpoint is the answer to "where can I send" without
+// exposing internal entitlement names. Agents that don't
+// recognize a `type` can still read the `description` prose
+// and act on it.
+// Rule kinds, ordered broadest-first so an agent can stop
+// scanning at the first match:
+// 1. `any_recipient` (one entry, only when the org can send
+// anywhere): every other rule below it is redundant.
+// 2. `managed_zone` (always emitted, one per Primitive-managed
+// zone): sends to any address at *.primitive.email or
+// *.email.works always succeed; no entitlement required.
+// 3. `your_domain` (one per active verified outbound domain
+// owned by the org): sends to that domain are approved.
+// 4. `address` (one per address that has authenticated
+// inbound mail to the org, capped at `meta.address_cap`):
+// sends to that exact address are approved.
+// The list is informational, not an authorization check.
+// /send-mail remains the source of truth on whether an
+// individual send will succeed (it also enforces the
+// from-address and the `send_mail` entitlement, which are
+// not recipient-scope concerns and are not represented here).
+//
+// GET /send-permissions
+func (c *Client) GetSendPermissions(ctx context.Context) (GetSendPermissionsRes, error) {
+	res, err := c.sendGetSendPermissions(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetSendPermissions(ctx context.Context) (res GetSendPermissionsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSendPermissions"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/send-permissions"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSendPermissionsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/send-permissions"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetSendPermissionsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetSendPermissionsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

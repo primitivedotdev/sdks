@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SendEmailData, SendEmailErrors, SendEmailResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SendEmailData, SendEmailErrors, SendEmailResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -414,6 +414,47 @@ export const listDeliveries = <ThrowOnError extends boolean = false>(options?: O
 export const replayDelivery = <ThrowOnError extends boolean = false>(options: Options<ReplayDeliveryData, ThrowOnError>) => (options.client ?? client).post<ReplayDeliveryResponses, ReplayDeliveryErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/webhooks/deliveries/{id}/replay',
+    ...options
+});
+
+/**
+ * List send-permission rules
+ *
+ * Returns a flat list of rules describing every recipient the
+ * caller may send to. Each rule has a `type`, a kind-specific
+ * payload, and a human-readable `description`. If any rule
+ * matches the recipient, /send-mail will accept the send under
+ * the recipient-scope check.
+ *
+ * The endpoint is the answer to "where can I send" without
+ * exposing internal entitlement names. Agents that don't
+ * recognize a `type` can still read the `description` prose
+ * and act on it.
+ *
+ * Rule kinds, ordered broadest-first so an agent can stop
+ * scanning at the first match:
+ *
+ * 1. `any_recipient` (one entry, only when the org can send
+ * anywhere): every other rule below it is redundant.
+ * 2. `managed_zone` (always emitted, one per Primitive-managed
+ * zone): sends to any address at *.primitive.email or
+ * *.email.works always succeed; no entitlement required.
+ * 3. `your_domain` (one per active verified outbound domain
+ * owned by the org): sends to that domain are approved.
+ * 4. `address` (one per address that has authenticated
+ * inbound mail to the org, capped at `meta.address_cap`):
+ * sends to that exact address are approved.
+ *
+ * The list is informational, not an authorization check.
+ * /send-mail remains the source of truth on whether an
+ * individual send will succeed (it also enforces the
+ * from-address and the `send_mail` entitlement, which are
+ * not recipient-scope concerns and are not represented here).
+ *
+ */
+export const getSendPermissions = <ThrowOnError extends boolean = false>(options?: Options<GetSendPermissionsData, ThrowOnError>) => (options?.client ?? client).get<GetSendPermissionsResponses, GetSendPermissionsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/send-permissions',
     ...options
 });
 

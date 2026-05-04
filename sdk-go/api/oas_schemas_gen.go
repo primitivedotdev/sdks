@@ -2317,9 +2317,10 @@ func (s *ErrorResponse) SetError(val ErrorResponseError) {
 	s.Error = val
 }
 
-func (*ErrorResponse) listDomainsRes()   {}
-func (*ErrorResponse) listEndpointsRes() {}
-func (*ErrorResponse) listFiltersRes()   {}
+func (*ErrorResponse) getSendPermissionsRes() {}
+func (*ErrorResponse) listDomainsRes()        {}
+func (*ErrorResponse) listEndpointsRes()      {}
+func (*ErrorResponse) listFiltersRes()        {}
 
 type ErrorResponseError struct {
 	Code    ErrorResponseErrorCode `json:"code"`
@@ -3095,6 +3096,45 @@ func (*GetEmailOK) getEmailRes() {}
 type GetEmailUnauthorized ErrorResponse
 
 func (*GetEmailUnauthorized) getEmailRes() {}
+
+// Merged schema.
+type GetSendPermissionsOK struct {
+	Success bool                 `json:"success"`
+	Data    []SendPermissionRule `json:"data"`
+	Meta    SendPermissionsMeta  `json:"meta"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetSendPermissionsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetSendPermissionsOK) GetData() []SendPermissionRule {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *GetSendPermissionsOK) GetMeta() SendPermissionsMeta {
+	return s.Meta
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetSendPermissionsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetSendPermissionsOK) SetData(val []SendPermissionRule) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *GetSendPermissionsOK) SetMeta(val SendPermissionsMeta) {
+	s.Meta = val
+}
+
+func (*GetSendPermissionsOK) getSendPermissionsRes() {}
 
 type GetStorageStatsNotFound ErrorResponse
 
@@ -5301,6 +5341,495 @@ func (s *SendMailResult) SetSMTPResponseText(val OptString) {
 // SetIdempotentReplay sets the value of IdempotentReplay.
 func (s *SendMailResult) SetIdempotentReplay(val bool) {
 	s.IdempotentReplay = val
+}
+
+// The caller can send to a specific address that has
+// authenticated inbound mail to the org. Emitted once per row
+// in the org's `known_send_addresses` table, capped at
+// `meta.address_cap`.
+// Ref: #/components/schemas/SendPermissionAddress
+type SendPermissionAddress struct {
+	Type SendPermissionAddressType `json:"type"`
+	// The bare email address this rule grants sends to.
+	Address string `json:"address"`
+	// Most recent inbound email from this address that
+	// authenticated successfully (DMARC pass + DKIM/SPF
+	// alignment). Updated on each new authenticated receipt.
+	LastReceivedAt time.Time `json:"last_received_at"`
+	// Total number of authenticated inbound emails from this
+	// address. Increments only when `last_received_at` advances.
+	ReceivedCount int `json:"received_count"`
+	// Human-prose summary of the rule.
+	Description string `json:"description"`
+}
+
+// GetType returns the value of Type.
+func (s *SendPermissionAddress) GetType() SendPermissionAddressType {
+	return s.Type
+}
+
+// GetAddress returns the value of Address.
+func (s *SendPermissionAddress) GetAddress() string {
+	return s.Address
+}
+
+// GetLastReceivedAt returns the value of LastReceivedAt.
+func (s *SendPermissionAddress) GetLastReceivedAt() time.Time {
+	return s.LastReceivedAt
+}
+
+// GetReceivedCount returns the value of ReceivedCount.
+func (s *SendPermissionAddress) GetReceivedCount() int {
+	return s.ReceivedCount
+}
+
+// GetDescription returns the value of Description.
+func (s *SendPermissionAddress) GetDescription() string {
+	return s.Description
+}
+
+// SetType sets the value of Type.
+func (s *SendPermissionAddress) SetType(val SendPermissionAddressType) {
+	s.Type = val
+}
+
+// SetAddress sets the value of Address.
+func (s *SendPermissionAddress) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetLastReceivedAt sets the value of LastReceivedAt.
+func (s *SendPermissionAddress) SetLastReceivedAt(val time.Time) {
+	s.LastReceivedAt = val
+}
+
+// SetReceivedCount sets the value of ReceivedCount.
+func (s *SendPermissionAddress) SetReceivedCount(val int) {
+	s.ReceivedCount = val
+}
+
+// SetDescription sets the value of Description.
+func (s *SendPermissionAddress) SetDescription(val string) {
+	s.Description = val
+}
+
+type SendPermissionAddressType string
+
+const (
+	SendPermissionAddressTypeAddress SendPermissionAddressType = "address"
+)
+
+// AllValues returns all SendPermissionAddressType values.
+func (SendPermissionAddressType) AllValues() []SendPermissionAddressType {
+	return []SendPermissionAddressType{
+		SendPermissionAddressTypeAddress,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SendPermissionAddressType) MarshalText() ([]byte, error) {
+	switch s {
+	case SendPermissionAddressTypeAddress:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SendPermissionAddressType) UnmarshalText(data []byte) error {
+	switch SendPermissionAddressType(data) {
+	case SendPermissionAddressTypeAddress:
+		*s = SendPermissionAddressTypeAddress
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// The caller can send to any recipient. When this rule is
+// present, every other rule in the response is redundant.
+// Ref: #/components/schemas/SendPermissionAnyRecipient
+type SendPermissionAnyRecipient struct {
+	Type SendPermissionAnyRecipientType `json:"type"`
+	// Human-prose summary of the rule.
+	Description string `json:"description"`
+}
+
+// GetType returns the value of Type.
+func (s *SendPermissionAnyRecipient) GetType() SendPermissionAnyRecipientType {
+	return s.Type
+}
+
+// GetDescription returns the value of Description.
+func (s *SendPermissionAnyRecipient) GetDescription() string {
+	return s.Description
+}
+
+// SetType sets the value of Type.
+func (s *SendPermissionAnyRecipient) SetType(val SendPermissionAnyRecipientType) {
+	s.Type = val
+}
+
+// SetDescription sets the value of Description.
+func (s *SendPermissionAnyRecipient) SetDescription(val string) {
+	s.Description = val
+}
+
+type SendPermissionAnyRecipientType string
+
+const (
+	SendPermissionAnyRecipientTypeAnyRecipient SendPermissionAnyRecipientType = "any_recipient"
+)
+
+// AllValues returns all SendPermissionAnyRecipientType values.
+func (SendPermissionAnyRecipientType) AllValues() []SendPermissionAnyRecipientType {
+	return []SendPermissionAnyRecipientType{
+		SendPermissionAnyRecipientTypeAnyRecipient,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SendPermissionAnyRecipientType) MarshalText() ([]byte, error) {
+	switch s {
+	case SendPermissionAnyRecipientTypeAnyRecipient:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SendPermissionAnyRecipientType) UnmarshalText(data []byte) error {
+	switch SendPermissionAnyRecipientType(data) {
+	case SendPermissionAnyRecipientTypeAnyRecipient:
+		*s = SendPermissionAnyRecipientTypeAnyRecipient
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// The caller can send to any address at the named
+// Primitive-managed zone. Always emitted (no entitlement
+// required) because Primitive owns the zone and every mailbox
+// belongs to a Primitive customer by construction.
+// Ref: #/components/schemas/SendPermissionManagedZone
+type SendPermissionManagedZone struct {
+	Type SendPermissionManagedZoneType `json:"type"`
+	// The managed apex domain. Sends are accepted to any
+	// address at the apex itself or any subdomain (e.g.
+	// `alice@primitive.email` and `alice@acme.primitive.email`
+	// both match the `primitive.email` zone rule).
+	Zone string `json:"zone"`
+	// Human-prose summary of the rule.
+	Description string `json:"description"`
+}
+
+// GetType returns the value of Type.
+func (s *SendPermissionManagedZone) GetType() SendPermissionManagedZoneType {
+	return s.Type
+}
+
+// GetZone returns the value of Zone.
+func (s *SendPermissionManagedZone) GetZone() string {
+	return s.Zone
+}
+
+// GetDescription returns the value of Description.
+func (s *SendPermissionManagedZone) GetDescription() string {
+	return s.Description
+}
+
+// SetType sets the value of Type.
+func (s *SendPermissionManagedZone) SetType(val SendPermissionManagedZoneType) {
+	s.Type = val
+}
+
+// SetZone sets the value of Zone.
+func (s *SendPermissionManagedZone) SetZone(val string) {
+	s.Zone = val
+}
+
+// SetDescription sets the value of Description.
+func (s *SendPermissionManagedZone) SetDescription(val string) {
+	s.Description = val
+}
+
+type SendPermissionManagedZoneType string
+
+const (
+	SendPermissionManagedZoneTypeManagedZone SendPermissionManagedZoneType = "managed_zone"
+)
+
+// AllValues returns all SendPermissionManagedZoneType values.
+func (SendPermissionManagedZoneType) AllValues() []SendPermissionManagedZoneType {
+	return []SendPermissionManagedZoneType{
+		SendPermissionManagedZoneTypeManagedZone,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SendPermissionManagedZoneType) MarshalText() ([]byte, error) {
+	switch s {
+	case SendPermissionManagedZoneTypeManagedZone:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SendPermissionManagedZoneType) UnmarshalText(data []byte) error {
+	switch SendPermissionManagedZoneType(data) {
+	case SendPermissionManagedZoneTypeManagedZone:
+		*s = SendPermissionManagedZoneTypeManagedZone
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// One recipient-scope rule describing a destination the caller
+// may send to. Discriminated on `type`. Each rule carries a
+// human-prose `description` so callers that don't recognize the
+// type can still pattern-match the prose.
+// Ref: #/components/schemas/SendPermissionRule
+// SendPermissionRule represents sum type.
+type SendPermissionRule struct {
+	Type                       SendPermissionRuleType // switch on this field
+	SendPermissionAnyRecipient SendPermissionAnyRecipient
+	SendPermissionManagedZone  SendPermissionManagedZone
+	SendPermissionYourDomain   SendPermissionYourDomain
+	SendPermissionAddress      SendPermissionAddress
+}
+
+// SendPermissionRuleType is oneOf type of SendPermissionRule.
+type SendPermissionRuleType string
+
+// Possible values for SendPermissionRuleType.
+const (
+	SendPermissionAnyRecipientSendPermissionRule SendPermissionRuleType = "SendPermissionAnyRecipient"
+	SendPermissionManagedZoneSendPermissionRule  SendPermissionRuleType = "SendPermissionManagedZone"
+	SendPermissionYourDomainSendPermissionRule   SendPermissionRuleType = "SendPermissionYourDomain"
+	SendPermissionAddressSendPermissionRule      SendPermissionRuleType = "SendPermissionAddress"
+)
+
+// IsSendPermissionAnyRecipient reports whether SendPermissionRule is SendPermissionAnyRecipient.
+func (s SendPermissionRule) IsSendPermissionAnyRecipient() bool {
+	return s.Type == SendPermissionAnyRecipientSendPermissionRule
+}
+
+// IsSendPermissionManagedZone reports whether SendPermissionRule is SendPermissionManagedZone.
+func (s SendPermissionRule) IsSendPermissionManagedZone() bool {
+	return s.Type == SendPermissionManagedZoneSendPermissionRule
+}
+
+// IsSendPermissionYourDomain reports whether SendPermissionRule is SendPermissionYourDomain.
+func (s SendPermissionRule) IsSendPermissionYourDomain() bool {
+	return s.Type == SendPermissionYourDomainSendPermissionRule
+}
+
+// IsSendPermissionAddress reports whether SendPermissionRule is SendPermissionAddress.
+func (s SendPermissionRule) IsSendPermissionAddress() bool {
+	return s.Type == SendPermissionAddressSendPermissionRule
+}
+
+// SetSendPermissionAnyRecipient sets SendPermissionRule to SendPermissionAnyRecipient.
+func (s *SendPermissionRule) SetSendPermissionAnyRecipient(v SendPermissionAnyRecipient) {
+	s.Type = SendPermissionAnyRecipientSendPermissionRule
+	s.SendPermissionAnyRecipient = v
+}
+
+// GetSendPermissionAnyRecipient returns SendPermissionAnyRecipient and true boolean if SendPermissionRule is SendPermissionAnyRecipient.
+func (s SendPermissionRule) GetSendPermissionAnyRecipient() (v SendPermissionAnyRecipient, ok bool) {
+	if !s.IsSendPermissionAnyRecipient() {
+		return v, false
+	}
+	return s.SendPermissionAnyRecipient, true
+}
+
+// NewSendPermissionAnyRecipientSendPermissionRule returns new SendPermissionRule from SendPermissionAnyRecipient.
+func NewSendPermissionAnyRecipientSendPermissionRule(v SendPermissionAnyRecipient) SendPermissionRule {
+	var s SendPermissionRule
+	s.SetSendPermissionAnyRecipient(v)
+	return s
+}
+
+// SetSendPermissionManagedZone sets SendPermissionRule to SendPermissionManagedZone.
+func (s *SendPermissionRule) SetSendPermissionManagedZone(v SendPermissionManagedZone) {
+	s.Type = SendPermissionManagedZoneSendPermissionRule
+	s.SendPermissionManagedZone = v
+}
+
+// GetSendPermissionManagedZone returns SendPermissionManagedZone and true boolean if SendPermissionRule is SendPermissionManagedZone.
+func (s SendPermissionRule) GetSendPermissionManagedZone() (v SendPermissionManagedZone, ok bool) {
+	if !s.IsSendPermissionManagedZone() {
+		return v, false
+	}
+	return s.SendPermissionManagedZone, true
+}
+
+// NewSendPermissionManagedZoneSendPermissionRule returns new SendPermissionRule from SendPermissionManagedZone.
+func NewSendPermissionManagedZoneSendPermissionRule(v SendPermissionManagedZone) SendPermissionRule {
+	var s SendPermissionRule
+	s.SetSendPermissionManagedZone(v)
+	return s
+}
+
+// SetSendPermissionYourDomain sets SendPermissionRule to SendPermissionYourDomain.
+func (s *SendPermissionRule) SetSendPermissionYourDomain(v SendPermissionYourDomain) {
+	s.Type = SendPermissionYourDomainSendPermissionRule
+	s.SendPermissionYourDomain = v
+}
+
+// GetSendPermissionYourDomain returns SendPermissionYourDomain and true boolean if SendPermissionRule is SendPermissionYourDomain.
+func (s SendPermissionRule) GetSendPermissionYourDomain() (v SendPermissionYourDomain, ok bool) {
+	if !s.IsSendPermissionYourDomain() {
+		return v, false
+	}
+	return s.SendPermissionYourDomain, true
+}
+
+// NewSendPermissionYourDomainSendPermissionRule returns new SendPermissionRule from SendPermissionYourDomain.
+func NewSendPermissionYourDomainSendPermissionRule(v SendPermissionYourDomain) SendPermissionRule {
+	var s SendPermissionRule
+	s.SetSendPermissionYourDomain(v)
+	return s
+}
+
+// SetSendPermissionAddress sets SendPermissionRule to SendPermissionAddress.
+func (s *SendPermissionRule) SetSendPermissionAddress(v SendPermissionAddress) {
+	s.Type = SendPermissionAddressSendPermissionRule
+	s.SendPermissionAddress = v
+}
+
+// GetSendPermissionAddress returns SendPermissionAddress and true boolean if SendPermissionRule is SendPermissionAddress.
+func (s SendPermissionRule) GetSendPermissionAddress() (v SendPermissionAddress, ok bool) {
+	if !s.IsSendPermissionAddress() {
+		return v, false
+	}
+	return s.SendPermissionAddress, true
+}
+
+// NewSendPermissionAddressSendPermissionRule returns new SendPermissionRule from SendPermissionAddress.
+func NewSendPermissionAddressSendPermissionRule(v SendPermissionAddress) SendPermissionRule {
+	var s SendPermissionRule
+	s.SetSendPermissionAddress(v)
+	return s
+}
+
+// The caller can send to any address at one of their own
+// verified outbound domains. Emitted once per active row in
+// the org's `domains` table.
+// Ref: #/components/schemas/SendPermissionYourDomain
+type SendPermissionYourDomain struct {
+	Type SendPermissionYourDomainType `json:"type"`
+	// A verified outbound domain owned by the caller's org.
+	Domain string `json:"domain"`
+	// Human-prose summary of the rule.
+	Description string `json:"description"`
+}
+
+// GetType returns the value of Type.
+func (s *SendPermissionYourDomain) GetType() SendPermissionYourDomainType {
+	return s.Type
+}
+
+// GetDomain returns the value of Domain.
+func (s *SendPermissionYourDomain) GetDomain() string {
+	return s.Domain
+}
+
+// GetDescription returns the value of Description.
+func (s *SendPermissionYourDomain) GetDescription() string {
+	return s.Description
+}
+
+// SetType sets the value of Type.
+func (s *SendPermissionYourDomain) SetType(val SendPermissionYourDomainType) {
+	s.Type = val
+}
+
+// SetDomain sets the value of Domain.
+func (s *SendPermissionYourDomain) SetDomain(val string) {
+	s.Domain = val
+}
+
+// SetDescription sets the value of Description.
+func (s *SendPermissionYourDomain) SetDescription(val string) {
+	s.Description = val
+}
+
+type SendPermissionYourDomainType string
+
+const (
+	SendPermissionYourDomainTypeYourDomain SendPermissionYourDomainType = "your_domain"
+)
+
+// AllValues returns all SendPermissionYourDomainType values.
+func (SendPermissionYourDomainType) AllValues() []SendPermissionYourDomainType {
+	return []SendPermissionYourDomainType{
+		SendPermissionYourDomainTypeYourDomain,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SendPermissionYourDomainType) MarshalText() ([]byte, error) {
+	switch s {
+	case SendPermissionYourDomainTypeYourDomain:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SendPermissionYourDomainType) UnmarshalText(data []byte) error {
+	switch SendPermissionYourDomainType(data) {
+	case SendPermissionYourDomainTypeYourDomain:
+		*s = SendPermissionYourDomainTypeYourDomain
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Response metadata for /send-permissions. The `address_cap`
+// bounds the size of the `address` rule subset; orgs with more
+// than `address_cap` known addresses almost always also hold a
+// broader rule type (`any_recipient` or `your_domain`), so the
+// cap is a response-size bound rather than a meaningful
+// product limit.
+// Ref: #/components/schemas/SendPermissionsMeta
+type SendPermissionsMeta struct {
+	// Maximum number of `address` rules included in `data`.
+	AddressCap int `json:"address_cap"`
+	// True when the org has more than `address_cap` known
+	// addresses and the list was truncated. False when every
+	// known address is represented or when the org holds no
+	// address rules at all.
+	Truncated bool `json:"truncated"`
+}
+
+// GetAddressCap returns the value of AddressCap.
+func (s *SendPermissionsMeta) GetAddressCap() int {
+	return s.AddressCap
+}
+
+// GetTruncated returns the value of Truncated.
+func (s *SendPermissionsMeta) GetTruncated() bool {
+	return s.Truncated
+}
+
+// SetAddressCap sets the value of AddressCap.
+func (s *SendPermissionsMeta) SetAddressCap(val int) {
+	s.AddressCap = val
+}
+
+// SetTruncated sets the value of Truncated.
+func (s *SendPermissionsMeta) SetTruncated(val bool) {
+	s.Truncated = val
 }
 
 // Ref: #/components/schemas/SentEmailStatus

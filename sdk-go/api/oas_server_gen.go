@@ -84,6 +84,37 @@ type Handler interface {
 	//
 	// GET /emails/{id}
 	GetEmail(ctx context.Context, params GetEmailParams) (GetEmailRes, error)
+	// GetSendPermissions implements getSendPermissions operation.
+	//
+	// Returns a flat list of rules describing every recipient the
+	// caller may send to. Each rule has a `type`, a kind-specific
+	// payload, and a human-readable `description`. If any rule
+	// matches the recipient, /send-mail will accept the send under
+	// the recipient-scope check.
+	// The endpoint is the answer to "where can I send" without
+	// exposing internal entitlement names. Agents that don't
+	// recognize a `type` can still read the `description` prose
+	// and act on it.
+	// Rule kinds, ordered broadest-first so an agent can stop
+	// scanning at the first match:
+	// 1. `any_recipient` (one entry, only when the org can send
+	// anywhere): every other rule below it is redundant.
+	// 2. `managed_zone` (always emitted, one per Primitive-managed
+	// zone): sends to any address at *.primitive.email or
+	// *.email.works always succeed; no entitlement required.
+	// 3. `your_domain` (one per active verified outbound domain
+	// owned by the org): sends to that domain are approved.
+	// 4. `address` (one per address that has authenticated
+	// inbound mail to the org, capped at `meta.address_cap`):
+	// sends to that exact address are approved.
+	// The list is informational, not an authorization check.
+	// /send-mail remains the source of truth on whether an
+	// individual send will succeed (it also enforces the
+	// from-address and the `send_mail` entitlement, which are
+	// not recipient-scope concerns and are not represented here).
+	//
+	// GET /send-permissions
+	GetSendPermissions(ctx context.Context) (GetSendPermissionsRes, error)
 	// GetStorageStats implements getStorageStats operation.
 	//
 	// Get storage usage.
