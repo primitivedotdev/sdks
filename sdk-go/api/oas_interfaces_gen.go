@@ -49,6 +49,10 @@ type GetSendPermissionsRes interface {
 	getSendPermissionsRes()
 }
 
+type GetSentEmailRes interface {
+	getSentEmailRes()
+}
+
 type GetStorageStatsRes interface {
 	getStorageStatsRes()
 }
@@ -75,6 +79,10 @@ type ListEndpointsRes interface {
 
 type ListFiltersRes interface {
 	listFiltersRes()
+}
+
+type ListSentEmailsRes interface {
+	listSentEmailsRes()
 }
 
 type ReplayDeliveryRes interface {

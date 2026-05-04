@@ -115,6 +115,17 @@ type Handler interface {
 	//
 	// GET /send-permissions
 	GetSendPermissions(ctx context.Context) (GetSendPermissionsRes, error)
+	// GetSentEmail implements getSentEmail operation.
+	//
+	// Returns the full sent-email record by id, including
+	// `body_text` and `body_html` (omitted from the listing
+	// endpoint to keep paginated responses small). Use this when
+	// diagnosing a specific send, e.g. inspecting the receiver's
+	// SMTP response on a `bounced` row or pulling the gate
+	// denial detail on a `gate_denied` row.
+	//
+	// GET /sent-emails/{id}
+	GetSentEmail(ctx context.Context, params GetSentEmailParams) (GetSentEmailRes, error)
 	// GetStorageStats implements getStorageStats operation.
 	//
 	// Get storage usage.
@@ -166,6 +177,26 @@ type Handler interface {
 	//
 	// GET /filters
 	ListFilters(ctx context.Context) (ListFiltersRes, error)
+	// ListSentEmails implements listSentEmails operation.
+	//
+	// Returns a paginated list of OUTBOUND emails the caller's
+	// org has sent via /send-mail (and /emails/{id}/reply, which
+	// forwards through /send-mail). Includes every recorded
+	// attempt, including gate-denied attempts that the agent
+	// never called and rows still in `queued` state.
+	// For inbound mail received at your verified domains, see
+	// /emails. There is no unified send/receive history endpoint;
+	// the two surfaces are intentionally separate because the
+	// underlying tables, statuses, and lifecycle differ.
+	// Body bodies (`body_text`, `body_html`) are NOT included on
+	// list rows so a 50-row page can't balloon into a multi-MB
+	// response when sends are near the 5MB body cap. Use
+	// /sent-emails/{id} to fetch a single row with bodies, or
+	// cross-reference by `client_idempotency_key` if the caller
+	// already has the body locally.
+	//
+	// GET /sent-emails
+	ListSentEmails(ctx context.Context, params ListSentEmailsParams) (ListSentEmailsRes, error)
 	// ReplayDelivery implements replayDelivery operation.
 	//
 	// Re-sends the stored webhook payload from a previous delivery attempt.

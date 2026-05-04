@@ -52,6 +52,7 @@ from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
 from .get_email_response_200 import GetEmailResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
+from .get_sent_email_response_200 import GetSentEmailResponse200
 from .get_storage_stats_response_200 import GetStorageStatsResponse200
 from .get_webhook_secret_response_200 import GetWebhookSecretResponse200
 from .list_deliveries_response_200 import ListDeliveriesResponse200
@@ -62,6 +63,7 @@ from .list_emails_status import ListEmailsStatus
 from .list_endpoints_response_200 import ListEndpointsResponse200
 from .list_envelope import ListEnvelope
 from .list_filters_response_200 import ListFiltersResponse200
+from .list_sent_emails_response_200 import ListSentEmailsResponse200
 from .pagination_meta import PaginationMeta
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
 from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
@@ -81,7 +83,9 @@ from .send_permission_managed_zone_type import SendPermissionManagedZoneType
 from .send_permission_your_domain import SendPermissionYourDomain
 from .send_permission_your_domain_type import SendPermissionYourDomainType
 from .send_permissions_meta import SendPermissionsMeta
+from .sent_email_detail import SentEmailDetail
 from .sent_email_status import SentEmailStatus
+from .sent_email_summary import SentEmailSummary
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
 from .test_endpoint_response_200 import TestEndpointResponse200
@@ -153,6 +157,7 @@ __all__ = (
     "GetAccountResponse200",
     "GetEmailResponse200",
     "GetSendPermissionsResponse200",
+    "GetSentEmailResponse200",
     "GetStorageStatsResponse200",
     "GetWebhookSecretResponse200",
     "ListDeliveriesResponse200",
@@ -163,6 +168,7 @@ __all__ = (
     "ListEndpointsResponse200",
     "ListEnvelope",
     "ListFiltersResponse200",
+    "ListSentEmailsResponse200",
     "PaginationMeta",
     "ReplayDeliveryResponse200",
     "ReplayEmailWebhooksResponse200",
@@ -182,7 +188,9 @@ __all__ = (
     "SendPermissionsMeta",
     "SendPermissionYourDomain",
     "SendPermissionYourDomainType",
+    "SentEmailDetail",
     "SentEmailStatus",
+    "SentEmailSummary",
     "StorageStats",
     "SuccessEnvelope",
     "TestEndpointResponse200",

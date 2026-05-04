@@ -802,6 +802,98 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-sent-email",
+    "description": "Returns the full sent-email record by id, including\n`body_text` and `body_html` (omitted from the listing\nendpoint to keep paginated responses small). Use this when\ndiagnosing a specific send, e.g. inspecting the receiver's\nSMTP response on a `bounced` row or pulling the gate\ndenial detail on a `gate_denied` row.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getSentEmail",
+    "path": "/sent-emails/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "sdkName": "getSentEmail",
+    "summary": "Get a sent email by id",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-sent-emails",
+    "description": "Returns a paginated list of OUTBOUND emails the caller's\norg has sent via /send-mail (and /emails/{id}/reply, which\nforwards through /send-mail). Includes every recorded\nattempt, including gate-denied attempts that the agent\nnever called and rows still in `queued` state.\n\nFor inbound mail received at your verified domains, see\n/emails. There is no unified send/receive history endpoint;\nthe two surfaces are intentionally separate because the\nunderlying tables, statuses, and lifecycle differ.\n\nBody bodies (`body_text`, `body_html`) are NOT included on\nlist rows so a 50-row page can't balloon into a multi-MB\nresponse when sends are near the 5MB body cap. Use\n/sent-emails/{id} to fetch a single row with bodies, or\ncross-reference by `client_idempotency_key` if the caller\nalready has the body locally.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listSentEmails",
+    "path": "/sent-emails",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Pagination cursor from a previous response's `meta.cursor` field.\nFormat: `{ISO-datetime}|{id}`\n",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Number of results per page",
+        "enum": null,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "Filter to rows in this status. Useful for polling\nqueued rows that haven't transitioned, auditing\ngate-denied attempts, or listing only successful\ndeliveries.\n",
+        "enum": null,
+        "name": "status",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter to the row matching a specific server-issued\n`request_id`. The /send-mail response surfaces\n`request_id` on every send; this lookup lets the\ncaller find the historical row for a given live call\nwithout remembering its `id`.\n",
+        "enum": null,
+        "name": "request_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter to rows with the given `client_idempotency_key`.\nMultiple rows can share a key (a retry that hit the\nidempotent-replay path returns the same row, but a\nretry with a DIFFERENT canonical payload under the\nsame key is rejected by /send-mail before the row is\nwritten, so duplicates are bounded).\n",
+        "enum": null,
+        "name": "idempotency_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Inclusive lower bound on `created_at`.",
+        "enum": null,
+        "name": "date_from",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Inclusive upper bound on `created_at`.",
+        "enum": null,
+        "name": "date_to",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "sdkName": "listSentEmails",
+    "summary": "List outbound sent emails",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "reply-to-email",
     "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody and optional `wait` flag; passing any header or recipient\noverride is rejected by the schema (`additionalProperties:\nfalse`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
