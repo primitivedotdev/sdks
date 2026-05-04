@@ -236,11 +236,15 @@ The Node helper:
 import { verifyWebhookSignature } from "@primitivedotdev/sdk/webhook";
 
 verifyWebhookSignature({
-  body: rawBodyString,
-  headers: req.headers,
+  rawBody: rawBodyString,
+  signatureHeader: req.headers["primitive-signature"] as string,
   secret: process.env.PRIMITIVE_WEBHOOK_SECRET!,
 });
 ```
+
+`rawBody` must be the exact bytes of the HTTP body (string or Buffer) before any JSON parsing. `signatureHeader` is the value of the `Primitive-Signature` header verbatim. Throws `WebhookVerificationError` on mismatch, expired timestamp, or malformed input. Pass `toleranceSeconds` to override the default 300-second replay window.
+
+For most app-code callers, `primitive.receive(...)` from the root import handles both the body extraction and verification in one call (see "Receive and reply in a Next.js route" above). Reach for `verifyWebhookSignature` directly when your framework doesn't expose a standard `Request` and you've already pulled the raw body and header value yourself.
 
 For the full reference (response codes, replay protection details), see the API-level "Webhook signing" section in the [OpenAPI spec](https://primitive.dev/api/v1/openapi).
 
