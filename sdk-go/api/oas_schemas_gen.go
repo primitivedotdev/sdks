@@ -591,6 +591,20 @@ func (s *DeletedData) SetDeleted(val bool) {
 	s.Deleted = val
 }
 
+// Narrower enum covering only the four terminal delivery
+// outcomes returned to a synchronous `wait: true` send.
+// On the SendMailResult shape, `delivery_status` is always
+// equal to `status` whenever both are present (i.e. on
+// terminal-state replays and live wait=true responses).
+// The two fields exist so callers that want to type-narrow
+// on "this is a delivery outcome" can pattern-match against
+// the four-value enum without handling the broader
+// SentEmailStatus value set (which also covers `queued`,
+// `submitted_to_agent`, `agent_failed`, `gate_denied`,
+// `unknown`).
+// On async-mode and pre-terminal responses, `delivery_status`
+// is absent and only `status` is populated. Use `status` if
+// you want a single field that's always present.
 // Ref: #/components/schemas/DeliveryStatus
 type DeliveryStatus string
 
@@ -5254,7 +5268,17 @@ type SendMailResult struct {
 	// The display name was sent on the wire intact; this field
 	// just makes the address easy to compare against allowlists.
 	From string `json:"from"`
-	// Message identifier assigned by Primitive's outbound relay, when available.
+	// Message identifier assigned by Primitive's OUTBOUND relay
+	// (the box that signs your mail and submits it to the
+	// receiving MTA). NOT the receiver's queue id.
+	// The receiver may also report its own queue id in
+	// `smtp_response_text` (e.g. `"250 2.0.0 Ok: queued as
+	// 99D111927CDA"` from a Postfix receiver). Those two ids
+	// refer to different mail systems and are NOT comparable.
+	// Treat `queue_id` as Primitive-internal and the
+	// receiver's id as remote-system-internal.
+	// Null on rows that never reached the relay (queued,
+	// gate_denied, agent_failed before signing).
 	QueueID NilString `json:"queue_id"`
 	// Recipient addresses accepted by the relay.
 	Accepted []string `json:"accepted"`

@@ -54,7 +54,19 @@ class SendMailResult:
                 this field is the parsed bare address (`support@acme.test`).
                 The display name was sent on the wire intact; this field
                 just makes the address easy to compare against allowlists.
-            queue_id (None | str): Message identifier assigned by Primitive's outbound relay, when available.
+            queue_id (None | str): Message identifier assigned by Primitive's OUTBOUND relay
+                (the box that signs your mail and submits it to the
+                receiving MTA). NOT the receiver's queue id.
+
+                The receiver may also report its own queue id in
+                `smtp_response_text` (e.g. `"250 2.0.0 Ok: queued as
+                99D111927CDA"` from a Postfix receiver). Those two ids
+                refer to different mail systems and are NOT comparable.
+                Treat `queue_id` as Primitive-internal and the
+                receiver's id as remote-system-internal.
+
+                Null on rows that never reached the relay (queued,
+                gate_denied, agent_failed before signing).
             accepted (list[str]): Recipient addresses accepted by the relay.
             rejected (list[str]): Recipient addresses rejected by the relay.
             client_idempotency_key (str): Effective idempotency key used for this send.
@@ -65,7 +77,22 @@ class SendMailResult:
                 payload). False on a fresh send and on gate-denied
                 responses. Lets callers branch on cache state without
                 diffing fields.
-            delivery_status (DeliveryStatus | Unset):
+            delivery_status (DeliveryStatus | Unset): Narrower enum covering only the four terminal delivery
+                outcomes returned to a synchronous `wait: true` send.
+
+                On the SendMailResult shape, `delivery_status` is always
+                equal to `status` whenever both are present (i.e. on
+                terminal-state replays and live wait=true responses).
+                The two fields exist so callers that want to type-narrow
+                on "this is a delivery outcome" can pattern-match against
+                the four-value enum without handling the broader
+                SentEmailStatus value set (which also covers `queued`,
+                `submitted_to_agent`, `agent_failed`, `gate_denied`,
+                `unknown`).
+
+                On async-mode and pre-terminal responses, `delivery_status`
+                is absent and only `status` is populated. Use `status` if
+                you want a single field that's always present.
             smtp_response_code (int | None | Unset): SMTP response code from the first downstream delivery outcome when wait
                 is true.
             smtp_response_text (str | Unset): SMTP response text from the first downstream delivery outcome when wait is
