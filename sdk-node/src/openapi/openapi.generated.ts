@@ -533,8 +533,8 @@ export const openapiDocument: Record<string, unknown> = {
     "/emails": {
       "get": {
         "operationId": "listEmails",
-        "summary": "List emails",
-        "description": "Returns a paginated list of received emails. Supports filtering by\ndomain, status, date range, and free-text search across subject,\nsender, and recipient fields.\n",
+        "summary": "List inbound emails",
+        "description": "Returns a paginated list of INBOUND emails received at your\nverified domains. Outbound messages sent via /send-mail are not\nincluded; this endpoint is the inbox view, not a unified\nsend/receive history.\n\nSupports filtering by domain, status, date range, and free-text\nsearch across subject, sender, and recipient fields.\n",
         "tags": [
           "Emails"
         ],
@@ -1523,6 +1523,53 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/send-permissions": {
+      "get": {
+        "operationId": "getSendPermissions",
+        "summary": "List send-permission rules",
+        "description": "Returns a flat list of rules describing every recipient the\ncaller may send to. Each rule has a `type`, a kind-specific\npayload, and a human-readable `description`. If any rule\nmatches the recipient, /send-mail will accept the send under\nthe recipient-scope check.\n\nThe endpoint is the answer to \"where can I send\" without\nexposing internal entitlement names. Agents that don't\nrecognize a `type` can still read the `description` prose\nand act on it.\n\nRule kinds, ordered broadest-first so an agent can stop\nscanning at the first match:\n\n  1. `any_recipient` (one entry, only when the org can send\n     anywhere): every other rule below it is redundant.\n  2. `managed_zone` (always emitted, one per Primitive-managed\n     zone): sends to any address at *.primitive.email or\n     *.email.works always succeed; no entitlement required.\n  3. `your_domain` (one per active verified outbound domain\n     owned by the org): sends to that domain are approved.\n  4. `address` (one per address that has authenticated\n     inbound mail to the org, capped at `meta.address_cap`):\n     sends to that exact address are approved.\n\nThe list is informational, not an authorization check.\n/send-mail remains the source of truth on whether an\nindividual send will succeed (it also enforces the\nfrom-address and the `send_mail` entitlement, which are\nnot recipient-scope concerns and are not represented here).\n",
+        "tags": [
+          "Sending"
+        ],
+        "responses": {
+          "200": {
+            "description": "Send-permission rules for the caller's org",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/SendPermissionRule"
+                          }
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/SendPermissionsMeta"
+                        }
+                      },
+                      "required": [
+                        "data",
+                        "meta"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
     "/send-mail": {
       "post": {
         "operationId": "sendEmail",
@@ -2433,7 +2480,8 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "sender": {
-            "type": "string"
+            "type": "string",
+            "description": "SMTP envelope sender (return-path) the inbound mail server\naccepted. For most legitimate mail this equals the bare\naddress in the From header; for mailing lists, bounce\nhandlers, and forwarders it is typically the bounce address\nrather than the human-visible sender.\n\nFor the parsed From-header value (with display name handling\nand a sender-fallback when the header is unparseable), GET\nthe email by id and use `from_email`.\n"
           },
           "recipient": {
             "type": "string"
@@ -2524,7 +2572,8 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "uuid"
           },
           "sender": {
-            "type": "string"
+            "type": "string",
+            "description": "SMTP envelope sender (return-path) the inbound mail server\naccepted. Same value as `smtp_mail_from`; both fields exist\nso protocol-aware tooling can use whichever name it expects.\n\nFor most legitimate mail this equals `from_email`; for\nmailing lists, bounce handlers, and forwarders it is\ntypically the bounce-handling address rather than the\nhuman-visible sender.\n\n**For the canonical \"who sent this email\" value, use\n`from_email`.**\n"
           },
           "recipient": {
             "type": "string"
@@ -2646,7 +2695,8 @@ export const openapiDocument: Record<string, unknown> = {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "SMTP envelope MAIL FROM (return-path), as accepted by the\ninbound mail server. Same value as `sender`; both fields\nexist so protocol-aware tooling can use whichever name it\nexpects.\n\nFor the canonical \"who sent this email\" value (display name\nstripped, From-header preferred), use `from_email`.\n"
           },
           "smtp_rcpt_to": {
             "type": [
@@ -2661,7 +2711,8 @@ export const openapiDocument: Record<string, unknown> = {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Raw `From:` header from the message body, including any\ndisplay name (e.g. `\"Alice Example\" <alice@example.com>`).\nUse this when you need the display name for rendering.\n\nFor the bare email address (display name stripped), use\n`from_email`.\n"
           },
           "content_discarded_at": {
             "type": [
@@ -2678,7 +2729,7 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "from_email": {
             "type": "string",
-            "description": "Parsed from address (from_header or sender fallback)"
+            "description": "Bare email address parsed from the `From:` header, with\ndisplay name stripped (e.g. `alice@example.com`). Falls\nback to `sender` (the SMTP envelope MAIL FROM) when the\n`From:` header cannot be parsed.\n\n**This is the canonical \"who sent this email\" field for\nmost use cases**, including comparing against allowlists,\nrouting replies, or displaying the sender to a user. Use\n`from_header` when you specifically need the display name,\nor `sender`/`smtp_mail_from` when you need the SMTP\nenvelope value (e.g. to follow a bounce).\n"
           },
           "to_email": {
             "type": "string",
@@ -2934,6 +2985,156 @@ export const openapiDocument: Record<string, unknown> = {
           "request_id",
           "content_hash",
           "idempotent_replay"
+        ]
+      },
+      "SendPermissionRule": {
+        "description": "One recipient-scope rule describing a destination the caller\nmay send to. Discriminated on `type`. Each rule carries a\nhuman-prose `description` field intended for display.\n\nRule kinds are stable within an SDK release. A response\ncontaining a `type` value not enumerated in this schema\nmeans the server is running a newer version than the SDK;\nupgrade the SDK to the release that matches the server's\nschema. Strict-parsing SDKs (Go, Python) will raise a\ndecode error in that case rather than silently dropping\nthe unknown rule, since silent drops would let an outbound\nagent reason from an incomplete view of its own permissions.\n",
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "any_recipient": "#/components/schemas/SendPermissionAnyRecipient",
+            "managed_zone": "#/components/schemas/SendPermissionManagedZone",
+            "your_domain": "#/components/schemas/SendPermissionYourDomain",
+            "address": "#/components/schemas/SendPermissionAddress"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SendPermissionAnyRecipient"
+          },
+          {
+            "$ref": "#/components/schemas/SendPermissionManagedZone"
+          },
+          {
+            "$ref": "#/components/schemas/SendPermissionYourDomain"
+          },
+          {
+            "$ref": "#/components/schemas/SendPermissionAddress"
+          }
+        ]
+      },
+      "SendPermissionAnyRecipient": {
+        "type": "object",
+        "description": "The caller can send to any recipient. When this rule is\npresent, every other rule in the response is redundant.\n",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "any_recipient"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-prose summary of the rule."
+          }
+        },
+        "required": [
+          "type",
+          "description"
+        ]
+      },
+      "SendPermissionManagedZone": {
+        "type": "object",
+        "description": "The caller can send to any address at the named\nPrimitive-managed zone. Always emitted (no entitlement\nrequired) because Primitive owns the zone and every mailbox\nbelongs to a Primitive customer by construction.\n",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "managed_zone"
+            ]
+          },
+          "zone": {
+            "type": "string",
+            "description": "The managed apex domain. Sends are accepted to any\naddress at the apex itself or any subdomain (e.g.\n`alice@primitive.email` and `alice@acme.primitive.email`\nboth match the `primitive.email` zone rule).\n"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-prose summary of the rule."
+          }
+        },
+        "required": [
+          "type",
+          "zone",
+          "description"
+        ]
+      },
+      "SendPermissionYourDomain": {
+        "type": "object",
+        "description": "The caller can send to any address at one of their own\nverified outbound domains. Emitted once per active row in\nthe org's `domains` table.\n",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "your_domain"
+            ]
+          },
+          "domain": {
+            "type": "string",
+            "description": "A verified outbound domain owned by the caller's org."
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-prose summary of the rule."
+          }
+        },
+        "required": [
+          "type",
+          "domain",
+          "description"
+        ]
+      },
+      "SendPermissionAddress": {
+        "type": "object",
+        "description": "The caller can send to a specific address that has\nauthenticated inbound mail to the org. Emitted once per row\nin the org's `known_send_addresses` table, capped at\n`meta.address_cap`.\n",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "address"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "description": "The bare email address this rule grants sends to."
+          },
+          "last_received_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Most recent inbound email from this address that\nauthenticated successfully (DMARC pass + DKIM/SPF\nalignment). Updated on each new authenticated receipt.\n"
+          },
+          "received_count": {
+            "type": "integer",
+            "description": "Total number of authenticated inbound emails from this\naddress. Increments only when `last_received_at` advances.\n"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-prose summary of the rule."
+          }
+        },
+        "required": [
+          "type",
+          "address",
+          "last_received_at",
+          "received_count",
+          "description"
+        ]
+      },
+      "SendPermissionsMeta": {
+        "type": "object",
+        "description": "Response metadata for /send-permissions. The `address_cap`\nbounds the size of the `address` rule subset; orgs with more\nthan `address_cap` known addresses almost always also hold a\nbroader rule type (`any_recipient` or `your_domain`), so the\ncap is a response-size bound rather than a meaningful\nproduct limit.\n",
+        "properties": {
+          "address_cap": {
+            "type": "integer",
+            "description": "Maximum number of `address` rules included in `data`."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when the org has more than `address_cap` known\naddresses and the list was truncated. False when every\nknown address is represented or when the org holds no\naddress rules at all.\n"
+          }
+        },
+        "required": [
+          "address_cap",
+          "truncated"
         ]
       },
       "Endpoint": {

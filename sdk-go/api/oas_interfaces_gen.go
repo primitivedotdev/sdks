@@ -45,6 +45,10 @@ type GetEmailRes interface {
 	getEmailRes()
 }
 
+type GetSendPermissionsRes interface {
+	getSendPermissionsRes()
+}
+
 type GetStorageStatsRes interface {
 	getStorageStatsRes()
 }

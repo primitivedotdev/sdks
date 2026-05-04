@@ -402,7 +402,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-emails",
-    "description": "Returns a paginated list of received emails. Supports filtering by\ndomain, status, date range, and free-text search across subject,\nsender, and recipient fields.\n",
+    "description": "Returns a paginated list of INBOUND emails received at your\nverified domains. Outbound messages sent via /send-mail are not\nincluded; this endpoint is the inbox view, not a unified\nsend/receive history.\n\nSupports filtering by domain, status, date range, and free-text\nsearch across subject, sender, and recipient fields.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listEmails",
@@ -466,7 +466,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "requestSchema": null,
     "sdkName": "listEmails",
-    "summary": "List emails",
+    "summary": "List inbound emails",
     "tag": "Emails",
     "tagCommand": "emails"
   },
@@ -782,6 +782,23 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "summary": "Update a filter rule",
     "tag": "Filters",
     "tagCommand": "filters"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-send-permissions",
+    "description": "Returns a flat list of rules describing every recipient the\ncaller may send to. Each rule has a `type`, a kind-specific\npayload, and a human-readable `description`. If any rule\nmatches the recipient, /send-mail will accept the send under\nthe recipient-scope check.\n\nThe endpoint is the answer to \"where can I send\" without\nexposing internal entitlement names. Agents that don't\nrecognize a `type` can still read the `description` prose\nand act on it.\n\nRule kinds, ordered broadest-first so an agent can stop\nscanning at the first match:\n\n  1. `any_recipient` (one entry, only when the org can send\n     anywhere): every other rule below it is redundant.\n  2. `managed_zone` (always emitted, one per Primitive-managed\n     zone): sends to any address at *.primitive.email or\n     *.email.works always succeed; no entitlement required.\n  3. `your_domain` (one per active verified outbound domain\n     owned by the org): sends to that domain are approved.\n  4. `address` (one per address that has authenticated\n     inbound mail to the org, capped at `meta.address_cap`):\n     sends to that exact address are approved.\n\nThe list is informational, not an authorization check.\n/send-mail remains the source of truth on whether an\nindividual send will succeed (it also enforces the\nfrom-address and the `send_mail` entitlement, which are\nnot recipient-scope concerns and are not represented here).\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getSendPermissions",
+    "path": "/send-permissions",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "sdkName": "getSendPermissions",
+    "summary": "List send-permission rules",
+    "tag": "Sending",
+    "tagCommand": "sending"
   },
   {
     "binaryResponse": false,
