@@ -552,7 +552,7 @@ export function createOperationCommand(
           ) {
             body = { ...(explicit as Record<string, unknown>), ...overrides };
           } else {
-            // Caller passed --body as null, an array, or a
+            // Caller passed --raw-body as null, an array, or a
             // primitive AND also passed per-field flags. We can't
             // merge per-field overrides into a non-object body
             // shape, and silently dropping either source would
