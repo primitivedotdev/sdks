@@ -11844,28 +11844,73 @@ func (s *SendPermissionManagedZoneType) UnmarshalJSON(data []byte) error {
 
 // Encode encodes SendPermissionRule as json.
 func (s SendPermissionRule) Encode(e *jx.Encoder) {
-	switch s.Type {
-	case SendPermissionAnyRecipientSendPermissionRule:
-		s.SendPermissionAnyRecipient.Encode(e)
-	case SendPermissionManagedZoneSendPermissionRule:
-		s.SendPermissionManagedZone.Encode(e)
-	case SendPermissionYourDomainSendPermissionRule:
-		s.SendPermissionYourDomain.Encode(e)
-	case SendPermissionAddressSendPermissionRule:
-		s.SendPermissionAddress.Encode(e)
-	}
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
 }
 
 func (s SendPermissionRule) encodeFields(e *jx.Encoder) {
 	switch s.Type {
 	case SendPermissionAnyRecipientSendPermissionRule:
-		s.SendPermissionAnyRecipient.encodeFields(e)
+		e.FieldStart("type")
+		e.Str("any_recipient")
+		{
+			s := s.SendPermissionAnyRecipient
+			{
+				e.FieldStart("description")
+				e.Str(s.Description)
+			}
+		}
 	case SendPermissionManagedZoneSendPermissionRule:
-		s.SendPermissionManagedZone.encodeFields(e)
+		e.FieldStart("type")
+		e.Str("managed_zone")
+		{
+			s := s.SendPermissionManagedZone
+			{
+				e.FieldStart("zone")
+				e.Str(s.Zone)
+			}
+			{
+				e.FieldStart("description")
+				e.Str(s.Description)
+			}
+		}
 	case SendPermissionYourDomainSendPermissionRule:
-		s.SendPermissionYourDomain.encodeFields(e)
+		e.FieldStart("type")
+		e.Str("your_domain")
+		{
+			s := s.SendPermissionYourDomain
+			{
+				e.FieldStart("domain")
+				e.Str(s.Domain)
+			}
+			{
+				e.FieldStart("description")
+				e.Str(s.Description)
+			}
+		}
 	case SendPermissionAddressSendPermissionRule:
-		s.SendPermissionAddress.encodeFields(e)
+		e.FieldStart("type")
+		e.Str("address")
+		{
+			s := s.SendPermissionAddress
+			{
+				e.FieldStart("address")
+				e.Str(s.Address)
+			}
+			{
+				e.FieldStart("last_received_at")
+				json.EncodeDateTime(e, s.LastReceivedAt)
+			}
+			{
+				e.FieldStart("received_count")
+				e.Int(s.ReceivedCount)
+			}
+			{
+				e.FieldStart("description")
+				e.Str(s.Description)
+			}
+		}
 	}
 }
 
@@ -11874,7 +11919,7 @@ func (s *SendPermissionRule) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode SendPermissionRule to nil")
 	}
-	// Sum type fields.
+	// Sum type discriminator.
 	if typ := d.Next(); typ != jx.Object {
 		return errors.Errorf("unexpected json type %q", typ)
 	}
@@ -11882,111 +11927,30 @@ func (s *SendPermissionRule) Decode(d *jx.Decoder) error {
 	var found bool
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
+			if found {
+				return d.Skip()
+			}
 			switch string(key) {
-			case "address":
-				// Type-based discrimination: check if field has expected JSON type
-				if typ := d.Next(); typ != jx.String {
-					// Field exists but has wrong type, not a match for this variant
-					return d.Skip()
-				}
-				match := SendPermissionAddressSendPermissionRule
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "domain":
-				// Type-based discrimination: check if field has expected JSON type
-				if typ := d.Next(); typ != jx.String {
-					// Field exists but has wrong type, not a match for this variant
-					return d.Skip()
-				}
-				match := SendPermissionYourDomainSendPermissionRule
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "last_received_at":
-				match := SendPermissionAddressSendPermissionRule
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "received_count":
-				// Type-based discrimination: check if field has expected JSON type
-				if typ := d.Next(); typ != jx.Number {
-					// Field exists but has wrong type, not a match for this variant
-					return d.Skip()
-				}
-				match := SendPermissionAddressSendPermissionRule
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
-			case "zone":
-				// Type-based discrimination: check if field has expected JSON type
-				if typ := d.Next(); typ != jx.String {
-					// Field exists but has wrong type, not a match for this variant
-					return d.Skip()
-				}
-				match := SendPermissionManagedZoneSendPermissionRule
-				if found && s.Type != match {
-					s.Type = ""
-					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-				}
-				found = true
-				s.Type = match
 			case "type":
-				// Value-based discrimination: check enum value
-				if typ := d.Next(); typ != jx.String {
-					return d.Skip()
-				}
-				value, err := d.StrBytes()
+				typ, err := d.Str()
 				if err != nil {
 					return err
 				}
-				switch string(value) {
-				case "address":
-					match := SendPermissionAddressSendPermissionRule
-					if found && s.Type != match {
-						s.Type = ""
-						return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-					}
-					found = true
-					s.Type = match
+				switch typ {
 				case "any_recipient":
-					match := SendPermissionAnyRecipientSendPermissionRule
-					if found && s.Type != match {
-						s.Type = ""
-						return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-					}
+					s.Type = SendPermissionAnyRecipientSendPermissionRule
 					found = true
-					s.Type = match
 				case "managed_zone":
-					match := SendPermissionManagedZoneSendPermissionRule
-					if found && s.Type != match {
-						s.Type = ""
-						return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-					}
+					s.Type = SendPermissionManagedZoneSendPermissionRule
 					found = true
-					s.Type = match
 				case "your_domain":
-					match := SendPermissionYourDomainSendPermissionRule
-					if found && s.Type != match {
-						s.Type = ""
-						return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
-					}
+					s.Type = SendPermissionYourDomainSendPermissionRule
 					found = true
-					s.Type = match
+				case "address":
+					s.Type = SendPermissionAddressSendPermissionRule
+					found = true
 				default:
-					// Unknown enum value, ignore and continue
+					return errors.Errorf("unknown type %s", typ)
 				}
 				return nil
 			}

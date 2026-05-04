@@ -2025,6 +2025,20 @@ components:
         may send to. Discriminated on `type`. Each rule carries a
         human-prose `description` so callers that don't recognize the
         type can still pattern-match the prose.
+      # Explicit discriminator + mapping. Without these, conformant
+      # validators must speculatively try every oneOf arm against
+      # each object, which is O(arms) per rule and surfaces poor
+      # error messages on the wrong-type case. The mapping bridges
+      # the wire-format value (`"any_recipient"`) to the schema
+      # name (`SendPermissionAnyRecipient`) since they don't match
+      # by stringly-typed default rule.
+      discriminator:
+        propertyName: type
+        mapping:
+          any_recipient: '#/components/schemas/SendPermissionAnyRecipient'
+          managed_zone: '#/components/schemas/SendPermissionManagedZone'
+          your_domain: '#/components/schemas/SendPermissionYourDomain'
+          address: '#/components/schemas/SendPermissionAddress'
       oneOf:
         - $ref: '#/components/schemas/SendPermissionAnyRecipient'
         - $ref: '#/components/schemas/SendPermissionManagedZone'

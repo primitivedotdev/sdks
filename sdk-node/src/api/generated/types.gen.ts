@@ -492,7 +492,15 @@ export type SendMailResult = {
  * type can still pattern-match the prose.
  *
  */
-export type SendPermissionRule = SendPermissionAnyRecipient | SendPermissionManagedZone | SendPermissionYourDomain | SendPermissionAddress;
+export type SendPermissionRule = ({
+    type: 'any_recipient';
+} & SendPermissionAnyRecipient) | ({
+    type: 'managed_zone';
+} & SendPermissionManagedZone) | ({
+    type: 'your_domain';
+} & SendPermissionYourDomain) | ({
+    type: 'address';
+} & SendPermissionAddress);
 
 /**
  * The caller can send to any recipient. When this rule is

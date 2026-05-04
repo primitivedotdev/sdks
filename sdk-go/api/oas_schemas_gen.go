@@ -5609,10 +5609,10 @@ type SendPermissionRuleType string
 
 // Possible values for SendPermissionRuleType.
 const (
-	SendPermissionAnyRecipientSendPermissionRule SendPermissionRuleType = "SendPermissionAnyRecipient"
-	SendPermissionManagedZoneSendPermissionRule  SendPermissionRuleType = "SendPermissionManagedZone"
-	SendPermissionYourDomainSendPermissionRule   SendPermissionRuleType = "SendPermissionYourDomain"
-	SendPermissionAddressSendPermissionRule      SendPermissionRuleType = "SendPermissionAddress"
+	SendPermissionAnyRecipientSendPermissionRule SendPermissionRuleType = "any_recipient"
+	SendPermissionManagedZoneSendPermissionRule  SendPermissionRuleType = "managed_zone"
+	SendPermissionYourDomainSendPermissionRule   SendPermissionRuleType = "your_domain"
+	SendPermissionAddressSendPermissionRule      SendPermissionRuleType = "address"
 )
 
 // IsSendPermissionAnyRecipient reports whether SendPermissionRule is SendPermissionAnyRecipient.
