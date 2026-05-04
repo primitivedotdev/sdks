@@ -76,8 +76,14 @@ async function pickDefaultFromAddress(
     // wrapping.
     if (extractErrorCode(errorPayload) === "unauthorized") {
       writeErrorWithHints(errorPayload);
+      // exit: 1 to match the run() unauthorized path (which uses
+      // `process.exitCode = 1`). oclif's CLIError defaults to 2,
+      // so without this override the same "unauthorized" condition
+      // exits 2 when surfaced from listDomains and 1 when surfaced
+      // from sendEmail, breaking callers that branch on exit code.
       throw new Errors.CLIError(
         "Cannot send: API key is missing or invalid (see hint above).",
+        { exit: 1 },
       );
     }
     throw new Errors.CLIError(
