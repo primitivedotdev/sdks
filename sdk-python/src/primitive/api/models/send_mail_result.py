@@ -26,7 +26,23 @@ class SendMailResult:
     """ 
         Attributes:
             id (str): Persisted sent-email attempt ID.
-            status (SentEmailStatus):
+            status (SentEmailStatus): Lifecycle status of a sent_emails row. Possible values:
+
+                  - `queued`: pre-call INSERT; the outbound agent has not
+                    yet replied.
+                  - `submitted_to_agent`: agent accepted; `queue_id` is set.
+                  - `agent_failed`: agent rejected; `error_code` and
+                    `error_message` carry the reason.
+                  - `gate_denied`: a recipient-scope gate denied the send;
+                    the agent was never called. The `gates` array carries
+                    the denial detail. /send-mail returns 403 in this case
+                    so callers see the denial synchronously; /sent-emails
+                    additionally records the row for historical lookup,
+                    which is when this status appears in a listing.
+                  - `unknown`: terminal indeterminate; the on-box log
+                    poller couldn't classify the receiver's response.
+                  - `delivered` / `bounced` / `deferred` / `wait_timeout`:
+                    terminal delivery outcomes (see DeliveryStatus).
             from_ (str): Bare from-address actually written on the wire. Echoed
                 on every success branch so callers can confirm what
                 went out, particularly useful for the /emails/{id}/reply
