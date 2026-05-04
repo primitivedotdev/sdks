@@ -257,7 +257,7 @@ export type EmailSummary = {
     message_id?: string | null;
     domain_id?: string | null;
     org_id?: string | null;
-    status: 'pending' | 'accepted' | 'completed' | 'rejected';
+    status: EmailStatus;
     /**
      * SMTP envelope sender (return-path) the inbound mail server
      * accepted. For most legitimate mail this equals the bare
@@ -278,7 +278,7 @@ export type EmailSummary = {
     created_at: string;
     received_at: string;
     raw_size_bytes?: number | null;
-    webhook_status?: 'pending' | 'in_flight' | 'fired' | 'failed' | 'exhausted' | null;
+    webhook_status?: EmailWebhookStatus;
     webhook_attempt_count: number;
 };
 
@@ -312,7 +312,7 @@ export type EmailDetail = {
      * HTML body parsed from the inbound MIME, matching the `email.parsed.body_html` field on the webhook payload. Null when the message had no HTML part or parsing failed.
      */
     body_html?: string | null;
-    status: 'pending' | 'accepted' | 'completed' | 'rejected';
+    status: EmailStatus;
     domain: string;
     spam_score?: number | null;
     raw_size_bytes?: number | null;
@@ -320,7 +320,7 @@ export type EmailDetail = {
     created_at: string;
     received_at: string;
     rejection_reason?: string | null;
-    webhook_status?: 'pending' | 'in_flight' | 'fired' | 'failed' | 'exhausted' | null;
+    webhook_status?: EmailWebhookStatus;
     webhook_attempt_count: number;
     webhook_last_attempt_at?: string | null;
     webhook_last_status_code?: number | null;
@@ -447,6 +447,65 @@ export type SendMailInput = {
      */
     wait_timeout_ms?: number;
 };
+
+/**
+ * Lifecycle status of an INBOUND email (a row in the `emails`
+ * table). Distinct from `SentEmailStatus`, which describes
+ * the OUTBOUND lifecycle (the `sent_emails` table) and uses
+ * a different vocabulary because the lifecycles differ.
+ * Possible values:
+ *
+ * - `pending`: the row was inserted at ingestion (mx_main)
+ * and has not yet completed the spam / filter / auth
+ * pipeline. Body and parsed fields are present; webhook
+ * delivery is not yet scheduled. Most rows transition out
+ * of `pending` within seconds.
+ * - `accepted`: the inbound passed the policy gates and is
+ * queued for webhook delivery. The `webhook_status` field
+ * tracks the separate webhook-delivery lifecycle from
+ * this point.
+ * - `completed`: terminal success. Webhook delivery
+ * attempted and acknowledged by every active endpoint, OR
+ * no endpoints are configured, so the row is durably
+ * archived.
+ * - `rejected`: terminal failure at ingestion (spam, blocked
+ * sender, filter rule, malformed). The body and metadata
+ * are stored for auditing but no webhook fires and the
+ * row is not repliable.
+ *
+ * See also `webhook_status` (separate enum tracking the
+ * webhook-delivery state machine) and `SentEmailStatus` (the
+ * outbound vocabulary).
+ *
+ */
+export type EmailStatus = 'pending' | 'accepted' | 'completed' | 'rejected';
+
+/**
+ * Webhook-delivery state for an inbound email. Tracks a
+ * SEPARATE lifecycle from the email's `status` field; the
+ * same row carries both. Possible values:
+ *
+ * - `pending`: ingestion is past `pending` (the email itself
+ * is `accepted`) but the webhook fan-out has not yet
+ * started for this row.
+ * - `in_flight`: at least one delivery attempt is in flight.
+ * - `fired`: terminal success. Every active endpoint
+ * acknowledged the delivery (or accepted it after retries).
+ * - `failed`: terminal partial-failure. At least one endpoint
+ * exhausted its retry budget; some endpoints may still
+ * have succeeded.
+ * - `exhausted`: terminal failure. Every endpoint exhausted
+ * its retry budget without success.
+ * - `null`: no endpoints configured, so no webhook lifecycle
+ * applies.
+ *
+ * Note that the value `pending` here does NOT mean the email
+ * is `pending`; it means the email is past ingestion but
+ * webhook delivery has not yet begun. Two overlapping uses
+ * of the word `pending` for distinct lifecycle phases.
+ *
+ */
+export type EmailWebhookStatus = 'pending' | 'in_flight' | 'fired' | 'failed' | 'exhausted' | null;
 
 /**
  * Lifecycle status of a sent_emails row. Possible values:
@@ -1452,9 +1511,14 @@ export type ListEmailsData = {
          */
         domain_id?: string;
         /**
-         * Filter by email status
+         * Filter inbound rows by lifecycle status. See `EmailStatus`
+         * for what each value means. Note that the webhook delivery
+         * state is a SEPARATE lifecycle on the same row; filter by
+         * `webhook_status` semantics is not currently supported on
+         * this endpoint.
+         *
          */
-        status?: 'pending' | 'accepted' | 'completed' | 'rejected';
+        status?: EmailStatus;
         /**
          * Search subject, sender, and recipient (case-insensitive)
          */

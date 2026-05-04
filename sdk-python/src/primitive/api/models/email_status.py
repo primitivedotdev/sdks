@@ -1,6 +1,6 @@
 from enum import Enum
 
-class ListEmailsStatus(str, Enum):
+class EmailStatus(str, Enum):
     ACCEPTED = "accepted"
     COMPLETED = "completed"
     PENDING = "pending"

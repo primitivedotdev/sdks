@@ -131,6 +131,7 @@ class SendCommand extends Command {
     "<%= config.bin %> send --to alice@example.com --from support@yourcompany.com --subject 'Quick question' --body 'Are you free Thursday?'",
     "<%= config.bin %> send --to alice@example.com --html '<p>Hello!</p>'",
     "<%= config.bin %> send --to alice@example.com --body 'Confirmed' --wait",
+    "<%= config.bin %> send --to inbox@your-managed-domain.primitive.email --body 'self-loop smoke test' --wait  # any *.primitive.email address routes back to the sending account; useful for proving outbound + inbound work end-to-end",
   ];
 
   static flags = {

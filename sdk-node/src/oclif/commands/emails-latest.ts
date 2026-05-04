@@ -63,15 +63,18 @@ export function formatRow(email: EmailSummary): string {
 
 class EmailsLatestCommand extends Command {
   static description =
-    `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails:list-emails\` (full JSON envelope, cursor pagination, filters).
+    `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails:list-emails\` (full JSON envelope, cursor pagination, filters) or pass \`--json\` here for the same raw shape without pagination/filters.
 
-  The displayed id is the first ${ID_DISPLAY_WIDTH} characters of the email's UUID; pass the full UUID (from \`emails:list-emails\` or \`emails:get-email\`) to operations that need it.`;
+  The default text table truncates each row's id to the first ${ID_DISPLAY_WIDTH} characters for readability. Operations that take an id (\`emails:get-email\`, \`emails:delete-email\`, etc.) require the full UUID, so pass \`--json\` or use \`emails:list-emails\` when you need to feed an id back into another command.
+
+  Output streams: the column header line is written to STDERR so the row data on STDOUT stays grep/awk-friendly. \`--json\` writes everything (including the envelope) to STDOUT.`;
 
   static summary = "Show the most recent inbound emails as a compact table";
 
   static examples = [
     "<%= config.bin %> emails:latest",
     "<%= config.bin %> emails:latest --limit 25",
+    "<%= config.bin %> emails:latest --json | jq '.data[0].id'",
   ];
 
   static flags = {
@@ -91,6 +94,10 @@ class EmailsLatestCommand extends Command {
       // bounds check is needed here.
       min: 1,
       max: MAX_LIMIT,
+    }),
+    json: Flags.boolean({
+      description:
+        "Print the raw response envelope (with full UUIDs and meta) as JSON on STDOUT instead of the text table. Useful for piping into `jq`, capturing ids for follow-up commands, or scripting.",
     }),
   };
 
@@ -115,6 +122,15 @@ class EmailsLatestCommand extends Command {
     }
 
     const envelope = result.data as { data?: EmailSummary[] } | undefined;
+
+    if (flags.json) {
+      // Raw envelope on stdout. Mirrors the shape `emails:list-emails`
+      // emits so callers can swap one for the other when they want
+      // table vs json without remembering different command names.
+      this.log(JSON.stringify(envelope ?? null, null, 2));
+      return;
+    }
+
     const rows = envelope?.data ?? [];
 
     if (rows.length === 0) {

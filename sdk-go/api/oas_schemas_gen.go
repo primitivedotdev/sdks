@@ -1265,22 +1265,22 @@ type EmailDetail struct {
 	BodyText OptNilString `json:"body_text"`
 	// HTML body parsed from the inbound MIME, matching the `email.parsed.body_html` field on the webhook
 	// payload. Null when the message had no HTML part or parsing failed.
-	BodyHTML              OptNilString                   `json:"body_html"`
-	Status                EmailDetailStatus              `json:"status"`
-	Domain                string                         `json:"domain"`
-	SpamScore             OptNilFloat64                  `json:"spam_score"`
-	RawSizeBytes          OptNilInt                      `json:"raw_size_bytes"`
-	RawSHA256             OptNilString                   `json:"raw_sha256"`
-	CreatedAt             time.Time                      `json:"created_at"`
-	ReceivedAt            time.Time                      `json:"received_at"`
-	RejectionReason       OptNilString                   `json:"rejection_reason"`
-	WebhookStatus         OptNilEmailDetailWebhookStatus `json:"webhook_status"`
-	WebhookAttemptCount   int                            `json:"webhook_attempt_count"`
-	WebhookLastAttemptAt  OptNilDateTime                 `json:"webhook_last_attempt_at"`
-	WebhookLastStatusCode OptNilInt                      `json:"webhook_last_status_code"`
-	WebhookLastError      OptNilString                   `json:"webhook_last_error"`
-	WebhookFiredAt        OptNilDateTime                 `json:"webhook_fired_at"`
-	SMTPHelo              OptNilString                   `json:"smtp_helo"`
+	BodyHTML              OptNilString             `json:"body_html"`
+	Status                EmailStatus              `json:"status"`
+	Domain                string                   `json:"domain"`
+	SpamScore             OptNilFloat64            `json:"spam_score"`
+	RawSizeBytes          OptNilInt                `json:"raw_size_bytes"`
+	RawSHA256             OptNilString             `json:"raw_sha256"`
+	CreatedAt             time.Time                `json:"created_at"`
+	ReceivedAt            time.Time                `json:"received_at"`
+	RejectionReason       OptNilString             `json:"rejection_reason"`
+	WebhookStatus         OptNilEmailWebhookStatus `json:"webhook_status"`
+	WebhookAttemptCount   int                      `json:"webhook_attempt_count"`
+	WebhookLastAttemptAt  OptNilDateTime           `json:"webhook_last_attempt_at"`
+	WebhookLastStatusCode OptNilInt                `json:"webhook_last_status_code"`
+	WebhookLastError      OptNilString             `json:"webhook_last_error"`
+	WebhookFiredAt        OptNilDateTime           `json:"webhook_fired_at"`
+	SMTPHelo              OptNilString             `json:"smtp_helo"`
 	// SMTP envelope MAIL FROM (return-path), as accepted by the
 	// inbound mail server. Same value as `sender`; both fields
 	// exist so protocol-aware tooling can use whichever name it
@@ -1371,7 +1371,7 @@ func (s *EmailDetail) GetBodyHTML() OptNilString {
 }
 
 // GetStatus returns the value of Status.
-func (s *EmailDetail) GetStatus() EmailDetailStatus {
+func (s *EmailDetail) GetStatus() EmailStatus {
 	return s.Status
 }
 
@@ -1411,7 +1411,7 @@ func (s *EmailDetail) GetRejectionReason() OptNilString {
 }
 
 // GetWebhookStatus returns the value of WebhookStatus.
-func (s *EmailDetail) GetWebhookStatus() OptNilEmailDetailWebhookStatus {
+func (s *EmailDetail) GetWebhookStatus() OptNilEmailWebhookStatus {
 	return s.WebhookStatus
 }
 
@@ -1536,7 +1536,7 @@ func (s *EmailDetail) SetBodyHTML(val OptNilString) {
 }
 
 // SetStatus sets the value of Status.
-func (s *EmailDetail) SetStatus(val EmailDetailStatus) {
+func (s *EmailDetail) SetStatus(val EmailStatus) {
 	s.Status = val
 }
 
@@ -1576,7 +1576,7 @@ func (s *EmailDetail) SetRejectionReason(val OptNilString) {
 }
 
 // SetWebhookStatus sets the value of WebhookStatus.
-func (s *EmailDetail) SetWebhookStatus(val OptNilEmailDetailWebhookStatus) {
+func (s *EmailDetail) SetWebhookStatus(val OptNilEmailWebhookStatus) {
 	s.WebhookStatus = val
 }
 
@@ -1728,35 +1728,61 @@ func (s *EmailDetailReply) SetQueueID(val OptNilString) {
 	s.QueueID = val
 }
 
-type EmailDetailStatus string
+// Lifecycle status of an INBOUND email (a row in the `emails`
+// table). Distinct from `SentEmailStatus`, which describes
+// the OUTBOUND lifecycle (the `sent_emails` table) and uses
+// a different vocabulary because the lifecycles differ.
+// Possible values:
+// - `pending`: the row was inserted at ingestion (mx_main)
+// and has not yet completed the spam / filter / auth
+// pipeline. Body and parsed fields are present; webhook
+// delivery is not yet scheduled. Most rows transition out
+// of `pending` within seconds.
+// - `accepted`: the inbound passed the policy gates and is
+// queued for webhook delivery. The `webhook_status` field
+// tracks the separate webhook-delivery lifecycle from
+// this point.
+// - `completed`: terminal success. Webhook delivery
+// attempted and acknowledged by every active endpoint, OR
+// no endpoints are configured, so the row is durably
+// archived.
+// - `rejected`: terminal failure at ingestion (spam, blocked
+// sender, filter rule, malformed). The body and metadata
+// are stored for auditing but no webhook fires and the
+// row is not repliable.
+// See also `webhook_status` (separate enum tracking the
+// webhook-delivery state machine) and `SentEmailStatus` (the
+// outbound vocabulary).
+// Ref: #/components/schemas/EmailStatus
+type EmailStatus string
 
 const (
-	EmailDetailStatusPending   EmailDetailStatus = "pending"
-	EmailDetailStatusAccepted  EmailDetailStatus = "accepted"
-	EmailDetailStatusCompleted EmailDetailStatus = "completed"
-	EmailDetailStatusRejected  EmailDetailStatus = "rejected"
+	EmailStatusPending   EmailStatus = "pending"
+	EmailStatusAccepted  EmailStatus = "accepted"
+	EmailStatusCompleted EmailStatus = "completed"
+	EmailStatusRejected  EmailStatus = "rejected"
 )
 
-// AllValues returns all EmailDetailStatus values.
-func (EmailDetailStatus) AllValues() []EmailDetailStatus {
-	return []EmailDetailStatus{
-		EmailDetailStatusPending,
-		EmailDetailStatusAccepted,
-		EmailDetailStatusCompleted,
-		EmailDetailStatusRejected,
+// AllValues returns all EmailStatus values.
+func (EmailStatus) AllValues() []EmailStatus {
+	return []EmailStatus{
+		EmailStatusPending,
+		EmailStatusAccepted,
+		EmailStatusCompleted,
+		EmailStatusRejected,
 	}
 }
 
 // MarshalText implements encoding.TextMarshaler.
-func (s EmailDetailStatus) MarshalText() ([]byte, error) {
+func (s EmailStatus) MarshalText() ([]byte, error) {
 	switch s {
-	case EmailDetailStatusPending:
+	case EmailStatusPending:
 		return []byte(s), nil
-	case EmailDetailStatusAccepted:
+	case EmailStatusAccepted:
 		return []byte(s), nil
-	case EmailDetailStatusCompleted:
+	case EmailStatusCompleted:
 		return []byte(s), nil
-	case EmailDetailStatusRejected:
+	case EmailStatusRejected:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -1764,81 +1790,19 @@ func (s EmailDetailStatus) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (s *EmailDetailStatus) UnmarshalText(data []byte) error {
-	switch EmailDetailStatus(data) {
-	case EmailDetailStatusPending:
-		*s = EmailDetailStatusPending
+func (s *EmailStatus) UnmarshalText(data []byte) error {
+	switch EmailStatus(data) {
+	case EmailStatusPending:
+		*s = EmailStatusPending
 		return nil
-	case EmailDetailStatusAccepted:
-		*s = EmailDetailStatusAccepted
+	case EmailStatusAccepted:
+		*s = EmailStatusAccepted
 		return nil
-	case EmailDetailStatusCompleted:
-		*s = EmailDetailStatusCompleted
+	case EmailStatusCompleted:
+		*s = EmailStatusCompleted
 		return nil
-	case EmailDetailStatusRejected:
-		*s = EmailDetailStatusRejected
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-type EmailDetailWebhookStatus string
-
-const (
-	EmailDetailWebhookStatusPending   EmailDetailWebhookStatus = "pending"
-	EmailDetailWebhookStatusInFlight  EmailDetailWebhookStatus = "in_flight"
-	EmailDetailWebhookStatusFired     EmailDetailWebhookStatus = "fired"
-	EmailDetailWebhookStatusFailed    EmailDetailWebhookStatus = "failed"
-	EmailDetailWebhookStatusExhausted EmailDetailWebhookStatus = "exhausted"
-)
-
-// AllValues returns all EmailDetailWebhookStatus values.
-func (EmailDetailWebhookStatus) AllValues() []EmailDetailWebhookStatus {
-	return []EmailDetailWebhookStatus{
-		EmailDetailWebhookStatusPending,
-		EmailDetailWebhookStatusInFlight,
-		EmailDetailWebhookStatusFired,
-		EmailDetailWebhookStatusFailed,
-		EmailDetailWebhookStatusExhausted,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s EmailDetailWebhookStatus) MarshalText() ([]byte, error) {
-	switch s {
-	case EmailDetailWebhookStatusPending:
-		return []byte(s), nil
-	case EmailDetailWebhookStatusInFlight:
-		return []byte(s), nil
-	case EmailDetailWebhookStatusFired:
-		return []byte(s), nil
-	case EmailDetailWebhookStatusFailed:
-		return []byte(s), nil
-	case EmailDetailWebhookStatusExhausted:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *EmailDetailWebhookStatus) UnmarshalText(data []byte) error {
-	switch EmailDetailWebhookStatus(data) {
-	case EmailDetailWebhookStatusPending:
-		*s = EmailDetailWebhookStatusPending
-		return nil
-	case EmailDetailWebhookStatusInFlight:
-		*s = EmailDetailWebhookStatusInFlight
-		return nil
-	case EmailDetailWebhookStatusFired:
-		*s = EmailDetailWebhookStatusFired
-		return nil
-	case EmailDetailWebhookStatusFailed:
-		*s = EmailDetailWebhookStatusFailed
-		return nil
-	case EmailDetailWebhookStatusExhausted:
-		*s = EmailDetailWebhookStatusExhausted
+	case EmailStatusRejected:
+		*s = EmailStatusRejected
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -1847,11 +1811,11 @@ func (s *EmailDetailWebhookStatus) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/EmailSummary
 type EmailSummary struct {
-	ID        uuid.UUID          `json:"id"`
-	MessageID OptNilString       `json:"message_id"`
-	DomainID  OptNilUUID         `json:"domain_id"`
-	OrgID     OptNilUUID         `json:"org_id"`
-	Status    EmailSummaryStatus `json:"status"`
+	ID        uuid.UUID    `json:"id"`
+	MessageID OptNilString `json:"message_id"`
+	DomainID  OptNilUUID   `json:"domain_id"`
+	OrgID     OptNilUUID   `json:"org_id"`
+	Status    EmailStatus  `json:"status"`
 	// SMTP envelope sender (return-path) the inbound mail server
 	// accepted. For most legitimate mail this equals the bare
 	// address in the From header; for mailing lists, bounce
@@ -1860,16 +1824,16 @@ type EmailSummary struct {
 	// For the parsed From-header value (with display name handling
 	// and a sender-fallback when the header is unparseable), GET
 	// the email by id and use `from_email`.
-	Sender              string                          `json:"sender"`
-	Recipient           string                          `json:"recipient"`
-	Subject             OptNilString                    `json:"subject"`
-	Domain              string                          `json:"domain"`
-	SpamScore           OptNilFloat64                   `json:"spam_score"`
-	CreatedAt           time.Time                       `json:"created_at"`
-	ReceivedAt          time.Time                       `json:"received_at"`
-	RawSizeBytes        OptNilInt                       `json:"raw_size_bytes"`
-	WebhookStatus       OptNilEmailSummaryWebhookStatus `json:"webhook_status"`
-	WebhookAttemptCount int                             `json:"webhook_attempt_count"`
+	Sender              string                   `json:"sender"`
+	Recipient           string                   `json:"recipient"`
+	Subject             OptNilString             `json:"subject"`
+	Domain              string                   `json:"domain"`
+	SpamScore           OptNilFloat64            `json:"spam_score"`
+	CreatedAt           time.Time                `json:"created_at"`
+	ReceivedAt          time.Time                `json:"received_at"`
+	RawSizeBytes        OptNilInt                `json:"raw_size_bytes"`
+	WebhookStatus       OptNilEmailWebhookStatus `json:"webhook_status"`
+	WebhookAttemptCount int                      `json:"webhook_attempt_count"`
 }
 
 // GetID returns the value of ID.
@@ -1893,7 +1857,7 @@ func (s *EmailSummary) GetOrgID() OptNilUUID {
 }
 
 // GetStatus returns the value of Status.
-func (s *EmailSummary) GetStatus() EmailSummaryStatus {
+func (s *EmailSummary) GetStatus() EmailStatus {
 	return s.Status
 }
 
@@ -1938,7 +1902,7 @@ func (s *EmailSummary) GetRawSizeBytes() OptNilInt {
 }
 
 // GetWebhookStatus returns the value of WebhookStatus.
-func (s *EmailSummary) GetWebhookStatus() OptNilEmailSummaryWebhookStatus {
+func (s *EmailSummary) GetWebhookStatus() OptNilEmailWebhookStatus {
 	return s.WebhookStatus
 }
 
@@ -1968,7 +1932,7 @@ func (s *EmailSummary) SetOrgID(val OptNilUUID) {
 }
 
 // SetStatus sets the value of Status.
-func (s *EmailSummary) SetStatus(val EmailSummaryStatus) {
+func (s *EmailSummary) SetStatus(val EmailStatus) {
 	s.Status = val
 }
 
@@ -2013,7 +1977,7 @@ func (s *EmailSummary) SetRawSizeBytes(val OptNilInt) {
 }
 
 // SetWebhookStatus sets the value of WebhookStatus.
-func (s *EmailSummary) SetWebhookStatus(val OptNilEmailSummaryWebhookStatus) {
+func (s *EmailSummary) SetWebhookStatus(val OptNilEmailWebhookStatus) {
 	s.WebhookStatus = val
 }
 
@@ -2022,35 +1986,60 @@ func (s *EmailSummary) SetWebhookAttemptCount(val int) {
 	s.WebhookAttemptCount = val
 }
 
-type EmailSummaryStatus string
+// Webhook-delivery state for an inbound email. Tracks a
+// SEPARATE lifecycle from the email's `status` field; the
+// same row carries both. Possible values:
+// - `pending`: ingestion is past `pending` (the email itself
+// is `accepted`) but the webhook fan-out has not yet
+// started for this row.
+// - `in_flight`: at least one delivery attempt is in flight.
+// - `fired`: terminal success. Every active endpoint
+// acknowledged the delivery (or accepted it after retries).
+// - `failed`: terminal partial-failure. At least one endpoint
+// exhausted its retry budget; some endpoints may still
+// have succeeded.
+// - `exhausted`: terminal failure. Every endpoint exhausted
+// its retry budget without success.
+// - `null`: no endpoints configured, so no webhook lifecycle
+// applies.
+// Note that the value `pending` here does NOT mean the email
+// is `pending`; it means the email is past ingestion but
+// webhook delivery has not yet begun. Two overlapping uses
+// of the word `pending` for distinct lifecycle phases.
+// Ref: #/components/schemas/EmailWebhookStatus
+type EmailWebhookStatus string
 
 const (
-	EmailSummaryStatusPending   EmailSummaryStatus = "pending"
-	EmailSummaryStatusAccepted  EmailSummaryStatus = "accepted"
-	EmailSummaryStatusCompleted EmailSummaryStatus = "completed"
-	EmailSummaryStatusRejected  EmailSummaryStatus = "rejected"
+	EmailWebhookStatusPending   EmailWebhookStatus = "pending"
+	EmailWebhookStatusInFlight  EmailWebhookStatus = "in_flight"
+	EmailWebhookStatusFired     EmailWebhookStatus = "fired"
+	EmailWebhookStatusFailed    EmailWebhookStatus = "failed"
+	EmailWebhookStatusExhausted EmailWebhookStatus = "exhausted"
 )
 
-// AllValues returns all EmailSummaryStatus values.
-func (EmailSummaryStatus) AllValues() []EmailSummaryStatus {
-	return []EmailSummaryStatus{
-		EmailSummaryStatusPending,
-		EmailSummaryStatusAccepted,
-		EmailSummaryStatusCompleted,
-		EmailSummaryStatusRejected,
+// AllValues returns all EmailWebhookStatus values.
+func (EmailWebhookStatus) AllValues() []EmailWebhookStatus {
+	return []EmailWebhookStatus{
+		EmailWebhookStatusPending,
+		EmailWebhookStatusInFlight,
+		EmailWebhookStatusFired,
+		EmailWebhookStatusFailed,
+		EmailWebhookStatusExhausted,
 	}
 }
 
 // MarshalText implements encoding.TextMarshaler.
-func (s EmailSummaryStatus) MarshalText() ([]byte, error) {
+func (s EmailWebhookStatus) MarshalText() ([]byte, error) {
 	switch s {
-	case EmailSummaryStatusPending:
+	case EmailWebhookStatusPending:
 		return []byte(s), nil
-	case EmailSummaryStatusAccepted:
+	case EmailWebhookStatusInFlight:
 		return []byte(s), nil
-	case EmailSummaryStatusCompleted:
+	case EmailWebhookStatusFired:
 		return []byte(s), nil
-	case EmailSummaryStatusRejected:
+	case EmailWebhookStatusFailed:
+		return []byte(s), nil
+	case EmailWebhookStatusExhausted:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -2058,81 +2047,22 @@ func (s EmailSummaryStatus) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (s *EmailSummaryStatus) UnmarshalText(data []byte) error {
-	switch EmailSummaryStatus(data) {
-	case EmailSummaryStatusPending:
-		*s = EmailSummaryStatusPending
+func (s *EmailWebhookStatus) UnmarshalText(data []byte) error {
+	switch EmailWebhookStatus(data) {
+	case EmailWebhookStatusPending:
+		*s = EmailWebhookStatusPending
 		return nil
-	case EmailSummaryStatusAccepted:
-		*s = EmailSummaryStatusAccepted
+	case EmailWebhookStatusInFlight:
+		*s = EmailWebhookStatusInFlight
 		return nil
-	case EmailSummaryStatusCompleted:
-		*s = EmailSummaryStatusCompleted
+	case EmailWebhookStatusFired:
+		*s = EmailWebhookStatusFired
 		return nil
-	case EmailSummaryStatusRejected:
-		*s = EmailSummaryStatusRejected
+	case EmailWebhookStatusFailed:
+		*s = EmailWebhookStatusFailed
 		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-type EmailSummaryWebhookStatus string
-
-const (
-	EmailSummaryWebhookStatusPending   EmailSummaryWebhookStatus = "pending"
-	EmailSummaryWebhookStatusInFlight  EmailSummaryWebhookStatus = "in_flight"
-	EmailSummaryWebhookStatusFired     EmailSummaryWebhookStatus = "fired"
-	EmailSummaryWebhookStatusFailed    EmailSummaryWebhookStatus = "failed"
-	EmailSummaryWebhookStatusExhausted EmailSummaryWebhookStatus = "exhausted"
-)
-
-// AllValues returns all EmailSummaryWebhookStatus values.
-func (EmailSummaryWebhookStatus) AllValues() []EmailSummaryWebhookStatus {
-	return []EmailSummaryWebhookStatus{
-		EmailSummaryWebhookStatusPending,
-		EmailSummaryWebhookStatusInFlight,
-		EmailSummaryWebhookStatusFired,
-		EmailSummaryWebhookStatusFailed,
-		EmailSummaryWebhookStatusExhausted,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s EmailSummaryWebhookStatus) MarshalText() ([]byte, error) {
-	switch s {
-	case EmailSummaryWebhookStatusPending:
-		return []byte(s), nil
-	case EmailSummaryWebhookStatusInFlight:
-		return []byte(s), nil
-	case EmailSummaryWebhookStatusFired:
-		return []byte(s), nil
-	case EmailSummaryWebhookStatusFailed:
-		return []byte(s), nil
-	case EmailSummaryWebhookStatusExhausted:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *EmailSummaryWebhookStatus) UnmarshalText(data []byte) error {
-	switch EmailSummaryWebhookStatus(data) {
-	case EmailSummaryWebhookStatusPending:
-		*s = EmailSummaryWebhookStatusPending
-		return nil
-	case EmailSummaryWebhookStatusInFlight:
-		*s = EmailSummaryWebhookStatusInFlight
-		return nil
-	case EmailSummaryWebhookStatusFired:
-		*s = EmailSummaryWebhookStatusFired
-		return nil
-	case EmailSummaryWebhookStatusFailed:
-		*s = EmailSummaryWebhookStatusFailed
-		return nil
-	case EmailSummaryWebhookStatusExhausted:
-		*s = EmailSummaryWebhookStatusExhausted
+	case EmailWebhookStatusExhausted:
+		*s = EmailWebhookStatusExhausted
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -3458,61 +3388,6 @@ func (s *ListEmailsOK) SetData(val []EmailSummary) {
 
 func (*ListEmailsOK) listEmailsRes() {}
 
-type ListEmailsStatus string
-
-const (
-	ListEmailsStatusPending   ListEmailsStatus = "pending"
-	ListEmailsStatusAccepted  ListEmailsStatus = "accepted"
-	ListEmailsStatusCompleted ListEmailsStatus = "completed"
-	ListEmailsStatusRejected  ListEmailsStatus = "rejected"
-)
-
-// AllValues returns all ListEmailsStatus values.
-func (ListEmailsStatus) AllValues() []ListEmailsStatus {
-	return []ListEmailsStatus{
-		ListEmailsStatusPending,
-		ListEmailsStatusAccepted,
-		ListEmailsStatusCompleted,
-		ListEmailsStatusRejected,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s ListEmailsStatus) MarshalText() ([]byte, error) {
-	switch s {
-	case ListEmailsStatusPending:
-		return []byte(s), nil
-	case ListEmailsStatusAccepted:
-		return []byte(s), nil
-	case ListEmailsStatusCompleted:
-		return []byte(s), nil
-	case ListEmailsStatusRejected:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *ListEmailsStatus) UnmarshalText(data []byte) error {
-	switch ListEmailsStatus(data) {
-	case ListEmailsStatusPending:
-		*s = ListEmailsStatusPending
-		return nil
-	case ListEmailsStatusAccepted:
-		*s = ListEmailsStatusAccepted
-		return nil
-	case ListEmailsStatusCompleted:
-		*s = ListEmailsStatusCompleted
-		return nil
-	case ListEmailsStatusRejected:
-		*s = ListEmailsStatusRejected
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
 type ListEmailsUnauthorized ErrorResponse
 
 func (*ListEmailsUnauthorized) listEmailsRes() {}
@@ -3803,6 +3678,52 @@ func (o OptDeliveryStatus) Or(d DeliveryStatus) DeliveryStatus {
 	return d
 }
 
+// NewOptEmailStatus returns new OptEmailStatus with value set to v.
+func NewOptEmailStatus(v EmailStatus) OptEmailStatus {
+	return OptEmailStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailStatus is optional EmailStatus.
+type OptEmailStatus struct {
+	Value EmailStatus
+	Set   bool
+}
+
+// IsSet returns true if OptEmailStatus was set.
+func (o OptEmailStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailStatus) Reset() {
+	var v EmailStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailStatus) SetTo(v EmailStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailStatus) Get() (v EmailStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailStatus) Or(d EmailStatus) EmailStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptErrorResponseErrorDetails returns new OptErrorResponseErrorDetails with value set to v.
 func NewOptErrorResponseErrorDetails(v ErrorResponseErrorDetails) OptErrorResponseErrorDetails {
 	return OptErrorResponseErrorDetails{
@@ -4033,52 +3954,6 @@ func (o OptListDeliveriesStatus) Or(d ListDeliveriesStatus) ListDeliveriesStatus
 	return d
 }
 
-// NewOptListEmailsStatus returns new OptListEmailsStatus with value set to v.
-func NewOptListEmailsStatus(v ListEmailsStatus) OptListEmailsStatus {
-	return OptListEmailsStatus{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListEmailsStatus is optional ListEmailsStatus.
-type OptListEmailsStatus struct {
-	Value ListEmailsStatus
-	Set   bool
-}
-
-// IsSet returns true if OptListEmailsStatus was set.
-func (o OptListEmailsStatus) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListEmailsStatus) Reset() {
-	var v ListEmailsStatus
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListEmailsStatus) SetTo(v ListEmailsStatus) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListEmailsStatus) Get() (v ListEmailsStatus, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListEmailsStatus) Or(d ListEmailsStatus) ListEmailsStatus {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptNilBool returns new OptNilBool with value set to v.
 func NewOptNilBool(v bool) OptNilBool {
 	return OptNilBool{
@@ -4268,52 +4143,52 @@ func (o OptNilDeliverySummaryEmail) Or(d DeliverySummaryEmail) DeliverySummaryEm
 	return d
 }
 
-// NewOptNilEmailDetailWebhookStatus returns new OptNilEmailDetailWebhookStatus with value set to v.
-func NewOptNilEmailDetailWebhookStatus(v EmailDetailWebhookStatus) OptNilEmailDetailWebhookStatus {
-	return OptNilEmailDetailWebhookStatus{
+// NewOptNilEmailWebhookStatus returns new OptNilEmailWebhookStatus with value set to v.
+func NewOptNilEmailWebhookStatus(v EmailWebhookStatus) OptNilEmailWebhookStatus {
+	return OptNilEmailWebhookStatus{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptNilEmailDetailWebhookStatus is optional nullable EmailDetailWebhookStatus.
-type OptNilEmailDetailWebhookStatus struct {
-	Value EmailDetailWebhookStatus
+// OptNilEmailWebhookStatus is optional nullable EmailWebhookStatus.
+type OptNilEmailWebhookStatus struct {
+	Value EmailWebhookStatus
 	Set   bool
 	Null  bool
 }
 
-// IsSet returns true if OptNilEmailDetailWebhookStatus was set.
-func (o OptNilEmailDetailWebhookStatus) IsSet() bool { return o.Set }
+// IsSet returns true if OptNilEmailWebhookStatus was set.
+func (o OptNilEmailWebhookStatus) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptNilEmailDetailWebhookStatus) Reset() {
-	var v EmailDetailWebhookStatus
+func (o *OptNilEmailWebhookStatus) Reset() {
+	var v EmailWebhookStatus
 	o.Value = v
 	o.Set = false
 	o.Null = false
 }
 
 // SetTo sets value to v.
-func (o *OptNilEmailDetailWebhookStatus) SetTo(v EmailDetailWebhookStatus) {
+func (o *OptNilEmailWebhookStatus) SetTo(v EmailWebhookStatus) {
 	o.Set = true
 	o.Null = false
 	o.Value = v
 }
 
 // IsNull returns true if value is Null.
-func (o OptNilEmailDetailWebhookStatus) IsNull() bool { return o.Null }
+func (o OptNilEmailWebhookStatus) IsNull() bool { return o.Null }
 
 // SetToNull sets value to null.
-func (o *OptNilEmailDetailWebhookStatus) SetToNull() {
+func (o *OptNilEmailWebhookStatus) SetToNull() {
 	o.Set = true
 	o.Null = true
-	var v EmailDetailWebhookStatus
+	var v EmailWebhookStatus
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptNilEmailDetailWebhookStatus) Get() (v EmailDetailWebhookStatus, ok bool) {
+func (o OptNilEmailWebhookStatus) Get() (v EmailWebhookStatus, ok bool) {
 	if o.Null {
 		return v, false
 	}
@@ -4324,70 +4199,7 @@ func (o OptNilEmailDetailWebhookStatus) Get() (v EmailDetailWebhookStatus, ok bo
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptNilEmailDetailWebhookStatus) Or(d EmailDetailWebhookStatus) EmailDetailWebhookStatus {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptNilEmailSummaryWebhookStatus returns new OptNilEmailSummaryWebhookStatus with value set to v.
-func NewOptNilEmailSummaryWebhookStatus(v EmailSummaryWebhookStatus) OptNilEmailSummaryWebhookStatus {
-	return OptNilEmailSummaryWebhookStatus{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptNilEmailSummaryWebhookStatus is optional nullable EmailSummaryWebhookStatus.
-type OptNilEmailSummaryWebhookStatus struct {
-	Value EmailSummaryWebhookStatus
-	Set   bool
-	Null  bool
-}
-
-// IsSet returns true if OptNilEmailSummaryWebhookStatus was set.
-func (o OptNilEmailSummaryWebhookStatus) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptNilEmailSummaryWebhookStatus) Reset() {
-	var v EmailSummaryWebhookStatus
-	o.Value = v
-	o.Set = false
-	o.Null = false
-}
-
-// SetTo sets value to v.
-func (o *OptNilEmailSummaryWebhookStatus) SetTo(v EmailSummaryWebhookStatus) {
-	o.Set = true
-	o.Null = false
-	o.Value = v
-}
-
-// IsNull returns true if value is Null.
-func (o OptNilEmailSummaryWebhookStatus) IsNull() bool { return o.Null }
-
-// SetToNull sets value to null.
-func (o *OptNilEmailSummaryWebhookStatus) SetToNull() {
-	o.Set = true
-	o.Null = true
-	var v EmailSummaryWebhookStatus
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptNilEmailSummaryWebhookStatus) Get() (v EmailSummaryWebhookStatus, ok bool) {
-	if o.Null {
-		return v, false
-	}
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptNilEmailSummaryWebhookStatus) Or(d EmailSummaryWebhookStatus) EmailSummaryWebhookStatus {
+func (o OptNilEmailWebhookStatus) Or(d EmailWebhookStatus) EmailWebhookStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}

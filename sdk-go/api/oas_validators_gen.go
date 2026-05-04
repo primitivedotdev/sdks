@@ -642,7 +642,7 @@ func (s *EmailDetailReply) Validate() error {
 	return nil
 }
 
-func (s EmailDetailStatus) Validate() error {
+func (s EmailStatus) Validate() error {
 	switch s {
 	case "pending":
 		return nil
@@ -651,23 +651,6 @@ func (s EmailDetailStatus) Validate() error {
 	case "completed":
 		return nil
 	case "rejected":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s EmailDetailWebhookStatus) Validate() error {
-	switch s {
-	case "pending":
-		return nil
-	case "in_flight":
-		return nil
-	case "fired":
-		return nil
-	case "failed":
-		return nil
-	case "exhausted":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -733,22 +716,7 @@ func (s *EmailSummary) Validate() error {
 	return nil
 }
 
-func (s EmailSummaryStatus) Validate() error {
-	switch s {
-	case "pending":
-		return nil
-	case "accepted":
-		return nil
-	case "completed":
-		return nil
-	case "rejected":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s EmailSummaryWebhookStatus) Validate() error {
+func (s EmailWebhookStatus) Validate() error {
 	switch s {
 	case "pending":
 		return nil
@@ -1410,21 +1378,6 @@ func (s *ListEmailsOK) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
-}
-
-func (s ListEmailsStatus) Validate() error {
-	switch s {
-	case "pending":
-		return nil
-	case "accepted":
-		return nil
-	case "completed":
-		return nil
-	case "rejected":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
 }
 
 func (s *ListEmailsUnauthorized) Validate() error {

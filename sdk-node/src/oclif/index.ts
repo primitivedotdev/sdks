@@ -73,7 +73,16 @@ class DescribeCommand extends Command {
   static description =
     `Print the full operation manifest entry for a single API command, including the path, request schema, response schema, and per-field descriptions sourced from the OpenAPI spec.
 
-  Useful for clarifying response field meanings (e.g. on inbound EmailDetail, which of \`sender\`, \`from_email\`, \`from_header\`, and \`smtp_mail_from\` to read), confirming required body fields, or checking a path's parameter shape before composing a request.`;
+  The manifest entry's \`responseSchema\` carries the inlined JSON Schema for the operation's 200/201 \`data\` envelope contents (\`$ref\`s resolved). Use it to look up what specific response fields mean. Examples:
+
+      # Which of EmailDetail's sender-shaped fields is canonical?
+      primitive describe emails:get-email | jq '.responseSchema.properties | keys'
+      primitive describe emails:get-email | jq -r '.responseSchema.properties.from_email.description'
+
+      # What does each value of SentEmailStatus mean?
+      primitive describe sending:get-sent-email | jq -r '.responseSchema.properties.status.description'
+
+  \`requestSchema\` is the same shape for the request body when one exists. For a single field across many operations at once, use \`primitive list-operations | jq\` instead.`;
 
   static summary = "Describe a single API operation in detail";
 

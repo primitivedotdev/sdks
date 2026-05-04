@@ -88,6 +88,13 @@ type PrimitiveOperationManifest = {
    * full schema dump in one call.
    */
   requestSchema: Record<string, unknown> | null;
+  /**
+   * Resolved JSON Schema for the 200/201 response body's `data`
+   * envelope contents. Same shape as `requestSchema`: `$ref`s
+   * inlined, ready for agent consumption. Null on operations
+   * without a 200/201 JSON response (binary downloads).
+   */
+  responseSchema: Record<string, unknown> | null;
   sdkName: string;
   summary: string | null;
   tag: string;
@@ -294,6 +301,62 @@ function getRequestSchema(
     : null;
 }
 
+/**
+ * Pick the most interesting JSON Schema describing what an operation
+ * returns, with `$ref`s inlined. The "interesting" part is the `data`
+ * property of the 200 or 201 response envelope — the rest of the
+ * envelope (`{ success: true, meta: {...} }`) is uniform across the
+ * spec and adds noise.
+ *
+ * Spec-side, success responses are written as
+ * `allOf: [SuccessEnvelope, { properties: { data: <real schema> } }]`
+ * (or the same with ListEnvelope). This helper walks that shape and
+ * returns the inlined `<real schema>`. If the spec ever stops using
+ * the allOf+envelope idiom for an operation, the helper falls back
+ * to the full inlined response schema rather than returning null,
+ * since "imperfect schema" is more useful to an agent than "no
+ * schema."
+ *
+ * Surfaced for AGX: the `primitive describe` command advertises
+ * itself as the place to look up response field meanings (e.g.
+ * "which of `sender`, `from_email`, `from_header`, `smtp_mail_from`
+ * to read"). That promise was not delivered before this field
+ * existed; describe printed the manifest entry verbatim and the
+ * manifest had no response schema at all.
+ */
+function getResponseSchema(
+  doc: Record<string, unknown>,
+  operation: OpenApiOperation,
+): Record<string, unknown> | null {
+  const responses = operation.responses ?? {};
+  const response = responses["200"] ?? responses["201"];
+  if (!response) return null;
+  const schema = response.content?.["application/json"]?.schema;
+  if (!schema) return null;
+  const inlined = inlineSchemaRefs(doc, schema);
+  if (!inlined || typeof inlined !== "object") return null;
+
+  // The allOf+envelope idiom: try to peel off the envelope so the
+  // response schema is just the data shape. Picks the first allOf
+  // member that declares a `data` property and uses that property's
+  // schema directly. Falls through to the full schema if no member
+  // matches the pattern.
+  const fragment = inlined as Record<string, unknown>;
+  const allOf = fragment.allOf;
+  if (Array.isArray(allOf)) {
+    for (const member of allOf) {
+      if (!member || typeof member !== "object") continue;
+      const props = (member as Record<string, unknown>).properties;
+      if (!props || typeof props !== "object") continue;
+      const dataSchema = (props as Record<string, unknown>).data;
+      if (dataSchema && typeof dataSchema === "object") {
+        return dataSchema as Record<string, unknown>;
+      }
+    }
+  }
+  return fragment;
+}
+
 function hasBinaryResponse(operation: OpenApiOperation): boolean {
   const responses = operation.responses ?? {};
 
@@ -340,6 +403,7 @@ function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest
         pathParams: manifestParameters(parameters, "path"),
         queryParams: manifestParameters(parameters, "query"),
         requestSchema: getRequestSchema(doc, operation),
+        responseSchema: getResponseSchema(doc, operation),
         sdkName: operation.operationId,
         summary: operation.summary ?? null,
         tag,
@@ -413,6 +477,12 @@ export type PrimitiveOperationManifest = {
    * true. \`$ref\`s into the OpenAPI components are inlined.
    */
   requestSchema: Record<string, unknown> | null;
+  /**
+   * Resolved JSON Schema for the 200/201 response body's \`data\`
+   * envelope contents. Same shape as \`requestSchema\`: \`$ref\`s
+   * inlined. Null on operations without a 200/201 JSON response.
+   */
+  responseSchema: Record<string, unknown> | null;
   sdkName: string;
   summary: string | null;
   tag: string;

@@ -26,15 +26,11 @@ from .domain_verify_result_type_0 import DomainVerifyResultType0
 from .domain_verify_result_type_1 import DomainVerifyResultType1
 from .email_detail import EmailDetail
 from .email_detail_reply import EmailDetailReply
-from .email_detail_status import EmailDetailStatus
-from .email_detail_webhook_status_type_1 import EmailDetailWebhookStatusType1
-from .email_detail_webhook_status_type_2_type_1 import EmailDetailWebhookStatusType2Type1
-from .email_detail_webhook_status_type_3_type_1 import EmailDetailWebhookStatusType3Type1
+from .email_status import EmailStatus
 from .email_summary import EmailSummary
-from .email_summary_status import EmailSummaryStatus
-from .email_summary_webhook_status_type_1 import EmailSummaryWebhookStatusType1
-from .email_summary_webhook_status_type_2_type_1 import EmailSummaryWebhookStatusType2Type1
-from .email_summary_webhook_status_type_3_type_1 import EmailSummaryWebhookStatusType3Type1
+from .email_webhook_status_type_1 import EmailWebhookStatusType1
+from .email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
+from .email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
 from .endpoint import Endpoint
 from .endpoint_rules import EndpointRules
 from .error_response import ErrorResponse
@@ -59,7 +55,6 @@ from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
 from .list_domains_response_200 import ListDomainsResponse200
 from .list_emails_response_200 import ListEmailsResponse200
-from .list_emails_status import ListEmailsStatus
 from .list_endpoints_response_200 import ListEndpointsResponse200
 from .list_envelope import ListEnvelope
 from .list_filters_response_200 import ListFiltersResponse200
@@ -131,15 +126,11 @@ __all__ = (
     "DomainVerifyResultType1",
     "EmailDetail",
     "EmailDetailReply",
-    "EmailDetailStatus",
-    "EmailDetailWebhookStatusType1",
-    "EmailDetailWebhookStatusType2Type1",
-    "EmailDetailWebhookStatusType3Type1",
+    "EmailStatus",
     "EmailSummary",
-    "EmailSummaryStatus",
-    "EmailSummaryWebhookStatusType1",
-    "EmailSummaryWebhookStatusType2Type1",
-    "EmailSummaryWebhookStatusType3Type1",
+    "EmailWebhookStatusType1",
+    "EmailWebhookStatusType2Type1",
+    "EmailWebhookStatusType3Type1",
     "Endpoint",
     "EndpointRules",
     "ErrorResponse",
@@ -164,7 +155,6 @@ __all__ = (
     "ListDeliveriesStatus",
     "ListDomainsResponse200",
     "ListEmailsResponse200",
-    "ListEmailsStatus",
     "ListEndpointsResponse200",
     "ListEnvelope",
     "ListFiltersResponse200",

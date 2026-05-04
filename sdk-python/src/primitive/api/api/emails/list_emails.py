@@ -8,9 +8,9 @@ from ...client import AuthenticatedClient, Client
 from ...types import Response, UNSET
 from ... import errors
 
+from ...models.email_status import EmailStatus
 from ...models.error_response import ErrorResponse
 from ...models.list_emails_response_200 import ListEmailsResponse200
-from ...models.list_emails_status import ListEmailsStatus
 from ...types import UNSET, Unset
 from dateutil.parser import isoparse
 from typing import cast
@@ -24,7 +24,7 @@ def _get_kwargs(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     domain_id: UUID | Unset = UNSET,
-    status: ListEmailsStatus | Unset = UNSET,
+    status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -121,7 +121,7 @@ def sync_detailed(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     domain_id: UUID | Unset = UNSET,
-    status: ListEmailsStatus | Unset = UNSET,
+    status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -141,7 +141,33 @@ def sync_detailed(
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         domain_id (UUID | Unset):
-        status (ListEmailsStatus | Unset):
+        status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
+            table). Distinct from `SentEmailStatus`, which describes
+            the OUTBOUND lifecycle (the `sent_emails` table) and uses
+            a different vocabulary because the lifecycles differ.
+            Possible values:
+
+              - `pending`: the row was inserted at ingestion (mx_main)
+                and has not yet completed the spam / filter / auth
+                pipeline. Body and parsed fields are present; webhook
+                delivery is not yet scheduled. Most rows transition out
+                of `pending` within seconds.
+              - `accepted`: the inbound passed the policy gates and is
+                queued for webhook delivery. The `webhook_status` field
+                tracks the separate webhook-delivery lifecycle from
+                this point.
+              - `completed`: terminal success. Webhook delivery
+                attempted and acknowledged by every active endpoint, OR
+                no endpoints are configured, so the row is durably
+                archived.
+              - `rejected`: terminal failure at ingestion (spam, blocked
+                sender, filter rule, malformed). The body and metadata
+                are stored for auditing but no webhook fires and the
+                row is not repliable.
+
+            See also `webhook_status` (separate enum tracking the
+            webhook-delivery state machine) and `SentEmailStatus` (the
+            outbound vocabulary).
         search (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
@@ -178,7 +204,7 @@ def sync(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     domain_id: UUID | Unset = UNSET,
-    status: ListEmailsStatus | Unset = UNSET,
+    status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -198,7 +224,33 @@ def sync(
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         domain_id (UUID | Unset):
-        status (ListEmailsStatus | Unset):
+        status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
+            table). Distinct from `SentEmailStatus`, which describes
+            the OUTBOUND lifecycle (the `sent_emails` table) and uses
+            a different vocabulary because the lifecycles differ.
+            Possible values:
+
+              - `pending`: the row was inserted at ingestion (mx_main)
+                and has not yet completed the spam / filter / auth
+                pipeline. Body and parsed fields are present; webhook
+                delivery is not yet scheduled. Most rows transition out
+                of `pending` within seconds.
+              - `accepted`: the inbound passed the policy gates and is
+                queued for webhook delivery. The `webhook_status` field
+                tracks the separate webhook-delivery lifecycle from
+                this point.
+              - `completed`: terminal success. Webhook delivery
+                attempted and acknowledged by every active endpoint, OR
+                no endpoints are configured, so the row is durably
+                archived.
+              - `rejected`: terminal failure at ingestion (spam, blocked
+                sender, filter rule, malformed). The body and metadata
+                are stored for auditing but no webhook fires and the
+                row is not repliable.
+
+            See also `webhook_status` (separate enum tracking the
+            webhook-delivery state machine) and `SentEmailStatus` (the
+            outbound vocabulary).
         search (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
@@ -230,7 +282,7 @@ async def asyncio_detailed(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     domain_id: UUID | Unset = UNSET,
-    status: ListEmailsStatus | Unset = UNSET,
+    status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -250,7 +302,33 @@ async def asyncio_detailed(
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         domain_id (UUID | Unset):
-        status (ListEmailsStatus | Unset):
+        status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
+            table). Distinct from `SentEmailStatus`, which describes
+            the OUTBOUND lifecycle (the `sent_emails` table) and uses
+            a different vocabulary because the lifecycles differ.
+            Possible values:
+
+              - `pending`: the row was inserted at ingestion (mx_main)
+                and has not yet completed the spam / filter / auth
+                pipeline. Body and parsed fields are present; webhook
+                delivery is not yet scheduled. Most rows transition out
+                of `pending` within seconds.
+              - `accepted`: the inbound passed the policy gates and is
+                queued for webhook delivery. The `webhook_status` field
+                tracks the separate webhook-delivery lifecycle from
+                this point.
+              - `completed`: terminal success. Webhook delivery
+                attempted and acknowledged by every active endpoint, OR
+                no endpoints are configured, so the row is durably
+                archived.
+              - `rejected`: terminal failure at ingestion (spam, blocked
+                sender, filter rule, malformed). The body and metadata
+                are stored for auditing but no webhook fires and the
+                row is not repliable.
+
+            See also `webhook_status` (separate enum tracking the
+            webhook-delivery state machine) and `SentEmailStatus` (the
+            outbound vocabulary).
         search (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
@@ -287,7 +365,7 @@ async def asyncio(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     domain_id: UUID | Unset = UNSET,
-    status: ListEmailsStatus | Unset = UNSET,
+    status: EmailStatus | Unset = UNSET,
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -307,7 +385,33 @@ async def asyncio(
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         domain_id (UUID | Unset):
-        status (ListEmailsStatus | Unset):
+        status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
+            table). Distinct from `SentEmailStatus`, which describes
+            the OUTBOUND lifecycle (the `sent_emails` table) and uses
+            a different vocabulary because the lifecycles differ.
+            Possible values:
+
+              - `pending`: the row was inserted at ingestion (mx_main)
+                and has not yet completed the spam / filter / auth
+                pipeline. Body and parsed fields are present; webhook
+                delivery is not yet scheduled. Most rows transition out
+                of `pending` within seconds.
+              - `accepted`: the inbound passed the policy gates and is
+                queued for webhook delivery. The `webhook_status` field
+                tracks the separate webhook-delivery lifecycle from
+                this point.
+              - `completed`: terminal success. Webhook delivery
+                attempted and acknowledged by every active endpoint, OR
+                no endpoints are configured, so the row is durably
+                archived.
+              - `rejected`: terminal failure at ingestion (spam, blocked
+                sender, filter rule, malformed). The body and metadata
+                are stored for auditing but no webhook fires and the
+                row is not repliable.
+
+            See also `webhook_status` (separate enum tracking the
+            webhook-delivery state machine) and `SentEmailStatus` (the
+            outbound vocabulary).
         search (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
