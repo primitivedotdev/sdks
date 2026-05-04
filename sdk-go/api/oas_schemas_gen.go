@@ -875,6 +875,86 @@ func (s *DeliverySummaryStatus) UnmarshalText(data []byte) error {
 	}
 }
 
+// Ref: #/components/schemas/DiscardContentResult
+type DiscardContentResult struct {
+	// Always `true` on a 2xx response. The content is either now
+	// discarded as a result of this call, or was already discarded
+	// before this call ran.
+	Discarded bool `json:"discarded"`
+	// `true` if the email's content was already discarded before
+	// this call ran (no work was done). `false` if this call was
+	// the one that performed the discard.
+	AlreadyDiscarded bool `json:"already_discarded"`
+}
+
+// GetDiscarded returns the value of Discarded.
+func (s *DiscardContentResult) GetDiscarded() bool {
+	return s.Discarded
+}
+
+// GetAlreadyDiscarded returns the value of AlreadyDiscarded.
+func (s *DiscardContentResult) GetAlreadyDiscarded() bool {
+	return s.AlreadyDiscarded
+}
+
+// SetDiscarded sets the value of Discarded.
+func (s *DiscardContentResult) SetDiscarded(val bool) {
+	s.Discarded = val
+}
+
+// SetAlreadyDiscarded sets the value of AlreadyDiscarded.
+func (s *DiscardContentResult) SetAlreadyDiscarded(val bool) {
+	s.AlreadyDiscarded = val
+}
+
+type DiscardEmailContentBadRequest ErrorResponse
+
+func (*DiscardEmailContentBadRequest) discardEmailContentRes() {}
+
+type DiscardEmailContentForbidden ErrorResponse
+
+func (*DiscardEmailContentForbidden) discardEmailContentRes() {}
+
+type DiscardEmailContentInternalServerError ErrorResponse
+
+func (*DiscardEmailContentInternalServerError) discardEmailContentRes() {}
+
+type DiscardEmailContentNotFound ErrorResponse
+
+func (*DiscardEmailContentNotFound) discardEmailContentRes() {}
+
+// Merged schema.
+type DiscardEmailContentOK struct {
+	Success bool                 `json:"success"`
+	Data    DiscardContentResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *DiscardEmailContentOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *DiscardEmailContentOK) GetData() DiscardContentResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *DiscardEmailContentOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *DiscardEmailContentOK) SetData(val DiscardContentResult) {
+	s.Data = val
+}
+
+func (*DiscardEmailContentOK) discardEmailContentRes() {}
+
+type DiscardEmailContentUnauthorized ErrorResponse
+
+func (*DiscardEmailContentUnauthorized) discardEmailContentRes() {}
+
 // A domain can be either verified or unverified. Verified domains have
 // `is_active` and `spam_threshold` fields. Unverified domains have a
 // `verification_token` for DNS verification.
@@ -2372,6 +2452,7 @@ const (
 	ErrorResponseErrorCodeOutboundCapacityExhausted ErrorResponseErrorCode = "outbound_capacity_exhausted"
 	ErrorResponseErrorCodeOutboundResponseMalformed ErrorResponseErrorCode = "outbound_response_malformed"
 	ErrorResponseErrorCodeOutboundRelayFailed       ErrorResponseErrorCode = "outbound_relay_failed"
+	ErrorResponseErrorCodeDiscardNotEnabled         ErrorResponseErrorCode = "discard_not_enabled"
 	ErrorResponseErrorCodeInboundNotRepliable       ErrorResponseErrorCode = "inbound_not_repliable"
 )
 
@@ -2395,6 +2476,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeOutboundCapacityExhausted,
 		ErrorResponseErrorCodeOutboundResponseMalformed,
 		ErrorResponseErrorCodeOutboundRelayFailed,
+		ErrorResponseErrorCodeDiscardNotEnabled,
 		ErrorResponseErrorCodeInboundNotRepliable,
 	}
 }
@@ -2435,6 +2517,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeOutboundResponseMalformed:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeOutboundRelayFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDiscardNotEnabled:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInboundNotRepliable:
 		return []byte(s), nil
@@ -2496,6 +2580,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeOutboundRelayFailed:
 		*s = ErrorResponseErrorCodeOutboundRelayFailed
+		return nil
+	case ErrorResponseErrorCodeDiscardNotEnabled:
+		*s = ErrorResponseErrorCodeDiscardNotEnabled
 		return nil
 	case ErrorResponseErrorCodeInboundNotRepliable:
 		*s = ErrorResponseErrorCodeInboundNotRepliable
@@ -4788,6 +4875,7 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
+func (*RateLimitedHeaders) discardEmailContentRes() {}
 func (*RateLimitedHeaders) replayDeliveryRes()      {}
 func (*RateLimitedHeaders) replayEmailWebhooksRes() {}
 func (*RateLimitedHeaders) replyToEmailRes()        {}

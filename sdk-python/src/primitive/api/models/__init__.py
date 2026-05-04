@@ -22,6 +22,8 @@ from .delivery_status import DeliveryStatus
 from .delivery_summary import DeliverySummary
 from .delivery_summary_email_type_0 import DeliverySummaryEmailType0
 from .delivery_summary_status import DeliverySummaryStatus
+from .discard_content_result import DiscardContentResult
+from .discard_email_content_response_200 import DiscardEmailContentResponse200
 from .domain_verify_result_type_0 import DomainVerifyResultType0
 from .domain_verify_result_type_1 import DomainVerifyResultType1
 from .email_detail import EmailDetail
@@ -122,6 +124,8 @@ __all__ = (
     "DeliverySummary",
     "DeliverySummaryEmailType0",
     "DeliverySummaryStatus",
+    "DiscardContentResult",
+    "DiscardEmailContentResponse200",
     "DomainVerifyResultType0",
     "DomainVerifyResultType1",
     "EmailDetail",
