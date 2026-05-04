@@ -24,7 +24,7 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
 // Description of a single top-level body property, normalized
 // from the JSON Schema on the operation manifest. `kind` tells the
 // CLI generator whether to expose the field as an individual
-// `--flag` (scalar) or leave it to `--body` JSON (non-scalar).
+// `--flag` (scalar) or leave it to `--raw-body` JSON (non-scalar).
 interface BodyFieldDescriptor {
   name: string;
   description: string;
@@ -34,7 +34,7 @@ interface BodyFieldDescriptor {
   displayType: string;
   // Either a CLI flag-able scalar kind or "complex" (array, object,
   // mixed-non-nullable, unknown). Complex fields cannot be
-  // expressed as a single CLI flag and must go through --body.
+  // expressed as a single CLI flag and must go through --raw-body.
   kind: "string" | "integer" | "boolean" | "complex";
   // Restricted-string enum, when the schema had `enum: [...]` and
   // the type is string. Used to bound the generated flag.
@@ -131,15 +131,15 @@ function extractBodyFields(
  * Most scalar fields are exposed as individual `--flag` flags,
  * which oclif auto-renders in the FLAGS section above. To avoid
  * duplicating that, the summary here only documents fields that
- * MUST go through `--body` (complex types: arrays, objects,
+ * MUST go through `--raw-body` (complex types: arrays, objects,
  * mixed-non-nullable). When an operation has only scalars, the
  * summary is omitted entirely and oclif's FLAGS section is the
  * full story.
  *
  * For operations with mixed scalar and complex fields, we also
  * include a short header pointing the agent at the flag form so
- * the natural reading is "use the flags above; --body for the
- * leftovers below."
+ * the natural reading is "use the flags above; --raw-body for
+ * the leftovers below."
  */
 function renderRequestSchemaSummary(
   schema: Record<string, unknown> | null,
@@ -156,7 +156,7 @@ function renderRequestSchemaSummary(
   );
   const descMax = 78;
   const lines = [
-    "Body fields requiring --body JSON (these are not exposed as flags):",
+    "Body fields requiring --raw-body JSON (these are not exposed as flags):",
   ];
   for (const f of complex) {
     const marker = f.required ? " *" : "  ";
@@ -246,10 +246,10 @@ function parseJson(source: string, flagLabel: string): unknown {
 
 export function readJsonBody(flags: Record<string, unknown>): unknown {
   const bodyFile = flags["body-file"];
-  const body = flags.body;
+  const rawBody = flags["raw-body"];
 
-  if (bodyFile && body) {
-    throw cliError("Use either --body or --body-file, not both");
+  if (bodyFile && rawBody) {
+    throw cliError("Use either --raw-body or --body-file, not both");
   }
 
   if (typeof bodyFile === "string") {
@@ -263,8 +263,8 @@ export function readJsonBody(flags: Record<string, unknown>): unknown {
     return parseJson(contents, `--body-file ${bodyFile}`);
   }
 
-  if (typeof body === "string") {
-    return parseJson(body, "--body");
+  if (typeof rawBody === "string") {
+    return parseJson(rawBody, "--raw-body");
   }
 
   return undefined;
@@ -326,13 +326,25 @@ export function formatErrorPayload(payload: unknown): string {
 }
 
 // Reserved flag names the body-field expander must never overwrite.
-// `--body` and `--body-file` are the JSON escape hatches.
+// `--raw-body` and `--body-file` are the JSON escape hatches.
 // `--api-key`, `--base-url`, `--output` are infra. Path and query
 // params get added before body fields and take precedence.
+//
+// Note: `--body` is intentionally NOT reserved here. The naive
+// agent expectation (per AGX walkthrough) is that --body means
+// "the message body content," which collides with the JSON
+// escape-hatch meaning we used pre-0.12. The escape hatch is now
+// `--raw-body`; --body is free to be claimed by per-field flag
+// expansion as the kebab-cased version of a `body` schema field
+// (e.g. on a future `body: { ... }` schema). For send-mail today,
+// the body-text field is `body_text` -> `--body-text`, and there
+// is no top-level `body` field, so --body remains unclaimed at
+// the generated-command level. The agent shortcut `primitive
+// send` defines its own --body for the message text.
 const RESERVED_FLAG_NAMES = new Set([
   "api-key",
   "base-url",
-  "body",
+  "raw-body",
   "body-file",
   "output",
 ]);
@@ -391,13 +403,13 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   const bodyFieldFlagToProperty = new Map<string, string>();
 
   if (operation.hasJsonBody) {
-    flags.body = Flags.string({
+    flags["raw-body"] = Flags.string({
       description:
-        "Full request body as JSON. Prefer per-field flags (e.g. --to, --from, --body-text) when available; --body is the escape hatch for nested or complex fields.",
+        "Full request body as raw JSON. Escape hatch for nested or complex fields (e.g. arrays); prefer per-field flags (e.g. --to, --from, --body-text) when available.",
     });
     flags["body-file"] = Flags.string({
       description:
-        "Path to a JSON file used as the request body. Same role as --body for callers passing a saved payload.",
+        "Path to a JSON file used as the request body. Same role as --raw-body for callers passing a saved payload.",
     });
 
     // Expand top-level scalar body fields into individual flags so
@@ -556,7 +568,7 @@ export function createOperationCommand(
               .map((p) => `--${flagName(p)}`)
               .join(", ");
             throw new Errors.CLIError(
-              `--body must be a JSON object when also passing per-field flags (got ${explicitKind}); supplied per-field flags: ${overrideFlags}. Either drop --body and rely on the per-field flags, or move every field into the JSON --body and drop the flags.`,
+              `--raw-body must be a JSON object when also passing per-field flags (got ${explicitKind}); supplied per-field flags: ${overrideFlags}. Either drop --raw-body and rely on the per-field flags, or move every field into the JSON --raw-body and drop the flags.`,
             );
           }
         } else {
@@ -566,7 +578,7 @@ export function createOperationCommand(
 
       if (operation.bodyRequired && body === undefined) {
         throw new Errors.CLIError(
-          `Operation ${operation.operationId} requires a body. Pass each field as a --flag (see --help) or supply JSON via --body / --body-file.`,
+          `Operation ${operation.operationId} requires a body. Pass each field as a --flag (see --help) or supply JSON via --raw-body / --body-file.`,
         );
       }
 
@@ -611,9 +623,40 @@ export function createOperationCommand(
       if (cursor) {
         process.stderr.write(`next cursor: ${cursor}\n`);
       }
+
+      // Empty-result hint. When a list-style operation returns
+      // an empty array, emit an operation-specific note to
+      // stderr so a naive caller can distinguish "nothing here"
+      // from "something isn't set up." Stdout still gets the
+      // raw `[]` so machine-readable output is unchanged. The
+      // AGX walkthrough flagged this: `list-deliveries` returning
+      // `[]` left the agent unsure whether they had an empty
+      // delivery log or no endpoints configured at all.
+      if (Array.isArray(envelope?.data) && envelope.data.length === 0) {
+        const hint = EMPTY_RESULT_HINTS[operation.sdkName];
+        if (hint) process.stderr.write(`${hint}\n`);
+      }
+
       this.log(JSON.stringify(envelope?.data ?? null, null, 2));
     }
   }
 
   return OperationCommand;
 }
+
+// Empty-state hints for list-style operations whose empty result
+// would otherwise leave the caller wondering "is this empty
+// because there's nothing to list, or because something earlier
+// in the setup chain isn't done?" Keys are the manifest's
+// `sdkName` for the operation. Operations without an entry fall
+// back to no hint (silent empty array, same as before).
+const EMPTY_RESULT_HINTS: Record<string, string> = {
+  listDeliveries:
+    "(no results) Often means no webhook endpoints are configured to receive deliveries. Run `primitive endpoints:list-endpoints` to check.",
+  listEndpoints:
+    "(no results) No webhook endpoints configured. Add one with `primitive endpoints:create-endpoint --url <your-url>`.",
+  listEmails: "(no results) No inbound emails received yet on this account.",
+  listDomains:
+    "(no results) No domains on this account. Add one with `primitive domains:add-domain --domain <yourdomain.example>`.",
+  listFilters: "(no results) No filter rules configured.",
+};

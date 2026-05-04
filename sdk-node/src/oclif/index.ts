@@ -5,6 +5,7 @@ import {
 } from "../openapi/index.js";
 import { createOperationCommand } from "./api-command.js";
 import SendCommand from "./commands/send.js";
+import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
 
 class ListOperationsCommand extends Command {
@@ -62,5 +63,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // operation stays available under sending:send-email for callers
   // who want every flag.
   send: SendCommand,
+  // `whoami` is the credentials smoke test. Prints the account the
+  // current API key authenticates as. AGX walkthroughs kept
+  // wanting this before risking a real call against a possibly-
+  // bad key.
+  whoami: WhoamiCommand,
   ...generatedCommands,
 };
