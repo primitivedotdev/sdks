@@ -130,12 +130,20 @@ def sync_detailed(
     """ List inbound emails
 
      Returns a paginated list of INBOUND emails received at your
-    verified domains. Outbound messages sent via /send-mail are not
-    included; this endpoint is the inbox view, not a unified
-    send/receive history.
+    verified domains. Outbound messages sent via /send-mail are
+    not included; this endpoint is the inbox view, not a
+    unified send/receive history.
 
-    Supports filtering by domain, status, date range, and free-text
-    search across subject, sender, and recipient fields.
+    Supports filtering by domain, status, date range, and
+    free-text search across subject, sender, and recipient
+    fields.
+
+    For a compact text-table summary of the most recent N
+    inbounds (no filters, no cursor pagination), the CLI ships
+    `primitive emails:latest` as a one-line-per-email shortcut.
+    It's TTY-aware so id columns are full UUIDs when piped, and
+    a `--json` flag returns the same envelope this endpoint
+    does. Use whichever fits the call site.
 
     Args:
         cursor (str | Unset):
@@ -213,12 +221,20 @@ def sync(
     """ List inbound emails
 
      Returns a paginated list of INBOUND emails received at your
-    verified domains. Outbound messages sent via /send-mail are not
-    included; this endpoint is the inbox view, not a unified
-    send/receive history.
+    verified domains. Outbound messages sent via /send-mail are
+    not included; this endpoint is the inbox view, not a
+    unified send/receive history.
 
-    Supports filtering by domain, status, date range, and free-text
-    search across subject, sender, and recipient fields.
+    Supports filtering by domain, status, date range, and
+    free-text search across subject, sender, and recipient
+    fields.
+
+    For a compact text-table summary of the most recent N
+    inbounds (no filters, no cursor pagination), the CLI ships
+    `primitive emails:latest` as a one-line-per-email shortcut.
+    It's TTY-aware so id columns are full UUIDs when piped, and
+    a `--json` flag returns the same envelope this endpoint
+    does. Use whichever fits the call site.
 
     Args:
         cursor (str | Unset):
@@ -291,12 +307,20 @@ async def asyncio_detailed(
     """ List inbound emails
 
      Returns a paginated list of INBOUND emails received at your
-    verified domains. Outbound messages sent via /send-mail are not
-    included; this endpoint is the inbox view, not a unified
-    send/receive history.
+    verified domains. Outbound messages sent via /send-mail are
+    not included; this endpoint is the inbox view, not a
+    unified send/receive history.
 
-    Supports filtering by domain, status, date range, and free-text
-    search across subject, sender, and recipient fields.
+    Supports filtering by domain, status, date range, and
+    free-text search across subject, sender, and recipient
+    fields.
+
+    For a compact text-table summary of the most recent N
+    inbounds (no filters, no cursor pagination), the CLI ships
+    `primitive emails:latest` as a one-line-per-email shortcut.
+    It's TTY-aware so id columns are full UUIDs when piped, and
+    a `--json` flag returns the same envelope this endpoint
+    does. Use whichever fits the call site.
 
     Args:
         cursor (str | Unset):
@@ -374,12 +398,20 @@ async def asyncio(
     """ List inbound emails
 
      Returns a paginated list of INBOUND emails received at your
-    verified domains. Outbound messages sent via /send-mail are not
-    included; this endpoint is the inbox view, not a unified
-    send/receive history.
+    verified domains. Outbound messages sent via /send-mail are
+    not included; this endpoint is the inbox view, not a
+    unified send/receive history.
 
-    Supports filtering by domain, status, date range, and free-text
-    search across subject, sender, and recipient fields.
+    Supports filtering by domain, status, date range, and
+    free-text search across subject, sender, and recipient
+    fields.
+
+    For a compact text-table summary of the most recent N
+    inbounds (no filters, no cursor pagination), the CLI ships
+    `primitive emails:latest` as a one-line-per-email shortcut.
+    It's TTY-aware so id columns are full UUIDs when piped, and
+    a `--json` flag returns the same envelope this endpoint
+    does. Use whichever fits the call site.
 
     Args:
         cursor (str | Unset):

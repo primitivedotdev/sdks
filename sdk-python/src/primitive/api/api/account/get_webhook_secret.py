@@ -75,10 +75,27 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetWebhookSecretResponse200]:
-    """ Get webhook signing secret
+    r""" Get webhook signing secret
 
-     Returns the webhook signing secret for your account. If no secret
-    exists yet, one is generated automatically on first access.
+     Returns the webhook signing secret for your account. If no
+    secret exists yet, one is generated automatically on first
+    access.
+
+    Signing is account-scoped, not per-endpoint. Every webhook
+    delivery from any of your registered endpoints is signed
+    with this single secret. Rotate via
+    `POST /account/webhook-secret/rotate`.
+
+    **Secret format**: the returned string looks base64-shaped
+    (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
+    Use it AS-IS as a UTF-8 string when computing HMAC over a
+    delivery body. Base64-decoding before HMAC will silently
+    produce mismatched signatures.
+
+    See the API-level \"Webhook signing\" section for the full
+    wire format (header name, signed string shape, hash algo,
+    tolerance) including a language-agnostic verification
+    recipe.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -104,10 +121,27 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetWebhookSecretResponse200 | None:
-    """ Get webhook signing secret
+    r""" Get webhook signing secret
 
-     Returns the webhook signing secret for your account. If no secret
-    exists yet, one is generated automatically on first access.
+     Returns the webhook signing secret for your account. If no
+    secret exists yet, one is generated automatically on first
+    access.
+
+    Signing is account-scoped, not per-endpoint. Every webhook
+    delivery from any of your registered endpoints is signed
+    with this single secret. Rotate via
+    `POST /account/webhook-secret/rotate`.
+
+    **Secret format**: the returned string looks base64-shaped
+    (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
+    Use it AS-IS as a UTF-8 string when computing HMAC over a
+    delivery body. Base64-decoding before HMAC will silently
+    produce mismatched signatures.
+
+    See the API-level \"Webhook signing\" section for the full
+    wire format (header name, signed string shape, hash algo,
+    tolerance) including a language-agnostic verification
+    recipe.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -128,10 +162,27 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetWebhookSecretResponse200]:
-    """ Get webhook signing secret
+    r""" Get webhook signing secret
 
-     Returns the webhook signing secret for your account. If no secret
-    exists yet, one is generated automatically on first access.
+     Returns the webhook signing secret for your account. If no
+    secret exists yet, one is generated automatically on first
+    access.
+
+    Signing is account-scoped, not per-endpoint. Every webhook
+    delivery from any of your registered endpoints is signed
+    with this single secret. Rotate via
+    `POST /account/webhook-secret/rotate`.
+
+    **Secret format**: the returned string looks base64-shaped
+    (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
+    Use it AS-IS as a UTF-8 string when computing HMAC over a
+    delivery body. Base64-decoding before HMAC will silently
+    produce mismatched signatures.
+
+    See the API-level \"Webhook signing\" section for the full
+    wire format (header name, signed string shape, hash algo,
+    tolerance) including a language-agnostic verification
+    recipe.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -157,10 +208,27 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetWebhookSecretResponse200 | None:
-    """ Get webhook signing secret
+    r""" Get webhook signing secret
 
-     Returns the webhook signing secret for your account. If no secret
-    exists yet, one is generated automatically on first access.
+     Returns the webhook signing secret for your account. If no
+    secret exists yet, one is generated automatically on first
+    access.
+
+    Signing is account-scoped, not per-endpoint. Every webhook
+    delivery from any of your registered endpoints is signed
+    with this single secret. Rotate via
+    `POST /account/webhook-secret/rotate`.
+
+    **Secret format**: the returned string looks base64-shaped
+    (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.
+    Use it AS-IS as a UTF-8 string when computing HMAC over a
+    delivery body. Base64-decoding before HMAC will silently
+    produce mismatched signatures.
+
+    See the API-level \"Webhook signing\" section for the full
+    wire format (header name, signed string shape, hash algo,
+    tolerance) including a language-agnostic verification
+    recipe.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
