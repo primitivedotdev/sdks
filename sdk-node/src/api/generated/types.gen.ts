@@ -541,6 +541,141 @@ export type SendMailResult = {
     idempotent_replay: boolean;
 };
 
+/**
+ * One recipient-scope rule describing a destination the caller
+ * may send to. Discriminated on `type`. Each rule carries a
+ * human-prose `description` field intended for display.
+ *
+ * Rule kinds are stable within an SDK release. A response
+ * containing a `type` value not enumerated in this schema
+ * means the server is running a newer version than the SDK;
+ * upgrade the SDK to the release that matches the server's
+ * schema. Strict-parsing SDKs (Go, Python) will raise a
+ * decode error in that case rather than silently dropping
+ * the unknown rule, since silent drops would let an outbound
+ * agent reason from an incomplete view of its own permissions.
+ *
+ */
+export type SendPermissionRule = ({
+    type: 'any_recipient';
+} & SendPermissionAnyRecipient) | ({
+    type: 'managed_zone';
+} & SendPermissionManagedZone) | ({
+    type: 'your_domain';
+} & SendPermissionYourDomain) | ({
+    type: 'address';
+} & SendPermissionAddress);
+
+/**
+ * The caller can send to any recipient. When this rule is
+ * present, every other rule in the response is redundant.
+ *
+ */
+export type SendPermissionAnyRecipient = {
+    type: 'any_recipient';
+    /**
+     * Human-prose summary of the rule.
+     */
+    description: string;
+};
+
+/**
+ * The caller can send to any address at the named
+ * Primitive-managed zone. Always emitted (no entitlement
+ * required) because Primitive owns the zone and every mailbox
+ * belongs to a Primitive customer by construction.
+ *
+ */
+export type SendPermissionManagedZone = {
+    type: 'managed_zone';
+    /**
+     * The managed apex domain. Sends are accepted to any
+     * address at the apex itself or any subdomain (e.g.
+     * `alice@primitive.email` and `alice@acme.primitive.email`
+     * both match the `primitive.email` zone rule).
+     *
+     */
+    zone: string;
+    /**
+     * Human-prose summary of the rule.
+     */
+    description: string;
+};
+
+/**
+ * The caller can send to any address at one of their own
+ * verified outbound domains. Emitted once per active row in
+ * the org's `domains` table.
+ *
+ */
+export type SendPermissionYourDomain = {
+    type: 'your_domain';
+    /**
+     * A verified outbound domain owned by the caller's org.
+     */
+    domain: string;
+    /**
+     * Human-prose summary of the rule.
+     */
+    description: string;
+};
+
+/**
+ * The caller can send to a specific address that has
+ * authenticated inbound mail to the org. Emitted once per row
+ * in the org's `known_send_addresses` table, capped at
+ * `meta.address_cap`.
+ *
+ */
+export type SendPermissionAddress = {
+    type: 'address';
+    /**
+     * The bare email address this rule grants sends to.
+     */
+    address: string;
+    /**
+     * Most recent inbound email from this address that
+     * authenticated successfully (DMARC pass + DKIM/SPF
+     * alignment). Updated on each new authenticated receipt.
+     *
+     */
+    last_received_at: string;
+    /**
+     * Total number of authenticated inbound emails from this
+     * address. Increments only when `last_received_at` advances.
+     *
+     */
+    received_count: number;
+    /**
+     * Human-prose summary of the rule.
+     */
+    description: string;
+};
+
+/**
+ * Response metadata for /send-permissions. The `address_cap`
+ * bounds the size of the `address` rule subset; orgs with more
+ * than `address_cap` known addresses almost always also hold a
+ * broader rule type (`any_recipient` or `your_domain`), so the
+ * cap is a response-size bound rather than a meaningful
+ * product limit.
+ *
+ */
+export type SendPermissionsMeta = {
+    /**
+     * Maximum number of `address` rules included in `data`.
+     */
+    address_cap: number;
+    /**
+     * True when the org has more than `address_cap` known
+     * addresses and the list was truncated. False when every
+     * known address is represented or when the org holds no
+     * address rules at all.
+     *
+     */
+    truncated: boolean;
+};
+
 export type Endpoint = {
     id: string;
     org_id: string;
@@ -1839,6 +1974,34 @@ export type ReplayDeliveryResponses = {
 };
 
 export type ReplayDeliveryResponse = ReplayDeliveryResponses[keyof ReplayDeliveryResponses];
+
+export type GetSendPermissionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/send-permissions';
+};
+
+export type GetSendPermissionsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type GetSendPermissionsError = GetSendPermissionsErrors[keyof GetSendPermissionsErrors];
+
+export type GetSendPermissionsResponses = {
+    /**
+     * Send-permission rules for the caller's org
+     */
+    200: SuccessEnvelope & {
+        data: Array<SendPermissionRule>;
+        meta: SendPermissionsMeta;
+    };
+};
+
+export type GetSendPermissionsResponse = GetSendPermissionsResponses[keyof GetSendPermissionsResponses];
 
 export type SendEmailData = {
     body: SendMailInput;

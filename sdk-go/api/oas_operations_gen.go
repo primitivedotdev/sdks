@@ -17,6 +17,7 @@ const (
 	DownloadRawEmailOperation    OperationName = "DownloadRawEmail"
 	GetAccountOperation          OperationName = "GetAccount"
 	GetEmailOperation            OperationName = "GetEmail"
+	GetSendPermissionsOperation  OperationName = "GetSendPermissions"
 	GetStorageStatsOperation     OperationName = "GetStorageStats"
 	GetWebhookSecretOperation    OperationName = "GetWebhookSecret"
 	ListDeliveriesOperation      OperationName = "ListDeliveries"
