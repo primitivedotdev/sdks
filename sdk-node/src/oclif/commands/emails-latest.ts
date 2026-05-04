@@ -1,4 +1,4 @@
-import { Command, Errors, Flags } from "@oclif/core";
+import { Command, Flags } from "@oclif/core";
 import { listEmails } from "../../api/generated/sdk.gen.js";
 import type { EmailSummary } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
@@ -26,11 +26,18 @@ const ID_DISPLAY_WIDTH = 8;
 const RECEIVED_DISPLAY_WIDTH = 19;
 
 // Truncate to width with right-padding; values longer than width are
-// cut to width-3 with a "..." suffix. Display-only; never mutates the
-// underlying value the caller passed in.
+// cut to width-3 with a "..." suffix so the output is exactly `width`
+// chars (3 of which are the ellipsis). Display-only; never mutates
+// the underlying value the caller passed in.
+//
+// Width-exact output matters here: formatRow relies on each column
+// being exactly its declared width so columns line up across rows.
+// An overflowing truncate would shift every later column to the
+// right whenever truncation fired (e.g. a row with both addresses
+// truncated would push SUBJECT 4 chars off).
 export function truncate(value: string, width: number): string {
   if (value.length <= width) return value.padEnd(width);
-  return `${value.slice(0, width - 1)}...`.padEnd(width);
+  return `${value.slice(0, width - 3)}...`;
 }
 
 // Compact ISO timestamp for display: `YYYY-MM-DD HH:MM:SS` in UTC.
@@ -79,17 +86,16 @@ class EmailsLatestCommand extends Command {
     limit: Flags.integer({
       description: `Number of rows to print (1-${MAX_LIMIT}, default ${DEFAULT_LIMIT}).`,
       default: DEFAULT_LIMIT,
+      // oclif validates min/max at parse time and emits a consistent
+      // out-of-range error before run() is reached, so no manual
+      // bounds check is needed here.
+      min: 1,
+      max: MAX_LIMIT,
     }),
   };
 
   async run(): Promise<void> {
     const { flags } = await this.parse(EmailsLatestCommand);
-
-    if (flags.limit < 1 || flags.limit > MAX_LIMIT) {
-      throw new Errors.CLIError(`--limit must be between 1 and ${MAX_LIMIT}.`, {
-        exit: 1,
-      });
-    }
 
     const apiClient = new PrimitiveApiClient({
       apiKey: flags["api-key"],

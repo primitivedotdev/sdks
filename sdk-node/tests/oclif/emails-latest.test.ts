@@ -18,14 +18,23 @@ describe("truncate", () => {
     expect(out.length).toBe(8);
   });
 
-  it("truncates with ... when input exceeds width", () => {
+  it("truncates with ... so the output is exactly width chars", () => {
+    // 9 chars of slice + 3 chars sentinel = 12 total (width).
     const out = truncate("supercalifragilisticexpialidocious", 12);
-    expect(out).toBe("supercalifr...");
-    // Note: the trailing "..." can push past the requested width;
-    // padEnd is a no-op when length is already >= width. The width
-    // is treated as a minimum for padding, not a hard cap on output
-    // length, since the "..." sentinel is the agent-visible signal.
-    expect(out.length).toBeGreaterThanOrEqual(12);
+    expect(out).toBe("supercali...");
+    expect(out.length).toBe(12);
+  });
+
+  it("preserves column alignment when truncation fires on multiple columns", () => {
+    // The motivating bug for the width-exact contract: a row with
+    // multiple long values must keep its later columns at the same
+    // visual offset as a row where every value fits. This guards
+    // against regressions on the slice math.
+    const a = truncate("looooooong-value-one", 10);
+    const b = truncate("looooooong-value-two", 10);
+    expect(a.length).toBe(10);
+    expect(b.length).toBe(10);
+    expect(a + b).toHaveLength(20);
   });
 });
 
