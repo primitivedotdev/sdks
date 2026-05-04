@@ -7,8 +7,10 @@ import {
   extractErrorCode,
   extractErrorPayload,
   flagForParameter,
+  formatElapsed,
   formatErrorPayload,
   readJsonBody,
+  runWithTiming,
   writeErrorWithHints,
 } from "../../src/oclif/api-command.js";
 
@@ -347,5 +349,72 @@ describe("flagForParameter", () => {
     }) as { options?: readonly string[] };
 
     expect(flag.options).toBeUndefined();
+  });
+});
+
+describe("formatElapsed", () => {
+  it("formats sub-second durations with 2 decimals", () => {
+    expect(formatElapsed(180)).toBe("0.18s");
+    expect(formatElapsed(0)).toBe("0.00s");
+    expect(formatElapsed(999)).toBe("1.00s");
+  });
+
+  it("formats seconds with 2 decimals", () => {
+    expect(formatElapsed(1340)).toBe("1.34s");
+    expect(formatElapsed(12345)).toBe("12.35s");
+  });
+
+  it("switches to minute notation past 60s", () => {
+    expect(formatElapsed(60_000)).toBe("1m 0.00s");
+    expect(formatElapsed(83_500)).toBe("1m 23.50s");
+    expect(formatElapsed(125_000)).toBe("2m 5.00s");
+  });
+});
+
+describe("runWithTiming", () => {
+  let writes: string[];
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    writes = [];
+    writeSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: unknown) => {
+        writes.push(typeof chunk === "string" ? chunk : String(chunk));
+        return true;
+      });
+  });
+
+  afterEach(() => {
+    writeSpy.mockRestore();
+  });
+
+  it("returns the function value when timing disabled and writes nothing", async () => {
+    const result = await runWithTiming(false, async () => 42);
+    expect(result).toBe(42);
+    expect(writes).toHaveLength(0);
+  });
+
+  it("returns the function value when timing flag is undefined", async () => {
+    const result = await runWithTiming(undefined, async () => "ok");
+    expect(result).toBe("ok");
+    expect(writes).toHaveLength(0);
+  });
+
+  it("writes a single timing line to stderr when enabled", async () => {
+    const result = await runWithTiming(true, async () => "done");
+    expect(result).toBe("done");
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toMatch(/^\[time: \d+\.\d{2}s\]\n$/);
+  });
+
+  it("writes the timing line even if the function throws (so errors are still timed)", async () => {
+    await expect(
+      runWithTiming(true, async () => {
+        throw new Error("boom");
+      }),
+    ).rejects.toThrow("boom");
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toMatch(/^\[time: \d+\.\d{2}s\]\n$/);
   });
 });

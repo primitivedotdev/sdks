@@ -2,7 +2,12 @@ import { Command, Errors, Flags } from "@oclif/core";
 import { getAccount } from "../../api/generated/sdk.gen.js";
 import type { Account } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
-import { extractErrorPayload, writeErrorWithHints } from "../api-command.js";
+import {
+  extractErrorPayload,
+  runWithTiming,
+  TIME_FLAG_DESCRIPTION,
+  writeErrorWithHints,
+} from "../api-command.js";
 
 // `primitive whoami` is the credentials smoke-test the AGX
 // walkthrough kept asking for. Before this command, a user with a
@@ -35,50 +40,55 @@ class WhoamiCommand extends Command {
       description: "API base URL (defaults to PRIMITIVE_API_URL or production)",
       env: "PRIMITIVE_API_URL",
     }),
+    time: Flags.boolean({
+      description: TIME_FLAG_DESCRIPTION,
+    }),
   };
 
   async run(): Promise<void> {
     const { flags } = await this.parse(WhoamiCommand);
 
-    const apiClient = new PrimitiveApiClient({
-      apiKey: flags["api-key"],
-      baseUrl: flags["base-url"],
+    await runWithTiming(flags.time, async () => {
+      const apiClient = new PrimitiveApiClient({
+        apiKey: flags["api-key"],
+        baseUrl: flags["base-url"],
+      });
+
+      const result = await getAccount({
+        client: apiClient.client,
+        responseStyle: "fields",
+      });
+
+      if (result.error) {
+        writeErrorWithHints(extractErrorPayload(result.error));
+        process.exitCode = 1;
+        return;
+      }
+
+      const envelope = result.data as { data?: Account } | undefined;
+      const account = envelope?.data;
+      if (!account) {
+        process.stderr.write(
+          "Server returned an empty account body; this should not happen for a valid key.\n",
+        );
+        throw new Errors.CLIError("unexpected empty response");
+      }
+
+      // Concise human-readable summary on stderr; the full account
+      // JSON goes to stdout so a script can pipe it.
+      const onboarding =
+        account.onboarding_completed === true
+          ? "complete"
+          : account.onboarding_step
+            ? `in progress (step: ${account.onboarding_step})`
+            : "incomplete";
+      process.stderr.write(`Authenticated as ${account.email}\n`);
+      process.stderr.write(`  Account id: ${account.id}\n`);
+      process.stderr.write(`  Plan:       ${account.plan}\n`);
+      process.stderr.write(`  Onboarding: ${onboarding}\n`);
+
+      this.log(JSON.stringify(account, null, 2));
     });
-
-    const result = await getAccount({
-      client: apiClient.client,
-      responseStyle: "fields",
-    });
-
-    if (result.error) {
-      writeErrorWithHints(extractErrorPayload(result.error));
-      process.exitCode = 1;
-      return;
-    }
-
-    const envelope = result.data as { data?: Account } | undefined;
-    const account = envelope?.data;
-    if (!account) {
-      process.stderr.write(
-        "Server returned an empty account body; this should not happen for a valid key.\n",
-      );
-      throw new Errors.CLIError("unexpected empty response");
-    }
-
-    // Concise human-readable summary on stderr; the full account
-    // JSON goes to stdout so a script can pipe it.
-    const onboarding =
-      account.onboarding_completed === true
-        ? "complete"
-        : account.onboarding_step
-          ? `in progress (step: ${account.onboarding_step})`
-          : "incomplete";
-    process.stderr.write(`Authenticated as ${account.email}\n`);
-    process.stderr.write(`  Account id: ${account.id}\n`);
-    process.stderr.write(`  Plan:       ${account.plan}\n`);
-    process.stderr.write(`  Onboarding: ${onboarding}\n`);
-
-    this.log(JSON.stringify(account, null, 2));
   }
 }
 

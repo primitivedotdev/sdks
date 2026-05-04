@@ -11,6 +11,8 @@ import {
   extractErrorCode,
   extractErrorPayload,
   formatErrorPayload,
+  runWithTiming,
+  TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
 
@@ -175,6 +177,9 @@ class SendCommand extends Command {
       description:
         "Maximum time to wait when --wait is set. Defaults to 30000ms.",
     }),
+    time: Flags.boolean({
+      description: TIME_FLAG_DESCRIPTION,
+    }),
   };
 
   async run(): Promise<void> {
@@ -186,42 +191,44 @@ class SendCommand extends Command {
       );
     }
 
-    const apiClient = new PrimitiveApiClient({
-      apiKey: flags["api-key"],
-      baseUrl: flags["base-url"],
+    await runWithTiming(flags.time, async () => {
+      const apiClient = new PrimitiveApiClient({
+        apiKey: flags["api-key"],
+        baseUrl: flags["base-url"],
+      });
+
+      const from = flags.from ?? (await pickDefaultFromAddress(apiClient));
+      const subject =
+        flags.subject ?? (flags.body ? deriveSubject(flags.body) : "Message");
+
+      const result = await sendEmail({
+        body: {
+          from,
+          to: flags.to,
+          subject,
+          ...(flags.body !== undefined ? { body_text: flags.body } : {}),
+          ...(flags.html !== undefined ? { body_html: flags.html } : {}),
+          ...(flags["in-reply-to"] !== undefined
+            ? { in_reply_to: flags["in-reply-to"] }
+            : {}),
+          ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
+          ...(flags["wait-timeout-ms"] !== undefined
+            ? { wait_timeout_ms: flags["wait-timeout-ms"] }
+            : {}),
+        },
+        client: apiClient.client,
+        responseStyle: "fields",
+      });
+
+      if (result.error) {
+        writeErrorWithHints(extractErrorPayload(result.error));
+        process.exitCode = 1;
+        return;
+      }
+
+      const envelope = result.data as { data?: SendMailResult } | undefined;
+      this.log(JSON.stringify(envelope?.data ?? null, null, 2));
     });
-
-    const from = flags.from ?? (await pickDefaultFromAddress(apiClient));
-    const subject =
-      flags.subject ?? (flags.body ? deriveSubject(flags.body) : "Message");
-
-    const result = await sendEmail({
-      body: {
-        from,
-        to: flags.to,
-        subject,
-        ...(flags.body !== undefined ? { body_text: flags.body } : {}),
-        ...(flags.html !== undefined ? { body_html: flags.html } : {}),
-        ...(flags["in-reply-to"] !== undefined
-          ? { in_reply_to: flags["in-reply-to"] }
-          : {}),
-        ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
-        ...(flags["wait-timeout-ms"] !== undefined
-          ? { wait_timeout_ms: flags["wait-timeout-ms"] }
-          : {}),
-      },
-      client: apiClient.client,
-      responseStyle: "fields",
-    });
-
-    if (result.error) {
-      writeErrorWithHints(extractErrorPayload(result.error));
-      process.exitCode = 1;
-      return;
-    }
-
-    const envelope = result.data as { data?: SendMailResult } | undefined;
-    this.log(JSON.stringify(envelope?.data ?? null, null, 2));
   }
 }
 

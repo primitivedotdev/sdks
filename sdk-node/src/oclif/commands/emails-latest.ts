@@ -2,7 +2,12 @@ import { Command, Flags } from "@oclif/core";
 import { listEmails } from "../../api/generated/sdk.gen.js";
 import type { EmailSummary } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
-import { extractErrorPayload, writeErrorWithHints } from "../api-command.js";
+import {
+  extractErrorPayload,
+  runWithTiming,
+  TIME_FLAG_DESCRIPTION,
+  writeErrorWithHints,
+} from "../api-command.js";
 
 // `primitive emails:latest` is the agent-grade shortcut for "show me
 // the most recent inbound emails as something I can read at a glance."
@@ -123,55 +128,60 @@ class EmailsLatestCommand extends Command {
       description:
         "Print the raw response envelope (with full UUIDs and meta) as JSON on STDOUT instead of the text table. Useful for piping into `jq`, capturing ids for follow-up commands, or scripting.",
     }),
+    time: Flags.boolean({
+      description: TIME_FLAG_DESCRIPTION,
+    }),
   };
 
   async run(): Promise<void> {
     const { flags } = await this.parse(EmailsLatestCommand);
 
-    const apiClient = new PrimitiveApiClient({
-      apiKey: flags["api-key"],
-      baseUrl: flags["base-url"],
+    await runWithTiming(flags.time, async () => {
+      const apiClient = new PrimitiveApiClient({
+        apiKey: flags["api-key"],
+        baseUrl: flags["base-url"],
+      });
+
+      const result = await listEmails({
+        client: apiClient.client,
+        query: { limit: flags.limit },
+        responseStyle: "fields",
+      });
+
+      if (result.error) {
+        writeErrorWithHints(extractErrorPayload(result.error));
+        process.exitCode = 1;
+        return;
+      }
+
+      const envelope = result.data as { data?: EmailSummary[] } | undefined;
+
+      if (flags.json) {
+        // Raw envelope on stdout. Mirrors the shape `emails:list-emails`
+        // emits so callers can swap one for the other when they want
+        // table vs json without remembering different command names.
+        this.log(JSON.stringify(envelope ?? null, null, 2));
+        return;
+      }
+
+      const rows = envelope?.data ?? [];
+
+      if (rows.length === 0) {
+        process.stderr.write(
+          "No inbound emails yet. Send an email to one of your verified domains to populate this list.\n",
+        );
+        return;
+      }
+
+      const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
+
+      // Header on stderr so the table itself stays grep-friendly.
+      const header = `${"ID".padEnd(idWidth)}  ${"RECEIVED (UTC)".padEnd(RECEIVED_DISPLAY_WIDTH)}  ${"FROM".padEnd(ADDRESS_DISPLAY_WIDTH)}  ${"TO".padEnd(ADDRESS_DISPLAY_WIDTH)}  SUBJECT`;
+      process.stderr.write(`${header}\n`);
+      for (const row of rows) {
+        this.log(formatRow(row, idWidth));
+      }
     });
-
-    const result = await listEmails({
-      client: apiClient.client,
-      query: { limit: flags.limit },
-      responseStyle: "fields",
-    });
-
-    if (result.error) {
-      writeErrorWithHints(extractErrorPayload(result.error));
-      process.exitCode = 1;
-      return;
-    }
-
-    const envelope = result.data as { data?: EmailSummary[] } | undefined;
-
-    if (flags.json) {
-      // Raw envelope on stdout. Mirrors the shape `emails:list-emails`
-      // emits so callers can swap one for the other when they want
-      // table vs json without remembering different command names.
-      this.log(JSON.stringify(envelope ?? null, null, 2));
-      return;
-    }
-
-    const rows = envelope?.data ?? [];
-
-    if (rows.length === 0) {
-      process.stderr.write(
-        "No inbound emails yet. Send an email to one of your verified domains to populate this list.\n",
-      );
-      return;
-    }
-
-    const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
-
-    // Header on stderr so the table itself stays grep-friendly.
-    const header = `${"ID".padEnd(idWidth)}  ${"RECEIVED (UTC)".padEnd(RECEIVED_DISPLAY_WIDTH)}  ${"FROM".padEnd(ADDRESS_DISPLAY_WIDTH)}  ${"TO".padEnd(ADDRESS_DISPLAY_WIDTH)}  SUBJECT`;
-    process.stderr.write(`${header}\n`);
-    for (const row of rows) {
-      this.log(formatRow(row, idWidth));
-    }
   }
 }
 
