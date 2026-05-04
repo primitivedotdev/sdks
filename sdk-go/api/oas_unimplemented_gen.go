@@ -156,6 +156,20 @@ func (UnimplementedHandler) GetSendPermissions(ctx context.Context) (r GetSendPe
 	return r, ht.ErrNotImplemented
 }
 
+// GetSentEmail implements getSentEmail operation.
+//
+// Returns the full sent-email record by id, including
+// `body_text` and `body_html` (omitted from the listing
+// endpoint to keep paginated responses small). Use this when
+// diagnosing a specific send, e.g. inspecting the receiver's
+// SMTP response on a `bounced` row or pulling the gate
+// denial detail on a `gate_denied` row.
+//
+// GET /sent-emails/{id}
+func (UnimplementedHandler) GetSentEmail(ctx context.Context, params GetSentEmailParams) (r GetSentEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetStorageStats implements getStorageStats operation.
 //
 // Get storage usage.
@@ -225,6 +239,29 @@ func (UnimplementedHandler) ListEndpoints(ctx context.Context) (r ListEndpointsR
 //
 // GET /filters
 func (UnimplementedHandler) ListFilters(ctx context.Context) (r ListFiltersRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListSentEmails implements listSentEmails operation.
+//
+// Returns a paginated list of OUTBOUND emails the caller's
+// org has sent via /send-mail (and /emails/{id}/reply, which
+// forwards through /send-mail). Includes every recorded
+// attempt, including gate-denied attempts that the agent
+// never called and rows still in `queued` state.
+// For inbound mail received at your verified domains, see
+// /emails. There is no unified send/receive history endpoint;
+// the two surfaces are intentionally separate because the
+// underlying tables, statuses, and lifecycle differ.
+// Email bodies (`body_text`, `body_html`) are NOT included on
+// list rows so a 50-row page can't balloon into a multi-MB
+// response when sends are near the 5MB body cap. Use
+// /sent-emails/{id} to fetch a single row with bodies, or
+// cross-reference by `client_idempotency_key` if the caller
+// already has the body locally.
+//
+// GET /sent-emails
+func (UnimplementedHandler) ListSentEmails(ctx context.Context, params ListSentEmailsParams) (r ListSentEmailsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

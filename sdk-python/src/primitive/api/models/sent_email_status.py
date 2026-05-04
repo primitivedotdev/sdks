@@ -5,6 +5,7 @@ class SentEmailStatus(str, Enum):
     BOUNCED = "bounced"
     DEFERRED = "deferred"
     DELIVERED = "delivered"
+    GATE_DENIED = "gate_denied"
     QUEUED = "queued"
     SUBMITTED_TO_AGENT = "submitted_to_agent"
     UNKNOWN = "unknown"

@@ -1641,6 +1641,150 @@
           }
         }
       }
+    },
+    "/sent-emails": {
+      "get": {
+        "operationId": "listSentEmails",
+        "summary": "List outbound sent emails",
+        "description": "Returns a paginated list of OUTBOUND emails the caller's\norg has sent via /send-mail (and /emails/{id}/reply, which\nforwards through /send-mail). Includes every recorded\nattempt, including gate-denied attempts that the agent\nnever called and rows still in `queued` state.\n\nFor inbound mail received at your verified domains, see\n/emails. There is no unified send/receive history endpoint;\nthe two surfaces are intentionally separate because the\nunderlying tables, statuses, and lifecycle differ.\n\nEmail bodies (`body_text`, `body_html`) are NOT included on\nlist rows so a 50-row page can't balloon into a multi-MB\nresponse when sends are near the 5MB body cap. Use\n/sent-emails/{id} to fetch a single row with bodies, or\ncross-reference by `client_idempotency_key` if the caller\nalready has the body locally.\n",
+        "tags": [
+          "Sending"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SentEmailStatus"
+            },
+            "description": "Filter to rows in this status. Useful for polling\nqueued rows that haven't transitioned, auditing\ngate-denied attempts, or listing only successful\ndeliveries.\n"
+          },
+          {
+            "name": "request_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter to the row matching a specific server-issued\n`request_id`. The /send-mail response surfaces\n`request_id` on every send; this lookup lets the\ncaller find the historical row for a given live call\nwithout remembering its `id`.\n"
+          },
+          {
+            "name": "idempotency_key",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "description": "Filter to rows with the given `client_idempotency_key`.\nMultiple rows can share a key (a retry that hit the\nidempotent-replay path returns the same row, but a\nretry with a DIFFERENT canonical payload under the\nsame key is rejected by /send-mail before the row is\nwritten, so duplicates are bounded).\n"
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Inclusive lower bound on `created_at`."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Inclusive upper bound on `created_at`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page of sent-email summaries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/SentEmailSummary"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/sent-emails/{id}": {
+      "get": {
+        "operationId": "getSentEmail",
+        "summary": "Get a sent email by id",
+        "description": "Returns the full sent-email record by id, including\n`body_text` and `body_html` (omitted from the listing\nendpoint to keep paginated responses small). Use this when\ndiagnosing a specific send, e.g. inspecting the receiver's\nSMTP response on a `bounced` row or pulling the gate\ndenial detail on a `gate_denied` row.\n",
+        "tags": [
+          "Sending"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ResourceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sent-email detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SentEmailDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2777,10 +2921,12 @@
       },
       "SentEmailStatus": {
         "type": "string",
+        "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
         "enum": [
           "queued",
           "submitted_to_agent",
           "agent_failed",
+          "gate_denied",
           "unknown",
           "delivered",
           "bounced",
@@ -2795,6 +2941,181 @@
           "bounced",
           "deferred",
           "wait_timeout"
+        ]
+      },
+      "SentEmailSummary": {
+        "type": "object",
+        "description": "List-row projection of a sent-email record. Drops\n`body_text` and `body_html` to keep paginated responses\nsmall; fetch /sent-emails/{id} for the full record with\nbodies.\n",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SentEmailStatus"
+          },
+          "status_changed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of the most recent status transition.\nPolling clients should treat `status='queued'` AND\n`status_changed_at` older than 5 minutes as\n\"stuck-queued\" (the post-tx UPDATE failed and the\nactual delivery state is recoverable from on-box logs\nvia `queue_id` when populated, or `request_id`).\n"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "client_idempotency_key": {
+            "type": "string",
+            "description": "Effective idempotency key used for this send. If the\ncaller passed the `Idempotency-Key` header, this is\nthat value; otherwise it's a server-derived hash of\nthe canonical request payload.\n",
+            "nullable": true
+          },
+          "content_hash": {
+            "type": "string",
+            "description": "Stable hash of the canonical send payload."
+          },
+          "from_header": {
+            "type": "string",
+            "description": "Raw `From:` header as sent on the wire, including any\ndisplay name (e.g. `\"Acme Support\" <agent@acme.test>`).\n"
+          },
+          "from_address": {
+            "type": "string",
+            "description": "Bare email address parsed from `from_header`."
+          },
+          "to_header": {
+            "type": "string",
+            "description": "Raw `To:` header as sent on the wire, including any\ndisplay name.\n"
+          },
+          "to_address": {
+            "type": "string",
+            "description": "Bare email address parsed from `to_header`."
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body_size_bytes": {
+            "type": "integer",
+            "description": "Total UTF-8 byte length of `body_text` + `body_html`.\nSurfaced on the list endpoint so callers can see \"this\nrow has a 4MB body\" without fetching it.\n"
+          },
+          "content_discarded_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp at which the bodies were discarded by an\nentitlement-driven retention policy. Null when bodies\nare still present. The detail endpoint returns\nnull-valued `body_text`/`body_html` for discarded rows.\n",
+            "nullable": true
+          },
+          "message_id": {
+            "type": "string",
+            "description": "Wire-level Message-ID assigned to the outbound message\n(RFC 5322). Null on rows that never reached signing\n(queued, gate_denied, agent_failed before signing).\n",
+            "nullable": true
+          },
+          "in_reply_to": {
+            "type": "string",
+            "description": "Wire-level In-Reply-To header value, when this send\nwas a reply.\n",
+            "nullable": true
+          },
+          "email_references": {
+            "type": "string",
+            "description": "Wire-level References header value, when this send\nwas a reply.\n",
+            "nullable": true
+          },
+          "in_reply_to_email_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reference to the inbound `emails.id` that this send\nreplied to, when known. Populated when the caller used\n/emails/{id}/reply or when /send-mail's `in_reply_to`\nmatched a stored inbound message_id in the same org.\n",
+            "nullable": true
+          },
+          "queue_id": {
+            "type": "string",
+            "description": "Message identifier assigned by Primitive's outbound\nrelay once the agent accepts the message. Null on\nqueued, gate_denied, and agent_failed rows.\n",
+            "nullable": true
+          },
+          "smtp_response_code": {
+            "type": "integer",
+            "description": "Receiver's 3-digit SMTP code (e.g. 250, 550, 451).\nPopulated on terminal delivery statuses; may be null\non a deferred where the agent never got an SMTP-level\nresponse (TCP refused, DNS failed, TLS handshake\nfailed). `smtp_response_text` still carries Postfix's\ndescriptive text in those cases.\n",
+            "nullable": true
+          },
+          "smtp_response_text": {
+            "type": "string",
+            "description": "Free-form text portion of the receiver's SMTP\nresponse. The most useful debugging signal on a\n`bounced` or `deferred` row.\n",
+            "nullable": true
+          },
+          "smtp_enhanced_status_code": {
+            "type": "string",
+            "description": "RFC 3463 enhanced status code (e.g. `5.1.1` for \"Bad\ndestination mailbox address\"). Distinct from\n`smtp_response_code`: the basic 3-digit code is coarse\n(550 = \"permanent failure\"), the enhanced code is\nfiner-grained.\n",
+            "nullable": true
+          },
+          "dkim_selector": {
+            "type": "string",
+            "description": "DKIM selector used to sign the outbound message.\nPublic DNS data; useful for diagnosing why a downstream\nverifier rejected the signature.\n",
+            "nullable": true
+          },
+          "dkim_domain": {
+            "type": "string",
+            "description": "DKIM signing domain.",
+            "nullable": true
+          },
+          "error_code": {
+            "type": "string",
+            "description": "Stable public error code on `agent_failed` rows. The\nagent's internal codes are remapped to a stable public\ntaxonomy (see `publicAgentError` in the server) so this\nfield is safe to branch on across agent versions.\n",
+            "nullable": true
+          },
+          "error_message": {
+            "type": "string",
+            "description": "Free-form error message accompanying `error_code`.",
+            "nullable": true
+          },
+          "gates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GateDenial"
+            },
+            "description": "Gate-denial detail on `gate_denied` rows. Mirrors the\nsynchronous /send-mail 403 contract so a caller's\nGateDenial handler is the same across live denies and\nhistorical lookups. Null on every other status.\n",
+            "nullable": true
+          },
+          "request_id": {
+            "type": "string",
+            "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "status_changed_at",
+          "created_at",
+          "updated_at",
+          "content_hash",
+          "from_header",
+          "from_address",
+          "to_header",
+          "to_address",
+          "subject",
+          "body_size_bytes"
+        ]
+      },
+      "SentEmailDetail": {
+        "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SentEmailSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "body_text": {
+                "type": "string",
+                "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n",
+                "nullable": true
+              },
+              "body_html": {
+                "type": "string",
+                "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n",
+                "nullable": true
+              }
+            }
+          }
         ]
       },
       "ReplyInput": {

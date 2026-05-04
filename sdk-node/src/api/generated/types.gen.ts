@@ -448,9 +448,223 @@ export type SendMailInput = {
     wait_timeout_ms?: number;
 };
 
-export type SentEmailStatus = 'queued' | 'submitted_to_agent' | 'agent_failed' | 'unknown' | 'delivered' | 'bounced' | 'deferred' | 'wait_timeout';
+/**
+ * Lifecycle status of a sent_emails row. Possible values:
+ *
+ * - `queued`: pre-call INSERT; the outbound agent has not
+ * yet replied.
+ * - `submitted_to_agent`: agent accepted; `queue_id` is set.
+ * - `agent_failed`: agent rejected; `error_code` and
+ * `error_message` carry the reason.
+ * - `gate_denied`: a recipient-scope gate denied the send;
+ * the agent was never called. The `gates` array carries
+ * the denial detail. /send-mail returns 403 in this case
+ * so callers see the denial synchronously; /sent-emails
+ * additionally records the row for historical lookup,
+ * which is when this status appears in a listing.
+ * - `unknown`: terminal indeterminate; the on-box log
+ * poller couldn't classify the receiver's response.
+ * - `delivered` / `bounced` / `deferred` / `wait_timeout`:
+ * terminal delivery outcomes (see DeliveryStatus).
+ *
+ */
+export type SentEmailStatus = 'queued' | 'submitted_to_agent' | 'agent_failed' | 'gate_denied' | 'unknown' | 'delivered' | 'bounced' | 'deferred' | 'wait_timeout';
 
 export type DeliveryStatus = 'delivered' | 'bounced' | 'deferred' | 'wait_timeout';
+
+/**
+ * List-row projection of a sent-email record. Drops
+ * `body_text` and `body_html` to keep paginated responses
+ * small; fetch /sent-emails/{id} for the full record with
+ * bodies.
+ *
+ */
+export type SentEmailSummary = {
+    id: string;
+    status: SentEmailStatus;
+    /**
+     * Timestamp of the most recent status transition.
+     * Polling clients should treat `status='queued'` AND
+     * `status_changed_at` older than 5 minutes as
+     * "stuck-queued" (the post-tx UPDATE failed and the
+     * actual delivery state is recoverable from on-box logs
+     * via `queue_id` when populated, or `request_id`).
+     *
+     */
+    status_changed_at: string;
+    created_at: string;
+    updated_at: string;
+    /**
+     * Effective idempotency key used for this send. If the
+     * caller passed the `Idempotency-Key` header, this is
+     * that value; otherwise it's a server-derived hash of
+     * the canonical request payload.
+     *
+     */
+    client_idempotency_key?: string | null;
+    /**
+     * Stable hash of the canonical send payload.
+     */
+    content_hash: string;
+    /**
+     * Raw `From:` header as sent on the wire, including any
+     * display name (e.g. `"Acme Support" <agent@acme.test>`).
+     *
+     */
+    from_header: string;
+    /**
+     * Bare email address parsed from `from_header`.
+     */
+    from_address: string;
+    /**
+     * Raw `To:` header as sent on the wire, including any
+     * display name.
+     *
+     */
+    to_header: string;
+    /**
+     * Bare email address parsed from `to_header`.
+     */
+    to_address: string;
+    subject: string;
+    /**
+     * Total UTF-8 byte length of `body_text` + `body_html`.
+     * Surfaced on the list endpoint so callers can see "this
+     * row has a 4MB body" without fetching it.
+     *
+     */
+    body_size_bytes: number;
+    /**
+     * Timestamp at which the bodies were discarded by an
+     * entitlement-driven retention policy. Null when bodies
+     * are still present. The detail endpoint returns
+     * null-valued `body_text`/`body_html` for discarded rows.
+     *
+     */
+    content_discarded_at?: string | null;
+    /**
+     * Wire-level Message-ID assigned to the outbound message
+     * (RFC 5322). Null on rows that never reached signing
+     * (queued, gate_denied, agent_failed before signing).
+     *
+     */
+    message_id?: string | null;
+    /**
+     * Wire-level In-Reply-To header value, when this send
+     * was a reply.
+     *
+     */
+    in_reply_to?: string | null;
+    /**
+     * Wire-level References header value, when this send
+     * was a reply.
+     *
+     */
+    email_references?: string | null;
+    /**
+     * Reference to the inbound `emails.id` that this send
+     * replied to, when known. Populated when the caller used
+     * /emails/{id}/reply or when /send-mail's `in_reply_to`
+     * matched a stored inbound message_id in the same org.
+     *
+     */
+    in_reply_to_email_id?: string | null;
+    /**
+     * Message identifier assigned by Primitive's outbound
+     * relay once the agent accepts the message. Null on
+     * queued, gate_denied, and agent_failed rows.
+     *
+     */
+    queue_id?: string | null;
+    /**
+     * Receiver's 3-digit SMTP code (e.g. 250, 550, 451).
+     * Populated on terminal delivery statuses; may be null
+     * on a deferred where the agent never got an SMTP-level
+     * response (TCP refused, DNS failed, TLS handshake
+     * failed). `smtp_response_text` still carries Postfix's
+     * descriptive text in those cases.
+     *
+     */
+    smtp_response_code?: number | null;
+    /**
+     * Free-form text portion of the receiver's SMTP
+     * response. The most useful debugging signal on a
+     * `bounced` or `deferred` row.
+     *
+     */
+    smtp_response_text?: string | null;
+    /**
+     * RFC 3463 enhanced status code (e.g. `5.1.1` for "Bad
+     * destination mailbox address"). Distinct from
+     * `smtp_response_code`: the basic 3-digit code is coarse
+     * (550 = "permanent failure"), the enhanced code is
+     * finer-grained.
+     *
+     */
+    smtp_enhanced_status_code?: string | null;
+    /**
+     * DKIM selector used to sign the outbound message.
+     * Public DNS data; useful for diagnosing why a downstream
+     * verifier rejected the signature.
+     *
+     */
+    dkim_selector?: string | null;
+    /**
+     * DKIM signing domain.
+     */
+    dkim_domain?: string | null;
+    /**
+     * Stable public error code on `agent_failed` rows. The
+     * agent's internal codes are remapped to a stable public
+     * taxonomy (see `publicAgentError` in the server) so this
+     * field is safe to branch on across agent versions.
+     *
+     */
+    error_code?: string | null;
+    /**
+     * Free-form error message accompanying `error_code`.
+     */
+    error_message?: string | null;
+    /**
+     * Gate-denial detail on `gate_denied` rows. Mirrors the
+     * synchronous /send-mail 403 contract so a caller's
+     * GateDenial handler is the same across live denies and
+     * historical lookups. Null on every other status.
+     *
+     */
+    gates?: Array<GateDenial> | null;
+    /**
+     * Server-issued request identifier from the original
+     * /send-mail call. Surfaced as the `X-Request-Id`
+     * response header on the live send and recorded here
+     * for support escalation.
+     *
+     */
+    request_id?: string | null;
+};
+
+/**
+ * Full sent-email record, including `body_text` and
+ * `body_html`. Returned by /sent-emails/{id}.
+ *
+ */
+export type SentEmailDetail = SentEmailSummary & {
+    /**
+     * Plain-text body sent on the wire. Null when the
+     * send carried only an HTML body, or when bodies have
+     * been discarded post-send (`content_discarded_at`
+     * set).
+     *
+     */
+    body_text?: string | null;
+    /**
+     * HTML body sent on the wire. Null when the send
+     * carried only a plain-text body, or when bodies
+     * have been discarded post-send.
+     *
+     */
+    body_html?: string | null;
+};
 
 /**
  * Body shape for `/emails/{id}/reply`. Intentionally narrow:
@@ -2062,3 +2276,120 @@ export type SendEmailResponses = {
 };
 
 export type SendEmailResponse = SendEmailResponses[keyof SendEmailResponses];
+
+export type ListSentEmailsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Pagination cursor from a previous response's `meta.cursor` field.
+         * Format: `{ISO-datetime}|{id}`
+         *
+         */
+        cursor?: string;
+        /**
+         * Number of results per page
+         */
+        limit?: number;
+        /**
+         * Filter to rows in this status. Useful for polling
+         * queued rows that haven't transitioned, auditing
+         * gate-denied attempts, or listing only successful
+         * deliveries.
+         *
+         */
+        status?: SentEmailStatus;
+        /**
+         * Filter to the row matching a specific server-issued
+         * `request_id`. The /send-mail response surfaces
+         * `request_id` on every send; this lookup lets the
+         * caller find the historical row for a given live call
+         * without remembering its `id`.
+         *
+         */
+        request_id?: string;
+        /**
+         * Filter to rows with the given `client_idempotency_key`.
+         * Multiple rows can share a key (a retry that hit the
+         * idempotent-replay path returns the same row, but a
+         * retry with a DIFFERENT canonical payload under the
+         * same key is rejected by /send-mail before the row is
+         * written, so duplicates are bounded).
+         *
+         */
+        idempotency_key?: string;
+        /**
+         * Inclusive lower bound on `created_at`.
+         */
+        date_from?: string;
+        /**
+         * Inclusive upper bound on `created_at`.
+         */
+        date_to?: string;
+    };
+    url: '/sent-emails';
+};
+
+export type ListSentEmailsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type ListSentEmailsError = ListSentEmailsErrors[keyof ListSentEmailsErrors];
+
+export type ListSentEmailsResponses = {
+    /**
+     * Page of sent-email summaries
+     */
+    200: ListEnvelope & {
+        data?: Array<SentEmailSummary>;
+    };
+};
+
+export type ListSentEmailsResponse = ListSentEmailsResponses[keyof ListSentEmailsResponses];
+
+export type GetSentEmailData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/sent-emails/{id}';
+};
+
+export type GetSentEmailErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetSentEmailError = GetSentEmailErrors[keyof GetSentEmailErrors];
+
+export type GetSentEmailResponses = {
+    /**
+     * Sent-email detail
+     */
+    200: SuccessEnvelope & {
+        data?: SentEmailDetail;
+    };
+};
+
+export type GetSentEmailResponse = GetSentEmailResponses[keyof GetSentEmailResponses];

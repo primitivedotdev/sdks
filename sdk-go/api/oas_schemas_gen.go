@@ -3173,6 +3173,46 @@ func (s *GetSendPermissionsOK) SetMeta(val SendPermissionsMeta) {
 
 func (*GetSendPermissionsOK) getSendPermissionsRes() {}
 
+type GetSentEmailBadRequest ErrorResponse
+
+func (*GetSentEmailBadRequest) getSentEmailRes() {}
+
+type GetSentEmailNotFound ErrorResponse
+
+func (*GetSentEmailNotFound) getSentEmailRes() {}
+
+// Merged schema.
+type GetSentEmailOK struct {
+	Success bool            `json:"success"`
+	Data    SentEmailDetail `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetSentEmailOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetSentEmailOK) GetData() SentEmailDetail {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetSentEmailOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetSentEmailOK) SetData(val SentEmailDetail) {
+	s.Data = val
+}
+
+func (*GetSentEmailOK) getSentEmailRes() {}
+
+type GetSentEmailUnauthorized ErrorResponse
+
+func (*GetSentEmailUnauthorized) getSentEmailRes() {}
+
 type GetStorageStatsNotFound ErrorResponse
 
 func (*GetStorageStatsNotFound) getStorageStatsRes() {}
@@ -3532,6 +3572,53 @@ func (s *ListFiltersOK) SetData(val []Filter) {
 }
 
 func (*ListFiltersOK) listFiltersRes() {}
+
+type ListSentEmailsBadRequest ErrorResponse
+
+func (*ListSentEmailsBadRequest) listSentEmailsRes() {}
+
+// Merged schema.
+type ListSentEmailsOK struct {
+	Success bool               `json:"success"`
+	Meta    PaginationMeta     `json:"meta"`
+	Data    []SentEmailSummary `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListSentEmailsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListSentEmailsOK) GetMeta() PaginationMeta {
+	return s.Meta
+}
+
+// GetData returns the value of Data.
+func (s *ListSentEmailsOK) GetData() []SentEmailSummary {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListSentEmailsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListSentEmailsOK) SetMeta(val PaginationMeta) {
+	s.Meta = val
+}
+
+// SetData sets the value of Data.
+func (s *ListSentEmailsOK) SetData(val []SentEmailSummary) {
+	s.Data = val
+}
+
+func (*ListSentEmailsOK) listSentEmailsRes() {}
+
+type ListSentEmailsUnauthorized ErrorResponse
+
+func (*ListSentEmailsUnauthorized) listSentEmailsRes() {}
 
 // NewNilString returns new NilString with value set to v.
 func NewNilString(v string) NilString {
@@ -4370,6 +4457,69 @@ func (o OptNilFloat64) Or(d float64) float64 {
 	return d
 }
 
+// NewOptNilGateDenialArray returns new OptNilGateDenialArray with value set to v.
+func NewOptNilGateDenialArray(v []GateDenial) OptNilGateDenialArray {
+	return OptNilGateDenialArray{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilGateDenialArray is optional nullable []GateDenial.
+type OptNilGateDenialArray struct {
+	Value []GateDenial
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilGateDenialArray was set.
+func (o OptNilGateDenialArray) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilGateDenialArray) Reset() {
+	var v []GateDenial
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilGateDenialArray) SetTo(v []GateDenial) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilGateDenialArray) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilGateDenialArray) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v []GateDenial
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilGateDenialArray) Get() (v []GateDenial, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilGateDenialArray) Or(d []GateDenial) []GateDenial {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilInt returns new OptNilInt with value set to v.
 func NewOptNilInt(v int) OptNilInt {
 	return OptNilInt{
@@ -4616,6 +4766,52 @@ func (o OptNilUUID) Get() (v uuid.UUID, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilUUID) Or(d uuid.UUID) uuid.UUID {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSentEmailStatus returns new OptSentEmailStatus with value set to v.
+func NewOptSentEmailStatus(v SentEmailStatus) OptSentEmailStatus {
+	return OptSentEmailStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSentEmailStatus is optional SentEmailStatus.
+type OptSentEmailStatus struct {
+	Value SentEmailStatus
+	Set   bool
+}
+
+// IsSet returns true if OptSentEmailStatus was set.
+func (o OptSentEmailStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSentEmailStatus) Reset() {
+	var v SentEmailStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSentEmailStatus) SetTo(v SentEmailStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSentEmailStatus) Get() (v SentEmailStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSentEmailStatus) Or(d SentEmailStatus) SentEmailStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -5876,6 +6072,433 @@ func (s *SendPermissionsMeta) SetTruncated(val bool) {
 	s.Truncated = val
 }
 
+// Merged schema.
+// Ref: #/components/schemas/SentEmailDetail
+type SentEmailDetail struct {
+	ID     uuid.UUID       `json:"id"`
+	Status SentEmailStatus `json:"status"`
+	// Timestamp of the most recent status transition.
+	// Polling clients should treat `status='queued'` AND
+	// `status_changed_at` older than 5 minutes as
+	// "stuck-queued" (the post-tx UPDATE failed and the
+	// actual delivery state is recoverable from on-box logs
+	// via `queue_id` when populated, or `request_id`).
+	StatusChangedAt time.Time `json:"status_changed_at"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+	// Effective idempotency key used for this send. If the
+	// caller passed the `Idempotency-Key` header, this is
+	// that value; otherwise it's a server-derived hash of
+	// the canonical request payload.
+	ClientIdempotencyKey OptNilString `json:"client_idempotency_key"`
+	// Stable hash of the canonical send payload.
+	ContentHash string `json:"content_hash"`
+	// Raw `From:` header as sent on the wire, including any
+	// display name (e.g. `"Acme Support" <agent@acme.test>`).
+	FromHeader string `json:"from_header"`
+	// Bare email address parsed from `from_header`.
+	FromAddress string `json:"from_address"`
+	// Raw `To:` header as sent on the wire, including any
+	// display name.
+	ToHeader string `json:"to_header"`
+	// Bare email address parsed from `to_header`.
+	ToAddress string `json:"to_address"`
+	Subject   string `json:"subject"`
+	// Total UTF-8 byte length of `body_text` + `body_html`.
+	// Surfaced on the list endpoint so callers can see "this
+	// row has a 4MB body" without fetching it.
+	BodySizeBytes int `json:"body_size_bytes"`
+	// Timestamp at which the bodies were discarded by an
+	// entitlement-driven retention policy. Null when bodies
+	// are still present. The detail endpoint returns
+	// null-valued `body_text`/`body_html` for discarded rows.
+	ContentDiscardedAt OptNilDateTime `json:"content_discarded_at"`
+	// Wire-level Message-ID assigned to the outbound message
+	// (RFC 5322). Null on rows that never reached signing
+	// (queued, gate_denied, agent_failed before signing).
+	MessageID OptNilString `json:"message_id"`
+	// Wire-level In-Reply-To header value, when this send
+	// was a reply.
+	InReplyTo OptNilString `json:"in_reply_to"`
+	// Wire-level References header value, when this send
+	// was a reply.
+	EmailReferences OptNilString `json:"email_references"`
+	// Reference to the inbound `emails.id` that this send
+	// replied to, when known. Populated when the caller used
+	// /emails/{id}/reply or when /send-mail's `in_reply_to`
+	// matched a stored inbound message_id in the same org.
+	InReplyToEmailID OptNilUUID `json:"in_reply_to_email_id"`
+	// Message identifier assigned by Primitive's outbound
+	// relay once the agent accepts the message. Null on
+	// queued, gate_denied, and agent_failed rows.
+	QueueID OptNilString `json:"queue_id"`
+	// Receiver's 3-digit SMTP code (e.g. 250, 550, 451).
+	// Populated on terminal delivery statuses; may be null
+	// on a deferred where the agent never got an SMTP-level
+	// response (TCP refused, DNS failed, TLS handshake
+	// failed). `smtp_response_text` still carries Postfix's
+	// descriptive text in those cases.
+	SMTPResponseCode OptNilInt `json:"smtp_response_code"`
+	// Free-form text portion of the receiver's SMTP
+	// response. The most useful debugging signal on a
+	// `bounced` or `deferred` row.
+	SMTPResponseText OptNilString `json:"smtp_response_text"`
+	// RFC 3463 enhanced status code (e.g. `5.1.1` for "Bad
+	// destination mailbox address"). Distinct from
+	// `smtp_response_code`: the basic 3-digit code is coarse
+	// (550 = "permanent failure"), the enhanced code is
+	// finer-grained.
+	SMTPEnhancedStatusCode OptNilString `json:"smtp_enhanced_status_code"`
+	// DKIM selector used to sign the outbound message.
+	// Public DNS data; useful for diagnosing why a downstream
+	// verifier rejected the signature.
+	DkimSelector OptNilString `json:"dkim_selector"`
+	// DKIM signing domain.
+	DkimDomain OptNilString `json:"dkim_domain"`
+	// Stable public error code on `agent_failed` rows. The
+	// agent's internal codes are remapped to a stable public
+	// taxonomy (see `publicAgentError` in the server) so this
+	// field is safe to branch on across agent versions.
+	ErrorCode OptNilString `json:"error_code"`
+	// Free-form error message accompanying `error_code`.
+	ErrorMessage OptNilString `json:"error_message"`
+	// Gate-denial detail on `gate_denied` rows. Mirrors the
+	// synchronous /send-mail 403 contract so a caller's
+	// GateDenial handler is the same across live denies and
+	// historical lookups. Null on every other status.
+	Gates OptNilGateDenialArray `json:"gates"`
+	// Server-issued request identifier from the original
+	// /send-mail call. Surfaced as the `X-Request-Id`
+	// response header on the live send and recorded here
+	// for support escalation.
+	RequestID OptNilString `json:"request_id"`
+	// Plain-text body sent on the wire. Null when the
+	// send carried only an HTML body, or when bodies have
+	// been discarded post-send (`content_discarded_at`
+	// set).
+	BodyText OptNilString `json:"body_text"`
+	// HTML body sent on the wire. Null when the send
+	// carried only a plain-text body, or when bodies
+	// have been discarded post-send.
+	BodyHTML OptNilString `json:"body_html"`
+}
+
+// GetID returns the value of ID.
+func (s *SentEmailDetail) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *SentEmailDetail) GetStatus() SentEmailStatus {
+	return s.Status
+}
+
+// GetStatusChangedAt returns the value of StatusChangedAt.
+func (s *SentEmailDetail) GetStatusChangedAt() time.Time {
+	return s.StatusChangedAt
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *SentEmailDetail) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *SentEmailDetail) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetClientIdempotencyKey returns the value of ClientIdempotencyKey.
+func (s *SentEmailDetail) GetClientIdempotencyKey() OptNilString {
+	return s.ClientIdempotencyKey
+}
+
+// GetContentHash returns the value of ContentHash.
+func (s *SentEmailDetail) GetContentHash() string {
+	return s.ContentHash
+}
+
+// GetFromHeader returns the value of FromHeader.
+func (s *SentEmailDetail) GetFromHeader() string {
+	return s.FromHeader
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *SentEmailDetail) GetFromAddress() string {
+	return s.FromAddress
+}
+
+// GetToHeader returns the value of ToHeader.
+func (s *SentEmailDetail) GetToHeader() string {
+	return s.ToHeader
+}
+
+// GetToAddress returns the value of ToAddress.
+func (s *SentEmailDetail) GetToAddress() string {
+	return s.ToAddress
+}
+
+// GetSubject returns the value of Subject.
+func (s *SentEmailDetail) GetSubject() string {
+	return s.Subject
+}
+
+// GetBodySizeBytes returns the value of BodySizeBytes.
+func (s *SentEmailDetail) GetBodySizeBytes() int {
+	return s.BodySizeBytes
+}
+
+// GetContentDiscardedAt returns the value of ContentDiscardedAt.
+func (s *SentEmailDetail) GetContentDiscardedAt() OptNilDateTime {
+	return s.ContentDiscardedAt
+}
+
+// GetMessageID returns the value of MessageID.
+func (s *SentEmailDetail) GetMessageID() OptNilString {
+	return s.MessageID
+}
+
+// GetInReplyTo returns the value of InReplyTo.
+func (s *SentEmailDetail) GetInReplyTo() OptNilString {
+	return s.InReplyTo
+}
+
+// GetEmailReferences returns the value of EmailReferences.
+func (s *SentEmailDetail) GetEmailReferences() OptNilString {
+	return s.EmailReferences
+}
+
+// GetInReplyToEmailID returns the value of InReplyToEmailID.
+func (s *SentEmailDetail) GetInReplyToEmailID() OptNilUUID {
+	return s.InReplyToEmailID
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *SentEmailDetail) GetQueueID() OptNilString {
+	return s.QueueID
+}
+
+// GetSMTPResponseCode returns the value of SMTPResponseCode.
+func (s *SentEmailDetail) GetSMTPResponseCode() OptNilInt {
+	return s.SMTPResponseCode
+}
+
+// GetSMTPResponseText returns the value of SMTPResponseText.
+func (s *SentEmailDetail) GetSMTPResponseText() OptNilString {
+	return s.SMTPResponseText
+}
+
+// GetSMTPEnhancedStatusCode returns the value of SMTPEnhancedStatusCode.
+func (s *SentEmailDetail) GetSMTPEnhancedStatusCode() OptNilString {
+	return s.SMTPEnhancedStatusCode
+}
+
+// GetDkimSelector returns the value of DkimSelector.
+func (s *SentEmailDetail) GetDkimSelector() OptNilString {
+	return s.DkimSelector
+}
+
+// GetDkimDomain returns the value of DkimDomain.
+func (s *SentEmailDetail) GetDkimDomain() OptNilString {
+	return s.DkimDomain
+}
+
+// GetErrorCode returns the value of ErrorCode.
+func (s *SentEmailDetail) GetErrorCode() OptNilString {
+	return s.ErrorCode
+}
+
+// GetErrorMessage returns the value of ErrorMessage.
+func (s *SentEmailDetail) GetErrorMessage() OptNilString {
+	return s.ErrorMessage
+}
+
+// GetGates returns the value of Gates.
+func (s *SentEmailDetail) GetGates() OptNilGateDenialArray {
+	return s.Gates
+}
+
+// GetRequestID returns the value of RequestID.
+func (s *SentEmailDetail) GetRequestID() OptNilString {
+	return s.RequestID
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *SentEmailDetail) GetBodyText() OptNilString {
+	return s.BodyText
+}
+
+// GetBodyHTML returns the value of BodyHTML.
+func (s *SentEmailDetail) GetBodyHTML() OptNilString {
+	return s.BodyHTML
+}
+
+// SetID sets the value of ID.
+func (s *SentEmailDetail) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *SentEmailDetail) SetStatus(val SentEmailStatus) {
+	s.Status = val
+}
+
+// SetStatusChangedAt sets the value of StatusChangedAt.
+func (s *SentEmailDetail) SetStatusChangedAt(val time.Time) {
+	s.StatusChangedAt = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *SentEmailDetail) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *SentEmailDetail) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetClientIdempotencyKey sets the value of ClientIdempotencyKey.
+func (s *SentEmailDetail) SetClientIdempotencyKey(val OptNilString) {
+	s.ClientIdempotencyKey = val
+}
+
+// SetContentHash sets the value of ContentHash.
+func (s *SentEmailDetail) SetContentHash(val string) {
+	s.ContentHash = val
+}
+
+// SetFromHeader sets the value of FromHeader.
+func (s *SentEmailDetail) SetFromHeader(val string) {
+	s.FromHeader = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *SentEmailDetail) SetFromAddress(val string) {
+	s.FromAddress = val
+}
+
+// SetToHeader sets the value of ToHeader.
+func (s *SentEmailDetail) SetToHeader(val string) {
+	s.ToHeader = val
+}
+
+// SetToAddress sets the value of ToAddress.
+func (s *SentEmailDetail) SetToAddress(val string) {
+	s.ToAddress = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *SentEmailDetail) SetSubject(val string) {
+	s.Subject = val
+}
+
+// SetBodySizeBytes sets the value of BodySizeBytes.
+func (s *SentEmailDetail) SetBodySizeBytes(val int) {
+	s.BodySizeBytes = val
+}
+
+// SetContentDiscardedAt sets the value of ContentDiscardedAt.
+func (s *SentEmailDetail) SetContentDiscardedAt(val OptNilDateTime) {
+	s.ContentDiscardedAt = val
+}
+
+// SetMessageID sets the value of MessageID.
+func (s *SentEmailDetail) SetMessageID(val OptNilString) {
+	s.MessageID = val
+}
+
+// SetInReplyTo sets the value of InReplyTo.
+func (s *SentEmailDetail) SetInReplyTo(val OptNilString) {
+	s.InReplyTo = val
+}
+
+// SetEmailReferences sets the value of EmailReferences.
+func (s *SentEmailDetail) SetEmailReferences(val OptNilString) {
+	s.EmailReferences = val
+}
+
+// SetInReplyToEmailID sets the value of InReplyToEmailID.
+func (s *SentEmailDetail) SetInReplyToEmailID(val OptNilUUID) {
+	s.InReplyToEmailID = val
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *SentEmailDetail) SetQueueID(val OptNilString) {
+	s.QueueID = val
+}
+
+// SetSMTPResponseCode sets the value of SMTPResponseCode.
+func (s *SentEmailDetail) SetSMTPResponseCode(val OptNilInt) {
+	s.SMTPResponseCode = val
+}
+
+// SetSMTPResponseText sets the value of SMTPResponseText.
+func (s *SentEmailDetail) SetSMTPResponseText(val OptNilString) {
+	s.SMTPResponseText = val
+}
+
+// SetSMTPEnhancedStatusCode sets the value of SMTPEnhancedStatusCode.
+func (s *SentEmailDetail) SetSMTPEnhancedStatusCode(val OptNilString) {
+	s.SMTPEnhancedStatusCode = val
+}
+
+// SetDkimSelector sets the value of DkimSelector.
+func (s *SentEmailDetail) SetDkimSelector(val OptNilString) {
+	s.DkimSelector = val
+}
+
+// SetDkimDomain sets the value of DkimDomain.
+func (s *SentEmailDetail) SetDkimDomain(val OptNilString) {
+	s.DkimDomain = val
+}
+
+// SetErrorCode sets the value of ErrorCode.
+func (s *SentEmailDetail) SetErrorCode(val OptNilString) {
+	s.ErrorCode = val
+}
+
+// SetErrorMessage sets the value of ErrorMessage.
+func (s *SentEmailDetail) SetErrorMessage(val OptNilString) {
+	s.ErrorMessage = val
+}
+
+// SetGates sets the value of Gates.
+func (s *SentEmailDetail) SetGates(val OptNilGateDenialArray) {
+	s.Gates = val
+}
+
+// SetRequestID sets the value of RequestID.
+func (s *SentEmailDetail) SetRequestID(val OptNilString) {
+	s.RequestID = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *SentEmailDetail) SetBodyText(val OptNilString) {
+	s.BodyText = val
+}
+
+// SetBodyHTML sets the value of BodyHTML.
+func (s *SentEmailDetail) SetBodyHTML(val OptNilString) {
+	s.BodyHTML = val
+}
+
+// Lifecycle status of a sent_emails row. Possible values:
+// - `queued`: pre-call INSERT; the outbound agent has not
+// yet replied.
+// - `submitted_to_agent`: agent accepted; `queue_id` is set.
+// - `agent_failed`: agent rejected; `error_code` and
+// `error_message` carry the reason.
+// - `gate_denied`: a recipient-scope gate denied the send;
+// the agent was never called. The `gates` array carries
+// the denial detail. /send-mail returns 403 in this case
+// so callers see the denial synchronously; /sent-emails
+// additionally records the row for historical lookup,
+// which is when this status appears in a listing.
+// - `unknown`: terminal indeterminate; the on-box log
+// poller couldn't classify the receiver's response.
+// - `delivered` / `bounced` / `deferred` / `wait_timeout`:
+// terminal delivery outcomes (see DeliveryStatus).
 // Ref: #/components/schemas/SentEmailStatus
 type SentEmailStatus string
 
@@ -5883,6 +6506,7 @@ const (
 	SentEmailStatusQueued           SentEmailStatus = "queued"
 	SentEmailStatusSubmittedToAgent SentEmailStatus = "submitted_to_agent"
 	SentEmailStatusAgentFailed      SentEmailStatus = "agent_failed"
+	SentEmailStatusGateDenied       SentEmailStatus = "gate_denied"
 	SentEmailStatusUnknown          SentEmailStatus = "unknown"
 	SentEmailStatusDelivered        SentEmailStatus = "delivered"
 	SentEmailStatusBounced          SentEmailStatus = "bounced"
@@ -5896,6 +6520,7 @@ func (SentEmailStatus) AllValues() []SentEmailStatus {
 		SentEmailStatusQueued,
 		SentEmailStatusSubmittedToAgent,
 		SentEmailStatusAgentFailed,
+		SentEmailStatusGateDenied,
 		SentEmailStatusUnknown,
 		SentEmailStatusDelivered,
 		SentEmailStatusBounced,
@@ -5912,6 +6537,8 @@ func (s SentEmailStatus) MarshalText() ([]byte, error) {
 	case SentEmailStatusSubmittedToAgent:
 		return []byte(s), nil
 	case SentEmailStatusAgentFailed:
+		return []byte(s), nil
+	case SentEmailStatusGateDenied:
 		return []byte(s), nil
 	case SentEmailStatusUnknown:
 		return []byte(s), nil
@@ -5940,6 +6567,9 @@ func (s *SentEmailStatus) UnmarshalText(data []byte) error {
 	case SentEmailStatusAgentFailed:
 		*s = SentEmailStatusAgentFailed
 		return nil
+	case SentEmailStatusGateDenied:
+		*s = SentEmailStatusGateDenied
+		return nil
 	case SentEmailStatusUnknown:
 		*s = SentEmailStatusUnknown
 		return nil
@@ -5958,6 +6588,391 @@ func (s *SentEmailStatus) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// List-row projection of a sent-email record. Drops
+// `body_text` and `body_html` to keep paginated responses
+// small; fetch /sent-emails/{id} for the full record with
+// bodies.
+// Ref: #/components/schemas/SentEmailSummary
+type SentEmailSummary struct {
+	ID     uuid.UUID       `json:"id"`
+	Status SentEmailStatus `json:"status"`
+	// Timestamp of the most recent status transition.
+	// Polling clients should treat `status='queued'` AND
+	// `status_changed_at` older than 5 minutes as
+	// "stuck-queued" (the post-tx UPDATE failed and the
+	// actual delivery state is recoverable from on-box logs
+	// via `queue_id` when populated, or `request_id`).
+	StatusChangedAt time.Time `json:"status_changed_at"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+	// Effective idempotency key used for this send. If the
+	// caller passed the `Idempotency-Key` header, this is
+	// that value; otherwise it's a server-derived hash of
+	// the canonical request payload.
+	ClientIdempotencyKey OptNilString `json:"client_idempotency_key"`
+	// Stable hash of the canonical send payload.
+	ContentHash string `json:"content_hash"`
+	// Raw `From:` header as sent on the wire, including any
+	// display name (e.g. `"Acme Support" <agent@acme.test>`).
+	FromHeader string `json:"from_header"`
+	// Bare email address parsed from `from_header`.
+	FromAddress string `json:"from_address"`
+	// Raw `To:` header as sent on the wire, including any
+	// display name.
+	ToHeader string `json:"to_header"`
+	// Bare email address parsed from `to_header`.
+	ToAddress string `json:"to_address"`
+	Subject   string `json:"subject"`
+	// Total UTF-8 byte length of `body_text` + `body_html`.
+	// Surfaced on the list endpoint so callers can see "this
+	// row has a 4MB body" without fetching it.
+	BodySizeBytes int `json:"body_size_bytes"`
+	// Timestamp at which the bodies were discarded by an
+	// entitlement-driven retention policy. Null when bodies
+	// are still present. The detail endpoint returns
+	// null-valued `body_text`/`body_html` for discarded rows.
+	ContentDiscardedAt OptNilDateTime `json:"content_discarded_at"`
+	// Wire-level Message-ID assigned to the outbound message
+	// (RFC 5322). Null on rows that never reached signing
+	// (queued, gate_denied, agent_failed before signing).
+	MessageID OptNilString `json:"message_id"`
+	// Wire-level In-Reply-To header value, when this send
+	// was a reply.
+	InReplyTo OptNilString `json:"in_reply_to"`
+	// Wire-level References header value, when this send
+	// was a reply.
+	EmailReferences OptNilString `json:"email_references"`
+	// Reference to the inbound `emails.id` that this send
+	// replied to, when known. Populated when the caller used
+	// /emails/{id}/reply or when /send-mail's `in_reply_to`
+	// matched a stored inbound message_id in the same org.
+	InReplyToEmailID OptNilUUID `json:"in_reply_to_email_id"`
+	// Message identifier assigned by Primitive's outbound
+	// relay once the agent accepts the message. Null on
+	// queued, gate_denied, and agent_failed rows.
+	QueueID OptNilString `json:"queue_id"`
+	// Receiver's 3-digit SMTP code (e.g. 250, 550, 451).
+	// Populated on terminal delivery statuses; may be null
+	// on a deferred where the agent never got an SMTP-level
+	// response (TCP refused, DNS failed, TLS handshake
+	// failed). `smtp_response_text` still carries Postfix's
+	// descriptive text in those cases.
+	SMTPResponseCode OptNilInt `json:"smtp_response_code"`
+	// Free-form text portion of the receiver's SMTP
+	// response. The most useful debugging signal on a
+	// `bounced` or `deferred` row.
+	SMTPResponseText OptNilString `json:"smtp_response_text"`
+	// RFC 3463 enhanced status code (e.g. `5.1.1` for "Bad
+	// destination mailbox address"). Distinct from
+	// `smtp_response_code`: the basic 3-digit code is coarse
+	// (550 = "permanent failure"), the enhanced code is
+	// finer-grained.
+	SMTPEnhancedStatusCode OptNilString `json:"smtp_enhanced_status_code"`
+	// DKIM selector used to sign the outbound message.
+	// Public DNS data; useful for diagnosing why a downstream
+	// verifier rejected the signature.
+	DkimSelector OptNilString `json:"dkim_selector"`
+	// DKIM signing domain.
+	DkimDomain OptNilString `json:"dkim_domain"`
+	// Stable public error code on `agent_failed` rows. The
+	// agent's internal codes are remapped to a stable public
+	// taxonomy (see `publicAgentError` in the server) so this
+	// field is safe to branch on across agent versions.
+	ErrorCode OptNilString `json:"error_code"`
+	// Free-form error message accompanying `error_code`.
+	ErrorMessage OptNilString `json:"error_message"`
+	// Gate-denial detail on `gate_denied` rows. Mirrors the
+	// synchronous /send-mail 403 contract so a caller's
+	// GateDenial handler is the same across live denies and
+	// historical lookups. Null on every other status.
+	Gates OptNilGateDenialArray `json:"gates"`
+	// Server-issued request identifier from the original
+	// /send-mail call. Surfaced as the `X-Request-Id`
+	// response header on the live send and recorded here
+	// for support escalation.
+	RequestID OptNilString `json:"request_id"`
+}
+
+// GetID returns the value of ID.
+func (s *SentEmailSummary) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *SentEmailSummary) GetStatus() SentEmailStatus {
+	return s.Status
+}
+
+// GetStatusChangedAt returns the value of StatusChangedAt.
+func (s *SentEmailSummary) GetStatusChangedAt() time.Time {
+	return s.StatusChangedAt
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *SentEmailSummary) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *SentEmailSummary) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetClientIdempotencyKey returns the value of ClientIdempotencyKey.
+func (s *SentEmailSummary) GetClientIdempotencyKey() OptNilString {
+	return s.ClientIdempotencyKey
+}
+
+// GetContentHash returns the value of ContentHash.
+func (s *SentEmailSummary) GetContentHash() string {
+	return s.ContentHash
+}
+
+// GetFromHeader returns the value of FromHeader.
+func (s *SentEmailSummary) GetFromHeader() string {
+	return s.FromHeader
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *SentEmailSummary) GetFromAddress() string {
+	return s.FromAddress
+}
+
+// GetToHeader returns the value of ToHeader.
+func (s *SentEmailSummary) GetToHeader() string {
+	return s.ToHeader
+}
+
+// GetToAddress returns the value of ToAddress.
+func (s *SentEmailSummary) GetToAddress() string {
+	return s.ToAddress
+}
+
+// GetSubject returns the value of Subject.
+func (s *SentEmailSummary) GetSubject() string {
+	return s.Subject
+}
+
+// GetBodySizeBytes returns the value of BodySizeBytes.
+func (s *SentEmailSummary) GetBodySizeBytes() int {
+	return s.BodySizeBytes
+}
+
+// GetContentDiscardedAt returns the value of ContentDiscardedAt.
+func (s *SentEmailSummary) GetContentDiscardedAt() OptNilDateTime {
+	return s.ContentDiscardedAt
+}
+
+// GetMessageID returns the value of MessageID.
+func (s *SentEmailSummary) GetMessageID() OptNilString {
+	return s.MessageID
+}
+
+// GetInReplyTo returns the value of InReplyTo.
+func (s *SentEmailSummary) GetInReplyTo() OptNilString {
+	return s.InReplyTo
+}
+
+// GetEmailReferences returns the value of EmailReferences.
+func (s *SentEmailSummary) GetEmailReferences() OptNilString {
+	return s.EmailReferences
+}
+
+// GetInReplyToEmailID returns the value of InReplyToEmailID.
+func (s *SentEmailSummary) GetInReplyToEmailID() OptNilUUID {
+	return s.InReplyToEmailID
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *SentEmailSummary) GetQueueID() OptNilString {
+	return s.QueueID
+}
+
+// GetSMTPResponseCode returns the value of SMTPResponseCode.
+func (s *SentEmailSummary) GetSMTPResponseCode() OptNilInt {
+	return s.SMTPResponseCode
+}
+
+// GetSMTPResponseText returns the value of SMTPResponseText.
+func (s *SentEmailSummary) GetSMTPResponseText() OptNilString {
+	return s.SMTPResponseText
+}
+
+// GetSMTPEnhancedStatusCode returns the value of SMTPEnhancedStatusCode.
+func (s *SentEmailSummary) GetSMTPEnhancedStatusCode() OptNilString {
+	return s.SMTPEnhancedStatusCode
+}
+
+// GetDkimSelector returns the value of DkimSelector.
+func (s *SentEmailSummary) GetDkimSelector() OptNilString {
+	return s.DkimSelector
+}
+
+// GetDkimDomain returns the value of DkimDomain.
+func (s *SentEmailSummary) GetDkimDomain() OptNilString {
+	return s.DkimDomain
+}
+
+// GetErrorCode returns the value of ErrorCode.
+func (s *SentEmailSummary) GetErrorCode() OptNilString {
+	return s.ErrorCode
+}
+
+// GetErrorMessage returns the value of ErrorMessage.
+func (s *SentEmailSummary) GetErrorMessage() OptNilString {
+	return s.ErrorMessage
+}
+
+// GetGates returns the value of Gates.
+func (s *SentEmailSummary) GetGates() OptNilGateDenialArray {
+	return s.Gates
+}
+
+// GetRequestID returns the value of RequestID.
+func (s *SentEmailSummary) GetRequestID() OptNilString {
+	return s.RequestID
+}
+
+// SetID sets the value of ID.
+func (s *SentEmailSummary) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *SentEmailSummary) SetStatus(val SentEmailStatus) {
+	s.Status = val
+}
+
+// SetStatusChangedAt sets the value of StatusChangedAt.
+func (s *SentEmailSummary) SetStatusChangedAt(val time.Time) {
+	s.StatusChangedAt = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *SentEmailSummary) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *SentEmailSummary) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetClientIdempotencyKey sets the value of ClientIdempotencyKey.
+func (s *SentEmailSummary) SetClientIdempotencyKey(val OptNilString) {
+	s.ClientIdempotencyKey = val
+}
+
+// SetContentHash sets the value of ContentHash.
+func (s *SentEmailSummary) SetContentHash(val string) {
+	s.ContentHash = val
+}
+
+// SetFromHeader sets the value of FromHeader.
+func (s *SentEmailSummary) SetFromHeader(val string) {
+	s.FromHeader = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *SentEmailSummary) SetFromAddress(val string) {
+	s.FromAddress = val
+}
+
+// SetToHeader sets the value of ToHeader.
+func (s *SentEmailSummary) SetToHeader(val string) {
+	s.ToHeader = val
+}
+
+// SetToAddress sets the value of ToAddress.
+func (s *SentEmailSummary) SetToAddress(val string) {
+	s.ToAddress = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *SentEmailSummary) SetSubject(val string) {
+	s.Subject = val
+}
+
+// SetBodySizeBytes sets the value of BodySizeBytes.
+func (s *SentEmailSummary) SetBodySizeBytes(val int) {
+	s.BodySizeBytes = val
+}
+
+// SetContentDiscardedAt sets the value of ContentDiscardedAt.
+func (s *SentEmailSummary) SetContentDiscardedAt(val OptNilDateTime) {
+	s.ContentDiscardedAt = val
+}
+
+// SetMessageID sets the value of MessageID.
+func (s *SentEmailSummary) SetMessageID(val OptNilString) {
+	s.MessageID = val
+}
+
+// SetInReplyTo sets the value of InReplyTo.
+func (s *SentEmailSummary) SetInReplyTo(val OptNilString) {
+	s.InReplyTo = val
+}
+
+// SetEmailReferences sets the value of EmailReferences.
+func (s *SentEmailSummary) SetEmailReferences(val OptNilString) {
+	s.EmailReferences = val
+}
+
+// SetInReplyToEmailID sets the value of InReplyToEmailID.
+func (s *SentEmailSummary) SetInReplyToEmailID(val OptNilUUID) {
+	s.InReplyToEmailID = val
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *SentEmailSummary) SetQueueID(val OptNilString) {
+	s.QueueID = val
+}
+
+// SetSMTPResponseCode sets the value of SMTPResponseCode.
+func (s *SentEmailSummary) SetSMTPResponseCode(val OptNilInt) {
+	s.SMTPResponseCode = val
+}
+
+// SetSMTPResponseText sets the value of SMTPResponseText.
+func (s *SentEmailSummary) SetSMTPResponseText(val OptNilString) {
+	s.SMTPResponseText = val
+}
+
+// SetSMTPEnhancedStatusCode sets the value of SMTPEnhancedStatusCode.
+func (s *SentEmailSummary) SetSMTPEnhancedStatusCode(val OptNilString) {
+	s.SMTPEnhancedStatusCode = val
+}
+
+// SetDkimSelector sets the value of DkimSelector.
+func (s *SentEmailSummary) SetDkimSelector(val OptNilString) {
+	s.DkimSelector = val
+}
+
+// SetDkimDomain sets the value of DkimDomain.
+func (s *SentEmailSummary) SetDkimDomain(val OptNilString) {
+	s.DkimDomain = val
+}
+
+// SetErrorCode sets the value of ErrorCode.
+func (s *SentEmailSummary) SetErrorCode(val OptNilString) {
+	s.ErrorCode = val
+}
+
+// SetErrorMessage sets the value of ErrorMessage.
+func (s *SentEmailSummary) SetErrorMessage(val OptNilString) {
+	s.ErrorMessage = val
+}
+
+// SetGates sets the value of Gates.
+func (s *SentEmailSummary) SetGates(val OptNilGateDenialArray) {
+	s.Gates = val
+}
+
+// SetRequestID sets the value of RequestID.
+func (s *SentEmailSummary) SetRequestID(val OptNilString) {
+	s.RequestID = val
 }
 
 // Ref: #/components/schemas/StorageStats
