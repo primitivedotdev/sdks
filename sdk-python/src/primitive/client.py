@@ -46,6 +46,31 @@ class RequestOptions:
     idempotency_key: str | None = None
 
 
+class _NotGiven:
+    """Sentinel for ``with_options`` to distinguish 'leave as-is' from 'reset'.
+
+    Following the OpenAI/Anthropic Python SDK pattern: a parameter whose
+    default is ``_NOT_GIVEN`` is unchanged on the clone, while passing
+    ``None`` explicitly resets that field to its underlying default.
+    """
+
+    _instance: _NotGiven | None = None
+
+    def __new__(cls) -> _NotGiven:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self) -> str:
+        return "NOT_GIVEN"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+_NOT_GIVEN = _NotGiven()
+
+
 def _apply_request_options(
     api_client: AuthenticatedClient,
     *,
@@ -434,24 +459,40 @@ class PrimitiveClient:
     def with_options(
         self,
         *,
-        timeout: float | None = None,
+        timeout: float | None | _NotGiven = _NOT_GIVEN,
         extra_headers: dict[str, str] | None = None,
     ) -> PrimitiveClient:
         """Return a clone of this client with new default request options.
 
         Mirrors the ``with_options`` helper on the OpenAI/Anthropic Python
-        SDKs: the returned client carries ``timeout`` and ``extra_headers``
-        as defaults applied to every subsequent call. Per-call kwargs on
-        ``send`` / ``reply`` / ``forward`` still override these defaults.
-        ``idempotency_key`` is intentionally omitted because it is a
-        per-call concern, never a client default.
+        SDKs. Per-call kwargs on ``send``/``reply``/``forward`` still
+        override the defaults set here. ``idempotency_key`` is intentionally
+        omitted because it is a per-call concern, never a client default.
+
+        ``timeout`` is three-state: omitted leaves the clone's timeout
+        unchanged, ``None`` clears any timeout (httpx's "no timeout"), and
+        a float sets the timeout. ``extra_headers`` merges on top of the
+        clone's current headers; the merge-only model means there is no
+        way to "remove" a header that an earlier ``with_options`` call
+        added, so callers who need a clean baseline should construct a
+        fresh client.
         """
+        if isinstance(timeout, _NotGiven):
+            merged_timeout = self.api_client._timeout
+        elif timeout is None:
+            merged_timeout = httpx.Timeout(None)
+        else:
+            merged_timeout = httpx.Timeout(timeout)
+
+        merged_headers = dict(self.api_client._headers)
+        if extra_headers:
+            merged_headers.update(extra_headers)
+
         clone = copy.copy(self)
-        clone.api_client = _apply_request_options(
+        clone.api_client = evolve(
             self.api_client,
-            timeout=timeout,
-            extra_headers=extra_headers,
-            idempotency_key=None,
+            headers=merged_headers,
+            timeout=merged_timeout,
         )
         return clone
 

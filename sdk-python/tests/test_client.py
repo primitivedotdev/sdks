@@ -971,6 +971,58 @@ def test_with_options_does_not_mutate_base_client(
     assert "X-Tenant" not in headers
 
 
+def test_with_options_no_args_returns_a_clone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake(*, client, body):
+        del body
+        captured["timeout"] = client._timeout
+        return _ok_send_response()
+
+    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
+
+    base = PrimitiveClient("prim_test")
+    base_timeout = base.api_client._timeout
+    cloned = base.with_options()
+    assert cloned is not base
+    cloned.send(
+        from_email="support@example.com",
+        to="alice@example.com",
+        subject="Hello",
+        body_text="Hi",
+    )
+    assert captured["timeout"] == base_timeout
+
+
+def test_with_options_timeout_none_clears_previously_set_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake(*, client, body):
+        del body
+        captured["timeout"] = client._timeout
+        return _ok_send_response()
+
+    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
+
+    base = PrimitiveClient("prim_test")
+    fast = base.with_options(timeout=10.0)
+    cleared = fast.with_options(timeout=None)
+    cleared.send(
+        from_email="support@example.com",
+        to="alice@example.com",
+        subject="Hello",
+        body_text="Hi",
+    )
+
+    timeout = cast(httpx.Timeout, captured["timeout"])
+    assert timeout.read is None
+    assert timeout.connect is None
+
+
 def test_request_options_dataclass_is_constructible() -> None:
     options = RequestOptions(
         timeout=5.0,
