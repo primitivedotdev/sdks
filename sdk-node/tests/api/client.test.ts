@@ -251,15 +251,17 @@ describe("PrimitiveClient", () => {
     });
 
     await expect(
-      client.send({
-        from: "support@example.com",
-        to: "alice@example.com",
-        subject: "Hello",
-        bodyText: "Hi there",
-        wait: true,
-        waitTimeoutMs: 5000,
-        idempotencyKey: "customer-key",
-      }),
+      client.send(
+        {
+          from: "support@example.com",
+          to: "alice@example.com",
+          subject: "Hello",
+          bodyText: "Hi there",
+          wait: true,
+          waitTimeoutMs: 5000,
+        },
+        { idempotencyKey: "customer-key" },
+      ),
     ).resolves.toMatchObject({
       status: "delivered",
       deliveryStatus: "delivered",
@@ -501,6 +503,269 @@ describe("PrimitiveClient", () => {
     expect(captured?.gates).toHaveLength(1);
     expect(captured?.gates?.[0]?.reason).toBe("recipient_not_known");
     expect(captured?.details?.sent_email_id).toBe("se_abc");
+  });
+
+  it("send: pre-aborted signal rejects with AbortError", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      if (request.signal.aborted) throw request.signal.reason;
+      return new Response(
+        JSON.stringify({ success: true, data: SEND_RESULT }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      client.send(
+        {
+          from: "support@example.com",
+          to: "alice@example.com",
+          subject: "Hello",
+          bodyText: "Hi",
+        },
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("send: timeout rejects with AbortError when fetch never resolves", async () => {
+    const fetchMock = vi.fn<typeof fetch>(
+      (input) =>
+        new Promise<Response>((_, reject) => {
+          const request = input as Request;
+          request.signal.addEventListener("abort", () => {
+            reject(request.signal.reason);
+          });
+        }),
+    ) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    await expect(
+      client.send(
+        {
+          from: "support@example.com",
+          to: "alice@example.com",
+          subject: "Hello",
+          bodyText: "Hi",
+        },
+        { timeout: 50 },
+      ),
+    ).rejects.toMatchObject({ name: "TimeoutError" });
+  });
+
+  it("send: per-call headers are merged onto the request", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      expect(request.headers.get("x-custom")).toBe("v");
+      return new Response(
+        JSON.stringify({ success: true, data: SEND_RESULT }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    await client.send(
+      {
+        from: "support@example.com",
+        to: "alice@example.com",
+        subject: "Hello",
+        bodyText: "Hi",
+      },
+      { headers: { "X-Custom": "v" } },
+    );
+  });
+
+  it("send: idempotencyKey on options sets the Idempotency-Key header", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      expect(request.headers.get("idempotency-key")).toBe("foo");
+      return new Response(
+        JSON.stringify({ success: true, data: SEND_RESULT }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    await client.send(
+      {
+        from: "support@example.com",
+        to: "alice@example.com",
+        subject: "Hello",
+        bodyText: "Hi",
+      },
+      { idempotencyKey: "foo" },
+    );
+  });
+
+  it("reply: pre-aborted signal rejects with AbortError", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      if (request.signal.aborted) throw request.signal.reason;
+      return new Response(
+        JSON.stringify({ success: true, data: SEND_RESULT }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      client.reply(RECEIVED_EMAIL, "Thanks", { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("reply: timeout rejects when fetch never resolves", async () => {
+    const fetchMock = vi.fn<typeof fetch>(
+      (input) =>
+        new Promise<Response>((_, reject) => {
+          const request = input as Request;
+          request.signal.addEventListener("abort", () => {
+            reject(request.signal.reason);
+          });
+        }),
+    ) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    await expect(
+      client.reply(RECEIVED_EMAIL, "Thanks", { timeout: 50 }),
+    ).rejects.toMatchObject({ name: "TimeoutError" });
+  });
+
+  it("forward: pre-aborted signal rejects with AbortError", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      if (request.signal.aborted) throw request.signal.reason;
+      return new Response(
+        JSON.stringify({ success: true, data: SEND_RESULT }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      client.forward(
+        RECEIVED_EMAIL,
+        { to: "ops@example.com", bodyText: "Take this" },
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("forward: timeout rejects when fetch never resolves", async () => {
+    const fetchMock = vi.fn<typeof fetch>(
+      (input) =>
+        new Promise<Response>((_, reject) => {
+          const request = input as Request;
+          request.signal.addEventListener("abort", () => {
+            reject(request.signal.reason);
+          });
+        }),
+    ) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    await expect(
+      client.forward(
+        RECEIVED_EMAIL,
+        { to: "ops@example.com", bodyText: "Take this" },
+        { timeout: 50 },
+      ),
+    ).rejects.toMatchObject({ name: "TimeoutError" });
+  });
+
+  it("send: when both signal and timeout are set, timeout firing first aborts the request", async () => {
+    const fetchMock = vi.fn<typeof fetch>(
+      (input) =>
+        new Promise<Response>((_, reject) => {
+          const request = input as Request;
+          request.signal.addEventListener("abort", () => {
+            reject(request.signal.reason);
+          });
+        }),
+    ) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
+    });
+
+    const controller = new AbortController();
+
+    await expect(
+      client.send(
+        {
+          from: "support@example.com",
+          to: "alice@example.com",
+          subject: "Hello",
+          bodyText: "Hi",
+        },
+        { signal: controller.signal, timeout: 50 },
+      ),
+    ).rejects.toMatchObject({ name: "TimeoutError" });
   });
 
   it("surfaces retry-after header on 429 rate_limit_exceeded", async () => {

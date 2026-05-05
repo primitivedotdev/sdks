@@ -91,10 +91,23 @@ def _build_received_email(c: dict[str, Any]) -> ReceivedEmail:
     )
 
 
+def _captured_idempotency_key(kwargs: dict[str, Any]) -> str | None:
+    """Read Idempotency-Key off the per-call client clone's headers.
+
+    The SDK injects Idempotency-Key as a request header via a clone of
+    the underlying AuthenticatedClient, so the captured generated-call
+    kwargs no longer carry an ``idempotency_key`` parameter directly.
+    """
+    headers = getattr(kwargs.get("client"), "_headers", None)
+    if not isinstance(headers, dict):
+        return None
+    return cast(str | None, headers.get("Idempotency-Key"))
+
+
 def _make_capturing_sync_send(captured: dict[str, Any]) -> Any:
     def fake(**kwargs: Any) -> Any:
         captured["body"] = kwargs["body"].to_dict()
-        captured["idempotency_key"] = kwargs.get("idempotency_key")
+        captured["idempotency_key"] = _captured_idempotency_key(kwargs)
         return SimpleNamespace(
             status_code=HTTPStatus.OK,
             parsed=SendEmailResponse200.from_dict(SUCCESS_RESPONSE),
@@ -111,11 +124,7 @@ def _make_capturing_sync_reply(captured: dict[str, Any]) -> Any:
     def fake(**kwargs: Any) -> Any:
         captured["id"] = str(kwargs["id"])
         captured["body"] = kwargs["body"].to_dict()
-        # Capture idempotency_key even though reply() doesn't pass it
-        # today, so the symmetry with send/forward holds and a future
-        # change that wires reply idempotency without updating
-        # fixtures fails loudly.
-        captured["idempotency_key"] = kwargs.get("idempotency_key")
+        captured["idempotency_key"] = _captured_idempotency_key(kwargs)
         return SimpleNamespace(
             status_code=HTTPStatus.OK,
             parsed=ReplyToEmailResponse200.from_dict(SUCCESS_RESPONSE),

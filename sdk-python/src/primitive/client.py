@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import copy
 import json
 import re
 from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any, cast
 from uuid import UUID
+
+import httpx
+from attrs import evolve
 
 from .api import DEFAULT_BASE_URL, AuthenticatedClient
 from .api.api.sending.reply_to_email import (
@@ -31,6 +35,51 @@ EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 DISPLAY_EMAIL_REGEX = re.compile(r"^.+<[^\s@]+@[^\s@]+\.[^\s@]+>$")
 MAX_FROM_HEADER_LENGTH = 998
 MAX_TO_HEADER_LENGTH = 320
+
+
+@dataclass(frozen=True, slots=True)
+class RequestOptions:
+    """Per-call HTTP options applied to a single client method call."""
+
+    timeout: float | None = None
+    extra_headers: dict[str, str] | None = None
+    idempotency_key: str | None = None
+
+
+def _apply_request_options(
+    api_client: AuthenticatedClient,
+    *,
+    timeout: float | None,
+    extra_headers: dict[str, str] | None,
+    idempotency_key: str | None,
+) -> AuthenticatedClient:
+    """Return a clone of ``api_client`` with per-call options applied.
+
+    Uses ``attrs.evolve`` directly rather than ``AuthenticatedClient.with_*``
+    helpers because those helpers mutate the underlying httpx client in
+    place, which would leak per-call headers (including ``Idempotency-Key``)
+    into every subsequent call on the original client.
+    """
+    if timeout is None and not extra_headers and idempotency_key is None:
+        return api_client
+
+    merged_headers = dict(api_client._headers)
+    if extra_headers:
+        merged_headers.update(extra_headers)
+    if idempotency_key is not None:
+        merged_headers["Idempotency-Key"] = idempotency_key
+
+    merged_timeout: httpx.Timeout | None
+    if timeout is not None:
+        merged_timeout = httpx.Timeout(timeout)
+    else:
+        merged_timeout = api_client._timeout
+
+    return evolve(
+        api_client,
+        headers=merged_headers,
+        timeout=merged_timeout,
+    )
 
 
 @dataclass(frozen=True)
@@ -382,6 +431,30 @@ class PrimitiveClient:
             **client_kwargs,
         )
 
+    def with_options(
+        self,
+        *,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
+    ) -> PrimitiveClient:
+        """Return a clone of this client with new default request options.
+
+        Mirrors the ``with_options`` helper on the OpenAI/Anthropic Python
+        SDKs: the returned client carries ``timeout`` and ``extra_headers``
+        as defaults applied to every subsequent call. Per-call kwargs on
+        ``send`` / ``reply`` / ``forward`` still override these defaults.
+        ``idempotency_key`` is intentionally omitted because it is a
+        per-call concern, never a client default.
+        """
+        clone = copy.copy(self)
+        clone.api_client = _apply_request_options(
+            self.api_client,
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=None,
+        )
+        return clone
+
     def send(
         self,
         *,
@@ -394,10 +467,17 @@ class PrimitiveClient:
         wait: bool | None = None,
         wait_timeout_ms: int | None = None,
         idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
+        client = _apply_request_options(
+            self.api_client,
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=idempotency_key,
+        )
         response = send_email_sync_detailed(
-            client=self.api_client,
-            **({"idempotency_key": idempotency_key} if idempotency_key else {}),
+            client=client,
             body=_build_send_input(
                 from_email=from_email,
                 to=to,
@@ -437,10 +517,17 @@ class PrimitiveClient:
         wait: bool | None = None,
         wait_timeout_ms: int | None = None,
         idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
+        client = _apply_request_options(
+            self.api_client,
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=idempotency_key,
+        )
         response = await send_email_async_detailed(
-            client=self.api_client,
-            **({"idempotency_key": idempotency_key} if idempotency_key else {}),
+            client=client,
             body=_build_send_input(
                 from_email=from_email,
                 to=to,
@@ -474,6 +561,9 @@ class PrimitiveClient:
         text: str | dict[str, str | bool],
         *,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
         """Reply to an inbound email.
 
@@ -493,6 +583,9 @@ class PrimitiveClient:
             body_html=body_html,
             from_email=from_email or dict_from,
             wait=wait,
+            idempotency_key=idempotency_key,
+            timeout=timeout,
+            extra_headers=extra_headers,
         )
 
     async def areply(
@@ -501,6 +594,9 @@ class PrimitiveClient:
         text: str | dict[str, str | bool],
         *,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
         """Async version of :meth:`reply`."""
         body_text, body_html, dict_from, wait = _resolve_reply_payload(text)
@@ -510,6 +606,9 @@ class PrimitiveClient:
             body_html=body_html,
             from_email=from_email or dict_from,
             wait=wait,
+            idempotency_key=idempotency_key,
+            timeout=timeout,
+            extra_headers=extra_headers,
         )
 
     def _do_reply(
@@ -520,10 +619,19 @@ class PrimitiveClient:
         body_html: str | None,
         from_email: str | None,
         wait: bool | None,
+        idempotency_key: str | None,
+        timeout: float | None,
+        extra_headers: dict[str, str] | None,
     ) -> SendResult:
+        client = _apply_request_options(
+            self.api_client,
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=idempotency_key,
+        )
         response = reply_to_email_sync_detailed(
             id=UUID(email_id),
-            client=self.api_client,
+            client=client,
             body=_build_reply_input(
                 body_text=body_text,
                 body_html=body_html,
@@ -541,10 +649,19 @@ class PrimitiveClient:
         body_html: str | None,
         from_email: str | None,
         wait: bool | None,
+        idempotency_key: str | None,
+        timeout: float | None,
+        extra_headers: dict[str, str] | None,
     ) -> SendResult:
+        client = _apply_request_options(
+            self.api_client,
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=idempotency_key,
+        )
         response = await reply_to_email_async_detailed(
             id=UUID(email_id),
-            client=self.api_client,
+            client=client,
             body=_build_reply_input(
                 body_text=body_text,
                 body_html=body_html,
@@ -562,12 +679,18 @@ class PrimitiveClient:
         body_text: str | None = None,
         subject: str | None = None,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
         return self.send(
             from_email=from_email or email.received_by,
             to=to,
             subject=subject or email.forward_subject,
             body_text=_build_forward_text(email, body_text),
+            idempotency_key=idempotency_key,
+            timeout=timeout,
+            extra_headers=extra_headers,
         )
 
     async def aforward(
@@ -578,12 +701,18 @@ class PrimitiveClient:
         body_text: str | None = None,
         subject: str | None = None,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
         return await self.asend(
             from_email=from_email or email.received_by,
             to=to,
             subject=subject or email.forward_subject,
             body_text=_build_forward_text(email, body_text),
+            idempotency_key=idempotency_key,
+            timeout=timeout,
+            extra_headers=extra_headers,
         )
 
 
@@ -608,6 +737,7 @@ def client(
 __all__ = [
     "PrimitiveAPIError",
     "PrimitiveClient",
+    "RequestOptions",
     "SendResult",
     "SendThread",
     "client",

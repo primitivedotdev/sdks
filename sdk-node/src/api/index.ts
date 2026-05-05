@@ -82,6 +82,16 @@ export interface SendInput {
   thread?: SendThreadInput;
   wait?: boolean;
   waitTimeoutMs?: number;
+}
+
+export interface RequestOptions {
+  /** Cancel the in-flight request when this signal fires. Surfaces as AbortError. */
+  signal?: AbortSignal;
+  /** Per-call timeout in milliseconds. Composed with `signal` via AbortSignal.any so either fires AbortError. */
+  timeout?: number;
+  /** Per-call headers merged on top of client-level headers. Last write wins. */
+  headers?: Record<string, string>;
+  /** Idempotency key for safe retries. Sent as the Idempotency-Key request header. */
   idempotencyKey?: string;
 }
 
@@ -302,6 +312,11 @@ export class PrimitiveApiError extends Error {
   }
 }
 
+function isAbortLikeError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.name === "AbortError" || error.name === "TimeoutError";
+}
+
 function parseRetryAfterHeader(
   response: Response | undefined,
 ): number | undefined {
@@ -338,8 +353,42 @@ export class PrimitiveApiClient {
 
 export type PrimitiveClientOptions = PrimitiveApiClientOptions;
 
+interface ResolvedRequestOptions {
+  signal?: AbortSignal;
+  headers?: Record<string, string>;
+}
+
+function resolveRequestOptions(
+  options: RequestOptions | undefined,
+): ResolvedRequestOptions {
+  const signals: AbortSignal[] = [];
+  if (options?.signal) signals.push(options.signal);
+  if (options?.timeout !== undefined) {
+    signals.push(AbortSignal.timeout(options.timeout));
+  }
+
+  const signal =
+    signals.length === 0
+      ? undefined
+      : signals.length === 1
+        ? signals[0]
+        : AbortSignal.any(signals);
+
+  const headers: Record<string, string> = {
+    ...(options?.headers ?? {}),
+    ...(options?.idempotencyKey
+      ? { "Idempotency-Key": options.idempotencyKey }
+      : {}),
+  };
+
+  const resolved: ResolvedRequestOptions = {};
+  if (signal) resolved.signal = signal;
+  if (Object.keys(headers).length > 0) resolved.headers = headers;
+  return resolved;
+}
+
 export class PrimitiveClient extends PrimitiveApiClient {
-  async send(input: SendInput): Promise<SendResult> {
+  async send(input: SendInput, options?: RequestOptions): Promise<SendResult> {
     validateSendInput(input);
 
     const body: GeneratedSendMailInput = {
@@ -362,9 +411,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
 
     const result = await generatedOperations.sendEmail({
       body,
-      ...(input.idempotencyKey
-        ? { headers: { "Idempotency-Key": input.idempotencyKey } }
-        : {}),
+      ...resolveRequestOptions(options),
       client: this.client,
       responseStyle: "fields",
     });
@@ -385,7 +432,11 @@ export class PrimitiveClient extends PrimitiveApiClient {
    * subject match to thread, so a custom subject silently breaks the
    * thread for half the recipient population.
    */
-  async reply(email: ReceivedEmail, input: ReplyInput): Promise<SendResult> {
+  async reply(
+    email: ReceivedEmail,
+    input: ReplyInput,
+    options?: RequestOptions,
+  ): Promise<SendResult> {
     const resolved = typeof input === "string" ? { text: input } : input;
     // Reject the subject override at runtime so a JS caller (no TS
     // types) gets the same loud error as a TS caller. Without this,
@@ -413,6 +464,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
     const result = await generatedOperations.replyToEmail({
       body,
       path: { id: email.id },
+      ...resolveRequestOptions(options),
       client: this.client,
       responseStyle: "fields",
     });
@@ -422,15 +474,19 @@ export class PrimitiveClient extends PrimitiveApiClient {
   async forward(
     email: ReceivedEmail,
     input: ForwardInput,
+    options?: RequestOptions,
   ): Promise<SendResult> {
     validateForwardInput(input);
 
-    return this.send({
-      from: input.from ?? email.receivedBy,
-      to: input.to,
-      subject: input.subject ?? email.forwardSubject,
-      bodyText: buildForwardText(email, input.bodyText),
-    });
+    return this.send(
+      {
+        from: input.from ?? email.receivedBy,
+        to: input.to,
+        subject: input.subject ?? email.forwardSubject,
+        bodyText: buildForwardText(email, input.bodyText),
+      },
+      options,
+    );
   }
 }
 
@@ -468,6 +524,9 @@ function unwrapSendResult(result: {
   const response = (result as { response?: Response }).response;
 
   if (result.error) {
+    if (isAbortLikeError(result.error)) {
+      throw result.error;
+    }
     const parsed = parseApiErrorPayload(result.error);
     throw new PrimitiveApiError(parsed.message, {
       payload: result.error,
