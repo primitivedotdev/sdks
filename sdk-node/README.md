@@ -156,6 +156,8 @@ await client.send(
 );
 ```
 
+`idempotencyKey` is accepted on `send` and `forward`. `reply` does not accept it because the server does not currently forward `Idempotency-Key` from the reply route to the underlying send pipeline. The `reply` options type is `Omit<RequestOptions, "idempotencyKey">`; passing the field throws at runtime as well.
+
 Client-level config (default fetch, base URL, default headers passed to `primitive.client({...})`) still applies to every call. Per-call `RequestOptions` overrides or merges on top: headers merge (per-call wins on conflict), `signal` and `timeout` compose so the first to fire wins.
 
 ### About `wait` mode

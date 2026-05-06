@@ -92,16 +92,18 @@ def _build_received_email(c: dict[str, Any]) -> ReceivedEmail:
 
 
 def _captured_idempotency_key(kwargs: dict[str, Any]) -> str | None:
-    """Read Idempotency-Key off the per-call client clone's headers.
+    """Read the active per-call Idempotency-Key from the contextvar.
 
-    The SDK injects Idempotency-Key as a request header via a clone of
-    the underlying AuthenticatedClient, so the captured generated-call
-    kwargs no longer carry an ``idempotency_key`` parameter directly.
+    The SDK now applies per-call options at request time via a contextvar
+    + httpx event hook, so the api_client's headers no longer change. The
+    monkeypatched fake runs while the contextvar token is still active,
+    which is when we read it.
     """
-    headers = getattr(kwargs.get("client"), "_headers", None)
-    if not isinstance(headers, dict):
+    del kwargs
+    opts = client_module._per_call_options_var.get()
+    if opts is None:
         return None
-    return cast(str | None, headers.get("Idempotency-Key"))
+    return cast(str | None, opts.idempotency_key)
 
 
 def _make_capturing_sync_send(captured: dict[str, Any]) -> Any:

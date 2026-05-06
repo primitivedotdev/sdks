@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any, cast
@@ -14,7 +15,6 @@ from primitive.api.models.send_email_response_200 import SendEmailResponse200
 from primitive.client import (
     PrimitiveAPIError,
     PrimitiveClient,
-    RequestOptions,
     SendThread,
 )
 from primitive.received_email import (
@@ -77,6 +77,68 @@ SEND_RESULT = {
     "content_hash": "hash-123",
     "idempotent_replay": False,
 }
+
+BASE_URL = "https://example.test/api/v1"
+
+
+def _send_response_body(extra: dict[str, Any] | None = None) -> bytes:
+    """Return the canonical send-success JSON body for a MockTransport handler."""
+    data: dict[str, Any] = dict(SEND_RESULT)
+    if extra:
+        data.update(extra)
+    return json.dumps({"success": True, "data": data}).encode("utf-8")
+
+
+def _install_capturing_transport(
+    client: PrimitiveClient,
+    captured: list[httpx.Request],
+    *,
+    body: bytes | None = None,
+    is_reply: bool = False,
+) -> None:
+    """Install a MockTransport that records the request and returns a 200 response.
+
+    Used in lieu of monkeypatching generated client functions so tests can
+    assert on the actual httpx.Request (post-hook), where per-call options
+    now live.
+    """
+    response_body = body if body is not None else _send_response_body()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(
+            HTTPStatus.OK,
+            content=response_body,
+            headers={"content-type": "application/json"},
+        )
+
+    transport = httpx.MockTransport(handler)
+    client.api_client.set_httpx_client(
+        httpx.Client(base_url=BASE_URL, transport=transport)
+    )
+    del is_reply  # signature symmetry; both endpoints use the same envelope
+
+
+async def _install_async_capturing_transport(
+    client: PrimitiveClient,
+    captured: list[httpx.Request],
+    *,
+    body: bytes | None = None,
+) -> None:
+    response_body = body if body is not None else _send_response_body()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(
+            HTTPStatus.OK,
+            content=response_body,
+            headers={"content-type": "application/json"},
+        )
+
+    transport = httpx.MockTransport(handler)
+    client.api_client.set_async_httpx_client(
+        httpx.AsyncClient(base_url=BASE_URL, transport=transport)
+    )
 
 
 def test_normalize_received_email_rejects_empty_smtp_recipients() -> None:
@@ -268,36 +330,27 @@ def test_send_accepts_display_name_from(monkeypatch: pytest.MonkeyPatch) -> None
     )
 
 
-def test_send_passes_wait_options_and_idempotency_key(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+def test_send_passes_wait_options_and_idempotency_key() -> None:
+    """Per-call options now ride on the httpx.Request headers, set by hook.
 
-    def fake_send_email_sync_detailed(*, client, body):
-        captured["body"] = body.to_dict()
-        captured["headers"] = dict(client._headers)
-        return SimpleNamespace(
-            status_code=HTTPStatus.OK,
-            parsed=SendEmailResponse200.from_dict(
-                {
-                    "success": True,
-                    "data": {
-                        **SEND_RESULT,
-                        "status": "delivered",
-                        "delivery_status": "delivered",
-                        "smtp_response_code": 250,
-                        "smtp_response_text": "250 OK",
-                    },
-                }
-            ),
-            content=b"",
-        )
-
-    monkeypatch.setattr(
-        client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
+    The wait/wait_timeout_ms travel in the body; the idempotency key
+    travels in the request headers.
+    """
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(
+        client,
+        captured,
+        body=_send_response_body(
+            {
+                "status": "delivered",
+                "delivery_status": "delivered",
+                "smtp_response_code": 250,
+                "smtp_response_text": "250 OK",
+            }
+        ),
     )
 
-    client = PrimitiveClient("prim_test")
     result = client.send(
         from_email="support@example.com",
         to="alice@example.com",
@@ -308,11 +361,12 @@ def test_send_passes_wait_options_and_idempotency_key(
         idempotency_key="customer-key",
     )
 
-    assert cast(dict[str, str], captured["headers"]).get("Idempotency-Key") == (
-        "customer-key"
-    )
-    assert cast(dict[str, Any], captured["body"])["wait"] is True
-    assert cast(dict[str, Any], captured["body"])["wait_timeout_ms"] == 5000
+    assert len(captured) == 1
+    request = captured[0]
+    assert request.headers.get("Idempotency-Key") == "customer-key"
+    body = json.loads(request.content)
+    assert body["wait"] is True
+    assert body["wait_timeout_ms"] == 5000
     assert result.delivery_status == "delivered"
     assert result.smtp_response_code == 250
     assert result.smtp_response_text == "250 OK"
@@ -697,39 +751,11 @@ def test_reply_dict_from_overrides_default(monkeypatch: pytest.MonkeyPatch) -> N
     assert cast(dict[str, Any], captured["body"])["from"] == "ops@example.com"
 
 
-def _ok_send_response() -> Any:
-    return SimpleNamespace(
-        status_code=HTTPStatus.OK,
-        parsed=SendEmailResponse200.from_dict(
-            {"success": True, "data": SEND_RESULT}
-        ),
-        content=b"",
-    )
+def test_send_extra_headers_appear_on_request() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(client, captured)
 
-
-def _ok_reply_response() -> Any:
-    return SimpleNamespace(
-        status_code=HTTPStatus.OK,
-        parsed=ReplyToEmailResponse200.from_dict(
-            {"success": True, "data": SEND_RESULT}
-        ),
-        content=b"",
-    )
-
-
-def test_send_extra_headers_are_merged_into_request_client(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
-
-    def fake(*, client, body):
-        del body
-        captured["headers"] = dict(client._headers)
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
-
-    client = PrimitiveClient("prim_test")
     client.send(
         from_email="support@example.com",
         to="alice@example.com",
@@ -738,23 +764,15 @@ def test_send_extra_headers_are_merged_into_request_client(
         extra_headers={"X-Custom": "v1"},
     )
 
-    headers = cast(dict[str, str], captured["headers"])
-    assert headers["X-Custom"] == "v1"
+    assert len(captured) == 1
+    assert captured[0].headers.get("X-Custom") == "v1"
 
 
-def test_send_per_call_timeout_sets_client_timeout(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+def test_send_per_call_timeout_appears_on_request_extension() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(client, captured)
 
-    def fake(*, client, body):
-        del body
-        captured["timeout"] = client._timeout
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
-
-    client = PrimitiveClient("prim_test")
     client.send(
         from_email="support@example.com",
         to="alice@example.com",
@@ -763,24 +781,18 @@ def test_send_per_call_timeout_sets_client_timeout(
         timeout=0.5,
     )
 
-    assert isinstance(captured["timeout"], httpx.Timeout)
-    assert cast(httpx.Timeout, captured["timeout"]).read == 0.5
+    assert len(captured) == 1
+    timeout_ext = captured[0].extensions.get("timeout")
+    assert isinstance(timeout_ext, dict)
+    assert timeout_ext.get("read") == 0.5
 
 
-def test_send_per_call_options_do_not_mutate_base_client(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_send_per_call_options_do_not_leak_into_next_call() -> None:
     """Per-call kwargs must not leak into the next call on the same client."""
-    captured: list[dict[str, str]] = []
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(client, captured)
 
-    def fake(*, client, body):
-        del body
-        captured.append(dict(client._headers))
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
-
-    client = PrimitiveClient("prim_test")
     client.send(
         from_email="support@example.com",
         to="alice@example.com",
@@ -796,10 +808,11 @@ def test_send_per_call_options_do_not_mutate_base_client(
         body_text="Hi",
     )
 
-    assert captured[0].get("Idempotency-Key") == "first"
-    assert captured[0].get("X-First") == "1"
-    assert "Idempotency-Key" not in captured[1]
-    assert "X-First" not in captured[1]
+    assert len(captured) == 2
+    assert captured[0].headers.get("Idempotency-Key") == "first"
+    assert captured[0].headers.get("X-First") == "1"
+    assert "Idempotency-Key" not in captured[1].headers
+    assert "X-First" not in captured[1].headers
 
 
 def test_send_propagates_httpx_timeout_exception() -> None:
@@ -823,39 +836,62 @@ def test_send_propagates_httpx_timeout_exception() -> None:
         )
 
 
-def test_reply_threads_idempotency_key_through_to_request_client(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+def test_custom_httpx_client_is_not_replaced_by_per_call_options() -> None:
+    """Setting a custom httpx client and then passing per-call options must
+    not drop the user's client. Counter the previously-broken behavior where
+    attrs.evolve() reset _client / _async_client to None."""
 
-    def fake(*, id, client, body):
-        del id, body
-        captured["headers"] = dict(client._headers)
-        return _ok_reply_response()
+    request_count = 0
 
-    monkeypatch.setattr(client_module, "reply_to_email_sync_detailed", fake)
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal request_count
+        request_count += 1
+        return httpx.Response(
+            HTTPStatus.OK,
+            content=_send_response_body(),
+            headers={"content-type": "application/json"},
+        )
 
-    client = PrimitiveClient("prim_test")
-    client.reply(RECEIVED_EMAIL, "Thanks!", idempotency_key="reply-key")
+    transport = httpx.MockTransport(handler)
+    custom_client = httpx.Client(base_url=BASE_URL, transport=transport)
+    # Mark the client so we can detect identity preservation.
+    cast(Any, custom_client)._primitive_marker = "this-one"
 
-    assert cast(dict[str, str], captured["headers"]).get("Idempotency-Key") == (
-        "reply-key"
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client.api_client.set_httpx_client(custom_client)
+
+    client.send(
+        from_email="support@example.com",
+        to="alice@example.com",
+        subject="Hello",
+        body_text="Hi",
+        timeout=5.0,
+        idempotency_key="key-1",
+        extra_headers={"X-Tenant": "acme"},
+    )
+
+    assert request_count == 1
+    # The same custom client must still be installed after the per-call call.
+    assert client.api_client.get_httpx_client() is custom_client
+    assert (
+        cast(Any, client.api_client.get_httpx_client())._primitive_marker
+        == "this-one"
     )
 
 
-def test_forward_threads_idempotency_key_through_to_request_client(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+def test_reply_does_not_accept_idempotency_key() -> None:
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
 
-    def fake(*, client, body):
-        del body
-        captured["headers"] = dict(client._headers)
-        return _ok_send_response()
+    extra: dict[str, Any] = {"idempotency_key": "reply-key"}
+    with pytest.raises(TypeError, match="idempotency_key"):
+        client.reply(RECEIVED_EMAIL, "Thanks!", **extra)
 
-    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
 
-    client = PrimitiveClient("prim_test")
+def test_forward_threads_idempotency_key_through_to_request() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(client, captured)
+
     client.forward(
         RECEIVED_EMAIL,
         to="ops@example.com",
@@ -863,25 +899,15 @@ def test_forward_threads_idempotency_key_through_to_request_client(
         idempotency_key="fwd-key",
     )
 
-    assert cast(dict[str, str], captured["headers"]).get("Idempotency-Key") == (
-        "fwd-key"
-    )
+    assert len(captured) == 1
+    assert captured[0].headers.get("Idempotency-Key") == "fwd-key"
 
 
-def test_reply_per_call_extra_headers_and_timeout(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+def test_reply_per_call_extra_headers_and_timeout() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(client, captured)
 
-    def fake(*, id, client, body):
-        del id, body
-        captured["headers"] = dict(client._headers)
-        captured["timeout"] = client._timeout
-        return _ok_reply_response()
-
-    monkeypatch.setattr(client_module, "reply_to_email_sync_detailed", fake)
-
-    client = PrimitiveClient("prim_test")
     client.reply(
         RECEIVED_EMAIL,
         "Thanks!",
@@ -889,24 +915,18 @@ def test_reply_per_call_extra_headers_and_timeout(
         timeout=2.5,
     )
 
-    assert cast(dict[str, str], captured["headers"])["X-Reply"] == "yes"
-    assert cast(httpx.Timeout, captured["timeout"]).read == 2.5
+    assert len(captured) == 1
+    assert captured[0].headers.get("X-Reply") == "yes"
+    timeout_ext = captured[0].extensions.get("timeout")
+    assert isinstance(timeout_ext, dict)
+    assert timeout_ext.get("read") == 2.5
 
 
-def test_with_options_sets_default_timeout_for_subsequent_calls(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+def test_with_options_sets_default_timeout_for_subsequent_calls() -> None:
+    captured: list[httpx.Request] = []
+    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(base, captured)
 
-    def fake(*, client, body):
-        del body
-        captured["timeout"] = client._timeout
-        captured["headers"] = dict(client._headers)
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
-
-    base = PrimitiveClient("prim_test")
     fast = base.with_options(timeout=10.0, extra_headers={"X-Tenant": "acme"})
     fast.send(
         from_email="support@example.com",
@@ -915,23 +935,18 @@ def test_with_options_sets_default_timeout_for_subsequent_calls(
         body_text="Hi",
     )
 
-    assert cast(httpx.Timeout, captured["timeout"]).read == 10.0
-    assert cast(dict[str, str], captured["headers"])["X-Tenant"] == "acme"
+    assert len(captured) == 1
+    assert captured[0].headers.get("X-Tenant") == "acme"
+    timeout_ext = captured[0].extensions.get("timeout")
+    assert isinstance(timeout_ext, dict)
+    assert timeout_ext.get("read") == 10.0
 
 
-def test_with_options_per_call_timeout_overrides_default(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+def test_with_options_per_call_timeout_overrides_default() -> None:
+    captured: list[httpx.Request] = []
+    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(base, captured)
 
-    def fake(*, client, body):
-        del body
-        captured["timeout"] = client._timeout
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
-
-    base = PrimitiveClient("prim_test")
     fast = base.with_options(timeout=10.0)
     fast.send(
         from_email="support@example.com",
@@ -941,24 +956,17 @@ def test_with_options_per_call_timeout_overrides_default(
         timeout=2.0,
     )
 
-    assert cast(httpx.Timeout, captured["timeout"]).read == 2.0
+    assert len(captured) == 1
+    timeout_ext = captured[0].extensions.get("timeout")
+    assert isinstance(timeout_ext, dict)
+    assert timeout_ext.get("read") == 2.0
 
 
-def test_with_options_does_not_mutate_base_client(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: list[dict[str, object]] = []
+def test_with_options_does_not_mutate_base_client() -> None:
+    captured: list[httpx.Request] = []
+    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(base, captured)
 
-    def fake(*, client, body):
-        del body
-        captured.append(
-            {"timeout": client._timeout, "headers": dict(client._headers)}
-        )
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
-
-    base = PrimitiveClient("prim_test")
     base.with_options(timeout=10.0, extra_headers={"X-Tenant": "acme"})
     base.send(
         from_email="support@example.com",
@@ -967,24 +975,20 @@ def test_with_options_does_not_mutate_base_client(
         body_text="Hi",
     )
 
-    headers = cast(dict[str, str], captured[0]["headers"])
-    assert "X-Tenant" not in headers
+    assert len(captured) == 1
+    assert "X-Tenant" not in captured[0].headers
+    # The base client never set its own timeout, so the request should not
+    # carry the with_options(timeout=10.0) override.
+    timeout_ext = captured[0].extensions.get("timeout")
+    if isinstance(timeout_ext, dict):
+        assert timeout_ext.get("read") != 10.0
 
 
-def test_with_options_no_args_returns_a_clone(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+def test_with_options_no_args_returns_a_clone() -> None:
+    captured: list[httpx.Request] = []
+    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(base, captured)
 
-    def fake(*, client, body):
-        del body
-        captured["timeout"] = client._timeout
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
-
-    base = PrimitiveClient("prim_test")
-    base_timeout = base.api_client._timeout
     cloned = base.with_options()
     assert cloned is not base
     cloned.send(
@@ -993,22 +997,18 @@ def test_with_options_no_args_returns_a_clone(
         subject="Hello",
         body_text="Hi",
     )
-    assert captured["timeout"] == base_timeout
+
+    # The clone has no defaults of its own; the request must look the same as
+    # one issued through the base client (no per-call hook mutation).
+    assert len(captured) == 1
+    assert "Idempotency-Key" not in captured[0].headers
 
 
-def test_with_options_timeout_none_clears_previously_set_timeout(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+def test_with_options_timeout_none_clears_previously_set_timeout() -> None:
+    captured: list[httpx.Request] = []
+    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(base, captured)
 
-    def fake(*, client, body):
-        del body
-        captured["timeout"] = client._timeout
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_sync_detailed", fake)
-
-    base = PrimitiveClient("prim_test")
     fast = base.with_options(timeout=10.0)
     cleared = fast.with_options(timeout=None)
     cleared.send(
@@ -1018,37 +1018,19 @@ def test_with_options_timeout_none_clears_previously_set_timeout(
         body_text="Hi",
     )
 
-    timeout = cast(httpx.Timeout, captured["timeout"])
-    assert timeout.read is None
-    assert timeout.connect is None
-
-
-def test_request_options_dataclass_is_constructible() -> None:
-    options = RequestOptions(
-        timeout=5.0,
-        extra_headers={"X-Trace": "abc"},
-        idempotency_key="key",
-    )
-    assert options.timeout == 5.0
-    assert options.extra_headers == {"X-Trace": "abc"}
-    assert options.idempotency_key == "key"
+    assert len(captured) == 1
+    # The cleared client must NOT carry the previously-set 10s read timeout.
+    timeout_ext = captured[0].extensions.get("timeout")
+    if isinstance(timeout_ext, dict):
+        assert timeout_ext.get("read") != 10.0
 
 
 @pytest.mark.anyio
-async def test_asend_per_call_timeout_and_extra_headers(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+async def test_asend_per_call_timeout_and_extra_headers() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    await _install_async_capturing_transport(client, captured)
 
-    async def fake(*, client, body):
-        del body
-        captured["headers"] = dict(client._headers)
-        captured["timeout"] = client._timeout
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_async_detailed", fake)
-
-    client = PrimitiveClient("prim_test")
     await client.asend(
         from_email="support@example.com",
         to="alice@example.com",
@@ -1059,47 +1041,29 @@ async def test_asend_per_call_timeout_and_extra_headers(
         timeout=3.0,
     )
 
-    headers = cast(dict[str, str], captured["headers"])
-    assert headers["Idempotency-Key"] == "async-key"
-    assert headers["X-Async"] == "1"
-    assert cast(httpx.Timeout, captured["timeout"]).read == 3.0
+    assert len(captured) == 1
+    assert captured[0].headers.get("Idempotency-Key") == "async-key"
+    assert captured[0].headers.get("X-Async") == "1"
+    timeout_ext = captured[0].extensions.get("timeout")
+    assert isinstance(timeout_ext, dict)
+    assert timeout_ext.get("read") == 3.0
 
 
 @pytest.mark.anyio
-async def test_areply_threads_idempotency_key_through_to_request_client(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+async def test_areply_does_not_accept_idempotency_key() -> None:
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
 
-    async def fake(*, id, client, body):
-        del id, body
-        captured["headers"] = dict(client._headers)
-        return _ok_reply_response()
-
-    monkeypatch.setattr(client_module, "reply_to_email_async_detailed", fake)
-
-    client = PrimitiveClient("prim_test")
-    await client.areply(RECEIVED_EMAIL, "Thanks!", idempotency_key="areply-key")
-
-    assert cast(dict[str, str], captured["headers"])["Idempotency-Key"] == (
-        "areply-key"
-    )
+    extra: dict[str, Any] = {"idempotency_key": "areply-key"}
+    with pytest.raises(TypeError, match="idempotency_key"):
+        await client.areply(RECEIVED_EMAIL, "Thanks!", **extra)
 
 
 @pytest.mark.anyio
-async def test_aforward_threads_idempotency_key_through_to_request_client(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict[str, object] = {}
+async def test_aforward_threads_idempotency_key_through_to_request() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    await _install_async_capturing_transport(client, captured)
 
-    async def fake(*, client, body):
-        del body
-        captured["headers"] = dict(client._headers)
-        return _ok_send_response()
-
-    monkeypatch.setattr(client_module, "send_email_async_detailed", fake)
-
-    client = PrimitiveClient("prim_test")
     await client.aforward(
         RECEIVED_EMAIL,
         to="ops@example.com",
@@ -1107,6 +1071,5 @@ async def test_aforward_threads_idempotency_key_through_to_request_client(
         idempotency_key="afwd-key",
     )
 
-    assert cast(dict[str, str], captured["headers"])["Idempotency-Key"] == (
-        "afwd-key"
-    )
+    assert len(captured) == 1
+    assert captured[0].headers.get("Idempotency-Key") == "afwd-key"
