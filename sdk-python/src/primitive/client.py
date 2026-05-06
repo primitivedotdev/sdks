@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import contextvars
+import copy
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http import HTTPStatus
 from typing import Any, cast
 from uuid import UUID
+
+import httpx
 
 from .api import DEFAULT_BASE_URL, AuthenticatedClient
 from .api.api.sending.reply_to_email import (
@@ -31,6 +35,131 @@ EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 DISPLAY_EMAIL_REGEX = re.compile(r"^.+<[^\s@]+@[^\s@]+\.[^\s@]+>$")
 MAX_FROM_HEADER_LENGTH = 998
 MAX_TO_HEADER_LENGTH = 320
+
+
+@dataclass(frozen=True, slots=True)
+class _PerCallOptions:
+    """Per-call HTTP options resolved from with_options defaults plus kwargs."""
+
+    timeout: float | None = None
+    extra_headers: dict[str, str] | None = None
+    idempotency_key: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _ClientDefaults:
+    """Defaults set via with_options; per-call kwargs override these."""
+
+    timeout: httpx.Timeout | None = None
+    extra_headers: dict[str, str] = field(default_factory=dict)
+
+
+_per_call_options_var: contextvars.ContextVar[_PerCallOptions | None] = (
+    contextvars.ContextVar("primitive_per_call_options", default=None)
+)
+
+
+def _apply_per_call_options_to_request(request: httpx.Request) -> None:
+    """Mutate an in-flight httpx.Request to apply the active per-call options.
+
+    Reads from the contextvar so the same request hook works for sync and async.
+    Idempotent: if no options are set in the current context, this is a no-op.
+    """
+    opts = _per_call_options_var.get()
+    if opts is None:
+        return
+    if opts.extra_headers:
+        for key, value in opts.extra_headers.items():
+            request.headers[key] = value
+    if opts.idempotency_key is not None:
+        request.headers["Idempotency-Key"] = opts.idempotency_key
+    if opts.timeout is not None:
+        request.extensions["timeout"] = httpx.Timeout(opts.timeout).as_dict()
+
+
+def _sync_request_hook(request: httpx.Request) -> None:
+    _apply_per_call_options_to_request(request)
+
+
+async def _async_request_hook(request: httpx.Request) -> None:
+    _apply_per_call_options_to_request(request)
+
+
+def _install_request_hooks(api_client: AuthenticatedClient) -> None:
+    """Eagerly construct the httpx clients and attach our request hook.
+
+    Done once at PrimitiveClient init so that customer-supplied clients
+    installed later via set_httpx_client also have hooks attached when we
+    re-call this. The append is idempotent (same callable identity check).
+    """
+    sync_client = api_client.get_httpx_client()
+    async_client = api_client.get_async_httpx_client()
+    sync_hooks = sync_client.event_hooks.setdefault("request", [])
+    if _sync_request_hook not in sync_hooks:
+        sync_hooks.append(_sync_request_hook)
+    async_hooks = async_client.event_hooks.setdefault("request", [])
+    if _async_request_hook not in async_hooks:
+        async_hooks.append(_async_request_hook)
+
+
+class _NotGiven:
+    """Sentinel for ``with_options`` to distinguish 'leave as-is' from 'reset'."""
+
+    _instance: _NotGiven | None = None
+
+    def __new__(cls) -> _NotGiven:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self) -> str:
+        return "NOT_GIVEN"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+_NOT_GIVEN = _NotGiven()
+
+
+def _compose_options(
+    defaults: _ClientDefaults,
+    *,
+    timeout: float | None,
+    extra_headers: dict[str, str] | None,
+    idempotency_key: str | None,
+) -> _PerCallOptions | None:
+    """Merge with_options defaults with per-call kwargs (per-call wins)."""
+    final_timeout: float | None
+    if timeout is not None:
+        final_timeout = timeout
+    elif defaults.timeout is not None:
+        # Pull a single read timeout out of the httpx.Timeout for the hook.
+        # An all-None Timeout (from with_options(timeout=None)) is treated
+        # as "no per-call override" because there is nothing to apply.
+        read_value = defaults.timeout.read
+        final_timeout = read_value if read_value is not None else None
+    else:
+        final_timeout = None
+
+    final_extra_headers: dict[str, str] = {}
+    if defaults.extra_headers:
+        final_extra_headers.update(defaults.extra_headers)
+    if extra_headers:
+        final_extra_headers.update(extra_headers)
+
+    if (
+        final_timeout is None
+        and not final_extra_headers
+        and idempotency_key is None
+    ):
+        return None
+
+    return _PerCallOptions(
+        timeout=final_timeout,
+        extra_headers=final_extra_headers or None,
+        idempotency_key=idempotency_key,
+    )
 
 
 @dataclass(frozen=True)
@@ -81,18 +210,20 @@ class PrimitiveAPIError(Exception):
         self.payload = payload
 
 
-def _validate_address_header(field: str, value: str) -> None:
+def _validate_address_header(field_name: str, value: str) -> None:
     value_length = len(value.strip())
-    max_length = MAX_FROM_HEADER_LENGTH if field == "from" else MAX_TO_HEADER_LENGTH
+    max_length = (
+        MAX_FROM_HEADER_LENGTH if field_name == "from" else MAX_TO_HEADER_LENGTH
+    )
     if value_length < 3:
-        raise ValueError(f"{field} must be at least 3 characters")
+        raise ValueError(f"{field_name} must be at least 3 characters")
     if value_length > max_length:
-        raise ValueError(f"{field} must be at most {max_length} characters")
+        raise ValueError(f"{field_name} must be at most {max_length} characters")
 
 
-def _validate_email_address(field: str, value: str) -> None:
+def _validate_email_address(field_name: str, value: str) -> None:
     if not EMAIL_REGEX.fullmatch(value) and not DISPLAY_EMAIL_REGEX.fullmatch(value):
-        raise ValueError(f"{field} must be a valid email address")
+        raise ValueError(f"{field_name} must be a valid email address")
 
 
 def _build_reply_input(
@@ -369,6 +500,8 @@ def _resolve_reply_payload(
 
 
 class PrimitiveClient:
+    _defaults: _ClientDefaults
+
     def __init__(
         self,
         api_key: str,
@@ -381,6 +514,70 @@ class PrimitiveClient:
             token=api_key,
             **client_kwargs,
         )
+        self._defaults = _ClientDefaults()
+        _install_request_hooks(self.api_client)
+
+    def with_options(
+        self,
+        *,
+        timeout: float | None | _NotGiven = _NOT_GIVEN,
+        extra_headers: dict[str, str] | None = None,
+    ) -> PrimitiveClient:
+        """Return a clone of this client with new default request options.
+
+        Mirrors ``with_options`` on the OpenAI/Anthropic Python SDKs. Per-call
+        kwargs on ``send``/``reply``/``forward`` still override the defaults
+        set here. ``idempotency_key`` is intentionally omitted because it is
+        a per-call concern, never a client default.
+
+        ``timeout`` is three-state: omitted leaves the clone's timeout
+        unchanged, ``None`` clears any timeout (httpx's "no timeout"), and
+        a float sets the timeout. ``extra_headers`` merges on top of the
+        clone's current defaults; the merge-only model means there is no
+        way to "remove" a header that an earlier ``with_options`` call
+        added, so callers who need a clean baseline should construct a
+        fresh client.
+
+        The clone shares the same ``api_client`` (and its underlying
+        httpx clients) as the base; defaults are stored on the
+        PrimitiveClient itself, applied per-request via a contextvar.
+        """
+        if isinstance(timeout, _NotGiven):
+            merged_timeout = self._defaults.timeout
+        elif timeout is None:
+            merged_timeout = httpx.Timeout(None)
+        else:
+            merged_timeout = httpx.Timeout(timeout)
+
+        merged_headers = dict(self._defaults.extra_headers)
+        if extra_headers:
+            merged_headers.update(extra_headers)
+
+        clone = copy.copy(self)
+        clone._defaults = _ClientDefaults(
+            timeout=merged_timeout,
+            extra_headers=merged_headers,
+        )
+        return clone
+
+    def _set_per_call_options(
+        self,
+        *,
+        timeout: float | None,
+        extra_headers: dict[str, str] | None,
+        idempotency_key: str | None,
+    ) -> contextvars.Token[_PerCallOptions | None]:
+        """Compose final options and bind them to the contextvar.
+
+        Returns the token so callers can reset() in a finally block.
+        """
+        opts = _compose_options(
+            self._defaults,
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=idempotency_key,
+        )
+        return _per_call_options_var.set(opts)
 
     def send(
         self,
@@ -394,21 +591,33 @@ class PrimitiveClient:
         wait: bool | None = None,
         wait_timeout_ms: int | None = None,
         idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
-        response = send_email_sync_detailed(
-            client=self.api_client,
-            **({"idempotency_key": idempotency_key} if idempotency_key else {}),
-            body=_build_send_input(
-                from_email=from_email,
-                to=to,
-                subject=subject,
-                body_text=body_text,
-                body_html=body_html,
-                thread=thread,
-                wait=wait,
-                wait_timeout_ms=wait_timeout_ms,
-            ),
+        # Make sure hooks are present in case the user installed a custom
+        # httpx client via api_client.set_httpx_client(...) after init.
+        _install_request_hooks(self.api_client)
+        token = self._set_per_call_options(
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=idempotency_key,
         )
+        try:
+            response = send_email_sync_detailed(
+                client=self.api_client,
+                body=_build_send_input(
+                    from_email=from_email,
+                    to=to,
+                    subject=subject,
+                    body_text=body_text,
+                    body_html=body_html,
+                    thread=thread,
+                    wait=wait,
+                    wait_timeout_ms=wait_timeout_ms,
+                ),
+            )
+        finally:
+            _per_call_options_var.reset(token)
 
         if response.status_code == HTTPStatus.OK and isinstance(
             response.parsed,
@@ -437,21 +646,31 @@ class PrimitiveClient:
         wait: bool | None = None,
         wait_timeout_ms: int | None = None,
         idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
-        response = await send_email_async_detailed(
-            client=self.api_client,
-            **({"idempotency_key": idempotency_key} if idempotency_key else {}),
-            body=_build_send_input(
-                from_email=from_email,
-                to=to,
-                subject=subject,
-                body_text=body_text,
-                body_html=body_html,
-                thread=thread,
-                wait=wait,
-                wait_timeout_ms=wait_timeout_ms,
-            ),
+        _install_request_hooks(self.api_client)
+        token = self._set_per_call_options(
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=idempotency_key,
         )
+        try:
+            response = await send_email_async_detailed(
+                client=self.api_client,
+                body=_build_send_input(
+                    from_email=from_email,
+                    to=to,
+                    subject=subject,
+                    body_text=body_text,
+                    body_html=body_html,
+                    thread=thread,
+                    wait=wait,
+                    wait_timeout_ms=wait_timeout_ms,
+                ),
+            )
+        finally:
+            _per_call_options_var.reset(token)
 
         if response.status_code == HTTPStatus.OK and isinstance(
             response.parsed,
@@ -474,6 +693,9 @@ class PrimitiveClient:
         text: str | dict[str, str | bool],
         *,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
         """Reply to an inbound email.
 
@@ -493,6 +715,9 @@ class PrimitiveClient:
             body_html=body_html,
             from_email=from_email or dict_from,
             wait=wait,
+            idempotency_key=idempotency_key,
+            timeout=timeout,
+            extra_headers=extra_headers,
         )
 
     async def areply(
@@ -501,6 +726,9 @@ class PrimitiveClient:
         text: str | dict[str, str | bool],
         *,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
         """Async version of :meth:`reply`."""
         body_text, body_html, dict_from, wait = _resolve_reply_payload(text)
@@ -510,6 +738,9 @@ class PrimitiveClient:
             body_html=body_html,
             from_email=from_email or dict_from,
             wait=wait,
+            idempotency_key=idempotency_key,
+            timeout=timeout,
+            extra_headers=extra_headers,
         )
 
     def _do_reply(
@@ -520,17 +751,29 @@ class PrimitiveClient:
         body_html: str | None,
         from_email: str | None,
         wait: bool | None,
+        idempotency_key: str | None,
+        timeout: float | None,
+        extra_headers: dict[str, str] | None,
     ) -> SendResult:
-        response = reply_to_email_sync_detailed(
-            id=UUID(email_id),
-            client=self.api_client,
-            body=_build_reply_input(
-                body_text=body_text,
-                body_html=body_html,
-                from_email=from_email,
-                wait=wait,
-            ),
+        _install_request_hooks(self.api_client)
+        token = self._set_per_call_options(
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=idempotency_key,
         )
+        try:
+            response = reply_to_email_sync_detailed(
+                id=UUID(email_id),
+                client=self.api_client,
+                body=_build_reply_input(
+                    body_text=body_text,
+                    body_html=body_html,
+                    from_email=from_email,
+                    wait=wait,
+                ),
+            )
+        finally:
+            _per_call_options_var.reset(token)
         return _unwrap_reply_response(response)
 
     async def _ado_reply(
@@ -541,17 +784,29 @@ class PrimitiveClient:
         body_html: str | None,
         from_email: str | None,
         wait: bool | None,
+        idempotency_key: str | None,
+        timeout: float | None,
+        extra_headers: dict[str, str] | None,
     ) -> SendResult:
-        response = await reply_to_email_async_detailed(
-            id=UUID(email_id),
-            client=self.api_client,
-            body=_build_reply_input(
-                body_text=body_text,
-                body_html=body_html,
-                from_email=from_email,
-                wait=wait,
-            ),
+        _install_request_hooks(self.api_client)
+        token = self._set_per_call_options(
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=idempotency_key,
         )
+        try:
+            response = await reply_to_email_async_detailed(
+                id=UUID(email_id),
+                client=self.api_client,
+                body=_build_reply_input(
+                    body_text=body_text,
+                    body_html=body_html,
+                    from_email=from_email,
+                    wait=wait,
+                ),
+            )
+        finally:
+            _per_call_options_var.reset(token)
         return _unwrap_reply_response(response)
 
     def forward(
@@ -562,12 +817,22 @@ class PrimitiveClient:
         body_text: str | None = None,
         subject: str | None = None,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
+        # Forward composes the per-call options once at this layer; the
+        # inner send() will set its own contextvar token from these same
+        # kwargs, which is fine because the token-based reset restores
+        # whatever this frame had set when send() returns.
         return self.send(
             from_email=from_email or email.received_by,
             to=to,
             subject=subject or email.forward_subject,
             body_text=_build_forward_text(email, body_text),
+            idempotency_key=idempotency_key,
+            timeout=timeout,
+            extra_headers=extra_headers,
         )
 
     async def aforward(
@@ -578,12 +843,18 @@ class PrimitiveClient:
         body_text: str | None = None,
         subject: str | None = None,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
         return await self.asend(
             from_email=from_email or email.received_by,
             to=to,
             subject=subject or email.forward_subject,
             body_text=_build_forward_text(email, body_text),
+            idempotency_key=idempotency_key,
+            timeout=timeout,
+            extra_headers=extra_headers,
         )
 
 

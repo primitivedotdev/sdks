@@ -56,10 +56,11 @@ type ReplyParams struct {
 }
 
 type ForwardParams struct {
-	To       string
-	BodyText string
-	Subject  string
-	From     string
+	To             string
+	BodyText       string
+	Subject        string
+	From           string
+	IdempotencyKey string
 }
 
 type SendResult struct {
@@ -391,10 +392,11 @@ func (c *Client) Forward(ctx context.Context, email *ReceivedEmail, input Forwar
 	}
 
 	return c.Send(ctx, SendParams{
-		From:     firstNonEmpty(input.From, email.ReceivedBy),
-		To:       input.To,
-		Subject:  firstNonEmpty(input.Subject, email.ForwardSubject),
-		BodyText: buildForwardText(*email, input.BodyText),
+		From:           firstNonEmpty(input.From, email.ReceivedBy),
+		To:             input.To,
+		Subject:        firstNonEmpty(input.Subject, email.ForwardSubject),
+		BodyText:       buildForwardText(*email, input.BodyText),
+		IdempotencyKey: input.IdempotencyKey,
 	})
 }
 

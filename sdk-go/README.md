@@ -86,6 +86,38 @@ result, err := client.Send(ctx, primitive.SendParams{
 downstream SMTP transaction completes. Use a context deadline long enough for
 SMTP delivery, typically 30-60 seconds.
 
+### Per-call timeout and cancellation
+
+Every client method takes `ctx context.Context` as its first argument, so
+per-call deadlines, cancellation, and request-scoped values use the standard
+library directly. There is no separate `RequestOptions` struct.
+
+```go
+// Per-call timeout: cancel after 15 seconds.
+ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+defer cancel()
+_, err := client.Send(ctx, primitive.SendParams{
+    From:    "Support <support@example.com>",
+    To:      "alice@example.com",
+    Subject: "Hello",
+    BodyText: "Hi there",
+})
+
+// Per-call cancellation: bail out from another goroutine.
+ctx, cancel := context.WithCancel(context.Background())
+go func() { <-userBailoutSignal; cancel() }()
+_, err := client.Send(ctx, primitive.SendParams{ /* params */ })
+```
+
+A canceled `ctx` surfaces as `context.Canceled`; a deadline exceeded surfaces
+as `context.DeadlineExceeded`. Both are distinct from API errors returned as
+`*primitive.APIError`, so callers can tell a client-side abort apart from a
+server response.
+
+For idempotent retries, set `IdempotencyKey` on `SendParams` or
+`ForwardParams` (see the `Send` example above). The same key replays the
+original response.
+
 ### About `Wait` mode
 
 When `Wait` is true, the call returns the first downstream SMTP outcome (or

@@ -112,9 +112,6 @@ const result = await client.send({
   to: "alice@example.com",
   subject: "Hello",
   bodyText: "Hi there",
-  // Use a unique key per logical send. Reusing a key returns the original
-  // response from the first send, which is how retries are deduplicated.
-  idempotencyKey: "customer-key-abc123",
   wait: true,
   waitTimeoutMs: 5000,
 });
@@ -123,6 +120,43 @@ console.log(result.id, result.status, result.queueId, result.deliveryStatus);
 ```
 
 `send`, `reply`, and `forward` keep the HTTP request open until Primitive's downstream SMTP transaction completes. In production, configure your runtime or transport with a request timeout long enough for SMTP delivery, typically 30 to 60 seconds.
+
+### Per-call request options
+
+Every client method accepts an optional second argument with cancellation, timeout, header, and idempotency controls:
+
+```ts
+interface RequestOptions {
+  // Cancel the in-flight request when this signal fires. Surfaces as AbortError.
+  signal?: AbortSignal;
+  // Per-call timeout in milliseconds. Composed with `signal` so either fires.
+  timeout?: number;
+  // Per-call headers merged on top of client-level headers. Last write wins.
+  headers?: Record<string, string>;
+  // Idempotency key for safe retries. Sent as the Idempotency-Key request header.
+  idempotencyKey?: string;
+}
+```
+
+Cap a single send at 15 seconds:
+
+```ts
+await client.send(
+  { from, to, subject, bodyText },
+  { signal: AbortSignal.timeout(15000) },
+);
+```
+
+Idempotency key for safe retries (reusing a key returns the original response, so a retried network call deduplicates against the first send):
+
+```ts
+await client.send(
+  { from, to, subject, bodyText },
+  { idempotencyKey: "customer-key-abc123" },
+);
+```
+
+Client-level config (default fetch, base URL, default headers passed to `primitive.client({...})`) still applies to every call. Per-call `RequestOptions` overrides or merges on top: headers merge (per-call wins on conflict), `signal` and `timeout` compose so the first to fire wins.
 
 ### About `wait` mode
 

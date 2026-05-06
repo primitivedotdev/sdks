@@ -257,27 +257,29 @@ describe("shared send/reply/forward payloads", () => {
             }
           : undefined;
 
-      await client.send({
-        from: testCase.input.from,
-        to: testCase.input.to,
-        subject: testCase.input.subject,
-        ...(testCase.input.body_text !== undefined
-          ? { bodyText: testCase.input.body_text }
-          : {}),
-        ...(testCase.input.body_html !== undefined
-          ? { bodyHtml: testCase.input.body_html }
-          : {}),
-        ...(thread ? { thread } : {}),
-        ...(testCase.input.wait !== undefined
-          ? { wait: testCase.input.wait }
-          : {}),
-        ...(testCase.input.wait_timeout_ms !== undefined
-          ? { waitTimeoutMs: testCase.input.wait_timeout_ms }
-          : {}),
-        ...(testCase.input.idempotency_key !== undefined
+      await client.send(
+        {
+          from: testCase.input.from,
+          to: testCase.input.to,
+          subject: testCase.input.subject,
+          ...(testCase.input.body_text !== undefined
+            ? { bodyText: testCase.input.body_text }
+            : {}),
+          ...(testCase.input.body_html !== undefined
+            ? { bodyHtml: testCase.input.body_html }
+            : {}),
+          ...(thread ? { thread } : {}),
+          ...(testCase.input.wait !== undefined
+            ? { wait: testCase.input.wait }
+            : {}),
+          ...(testCase.input.wait_timeout_ms !== undefined
+            ? { waitTimeoutMs: testCase.input.wait_timeout_ms }
+            : {}),
+        },
+        testCase.input.idempotency_key !== undefined
           ? { idempotencyKey: testCase.input.idempotency_key }
-          : {}),
-      });
+          : undefined,
+      );
 
       expect(captured.body).toEqual(testCase.expected_body);
       expect(captured.idempotencyKey).toBe(testCase.expected_idempotency_key);

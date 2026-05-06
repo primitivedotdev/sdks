@@ -91,10 +91,25 @@ def _build_received_email(c: dict[str, Any]) -> ReceivedEmail:
     )
 
 
+def _captured_idempotency_key(kwargs: dict[str, Any]) -> str | None:
+    """Read the active per-call Idempotency-Key from the contextvar.
+
+    The SDK now applies per-call options at request time via a contextvar
+    + httpx event hook, so the api_client's headers no longer change. The
+    monkeypatched fake runs while the contextvar token is still active,
+    which is when we read it.
+    """
+    del kwargs
+    opts = client_module._per_call_options_var.get()
+    if opts is None:
+        return None
+    return cast(str | None, opts.idempotency_key)
+
+
 def _make_capturing_sync_send(captured: dict[str, Any]) -> Any:
     def fake(**kwargs: Any) -> Any:
         captured["body"] = kwargs["body"].to_dict()
-        captured["idempotency_key"] = kwargs.get("idempotency_key")
+        captured["idempotency_key"] = _captured_idempotency_key(kwargs)
         return SimpleNamespace(
             status_code=HTTPStatus.OK,
             parsed=SendEmailResponse200.from_dict(SUCCESS_RESPONSE),
@@ -111,11 +126,7 @@ def _make_capturing_sync_reply(captured: dict[str, Any]) -> Any:
     def fake(**kwargs: Any) -> Any:
         captured["id"] = str(kwargs["id"])
         captured["body"] = kwargs["body"].to_dict()
-        # Capture idempotency_key even though reply() doesn't pass it
-        # today, so the symmetry with send/forward holds and a future
-        # change that wires reply idempotency without updating
-        # fixtures fails loudly.
-        captured["idempotency_key"] = kwargs.get("idempotency_key")
+        captured["idempotency_key"] = _captured_idempotency_key(kwargs)
         return SimpleNamespace(
             status_code=HTTPStatus.OK,
             parsed=ReplyToEmailResponse200.from_dict(SUCCESS_RESPONSE),

@@ -135,6 +135,51 @@ client.forward(
 )
 ```
 
+### Per-call request options
+
+`send`, `reply`, `forward` (and their `a*` async variants) accept the same
+three per-call kwargs:
+
+- `timeout` (seconds, float). Overrides the client-level timeout.
+- `extra_headers` (dict). Merged on top of client headers.
+- `idempotency_key` (str). Sent as the `Idempotency-Key` header.
+
+```python
+# Per-call timeout
+client.send(
+    from_email="support@example.com",
+    to="alice@example.com",
+    subject="Hello",
+    body_text="Hi there",
+    timeout=15.0,
+)
+
+# Per-call idempotency key
+client.send(
+    from_email="support@example.com",
+    to="alice@example.com",
+    subject="Hello",
+    body_text="Hi there",
+    idempotency_key="my-key",
+)
+```
+
+Use `client.with_options(...)` to clone the client with new defaults applied
+to every subsequent call. Per-call kwargs still win over these defaults.
+
+```python
+fast = client.with_options(timeout=5.0)
+fast.send(
+    from_email="support@example.com",
+    to="alice@example.com",
+    subject="Hello",
+    body_text="Hi there",
+)
+```
+
+`with_options` accepts `timeout` and `extra_headers` only. `idempotency_key`
+is a per-call concern and is rejected as a client default.
+
 ## The normalized email object
 
 `primitive.receive(...)` returns a normalized inbound email object:
