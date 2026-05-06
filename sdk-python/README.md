@@ -138,15 +138,11 @@ client.forward(
 ### Per-call request options
 
 `send`, `reply`, `forward` (and their `a*` async variants) accept the same
-two per-call kwargs:
+three per-call kwargs:
 
 - `timeout` (seconds, float). Overrides the client-level timeout.
 - `extra_headers` (dict). Merged on top of client headers.
-
-`send` and `forward` additionally accept `idempotency_key` (str), sent as
-the `Idempotency-Key` header. `reply` does not, because the server does
-not currently forward `Idempotency-Key` from the reply route to the
-underlying send pipeline.
+- `idempotency_key` (str). Sent as the `Idempotency-Key` header.
 
 ```python
 # Per-call timeout

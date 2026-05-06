@@ -879,12 +879,15 @@ def test_custom_httpx_client_is_not_replaced_by_per_call_options() -> None:
     )
 
 
-def test_reply_does_not_accept_idempotency_key() -> None:
+def test_reply_threads_idempotency_key_through_to_request() -> None:
+    captured: list[httpx.Request] = []
     client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    _install_capturing_transport(client, captured)
 
-    extra: dict[str, Any] = {"idempotency_key": "reply-key"}
-    with pytest.raises(TypeError, match="idempotency_key"):
-        client.reply(RECEIVED_EMAIL, "Thanks!", **extra)
+    client.reply(RECEIVED_EMAIL, "Thanks!", idempotency_key="reply-key")
+
+    assert len(captured) == 1
+    assert captured[0].headers.get("Idempotency-Key") == "reply-key"
 
 
 def test_forward_threads_idempotency_key_through_to_request() -> None:
@@ -1050,12 +1053,15 @@ async def test_asend_per_call_timeout_and_extra_headers() -> None:
 
 
 @pytest.mark.anyio
-async def test_areply_does_not_accept_idempotency_key() -> None:
+async def test_areply_threads_idempotency_key_through_to_request() -> None:
+    captured: list[httpx.Request] = []
     client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    await _install_async_capturing_transport(client, captured)
 
-    extra: dict[str, Any] = {"idempotency_key": "areply-key"}
-    with pytest.raises(TypeError, match="idempotency_key"):
-        await client.areply(RECEIVED_EMAIL, "Thanks!", **extra)
+    await client.areply(RECEIVED_EMAIL, "Thanks!", idempotency_key="areply-key")
+
+    assert len(captured) == 1
+    assert captured[0].headers.get("Idempotency-Key") == "areply-key"
 
 
 @pytest.mark.anyio

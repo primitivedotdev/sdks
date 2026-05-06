@@ -435,7 +435,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
   async reply(
     email: ReceivedEmail,
     input: ReplyInput,
-    options?: Omit<RequestOptions, "idempotencyKey">,
+    options?: RequestOptions,
   ): Promise<SendResult> {
     const resolved = typeof input === "string" ? { text: input } : input;
     // Reject the subject override at runtime so a JS caller (no TS
@@ -448,15 +448,6 @@ export class PrimitiveClient extends PrimitiveApiClient {
     if ("subject" in resolved) {
       throw new TypeError(
         "reply does not support a subject override; the server prepends 'Re:' to the parent's subject for thread continuity",
-      );
-    }
-    // Runtime guard so JS callers (no TS types) get a loud error if
-    // they pass idempotencyKey via options. The reply route does not
-    // currently forward Idempotency-Key to the underlying send pipeline,
-    // so accepting the field would be a silent no-op.
-    if (options && "idempotencyKey" in options) {
-      throw new TypeError(
-        "reply does not accept idempotencyKey; the server does not currently forward Idempotency-Key from the reply route to the underlying send pipeline",
       );
     }
     if (!resolved.text && !resolved.html) {

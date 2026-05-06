@@ -693,6 +693,7 @@ class PrimitiveClient:
         text: str | dict[str, str | bool],
         *,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
@@ -705,9 +706,7 @@ class PrimitiveClient:
         ``from_email`` is a kwarg shorthand for the same override.
         ``subject`` is intentionally not accepted because Gmail's
         threading needs a normalized-subject match in addition to
-        References. ``idempotency_key`` is not accepted because the
-        server does not currently forward it from the reply route to
-        the underlying send pipeline.
+        References.
         """
         body_text, body_html, dict_from, wait = _resolve_reply_payload(text)
         return self._do_reply(
@@ -716,6 +715,7 @@ class PrimitiveClient:
             body_html=body_html,
             from_email=from_email or dict_from,
             wait=wait,
+            idempotency_key=idempotency_key,
             timeout=timeout,
             extra_headers=extra_headers,
         )
@@ -726,6 +726,7 @@ class PrimitiveClient:
         text: str | dict[str, str | bool],
         *,
         from_email: str | None = None,
+        idempotency_key: str | None = None,
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
@@ -737,6 +738,7 @@ class PrimitiveClient:
             body_html=body_html,
             from_email=from_email or dict_from,
             wait=wait,
+            idempotency_key=idempotency_key,
             timeout=timeout,
             extra_headers=extra_headers,
         )
@@ -749,6 +751,7 @@ class PrimitiveClient:
         body_html: str | None,
         from_email: str | None,
         wait: bool | None,
+        idempotency_key: str | None,
         timeout: float | None,
         extra_headers: dict[str, str] | None,
     ) -> SendResult:
@@ -756,7 +759,7 @@ class PrimitiveClient:
         token = self._set_per_call_options(
             timeout=timeout,
             extra_headers=extra_headers,
-            idempotency_key=None,
+            idempotency_key=idempotency_key,
         )
         try:
             response = reply_to_email_sync_detailed(
@@ -781,6 +784,7 @@ class PrimitiveClient:
         body_html: str | None,
         from_email: str | None,
         wait: bool | None,
+        idempotency_key: str | None,
         timeout: float | None,
         extra_headers: dict[str, str] | None,
     ) -> SendResult:
@@ -788,7 +792,7 @@ class PrimitiveClient:
         token = self._set_per_call_options(
             timeout=timeout,
             extra_headers=extra_headers,
-            idempotency_key=None,
+            idempotency_key=idempotency_key,
         )
         try:
             response = await reply_to_email_async_detailed(

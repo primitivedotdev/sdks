@@ -630,17 +630,28 @@ describe("PrimitiveClient", () => {
     );
   });
 
-  it("reply: rejects idempotencyKey on options at runtime", async () => {
+  it("reply: idempotencyKey on options sets the Idempotency-Key header", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      expect(request.headers.get("idempotency-key")).toBe("reply-key");
+      return new Response(
+        JSON.stringify({ success: true, data: SEND_RESULT }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }) as typeof fetch;
+
     const client = new PrimitiveClient({
       apiKey: "prim_test",
       baseUrl: "https://example.test/api/v1",
+      fetch: fetchMock,
     });
 
-    await expect(
-      client.reply(RECEIVED_EMAIL, "Thanks", {
-        idempotencyKey: "k",
-      } as unknown as Parameters<typeof client.reply>[2]),
-    ).rejects.toThrow(/does not accept idempotencyKey/);
+    await client.reply(RECEIVED_EMAIL, "Thanks", {
+      idempotencyKey: "reply-key",
+    });
   });
 
   it("reply: pre-aborted signal rejects with AbortError", async () => {
