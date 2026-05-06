@@ -419,7 +419,7 @@ export interface BuildEventFromParsedDataOptions {
   downloadExpiresAt: string;
   /**
    * Download URL for the attachments tarball.
-   * Must be null iff `parsed.attachments` is empty — mismatch throws.
+   * Must be null iff `parsed.attachments` is empty. Mismatch throws.
    */
   attachmentsDownloadUrl: string | null;
   /** Delivery attempt number, starting at 1. */

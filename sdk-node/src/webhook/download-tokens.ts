@@ -5,10 +5,10 @@
  * specific email's raw bytes or attachment bundle from a per-deployment
  * download endpoint. It binds:
  *
- * - `email_id` — the specific email the token authorizes.
- * - `aud` — a caller-chosen audience label (e.g. the resource kind being
+ * - `email_id`: the specific email the token authorizes.
+ * - `aud`: a caller-chosen audience label (e.g. the resource kind being
  *   downloaded). Tokens minted for one audience will not verify under another.
- * - `exp` — an absolute expiration time (unix seconds).
+ * - `exp`: an absolute expiration time (unix seconds).
  *
  * Format: `<base64url(payload)>.<base64url(signature)>` where `signature`
  * is HMAC-SHA256 over the base64url-encoded payload using the shared secret.
@@ -84,9 +84,9 @@ export function generateDownloadToken(
 export interface VerifyDownloadTokenOptions {
   /** The token string to verify. */
   token: string;
-  /** Expected email ID — must match the token payload exactly. */
+  /** Expected email ID. Must match the token payload exactly. */
   emailId: string;
-  /** Expected audience — must match the token payload exactly. */
+  /** Expected audience. Must match the token payload exactly. */
   audience: string;
   /** Shared HMAC secret. */
   secret: string;
@@ -98,7 +98,7 @@ export interface VerifyDownloadTokenOptions {
  * Result of verifying a download token.
  *
  * On failure, `error` is a short human-readable reason suitable for logs.
- * Do not surface it to untrusted clients — it may reveal which check failed.
+ * Do not surface it to untrusted clients; it may reveal which check failed.
  */
 export type VerifyDownloadTokenResult =
   | { valid: true }
@@ -108,7 +108,7 @@ export type VerifyDownloadTokenResult =
  * Verify a signed download token.
  *
  * Returns a discriminated-union result. The function never throws for
- * verification failures — only malformed inputs at the crypto layer would
+ * verification failures. Only malformed inputs at the crypto layer would
  * surface. Callers should check `result.valid` and log `result.error`.
  *
  * @param params - Verification inputs.
@@ -150,8 +150,8 @@ export function verifyDownloadToken(
     return { valid: false, error: "Invalid signature" };
   }
 
-  // Buffer.from(..., "base64url") is lenient — it silently drops non-alphabet
-  // characters instead of throwing — so validate the charset explicitly.
+  // Buffer.from(..., "base64url") is lenient: it silently drops non-alphabet
+  // characters instead of throwing, so validate the charset explicitly.
   if (!BASE64URL_PATTERN.test(payloadStr)) {
     return { valid: false, error: "Token payload is not valid base64url" };
   }
