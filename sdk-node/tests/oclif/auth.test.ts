@@ -1,8 +1,10 @@
 import {
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -122,5 +124,23 @@ describe("CLI auth credentials", () => {
     release();
     const releaseAgain = acquireCliCredentialsLock(tempDir);
     releaseAgain();
+  });
+
+  it("recovers stale credential lock directories", () => {
+    const lockPath = join(tempDir, "credentials.lock");
+    mkdirSync(lockPath, { mode: 0o700 });
+    const now = new Date("2026-05-05T00:00:00.000Z").getTime();
+    const staleTime = new Date(now - 2_000);
+    utimesSync(lockPath, staleTime, staleTime);
+
+    const release = acquireCliCredentialsLock(tempDir, {
+      now: () => now,
+      staleMs: 1_000,
+    });
+
+    expect(() =>
+      acquireCliCredentialsLock(tempDir, { now: () => now, staleMs: 1_000 }),
+    ).toThrow(/already in progress/);
+    release();
   });
 });

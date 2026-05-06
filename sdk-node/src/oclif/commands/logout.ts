@@ -9,6 +9,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  acquireCliCredentialsLock,
   deleteCliCredentials,
   loadCliCredentials,
   normalizeBaseUrl,
@@ -22,6 +23,10 @@ function unwrapData<T>(value: unknown): T | null {
   const envelope = value as { data?: T } | null | undefined;
   return envelope?.data ?? null;
 }
+
+type LogoutFlags = {
+  "base-url"?: string;
+};
 
 class LogoutCommand extends Command {
   static description =
@@ -40,6 +45,22 @@ class LogoutCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(LogoutCommand);
+    let releaseCredentialsLock: () => void;
+    try {
+      releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw cliError(detail);
+    }
+
+    try {
+      await this.runWithCredentialLock(flags);
+    } finally {
+      releaseCredentialsLock();
+    }
+  }
+
+  private async runWithCredentialLock(flags: LogoutFlags): Promise<void> {
     let credentials: ReturnType<typeof loadCliCredentials>;
     try {
       credentials = loadCliCredentials(this.config.configDir);

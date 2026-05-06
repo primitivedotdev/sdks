@@ -5,6 +5,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -12,6 +13,7 @@ import { DEFAULT_BASE_URL } from "../api/index.js";
 
 const CREDENTIALS_FILE = "credentials.json";
 const CREDENTIALS_LOCK_DIR = "credentials.lock";
+const CREDENTIALS_LOCK_STALE_MS = 30 * 60 * 1000;
 const MALFORMED_CREDENTIALS_HINT =
   "Run `primitive logout` and then `primitive login`.";
 
@@ -142,22 +144,56 @@ export function deleteCliCredentials(configDir: string): void {
   rmSync(credentialsPath(configDir), { force: true });
 }
 
-export function acquireCliCredentialsLock(configDir: string): () => void {
+function errorCode(error: unknown): unknown {
+  return error && typeof error === "object"
+    ? (error as { code?: unknown }).code
+    : undefined;
+}
+
+function removeStaleCliCredentialsLock(
+  lockPath: string,
+  staleMs: number,
+  now: () => number,
+): boolean {
+  try {
+    const stats = statSync(lockPath);
+    if (now() - stats.mtimeMs < staleMs) return false;
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return true;
+    throw error;
+  }
+
+  rmSync(lockPath, { force: true, recursive: true });
+  return true;
+}
+
+export function acquireCliCredentialsLock(
+  configDir: string,
+  options: { now?: () => number; staleMs?: number } = {},
+): () => void {
   mkdirSync(configDir, { mode: 0o700, recursive: true });
   const lockPath = join(configDir, CREDENTIALS_LOCK_DIR);
-  try {
-    mkdirSync(lockPath, { mode: 0o700 });
-  } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      (error as { code?: unknown }).code === "EEXIST"
-    ) {
+  const now = options.now ?? Date.now;
+  const staleMs = options.staleMs ?? CREDENTIALS_LOCK_STALE_MS;
+  let acquired = false;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      mkdirSync(lockPath, { mode: 0o700 });
+      acquired = true;
+      break;
+    } catch (error) {
+      if (errorCode(error) !== "EEXIST") throw error;
+      if (removeStaleCliCredentialsLock(lockPath, staleMs, now)) continue;
       throw new Error(
         "Another Primitive CLI credential operation is already in progress. Wait for it to finish, then retry.",
       );
     }
-    throw error;
+  }
+  if (!acquired) {
+    throw new Error(
+      "Another Primitive CLI credential operation is already in progress. Wait for it to finish, then retry.",
+    );
   }
 
   let released = false;
