@@ -176,7 +176,15 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "400": {
-            "description": "Invalid request, pending authorization, expired token, or invalid device code",
+            "description": "Invalid request, pending authorization, slow polling, expired token, or invalid device code",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before polling again when the error code is `slow_down`"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -212,6 +220,16 @@ export const openapiDocument: Record<string, unknown> = {
                         "message": "Invalid CLI login device code"
                       }
                     }
+                  },
+                  "slow_down": {
+                    "summary": "Polling too quickly",
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "slow_down",
+                        "message": "Polling too quickly; slow down and retry later"
+                      }
+                    }
                   }
                 }
               }
@@ -229,31 +247,6 @@ export const openapiDocument: Record<string, unknown> = {
                   "error": {
                     "code": "access_denied",
                     "message": "CLI login was denied in the browser"
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Polling too quickly",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer"
-                },
-                "description": "Seconds to wait before polling again"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "slow_down",
-                    "message": "Polling too quickly; slow down and retry later"
                   }
                 }
               }
@@ -2570,7 +2563,7 @@ export const openapiDocument: Record<string, unknown> = {
           "metadata": {
             "type": "object",
             "additionalProperties": true,
-            "description": "Optional client metadata stored with the login session"
+            "description": "Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer"
           }
         }
       },

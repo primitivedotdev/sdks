@@ -123,7 +123,7 @@ export type StartCliLoginInput = {
      */
     device_name?: string;
     /**
-     * Optional client metadata stored with the login session
+     * Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer
      */
     metadata?: {
         [key: string]: unknown;
@@ -1289,17 +1289,13 @@ export type PollCliLoginData = {
 
 export type PollCliLoginErrors = {
     /**
-     * Invalid request, pending authorization, expired token, or invalid device code
+     * Invalid request, pending authorization, slow polling, expired token, or invalid device code
      */
     400: ErrorResponse;
     /**
      * CLI login was denied in the browser
      */
     403: ErrorResponse;
-    /**
-     * Polling too quickly
-     */
-    429: ErrorResponse;
 };
 
 export type PollCliLoginError = PollCliLoginErrors[keyof PollCliLoginErrors];

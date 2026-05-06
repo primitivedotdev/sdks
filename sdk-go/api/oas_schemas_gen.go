@@ -2604,6 +2604,7 @@ func (*ErrorResponse) getSendPermissionsRes() {}
 func (*ErrorResponse) listDomainsRes()        {}
 func (*ErrorResponse) listEndpointsRes()      {}
 func (*ErrorResponse) listFiltersRes()        {}
+func (*ErrorResponse) pollCliLoginRes()       {}
 func (*ErrorResponse) startCliLoginRes()      {}
 
 type ErrorResponseError struct {
@@ -5287,14 +5288,6 @@ func (s *PaginationMeta) SetCursor(val NilString) {
 	s.Cursor = val
 }
 
-type PollCliLoginBadRequest ErrorResponse
-
-func (*PollCliLoginBadRequest) pollCliLoginRes() {}
-
-type PollCliLoginForbidden ErrorResponse
-
-func (*PollCliLoginForbidden) pollCliLoginRes() {}
-
 // Ref: #/components/schemas/PollCliLoginInput
 type PollCliLoginInput struct {
 	DeviceCode string `json:"device_code"`
@@ -7480,7 +7473,7 @@ func (*StartCliLoginCreatedHeaders) startCliLoginRes() {}
 type StartCliLoginInput struct {
 	// Human-readable device name shown during browser approval.
 	DeviceName OptString `json:"device_name"`
-	// Optional client metadata stored with the login session.
+	// Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer.
 	Metadata OptStartCliLoginInputMetadata `json:"metadata"`
 }
 
@@ -7504,7 +7497,7 @@ func (s *StartCliLoginInput) SetMetadata(val OptStartCliLoginInputMetadata) {
 	s.Metadata = val
 }
 
-// Optional client metadata stored with the login session.
+// Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer.
 type StartCliLoginInputMetadata map[string]jx.Raw
 
 func (s *StartCliLoginInputMetadata) init() StartCliLoginInputMetadata {

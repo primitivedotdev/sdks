@@ -20,7 +20,7 @@ T = TypeVar("T", bound="StartCliLoginInputMetadata")
 
 @_attrs_define
 class StartCliLoginInputMetadata:
-    """ Optional client metadata stored with the login session
+    """ Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer
 
      """
 

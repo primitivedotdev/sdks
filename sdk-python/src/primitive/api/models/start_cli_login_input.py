@@ -26,7 +26,8 @@ class StartCliLoginInput:
     """ 
         Attributes:
             device_name (str | Unset): Human-readable device name shown during browser approval
-            metadata (StartCliLoginInputMetadata | Unset): Optional client metadata stored with the login session
+            metadata (StartCliLoginInputMetadata | Unset): Optional client metadata stored with the login session;
+                serialized JSON must be 2048 bytes or fewer
      """
 
     device_name: str | Unset = UNSET

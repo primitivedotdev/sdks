@@ -1649,22 +1649,6 @@ func (s *ListSentEmailsUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *PollCliLoginBadRequest) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *PollCliLoginForbidden) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *PollCliLoginInput) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer

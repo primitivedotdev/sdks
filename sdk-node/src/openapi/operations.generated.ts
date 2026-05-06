@@ -441,7 +441,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "metadata": {
           "type": "object",
           "additionalProperties": true,
-          "description": "Optional client metadata stored with the login session"
+          "description": "Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer"
         }
       }
     },
