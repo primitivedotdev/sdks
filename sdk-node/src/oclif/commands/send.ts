@@ -8,6 +8,7 @@ import type {
 } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
 import {
+  API_ERROR_CODES,
   extractErrorCode,
   extractErrorPayload,
   formatErrorPayload,
@@ -91,7 +92,7 @@ async function pickDefaultFromAddress(
     // Surface the auth hint via writeErrorWithHints and bail with
     // a focused message instead of the verbose "underlying error"
     // wrapping.
-    if (extractErrorCode(errorPayload) === "unauthorized") {
+    if (extractErrorCode(errorPayload) === API_ERROR_CODES.unauthorized) {
       writeErrorWithHints(errorPayload);
       removeStaleSavedCredentialOnUnauthorized({
         ...authFailureContext,

@@ -12,17 +12,22 @@ import type {
 } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
 import {
+  API_ERROR_CODES,
   extractErrorCode,
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  acquireCliCredentialsLock,
+  credentialsPath,
   loadCliCredentials,
   normalizeBaseUrl,
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../auth.js";
+
+const MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS = 60;
 
 function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
@@ -110,11 +115,18 @@ export async function checkExistingLogin(params: {
     status: "blocked",
     payload,
     message:
-      code === "unauthorized"
+      code === API_ERROR_CODES.unauthorized
         ? "Saved Primitive CLI credentials were rejected. Run `primitive logout` to remove them before logging in again."
         : "A saved Primitive CLI login exists, but the CLI could not verify whether it is still valid. Run `primitive logout` before logging in again.",
   };
 }
+
+type LoginFlags = {
+  "base-url"?: string;
+  "device-name"?: string;
+  "no-browser"?: boolean;
+  force?: boolean;
+};
 
 class LoginCommand extends Command {
   static description =
@@ -125,6 +137,7 @@ class LoginCommand extends Command {
   static examples = [
     "<%= config.bin %> login",
     "<%= config.bin %> login --device-name work-laptop",
+    "<%= config.bin %> login --force",
   ];
 
   static flags = {
@@ -138,13 +151,50 @@ class LoginCommand extends Command {
     "no-browser": Flags.boolean({
       description: "Do not attempt to open the browser automatically",
     }),
+    force: Flags.boolean({
+      char: "f",
+      description:
+        "Replace saved credentials without first verifying the existing login",
+    }),
   };
 
   async run(): Promise<void> {
     const { flags } = await this.parse(LoginCommand);
+
+    let releaseCredentialsLock: () => void;
+    try {
+      releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw cliError(detail);
+    }
+
+    try {
+      await this.runWithCredentialLock(flags);
+    } finally {
+      releaseCredentialsLock();
+    }
+  }
+
+  private async runWithCredentialLock(flags: LoginFlags): Promise<void> {
     const baseUrl = normalizeBaseUrl(flags["base-url"]);
-    const existing = loadCliCredentials(this.config.configDir);
-    if (existing) {
+    let existing: StoredCliCredentials | null;
+    try {
+      existing = loadCliCredentials(this.config.configDir);
+    } catch (error) {
+      if (!flags.force) throw error;
+      const detail = error instanceof Error ? error.message : String(error);
+      process.stderr.write(
+        `Replacing unreadable Primitive CLI credentials because --force was set: ${detail}\n`,
+      );
+      existing = null;
+    }
+
+    if (existing && flags.force) {
+      process.stderr.write(
+        "Replacing saved Primitive CLI credentials after browser approval because --force was set.\n",
+      );
+    } else if (existing) {
       const existingStatus = await checkExistingLogin({
         baseUrl: flags["base-url"],
         configDir: this.config.configDir,
@@ -168,11 +218,6 @@ class LoginCommand extends Command {
     const started = await startCliLogin({
       body: {
         device_name: deviceName,
-        metadata: {
-          arch: process.arch,
-          platform: process.platform,
-          version: this.config.version,
-        },
       },
       client: apiClient.client,
       responseStyle: "fields",
@@ -199,10 +244,15 @@ class LoginCommand extends Command {
     process.stderr.write("Waiting for browser approval...\n");
 
     const deadline = Date.now() + start.expires_in * 1000;
-    let interval = start.interval;
+    let interval = Math.min(
+      Math.max(1, start.interval),
+      MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS,
+    );
+    let nextPollDelay = 1;
 
     while (Date.now() < deadline) {
-      await sleep(interval * 1000);
+      await sleep(nextPollDelay * 1000);
+      nextPollDelay = interval;
 
       const polled = await pollCliLogin({
         body: { device_code: start.device_code },
@@ -228,25 +278,35 @@ class LoginCommand extends Command {
 
         const org = login.org_name ? ` (${login.org_name})` : "";
         process.stderr.write(`Logged in to org ${login.org_id}${org}.\n`);
+        process.stderr.write(
+          `Saved credentials to ${credentialsPath(this.config.configDir)}.\n`,
+        );
         return;
       }
 
       const payload = extractErrorPayload(polled.error);
       const code = extractErrorCode(payload);
-      if (code === "authorization_pending") continue;
-      if (code === "slow_down") {
-        interval = retryAfterSeconds(polled) ?? interval + 5;
+      if (code === API_ERROR_CODES.authorizationPending) {
+        nextPollDelay = interval;
         continue;
       }
-      if (code === "access_denied") {
+      if (code === API_ERROR_CODES.slowDown) {
+        interval = Math.min(
+          retryAfterSeconds(polled) ?? interval + 5,
+          MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS,
+        );
+        nextPollDelay = interval;
+        continue;
+      }
+      if (code === API_ERROR_CODES.accessDenied) {
         throw cliError("Primitive CLI login was denied in the browser.");
       }
-      if (code === "expired_token") {
+      if (code === API_ERROR_CODES.expiredToken) {
         throw cliError(
           "Primitive CLI login expired. Run `primitive login` again.",
         );
       }
-      if (code === "invalid_device_code") {
+      if (code === API_ERROR_CODES.invalidDeviceCode) {
         throw cliError(
           "Primitive CLI login device code is invalid. Run `primitive login` again.",
         );

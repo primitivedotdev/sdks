@@ -1,8 +1,15 @@
-import { mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  acquireCliCredentialsLock,
   credentialsPath,
   deleteCliCredentials,
   loadCliCredentials,
@@ -44,6 +51,9 @@ describe("CLI auth credentials", () => {
     if (process.platform !== "win32") {
       expect(statSync(credentialsPath(tempDir)).mode & 0o777).toBe(0o600);
     }
+    expect(
+      readdirSync(tempDir).filter((name) => name.endsWith(".tmp")),
+    ).toEqual([]);
   });
 
   it("deletes saved credentials", () => {
@@ -91,5 +101,26 @@ describe("CLI auth credentials", () => {
     expect(() => loadCliCredentials(tempDir)).toThrow(
       /credentials are not valid JSON/,
     );
+  });
+
+  it("throws a field-specific error for malformed credential fields", () => {
+    writeFileSync(
+      credentialsPath(tempDir),
+      `${JSON.stringify({ ...CREDENTIALS, api_key: "" })}\n`,
+    );
+
+    expect(() => loadCliCredentials(tempDir)).toThrow(/api_key/);
+  });
+
+  it("serializes credential updates with a lock directory", () => {
+    const release = acquireCliCredentialsLock(tempDir);
+
+    expect(() => acquireCliCredentialsLock(tempDir)).toThrow(
+      /already in progress/,
+    );
+
+    release();
+    const releaseAgain = acquireCliCredentialsLock(tempDir);
+    releaseAgain();
   });
 });

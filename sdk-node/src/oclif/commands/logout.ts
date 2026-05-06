@@ -3,6 +3,7 @@ import { cliLogout } from "../../api/generated/sdk.gen.js";
 import type { CliLogoutResult } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
 import {
+  API_ERROR_CODES,
   extractErrorCode,
   extractErrorPayload,
   writeErrorWithHints,
@@ -74,7 +75,10 @@ class LogoutCommand extends Command {
     if (result.error) {
       const payload = extractErrorPayload(result.error);
       const code = extractErrorCode(payload);
-      if (code === "unauthorized" || code === "not_found") {
+      if (
+        code === API_ERROR_CODES.unauthorized ||
+        code === API_ERROR_CODES.notFound
+      ) {
         deleteCliCredentials(this.config.configDir);
         writeErrorWithHints(payload);
         process.stderr.write(

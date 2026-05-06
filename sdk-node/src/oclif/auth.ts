@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import {
   chmodSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -9,6 +11,9 @@ import { join } from "node:path";
 import { DEFAULT_BASE_URL } from "../api/index.js";
 
 const CREDENTIALS_FILE = "credentials.json";
+const CREDENTIALS_LOCK_DIR = "credentials.lock";
+const MALFORMED_CREDENTIALS_HINT =
+  "Run `primitive logout` and then `primitive login`.";
 
 export type StoredCliCredentials = {
   api_key: string;
@@ -38,7 +43,7 @@ function requireString(
   const raw = value[key];
   if (typeof raw !== "string" || raw.trim().length === 0) {
     throw new Error(
-      "Stored Primitive CLI credentials are malformed. Run `primitive logout` and then `primitive login`.",
+      `Stored Primitive CLI credentials are malformed: ${key} must be a non-empty string. ${MALFORMED_CREDENTIALS_HINT}`,
     );
   }
   return raw;
@@ -47,14 +52,14 @@ function requireString(
 function parseCredentials(raw: unknown): StoredCliCredentials {
   if (!isRecord(raw)) {
     throw new Error(
-      "Stored Primitive CLI credentials are malformed. Run `primitive logout` and then `primitive login`.",
+      `Stored Primitive CLI credentials are malformed: expected a JSON object. ${MALFORMED_CREDENTIALS_HINT}`,
     );
   }
 
   const orgName = raw.org_name;
   if (orgName !== null && typeof orgName !== "string") {
     throw new Error(
-      "Stored Primitive CLI credentials are malformed. Run `primitive logout` and then `primitive login`.",
+      `Stored Primitive CLI credentials are malformed: org_name must be a string or null. ${MALFORMED_CREDENTIALS_HINT}`,
     );
   }
 
@@ -116,14 +121,51 @@ export function saveCliCredentials(
 ): void {
   mkdirSync(configDir, { mode: 0o700, recursive: true });
   const path = credentialsPath(configDir);
-  writeFileSync(path, `${JSON.stringify(credentials, null, 2)}\n`, {
-    mode: 0o600,
-  });
-  chmodSync(path, 0o600);
+  const tempPath = join(
+    configDir,
+    `${CREDENTIALS_FILE}.${process.pid}.${randomUUID()}.tmp`,
+  );
+  try {
+    writeFileSync(tempPath, `${JSON.stringify(credentials, null, 2)}\n`, {
+      mode: 0o600,
+    });
+    chmodSync(tempPath, 0o600);
+    renameSync(tempPath, path);
+    chmodSync(path, 0o600);
+  } catch (error) {
+    rmSync(tempPath, { force: true });
+    throw error;
+  }
 }
 
 export function deleteCliCredentials(configDir: string): void {
   rmSync(credentialsPath(configDir), { force: true });
+}
+
+export function acquireCliCredentialsLock(configDir: string): () => void {
+  mkdirSync(configDir, { mode: 0o700, recursive: true });
+  const lockPath = join(configDir, CREDENTIALS_LOCK_DIR);
+  try {
+    mkdirSync(lockPath, { mode: 0o700 });
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      (error as { code?: unknown }).code === "EEXIST"
+    ) {
+      throw new Error(
+        "Another Primitive CLI credential operation is already in progress. Wait for it to finish, then retry.",
+      );
+    }
+    throw error;
+  }
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    rmSync(lockPath, { force: true, recursive: true });
+  };
 }
 
 export function resolveCliAuth(params: {
