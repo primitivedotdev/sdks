@@ -4,7 +4,6 @@ package api
 
 import (
 	"io"
-	"net/url"
 	"time"
 
 	"github.com/go-faster/errors"
@@ -355,9 +354,9 @@ type CliLoginStartResult struct {
 	// Short code the user confirms in the browser.
 	UserCode string `json:"user_code"`
 	// Browser URL where the user approves the login.
-	VerificationURI url.URL `json:"verification_uri"`
+	VerificationURI string `json:"verification_uri"`
 	// Browser URL with the user code prefilled.
-	VerificationURIComplete url.URL `json:"verification_uri_complete"`
+	VerificationURIComplete string `json:"verification_uri_complete"`
 	// Seconds until the login session expires.
 	ExpiresIn int `json:"expires_in"`
 	// Minimum seconds between poll requests.
@@ -375,12 +374,12 @@ func (s *CliLoginStartResult) GetUserCode() string {
 }
 
 // GetVerificationURI returns the value of VerificationURI.
-func (s *CliLoginStartResult) GetVerificationURI() url.URL {
+func (s *CliLoginStartResult) GetVerificationURI() string {
 	return s.VerificationURI
 }
 
 // GetVerificationURIComplete returns the value of VerificationURIComplete.
-func (s *CliLoginStartResult) GetVerificationURIComplete() url.URL {
+func (s *CliLoginStartResult) GetVerificationURIComplete() string {
 	return s.VerificationURIComplete
 }
 
@@ -405,12 +404,12 @@ func (s *CliLoginStartResult) SetUserCode(val string) {
 }
 
 // SetVerificationURI sets the value of VerificationURI.
-func (s *CliLoginStartResult) SetVerificationURI(val url.URL) {
+func (s *CliLoginStartResult) SetVerificationURI(val string) {
 	s.VerificationURI = val
 }
 
 // SetVerificationURIComplete sets the value of VerificationURIComplete.
-func (s *CliLoginStartResult) SetVerificationURIComplete(val url.URL) {
+func (s *CliLoginStartResult) SetVerificationURIComplete(val string) {
 	s.VerificationURIComplete = val
 }
 

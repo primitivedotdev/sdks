@@ -964,11 +964,11 @@ func (s *CliLoginStartResult) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("verification_uri")
-		json.EncodeURI(e, s.VerificationURI)
+		e.Str(s.VerificationURI)
 	}
 	{
 		e.FieldStart("verification_uri_complete")
-		json.EncodeURI(e, s.VerificationURIComplete)
+		e.Str(s.VerificationURIComplete)
 	}
 	{
 		e.FieldStart("expires_in")
@@ -1025,8 +1025,8 @@ func (s *CliLoginStartResult) Decode(d *jx.Decoder) error {
 		case "verification_uri":
 			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				v, err := json.DecodeURI(d)
-				s.VerificationURI = v
+				v, err := d.Str()
+				s.VerificationURI = string(v)
 				if err != nil {
 					return err
 				}
@@ -1037,8 +1037,8 @@ func (s *CliLoginStartResult) Decode(d *jx.Decoder) error {
 		case "verification_uri_complete":
 			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
-				v, err := json.DecodeURI(d)
-				s.VerificationURIComplete = v
+				v, err := d.Str()
+				s.VerificationURIComplete = string(v)
 				if err != nil {
 					return err
 				}
