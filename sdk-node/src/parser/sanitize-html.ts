@@ -101,7 +101,7 @@ DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
   if (data.attrName === "style") {
     data.keepAttr = false;
   }
-  // Block data:image/svg+xml URIs — SVG can contain embedded JavaScript.
+  // Block data:image/svg+xml URIs; SVG can contain embedded JavaScript.
   // DOMPurify's DATA_URI_TAGS allowlist bypasses ALLOWED_URI_REGEXP for
   // img src, so we must strip it in the hook.
   if (

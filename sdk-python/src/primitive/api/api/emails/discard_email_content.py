@@ -118,7 +118,7 @@ def sync_detailed(
     dashboard at Settings > Webhooks). When the toggle is off, this
     endpoint returns `403` with code `discard_not_enabled` and a
     message pointing the human at the dashboard. There is intentionally
-    no API to flip this toggle — opting in to a destructive,
+    no API to flip this toggle. Opting in to a destructive,
     non-reversible operation must be a deliberate human click in the
     UI.
 
@@ -163,7 +163,7 @@ def sync(
     dashboard at Settings > Webhooks). When the toggle is off, this
     endpoint returns `403` with code `discard_not_enabled` and a
     message pointing the human at the dashboard. There is intentionally
-    no API to flip this toggle — opting in to a destructive,
+    no API to flip this toggle. Opting in to a destructive,
     non-reversible operation must be a deliberate human click in the
     UI.
 
@@ -203,7 +203,7 @@ async def asyncio_detailed(
     dashboard at Settings > Webhooks). When the toggle is off, this
     endpoint returns `403` with code `discard_not_enabled` and a
     message pointing the human at the dashboard. There is intentionally
-    no API to flip this toggle — opting in to a destructive,
+    no API to flip this toggle. Opting in to a destructive,
     non-reversible operation must be a deliberate human click in the
     UI.
 
@@ -248,7 +248,7 @@ async def asyncio(
     dashboard at Settings > Webhooks). When the toggle is off, this
     endpoint returns `403` with code `discard_not_enabled` and a
     message pointing the human at the dashboard. There is intentionally
-    no API to flip this toggle — opting in to a destructive,
+    no API to flip this toggle. Opting in to a destructive,
     non-reversible operation must be a deliberate human click in the
     UI.
 

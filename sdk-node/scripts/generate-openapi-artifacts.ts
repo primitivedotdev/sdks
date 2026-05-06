@@ -304,7 +304,7 @@ function getRequestSchema(
 /**
  * Pick the most interesting JSON Schema describing what an operation
  * returns, with `$ref`s inlined. The "interesting" part is the `data`
- * property of the 200 or 201 response envelope — the rest of the
+ * property of the 200 or 201 response envelope. The rest of the
  * envelope (`{ success: true, meta: {...} }`) is uniform across the
  * spec and adds noise.
  *
