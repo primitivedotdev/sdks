@@ -330,7 +330,7 @@ export function sanitizeFilename(
     // Remove .. sequences (path traversal)
     .replace(/\.\./g, "_")
     // Remove null bytes and control characters
-    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional — stripping control chars from filenames
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional, stripping control chars from filenames
     .replace(/[\x00-\x1f\x7f]/g, "")
     // Keep entry names ASCII-only so they stay in the basic tar header format that
     // our simple tar parser handles. The original filename is still preserved in metadata.

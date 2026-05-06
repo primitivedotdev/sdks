@@ -44,7 +44,7 @@ All 3 SDKs must behave identically for the same input. Shared test fixtures in `
 
 ## Warnings are errors
 
-There are no warnings in this codebase — every diagnostic fails the build. Any warning is a bug to fix, not a signal to tolerate.
+There are no warnings in this codebase. Every diagnostic fails the build. Any warning is a bug to fix, not a signal to tolerate.
 
 - Biome lint runs with `--error-on-warnings` in `pnpm lint` and in `make node-check`. A single biome warning (unused import, unused variable, etc.) exits non-zero.
 - TypeScript typechecking uses `tsconfig.typecheck.json`, which covers both `src/**/*` and `tests/**/*`. Test fixtures must satisfy the same type contracts as production code.
