@@ -5,6 +5,10 @@ type AddDomainRes interface {
 	addDomainRes()
 }
 
+type CliLogoutRes interface {
+	cliLogoutRes()
+}
+
 type CreateEndpointRes interface {
 	createEndpointRes()
 }
@@ -89,6 +93,10 @@ type ListSentEmailsRes interface {
 	listSentEmailsRes()
 }
 
+type PollCliLoginRes interface {
+	pollCliLoginRes()
+}
+
 type ReplayDeliveryRes interface {
 	replayDeliveryRes()
 }
@@ -107,6 +115,10 @@ type RotateWebhookSecretRes interface {
 
 type SendEmailRes interface {
 	sendEmailRes()
+}
+
+type StartCliLoginRes interface {
+	startCliLoginRes()
 }
 
 type TestEndpointRes interface {

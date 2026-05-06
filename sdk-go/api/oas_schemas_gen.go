@@ -287,6 +287,228 @@ func (s *BearerAuth) SetRoles(val []string) {
 	s.Roles = val
 }
 
+// Ref: #/components/schemas/CliLoginPollResult
+type CliLoginPollResult struct {
+	// Newly-created API key for CLI authentication.
+	APIKey    string    `json:"api_key"`
+	KeyID     uuid.UUID `json:"key_id"`
+	KeyPrefix string    `json:"key_prefix"`
+	OrgID     uuid.UUID `json:"org_id"`
+	OrgName   NilString `json:"org_name"`
+}
+
+// GetAPIKey returns the value of APIKey.
+func (s *CliLoginPollResult) GetAPIKey() string {
+	return s.APIKey
+}
+
+// GetKeyID returns the value of KeyID.
+func (s *CliLoginPollResult) GetKeyID() uuid.UUID {
+	return s.KeyID
+}
+
+// GetKeyPrefix returns the value of KeyPrefix.
+func (s *CliLoginPollResult) GetKeyPrefix() string {
+	return s.KeyPrefix
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *CliLoginPollResult) GetOrgID() uuid.UUID {
+	return s.OrgID
+}
+
+// GetOrgName returns the value of OrgName.
+func (s *CliLoginPollResult) GetOrgName() NilString {
+	return s.OrgName
+}
+
+// SetAPIKey sets the value of APIKey.
+func (s *CliLoginPollResult) SetAPIKey(val string) {
+	s.APIKey = val
+}
+
+// SetKeyID sets the value of KeyID.
+func (s *CliLoginPollResult) SetKeyID(val uuid.UUID) {
+	s.KeyID = val
+}
+
+// SetKeyPrefix sets the value of KeyPrefix.
+func (s *CliLoginPollResult) SetKeyPrefix(val string) {
+	s.KeyPrefix = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *CliLoginPollResult) SetOrgID(val uuid.UUID) {
+	s.OrgID = val
+}
+
+// SetOrgName sets the value of OrgName.
+func (s *CliLoginPollResult) SetOrgName(val NilString) {
+	s.OrgName = val
+}
+
+// Ref: #/components/schemas/CliLoginStartResult
+type CliLoginStartResult struct {
+	// Opaque code used by the CLI to poll for approval.
+	DeviceCode string `json:"device_code"`
+	// Short code the user confirms in the browser.
+	UserCode string `json:"user_code"`
+	// Browser URL where the user approves the login.
+	VerificationURI string `json:"verification_uri"`
+	// Browser URL with the user code prefilled.
+	VerificationURIComplete string `json:"verification_uri_complete"`
+	// Seconds until the login session expires.
+	ExpiresIn int `json:"expires_in"`
+	// Minimum seconds between poll requests.
+	Interval int `json:"interval"`
+}
+
+// GetDeviceCode returns the value of DeviceCode.
+func (s *CliLoginStartResult) GetDeviceCode() string {
+	return s.DeviceCode
+}
+
+// GetUserCode returns the value of UserCode.
+func (s *CliLoginStartResult) GetUserCode() string {
+	return s.UserCode
+}
+
+// GetVerificationURI returns the value of VerificationURI.
+func (s *CliLoginStartResult) GetVerificationURI() string {
+	return s.VerificationURI
+}
+
+// GetVerificationURIComplete returns the value of VerificationURIComplete.
+func (s *CliLoginStartResult) GetVerificationURIComplete() string {
+	return s.VerificationURIComplete
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *CliLoginStartResult) GetExpiresIn() int {
+	return s.ExpiresIn
+}
+
+// GetInterval returns the value of Interval.
+func (s *CliLoginStartResult) GetInterval() int {
+	return s.Interval
+}
+
+// SetDeviceCode sets the value of DeviceCode.
+func (s *CliLoginStartResult) SetDeviceCode(val string) {
+	s.DeviceCode = val
+}
+
+// SetUserCode sets the value of UserCode.
+func (s *CliLoginStartResult) SetUserCode(val string) {
+	s.UserCode = val
+}
+
+// SetVerificationURI sets the value of VerificationURI.
+func (s *CliLoginStartResult) SetVerificationURI(val string) {
+	s.VerificationURI = val
+}
+
+// SetVerificationURIComplete sets the value of VerificationURIComplete.
+func (s *CliLoginStartResult) SetVerificationURIComplete(val string) {
+	s.VerificationURIComplete = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *CliLoginStartResult) SetExpiresIn(val int) {
+	s.ExpiresIn = val
+}
+
+// SetInterval sets the value of Interval.
+func (s *CliLoginStartResult) SetInterval(val int) {
+	s.Interval = val
+}
+
+type CliLogoutBadRequest ErrorResponse
+
+func (*CliLogoutBadRequest) cliLogoutRes() {}
+
+type CliLogoutForbidden ErrorResponse
+
+func (*CliLogoutForbidden) cliLogoutRes() {}
+
+// Ref: #/components/schemas/CliLogoutInput
+type CliLogoutInput struct {
+	// Optional key id guard; when provided it must match the authenticated API key.
+	KeyID OptUUID `json:"key_id"`
+}
+
+// GetKeyID returns the value of KeyID.
+func (s *CliLogoutInput) GetKeyID() OptUUID {
+	return s.KeyID
+}
+
+// SetKeyID sets the value of KeyID.
+func (s *CliLogoutInput) SetKeyID(val OptUUID) {
+	s.KeyID = val
+}
+
+type CliLogoutNotFound ErrorResponse
+
+func (*CliLogoutNotFound) cliLogoutRes() {}
+
+// Merged schema.
+type CliLogoutOK struct {
+	Success bool            `json:"success"`
+	Data    CliLogoutResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CliLogoutOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CliLogoutOK) GetData() CliLogoutResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CliLogoutOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CliLogoutOK) SetData(val CliLogoutResult) {
+	s.Data = val
+}
+
+func (*CliLogoutOK) cliLogoutRes() {}
+
+// Ref: #/components/schemas/CliLogoutResult
+type CliLogoutResult struct {
+	Revoked bool      `json:"revoked"`
+	KeyID   uuid.UUID `json:"key_id"`
+}
+
+// GetRevoked returns the value of Revoked.
+func (s *CliLogoutResult) GetRevoked() bool {
+	return s.Revoked
+}
+
+// GetKeyID returns the value of KeyID.
+func (s *CliLogoutResult) GetKeyID() uuid.UUID {
+	return s.KeyID
+}
+
+// SetRevoked sets the value of Revoked.
+func (s *CliLogoutResult) SetRevoked(val bool) {
+	s.Revoked = val
+}
+
+// SetKeyID sets the value of KeyID.
+func (s *CliLogoutResult) SetKeyID(val uuid.UUID) {
+	s.KeyID = val
+}
+
+type CliLogoutUnauthorized ErrorResponse
+
+func (*CliLogoutUnauthorized) cliLogoutRes() {}
+
 type CreateEndpointBadRequest ErrorResponse
 
 func (*CreateEndpointBadRequest) createEndpointRes() {}
@@ -2382,6 +2604,8 @@ func (*ErrorResponse) getSendPermissionsRes() {}
 func (*ErrorResponse) listDomainsRes()        {}
 func (*ErrorResponse) listEndpointsRes()      {}
 func (*ErrorResponse) listFiltersRes()        {}
+func (*ErrorResponse) pollCliLoginRes()       {}
+func (*ErrorResponse) startCliLoginRes()      {}
 
 type ErrorResponseError struct {
 	Code    ErrorResponseErrorCode `json:"code"`
@@ -2468,6 +2692,11 @@ const (
 	ErrorResponseErrorCodeOutboundRelayFailed       ErrorResponseErrorCode = "outbound_relay_failed"
 	ErrorResponseErrorCodeDiscardNotEnabled         ErrorResponseErrorCode = "discard_not_enabled"
 	ErrorResponseErrorCodeInboundNotRepliable       ErrorResponseErrorCode = "inbound_not_repliable"
+	ErrorResponseErrorCodeAuthorizationPending      ErrorResponseErrorCode = "authorization_pending"
+	ErrorResponseErrorCodeSlowDown                  ErrorResponseErrorCode = "slow_down"
+	ErrorResponseErrorCodeAccessDenied              ErrorResponseErrorCode = "access_denied"
+	ErrorResponseErrorCodeExpiredToken              ErrorResponseErrorCode = "expired_token"
+	ErrorResponseErrorCodeInvalidDeviceCode         ErrorResponseErrorCode = "invalid_device_code"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -2492,6 +2721,11 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeOutboundRelayFailed,
 		ErrorResponseErrorCodeDiscardNotEnabled,
 		ErrorResponseErrorCodeInboundNotRepliable,
+		ErrorResponseErrorCodeAuthorizationPending,
+		ErrorResponseErrorCodeSlowDown,
+		ErrorResponseErrorCodeAccessDenied,
+		ErrorResponseErrorCodeExpiredToken,
+		ErrorResponseErrorCodeInvalidDeviceCode,
 	}
 }
 
@@ -2535,6 +2769,16 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeDiscardNotEnabled:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInboundNotRepliable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAuthorizationPending:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSlowDown:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAccessDenied:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeExpiredToken:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidDeviceCode:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -2600,6 +2844,21 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeInboundNotRepliable:
 		*s = ErrorResponseErrorCodeInboundNotRepliable
+		return nil
+	case ErrorResponseErrorCodeAuthorizationPending:
+		*s = ErrorResponseErrorCodeAuthorizationPending
+		return nil
+	case ErrorResponseErrorCodeSlowDown:
+		*s = ErrorResponseErrorCodeSlowDown
+		return nil
+	case ErrorResponseErrorCodeAccessDenied:
+		*s = ErrorResponseErrorCodeAccessDenied
+		return nil
+	case ErrorResponseErrorCodeExpiredToken:
+		*s = ErrorResponseErrorCodeExpiredToken
+		return nil
+	case ErrorResponseErrorCodeInvalidDeviceCode:
+		*s = ErrorResponseErrorCodeInvalidDeviceCode
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -2721,6 +2980,34 @@ func (s *ErrorResponseErrorDetailsMxConflict) SetProviderName(val string) {
 func (s *ErrorResponseErrorDetailsMxConflict) SetSuggestedSubdomain(val string) {
 	s.SuggestedSubdomain = val
 }
+
+// ErrorResponseHeaders wraps ErrorResponse with response headers.
+type ErrorResponseHeaders struct {
+	RetryAfter OptInt
+	Response   ErrorResponse
+}
+
+// GetRetryAfter returns the value of RetryAfter.
+func (s *ErrorResponseHeaders) GetRetryAfter() OptInt {
+	return s.RetryAfter
+}
+
+// GetResponse returns the value of Response.
+func (s *ErrorResponseHeaders) GetResponse() ErrorResponse {
+	return s.Response
+}
+
+// SetRetryAfter sets the value of RetryAfter.
+func (s *ErrorResponseHeaders) SetRetryAfter(val OptInt) {
+	s.RetryAfter = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ErrorResponseHeaders) SetResponse(val ErrorResponse) {
+	s.Response = val
+}
+
+func (*ErrorResponseHeaders) pollCliLoginRes() {}
 
 // Ref: #/components/schemas/Filter
 type Filter struct {
@@ -3681,6 +3968,52 @@ func (o OptBool) Get() (v bool, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptBool) Or(d bool) bool {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCliLogoutInput returns new OptCliLogoutInput with value set to v.
+func NewOptCliLogoutInput(v CliLogoutInput) OptCliLogoutInput {
+	return OptCliLogoutInput{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCliLogoutInput is optional CliLogoutInput.
+type OptCliLogoutInput struct {
+	Value CliLogoutInput
+	Set   bool
+}
+
+// IsSet returns true if OptCliLogoutInput was set.
+func (o OptCliLogoutInput) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCliLogoutInput) Reset() {
+	var v CliLogoutInput
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCliLogoutInput) SetTo(v CliLogoutInput) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCliLogoutInput) Get() (v CliLogoutInput, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCliLogoutInput) Or(d CliLogoutInput) CliLogoutInput {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -4731,6 +5064,98 @@ func (o OptSentEmailStatus) Or(d SentEmailStatus) SentEmailStatus {
 	return d
 }
 
+// NewOptStartCliLoginInput returns new OptStartCliLoginInput with value set to v.
+func NewOptStartCliLoginInput(v StartCliLoginInput) OptStartCliLoginInput {
+	return OptStartCliLoginInput{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptStartCliLoginInput is optional StartCliLoginInput.
+type OptStartCliLoginInput struct {
+	Value StartCliLoginInput
+	Set   bool
+}
+
+// IsSet returns true if OptStartCliLoginInput was set.
+func (o OptStartCliLoginInput) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptStartCliLoginInput) Reset() {
+	var v StartCliLoginInput
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptStartCliLoginInput) SetTo(v StartCliLoginInput) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptStartCliLoginInput) Get() (v StartCliLoginInput, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptStartCliLoginInput) Or(d StartCliLoginInput) StartCliLoginInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptStartCliLoginInputMetadata returns new OptStartCliLoginInputMetadata with value set to v.
+func NewOptStartCliLoginInputMetadata(v StartCliLoginInputMetadata) OptStartCliLoginInputMetadata {
+	return OptStartCliLoginInputMetadata{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptStartCliLoginInputMetadata is optional StartCliLoginInputMetadata.
+type OptStartCliLoginInputMetadata struct {
+	Value StartCliLoginInputMetadata
+	Set   bool
+}
+
+// IsSet returns true if OptStartCliLoginInputMetadata was set.
+func (o OptStartCliLoginInputMetadata) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptStartCliLoginInputMetadata) Reset() {
+	var v StartCliLoginInputMetadata
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptStartCliLoginInputMetadata) SetTo(v StartCliLoginInputMetadata) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptStartCliLoginInputMetadata) Get() (v StartCliLoginInputMetadata, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptStartCliLoginInputMetadata) Or(d StartCliLoginInputMetadata) StartCliLoginInputMetadata {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptString returns new OptString with value set to v.
 func NewOptString(v string) OptString {
 	return OptString{
@@ -4863,6 +5288,75 @@ func (s *PaginationMeta) SetCursor(val NilString) {
 	s.Cursor = val
 }
 
+// Ref: #/components/schemas/PollCliLoginInput
+type PollCliLoginInput struct {
+	DeviceCode string `json:"device_code"`
+}
+
+// GetDeviceCode returns the value of DeviceCode.
+func (s *PollCliLoginInput) GetDeviceCode() string {
+	return s.DeviceCode
+}
+
+// SetDeviceCode sets the value of DeviceCode.
+func (s *PollCliLoginInput) SetDeviceCode(val string) {
+	s.DeviceCode = val
+}
+
+// Merged schema.
+type PollCliLoginOK struct {
+	Success bool               `json:"success"`
+	Data    CliLoginPollResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *PollCliLoginOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *PollCliLoginOK) GetData() CliLoginPollResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *PollCliLoginOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *PollCliLoginOK) SetData(val CliLoginPollResult) {
+	s.Data = val
+}
+
+// PollCliLoginOKHeaders wraps PollCliLoginOK with response headers.
+type PollCliLoginOKHeaders struct {
+	CacheControl OptString
+	Response     PollCliLoginOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *PollCliLoginOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *PollCliLoginOKHeaders) GetResponse() PollCliLoginOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *PollCliLoginOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *PollCliLoginOKHeaders) SetResponse(val PollCliLoginOK) {
+	s.Response = val
+}
+
+func (*PollCliLoginOKHeaders) pollCliLoginRes() {}
+
 // RateLimitedHeaders wraps ErrorResponse with response headers.
 type RateLimitedHeaders struct {
 	RetryAfter OptInt
@@ -4895,6 +5389,7 @@ func (*RateLimitedHeaders) replayEmailWebhooksRes() {}
 func (*RateLimitedHeaders) replyToEmailRes()        {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes() {}
 func (*RateLimitedHeaders) sendEmailRes()           {}
+func (*RateLimitedHeaders) startCliLoginRes()       {}
 func (*RateLimitedHeaders) testEndpointRes()        {}
 
 type ReplayDeliveryBadRequest ErrorResponse
@@ -6918,6 +7413,100 @@ func (s *SentEmailSummary) SetGates(val OptNilGateDenialArray) {
 // SetRequestID sets the value of RequestID.
 func (s *SentEmailSummary) SetRequestID(val OptNilString) {
 	s.RequestID = val
+}
+
+// Merged schema.
+type StartCliLoginCreated struct {
+	Success bool                `json:"success"`
+	Data    CliLoginStartResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *StartCliLoginCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *StartCliLoginCreated) GetData() CliLoginStartResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *StartCliLoginCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *StartCliLoginCreated) SetData(val CliLoginStartResult) {
+	s.Data = val
+}
+
+// StartCliLoginCreatedHeaders wraps StartCliLoginCreated with response headers.
+type StartCliLoginCreatedHeaders struct {
+	CacheControl OptString
+	Response     StartCliLoginCreated
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *StartCliLoginCreatedHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *StartCliLoginCreatedHeaders) GetResponse() StartCliLoginCreated {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *StartCliLoginCreatedHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *StartCliLoginCreatedHeaders) SetResponse(val StartCliLoginCreated) {
+	s.Response = val
+}
+
+func (*StartCliLoginCreatedHeaders) startCliLoginRes() {}
+
+// Ref: #/components/schemas/StartCliLoginInput
+type StartCliLoginInput struct {
+	// Human-readable device name shown during browser approval.
+	DeviceName OptString `json:"device_name"`
+	// Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer.
+	Metadata OptStartCliLoginInputMetadata `json:"metadata"`
+}
+
+// GetDeviceName returns the value of DeviceName.
+func (s *StartCliLoginInput) GetDeviceName() OptString {
+	return s.DeviceName
+}
+
+// GetMetadata returns the value of Metadata.
+func (s *StartCliLoginInput) GetMetadata() OptStartCliLoginInputMetadata {
+	return s.Metadata
+}
+
+// SetDeviceName sets the value of DeviceName.
+func (s *StartCliLoginInput) SetDeviceName(val OptString) {
+	s.DeviceName = val
+}
+
+// SetMetadata sets the value of Metadata.
+func (s *StartCliLoginInput) SetMetadata(val OptStartCliLoginInputMetadata) {
+	s.Metadata = val
+}
+
+// Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer.
+type StartCliLoginInputMetadata map[string]jx.Raw
+
+func (s *StartCliLoginInputMetadata) init() StartCliLoginInputMetadata {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // Ref: #/components/schemas/StorageStats

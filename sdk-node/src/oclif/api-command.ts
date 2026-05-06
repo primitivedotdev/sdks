@@ -1,12 +1,29 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { Command, Errors, Flags } from "@oclif/core";
+import type { ErrorResponse } from "../api/generated/types.gen.js";
 import { operations, PrimitiveApiClient } from "../api/index.js";
 import type {
   PrimitiveOperationManifest,
   PrimitiveParameterManifest,
 } from "../openapi/index.js";
+import {
+  deleteCliCredentials,
+  type ResolvedCliAuth,
+  resolveCliAuth,
+} from "./auth.js";
 
 type OperationName = keyof typeof operations;
+export type ApiErrorCode = ErrorResponse["error"]["code"];
+
+export const API_ERROR_CODES = {
+  accessDenied: "access_denied",
+  authorizationPending: "authorization_pending",
+  expiredToken: "expired_token",
+  invalidDeviceCode: "invalid_device_code",
+  notFound: "not_found",
+  slowDown: "slow_down",
+  unauthorized: "unauthorized",
+} as const satisfies Record<string, ApiErrorCode>;
 
 type OperationExecutor = (options: Record<string, unknown>) => Promise<{
   data?: Blob | File | Record<string, unknown> | Record<string, unknown>[];
@@ -372,10 +389,10 @@ export function extractErrorCode(payload: unknown): string | undefined {
 // alone left the agent without context for the env var or the
 // `--api-key` flag; this closes that gap without having to
 // special-case every command.
-const ERROR_CODE_HINTS: Record<string, string> = {
-  unauthorized:
-    "Hint: pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify a key is live.",
-};
+const ERROR_CODE_HINTS = {
+  [API_ERROR_CODES.unauthorized]:
+    "Hint: run `primitive login`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify a key is live.",
+} as const satisfies Partial<Record<ApiErrorCode, string>>;
 
 // Write a server / SDK error to stderr in the canonical envelope
 // shape, plus an actionable hint when the code is one we know how
@@ -385,9 +402,42 @@ const ERROR_CODE_HINTS: Record<string, string> = {
 export function writeErrorWithHints(payload: unknown): void {
   process.stderr.write(`${formatErrorPayload(payload)}\n`);
   const code = extractErrorCode(payload);
-  if (code && ERROR_CODE_HINTS[code]) {
-    process.stderr.write(`${ERROR_CODE_HINTS[code]}\n`);
+  if (code && code in ERROR_CODE_HINTS) {
+    const hint = ERROR_CODE_HINTS[code as keyof typeof ERROR_CODE_HINTS];
+    process.stderr.write(`${hint}\n`);
   }
+}
+
+export function removeStaleSavedCredentialOnUnauthorized(params: {
+  auth: ResolvedCliAuth;
+  baseUrlOverridden: boolean;
+  configDir: string;
+  payload: unknown;
+}): boolean {
+  if (
+    extractErrorCode(params.payload) !== API_ERROR_CODES.unauthorized ||
+    params.auth.source !== "stored"
+  ) {
+    return false;
+  }
+
+  const baseUrlDiffersFromSaved =
+    params.baseUrlOverridden &&
+    params.auth.credentials !== null &&
+    params.auth.baseUrl !== params.auth.credentials.base_url;
+
+  if (baseUrlDiffersFromSaved) {
+    process.stderr.write(
+      "Saved Primitive CLI credentials were rejected by the overridden API base URL. The local credential was not removed; check --base-url / PRIMITIVE_API_URL, or run `primitive logout` to remove it.\n",
+    );
+    return false;
+  }
+
+  deleteCliCredentials(params.configDir);
+  process.stderr.write(
+    "Removed saved Primitive CLI credentials because the backing API key is no longer valid. Run `primitive login` to create a new one.\n",
+  );
+  return true;
 }
 
 // Format milliseconds as a short human-readable wall-clock duration.
@@ -495,7 +545,8 @@ function buildFlags(operation: PrimitiveOperationManifest): {
 } {
   const flags: Record<string, unknown> = {
     "api-key": Flags.string({
-      description: "Primitive API key (defaults to PRIMITIVE_API_KEY)",
+      description:
+        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "base-url": Flags.string({
@@ -630,7 +681,8 @@ export function createOperationCommand(
       const { flags } = await this.parse(OperationCommand as never);
       const parsedFlags = flags as Record<string, unknown>;
       await runWithTiming(parsedFlags.time === true, async () => {
-        const apiClient = new PrimitiveApiClient({
+        const baseUrlOverridden = typeof parsedFlags["base-url"] === "string";
+        const auth = resolveCliAuth({
           apiKey:
             typeof parsedFlags["api-key"] === "string"
               ? (parsedFlags["api-key"] as string)
@@ -639,6 +691,11 @@ export function createOperationCommand(
             typeof parsedFlags["base-url"] === "string"
               ? (parsedFlags["base-url"] as string)
               : undefined,
+          configDir: this.config.configDir,
+        });
+        const apiClient = new PrimitiveApiClient({
+          apiKey: auth.apiKey,
+          baseUrl: auth.baseUrl,
         });
 
         // Two body sources, merged: explicit JSON via --body /
@@ -707,7 +764,14 @@ export function createOperationCommand(
         });
 
         if (result.error) {
-          writeErrorWithHints(extractErrorPayload(result.error));
+          const errorPayload = extractErrorPayload(result.error);
+          writeErrorWithHints(errorPayload);
+          removeStaleSavedCredentialOnUnauthorized({
+            auth,
+            baseUrlOverridden,
+            configDir: this.config.configDir,
+            payload: errorPayload,
+          });
           process.exitCode = 1;
           return;
         }

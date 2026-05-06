@@ -36,6 +36,13 @@ type Invoker interface {
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, request *AddDomainInput) (AddDomainRes, error)
+	// CliLogout invokes cliLogout operation.
+	//
+	// Revokes the API key used to authenticate the request. CLI clients use
+	// this endpoint during `primitive logout` before removing local credentials.
+	//
+	// POST /cli/logout
+	CliLogout(ctx context.Context, request OptCliLogoutInput) (CliLogoutRes, error)
 	// CreateEndpoint invokes createEndpoint operation.
 	//
 	// Creates a new webhook endpoint. If a deactivated endpoint
@@ -284,6 +291,14 @@ type Invoker interface {
 	//
 	// GET /sent-emails
 	ListSentEmails(ctx context.Context, params ListSentEmailsParams) (ListSentEmailsRes, error)
+	// PollCliLogin invokes pollCliLogin operation.
+	//
+	// Polls a CLI login session until the browser approval either succeeds,
+	// is denied, expires, or is polled too quickly. The API key is generated
+	// only after approval and is returned exactly once.
+	//
+	// POST /cli/login/poll
+	PollCliLogin(ctx context.Context, request *PollCliLoginInput) (PollCliLoginRes, error)
 	// ReplayDelivery invokes replayDelivery operation.
 	//
 	// Re-sends the stored webhook payload from a previous delivery attempt.
@@ -335,6 +350,14 @@ type Invoker interface {
 	//
 	// POST /send-mail
 	SendEmail(ctx context.Context, request *SendMailInput, params SendEmailParams) (SendEmailRes, error)
+	// StartCliLogin invokes startCliLogin operation.
+	//
+	// Starts a browser-assisted CLI login session. The response includes a
+	// device code for polling and a user code that the user approves in the
+	// browser. This endpoint does not require an API key.
+	//
+	// POST /cli/login/start
+	StartCliLogin(ctx context.Context, request OptStartCliLoginInput) (StartCliLoginRes, error)
 	// TestEndpoint invokes testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -528,6 +551,117 @@ func (c *Client) sendAddDomain(ctx context.Context, request *AddDomainInput) (re
 
 	stage = "DecodeResponse"
 	result, err := decodeAddDomainResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CliLogout invokes cliLogout operation.
+//
+// Revokes the API key used to authenticate the request. CLI clients use
+// this endpoint during `primitive logout` before removing local credentials.
+//
+// POST /cli/logout
+func (c *Client) CliLogout(ctx context.Context, request OptCliLogoutInput) (CliLogoutRes, error) {
+	res, err := c.sendCliLogout(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput) (res CliLogoutRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("cliLogout"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/cli/logout"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CliLogoutOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/cli/logout"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCliLogoutRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CliLogoutOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCliLogoutResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -3493,6 +3627,85 @@ func (c *Client) sendListSentEmails(ctx context.Context, params ListSentEmailsPa
 	return result, nil
 }
 
+// PollCliLogin invokes pollCliLogin operation.
+//
+// Polls a CLI login session until the browser approval either succeeds,
+// is denied, expires, or is polled too quickly. The API key is generated
+// only after approval and is returned exactly once.
+//
+// POST /cli/login/poll
+func (c *Client) PollCliLogin(ctx context.Context, request *PollCliLoginInput) (PollCliLoginRes, error) {
+	res, err := c.sendPollCliLogin(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendPollCliLogin(ctx context.Context, request *PollCliLoginInput) (res PollCliLoginRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("pollCliLogin"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/cli/login/poll"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PollCliLoginOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/cli/login/poll"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePollCliLoginRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePollCliLoginResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ReplayDelivery invokes replayDelivery operation.
 //
 // Re-sends the stored webhook payload from a previous delivery attempt.
@@ -4122,6 +4335,85 @@ func (c *Client) sendSendEmail(ctx context.Context, request *SendMailInput, para
 
 	stage = "DecodeResponse"
 	result, err := decodeSendEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// StartCliLogin invokes startCliLogin operation.
+//
+// Starts a browser-assisted CLI login session. The response includes a
+// device code for polling and a user code that the user approves in the
+// browser. This endpoint does not require an API key.
+//
+// POST /cli/login/start
+func (c *Client) StartCliLogin(ctx context.Context, request OptStartCliLoginInput) (StartCliLoginRes, error) {
+	res, err := c.sendStartCliLogin(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendStartCliLogin(ctx context.Context, request OptStartCliLoginInput) (res StartCliLoginRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("startCliLogin"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/cli/login/start"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, StartCliLoginOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/cli/login/start"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeStartCliLoginRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeStartCliLoginResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

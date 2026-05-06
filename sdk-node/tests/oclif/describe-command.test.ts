@@ -5,6 +5,11 @@ describe("describe command", () => {
   it("registers `describe` in the COMMANDS map", () => {
     expect(COMMANDS.describe).toBeDefined();
   });
+
+  it("registers browser login commands in the COMMANDS map", () => {
+    expect(COMMANDS.login).toBeDefined();
+    expect(COMMANDS.logout).toBeDefined();
+  });
 });
 
 describe("lookupOperation", () => {
