@@ -106,7 +106,7 @@ export function renderFishCompletion(binName: string): string {
       }
 
       lines.push(
-        `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'api-key' -r -d 'Primitive API key (defaults to PRIMITIVE_API_KEY)'`,
+        `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'api-key' -r -d 'Primitive API key (defaults to PRIMITIVE_API_KEY or saved primitive login credentials)'`,
         `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'base-url' -r -d 'API base URL (defaults to PRIMITIVE_API_URL or production)'`,
       );
 

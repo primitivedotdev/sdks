@@ -11,10 +11,12 @@ import {
   extractErrorCode,
   extractErrorPayload,
   formatErrorPayload,
+  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { type ResolvedCliAuth, resolveCliAuth } from "../auth.js";
 
 // `primitive send` is the agent-grade shortcut for the most common
 // case: send a fresh outbound email. It wraps `sending:send-email`
@@ -72,6 +74,11 @@ function isVerifiedDomain(domain: Domain): domain is VerifiedDomain {
 
 async function pickDefaultFromAddress(
   apiClient: PrimitiveApiClient,
+  authFailureContext: {
+    auth: ResolvedCliAuth;
+    baseUrlOverridden: boolean;
+    configDir: string;
+  },
 ): Promise<string> {
   const result = await listDomains({
     client: apiClient.client,
@@ -86,6 +93,10 @@ async function pickDefaultFromAddress(
     // wrapping.
     if (extractErrorCode(errorPayload) === "unauthorized") {
       writeErrorWithHints(errorPayload);
+      removeStaleSavedCredentialOnUnauthorized({
+        ...authFailureContext,
+        payload: errorPayload,
+      });
       // exit: 1 to match the run() unauthorized path (which uses
       // `process.exitCode = 1`). oclif's CLIError defaults to 2,
       // so without this override the same "unauthorized" condition
@@ -138,7 +149,8 @@ class SendCommand extends Command {
 
   static flags = {
     "api-key": Flags.string({
-      description: "Primitive API key (defaults to PRIMITIVE_API_KEY)",
+      description:
+        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "base-url": Flags.string({
@@ -192,12 +204,25 @@ class SendCommand extends Command {
     }
 
     await runWithTiming(flags.time, async () => {
-      const apiClient = new PrimitiveApiClient({
+      const baseUrlOverridden = flags["base-url"] !== undefined;
+      const auth = resolveCliAuth({
         apiKey: flags["api-key"],
         baseUrl: flags["base-url"],
+        configDir: this.config.configDir,
+      });
+      const apiClient = new PrimitiveApiClient({
+        apiKey: auth.apiKey,
+        baseUrl: auth.baseUrl,
       });
 
-      const from = flags.from ?? (await pickDefaultFromAddress(apiClient));
+      const authFailureContext = {
+        auth,
+        baseUrlOverridden,
+        configDir: this.config.configDir,
+      };
+      const from =
+        flags.from ??
+        (await pickDefaultFromAddress(apiClient, authFailureContext));
       const subject =
         flags.subject ?? (flags.body ? deriveSubject(flags.body) : "Message");
 
@@ -221,7 +246,12 @@ class SendCommand extends Command {
       });
 
       if (result.error) {
-        writeErrorWithHints(extractErrorPayload(result.error));
+        const errorPayload = extractErrorPayload(result.error);
+        writeErrorWithHints(errorPayload);
+        removeStaleSavedCredentialOnUnauthorized({
+          ...authFailureContext,
+          payload: errorPayload,
+        });
         process.exitCode = 1;
         return;
       }

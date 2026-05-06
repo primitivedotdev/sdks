@@ -16,6 +16,13 @@ type Handler interface {
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, req *AddDomainInput) (AddDomainRes, error)
+	// CliLogout implements cliLogout operation.
+	//
+	// Revokes the API key used to authenticate the request. CLI clients use
+	// this endpoint during `primitive logout` before removing local credentials.
+	//
+	// POST /cli/logout
+	CliLogout(ctx context.Context, req OptCliLogoutInput) (CliLogoutRes, error)
 	// CreateEndpoint implements createEndpoint operation.
 	//
 	// Creates a new webhook endpoint. If a deactivated endpoint
@@ -264,6 +271,14 @@ type Handler interface {
 	//
 	// GET /sent-emails
 	ListSentEmails(ctx context.Context, params ListSentEmailsParams) (ListSentEmailsRes, error)
+	// PollCliLogin implements pollCliLogin operation.
+	//
+	// Polls a CLI login session until the browser approval either succeeds,
+	// is denied, expires, or is polled too quickly. The API key is generated
+	// only after approval and is returned exactly once.
+	//
+	// POST /cli/login/poll
+	PollCliLogin(ctx context.Context, req *PollCliLoginInput) (PollCliLoginRes, error)
 	// ReplayDelivery implements replayDelivery operation.
 	//
 	// Re-sends the stored webhook payload from a previous delivery attempt.
@@ -315,6 +330,14 @@ type Handler interface {
 	//
 	// POST /send-mail
 	SendEmail(ctx context.Context, req *SendMailInput, params SendEmailParams) (SendEmailRes, error)
+	// StartCliLogin implements startCliLogin operation.
+	//
+	// Starts a browser-assisted CLI login session. The response includes a
+	// device code for polling and a user code that the user approves in the
+	// browser. This endpoint does not require an API key.
+	//
+	// POST /cli/login/start
+	StartCliLogin(ctx context.Context, req OptStartCliLoginInput) (StartCliLoginRes, error)
 	// TestEndpoint implements testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request

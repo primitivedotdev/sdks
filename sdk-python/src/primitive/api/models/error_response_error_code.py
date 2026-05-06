@@ -1,12 +1,16 @@
 from enum import Enum
 
 class ErrorResponseErrorCode(str, Enum):
+    ACCESS_DENIED = "access_denied"
+    AUTHORIZATION_PENDING = "authorization_pending"
     CANNOT_SEND_FROM_DOMAIN = "cannot_send_from_domain"
     CONFLICT = "conflict"
     DISCARD_NOT_ENABLED = "discard_not_enabled"
+    EXPIRED_TOKEN = "expired_token"
     FORBIDDEN = "forbidden"
     INBOUND_NOT_REPLIABLE = "inbound_not_repliable"
     INTERNAL_ERROR = "internal_error"
+    INVALID_DEVICE_CODE = "invalid_device_code"
     MX_CONFLICT = "mx_conflict"
     NOT_FOUND = "not_found"
     OUTBOUND_CAPACITY_EXHAUSTED = "outbound_capacity_exhausted"
@@ -18,6 +22,7 @@ class ErrorResponseErrorCode(str, Enum):
     OUTBOUND_UNREACHABLE = "outbound_unreachable"
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
     RECIPIENT_NOT_ALLOWED = "recipient_not_allowed"
+    SLOW_DOWN = "slow_down"
     UNAUTHORIZED = "unauthorized"
     VALIDATION_ERROR = "validation_error"
 

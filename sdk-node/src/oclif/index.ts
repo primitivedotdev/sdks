@@ -5,6 +5,8 @@ import {
 } from "../openapi/index.js";
 import { createOperationCommand } from "./api-command.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
+import LoginCommand from "./commands/login.js";
+import LogoutCommand from "./commands/logout.js";
 import SendCommand from "./commands/send.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
@@ -161,6 +163,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // operation stays available under sending:send-email for callers
   // who want every flag.
   send: SendCommand,
+  // `login` creates and stores an org-scoped CLI API key via browser approval.
+  login: LoginCommand,
+  // `logout` revokes the saved CLI API key and removes local credentials.
+  logout: LogoutCommand,
   // `whoami` is the credentials smoke test. Prints the account the
   // current API key authenticates as. AGX walkthroughs kept
   // wanting this before risking a real call against a possibly-

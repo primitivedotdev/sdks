@@ -18,6 +18,7 @@ import (
 )
 
 var regexMap = map[string]ogenregex.Regexp{
+	"^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$": ogenregex.MustCompile("^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$"),
 	"^[\\x21-\\x7E]+$":       ogenregex.MustCompile("^[\\x21-\\x7E]+$"),
 	"^[^\\x00-\\x1F\\x7F]+$": ogenregex.MustCompile("^[^\\x00-\\x1F\\x7F]+$"),
 	"^\\d+$":                 ogenregex.MustCompile("^\\d+$"),

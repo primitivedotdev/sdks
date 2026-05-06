@@ -31,7 +31,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -115,6 +115,73 @@ export type GateFix = {
      * Entity the action applies to.
      */
     subject: string;
+};
+
+export type StartCliLoginInput = {
+    /**
+     * Human-readable device name shown during browser approval
+     */
+    device_name?: string;
+    /**
+     * Optional client metadata stored with the login session
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+};
+
+export type CliLoginStartResult = {
+    /**
+     * Opaque code used by the CLI to poll for approval
+     */
+    device_code: string;
+    /**
+     * Short code the user confirms in the browser
+     */
+    user_code: string;
+    /**
+     * Browser URL where the user approves the login
+     */
+    verification_uri: string;
+    /**
+     * Browser URL with the user code prefilled
+     */
+    verification_uri_complete: string;
+    /**
+     * Seconds until the login session expires
+     */
+    expires_in: number;
+    /**
+     * Minimum seconds between poll requests
+     */
+    interval: number;
+};
+
+export type PollCliLoginInput = {
+    device_code: string;
+};
+
+export type CliLoginPollResult = {
+    /**
+     * Newly-created API key for CLI authentication
+     */
+    api_key: string;
+    key_id: string;
+    key_prefix: string;
+    org_id: string;
+    org_name: string | null;
+};
+
+export type CliLogoutInput = {
+    /**
+     * Optional key id guard; when provided it must match the authenticated API key
+     */
+    key_id?: string;
+};
+
+export type CliLogoutResult = {
+    revoked: boolean;
+    key_id: string;
 };
 
 export type Account = {
@@ -1181,6 +1248,111 @@ export type Cursor = string;
  * Number of results per page
  */
 export type Limit = number;
+
+export type StartCliLoginData = {
+    body?: StartCliLoginInput;
+    path?: never;
+    query?: never;
+    url: '/cli/login/start';
+};
+
+export type StartCliLoginErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type StartCliLoginError = StartCliLoginErrors[keyof StartCliLoginErrors];
+
+export type StartCliLoginResponses = {
+    /**
+     * CLI login session created
+     */
+    201: SuccessEnvelope & {
+        data?: CliLoginStartResult;
+    };
+};
+
+export type StartCliLoginResponse = StartCliLoginResponses[keyof StartCliLoginResponses];
+
+export type PollCliLoginData = {
+    body: PollCliLoginInput;
+    path?: never;
+    query?: never;
+    url: '/cli/login/poll';
+};
+
+export type PollCliLoginErrors = {
+    /**
+     * Invalid request, pending authorization, expired token, or invalid device code
+     */
+    400: ErrorResponse;
+    /**
+     * CLI login was denied in the browser
+     */
+    403: ErrorResponse;
+    /**
+     * Polling too quickly
+     */
+    429: ErrorResponse;
+};
+
+export type PollCliLoginError = PollCliLoginErrors[keyof PollCliLoginErrors];
+
+export type PollCliLoginResponses = {
+    /**
+     * CLI login approved and API key created
+     */
+    200: SuccessEnvelope & {
+        data?: CliLoginPollResult;
+    };
+};
+
+export type PollCliLoginResponse = PollCliLoginResponses[keyof PollCliLoginResponses];
+
+export type CliLogoutData = {
+    body?: CliLogoutInput;
+    path?: never;
+    query?: never;
+    url: '/cli/logout';
+};
+
+export type CliLogoutErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type CliLogoutError = CliLogoutErrors[keyof CliLogoutErrors];
+
+export type CliLogoutResponses = {
+    /**
+     * CLI API key revoked
+     */
+    200: SuccessEnvelope & {
+        data?: CliLogoutResult;
+    };
+};
+
+export type CliLogoutResponse = CliLogoutResponses[keyof CliLogoutResponses];
 
 export type GetAccountData = {
     body?: never;

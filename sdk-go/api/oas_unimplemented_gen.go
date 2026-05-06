@@ -24,6 +24,16 @@ func (UnimplementedHandler) AddDomain(ctx context.Context, req *AddDomainInput) 
 	return r, ht.ErrNotImplemented
 }
 
+// CliLogout implements cliLogout operation.
+//
+// Revokes the API key used to authenticate the request. CLI clients use
+// this endpoint during `primitive logout` before removing local credentials.
+//
+// POST /cli/logout
+func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput) (r CliLogoutRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreateEndpoint implements createEndpoint operation.
 //
 // Creates a new webhook endpoint. If a deactivated endpoint
@@ -335,6 +345,17 @@ func (UnimplementedHandler) ListSentEmails(ctx context.Context, params ListSentE
 	return r, ht.ErrNotImplemented
 }
 
+// PollCliLogin implements pollCliLogin operation.
+//
+// Polls a CLI login session until the browser approval either succeeds,
+// is denied, expires, or is polled too quickly. The API key is generated
+// only after approval and is returned exactly once.
+//
+// POST /cli/login/poll
+func (UnimplementedHandler) PollCliLogin(ctx context.Context, req *PollCliLoginInput) (r PollCliLoginRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ReplayDelivery implements replayDelivery operation.
 //
 // Re-sends the stored webhook payload from a previous delivery attempt.
@@ -398,6 +419,17 @@ func (UnimplementedHandler) RotateWebhookSecret(ctx context.Context) (r RotateWe
 //
 // POST /send-mail
 func (UnimplementedHandler) SendEmail(ctx context.Context, req *SendMailInput, params SendEmailParams) (r SendEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// StartCliLogin implements startCliLogin operation.
+//
+// Starts a browser-assisted CLI login session. The response includes a
+// device code for polling and a user code that the user approves in the
+// browser. This endpoint does not require an API key.
+//
+// POST /cli/login/start
+func (UnimplementedHandler) StartCliLogin(ctx context.Context, req OptStartCliLoginInput) (r StartCliLoginRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SendEmailData, SendEmailErrors, SendEmailResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SendEmailData, SendEmailErrors, SendEmailResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,57 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: Record<string, unknown>;
 };
+
+/**
+ * Start CLI browser login
+ *
+ * Starts a browser-assisted CLI login session. The response includes a
+ * device code for polling and a user code that the user approves in the
+ * browser. This endpoint does not require an API key.
+ *
+ */
+export const startCliLogin = <ThrowOnError extends boolean = false>(options?: Options<StartCliLoginData, ThrowOnError>) => (options?.client ?? client).post<StartCliLoginResponses, StartCliLoginErrors, ThrowOnError>({
+    url: '/cli/login/start',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers
+    }
+});
+
+/**
+ * Poll CLI browser login
+ *
+ * Polls a CLI login session until the browser approval either succeeds,
+ * is denied, expires, or is polled too quickly. The API key is generated
+ * only after approval and is returned exactly once.
+ *
+ */
+export const pollCliLogin = <ThrowOnError extends boolean = false>(options: Options<PollCliLoginData, ThrowOnError>) => (options.client ?? client).post<PollCliLoginResponses, PollCliLoginErrors, ThrowOnError>({
+    url: '/cli/login/poll',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Revoke the current CLI API key
+ *
+ * Revokes the API key used to authenticate the request. CLI clients use
+ * this endpoint during `primitive logout` before removing local credentials.
+ *
+ */
+export const cliLogout = <ThrowOnError extends boolean = false>(options?: Options<CliLogoutData, ThrowOnError>) => (options?.client ?? client).post<CliLogoutResponses, CliLogoutErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/cli/logout',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers
+    }
+});
 
 /**
  * Get account info

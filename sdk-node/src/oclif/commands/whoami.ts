@@ -4,10 +4,12 @@ import type { Account } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
 import {
   extractErrorPayload,
+  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { resolveCliAuth } from "../auth.js";
 
 // `primitive whoami` is the credentials smoke-test the AGX
 // walkthrough kept asking for. Before this command, a user with a
@@ -33,7 +35,8 @@ class WhoamiCommand extends Command {
 
   static flags = {
     "api-key": Flags.string({
-      description: "Primitive API key (defaults to PRIMITIVE_API_KEY)",
+      description:
+        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "base-url": Flags.string({
@@ -49,9 +52,15 @@ class WhoamiCommand extends Command {
     const { flags } = await this.parse(WhoamiCommand);
 
     await runWithTiming(flags.time, async () => {
-      const apiClient = new PrimitiveApiClient({
+      const baseUrlOverridden = flags["base-url"] !== undefined;
+      const auth = resolveCliAuth({
         apiKey: flags["api-key"],
         baseUrl: flags["base-url"],
+        configDir: this.config.configDir,
+      });
+      const apiClient = new PrimitiveApiClient({
+        apiKey: auth.apiKey,
+        baseUrl: auth.baseUrl,
       });
 
       const result = await getAccount({
@@ -60,7 +69,14 @@ class WhoamiCommand extends Command {
       });
 
       if (result.error) {
-        writeErrorWithHints(extractErrorPayload(result.error));
+        const errorPayload = extractErrorPayload(result.error);
+        writeErrorWithHints(errorPayload);
+        removeStaleSavedCredentialOnUnauthorized({
+          auth,
+          baseUrlOverridden,
+          configDir: this.config.configDir,
+          payload: errorPayload,
+        });
         process.exitCode = 1;
         return;
       }
