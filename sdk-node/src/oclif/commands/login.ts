@@ -190,12 +190,8 @@ class LoginCommand extends Command {
 
     process.stderr.write(`Your login code is: ${start.user_code}\n`);
     if (!flags["no-browser"]) {
-      try {
-        openBrowser(start.verification_uri_complete);
-        process.stderr.write("Opening Primitive in your browser...\n");
-      } catch {
-        process.stderr.write("Could not open a browser automatically.\n");
-      }
+      openBrowser(start.verification_uri_complete);
+      process.stderr.write("Opening Primitive in your browser...\n");
     }
     process.stderr.write(
       `If the browser did not open, visit: ${start.verification_uri_complete}\n`,
