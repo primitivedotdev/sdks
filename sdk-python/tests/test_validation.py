@@ -154,7 +154,7 @@ def test_validate_email_received_event_accepts_http_attachments_download_url(
 ) -> None:
     # Self-host deployments may issue http:// URLs that resolve on a local
     # network. Receivers that want to refuse plaintext downloads should
-    # check the scheme explicitly — the SDK no longer enforces it.
+    # check the scheme explicitly; the SDK no longer enforces it.
     validate_email_received_event(
         {
             **valid_payload,
@@ -212,7 +212,7 @@ def test_validate_email_received_event_accepts_https_attachments_download_url(
 def test_email_received_event_model_accepts_http_download_url(
     valid_payload: dict[str, Any],
 ) -> None:
-    # Self-host deployments may issue http:// URLs — Pydantic no longer rejects.
+    # Self-host deployments may issue http:// URLs; Pydantic no longer rejects.
     EmailReceivedEvent.model_validate(
         {
             **valid_payload,
