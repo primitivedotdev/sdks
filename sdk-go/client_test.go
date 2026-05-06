@@ -311,6 +311,25 @@ func TestClientForwardBuildsSend(t *testing.T) {
 	}
 }
 
+func TestClientForwardThreadsIdempotencyKeyToSend(t *testing.T) {
+	stub := &stubSendAPI{
+		result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()},
+	}
+	client := NewClientFromAPI(stub)
+
+	_, err := client.Forward(context.Background(), receivedEmailFixture(), ForwardParams{
+		To:             "ops@example.com",
+		BodyText:       "Can you take this one?",
+		IdempotencyKey: "fwd-key-123",
+	})
+	if err != nil {
+		t.Fatalf("Forward returned error: %v", err)
+	}
+	if value, ok := stub.params.IdempotencyKey.Get(); !ok || value != "fwd-key-123" {
+		t.Fatalf("unexpected idempotency key: %#v", stub.params.IdempotencyKey)
+	}
+}
+
 func TestClientSendWrapsAPIErrors(t *testing.T) {
 	stub := &stubSendAPI{
 		result: &primitiveapi.SendEmailBadRequest{
