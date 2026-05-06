@@ -313,6 +313,183 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "cli-logout",
+    "description": "Revokes the API key used to authenticate the request. CLI clients use\nthis endpoint during `primitive logout` before removing local credentials.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "cliLogout",
+    "path": "/cli/logout",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "key_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional key id guard; when provided it must match the authenticated API key"
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "revoked": {
+          "type": "boolean",
+          "const": true
+        },
+        "key_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "revoked",
+        "key_id"
+      ]
+    },
+    "sdkName": "cliLogout",
+    "summary": "Revoke the current CLI API key",
+    "tag": "CLI",
+    "tagCommand": "cli"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "poll-cli-login",
+    "description": "Polls a CLI login session until the browser approval either succeeds,\nis denied, expires, or is polled too quickly. The API key is generated\nonly after approval and is returned exactly once.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "pollCliLogin",
+    "path": "/cli/login/poll",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "device_code": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "device_code"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "description": "Newly-created API key for CLI authentication"
+        },
+        "key_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "key_prefix": {
+          "type": "string"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "api_key",
+        "key_id",
+        "key_prefix",
+        "org_id",
+        "org_name"
+      ]
+    },
+    "sdkName": "pollCliLogin",
+    "summary": "Poll CLI browser login",
+    "tag": "CLI",
+    "tagCommand": "cli"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "start-cli-login",
+    "description": "Starts a browser-assisted CLI login session. The response includes a\ndevice code for polling and a user code that the user approves in the\nbrowser. This endpoint does not require an API key.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "startCliLogin",
+    "path": "/cli/login/start",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "device_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Human-readable device name shown during browser approval"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer"
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "device_code": {
+          "type": "string",
+          "description": "Opaque code used by the CLI to poll for approval"
+        },
+        "user_code": {
+          "type": "string",
+          "pattern": "^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$",
+          "description": "Short code the user confirms in the browser"
+        },
+        "verification_uri": {
+          "type": "string",
+          "description": "Browser URL where the user approves the login"
+        },
+        "verification_uri_complete": {
+          "type": "string",
+          "description": "Browser URL with the user code prefilled"
+        },
+        "expires_in": {
+          "type": "integer",
+          "description": "Seconds until the login session expires"
+        },
+        "interval": {
+          "type": "integer",
+          "description": "Minimum seconds between poll requests"
+        }
+      },
+      "required": [
+        "device_code",
+        "user_code",
+        "verification_uri",
+        "verification_uri_complete",
+        "expires_in",
+        "interval"
+      ]
+    },
+    "sdkName": "startCliLogin",
+    "summary": "Start CLI browser login",
+    "tag": "CLI",
+    "tagCommand": "cli"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "add-domain",
     "description": "Creates an unverified domain claim. You will receive a\n`verification_token` to add as a DNS TXT record before\ncalling the verify endpoint.\n",

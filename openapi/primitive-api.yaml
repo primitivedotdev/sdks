@@ -127,6 +127,8 @@ security:
   - BearerAuth: []
 
 tags:
+  - name: CLI
+    description: Browser-assisted CLI authentication
   - name: Account
     description: Manage your account settings, storage, and webhook secret
   - name: Domains
@@ -143,6 +145,166 @@ tags:
     description: View and replay webhook delivery attempts
 
 paths:
+  # ---------------------------------------------------------------------------
+  # CLI
+  # ---------------------------------------------------------------------------
+  /cli/login/start:
+    post:
+      operationId: startCliLogin
+      summary: Start CLI browser login
+      description: |
+        Starts a browser-assisted CLI login session. The response includes a
+        device code for polling and a user code that the user approves in the
+        browser. This endpoint does not require an API key.
+      tags: [CLI]
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartCliLoginInput'
+      responses:
+        '201':
+          description: CLI login session created
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Always `no-store`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CliLoginStartResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /cli/login/poll:
+    post:
+      operationId: pollCliLogin
+      summary: Poll CLI browser login
+      description: |
+        Polls a CLI login session until the browser approval either succeeds,
+        is denied, expires, or is polled too quickly. The API key is generated
+        only after approval and is returned exactly once.
+      tags: [CLI]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollCliLoginInput'
+      responses:
+        '200':
+          description: CLI login approved and API key created
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Always `no-store`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CliLoginPollResult'
+        '400':
+          description: Invalid request, pending authorization, slow polling, expired token, or invalid device code
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before polling again when the error code is `slow_down`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                authorization_pending:
+                  summary: Awaiting browser approval
+                  value:
+                    success: false
+                    error:
+                      code: authorization_pending
+                      message: CLI login is still pending browser approval
+                expired_token:
+                  summary: Login session expired
+                  value:
+                    success: false
+                    error:
+                      code: expired_token
+                      message: CLI login code expired; run primitive login again
+                invalid_device_code:
+                  summary: Unknown device code
+                  value:
+                    success: false
+                    error:
+                      code: invalid_device_code
+                      message: Invalid CLI login device code
+                slow_down:
+                  summary: Polling too quickly
+                  value:
+                    success: false
+                    error:
+                      code: slow_down
+                      message: Polling too quickly; slow down and retry later
+        '403':
+          description: CLI login was denied in the browser
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: access_denied
+                  message: CLI login was denied in the browser
+  /cli/logout:
+    post:
+      operationId: cliLogout
+      summary: Revoke the current CLI API key
+      description: |
+        Revokes the API key used to authenticate the request. CLI clients use
+        this endpoint during `primitive logout` before removing local credentials.
+      tags: [CLI]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CliLogoutInput'
+      responses:
+        '200':
+          description: CLI API key revoked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CliLogoutResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ---------------------------------------------------------------------------
   # Account
   # ---------------------------------------------------------------------------
@@ -1686,6 +1848,11 @@ components:
                 - outbound_relay_failed
                 - discard_not_enabled
                 - inbound_not_repliable
+                - authorization_pending
+                - slow_down
+                - access_denied
+                - expired_token
+                - invalid_device_code
             message:
               type: string
             details:
@@ -1767,6 +1934,100 @@ components:
           type: string
           description: Entity the action applies to.
       required: [action, subject]
+
+    # -------------------------------------------------------------------------
+    # CLI
+    # -------------------------------------------------------------------------
+    StartCliLoginInput:
+      type: object
+      additionalProperties: false
+      properties:
+        device_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: Human-readable device name shown during browser approval
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional client metadata stored with the login session; serialized JSON must be 2048 bytes or fewer
+
+    CliLoginStartResult:
+      type: object
+      properties:
+        device_code:
+          type: string
+          description: Opaque code used by the CLI to poll for approval
+        user_code:
+          type: string
+          pattern: '^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$'
+          description: Short code the user confirms in the browser
+        verification_uri:
+          type: string
+          description: Browser URL where the user approves the login
+        verification_uri_complete:
+          type: string
+          description: Browser URL with the user code prefilled
+        expires_in:
+          type: integer
+          description: Seconds until the login session expires
+        interval:
+          type: integer
+          description: Minimum seconds between poll requests
+      required:
+        - device_code
+        - user_code
+        - verification_uri
+        - verification_uri_complete
+        - expires_in
+        - interval
+
+    PollCliLoginInput:
+      type: object
+      additionalProperties: false
+      properties:
+        device_code:
+          type: string
+          minLength: 1
+      required: [device_code]
+
+    CliLoginPollResult:
+      type: object
+      properties:
+        api_key:
+          type: string
+          description: Newly-created API key for CLI authentication
+        key_id:
+          type: string
+          format: uuid
+        key_prefix:
+          type: string
+        org_id:
+          type: string
+          format: uuid
+        org_name:
+          type: [string, 'null']
+      required: [api_key, key_id, key_prefix, org_id, org_name]
+
+    CliLogoutInput:
+      type: object
+      additionalProperties: false
+      properties:
+        key_id:
+          type: string
+          format: uuid
+          description: Optional key id guard; when provided it must match the authenticated API key
+
+    CliLogoutResult:
+      type: object
+      properties:
+        revoked:
+          type: boolean
+          const: true
+        key_id:
+          type: string
+          format: uuid
+      required: [revoked, key_id]
 
     # -------------------------------------------------------------------------
     # Account

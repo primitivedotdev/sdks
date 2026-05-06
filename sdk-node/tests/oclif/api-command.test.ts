@@ -10,9 +10,15 @@ import {
   formatElapsed,
   formatErrorPayload,
   readJsonBody,
+  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
   writeErrorWithHints,
 } from "../../src/oclif/api-command.js";
+import {
+  loadCliCredentials,
+  type StoredCliCredentials,
+  saveCliCredentials,
+} from "../../src/oclif/auth.js";
 
 describe("formatErrorPayload", () => {
   it("wraps a fetch TypeError into a code/message payload instead of {}", () => {
@@ -306,6 +312,100 @@ describe("writeErrorWithHints", () => {
 
     expect(writes).toHaveLength(2);
     expect(writes[1]).toContain("--api-key");
+  });
+});
+
+describe("removeStaleSavedCredentialOnUnauthorized", () => {
+  const credentials: StoredCliCredentials = {
+    api_key: "prim_stale",
+    base_url: "https://www.primitive.dev/api/v1",
+    created_at: "2026-05-05T00:00:00.000Z",
+    key_id: "11111111-1111-4111-8111-111111111111",
+    key_prefix: "prim_sta...",
+    org_id: "22222222-2222-4222-8222-222222222222",
+    org_name: "Acme",
+  };
+
+  let tempDir: string;
+  let writes: string[];
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), "primitive-cli-stale-auth-test-"));
+    writes = [];
+    writeSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: unknown) => {
+        writes.push(typeof chunk === "string" ? chunk : String(chunk));
+        return true;
+      });
+  });
+
+  afterEach(() => {
+    writeSpy.mockRestore();
+    rmSync(tempDir, { force: true, recursive: true });
+  });
+
+  it("removes stale saved credentials when the saved key is unauthorized", () => {
+    saveCliCredentials(tempDir, credentials);
+
+    const removed = removeStaleSavedCredentialOnUnauthorized({
+      auth: {
+        apiKey: credentials.api_key,
+        baseUrl: credentials.base_url,
+        credentials,
+        source: "stored",
+      },
+      baseUrlOverridden: false,
+      configDir: tempDir,
+      payload: { code: "unauthorized", message: "Invalid API key" },
+    });
+
+    expect(removed).toBe(true);
+    expect(loadCliCredentials(tempDir)).toBeNull();
+    expect(writes.join("")).toContain(
+      "Removed saved Primitive CLI credentials",
+    );
+  });
+
+  it("keeps saved credentials when an overridden base URL rejects them", () => {
+    saveCliCredentials(tempDir, credentials);
+
+    const removed = removeStaleSavedCredentialOnUnauthorized({
+      auth: {
+        apiKey: credentials.api_key,
+        baseUrl: "http://localhost:3000/api/v1",
+        credentials,
+        source: "stored",
+      },
+      baseUrlOverridden: true,
+      configDir: tempDir,
+      payload: { code: "unauthorized", message: "Invalid API key" },
+    });
+
+    expect(removed).toBe(false);
+    expect(loadCliCredentials(tempDir)).toEqual(credentials);
+    expect(writes.join("")).toContain("local credential was not removed");
+  });
+
+  it("ignores non-auth errors", () => {
+    saveCliCredentials(tempDir, credentials);
+
+    const removed = removeStaleSavedCredentialOnUnauthorized({
+      auth: {
+        apiKey: credentials.api_key,
+        baseUrl: credentials.base_url,
+        credentials,
+        source: "stored",
+      },
+      baseUrlOverridden: false,
+      configDir: tempDir,
+      payload: { code: "validation_error", message: "Bad request" },
+    });
+
+    expect(removed).toBe(false);
+    expect(loadCliCredentials(tempDir)).toEqual(credentials);
+    expect(writes).toEqual([]);
   });
 });
 

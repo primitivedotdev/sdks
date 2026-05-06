@@ -7,6 +7,7 @@ type OperationName = string
 
 const (
 	AddDomainOperation           OperationName = "AddDomain"
+	CliLogoutOperation           OperationName = "CliLogout"
 	CreateEndpointOperation      OperationName = "CreateEndpoint"
 	CreateFilterOperation        OperationName = "CreateFilter"
 	DeleteDomainOperation        OperationName = "DeleteDomain"
@@ -28,11 +29,13 @@ const (
 	ListEndpointsOperation       OperationName = "ListEndpoints"
 	ListFiltersOperation         OperationName = "ListFilters"
 	ListSentEmailsOperation      OperationName = "ListSentEmails"
+	PollCliLoginOperation        OperationName = "PollCliLogin"
 	ReplayDeliveryOperation      OperationName = "ReplayDelivery"
 	ReplayEmailWebhooksOperation OperationName = "ReplayEmailWebhooks"
 	ReplyToEmailOperation        OperationName = "ReplyToEmail"
 	RotateWebhookSecretOperation OperationName = "RotateWebhookSecret"
 	SendEmailOperation           OperationName = "SendEmail"
+	StartCliLoginOperation       OperationName = "StartCliLogin"
 	TestEndpointOperation        OperationName = "TestEndpoint"
 	UpdateAccountOperation       OperationName = "UpdateAccount"
 	UpdateDomainOperation        OperationName = "UpdateDomain"

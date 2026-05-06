@@ -59,6 +59,9 @@
       "@oclif/plugin-autocomplete"
     ],
     "topics": {
+      "cli": {
+        "description": "Browser-assisted CLI authentication"
+      },
       "account": {
         "description": "Manage your account settings, storage, and webhook secret"
       },
