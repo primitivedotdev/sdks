@@ -874,6 +874,230 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/emails/search": {
+      "get": {
+        "operationId": "searchEmails",
+        "summary": "Search inbound emails",
+        "description": "Searches inbound emails with structured filters and optional\nfull-text matching across parsed email fields. This endpoint is\noptimized for filtered inbox views and CLI polling workflows:\ncallers that only need new accepted mail can pass\n`sort=received_at_asc`, `snippet=false`, `include_facets=false`,\nand a `date_from` timestamp.\n\n`q`, `subject`, and `body` use the same English full-text index\nas the web inbox search. Structured filters such as `from`, `to`,\n`domain_id`, status, attachment presence, and spam score bounds\nare combined with the text query.\n",
+        "tags": [
+          "Emails"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "description": "Full-text search DSL query."
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Filter by sender address or sender domain."
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            },
+            "description": "Filter by recipient address or recipient domain."
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "description": "Full-text search restricted to the subject field."
+          },
+          {
+            "name": "body",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "description": "Full-text search restricted to the parsed text body."
+          },
+          {
+            "name": "domain_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by domain ID."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/EmailStatus"
+            },
+            "description": "Filter by inbound email lifecycle status."
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter emails received on or after this timestamp."
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filter emails received on or before this timestamp."
+          },
+          {
+            "name": "has_attachment",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "Filter by whether the email has one or more attachments."
+          },
+          {
+            "name": "spam_score_lt",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "description": "Filter to emails with spam score below this value."
+          },
+          {
+            "name": "spam_score_gte",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "description": "Filter to emails with spam score greater than or equal to this value."
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "relevance",
+                "received_at_desc",
+                "received_at_asc"
+              ]
+            },
+            "description": "Sort mode. Defaults to relevance when a text query is present,\notherwise `received_at_desc`.\n"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Opaque pagination cursor from a previous search response."
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "name": "snippet",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "true"
+            },
+            "description": "Include subject/body highlight snippets when text search is active."
+          },
+          {
+            "name": "include_facets",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "default": "true"
+            },
+            "description": "Include facet counts for sender, domain, status, and attachment presence."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/EmailSearchResult"
+                          }
+                        },
+                        "meta": {
+                          "$ref": "#/components/schemas/EmailSearchMeta"
+                        },
+                        "facets": {
+                          "$ref": "#/components/schemas/EmailSearchFacets"
+                        }
+                      },
+                      "required": [
+                        "data",
+                        "meta"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "504": {
+            "description": "Search query timed out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/emails/{id}": {
       "parameters": [
         {
@@ -2408,6 +2632,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "outbound_relay_failed",
                   "discard_not_enabled",
                   "inbound_not_repliable",
+                  "search_timeout",
                   "authorization_pending",
                   "slow_down",
                   "access_denied",
@@ -3108,6 +3333,162 @@ export const openapiDocument: Record<string, unknown> = {
           "created_at",
           "received_at",
           "webhook_attempt_count"
+        ]
+      },
+      "EmailSearchHighlights": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Subject snippets with matching terms highlighted."
+          },
+          "body": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Body snippets with matching terms highlighted."
+          }
+        },
+        "required": [
+          "subject",
+          "body"
+        ]
+      },
+      "EmailSearchResult": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EmailSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "attachment_count": {
+                "type": "integer",
+                "description": "Number of parsed attachments on the email."
+              },
+              "from_known_address": {
+                "type": "boolean",
+                "description": "Whether the parsed From address is known to this org from prior authenticated inbound mail."
+              },
+              "score": {
+                "type": "number",
+                "description": "Relevance score. Present only when sorting by relevance."
+              },
+              "highlights": {
+                "$ref": "#/components/schemas/EmailSearchHighlights"
+              }
+            },
+            "required": [
+              "attachment_count",
+              "from_known_address"
+            ]
+          }
+        ]
+      },
+      "EmailSearchMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "Total number of matching records, capped when `total_capped` is true."
+          },
+          "total_capped": {
+            "type": "boolean",
+            "description": "Whether `total` was capped instead of counted exactly."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Page size used for this request."
+          },
+          "cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cursor for the next search page, or null if no more results."
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "relevance",
+              "received_at_desc",
+              "received_at_asc"
+            ],
+            "description": "Sort mode used for the result page."
+          }
+        },
+        "required": [
+          "total",
+          "total_capped",
+          "limit",
+          "cursor",
+          "sort"
+        ]
+      },
+      "EmailSearchFacetBucket": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value",
+          "count"
+        ]
+      },
+      "EmailSearchFacets": {
+        "type": "object",
+        "properties": {
+          "by_sender": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailSearchFacetBucket"
+            }
+          },
+          "by_domain": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailSearchFacetBucket"
+            }
+          },
+          "by_status": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailSearchFacetBucket"
+            }
+          },
+          "has_attachment": {
+            "type": "object",
+            "properties": {
+              "true": {
+                "type": "integer"
+              },
+              "false": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "true",
+              "false"
+            ]
+          }
+        },
+        "required": [
+          "by_sender",
+          "by_domain",
+          "by_status",
+          "has_attachment"
         ]
       },
       "EmailDetail": {

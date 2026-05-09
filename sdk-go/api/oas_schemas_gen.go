@@ -2044,6 +2044,471 @@ func (s *EmailDetailReply) SetQueueID(val OptNilString) {
 	s.QueueID = val
 }
 
+// Ref: #/components/schemas/EmailSearchFacetBucket
+type EmailSearchFacetBucket struct {
+	Value NilString `json:"value"`
+	Count int       `json:"count"`
+}
+
+// GetValue returns the value of Value.
+func (s *EmailSearchFacetBucket) GetValue() NilString {
+	return s.Value
+}
+
+// GetCount returns the value of Count.
+func (s *EmailSearchFacetBucket) GetCount() int {
+	return s.Count
+}
+
+// SetValue sets the value of Value.
+func (s *EmailSearchFacetBucket) SetValue(val NilString) {
+	s.Value = val
+}
+
+// SetCount sets the value of Count.
+func (s *EmailSearchFacetBucket) SetCount(val int) {
+	s.Count = val
+}
+
+// Ref: #/components/schemas/EmailSearchFacets
+type EmailSearchFacets struct {
+	BySender      []EmailSearchFacetBucket       `json:"by_sender"`
+	ByDomain      []EmailSearchFacetBucket       `json:"by_domain"`
+	ByStatus      []EmailSearchFacetBucket       `json:"by_status"`
+	HasAttachment EmailSearchFacetsHasAttachment `json:"has_attachment"`
+}
+
+// GetBySender returns the value of BySender.
+func (s *EmailSearchFacets) GetBySender() []EmailSearchFacetBucket {
+	return s.BySender
+}
+
+// GetByDomain returns the value of ByDomain.
+func (s *EmailSearchFacets) GetByDomain() []EmailSearchFacetBucket {
+	return s.ByDomain
+}
+
+// GetByStatus returns the value of ByStatus.
+func (s *EmailSearchFacets) GetByStatus() []EmailSearchFacetBucket {
+	return s.ByStatus
+}
+
+// GetHasAttachment returns the value of HasAttachment.
+func (s *EmailSearchFacets) GetHasAttachment() EmailSearchFacetsHasAttachment {
+	return s.HasAttachment
+}
+
+// SetBySender sets the value of BySender.
+func (s *EmailSearchFacets) SetBySender(val []EmailSearchFacetBucket) {
+	s.BySender = val
+}
+
+// SetByDomain sets the value of ByDomain.
+func (s *EmailSearchFacets) SetByDomain(val []EmailSearchFacetBucket) {
+	s.ByDomain = val
+}
+
+// SetByStatus sets the value of ByStatus.
+func (s *EmailSearchFacets) SetByStatus(val []EmailSearchFacetBucket) {
+	s.ByStatus = val
+}
+
+// SetHasAttachment sets the value of HasAttachment.
+func (s *EmailSearchFacets) SetHasAttachment(val EmailSearchFacetsHasAttachment) {
+	s.HasAttachment = val
+}
+
+type EmailSearchFacetsHasAttachment struct {
+	True  int `json:"true"`
+	False int `json:"false"`
+}
+
+// GetTrue returns the value of True.
+func (s *EmailSearchFacetsHasAttachment) GetTrue() int {
+	return s.True
+}
+
+// GetFalse returns the value of False.
+func (s *EmailSearchFacetsHasAttachment) GetFalse() int {
+	return s.False
+}
+
+// SetTrue sets the value of True.
+func (s *EmailSearchFacetsHasAttachment) SetTrue(val int) {
+	s.True = val
+}
+
+// SetFalse sets the value of False.
+func (s *EmailSearchFacetsHasAttachment) SetFalse(val int) {
+	s.False = val
+}
+
+// Ref: #/components/schemas/EmailSearchHighlights
+type EmailSearchHighlights struct {
+	// Subject snippets with matching terms highlighted.
+	Subject []string `json:"subject"`
+	// Body snippets with matching terms highlighted.
+	Body []string `json:"body"`
+}
+
+// GetSubject returns the value of Subject.
+func (s *EmailSearchHighlights) GetSubject() []string {
+	return s.Subject
+}
+
+// GetBody returns the value of Body.
+func (s *EmailSearchHighlights) GetBody() []string {
+	return s.Body
+}
+
+// SetSubject sets the value of Subject.
+func (s *EmailSearchHighlights) SetSubject(val []string) {
+	s.Subject = val
+}
+
+// SetBody sets the value of Body.
+func (s *EmailSearchHighlights) SetBody(val []string) {
+	s.Body = val
+}
+
+// Ref: #/components/schemas/EmailSearchMeta
+type EmailSearchMeta struct {
+	// Total number of matching records, capped when `total_capped` is true.
+	Total int `json:"total"`
+	// Whether `total` was capped instead of counted exactly.
+	TotalCapped bool `json:"total_capped"`
+	// Page size used for this request.
+	Limit int `json:"limit"`
+	// Cursor for the next search page, or null if no more results.
+	Cursor NilString `json:"cursor"`
+	// Sort mode used for the result page.
+	Sort EmailSearchMetaSort `json:"sort"`
+}
+
+// GetTotal returns the value of Total.
+func (s *EmailSearchMeta) GetTotal() int {
+	return s.Total
+}
+
+// GetTotalCapped returns the value of TotalCapped.
+func (s *EmailSearchMeta) GetTotalCapped() bool {
+	return s.TotalCapped
+}
+
+// GetLimit returns the value of Limit.
+func (s *EmailSearchMeta) GetLimit() int {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *EmailSearchMeta) GetCursor() NilString {
+	return s.Cursor
+}
+
+// GetSort returns the value of Sort.
+func (s *EmailSearchMeta) GetSort() EmailSearchMetaSort {
+	return s.Sort
+}
+
+// SetTotal sets the value of Total.
+func (s *EmailSearchMeta) SetTotal(val int) {
+	s.Total = val
+}
+
+// SetTotalCapped sets the value of TotalCapped.
+func (s *EmailSearchMeta) SetTotalCapped(val bool) {
+	s.TotalCapped = val
+}
+
+// SetLimit sets the value of Limit.
+func (s *EmailSearchMeta) SetLimit(val int) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *EmailSearchMeta) SetCursor(val NilString) {
+	s.Cursor = val
+}
+
+// SetSort sets the value of Sort.
+func (s *EmailSearchMeta) SetSort(val EmailSearchMetaSort) {
+	s.Sort = val
+}
+
+// Sort mode used for the result page.
+type EmailSearchMetaSort string
+
+const (
+	EmailSearchMetaSortRelevance      EmailSearchMetaSort = "relevance"
+	EmailSearchMetaSortReceivedAtDesc EmailSearchMetaSort = "received_at_desc"
+	EmailSearchMetaSortReceivedAtAsc  EmailSearchMetaSort = "received_at_asc"
+)
+
+// AllValues returns all EmailSearchMetaSort values.
+func (EmailSearchMetaSort) AllValues() []EmailSearchMetaSort {
+	return []EmailSearchMetaSort{
+		EmailSearchMetaSortRelevance,
+		EmailSearchMetaSortReceivedAtDesc,
+		EmailSearchMetaSortReceivedAtAsc,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailSearchMetaSort) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailSearchMetaSortRelevance:
+		return []byte(s), nil
+	case EmailSearchMetaSortReceivedAtDesc:
+		return []byte(s), nil
+	case EmailSearchMetaSortReceivedAtAsc:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailSearchMetaSort) UnmarshalText(data []byte) error {
+	switch EmailSearchMetaSort(data) {
+	case EmailSearchMetaSortRelevance:
+		*s = EmailSearchMetaSortRelevance
+		return nil
+	case EmailSearchMetaSortReceivedAtDesc:
+		*s = EmailSearchMetaSortReceivedAtDesc
+		return nil
+	case EmailSearchMetaSortReceivedAtAsc:
+		*s = EmailSearchMetaSortReceivedAtAsc
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Merged schema.
+// Ref: #/components/schemas/EmailSearchResult
+type EmailSearchResult struct {
+	ID        uuid.UUID    `json:"id"`
+	MessageID OptNilString `json:"message_id"`
+	DomainID  OptNilUUID   `json:"domain_id"`
+	OrgID     OptNilUUID   `json:"org_id"`
+	Status    EmailStatus  `json:"status"`
+	// SMTP envelope sender (return-path) the inbound mail server
+	// accepted. For most legitimate mail this equals the bare
+	// address in the From header; for mailing lists, bounce
+	// handlers, and forwarders it is typically the bounce address
+	// rather than the human-visible sender.
+	// For the parsed From-header value (with display name handling
+	// and a sender-fallback when the header is unparseable), GET
+	// the email by id and use `from_email`.
+	Sender              string                   `json:"sender"`
+	Recipient           string                   `json:"recipient"`
+	Subject             OptNilString             `json:"subject"`
+	Domain              string                   `json:"domain"`
+	SpamScore           OptNilFloat64            `json:"spam_score"`
+	CreatedAt           time.Time                `json:"created_at"`
+	ReceivedAt          time.Time                `json:"received_at"`
+	RawSizeBytes        OptNilInt                `json:"raw_size_bytes"`
+	WebhookStatus       OptNilEmailWebhookStatus `json:"webhook_status"`
+	WebhookAttemptCount int                      `json:"webhook_attempt_count"`
+	// Number of parsed attachments on the email.
+	AttachmentCount int `json:"attachment_count"`
+	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
+	FromKnownAddress bool `json:"from_known_address"`
+	// Relevance score. Present only when sorting by relevance.
+	Score      OptFloat64               `json:"score"`
+	Highlights OptEmailSearchHighlights `json:"highlights"`
+}
+
+// GetID returns the value of ID.
+func (s *EmailSearchResult) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetMessageID returns the value of MessageID.
+func (s *EmailSearchResult) GetMessageID() OptNilString {
+	return s.MessageID
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *EmailSearchResult) GetDomainID() OptNilUUID {
+	return s.DomainID
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *EmailSearchResult) GetOrgID() OptNilUUID {
+	return s.OrgID
+}
+
+// GetStatus returns the value of Status.
+func (s *EmailSearchResult) GetStatus() EmailStatus {
+	return s.Status
+}
+
+// GetSender returns the value of Sender.
+func (s *EmailSearchResult) GetSender() string {
+	return s.Sender
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *EmailSearchResult) GetRecipient() string {
+	return s.Recipient
+}
+
+// GetSubject returns the value of Subject.
+func (s *EmailSearchResult) GetSubject() OptNilString {
+	return s.Subject
+}
+
+// GetDomain returns the value of Domain.
+func (s *EmailSearchResult) GetDomain() string {
+	return s.Domain
+}
+
+// GetSpamScore returns the value of SpamScore.
+func (s *EmailSearchResult) GetSpamScore() OptNilFloat64 {
+	return s.SpamScore
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *EmailSearchResult) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetReceivedAt returns the value of ReceivedAt.
+func (s *EmailSearchResult) GetReceivedAt() time.Time {
+	return s.ReceivedAt
+}
+
+// GetRawSizeBytes returns the value of RawSizeBytes.
+func (s *EmailSearchResult) GetRawSizeBytes() OptNilInt {
+	return s.RawSizeBytes
+}
+
+// GetWebhookStatus returns the value of WebhookStatus.
+func (s *EmailSearchResult) GetWebhookStatus() OptNilEmailWebhookStatus {
+	return s.WebhookStatus
+}
+
+// GetWebhookAttemptCount returns the value of WebhookAttemptCount.
+func (s *EmailSearchResult) GetWebhookAttemptCount() int {
+	return s.WebhookAttemptCount
+}
+
+// GetAttachmentCount returns the value of AttachmentCount.
+func (s *EmailSearchResult) GetAttachmentCount() int {
+	return s.AttachmentCount
+}
+
+// GetFromKnownAddress returns the value of FromKnownAddress.
+func (s *EmailSearchResult) GetFromKnownAddress() bool {
+	return s.FromKnownAddress
+}
+
+// GetScore returns the value of Score.
+func (s *EmailSearchResult) GetScore() OptFloat64 {
+	return s.Score
+}
+
+// GetHighlights returns the value of Highlights.
+func (s *EmailSearchResult) GetHighlights() OptEmailSearchHighlights {
+	return s.Highlights
+}
+
+// SetID sets the value of ID.
+func (s *EmailSearchResult) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetMessageID sets the value of MessageID.
+func (s *EmailSearchResult) SetMessageID(val OptNilString) {
+	s.MessageID = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *EmailSearchResult) SetDomainID(val OptNilUUID) {
+	s.DomainID = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *EmailSearchResult) SetOrgID(val OptNilUUID) {
+	s.OrgID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *EmailSearchResult) SetStatus(val EmailStatus) {
+	s.Status = val
+}
+
+// SetSender sets the value of Sender.
+func (s *EmailSearchResult) SetSender(val string) {
+	s.Sender = val
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *EmailSearchResult) SetRecipient(val string) {
+	s.Recipient = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *EmailSearchResult) SetSubject(val OptNilString) {
+	s.Subject = val
+}
+
+// SetDomain sets the value of Domain.
+func (s *EmailSearchResult) SetDomain(val string) {
+	s.Domain = val
+}
+
+// SetSpamScore sets the value of SpamScore.
+func (s *EmailSearchResult) SetSpamScore(val OptNilFloat64) {
+	s.SpamScore = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *EmailSearchResult) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetReceivedAt sets the value of ReceivedAt.
+func (s *EmailSearchResult) SetReceivedAt(val time.Time) {
+	s.ReceivedAt = val
+}
+
+// SetRawSizeBytes sets the value of RawSizeBytes.
+func (s *EmailSearchResult) SetRawSizeBytes(val OptNilInt) {
+	s.RawSizeBytes = val
+}
+
+// SetWebhookStatus sets the value of WebhookStatus.
+func (s *EmailSearchResult) SetWebhookStatus(val OptNilEmailWebhookStatus) {
+	s.WebhookStatus = val
+}
+
+// SetWebhookAttemptCount sets the value of WebhookAttemptCount.
+func (s *EmailSearchResult) SetWebhookAttemptCount(val int) {
+	s.WebhookAttemptCount = val
+}
+
+// SetAttachmentCount sets the value of AttachmentCount.
+func (s *EmailSearchResult) SetAttachmentCount(val int) {
+	s.AttachmentCount = val
+}
+
+// SetFromKnownAddress sets the value of FromKnownAddress.
+func (s *EmailSearchResult) SetFromKnownAddress(val bool) {
+	s.FromKnownAddress = val
+}
+
+// SetScore sets the value of Score.
+func (s *EmailSearchResult) SetScore(val OptFloat64) {
+	s.Score = val
+}
+
+// SetHighlights sets the value of Highlights.
+func (s *EmailSearchResult) SetHighlights(val OptEmailSearchHighlights) {
+	s.Highlights = val
+}
+
 // Lifecycle status of an INBOUND email (a row in the `emails`
 // table). Distinct from `SentEmailStatus`, which describes
 // the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -2692,6 +3157,7 @@ const (
 	ErrorResponseErrorCodeOutboundRelayFailed       ErrorResponseErrorCode = "outbound_relay_failed"
 	ErrorResponseErrorCodeDiscardNotEnabled         ErrorResponseErrorCode = "discard_not_enabled"
 	ErrorResponseErrorCodeInboundNotRepliable       ErrorResponseErrorCode = "inbound_not_repliable"
+	ErrorResponseErrorCodeSearchTimeout             ErrorResponseErrorCode = "search_timeout"
 	ErrorResponseErrorCodeAuthorizationPending      ErrorResponseErrorCode = "authorization_pending"
 	ErrorResponseErrorCodeSlowDown                  ErrorResponseErrorCode = "slow_down"
 	ErrorResponseErrorCodeAccessDenied              ErrorResponseErrorCode = "access_denied"
@@ -2721,6 +3187,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeOutboundRelayFailed,
 		ErrorResponseErrorCodeDiscardNotEnabled,
 		ErrorResponseErrorCodeInboundNotRepliable,
+		ErrorResponseErrorCodeSearchTimeout,
 		ErrorResponseErrorCodeAuthorizationPending,
 		ErrorResponseErrorCodeSlowDown,
 		ErrorResponseErrorCodeAccessDenied,
@@ -2769,6 +3236,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeDiscardNotEnabled:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInboundNotRepliable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSearchTimeout:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeAuthorizationPending:
 		return []byte(s), nil
@@ -2844,6 +3313,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeInboundNotRepliable:
 		*s = ErrorResponseErrorCodeInboundNotRepliable
+		return nil
+	case ErrorResponseErrorCodeSearchTimeout:
+		*s = ErrorResponseErrorCodeSearchTimeout
 		return nil
 	case ErrorResponseErrorCodeAuthorizationPending:
 		*s = ErrorResponseErrorCodeAuthorizationPending
@@ -4112,6 +4584,98 @@ func (o OptDeliveryStatus) Or(d DeliveryStatus) DeliveryStatus {
 	return d
 }
 
+// NewOptEmailSearchFacets returns new OptEmailSearchFacets with value set to v.
+func NewOptEmailSearchFacets(v EmailSearchFacets) OptEmailSearchFacets {
+	return OptEmailSearchFacets{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailSearchFacets is optional EmailSearchFacets.
+type OptEmailSearchFacets struct {
+	Value EmailSearchFacets
+	Set   bool
+}
+
+// IsSet returns true if OptEmailSearchFacets was set.
+func (o OptEmailSearchFacets) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailSearchFacets) Reset() {
+	var v EmailSearchFacets
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailSearchFacets) SetTo(v EmailSearchFacets) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailSearchFacets) Get() (v EmailSearchFacets, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailSearchFacets) Or(d EmailSearchFacets) EmailSearchFacets {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptEmailSearchHighlights returns new OptEmailSearchHighlights with value set to v.
+func NewOptEmailSearchHighlights(v EmailSearchHighlights) OptEmailSearchHighlights {
+	return OptEmailSearchHighlights{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEmailSearchHighlights is optional EmailSearchHighlights.
+type OptEmailSearchHighlights struct {
+	Value EmailSearchHighlights
+	Set   bool
+}
+
+// IsSet returns true if OptEmailSearchHighlights was set.
+func (o OptEmailSearchHighlights) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEmailSearchHighlights) Reset() {
+	var v EmailSearchHighlights
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEmailSearchHighlights) SetTo(v EmailSearchHighlights) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEmailSearchHighlights) Get() (v EmailSearchHighlights, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEmailSearchHighlights) Or(d EmailSearchHighlights) EmailSearchHighlights {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptEmailStatus returns new OptEmailStatus with value set to v.
 func NewOptEmailStatus(v EmailStatus) OptEmailStatus {
 	return OptEmailStatus{
@@ -4244,6 +4808,52 @@ func (o OptErrorResponseErrorDetailsMxConflict) Get() (v ErrorResponseErrorDetai
 
 // Or returns value if set, or given parameter if does not.
 func (o OptErrorResponseErrorDetailsMxConflict) Or(d ErrorResponseErrorDetailsMxConflict) ErrorResponseErrorDetailsMxConflict {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptFloat64 returns new OptFloat64 with value set to v.
+func NewOptFloat64(v float64) OptFloat64 {
+	return OptFloat64{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptFloat64 is optional float64.
+type OptFloat64 struct {
+	Value float64
+	Set   bool
+}
+
+// IsSet returns true if OptFloat64 was set.
+func (o OptFloat64) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptFloat64) Reset() {
+	var v float64
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptFloat64) SetTo(v float64) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptFloat64) Get() (v float64, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptFloat64) Or(d float64) float64 {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -5018,6 +5628,190 @@ func (o OptNilUUID) Or(d uuid.UUID) uuid.UUID {
 	return d
 }
 
+// NewOptSearchEmailsHasAttachment returns new OptSearchEmailsHasAttachment with value set to v.
+func NewOptSearchEmailsHasAttachment(v SearchEmailsHasAttachment) OptSearchEmailsHasAttachment {
+	return OptSearchEmailsHasAttachment{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsHasAttachment is optional SearchEmailsHasAttachment.
+type OptSearchEmailsHasAttachment struct {
+	Value SearchEmailsHasAttachment
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsHasAttachment was set.
+func (o OptSearchEmailsHasAttachment) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsHasAttachment) Reset() {
+	var v SearchEmailsHasAttachment
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsHasAttachment) SetTo(v SearchEmailsHasAttachment) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsHasAttachment) Get() (v SearchEmailsHasAttachment, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsHasAttachment) Or(d SearchEmailsHasAttachment) SearchEmailsHasAttachment {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSearchEmailsIncludeFacets returns new OptSearchEmailsIncludeFacets with value set to v.
+func NewOptSearchEmailsIncludeFacets(v SearchEmailsIncludeFacets) OptSearchEmailsIncludeFacets {
+	return OptSearchEmailsIncludeFacets{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsIncludeFacets is optional SearchEmailsIncludeFacets.
+type OptSearchEmailsIncludeFacets struct {
+	Value SearchEmailsIncludeFacets
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsIncludeFacets was set.
+func (o OptSearchEmailsIncludeFacets) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsIncludeFacets) Reset() {
+	var v SearchEmailsIncludeFacets
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsIncludeFacets) SetTo(v SearchEmailsIncludeFacets) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsIncludeFacets) Get() (v SearchEmailsIncludeFacets, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsIncludeFacets) Or(d SearchEmailsIncludeFacets) SearchEmailsIncludeFacets {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSearchEmailsSnippet returns new OptSearchEmailsSnippet with value set to v.
+func NewOptSearchEmailsSnippet(v SearchEmailsSnippet) OptSearchEmailsSnippet {
+	return OptSearchEmailsSnippet{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsSnippet is optional SearchEmailsSnippet.
+type OptSearchEmailsSnippet struct {
+	Value SearchEmailsSnippet
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsSnippet was set.
+func (o OptSearchEmailsSnippet) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsSnippet) Reset() {
+	var v SearchEmailsSnippet
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsSnippet) SetTo(v SearchEmailsSnippet) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsSnippet) Get() (v SearchEmailsSnippet, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsSnippet) Or(d SearchEmailsSnippet) SearchEmailsSnippet {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSearchEmailsSort returns new OptSearchEmailsSort with value set to v.
+func NewOptSearchEmailsSort(v SearchEmailsSort) OptSearchEmailsSort {
+	return OptSearchEmailsSort{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsSort is optional SearchEmailsSort.
+type OptSearchEmailsSort struct {
+	Value SearchEmailsSort
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsSort was set.
+func (o OptSearchEmailsSort) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsSort) Reset() {
+	var v SearchEmailsSort
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsSort) SetTo(v SearchEmailsSort) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsSort) Get() (v SearchEmailsSort, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsSort) Or(d SearchEmailsSort) SearchEmailsSort {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSentEmailStatus returns new OptSentEmailStatus with value set to v.
 func NewOptSentEmailStatus(v SentEmailStatus) OptSentEmailStatus {
 	return OptSentEmailStatus{
@@ -5668,6 +6462,239 @@ func (*RotateWebhookSecretOK) rotateWebhookSecretRes() {}
 type RotateWebhookSecretUnauthorized ErrorResponse
 
 func (*RotateWebhookSecretUnauthorized) rotateWebhookSecretRes() {}
+
+type SearchEmailsBadRequest ErrorResponse
+
+func (*SearchEmailsBadRequest) searchEmailsRes() {}
+
+type SearchEmailsGatewayTimeout ErrorResponse
+
+func (*SearchEmailsGatewayTimeout) searchEmailsRes() {}
+
+type SearchEmailsHasAttachment string
+
+const (
+	SearchEmailsHasAttachmentTrue  SearchEmailsHasAttachment = "true"
+	SearchEmailsHasAttachmentFalse SearchEmailsHasAttachment = "false"
+)
+
+// AllValues returns all SearchEmailsHasAttachment values.
+func (SearchEmailsHasAttachment) AllValues() []SearchEmailsHasAttachment {
+	return []SearchEmailsHasAttachment{
+		SearchEmailsHasAttachmentTrue,
+		SearchEmailsHasAttachmentFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsHasAttachment) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsHasAttachmentTrue:
+		return []byte(s), nil
+	case SearchEmailsHasAttachmentFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsHasAttachment) UnmarshalText(data []byte) error {
+	switch SearchEmailsHasAttachment(data) {
+	case SearchEmailsHasAttachmentTrue:
+		*s = SearchEmailsHasAttachmentTrue
+		return nil
+	case SearchEmailsHasAttachmentFalse:
+		*s = SearchEmailsHasAttachmentFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SearchEmailsIncludeFacets string
+
+const (
+	SearchEmailsIncludeFacetsTrue  SearchEmailsIncludeFacets = "true"
+	SearchEmailsIncludeFacetsFalse SearchEmailsIncludeFacets = "false"
+)
+
+// AllValues returns all SearchEmailsIncludeFacets values.
+func (SearchEmailsIncludeFacets) AllValues() []SearchEmailsIncludeFacets {
+	return []SearchEmailsIncludeFacets{
+		SearchEmailsIncludeFacetsTrue,
+		SearchEmailsIncludeFacetsFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsIncludeFacets) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsIncludeFacetsTrue:
+		return []byte(s), nil
+	case SearchEmailsIncludeFacetsFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsIncludeFacets) UnmarshalText(data []byte) error {
+	switch SearchEmailsIncludeFacets(data) {
+	case SearchEmailsIncludeFacetsTrue:
+		*s = SearchEmailsIncludeFacetsTrue
+		return nil
+	case SearchEmailsIncludeFacetsFalse:
+		*s = SearchEmailsIncludeFacetsFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Merged schema.
+type SearchEmailsOK struct {
+	Success bool                 `json:"success"`
+	Data    []EmailSearchResult  `json:"data"`
+	Meta    EmailSearchMeta      `json:"meta"`
+	Facets  OptEmailSearchFacets `json:"facets"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SearchEmailsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SearchEmailsOK) GetData() []EmailSearchResult {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *SearchEmailsOK) GetMeta() EmailSearchMeta {
+	return s.Meta
+}
+
+// GetFacets returns the value of Facets.
+func (s *SearchEmailsOK) GetFacets() OptEmailSearchFacets {
+	return s.Facets
+}
+
+// SetSuccess sets the value of Success.
+func (s *SearchEmailsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SearchEmailsOK) SetData(val []EmailSearchResult) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *SearchEmailsOK) SetMeta(val EmailSearchMeta) {
+	s.Meta = val
+}
+
+// SetFacets sets the value of Facets.
+func (s *SearchEmailsOK) SetFacets(val OptEmailSearchFacets) {
+	s.Facets = val
+}
+
+func (*SearchEmailsOK) searchEmailsRes() {}
+
+type SearchEmailsSnippet string
+
+const (
+	SearchEmailsSnippetTrue  SearchEmailsSnippet = "true"
+	SearchEmailsSnippetFalse SearchEmailsSnippet = "false"
+)
+
+// AllValues returns all SearchEmailsSnippet values.
+func (SearchEmailsSnippet) AllValues() []SearchEmailsSnippet {
+	return []SearchEmailsSnippet{
+		SearchEmailsSnippetTrue,
+		SearchEmailsSnippetFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsSnippet) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsSnippetTrue:
+		return []byte(s), nil
+	case SearchEmailsSnippetFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsSnippet) UnmarshalText(data []byte) error {
+	switch SearchEmailsSnippet(data) {
+	case SearchEmailsSnippetTrue:
+		*s = SearchEmailsSnippetTrue
+		return nil
+	case SearchEmailsSnippetFalse:
+		*s = SearchEmailsSnippetFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SearchEmailsSort string
+
+const (
+	SearchEmailsSortRelevance      SearchEmailsSort = "relevance"
+	SearchEmailsSortReceivedAtDesc SearchEmailsSort = "received_at_desc"
+	SearchEmailsSortReceivedAtAsc  SearchEmailsSort = "received_at_asc"
+)
+
+// AllValues returns all SearchEmailsSort values.
+func (SearchEmailsSort) AllValues() []SearchEmailsSort {
+	return []SearchEmailsSort{
+		SearchEmailsSortRelevance,
+		SearchEmailsSortReceivedAtDesc,
+		SearchEmailsSortReceivedAtAsc,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsSort) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsSortRelevance:
+		return []byte(s), nil
+	case SearchEmailsSortReceivedAtDesc:
+		return []byte(s), nil
+	case SearchEmailsSortReceivedAtAsc:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsSort) UnmarshalText(data []byte) error {
+	switch SearchEmailsSort(data) {
+	case SearchEmailsSortRelevance:
+		*s = SearchEmailsSortRelevance
+		return nil
+	case SearchEmailsSortReceivedAtDesc:
+		*s = SearchEmailsSortReceivedAtDesc
+		return nil
+	case SearchEmailsSortReceivedAtAsc:
+		*s = SearchEmailsSortReceivedAtAsc
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SearchEmailsUnauthorized ErrorResponse
+
+func (*SearchEmailsUnauthorized) searchEmailsRes() {}
 
 type SendEmailBadGateway ErrorResponse
 

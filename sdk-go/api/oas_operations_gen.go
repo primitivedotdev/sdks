@@ -34,6 +34,7 @@ const (
 	ReplayEmailWebhooksOperation OperationName = "ReplayEmailWebhooks"
 	ReplyToEmailOperation        OperationName = "ReplyToEmail"
 	RotateWebhookSecretOperation OperationName = "RotateWebhookSecret"
+	SearchEmailsOperation        OperationName = "SearchEmails"
 	SendEmailOperation           OperationName = "SendEmail"
 	StartCliLoginOperation       OperationName = "StartCliLogin"
 	TestEndpointOperation        OperationName = "TestEndpoint"

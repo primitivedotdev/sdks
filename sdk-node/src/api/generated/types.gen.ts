@@ -31,7 +31,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -347,6 +347,71 @@ export type EmailSummary = {
     raw_size_bytes?: number | null;
     webhook_status?: EmailWebhookStatus;
     webhook_attempt_count: number;
+};
+
+export type EmailSearchHighlights = {
+    /**
+     * Subject snippets with matching terms highlighted.
+     */
+    subject: Array<string>;
+    /**
+     * Body snippets with matching terms highlighted.
+     */
+    body: Array<string>;
+};
+
+export type EmailSearchResult = EmailSummary & {
+    /**
+     * Number of parsed attachments on the email.
+     */
+    attachment_count: number;
+    /**
+     * Whether the parsed From address is known to this org from prior authenticated inbound mail.
+     */
+    from_known_address: boolean;
+    /**
+     * Relevance score. Present only when sorting by relevance.
+     */
+    score?: number;
+    highlights?: EmailSearchHighlights;
+};
+
+export type EmailSearchMeta = {
+    /**
+     * Total number of matching records, capped when `total_capped` is true.
+     */
+    total: number;
+    /**
+     * Whether `total` was capped instead of counted exactly.
+     */
+    total_capped: boolean;
+    /**
+     * Page size used for this request.
+     */
+    limit: number;
+    /**
+     * Cursor for the next search page, or null if no more results.
+     */
+    cursor: string | null;
+    /**
+     * Sort mode used for the result page.
+     */
+    sort: 'relevance' | 'received_at_desc' | 'received_at_asc';
+};
+
+export type EmailSearchFacetBucket = {
+    value: string | null;
+    count: number;
+};
+
+export type EmailSearchFacets = {
+    by_sender: Array<EmailSearchFacetBucket>;
+    by_domain: Array<EmailSearchFacetBucket>;
+    by_status: Array<EmailSearchFacetBucket>;
+    has_attachment: {
+        true: number;
+        false: number;
+    };
 };
 
 export type EmailDetail = {
@@ -1775,6 +1840,114 @@ export type ListEmailsResponses = {
 };
 
 export type ListEmailsResponse = ListEmailsResponses[keyof ListEmailsResponses];
+
+export type SearchEmailsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Full-text search DSL query.
+         */
+        q?: string;
+        /**
+         * Filter by sender address or sender domain.
+         */
+        from?: string;
+        /**
+         * Filter by recipient address or recipient domain.
+         */
+        to?: string;
+        /**
+         * Full-text search restricted to the subject field.
+         */
+        subject?: string;
+        /**
+         * Full-text search restricted to the parsed text body.
+         */
+        body?: string;
+        /**
+         * Filter by domain ID.
+         */
+        domain_id?: string;
+        /**
+         * Filter by inbound email lifecycle status.
+         */
+        status?: EmailStatus;
+        /**
+         * Filter emails received on or after this timestamp.
+         */
+        date_from?: string;
+        /**
+         * Filter emails received on or before this timestamp.
+         */
+        date_to?: string;
+        /**
+         * Filter by whether the email has one or more attachments.
+         */
+        has_attachment?: 'true' | 'false';
+        /**
+         * Filter to emails with spam score below this value.
+         */
+        spam_score_lt?: number;
+        /**
+         * Filter to emails with spam score greater than or equal to this value.
+         */
+        spam_score_gte?: number;
+        /**
+         * Sort mode. Defaults to relevance when a text query is present,
+         * otherwise `received_at_desc`.
+         *
+         */
+        sort?: 'relevance' | 'received_at_desc' | 'received_at_asc';
+        /**
+         * Opaque pagination cursor from a previous search response.
+         */
+        cursor?: string;
+        /**
+         * Number of results per page
+         */
+        limit?: number;
+        /**
+         * Include subject/body highlight snippets when text search is active.
+         */
+        snippet?: 'true' | 'false';
+        /**
+         * Include facet counts for sender, domain, status, and attachment presence.
+         */
+        include_facets?: 'true' | 'false';
+    };
+    url: '/emails/search';
+};
+
+export type SearchEmailsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Search query timed out
+     */
+    504: ErrorResponse;
+};
+
+export type SearchEmailsError = SearchEmailsErrors[keyof SearchEmailsErrors];
+
+export type SearchEmailsResponses = {
+    /**
+     * Search results
+     */
+    200: SuccessEnvelope & {
+        data: Array<EmailSearchResult>;
+        meta: EmailSearchMeta;
+        facets?: EmailSearchFacets;
+    };
+};
+
+export type SearchEmailsResponse = SearchEmailsResponses[keyof SearchEmailsResponses];
 
 export type DeleteEmailData = {
     body?: never;

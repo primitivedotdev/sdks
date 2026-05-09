@@ -33,6 +33,13 @@ from .domain_verify_result_type_0 import DomainVerifyResultType0
 from .domain_verify_result_type_1 import DomainVerifyResultType1
 from .email_detail import EmailDetail
 from .email_detail_reply import EmailDetailReply
+from .email_search_facet_bucket import EmailSearchFacetBucket
+from .email_search_facets import EmailSearchFacets
+from .email_search_facets_has_attachment import EmailSearchFacetsHasAttachment
+from .email_search_highlights import EmailSearchHighlights
+from .email_search_meta import EmailSearchMeta
+from .email_search_meta_sort import EmailSearchMetaSort
+from .email_search_result import EmailSearchResult
 from .email_status import EmailStatus
 from .email_summary import EmailSummary
 from .email_webhook_status_type_1 import EmailWebhookStatusType1
@@ -75,6 +82,11 @@ from .replay_result import ReplayResult
 from .reply_input import ReplyInput
 from .reply_to_email_response_200 import ReplyToEmailResponse200
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
+from .search_emails_has_attachment import SearchEmailsHasAttachment
+from .search_emails_include_facets import SearchEmailsIncludeFacets
+from .search_emails_response_200 import SearchEmailsResponse200
+from .search_emails_snippet import SearchEmailsSnippet
+from .search_emails_sort import SearchEmailsSort
 from .send_email_response_200 import SendEmailResponse200
 from .send_mail_input import SendMailInput
 from .send_mail_result import SendMailResult
@@ -145,6 +157,13 @@ __all__ = (
     "DomainVerifyResultType1",
     "EmailDetail",
     "EmailDetailReply",
+    "EmailSearchFacetBucket",
+    "EmailSearchFacets",
+    "EmailSearchFacetsHasAttachment",
+    "EmailSearchHighlights",
+    "EmailSearchMeta",
+    "EmailSearchMetaSort",
+    "EmailSearchResult",
     "EmailStatus",
     "EmailSummary",
     "EmailWebhookStatusType1",
@@ -187,6 +206,11 @@ __all__ = (
     "ReplyInput",
     "ReplyToEmailResponse200",
     "RotateWebhookSecretResponse200",
+    "SearchEmailsHasAttachment",
+    "SearchEmailsIncludeFacets",
+    "SearchEmailsResponse200",
+    "SearchEmailsSnippet",
+    "SearchEmailsSort",
     "SendEmailResponse200",
     "SendMailInput",
     "SendMailResult",

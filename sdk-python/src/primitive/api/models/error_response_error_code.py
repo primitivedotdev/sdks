@@ -22,6 +22,7 @@ class ErrorResponseErrorCode(str, Enum):
     OUTBOUND_UNREACHABLE = "outbound_unreachable"
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
     RECIPIENT_NOT_ALLOWED = "recipient_not_allowed"
+    SEARCH_TIMEOUT = "search_timeout"
     SLOW_DOWN = "slow_down"
     UNAUTHORIZED = "unauthorized"
     VALIDATION_ERROR = "validation_error"

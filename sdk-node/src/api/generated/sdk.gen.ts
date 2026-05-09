@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SendEmailData, SendEmailErrors, SendEmailResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SendEmailData, SendEmailErrors, SendEmailResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -240,6 +240,28 @@ export const verifyDomain = <ThrowOnError extends boolean = false>(options: Opti
 export const listEmails = <ThrowOnError extends boolean = false>(options?: Options<ListEmailsData, ThrowOnError>) => (options?.client ?? client).get<ListEmailsResponses, ListEmailsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/emails',
+    ...options
+});
+
+/**
+ * Search inbound emails
+ *
+ * Searches inbound emails with structured filters and optional
+ * full-text matching across parsed email fields. This endpoint is
+ * optimized for filtered inbox views and CLI polling workflows:
+ * callers that only need new accepted mail can pass
+ * `sort=received_at_asc`, `snippet=false`, `include_facets=false`,
+ * and a `date_from` timestamp.
+ *
+ * `q`, `subject`, and `body` use the same English full-text index
+ * as the web inbox search. Structured filters such as `from`, `to`,
+ * `domain_id`, status, attachment presence, and spam score bounds
+ * are combined with the text query.
+ *
+ */
+export const searchEmails = <ThrowOnError extends boolean = false>(options?: Options<SearchEmailsData, ThrowOnError>) => (options?.client ?? client).get<SearchEmailsResponses, SearchEmailsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/emails/search',
     ...options
 });
 
