@@ -91,6 +91,10 @@ export function formatRow(email: EmailSummary, idWidth: number): string {
   return `${id}  ${received}  ${from}  ${to}  ${subjectCol}`;
 }
 
+export function formatHeader(idWidth: number): string {
+  return `${"ID".padEnd(idWidth)}  ${"RECEIVED (UTC)".padEnd(RECEIVED_DISPLAY_WIDTH)}  ${"FROM".padEnd(ADDRESS_DISPLAY_WIDTH)}  ${"TO".padEnd(ADDRESS_DISPLAY_WIDTH)}  SUBJECT`;
+}
+
 class EmailsLatestCommand extends Command {
   static description =
     `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails:list-emails\` (full JSON envelope, cursor pagination, filters) or pass \`--json\` here for the same raw shape without pagination/filters.
@@ -102,10 +106,10 @@ class EmailsLatestCommand extends Command {
   static summary = "Show the most recent inbound emails as a compact table";
 
   static examples = [
-    "<%= config.bin %> emails:latest",
-    "<%= config.bin %> emails:latest --limit 25",
-    "<%= config.bin %> emails:latest | head -1 | awk '{print $1}'  # full UUID since piped",
-    "<%= config.bin %> emails:latest --json | jq '.data[0].id'",
+    "<%= config.bin %> emails latest",
+    "<%= config.bin %> emails latest --limit 25",
+    "<%= config.bin %> emails latest | head -1 | awk '{print $1}'  # full UUID since piped",
+    "<%= config.bin %> emails latest --json | jq '.data[0].id'",
   ];
 
   static flags = {
@@ -192,8 +196,7 @@ class EmailsLatestCommand extends Command {
       const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
 
       // Header on stderr so the table itself stays grep-friendly.
-      const header = `${"ID".padEnd(idWidth)}  ${"RECEIVED (UTC)".padEnd(RECEIVED_DISPLAY_WIDTH)}  ${"FROM".padEnd(ADDRESS_DISPLAY_WIDTH)}  ${"TO".padEnd(ADDRESS_DISPLAY_WIDTH)}  SUBJECT`;
-      process.stderr.write(`${header}\n`);
+      process.stderr.write(`${formatHeader(idWidth)}\n`);
       for (const row of rows) {
         this.log(formatRow(row, idWidth));
       }

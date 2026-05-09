@@ -5,6 +5,8 @@ import {
 } from "../openapi/index.js";
 import { createOperationCommand } from "./api-command.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
+import EmailsWaitCommand from "./commands/emails-wait.js";
+import EmailsWatchCommand from "./commands/emails-watch.js";
 import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
 import SendCommand from "./commands/send.js";
@@ -176,5 +178,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
   "emails:latest": EmailsLatestCommand,
+  // `emails:watch` and `emails:wait` poll the search API for new matching
+  // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
+  "emails:watch": EmailsWatchCommand,
+  "emails:wait": EmailsWaitCommand,
   ...generatedCommands,
 };
