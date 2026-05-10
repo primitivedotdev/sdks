@@ -555,8 +555,9 @@ class PrimitiveClient:
         added, so callers who need a clean baseline should construct a
         fresh client.
 
-        The clone shares the same ``api_client`` (and its underlying
-        httpx clients) as the base; defaults are stored on the
+        The clone shares both underlying clients (``api_client`` for
+        host 1 and ``api_send_client`` for host 2, plus their underlying
+        httpx clients) with the base; defaults are stored on the
         PrimitiveClient itself, applied per-request via a contextvar.
         """
         if isinstance(timeout, _NotGiven):
