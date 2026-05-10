@@ -17,6 +17,14 @@ type CreateFilterRes interface {
 	createFilterRes()
 }
 
+type CreateFunctionRes interface {
+	createFunctionRes()
+}
+
+type CreateFunctionSecretRes interface {
+	createFunctionSecretRes()
+}
+
 type DeleteDomainRes interface {
 	deleteDomainRes()
 }
@@ -31,6 +39,14 @@ type DeleteEndpointRes interface {
 
 type DeleteFilterRes interface {
 	deleteFilterRes()
+}
+
+type DeleteFunctionRes interface {
+	deleteFunctionRes()
+}
+
+type DeleteFunctionSecretRes interface {
+	deleteFunctionSecretRes()
 }
 
 type DiscardEmailContentRes interface {
@@ -51,6 +67,10 @@ type GetAccountRes interface {
 
 type GetEmailRes interface {
 	getEmailRes()
+}
+
+type GetFunctionRes interface {
+	getFunctionRes()
 }
 
 type GetSendPermissionsRes interface {
@@ -89,6 +109,14 @@ type ListFiltersRes interface {
 	listFiltersRes()
 }
 
+type ListFunctionSecretsRes interface {
+	listFunctionSecretsRes()
+}
+
+type ListFunctionsRes interface {
+	listFunctionsRes()
+}
+
 type ListSentEmailsRes interface {
 	listSentEmailsRes()
 }
@@ -121,12 +149,20 @@ type SendEmailRes interface {
 	sendEmailRes()
 }
 
+type SetFunctionSecretRes interface {
+	setFunctionSecretRes()
+}
+
 type StartCliLoginRes interface {
 	startCliLoginRes()
 }
 
 type TestEndpointRes interface {
 	testEndpointRes()
+}
+
+type TestFunctionRes interface {
+	testFunctionRes()
 }
 
 type UpdateAccountRes interface {
@@ -143,6 +179,10 @@ type UpdateEndpointRes interface {
 
 type UpdateFilterRes interface {
 	updateFilterRes()
+}
+
+type UpdateFunctionRes interface {
+	updateFunctionRes()
 }
 
 type VerifyDomainRes interface {

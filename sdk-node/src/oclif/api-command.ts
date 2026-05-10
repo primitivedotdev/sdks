@@ -301,6 +301,19 @@ export function readJsonBody(flags: Record<string, unknown>): unknown {
   return undefined;
 }
 
+// Read a UTF-8 text file off disk, mapping any failure to a CLIError
+// tagged with the originating flag so the user sees which path failed
+// to open. Used by hand-rolled commands that take a file-input flag
+// (e.g. functions:deploy --file).
+export function readTextFileFlag(path: string, flagLabel: string): string {
+  try {
+    return readFileSync(path, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw cliError(`Could not read ${flagLabel} ${path}: ${detail}`);
+  }
+}
+
 export function extractErrorPayload(raw: unknown): unknown {
   if (
     raw &&

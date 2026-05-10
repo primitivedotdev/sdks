@@ -15,6 +15,12 @@ from .create_endpoint_response_201 import CreateEndpointResponse201
 from .create_filter_input import CreateFilterInput
 from .create_filter_input_type import CreateFilterInputType
 from .create_filter_response_201 import CreateFilterResponse201
+from .create_function_input import CreateFunctionInput
+from .create_function_response_201 import CreateFunctionResponse201
+from .create_function_result import CreateFunctionResult
+from .create_function_secret_input import CreateFunctionSecretInput
+from .create_function_secret_response_200 import CreateFunctionSecretResponse200
+from .create_function_secret_response_201 import CreateFunctionSecretResponse201
 from .delete_domain_response_200 import DeleteDomainResponse200
 from .delete_domain_response_200_data import DeleteDomainResponse200Data
 from .delete_email_response_200 import DeleteEmailResponse200
@@ -23,6 +29,8 @@ from .delete_endpoint_response_200 import DeleteEndpointResponse200
 from .delete_endpoint_response_200_data import DeleteEndpointResponse200Data
 from .delete_filter_response_200 import DeleteFilterResponse200
 from .delete_filter_response_200_data import DeleteFilterResponse200Data
+from .delete_function_response_200 import DeleteFunctionResponse200
+from .delete_function_response_200_data import DeleteFunctionResponse200Data
 from .delivery_status import DeliveryStatus
 from .delivery_summary import DeliverySummary
 from .delivery_summary_email_type_0 import DeliverySummaryEmailType0
@@ -54,6 +62,11 @@ from .error_response_error_details import ErrorResponseErrorDetails
 from .error_response_error_details_mx_conflict import ErrorResponseErrorDetailsMxConflict
 from .filter_ import Filter
 from .filter_type import FilterType
+from .function_deploy_status import FunctionDeployStatus
+from .function_detail import FunctionDetail
+from .function_list_item import FunctionListItem
+from .function_secret_list_item import FunctionSecretListItem
+from .function_secret_write_result import FunctionSecretWriteResult
 from .gate_denial import GateDenial
 from .gate_denial_name import GateDenialName
 from .gate_denial_reason import GateDenialReason
@@ -61,6 +74,7 @@ from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
 from .get_email_response_200 import GetEmailResponse200
+from .get_function_response_200 import GetFunctionResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
 from .get_storage_stats_response_200 import GetStorageStatsResponse200
@@ -72,6 +86,9 @@ from .list_emails_response_200 import ListEmailsResponse200
 from .list_endpoints_response_200 import ListEndpointsResponse200
 from .list_envelope import ListEnvelope
 from .list_filters_response_200 import ListFiltersResponse200
+from .list_function_secrets_response_200 import ListFunctionSecretsResponse200
+from .list_function_secrets_response_200_data import ListFunctionSecretsResponse200Data
+from .list_functions_response_200 import ListFunctionsResponse200
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
 from .pagination_meta import PaginationMeta
 from .poll_cli_login_input import PollCliLoginInput
@@ -102,12 +119,17 @@ from .send_permissions_meta import SendPermissionsMeta
 from .sent_email_detail import SentEmailDetail
 from .sent_email_status import SentEmailStatus
 from .sent_email_summary import SentEmailSummary
+from .set_function_secret_input import SetFunctionSecretInput
+from .set_function_secret_response_200 import SetFunctionSecretResponse200
+from .set_function_secret_response_201 import SetFunctionSecretResponse201
 from .start_cli_login_input import StartCliLoginInput
 from .start_cli_login_input_metadata import StartCliLoginInputMetadata
 from .start_cli_login_response_201 import StartCliLoginResponse201
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
 from .test_endpoint_response_200 import TestEndpointResponse200
+from .test_function_response_200 import TestFunctionResponse200
+from .test_invocation_result import TestInvocationResult
 from .test_result import TestResult
 from .unverified_domain import UnverifiedDomain
 from .update_account_input import UpdateAccountInput
@@ -119,6 +141,8 @@ from .update_endpoint_input_rules import UpdateEndpointInputRules
 from .update_endpoint_response_200 import UpdateEndpointResponse200
 from .update_filter_input import UpdateFilterInput
 from .update_filter_response_200 import UpdateFilterResponse200
+from .update_function_input import UpdateFunctionInput
+from .update_function_response_200 import UpdateFunctionResponse200
 from .verified_domain import VerifiedDomain
 from .verify_domain_response_200 import VerifyDomainResponse200
 from .webhook_secret import WebhookSecret
@@ -139,6 +163,12 @@ __all__ = (
     "CreateFilterInput",
     "CreateFilterInputType",
     "CreateFilterResponse201",
+    "CreateFunctionInput",
+    "CreateFunctionResponse201",
+    "CreateFunctionResult",
+    "CreateFunctionSecretInput",
+    "CreateFunctionSecretResponse200",
+    "CreateFunctionSecretResponse201",
     "DeleteDomainResponse200",
     "DeleteDomainResponse200Data",
     "DeleteEmailResponse200",
@@ -147,6 +177,8 @@ __all__ = (
     "DeleteEndpointResponse200Data",
     "DeleteFilterResponse200",
     "DeleteFilterResponse200Data",
+    "DeleteFunctionResponse200",
+    "DeleteFunctionResponse200Data",
     "DeliveryStatus",
     "DeliverySummary",
     "DeliverySummaryEmailType0",
@@ -178,6 +210,11 @@ __all__ = (
     "ErrorResponseErrorDetailsMxConflict",
     "Filter",
     "FilterType",
+    "FunctionDeployStatus",
+    "FunctionDetail",
+    "FunctionListItem",
+    "FunctionSecretListItem",
+    "FunctionSecretWriteResult",
     "GateDenial",
     "GateDenialName",
     "GateDenialReason",
@@ -185,6 +222,7 @@ __all__ = (
     "GateFixAction",
     "GetAccountResponse200",
     "GetEmailResponse200",
+    "GetFunctionResponse200",
     "GetSendPermissionsResponse200",
     "GetSentEmailResponse200",
     "GetStorageStatsResponse200",
@@ -196,6 +234,9 @@ __all__ = (
     "ListEndpointsResponse200",
     "ListEnvelope",
     "ListFiltersResponse200",
+    "ListFunctionSecretsResponse200",
+    "ListFunctionSecretsResponse200Data",
+    "ListFunctionsResponse200",
     "ListSentEmailsResponse200",
     "PaginationMeta",
     "PollCliLoginInput",
@@ -226,12 +267,17 @@ __all__ = (
     "SentEmailDetail",
     "SentEmailStatus",
     "SentEmailSummary",
+    "SetFunctionSecretInput",
+    "SetFunctionSecretResponse200",
+    "SetFunctionSecretResponse201",
     "StartCliLoginInput",
     "StartCliLoginInputMetadata",
     "StartCliLoginResponse201",
     "StorageStats",
     "SuccessEnvelope",
     "TestEndpointResponse200",
+    "TestFunctionResponse200",
+    "TestInvocationResult",
     "TestResult",
     "UnverifiedDomain",
     "UpdateAccountInput",
@@ -243,6 +289,8 @@ __all__ = (
     "UpdateEndpointResponse200",
     "UpdateFilterInput",
     "UpdateFilterResponse200",
+    "UpdateFunctionInput",
+    "UpdateFunctionResponse200",
     "VerifiedDomain",
     "VerifyDomainResponse200",
     "WebhookSecret",

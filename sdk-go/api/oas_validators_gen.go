@@ -370,6 +370,254 @@ func (s *CreateFilterUnauthorized) Validate() error {
 	return nil
 }
 
+func (s *CreateFunctionBadGateway) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CreateFunctionBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CreateFunctionConflict) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CreateFunctionCreated) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *CreateFunctionInput) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.String{
+			MinLength:     0,
+			MinLengthSet:  false,
+			MaxLength:     0,
+			MaxLengthSet:  false,
+			Email:         false,
+			Hostname:      false,
+			Regex:         regexMap["^[a-z0-9_-]{1,64}$"],
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.Name)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "name",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := (validate.String{
+			MinLength:     1,
+			MinLengthSet:  true,
+			MaxLength:     1048576,
+			MaxLengthSet:  true,
+			Email:         false,
+			Hostname:      false,
+			Regex:         nil,
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.Code)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "code",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.SourceMap.Get(); ok {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     5242880,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(value)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sourceMap",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *CreateFunctionResult) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.DeployStatus.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "deploy_status",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *CreateFunctionSecretBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CreateFunctionSecretInput) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.String{
+			MinLength:     0,
+			MinLengthSet:  false,
+			MaxLength:     0,
+			MaxLengthSet:  false,
+			Email:         false,
+			Hostname:      false,
+			Regex:         regexMap["^[A-Z_][A-Z0-9_]*$"],
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.Key)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "key",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := (validate.String{
+			MinLength:     1,
+			MinLengthSet:  true,
+			MaxLength:     4096,
+			MaxLengthSet:  true,
+			Email:         false,
+			Hostname:      false,
+			Regex:         nil,
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.Value)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "value",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *CreateFunctionSecretNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CreateFunctionSecretUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CreateFunctionUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *DeleteDomainBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -459,6 +707,54 @@ func (s *DeleteFilterNotFound) Validate() error {
 }
 
 func (s *DeleteFilterUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DeleteFunctionBadGateway) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DeleteFunctionNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DeleteFunctionSecretBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DeleteFunctionSecretNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DeleteFunctionSecretUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DeleteFunctionUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -1235,6 +1531,65 @@ func (s FilterType) Validate() error {
 	}
 }
 
+func (s FunctionDeployStatus) Validate() error {
+	switch s {
+	case "pending":
+		return nil
+	case "deployed":
+		return nil
+	case "failed":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s *FunctionDetail) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.DeployStatus.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "deploy_status",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *FunctionListItem) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.DeployStatus.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "deploy_status",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *GateDenial) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -1426,6 +1781,45 @@ func (s *GetEmailOK) Validate() error {
 }
 
 func (s *GetEmailUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *GetFunctionNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *GetFunctionOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetFunctionUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -1766,6 +2160,108 @@ func (s *ListEndpointsOK) Validate() error {
 }
 
 func (s *ListFiltersOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Data == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Data {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ListFunctionSecretsNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ListFunctionSecretsOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ListFunctionSecretsOKData) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Items == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "items",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ListFunctionSecretsUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ListFunctionsOK) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
@@ -2876,6 +3372,65 @@ func (s *SentEmailSummary) Validate() error {
 	return nil
 }
 
+func (s *SetFunctionSecretBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SetFunctionSecretInput) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.String{
+			MinLength:     1,
+			MinLengthSet:  true,
+			MaxLength:     4096,
+			MaxLengthSet:  true,
+			Email:         false,
+			Hostname:      false,
+			Regex:         nil,
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.Value)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "value",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *SetFunctionSecretNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SetFunctionSecretUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *StartCliLoginCreated) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -3037,6 +3592,54 @@ func (s *TestEndpointNotFound) Validate() error {
 }
 
 func (s *TestEndpointUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *TestFunctionBadGateway) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *TestFunctionBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *TestFunctionNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *TestFunctionServiceUnavailable) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *TestFunctionUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *TestFunctionUnprocessableEntity) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -3324,6 +3927,126 @@ func (s *UpdateFilterOK) Validate() error {
 }
 
 func (s *UpdateFilterUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateFunctionBadGateway) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateFunctionBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateFunctionInput) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.String{
+			MinLength:     1,
+			MinLengthSet:  true,
+			MaxLength:     1048576,
+			MaxLengthSet:  true,
+			Email:         false,
+			Hostname:      false,
+			Regex:         nil,
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.Code)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "code",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.SourceMap.Get(); ok {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     5242880,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(value)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sourceMap",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *UpdateFunctionNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateFunctionOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *UpdateFunctionUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
