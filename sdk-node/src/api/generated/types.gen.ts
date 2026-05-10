@@ -1294,7 +1294,7 @@ export type FunctionDetail = {
     deploy_error?: string | null;
     deployed_at?: string | null;
     gateway_url: string;
-    created_at?: string;
+    created_at: string;
     updated_at: string;
 };
 

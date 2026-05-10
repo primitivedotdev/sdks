@@ -1,10 +1,10 @@
-import { readFileSync } from "node:fs";
-import { Command, Errors, Flags } from "@oclif/core";
+import { Command, Flags } from "@oclif/core";
 import { updateFunction } from "../../api/generated/sdk.gen.js";
 import type { FunctionDetail } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
 import {
   extractErrorPayload,
+  readTextFileFlag,
   removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
   TIME_FLAG_DESCRIPTION,
@@ -19,15 +19,6 @@ import { resolveCliAuth } from "../auth.js";
 // previously-deployed bundle (or any equivalent file) re-runs the
 // deploy and refreshes env from the secrets table, which is how
 // secret writes go live.
-
-function readFile(path: string, label: string): string {
-  try {
-    return readFileSync(path, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Errors.CLIError(`Could not read ${label} ${path}: ${detail}`);
-  }
-}
 
 class FunctionsRedeployCommand extends Command {
   static description =
@@ -76,12 +67,14 @@ class FunctionsRedeployCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(FunctionsRedeployCommand);
 
-    const code = readFile(flags.file, "--file");
-    const sourceMap = flags["source-map-file"]
-      ? readFile(flags["source-map-file"], "--source-map-file")
-      : undefined;
-
     await runWithTiming(flags.time, async () => {
+      // Reads inside the timed block: --time captures disk I/O too,
+      // which is the latency the flag is meant to surface.
+      const code = readTextFileFlag(flags.file, "--file");
+      const sourceMap = flags["source-map-file"]
+        ? readTextFileFlag(flags["source-map-file"], "--source-map-file")
+        : undefined;
+
       const baseUrlOverridden = flags["base-url"] !== undefined;
       const auth = resolveCliAuth({
         apiKey: flags["api-key"],

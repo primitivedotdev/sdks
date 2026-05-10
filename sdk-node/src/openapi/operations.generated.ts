@@ -2532,6 +2532,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "code",
         "deploy_status",
         "gateway_url",
+        "created_at",
         "updated_at"
       ]
     },
@@ -2928,6 +2929,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "code",
         "deploy_status",
         "gateway_url",
+        "created_at",
         "updated_at"
       ]
     },

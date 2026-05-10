@@ -4965,6 +4965,7 @@ export const openapiDocument: Record<string, unknown> = {
           "code",
           "deploy_status",
           "gateway_url",
+          "created_at",
           "updated_at"
         ]
       },

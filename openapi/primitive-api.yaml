@@ -3854,6 +3854,7 @@ components:
         - code
         - deploy_status
         - gateway_url
+        - created_at
         - updated_at
 
     CreateFunctionInput:

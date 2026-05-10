@@ -1,10 +1,10 @@
-import { readFileSync } from "node:fs";
-import { Command, Errors, Flags } from "@oclif/core";
+import { Command, Flags } from "@oclif/core";
 import { createFunction } from "../../api/generated/sdk.gen.js";
 import type { CreateFunctionResult } from "../../api/generated/types.gen.js";
 import { PrimitiveApiClient } from "../../api/index.js";
 import {
   extractErrorPayload,
+  readTextFileFlag,
   removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
   TIME_FLAG_DESCRIPTION,
@@ -28,15 +28,6 @@ import { resolveCliAuth } from "../auth.js";
 //
 // For full control (raw body, --raw-body JSON, etc.) the underlying
 // `functions:create-function` operation stays available.
-
-function readFile(path: string, label: string): string {
-  try {
-    return readFileSync(path, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Errors.CLIError(`Could not read ${label} ${path}: ${detail}`);
-  }
-}
 
 class FunctionsDeployCommand extends Command {
   static description =
@@ -86,12 +77,16 @@ class FunctionsDeployCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(FunctionsDeployCommand);
 
-    const code = readFile(flags.file, "--file");
-    const sourceMap = flags["source-map-file"]
-      ? readFile(flags["source-map-file"], "--source-map-file")
-      : undefined;
-
     await runWithTiming(flags.time, async () => {
+      // Reads are inside the timed block so --time captures disk I/O
+      // alongside the API call. A pathological filesystem (NFS, slow
+      // FUSE mount) showing up here is exactly the kind of latency
+      // surprise --time is meant to surface.
+      const code = readTextFileFlag(flags.file, "--file");
+      const sourceMap = flags["source-map-file"]
+        ? readTextFileFlag(flags["source-map-file"], "--source-map-file")
+        : undefined;
+
       const baseUrlOverridden = flags["base-url"] !== undefined;
       const auth = resolveCliAuth({
         apiKey: flags["api-key"],

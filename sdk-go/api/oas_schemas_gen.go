@@ -3476,7 +3476,7 @@ type FunctionDetail struct {
 	DeployError OptNilString   `json:"deploy_error"`
 	DeployedAt  OptNilDateTime `json:"deployed_at"`
 	GatewayURL  url.URL        `json:"gateway_url"`
-	CreatedAt   OptDateTime    `json:"created_at"`
+	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 }
 
@@ -3516,7 +3516,7 @@ func (s *FunctionDetail) GetGatewayURL() url.URL {
 }
 
 // GetCreatedAt returns the value of CreatedAt.
-func (s *FunctionDetail) GetCreatedAt() OptDateTime {
+func (s *FunctionDetail) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
@@ -3561,7 +3561,7 @@ func (s *FunctionDetail) SetGatewayURL(val url.URL) {
 }
 
 // SetCreatedAt sets the value of CreatedAt.
-func (s *FunctionDetail) SetCreatedAt(val OptDateTime) {
+func (s *FunctionDetail) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
