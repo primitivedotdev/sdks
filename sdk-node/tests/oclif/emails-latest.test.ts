@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatHeader,
   formatReceivedAt,
   formatRow,
   pickIdWidth,
@@ -138,6 +139,17 @@ describe("formatRow", () => {
   it("renders missing subject as empty (no crash)", () => {
     const row = formatRow(makeEmail({ subject: null }), ID_WIDTH_SHORT);
     expect(row.length).toBeGreaterThan(0);
+  });
+});
+
+describe("formatHeader", () => {
+  it("renders the fixed table columns", () => {
+    const header = formatHeader(ID_WIDTH_SHORT);
+    expect(header).toContain("ID");
+    expect(header).toContain("RECEIVED (UTC)");
+    expect(header).toContain("FROM");
+    expect(header).toContain("TO");
+    expect(header).toContain("SUBJECT");
   });
 });
 

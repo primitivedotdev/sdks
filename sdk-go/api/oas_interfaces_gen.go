@@ -141,6 +141,10 @@ type RotateWebhookSecretRes interface {
 	rotateWebhookSecretRes()
 }
 
+type SearchEmailsRes interface {
+	searchEmailsRes()
+}
+
 type SendEmailRes interface {
 	sendEmailRes()
 }

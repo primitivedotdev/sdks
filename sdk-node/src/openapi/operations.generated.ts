@@ -1498,6 +1498,310 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "search-emails",
+    "description": "Searches inbound emails with structured filters and optional\nfull-text matching across parsed email fields. This endpoint is\noptimized for filtered inbox views and CLI polling workflows:\ncallers that only need new accepted mail can pass\n`sort=received_at_asc`, `snippet=false`, `include_facets=false`,\nand a `date_from` timestamp.\n\n`q`, `subject`, and `body` use the same English full-text index\nas the web inbox search. Structured filters such as `from`, `to`,\n`domain_id`, status, attachment presence, and spam score bounds\nare combined with the text query.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "searchEmails",
+    "path": "/emails/search",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Full-text search DSL query.",
+        "enum": null,
+        "name": "q",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter by sender address or sender domain.",
+        "enum": null,
+        "name": "from",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter by recipient address or recipient domain.",
+        "enum": null,
+        "name": "to",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Full-text search restricted to the subject field.",
+        "enum": null,
+        "name": "subject",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Full-text search restricted to the parsed text body.",
+        "enum": null,
+        "name": "body",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter by domain ID.",
+        "enum": null,
+        "name": "domain_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter by inbound email lifecycle status.",
+        "enum": null,
+        "name": "status",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter emails received on or after this timestamp.",
+        "enum": null,
+        "name": "date_from",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter emails received on or before this timestamp.",
+        "enum": null,
+        "name": "date_to",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter by whether the email has one or more attachments.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "has_attachment",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter to emails with spam score below this value.",
+        "enum": null,
+        "name": "spam_score_lt",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "description": "Filter to emails with spam score greater than or equal to this value.",
+        "enum": null,
+        "name": "spam_score_gte",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "description": "Sort mode. Defaults to relevance when a text query is present,\notherwise `received_at_desc`.\n",
+        "enum": [
+          "relevance",
+          "received_at_desc",
+          "received_at_asc"
+        ],
+        "name": "sort",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Opaque pagination cursor from a previous search response.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Number of results per page",
+        "enum": null,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "Include subject/body highlight snippets when text search is active.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "snippet",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Include facet counts for sender, domain, status, and attachment presence.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "include_facets",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "message_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "domain_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "org_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "description": "Lifecycle status of an INBOUND email (a row in the `emails`\ntable). Distinct from `SentEmailStatus`, which describes\nthe OUTBOUND lifecycle (the `sent_emails` table) and uses\na different vocabulary because the lifecycles differ.\nPossible values:\n\n  - `pending`: the row was inserted at ingestion (mx_main)\n    and has not yet completed the spam / filter / auth\n    pipeline. Body and parsed fields are present; webhook\n    delivery is not yet scheduled. Most rows transition out\n    of `pending` within seconds.\n  - `accepted`: the inbound passed the policy gates and is\n    queued for webhook delivery. The `webhook_status` field\n    tracks the separate webhook-delivery lifecycle from\n    this point.\n  - `completed`: terminal success. Webhook delivery\n    attempted and acknowledged by every active endpoint, OR\n    no endpoints are configured, so the row is durably\n    archived.\n  - `rejected`: terminal failure at ingestion (spam, blocked\n    sender, filter rule, malformed). The body and metadata\n    are stored for auditing but no webhook fires and the\n    row is not repliable.\n\nSee also `webhook_status` (separate enum tracking the\nwebhook-delivery state machine) and `SentEmailStatus` (the\noutbound vocabulary).\n",
+                "enum": [
+                  "pending",
+                  "accepted",
+                  "completed",
+                  "rejected"
+                ]
+              },
+              "sender": {
+                "type": "string",
+                "description": "SMTP envelope sender (return-path) the inbound mail server\naccepted. For most legitimate mail this equals the bare\naddress in the From header; for mailing lists, bounce\nhandlers, and forwarders it is typically the bounce address\nrather than the human-visible sender.\n\nFor the parsed From-header value (with display name handling\nand a sender-fallback when the header is unparseable), GET\nthe email by id and use `from_email`.\n"
+              },
+              "recipient": {
+                "type": "string"
+              },
+              "subject": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "domain": {
+                "type": "string"
+              },
+              "spam_score": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "received_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "raw_size_bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "webhook_status": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Webhook-delivery state for an inbound email. Tracks a\nSEPARATE lifecycle from the email's `status` field; the\nsame row carries both. Possible values:\n\n  - `pending`: ingestion is past `pending` (the email itself\n    is `accepted`) but the webhook fan-out has not yet\n    started for this row.\n  - `in_flight`: at least one delivery attempt is in flight.\n  - `fired`: terminal success. Every active endpoint\n    acknowledged the delivery (or accepted it after retries).\n  - `failed`: terminal partial-failure. At least one endpoint\n    exhausted its retry budget; some endpoints may still\n    have succeeded.\n  - `exhausted`: terminal failure. Every endpoint exhausted\n    its retry budget without success.\n  - `null`: no endpoints configured, so no webhook lifecycle\n    applies.\n\nNote that the value `pending` here does NOT mean the email\nis `pending`; it means the email is past ingestion but\nwebhook delivery has not yet begun. Two overlapping uses\nof the word `pending` for distinct lifecycle phases.\n",
+                "enum": [
+                  "pending",
+                  "in_flight",
+                  "fired",
+                  "failed",
+                  "exhausted",
+                  null
+                ]
+              },
+              "webhook_attempt_count": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "sender",
+              "recipient",
+              "domain",
+              "created_at",
+              "received_at",
+              "webhook_attempt_count"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "attachment_count": {
+                "type": "integer",
+                "description": "Number of parsed attachments on the email."
+              },
+              "from_known_address": {
+                "type": "boolean",
+                "description": "Whether the parsed From address is known to this org from prior authenticated inbound mail."
+              },
+              "score": {
+                "type": "number",
+                "description": "Relevance score. Present only when sorting by relevance."
+              },
+              "highlights": {
+                "type": "object",
+                "properties": {
+                  "subject": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Subject snippets with matching terms highlighted."
+                  },
+                  "body": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Body snippets with matching terms highlighted."
+                  }
+                },
+                "required": [
+                  "subject",
+                  "body"
+                ]
+              }
+            },
+            "required": [
+              "attachment_count",
+              "from_known_address"
+            ]
+          }
+        ]
+      }
+    },
+    "sdkName": "searchEmails",
+    "summary": "Search inbound emails",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-endpoint",
     "description": "Creates a new webhook endpoint. If a deactivated endpoint\nwith the same URL and domain exists, it is reactivated\ninstead. Subject to plan limits on the number of active\nendpoints.\n\n**Signing is account-scoped, not per-endpoint.** This call\ndoes not return any signing material; every endpoint on the\naccount uses the same webhook secret, fetched via\n`GET /account/webhook-secret`. See the API-level \"Webhook\nsigning\" section for the full wire format (header name,\nsigned string, hash algo, secret format, tolerance) and a\nlanguage-agnostic verification recipe.\n\nAfter creating the endpoint, fire a test delivery against\nit via `POST /endpoints/{id}/test` to confirm your verifier\naccepts the signature.\n",
