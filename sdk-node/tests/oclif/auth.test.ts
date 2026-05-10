@@ -15,7 +15,7 @@ import {
   credentialsPath,
   deleteCliCredentials,
   loadCliCredentials,
-  normalizeBaseUrl,
+  normalizeApiBaseUrl1,
   resolveCliAuth,
   type StoredCliCredentials,
   saveCliCredentials,
@@ -23,7 +23,7 @@ import {
 
 const CREDENTIALS: StoredCliCredentials = {
   api_key: "prim_test",
-  base_url: "https://api.example.test/api/v1",
+  api_base_url_1: "https://api.example.test/api/v1",
   created_at: "2026-05-05T00:00:00.000Z",
   key_id: "11111111-1111-4111-8111-111111111111",
   key_prefix: "prim_abc",
@@ -66,7 +66,7 @@ describe("CLI auth credentials", () => {
   });
 
   it("normalizes explicit base URLs", () => {
-    expect(normalizeBaseUrl("https://api.example.test/api/v1///")).toBe(
+    expect(normalizeApiBaseUrl1("https://api.example.test/api/v1///")).toBe(
       "https://api.example.test/api/v1",
     );
   });
@@ -77,12 +77,12 @@ describe("CLI auth credentials", () => {
     expect(
       resolveCliAuth({
         apiKey: "prim_explicit",
-        baseUrl: "https://override.example/api/v1",
+        apiBaseUrl1: "https://override.example/api/v1",
         configDir: tempDir,
       }),
     ).toMatchObject({
       apiKey: "prim_explicit",
-      baseUrl: "https://override.example/api/v1",
+      apiBaseUrl1: "https://override.example/api/v1",
       source: "flag-or-env",
     });
   });
@@ -92,7 +92,7 @@ describe("CLI auth credentials", () => {
 
     expect(resolveCliAuth({ configDir: tempDir })).toMatchObject({
       apiKey: CREDENTIALS.api_key,
-      baseUrl: CREDENTIALS.base_url,
+      apiBaseUrl1: CREDENTIALS.api_base_url_1,
       source: "stored",
     });
   });

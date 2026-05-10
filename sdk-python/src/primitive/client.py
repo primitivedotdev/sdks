@@ -11,7 +11,11 @@ from uuid import UUID
 
 import httpx
 
-from .api import DEFAULT_BASE_URL, AuthenticatedClient
+from .api import (
+    DEFAULT_API_BASE_URL_1,
+    DEFAULT_API_BASE_URL_2,
+    AuthenticatedClient,
+)
 from .api.api.sending.reply_to_email import (
     asyncio_detailed as reply_to_email_async_detailed,
 )
@@ -506,16 +510,29 @@ class PrimitiveClient:
         self,
         api_key: str,
         *,
-        base_url: str = DEFAULT_BASE_URL,
+        api_base_url_1: str = DEFAULT_API_BASE_URL_1,
+        api_base_url_2: str = DEFAULT_API_BASE_URL_2,
         **client_kwargs: Any,
     ) -> None:
+        # The primary AuthenticatedClient targets api_base_url_1 and is
+        # what callers passing `client=primitive_client.api_client` to a
+        # generated operation get. /send-mail routes to the host-2
+        # client via api_send_client; the send() / asend() wrappers
+        # below pick the right client internally. Customers don't see
+        # the split.
         self.api_client = AuthenticatedClient(
-            base_url=base_url,
+            base_url=api_base_url_1,
+            token=api_key,
+            **client_kwargs,
+        )
+        self.api_send_client = AuthenticatedClient(
+            base_url=api_base_url_2,
             token=api_key,
             **client_kwargs,
         )
         self._defaults = _ClientDefaults()
         _install_request_hooks(self.api_client)
+        _install_request_hooks(self.api_send_client)
 
     def with_options(
         self,
@@ -596,15 +613,17 @@ class PrimitiveClient:
     ) -> SendResult:
         # Make sure hooks are present in case the user installed a custom
         # httpx client via api_client.set_httpx_client(...) after init.
-        _install_request_hooks(self.api_client)
+        _install_request_hooks(self.api_send_client)
         token = self._set_per_call_options(
             timeout=timeout,
             extra_headers=extra_headers,
             idempotency_key=idempotency_key,
         )
         try:
+            # /send-mail routes to api_send_client (host 2) so attachment
+            # sends work without the customer thinking about it.
             response = send_email_sync_detailed(
-                client=self.api_client,
+                client=self.api_send_client,
                 body=_build_send_input(
                     from_email=from_email,
                     to=to,
@@ -649,15 +668,16 @@ class PrimitiveClient:
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
-        _install_request_hooks(self.api_client)
+        _install_request_hooks(self.api_send_client)
         token = self._set_per_call_options(
             timeout=timeout,
             extra_headers=extra_headers,
             idempotency_key=idempotency_key,
         )
         try:
+            # /send-mail routes to api_send_client (host 2).
             response = await send_email_async_detailed(
-                client=self.api_client,
+                client=self.api_send_client,
                 body=_build_send_input(
                     from_email=from_email,
                     to=to,
@@ -861,19 +881,31 @@ class PrimitiveClient:
 def create_client(
     api_key: str,
     *,
-    base_url: str = DEFAULT_BASE_URL,
+    api_base_url_1: str = DEFAULT_API_BASE_URL_1,
+    api_base_url_2: str = DEFAULT_API_BASE_URL_2,
     **client_kwargs: Any,
 ) -> PrimitiveClient:
-    return PrimitiveClient(api_key, base_url=base_url, **client_kwargs)
+    return PrimitiveClient(
+        api_key,
+        api_base_url_1=api_base_url_1,
+        api_base_url_2=api_base_url_2,
+        **client_kwargs,
+    )
 
 
 def client(
     api_key: str,
     *,
-    base_url: str = DEFAULT_BASE_URL,
+    api_base_url_1: str = DEFAULT_API_BASE_URL_1,
+    api_base_url_2: str = DEFAULT_API_BASE_URL_2,
     **client_kwargs: Any,
 ) -> PrimitiveClient:
-    return PrimitiveClient(api_key, base_url=base_url, **client_kwargs)
+    return PrimitiveClient(
+        api_key,
+        api_base_url_1=api_base_url_1,
+        api_base_url_2=api_base_url_2,
+        **client_kwargs,
+    )
 
 
 __all__ = [

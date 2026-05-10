@@ -9,7 +9,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { DEFAULT_BASE_URL } from "../api/index.js";
+import {
+  DEFAULT_API_BASE_URL_1,
+  DEFAULT_API_BASE_URL_2,
+} from "../api/index.js";
 
 const CREDENTIALS_FILE = "credentials.json";
 const CREDENTIALS_LOCK_DIR = "credentials.lock";
@@ -17,19 +20,25 @@ const CREDENTIALS_LOCK_STALE_MS = 30 * 60 * 1000;
 const MALFORMED_CREDENTIALS_HINT =
   "Run `primitive logout` and then `primitive login`.";
 
+// Disk shape for saved CLI credentials. Only persists the primary
+// API host (api_base_url_1) because login is itself an operation on
+// that host; the secondary host (api_base_url_2) is for /send-mail
+// and isn't part of the login flow, so it never gets stored. At call
+// time api_base_url_2 falls back to env / production default.
 export type StoredCliCredentials = {
   api_key: string;
   key_id: string;
   key_prefix: string;
   org_id: string;
   org_name: string | null;
-  base_url: string;
+  api_base_url_1: string;
   created_at: string;
 };
 
 export type ResolvedCliAuth = {
   apiKey: string | undefined;
-  baseUrl: string;
+  apiBaseUrl1: string;
+  apiBaseUrl2: string;
   source: "flag-or-env" | "stored" | "none";
   credentials: StoredCliCredentials | null;
 };
@@ -71,7 +80,7 @@ function parseCredentials(raw: unknown): StoredCliCredentials {
     key_prefix: requireString(raw, "key_prefix"),
     org_id: requireString(raw, "org_id"),
     org_name: orgName,
-    base_url: requireString(raw, "base_url"),
+    api_base_url_1: requireString(raw, "api_base_url_1"),
     created_at: requireString(raw, "created_at"),
   };
 }
@@ -80,10 +89,18 @@ export function credentialsPath(configDir: string): string {
   return join(configDir, CREDENTIALS_FILE);
 }
 
-export function normalizeBaseUrl(baseUrl: string | undefined): string {
-  const trimmed = baseUrl?.trim();
-  if (!trimmed) return DEFAULT_BASE_URL;
+function normalize(url: string | undefined, fallback: string): string {
+  const trimmed = url?.trim();
+  if (!trimmed) return fallback;
   return trimmed.replace(/\/+$/, "");
+}
+
+export function normalizeApiBaseUrl1(url: string | undefined): string {
+  return normalize(url, DEFAULT_API_BASE_URL_1);
+}
+
+export function normalizeApiBaseUrl2(url: string | undefined): string {
+  return normalize(url, DEFAULT_API_BASE_URL_2);
 }
 
 export function loadCliCredentials(
@@ -207,13 +224,20 @@ export function acquireCliCredentialsLock(
 export function resolveCliAuth(params: {
   configDir: string;
   apiKey?: string;
-  baseUrl?: string;
+  apiBaseUrl1?: string;
+  apiBaseUrl2?: string;
 }): ResolvedCliAuth {
   const apiKey = params.apiKey?.trim();
+  // Host 2 (api_base_url_2) is never stored; either set by env/flag or
+  // falls back to the production default. The login flow only deals
+  // with host 1.
+  const apiBaseUrl2 = normalizeApiBaseUrl2(params.apiBaseUrl2);
+
   if (apiKey) {
     return {
       apiKey,
-      baseUrl: normalizeBaseUrl(params.baseUrl),
+      apiBaseUrl1: normalizeApiBaseUrl1(params.apiBaseUrl1),
+      apiBaseUrl2,
       credentials: null,
       source: "flag-or-env",
     };
@@ -223,9 +247,10 @@ export function resolveCliAuth(params: {
   if (credentials) {
     return {
       apiKey: credentials.api_key,
-      baseUrl: params.baseUrl
-        ? normalizeBaseUrl(params.baseUrl)
-        : credentials.base_url,
+      apiBaseUrl1: params.apiBaseUrl1
+        ? normalizeApiBaseUrl1(params.apiBaseUrl1)
+        : credentials.api_base_url_1,
+      apiBaseUrl2,
       credentials,
       source: "stored",
     };
@@ -233,7 +258,8 @@ export function resolveCliAuth(params: {
 
   return {
     apiKey: undefined,
-    baseUrl: normalizeBaseUrl(params.baseUrl),
+    apiBaseUrl1: normalizeApiBaseUrl1(params.apiBaseUrl1),
+    apiBaseUrl2,
     credentials: null,
     source: "none",
   };

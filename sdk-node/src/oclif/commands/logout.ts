@@ -12,7 +12,7 @@ import {
   acquireCliCredentialsLock,
   deleteCliCredentials,
   loadCliCredentials,
-  normalizeBaseUrl,
+  normalizeApiBaseUrl1,
 } from "../auth.js";
 
 function cliError(message: string): Errors.CLIError {
@@ -25,7 +25,7 @@ function unwrapData<T>(value: unknown): T | null {
 }
 
 type LogoutFlags = {
-  "base-url"?: string;
+  "api-base-url-1"?: string;
 };
 
 class LogoutCommand extends Command {
@@ -37,9 +37,11 @@ class LogoutCommand extends Command {
   static examples = ["<%= config.bin %> logout"];
 
   static flags = {
-    "base-url": Flags.string({
-      description: "Override the API base URL used for key revocation",
-      env: "PRIMITIVE_API_URL",
+    "api-base-url-1": Flags.string({
+      description:
+        "Override the primary API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_1",
+      hidden: true,
     }),
   };
 
@@ -79,12 +81,12 @@ class LogoutCommand extends Command {
       );
     }
 
-    const baseUrl = flags["base-url"]
-      ? normalizeBaseUrl(flags["base-url"])
-      : credentials.base_url;
+    const apiBaseUrl1 = flags["api-base-url-1"]
+      ? normalizeApiBaseUrl1(flags["api-base-url-1"])
+      : credentials.api_base_url_1;
     const apiClient = new PrimitiveApiClient({
       apiKey: credentials.api_key,
-      baseUrl,
+      apiBaseUrl1,
     });
 
     const result = await cliLogout({

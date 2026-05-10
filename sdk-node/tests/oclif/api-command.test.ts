@@ -318,7 +318,7 @@ describe("writeErrorWithHints", () => {
 describe("removeStaleSavedCredentialOnUnauthorized", () => {
   const credentials: StoredCliCredentials = {
     api_key: "prim_stale",
-    base_url: "https://www.primitive.dev/api/v1",
+    api_base_url_1: "https://www.primitive.dev/api/v1",
     created_at: "2026-05-05T00:00:00.000Z",
     key_id: "11111111-1111-4111-8111-111111111111",
     key_prefix: "prim_sta...",
@@ -352,7 +352,8 @@ describe("removeStaleSavedCredentialOnUnauthorized", () => {
     const removed = removeStaleSavedCredentialOnUnauthorized({
       auth: {
         apiKey: credentials.api_key,
-        baseUrl: credentials.base_url,
+        apiBaseUrl1: credentials.api_base_url_1,
+        apiBaseUrl2: "https://api.primitive.dev/v1",
         credentials,
         source: "stored",
       },
@@ -374,7 +375,8 @@ describe("removeStaleSavedCredentialOnUnauthorized", () => {
     const removed = removeStaleSavedCredentialOnUnauthorized({
       auth: {
         apiKey: credentials.api_key,
-        baseUrl: "http://localhost:3000/api/v1",
+        apiBaseUrl1: "http://localhost:3000/api/v1",
+        apiBaseUrl2: "https://api.primitive.dev/v1",
         credentials,
         source: "stored",
       },
@@ -394,7 +396,8 @@ describe("removeStaleSavedCredentialOnUnauthorized", () => {
     const removed = removeStaleSavedCredentialOnUnauthorized({
       auth: {
         apiKey: credentials.api_key,
-        baseUrl: credentials.base_url,
+        apiBaseUrl1: credentials.api_base_url_1,
+        apiBaseUrl2: "https://api.primitive.dev/v1",
         credentials,
         source: "stored",
       },
