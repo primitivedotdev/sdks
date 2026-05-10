@@ -66,6 +66,50 @@ func (UnimplementedHandler) CreateFilter(ctx context.Context, req *CreateFilterI
 	return r, ht.ErrNotImplemented
 }
 
+// CreateFunction implements createFunction operation.
+//
+// Creates and deploys a new function. The handler must be a single
+// ESM module that exports a default async function receiving the
+// `email.received` event (see the Webhook payload section for the
+// full schema). Code is bundled before being uploaded; ship a
+// single self-contained file rather than relying on external
+// imports.
+// **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
+// (optional) is capped at 5 MiB UTF-8 and is stored only on the
+// edge runtime side; it is not persisted in Primitive's database.
+// **Auto-wiring.** On successful deploy, Primitive automatically
+// creates a webhook endpoint that delivers inbound mail to the
+// function. There is nothing to configure on the Endpoints API
+// for this to work; the gateway URL returned here is for
+// reference only and is not directly callable from outside.
+// **Secrets.** New functions ship with the managed secrets
+// (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
+// bound. Add user-set secrets via
+// `POST /functions/{id}/secrets`; secret writes only land in the
+// running handler on the next redeploy.
+//
+// POST /functions
+func (UnimplementedHandler) CreateFunction(ctx context.Context, req *CreateFunctionInput) (r CreateFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateFunctionSecret implements createFunctionSecret operation.
+//
+// Idempotent insert-or-update keyed on `(function_id, key)`.
+// Returns 201 the first time the key is set, 200 on subsequent
+// updates. Values are encrypted at rest and only become visible
+// to the running handler on the next deploy (`PUT /functions/{id}`
+// with the existing code is sufficient to refresh bindings).
+// Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+// digits, underscores; first character is a letter or
+// underscore). Values are at most 4096 UTF-8 bytes. System-
+// managed keys are reserved and rejected.
+//
+// POST /functions/{id}/secrets
+func (UnimplementedHandler) CreateFunctionSecret(ctx context.Context, req *CreateFunctionSecretInput, params CreateFunctionSecretParams) (r CreateFunctionSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteDomain implements deleteDomain operation.
 //
 // Deletes a verified or unverified domain claim.
@@ -100,6 +144,34 @@ func (UnimplementedHandler) DeleteEndpoint(ctx context.Context, params DeleteEnd
 //
 // DELETE /filters/{id}
 func (UnimplementedHandler) DeleteFilter(ctx context.Context, params DeleteFilterParams) (r DeleteFilterRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteFunction implements deleteFunction operation.
+//
+// Soft-deletes the function row, removes the script from the edge
+// runtime, and deactivates the auto-wired webhook endpoint so no
+// further inbound mail is delivered. Past deploy history,
+// invocations, and logs are retained.
+// Returns 502 if the runtime delete fails partway; the function
+// row stays in place and the call is safe to retry until it
+// succeeds.
+//
+// DELETE /functions/{id}
+func (UnimplementedHandler) DeleteFunction(ctx context.Context, params DeleteFunctionParams) (r DeleteFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteFunctionSecret implements deleteFunctionSecret operation.
+//
+// Removes the secret. The binding stays live in the running
+// handler until the next deploy refreshes the binding set
+// (`PUT /functions/{id}` with the existing code is sufficient).
+// Returns 404 if the key did not exist. Managed system keys
+// cannot be deleted.
+//
+// DELETE /functions/{id}/secrets/{key}
+func (UnimplementedHandler) DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (r DeleteFunctionSecretRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -178,6 +250,17 @@ func (UnimplementedHandler) GetAccount(ctx context.Context) (r GetAccountRes, _ 
 //
 // GET /emails/{id}
 func (UnimplementedHandler) GetEmail(ctx context.Context, params GetEmailParams) (r GetEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetFunction implements getFunction operation.
+//
+// Returns the full record for a function, including its current
+// source code and the deploy status / error from the most recent
+// deploy attempt.
+//
+// GET /functions/{id}
+func (UnimplementedHandler) GetFunction(ctx context.Context, params GetFunctionParams) (r GetFunctionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -322,6 +405,34 @@ func (UnimplementedHandler) ListFilters(ctx context.Context) (r ListFiltersRes, 
 	return r, ht.ErrNotImplemented
 }
 
+// ListFunctionSecrets implements listFunctionSecrets operation.
+//
+// Returns metadata for every secret bound to the function, with
+// managed entries (provisioned by Primitive) listed first and
+// user-set entries listed alphabetically after. **Values are
+// never returned.** Secret writes are write-only.
+// Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
+// `PRIMITIVE_API_KEY`) carry a `description` instead of
+// `created_at` / `updated_at`. They cannot be created, updated,
+// or deleted via this API.
+//
+// GET /functions/{id}/secrets
+func (UnimplementedHandler) ListFunctionSecrets(ctx context.Context, params ListFunctionSecretsParams) (r ListFunctionSecretsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListFunctions implements listFunctions operation.
+//
+// Returns every active (non-deleted) function in the org, newest
+// first. Each entry carries the deploy status and the gateway URL
+// that the platform's webhook delivery loop posts to. To inspect
+// the source code or deploy errors, use `GET /functions/{id}`.
+//
+// GET /functions
+func (UnimplementedHandler) ListFunctions(ctx context.Context) (r ListFunctionsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListSentEmails implements listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -422,6 +533,19 @@ func (UnimplementedHandler) SendEmail(ctx context.Context, req *SendMailInput, p
 	return r, ht.ErrNotImplemented
 }
 
+// SetFunctionSecret implements setFunctionSecret operation.
+//
+// Path-keyed companion to `POST /functions/{id}/secrets`.
+// Idempotent: returns 201 the first time the key is set, 200 on
+// subsequent updates. Same validation rules and same write-only
+// guarantees as the POST verb; the new value lands in the running
+// handler on the next deploy.
+//
+// PUT /functions/{id}/secrets/{key}
+func (UnimplementedHandler) SetFunctionSecret(ctx context.Context, req *SetFunctionSecretInput, params SetFunctionSecretParams) (r SetFunctionSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // StartCliLogin implements startCliLogin operation.
 //
 // Starts a browser-assisted CLI login session. The response includes a
@@ -443,6 +567,25 @@ func (UnimplementedHandler) StartCliLogin(ctx context.Context, req OptStartCliLo
 //
 // POST /endpoints/{id}/test
 func (UnimplementedHandler) TestEndpoint(ctx context.Context, params TestEndpointParams) (r TestEndpointRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// TestFunction implements testFunction operation.
+//
+// Sends a real test email from a Primitive-controlled sender to a
+// synthetic local-part on one of the org's verified inbound
+// domains. The function fires through the normal MX delivery
+// path, so reply / send-mail calls from inside the handler
+// against the inbound's `email.id` work the same as in
+// production. Returns immediately after the send is queued; the
+// invocation appears on the function's invocations list within a
+// few seconds.
+// Requires that the function is currently `deployed`. Returns 422
+// if the function is in `pending` or `failed` state, or if the
+// org has no verified inbound domain to receive the test mail.
+//
+// POST /functions/{id}/test
+func (UnimplementedHandler) TestFunction(ctx context.Context, params TestFunctionParams) (r TestFunctionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -482,6 +625,24 @@ func (UnimplementedHandler) UpdateEndpoint(ctx context.Context, req *UpdateEndpo
 //
 // PATCH /filters/{id}
 func (UnimplementedHandler) UpdateFilter(ctx context.Context, req *UpdateFilterInput, params UpdateFilterParams) (r UpdateFilterRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateFunction implements updateFunction operation.
+//
+// Replaces the function's source code with the body's `code` and
+// triggers a redeploy. Same size limits as `POST /functions`.
+// Use this verb to push secret writes into the running handler:
+// passing the same `code` re-runs the deploy and refreshes the
+// binding set with the latest values from the secrets table.
+// On a 502 deploy failure, the previously-deployed code stays
+// live; the runtime never serves a half-built bundle. The
+// `deploy_error` field on the returned record carries the error
+// that came back from the runtime so you can surface it to users
+// without polling.
+//
+// PUT /functions/{id}
+func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (r UpdateFunctionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

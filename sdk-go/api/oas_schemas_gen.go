@@ -4,6 +4,7 @@ package api
 
 import (
 	"io"
+	"net/url"
 	"time"
 
 	"github.com/go-faster/errors"
@@ -720,6 +721,246 @@ type CreateFilterUnauthorized ErrorResponse
 
 func (*CreateFilterUnauthorized) createFilterRes() {}
 
+type CreateFunctionBadGateway ErrorResponse
+
+func (*CreateFunctionBadGateway) createFunctionRes() {}
+
+type CreateFunctionBadRequest ErrorResponse
+
+func (*CreateFunctionBadRequest) createFunctionRes() {}
+
+type CreateFunctionConflict ErrorResponse
+
+func (*CreateFunctionConflict) createFunctionRes() {}
+
+// Merged schema.
+type CreateFunctionCreated struct {
+	Success bool                 `json:"success"`
+	Data    CreateFunctionResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateFunctionCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateFunctionCreated) GetData() CreateFunctionResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateFunctionCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateFunctionCreated) SetData(val CreateFunctionResult) {
+	s.Data = val
+}
+
+func (*CreateFunctionCreated) createFunctionRes() {}
+
+// Ref: #/components/schemas/CreateFunctionInput
+type CreateFunctionInput struct {
+	// Slug-style name. Lowercase letters, digits, hyphens, and
+	// underscores. 1 to 64 characters. Must be unique within the
+	// org; a 409 is returned on collision.
+	Name string `json:"name"`
+	// Bundled handler as a single ESM module. Up to 1 MiB UTF-8.
+	// Must export a default `{ async fetch(req, env, ctx) { ... } }`
+	// object.
+	Code string `json:"code"`
+	// Optional source map for the bundle. Up to 5 MiB UTF-8.
+	// Stored only on the runtime side (not in Primitive's
+	// database) and used to symbolicate stack traces in the
+	// function's logs.
+	SourceMap OptString `json:"sourceMap"`
+}
+
+// GetName returns the value of Name.
+func (s *CreateFunctionInput) GetName() string {
+	return s.Name
+}
+
+// GetCode returns the value of Code.
+func (s *CreateFunctionInput) GetCode() string {
+	return s.Code
+}
+
+// GetSourceMap returns the value of SourceMap.
+func (s *CreateFunctionInput) GetSourceMap() OptString {
+	return s.SourceMap
+}
+
+// SetName sets the value of Name.
+func (s *CreateFunctionInput) SetName(val string) {
+	s.Name = val
+}
+
+// SetCode sets the value of Code.
+func (s *CreateFunctionInput) SetCode(val string) {
+	s.Code = val
+}
+
+// SetSourceMap sets the value of SourceMap.
+func (s *CreateFunctionInput) SetSourceMap(val OptString) {
+	s.SourceMap = val
+}
+
+// Returned by POST /functions on a successful deploy.
+// Ref: #/components/schemas/CreateFunctionResult
+type CreateFunctionResult struct {
+	ID           uuid.UUID            `json:"id"`
+	Name         string               `json:"name"`
+	DeployStatus FunctionDeployStatus `json:"deploy_status"`
+	GatewayURL   url.URL              `json:"gateway_url"`
+}
+
+// GetID returns the value of ID.
+func (s *CreateFunctionResult) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *CreateFunctionResult) GetName() string {
+	return s.Name
+}
+
+// GetDeployStatus returns the value of DeployStatus.
+func (s *CreateFunctionResult) GetDeployStatus() FunctionDeployStatus {
+	return s.DeployStatus
+}
+
+// GetGatewayURL returns the value of GatewayURL.
+func (s *CreateFunctionResult) GetGatewayURL() url.URL {
+	return s.GatewayURL
+}
+
+// SetID sets the value of ID.
+func (s *CreateFunctionResult) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *CreateFunctionResult) SetName(val string) {
+	s.Name = val
+}
+
+// SetDeployStatus sets the value of DeployStatus.
+func (s *CreateFunctionResult) SetDeployStatus(val FunctionDeployStatus) {
+	s.DeployStatus = val
+}
+
+// SetGatewayURL sets the value of GatewayURL.
+func (s *CreateFunctionResult) SetGatewayURL(val url.URL) {
+	s.GatewayURL = val
+}
+
+type CreateFunctionSecretBadRequest ErrorResponse
+
+func (*CreateFunctionSecretBadRequest) createFunctionSecretRes() {}
+
+// Merged schema.
+type CreateFunctionSecretCreated struct {
+	Success bool                      `json:"success"`
+	Data    FunctionSecretWriteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateFunctionSecretCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateFunctionSecretCreated) GetData() FunctionSecretWriteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateFunctionSecretCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateFunctionSecretCreated) SetData(val FunctionSecretWriteResult) {
+	s.Data = val
+}
+
+func (*CreateFunctionSecretCreated) createFunctionSecretRes() {}
+
+// Body for POST /functions/{id}/secrets.
+// Ref: #/components/schemas/CreateFunctionSecretInput
+type CreateFunctionSecretInput struct {
+	// Uppercase letters, digits, and underscores. Must start with
+	// a letter or underscore. System-managed keys (e.g.
+	// PRIMITIVE_WEBHOOK_SECRET) are reserved.
+	Key string `json:"key"`
+	// Secret value, up to 4096 UTF-8 bytes. Encrypted at rest.
+	// Never returned by any read endpoint.
+	Value string `json:"value"`
+}
+
+// GetKey returns the value of Key.
+func (s *CreateFunctionSecretInput) GetKey() string {
+	return s.Key
+}
+
+// GetValue returns the value of Value.
+func (s *CreateFunctionSecretInput) GetValue() string {
+	return s.Value
+}
+
+// SetKey sets the value of Key.
+func (s *CreateFunctionSecretInput) SetKey(val string) {
+	s.Key = val
+}
+
+// SetValue sets the value of Value.
+func (s *CreateFunctionSecretInput) SetValue(val string) {
+	s.Value = val
+}
+
+type CreateFunctionSecretNotFound ErrorResponse
+
+func (*CreateFunctionSecretNotFound) createFunctionSecretRes() {}
+
+// Merged schema.
+type CreateFunctionSecretOK struct {
+	Success bool                      `json:"success"`
+	Data    FunctionSecretWriteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateFunctionSecretOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateFunctionSecretOK) GetData() FunctionSecretWriteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateFunctionSecretOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateFunctionSecretOK) SetData(val FunctionSecretWriteResult) {
+	s.Data = val
+}
+
+func (*CreateFunctionSecretOK) createFunctionSecretRes() {}
+
+type CreateFunctionSecretUnauthorized ErrorResponse
+
+func (*CreateFunctionSecretUnauthorized) createFunctionSecretRes() {}
+
+type CreateFunctionUnauthorized ErrorResponse
+
+func (*CreateFunctionUnauthorized) createFunctionRes() {}
+
 type DeleteDomainBadRequest ErrorResponse
 
 func (*DeleteDomainBadRequest) deleteDomainRes() {}
@@ -768,6 +1009,35 @@ type DeleteFilterUnauthorized ErrorResponse
 
 func (*DeleteFilterUnauthorized) deleteFilterRes() {}
 
+type DeleteFunctionBadGateway ErrorResponse
+
+func (*DeleteFunctionBadGateway) deleteFunctionRes() {}
+
+type DeleteFunctionNotFound ErrorResponse
+
+func (*DeleteFunctionNotFound) deleteFunctionRes() {}
+
+type DeleteFunctionSecretBadRequest ErrorResponse
+
+func (*DeleteFunctionSecretBadRequest) deleteFunctionSecretRes() {}
+
+// DeleteFunctionSecretNoContent is response for DeleteFunctionSecret operation.
+type DeleteFunctionSecretNoContent struct{}
+
+func (*DeleteFunctionSecretNoContent) deleteFunctionSecretRes() {}
+
+type DeleteFunctionSecretNotFound ErrorResponse
+
+func (*DeleteFunctionSecretNotFound) deleteFunctionSecretRes() {}
+
+type DeleteFunctionSecretUnauthorized ErrorResponse
+
+func (*DeleteFunctionSecretUnauthorized) deleteFunctionSecretRes() {}
+
+type DeleteFunctionUnauthorized ErrorResponse
+
+func (*DeleteFunctionUnauthorized) deleteFunctionRes() {}
+
 // Merged schema.
 type Deleted struct {
 	Success bool        `json:"success"`
@@ -798,6 +1068,7 @@ func (*Deleted) deleteDomainRes()   {}
 func (*Deleted) deleteEmailRes()    {}
 func (*Deleted) deleteEndpointRes() {}
 func (*Deleted) deleteFilterRes()   {}
+func (*Deleted) deleteFunctionRes() {}
 
 type DeletedData struct {
 	Deleted bool `json:"deleted"`
@@ -2604,6 +2875,7 @@ func (*ErrorResponse) getSendPermissionsRes() {}
 func (*ErrorResponse) listDomainsRes()        {}
 func (*ErrorResponse) listEndpointsRes()      {}
 func (*ErrorResponse) listFiltersRes()        {}
+func (*ErrorResponse) listFunctionsRes()      {}
 func (*ErrorResponse) pollCliLoginRes()       {}
 func (*ErrorResponse) startCliLoginRes()      {}
 
@@ -3133,6 +3405,382 @@ func (s *FilterType) UnmarshalText(data []byte) error {
 	}
 }
 
+// Lifecycle state of the latest deploy attempt:
+// * `pending` — deploy in flight; the runtime has not yet
+// confirmed the new bundle is live.
+// * `deployed` — the running edge handler is the latest code.
+// * `failed` — the most recent deploy attempt failed; the
+// previously-live code (if any) is still running. The
+// `deploy_error` field carries the error message.
+// Ref: #/components/schemas/FunctionDeployStatus
+type FunctionDeployStatus string
+
+const (
+	FunctionDeployStatusPending  FunctionDeployStatus = "pending"
+	FunctionDeployStatusDeployed FunctionDeployStatus = "deployed"
+	FunctionDeployStatusFailed   FunctionDeployStatus = "failed"
+)
+
+// AllValues returns all FunctionDeployStatus values.
+func (FunctionDeployStatus) AllValues() []FunctionDeployStatus {
+	return []FunctionDeployStatus{
+		FunctionDeployStatusPending,
+		FunctionDeployStatusDeployed,
+		FunctionDeployStatusFailed,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s FunctionDeployStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case FunctionDeployStatusPending:
+		return []byte(s), nil
+	case FunctionDeployStatusDeployed:
+		return []byte(s), nil
+	case FunctionDeployStatusFailed:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *FunctionDeployStatus) UnmarshalText(data []byte) error {
+	switch FunctionDeployStatus(data) {
+	case FunctionDeployStatusPending:
+		*s = FunctionDeployStatusPending
+		return nil
+	case FunctionDeployStatusDeployed:
+		*s = FunctionDeployStatusDeployed
+		return nil
+	case FunctionDeployStatusFailed:
+		*s = FunctionDeployStatusFailed
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Full function record returned by GET / PUT.
+// Ref: #/components/schemas/FunctionDetail
+type FunctionDetail struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	// The bundled handler source. UTF-8 string up to 1 MiB. The
+	// same value most recently passed as `code` to POST or PUT.
+	Code         string               `json:"code"`
+	DeployStatus FunctionDeployStatus `json:"deploy_status"`
+	// Error message from the most recent failed deploy, or null
+	// after a successful deploy. Surface this to users to explain
+	// a `failed` status without polling.
+	DeployError OptNilString   `json:"deploy_error"`
+	DeployedAt  OptNilDateTime `json:"deployed_at"`
+	GatewayURL  url.URL        `json:"gateway_url"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionDetail) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *FunctionDetail) GetName() string {
+	return s.Name
+}
+
+// GetCode returns the value of Code.
+func (s *FunctionDetail) GetCode() string {
+	return s.Code
+}
+
+// GetDeployStatus returns the value of DeployStatus.
+func (s *FunctionDetail) GetDeployStatus() FunctionDeployStatus {
+	return s.DeployStatus
+}
+
+// GetDeployError returns the value of DeployError.
+func (s *FunctionDetail) GetDeployError() OptNilString {
+	return s.DeployError
+}
+
+// GetDeployedAt returns the value of DeployedAt.
+func (s *FunctionDetail) GetDeployedAt() OptNilDateTime {
+	return s.DeployedAt
+}
+
+// GetGatewayURL returns the value of GatewayURL.
+func (s *FunctionDetail) GetGatewayURL() url.URL {
+	return s.GatewayURL
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *FunctionDetail) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *FunctionDetail) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *FunctionDetail) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *FunctionDetail) SetName(val string) {
+	s.Name = val
+}
+
+// SetCode sets the value of Code.
+func (s *FunctionDetail) SetCode(val string) {
+	s.Code = val
+}
+
+// SetDeployStatus sets the value of DeployStatus.
+func (s *FunctionDetail) SetDeployStatus(val FunctionDeployStatus) {
+	s.DeployStatus = val
+}
+
+// SetDeployError sets the value of DeployError.
+func (s *FunctionDetail) SetDeployError(val OptNilString) {
+	s.DeployError = val
+}
+
+// SetDeployedAt sets the value of DeployedAt.
+func (s *FunctionDetail) SetDeployedAt(val OptNilDateTime) {
+	s.DeployedAt = val
+}
+
+// SetGatewayURL sets the value of GatewayURL.
+func (s *FunctionDetail) SetGatewayURL(val url.URL) {
+	s.GatewayURL = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *FunctionDetail) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *FunctionDetail) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// One row from the function listing.
+// Ref: #/components/schemas/FunctionListItem
+type FunctionListItem struct {
+	// Function id, also the script name in the edge runtime.
+	ID uuid.UUID `json:"id"`
+	// Slug-style name set on creation. Stable; cannot be changed.
+	Name         string               `json:"name"`
+	DeployStatus FunctionDeployStatus `json:"deploy_status"`
+	// Timestamp of the most recent successful deploy. Null until the first deploy succeeds.
+	DeployedAt OptNilDateTime `json:"deployed_at"`
+	// URL the platform's webhook delivery loop posts to in order
+	// to invoke the function. Reference only; not directly
+	// callable from outside.
+	GatewayURL url.URL   `json:"gateway_url"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionListItem) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *FunctionListItem) GetName() string {
+	return s.Name
+}
+
+// GetDeployStatus returns the value of DeployStatus.
+func (s *FunctionListItem) GetDeployStatus() FunctionDeployStatus {
+	return s.DeployStatus
+}
+
+// GetDeployedAt returns the value of DeployedAt.
+func (s *FunctionListItem) GetDeployedAt() OptNilDateTime {
+	return s.DeployedAt
+}
+
+// GetGatewayURL returns the value of GatewayURL.
+func (s *FunctionListItem) GetGatewayURL() url.URL {
+	return s.GatewayURL
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *FunctionListItem) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *FunctionListItem) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *FunctionListItem) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *FunctionListItem) SetName(val string) {
+	s.Name = val
+}
+
+// SetDeployStatus sets the value of DeployStatus.
+func (s *FunctionListItem) SetDeployStatus(val FunctionDeployStatus) {
+	s.DeployStatus = val
+}
+
+// SetDeployedAt sets the value of DeployedAt.
+func (s *FunctionListItem) SetDeployedAt(val OptNilDateTime) {
+	s.DeployedAt = val
+}
+
+// SetGatewayURL sets the value of GatewayURL.
+func (s *FunctionListItem) SetGatewayURL(val url.URL) {
+	s.GatewayURL = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *FunctionListItem) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *FunctionListItem) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// One row from GET /functions/{id}/secrets. Discriminate on the
+// `managed` field:
+// * `managed = true`  — system secret provisioned by Primitive.
+// `description` is set; `created_at` / `updated_at` are
+// null because the row is virtual (resolved at deploy time
+// from the managed registry, not stored in the secrets
+// table).
+// * `managed = false` — secret the user set via the API.
+// `created_at` / `updated_at` are set; `description` is
+// null.
+// Ref: #/components/schemas/FunctionSecretListItem
+type FunctionSecretListItem struct {
+	Key string `json:"key"`
+	// True for managed system secrets, false for user-set entries.
+	Managed bool `json:"managed"`
+	// Set on managed entries only; null on user-set entries.
+	Description OptNilString `json:"description"`
+	// Set on user-set entries only; null on managed entries.
+	CreatedAt OptNilDateTime `json:"created_at"`
+	// Set on user-set entries only; null on managed entries.
+	UpdatedAt OptNilDateTime `json:"updated_at"`
+}
+
+// GetKey returns the value of Key.
+func (s *FunctionSecretListItem) GetKey() string {
+	return s.Key
+}
+
+// GetManaged returns the value of Managed.
+func (s *FunctionSecretListItem) GetManaged() bool {
+	return s.Managed
+}
+
+// GetDescription returns the value of Description.
+func (s *FunctionSecretListItem) GetDescription() OptNilString {
+	return s.Description
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *FunctionSecretListItem) GetCreatedAt() OptNilDateTime {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *FunctionSecretListItem) GetUpdatedAt() OptNilDateTime {
+	return s.UpdatedAt
+}
+
+// SetKey sets the value of Key.
+func (s *FunctionSecretListItem) SetKey(val string) {
+	s.Key = val
+}
+
+// SetManaged sets the value of Managed.
+func (s *FunctionSecretListItem) SetManaged(val bool) {
+	s.Managed = val
+}
+
+// SetDescription sets the value of Description.
+func (s *FunctionSecretListItem) SetDescription(val OptNilString) {
+	s.Description = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *FunctionSecretListItem) SetCreatedAt(val OptNilDateTime) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *FunctionSecretListItem) SetUpdatedAt(val OptNilDateTime) {
+	s.UpdatedAt = val
+}
+
+// Returned by POST and PUT secret routes.
+// Ref: #/components/schemas/FunctionSecretWriteResult
+type FunctionSecretWriteResult struct {
+	Key       string    `json:"key"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	// True if this call inserted a new row, false if it updated an existing one.
+	Created bool `json:"created"`
+}
+
+// GetKey returns the value of Key.
+func (s *FunctionSecretWriteResult) GetKey() string {
+	return s.Key
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *FunctionSecretWriteResult) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *FunctionSecretWriteResult) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetCreated returns the value of Created.
+func (s *FunctionSecretWriteResult) GetCreated() bool {
+	return s.Created
+}
+
+// SetKey sets the value of Key.
+func (s *FunctionSecretWriteResult) SetKey(val string) {
+	s.Key = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *FunctionSecretWriteResult) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *FunctionSecretWriteResult) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetCreated sets the value of Created.
+func (s *FunctionSecretWriteResult) SetCreated(val bool) {
+	s.Created = val
+}
+
 // Ref: #/components/schemas/GateDenial
 type GateDenial struct {
 	// Public recipient-scope gate name that denied the send.
@@ -3451,6 +4099,42 @@ func (*GetEmailOK) getEmailRes() {}
 type GetEmailUnauthorized ErrorResponse
 
 func (*GetEmailUnauthorized) getEmailRes() {}
+
+type GetFunctionNotFound ErrorResponse
+
+func (*GetFunctionNotFound) getFunctionRes() {}
+
+// Merged schema.
+type GetFunctionOK struct {
+	Success bool           `json:"success"`
+	Data    FunctionDetail `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetFunctionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetFunctionOK) GetData() FunctionDetail {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetFunctionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetFunctionOK) SetData(val FunctionDetail) {
+	s.Data = val
+}
+
+func (*GetFunctionOK) getFunctionRes() {}
+
+type GetFunctionUnauthorized ErrorResponse
+
+func (*GetFunctionUnauthorized) getFunctionRes() {}
 
 // Merged schema.
 type GetSendPermissionsOK struct {
@@ -3835,6 +4519,84 @@ func (s *ListFiltersOK) SetData(val []Filter) {
 }
 
 func (*ListFiltersOK) listFiltersRes() {}
+
+type ListFunctionSecretsNotFound ErrorResponse
+
+func (*ListFunctionSecretsNotFound) listFunctionSecretsRes() {}
+
+// Merged schema.
+type ListFunctionSecretsOK struct {
+	Success bool                      `json:"success"`
+	Data    ListFunctionSecretsOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListFunctionSecretsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListFunctionSecretsOK) GetData() ListFunctionSecretsOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListFunctionSecretsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListFunctionSecretsOK) SetData(val ListFunctionSecretsOKData) {
+	s.Data = val
+}
+
+func (*ListFunctionSecretsOK) listFunctionSecretsRes() {}
+
+type ListFunctionSecretsOKData struct {
+	Items []FunctionSecretListItem `json:"items"`
+}
+
+// GetItems returns the value of Items.
+func (s *ListFunctionSecretsOKData) GetItems() []FunctionSecretListItem {
+	return s.Items
+}
+
+// SetItems sets the value of Items.
+func (s *ListFunctionSecretsOKData) SetItems(val []FunctionSecretListItem) {
+	s.Items = val
+}
+
+type ListFunctionSecretsUnauthorized ErrorResponse
+
+func (*ListFunctionSecretsUnauthorized) listFunctionSecretsRes() {}
+
+// Merged schema.
+type ListFunctionsOK struct {
+	Success bool               `json:"success"`
+	Data    []FunctionListItem `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListFunctionsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListFunctionsOK) GetData() []FunctionListItem {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListFunctionsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListFunctionsOK) SetData(val []FunctionListItem) {
+	s.Data = val
+}
+
+func (*ListFunctionsOK) listFunctionsRes() {}
 
 type ListSentEmailsBadRequest ErrorResponse
 
@@ -7415,6 +8177,90 @@ func (s *SentEmailSummary) SetRequestID(val OptNilString) {
 	s.RequestID = val
 }
 
+type SetFunctionSecretBadRequest ErrorResponse
+
+func (*SetFunctionSecretBadRequest) setFunctionSecretRes() {}
+
+// Merged schema.
+type SetFunctionSecretCreated struct {
+	Success bool                      `json:"success"`
+	Data    FunctionSecretWriteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SetFunctionSecretCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SetFunctionSecretCreated) GetData() FunctionSecretWriteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SetFunctionSecretCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SetFunctionSecretCreated) SetData(val FunctionSecretWriteResult) {
+	s.Data = val
+}
+
+func (*SetFunctionSecretCreated) setFunctionSecretRes() {}
+
+// Body for PUT /functions/{id}/secrets/{key}. Key comes from the path.
+// Ref: #/components/schemas/SetFunctionSecretInput
+type SetFunctionSecretInput struct {
+	Value string `json:"value"`
+}
+
+// GetValue returns the value of Value.
+func (s *SetFunctionSecretInput) GetValue() string {
+	return s.Value
+}
+
+// SetValue sets the value of Value.
+func (s *SetFunctionSecretInput) SetValue(val string) {
+	s.Value = val
+}
+
+type SetFunctionSecretNotFound ErrorResponse
+
+func (*SetFunctionSecretNotFound) setFunctionSecretRes() {}
+
+// Merged schema.
+type SetFunctionSecretOK struct {
+	Success bool                      `json:"success"`
+	Data    FunctionSecretWriteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SetFunctionSecretOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SetFunctionSecretOK) GetData() FunctionSecretWriteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SetFunctionSecretOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SetFunctionSecretOK) SetData(val FunctionSecretWriteResult) {
+	s.Data = val
+}
+
+func (*SetFunctionSecretOK) setFunctionSecretRes() {}
+
+type SetFunctionSecretUnauthorized ErrorResponse
+
+func (*SetFunctionSecretUnauthorized) setFunctionSecretRes() {}
+
 // Merged schema.
 type StartCliLoginCreated struct {
 	Success bool                `json:"success"`
@@ -7624,6 +8470,155 @@ func (*TestEndpointOK) testEndpointRes() {}
 type TestEndpointUnauthorized ErrorResponse
 
 func (*TestEndpointUnauthorized) testEndpointRes() {}
+
+type TestFunctionBadGateway ErrorResponse
+
+func (*TestFunctionBadGateway) testFunctionRes() {}
+
+type TestFunctionBadRequest ErrorResponse
+
+func (*TestFunctionBadRequest) testFunctionRes() {}
+
+type TestFunctionNotFound ErrorResponse
+
+func (*TestFunctionNotFound) testFunctionRes() {}
+
+// Merged schema.
+type TestFunctionOK struct {
+	Success bool                 `json:"success"`
+	Data    TestInvocationResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *TestFunctionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *TestFunctionOK) GetData() TestInvocationResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *TestFunctionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *TestFunctionOK) SetData(val TestInvocationResult) {
+	s.Data = val
+}
+
+func (*TestFunctionOK) testFunctionRes() {}
+
+type TestFunctionServiceUnavailable ErrorResponse
+
+func (*TestFunctionServiceUnavailable) testFunctionRes() {}
+
+type TestFunctionUnauthorized ErrorResponse
+
+func (*TestFunctionUnauthorized) testFunctionRes() {}
+
+type TestFunctionUnprocessableEntity ErrorResponse
+
+func (*TestFunctionUnprocessableEntity) testFunctionRes() {}
+
+// Metadata returned by POST /functions/{id}/test. The send is
+// queued; the actual invocation lands on the function's
+// invocations list a few seconds later as the inbound mail
+// traverses the MX path.
+// Ref: #/components/schemas/TestInvocationResult
+type TestInvocationResult struct {
+	// Verified inbound domain the test email was sent to.
+	InboundDomain string `json:"inbound_domain"`
+	// Synthetic local-part plus inbound_domain. Visible in the org's inbox.
+	To string `json:"to"`
+	// Primitive-controlled outbound sender used for the test.
+	From string `json:"from"`
+	// Outbound message id from the underlying send. NOT the
+	// inbound email's id; the inbound id is created when the
+	// email arrives via MX and lands on the function's
+	// invocations list.
+	SendID string `json:"send_id"`
+	// Subject placed on the test email so it can be located in the inbox.
+	Subject string `json:"subject"`
+	// ISO timestamp suitable as a `since` lower bound when
+	// polling /emails for the inbound's arrival. Captured
+	// slightly before the send to absorb light clock skew.
+	PollSince time.Time `json:"poll_since"`
+	// Function detail page where invocations show up live.
+	WatchURL url.URL `json:"watch_url"`
+}
+
+// GetInboundDomain returns the value of InboundDomain.
+func (s *TestInvocationResult) GetInboundDomain() string {
+	return s.InboundDomain
+}
+
+// GetTo returns the value of To.
+func (s *TestInvocationResult) GetTo() string {
+	return s.To
+}
+
+// GetFrom returns the value of From.
+func (s *TestInvocationResult) GetFrom() string {
+	return s.From
+}
+
+// GetSendID returns the value of SendID.
+func (s *TestInvocationResult) GetSendID() string {
+	return s.SendID
+}
+
+// GetSubject returns the value of Subject.
+func (s *TestInvocationResult) GetSubject() string {
+	return s.Subject
+}
+
+// GetPollSince returns the value of PollSince.
+func (s *TestInvocationResult) GetPollSince() time.Time {
+	return s.PollSince
+}
+
+// GetWatchURL returns the value of WatchURL.
+func (s *TestInvocationResult) GetWatchURL() url.URL {
+	return s.WatchURL
+}
+
+// SetInboundDomain sets the value of InboundDomain.
+func (s *TestInvocationResult) SetInboundDomain(val string) {
+	s.InboundDomain = val
+}
+
+// SetTo sets the value of To.
+func (s *TestInvocationResult) SetTo(val string) {
+	s.To = val
+}
+
+// SetFrom sets the value of From.
+func (s *TestInvocationResult) SetFrom(val string) {
+	s.From = val
+}
+
+// SetSendID sets the value of SendID.
+func (s *TestInvocationResult) SetSendID(val string) {
+	s.SendID = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *TestInvocationResult) SetSubject(val string) {
+	s.Subject = val
+}
+
+// SetPollSince sets the value of PollSince.
+func (s *TestInvocationResult) SetPollSince(val time.Time) {
+	s.PollSince = val
+}
+
+// SetWatchURL sets the value of WatchURL.
+func (s *TestInvocationResult) SetWatchURL(val url.URL) {
+	s.WatchURL = val
+}
 
 // Ref: #/components/schemas/TestResult
 type TestResult struct {
@@ -8017,6 +9012,77 @@ func (*UpdateFilterOK) updateFilterRes() {}
 type UpdateFilterUnauthorized ErrorResponse
 
 func (*UpdateFilterUnauthorized) updateFilterRes() {}
+
+type UpdateFunctionBadGateway ErrorResponse
+
+func (*UpdateFunctionBadGateway) updateFunctionRes() {}
+
+type UpdateFunctionBadRequest ErrorResponse
+
+func (*UpdateFunctionBadRequest) updateFunctionRes() {}
+
+// Ref: #/components/schemas/UpdateFunctionInput
+type UpdateFunctionInput struct {
+	// New bundled handler. Same rules as CreateFunctionInput.code.
+	Code      string    `json:"code"`
+	SourceMap OptString `json:"sourceMap"`
+}
+
+// GetCode returns the value of Code.
+func (s *UpdateFunctionInput) GetCode() string {
+	return s.Code
+}
+
+// GetSourceMap returns the value of SourceMap.
+func (s *UpdateFunctionInput) GetSourceMap() OptString {
+	return s.SourceMap
+}
+
+// SetCode sets the value of Code.
+func (s *UpdateFunctionInput) SetCode(val string) {
+	s.Code = val
+}
+
+// SetSourceMap sets the value of SourceMap.
+func (s *UpdateFunctionInput) SetSourceMap(val OptString) {
+	s.SourceMap = val
+}
+
+type UpdateFunctionNotFound ErrorResponse
+
+func (*UpdateFunctionNotFound) updateFunctionRes() {}
+
+// Merged schema.
+type UpdateFunctionOK struct {
+	Success bool           `json:"success"`
+	Data    FunctionDetail `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateFunctionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateFunctionOK) GetData() FunctionDetail {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateFunctionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateFunctionOK) SetData(val FunctionDetail) {
+	s.Data = val
+}
+
+func (*UpdateFunctionOK) updateFunctionRes() {}
+
+type UpdateFunctionUnauthorized ErrorResponse
+
+func (*UpdateFunctionUnauthorized) updateFunctionRes() {}
 
 // Ref: #/components/schemas/VerifiedDomain
 type VerifiedDomain struct {

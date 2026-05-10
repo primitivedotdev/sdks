@@ -82,6 +82,9 @@
       },
       "webhook-deliveries": {
         "description": "View and replay webhook delivery attempts"
+      },
+      "functions": {
+        "description": "Deploy JavaScript handlers that run on inbound mail. Use `primitive functions:deploy --name <name> --file <bundle.js>` for the file-input ergonomic, or `functions:create-function` / `functions:update-function` for the full body-string surface."
       }
     },
     "topicSeparator": " "

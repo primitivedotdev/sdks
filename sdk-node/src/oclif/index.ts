@@ -5,6 +5,8 @@ import {
 } from "../openapi/index.js";
 import { createOperationCommand } from "./api-command.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
+import FunctionsDeployCommand from "./commands/functions-deploy.js";
+import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
 import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
 import SendCommand from "./commands/send.js";
@@ -176,5 +178,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
   "emails:latest": EmailsLatestCommand,
+  // `functions:deploy` and `functions:redeploy` are file-input
+  // shortcuts for create-function / update-function. The underlying
+  // ops take `code` as a body string, which is awkward at the CLI
+  // for multi-line bundles; these read the bundle off disk and pass
+  // it through. The auto-generated functions:* operations stay
+  // available for callers that want the full surface.
+  "functions:deploy": FunctionsDeployCommand,
+  "functions:redeploy": FunctionsRedeployCommand,
   ...generatedCommands,
 };
