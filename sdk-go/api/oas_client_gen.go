@@ -69,6 +69,44 @@ type Invoker interface {
 	//
 	// POST /filters
 	CreateFilter(ctx context.Context, request *CreateFilterInput) (CreateFilterRes, error)
+	// CreateFunction invokes createFunction operation.
+	//
+	// Creates and deploys a new function. The handler must be a single
+	// ESM module that exports a default async function receiving the
+	// `email.received` event (see the Webhook payload section for the
+	// full schema). Code is bundled before being uploaded; ship a
+	// single self-contained file rather than relying on external
+	// imports.
+	// **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
+	// (optional) is capped at 5 MiB UTF-8 and is stored only on the
+	// edge runtime side; it is not persisted in Primitive's database.
+	// **Auto-wiring.** On successful deploy, Primitive automatically
+	// creates a webhook endpoint that delivers inbound mail to the
+	// function. There is nothing to configure on the Endpoints API
+	// for this to work; the gateway URL returned here is for
+	// reference only and is not directly callable from outside.
+	// **Secrets.** New functions ship with the managed secrets
+	// (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
+	// bound. Add user-set secrets via
+	// `POST /functions/{id}/secrets`; secret writes only land in the
+	// running handler on the next redeploy.
+	//
+	// POST /functions
+	CreateFunction(ctx context.Context, request *CreateFunctionInput) (CreateFunctionRes, error)
+	// CreateFunctionSecret invokes createFunctionSecret operation.
+	//
+	// Idempotent insert-or-update keyed on `(function_id, key)`.
+	// Returns 201 the first time the key is set, 200 on subsequent
+	// updates. Values are encrypted at rest and only become visible
+	// to the running handler on the next deploy (`PUT /functions/{id}`
+	// with the existing code is sufficient to refresh bindings).
+	// Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+	// digits, underscores; first character is a letter or
+	// underscore). Values are at most 4096 UTF-8 bytes. System-
+	// managed keys are reserved and rejected.
+	//
+	// POST /functions/{id}/secrets
+	CreateFunctionSecret(ctx context.Context, request *CreateFunctionSecretInput, params CreateFunctionSecretParams) (CreateFunctionSecretRes, error)
 	// DeleteDomain invokes deleteDomain operation.
 	//
 	// Deletes a verified or unverified domain claim.
@@ -94,6 +132,28 @@ type Invoker interface {
 	//
 	// DELETE /filters/{id}
 	DeleteFilter(ctx context.Context, params DeleteFilterParams) (DeleteFilterRes, error)
+	// DeleteFunction invokes deleteFunction operation.
+	//
+	// Soft-deletes the function row, removes the script from the edge
+	// runtime, and deactivates the auto-wired webhook endpoint so no
+	// further inbound mail is delivered. Past deploy history,
+	// invocations, and logs are retained.
+	// Returns 502 if the runtime delete fails partway; the function
+	// row stays in place and the call is safe to retry until it
+	// succeeds.
+	//
+	// DELETE /functions/{id}
+	DeleteFunction(ctx context.Context, params DeleteFunctionParams) (DeleteFunctionRes, error)
+	// DeleteFunctionSecret invokes deleteFunctionSecret operation.
+	//
+	// Removes the secret. The binding stays live in the running
+	// handler until the next deploy refreshes the binding set
+	// (`PUT /functions/{id}` with the existing code is sufficient).
+	// Returns 404 if the key did not exist. Managed system keys
+	// cannot be deleted.
+	//
+	// DELETE /functions/{id}/secrets/{key}
+	DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (DeleteFunctionSecretRes, error)
 	// DiscardEmailContent invokes discardEmailContent operation.
 	//
 	// Permanently deletes the email's raw bytes, parsed body (text + HTML),
@@ -157,6 +217,14 @@ type Invoker interface {
 	//
 	// GET /emails/{id}
 	GetEmail(ctx context.Context, params GetEmailParams) (GetEmailRes, error)
+	// GetFunction invokes getFunction operation.
+	//
+	// Returns the full record for a function, including its current
+	// source code and the deploy status / error from the most recent
+	// deploy attempt.
+	//
+	// GET /functions/{id}
+	GetFunction(ctx context.Context, params GetFunctionParams) (GetFunctionRes, error)
 	// GetSendPermissions invokes getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -271,6 +339,28 @@ type Invoker interface {
 	//
 	// GET /filters
 	ListFilters(ctx context.Context) (ListFiltersRes, error)
+	// ListFunctionSecrets invokes listFunctionSecrets operation.
+	//
+	// Returns metadata for every secret bound to the function, with
+	// managed entries (provisioned by Primitive) listed first and
+	// user-set entries listed alphabetically after. **Values are
+	// never returned.** Secret writes are write-only.
+	// Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
+	// `PRIMITIVE_API_KEY`) carry a `description` instead of
+	// `created_at` / `updated_at`. They cannot be created, updated,
+	// or deleted via this API.
+	//
+	// GET /functions/{id}/secrets
+	ListFunctionSecrets(ctx context.Context, params ListFunctionSecretsParams) (ListFunctionSecretsRes, error)
+	// ListFunctions invokes listFunctions operation.
+	//
+	// Returns every active (non-deleted) function in the org, newest
+	// first. Each entry carries the deploy status and the gateway URL
+	// that the platform's webhook delivery loop posts to. To inspect
+	// the source code or deploy errors, use `GET /functions/{id}`.
+	//
+	// GET /functions
+	ListFunctions(ctx context.Context) (ListFunctionsRes, error)
 	// ListSentEmails invokes listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -350,6 +440,16 @@ type Invoker interface {
 	//
 	// POST /send-mail
 	SendEmail(ctx context.Context, request *SendMailInput, params SendEmailParams) (SendEmailRes, error)
+	// SetFunctionSecret invokes setFunctionSecret operation.
+	//
+	// Path-keyed companion to `POST /functions/{id}/secrets`.
+	// Idempotent: returns 201 the first time the key is set, 200 on
+	// subsequent updates. Same validation rules and same write-only
+	// guarantees as the POST verb; the new value lands in the running
+	// handler on the next deploy.
+	//
+	// PUT /functions/{id}/secrets/{key}
+	SetFunctionSecret(ctx context.Context, request *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
 	// StartCliLogin invokes startCliLogin operation.
 	//
 	// Starts a browser-assisted CLI login session. The response includes a
@@ -368,6 +468,22 @@ type Invoker interface {
 	//
 	// POST /endpoints/{id}/test
 	TestEndpoint(ctx context.Context, params TestEndpointParams) (TestEndpointRes, error)
+	// TestFunction invokes testFunction operation.
+	//
+	// Sends a real test email from a Primitive-controlled sender to a
+	// synthetic local-part on one of the org's verified inbound
+	// domains. The function fires through the normal MX delivery
+	// path, so reply / send-mail calls from inside the handler
+	// against the inbound's `email.id` work the same as in
+	// production. Returns immediately after the send is queued; the
+	// invocation appears on the function's invocations list within a
+	// few seconds.
+	// Requires that the function is currently `deployed`. Returns 422
+	// if the function is in `pending` or `failed` state, or if the
+	// org has no verified inbound domain to receive the test mail.
+	//
+	// POST /functions/{id}/test
+	TestFunction(ctx context.Context, params TestFunctionParams) (TestFunctionRes, error)
 	// UpdateAccount invokes updateAccount operation.
 	//
 	// Update account settings.
@@ -395,6 +511,21 @@ type Invoker interface {
 	//
 	// PATCH /filters/{id}
 	UpdateFilter(ctx context.Context, request *UpdateFilterInput, params UpdateFilterParams) (UpdateFilterRes, error)
+	// UpdateFunction invokes updateFunction operation.
+	//
+	// Replaces the function's source code with the body's `code` and
+	// triggers a redeploy. Same size limits as `POST /functions`.
+	// Use this verb to push secret writes into the running handler:
+	// passing the same `code` re-runs the deploy and refreshes the
+	// binding set with the latest values from the secrets table.
+	// On a 502 deploy failure, the previously-deployed code stays
+	// live; the runtime never serves a half-built bundle. The
+	// `deploy_error` field on the returned record carries the error
+	// that came back from the runtime so you can surface it to users
+	// without polling.
+	//
+	// PUT /functions/{id}
+	UpdateFunction(ctx context.Context, request *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
 	// VerifyDomain invokes verifyDomain operation.
 	//
 	// Checks DNS records (MX and TXT) to verify domain ownership.
@@ -903,6 +1034,271 @@ func (c *Client) sendCreateFilter(ctx context.Context, request *CreateFilterInpu
 	return result, nil
 }
 
+// CreateFunction invokes createFunction operation.
+//
+// Creates and deploys a new function. The handler must be a single
+// ESM module that exports a default async function receiving the
+// `email.received` event (see the Webhook payload section for the
+// full schema). Code is bundled before being uploaded; ship a
+// single self-contained file rather than relying on external
+// imports.
+// **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
+// (optional) is capped at 5 MiB UTF-8 and is stored only on the
+// edge runtime side; it is not persisted in Primitive's database.
+// **Auto-wiring.** On successful deploy, Primitive automatically
+// creates a webhook endpoint that delivers inbound mail to the
+// function. There is nothing to configure on the Endpoints API
+// for this to work; the gateway URL returned here is for
+// reference only and is not directly callable from outside.
+// **Secrets.** New functions ship with the managed secrets
+// (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
+// bound. Add user-set secrets via
+// `POST /functions/{id}/secrets`; secret writes only land in the
+// running handler on the next redeploy.
+//
+// POST /functions
+func (c *Client) CreateFunction(ctx context.Context, request *CreateFunctionInput) (CreateFunctionRes, error) {
+	res, err := c.sendCreateFunction(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateFunction(ctx context.Context, request *CreateFunctionInput) (res CreateFunctionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createFunction"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/functions"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateFunctionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/functions"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateFunctionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateFunctionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateFunctionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateFunctionSecret invokes createFunctionSecret operation.
+//
+// Idempotent insert-or-update keyed on `(function_id, key)`.
+// Returns 201 the first time the key is set, 200 on subsequent
+// updates. Values are encrypted at rest and only become visible
+// to the running handler on the next deploy (`PUT /functions/{id}`
+// with the existing code is sufficient to refresh bindings).
+// Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+// digits, underscores; first character is a letter or
+// underscore). Values are at most 4096 UTF-8 bytes. System-
+// managed keys are reserved and rejected.
+//
+// POST /functions/{id}/secrets
+func (c *Client) CreateFunctionSecret(ctx context.Context, request *CreateFunctionSecretInput, params CreateFunctionSecretParams) (CreateFunctionSecretRes, error) {
+	res, err := c.sendCreateFunctionSecret(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendCreateFunctionSecret(ctx context.Context, request *CreateFunctionSecretInput, params CreateFunctionSecretParams) (res CreateFunctionSecretRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createFunctionSecret"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/functions/{id}/secrets"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateFunctionSecretOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/secrets"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateFunctionSecretRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateFunctionSecretOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateFunctionSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DeleteDomain invokes deleteDomain operation.
 //
 // Deletes a verified or unverified domain claim.
@@ -1397,6 +1793,285 @@ func (c *Client) sendDeleteFilter(ctx context.Context, params DeleteFilterParams
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteFilterResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteFunction invokes deleteFunction operation.
+//
+// Soft-deletes the function row, removes the script from the edge
+// runtime, and deactivates the auto-wired webhook endpoint so no
+// further inbound mail is delivered. Past deploy history,
+// invocations, and logs are retained.
+// Returns 502 if the runtime delete fails partway; the function
+// row stays in place and the call is safe to retry until it
+// succeeds.
+//
+// DELETE /functions/{id}
+func (c *Client) DeleteFunction(ctx context.Context, params DeleteFunctionParams) (DeleteFunctionRes, error) {
+	res, err := c.sendDeleteFunction(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteFunction(ctx context.Context, params DeleteFunctionParams) (res DeleteFunctionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteFunction"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/functions/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteFunctionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteFunctionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteFunctionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteFunctionSecret invokes deleteFunctionSecret operation.
+//
+// Removes the secret. The binding stays live in the running
+// handler until the next deploy refreshes the binding set
+// (`PUT /functions/{id}` with the existing code is sufficient).
+// Returns 404 if the key did not exist. Managed system keys
+// cannot be deleted.
+//
+// DELETE /functions/{id}/secrets/{key}
+func (c *Client) DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (DeleteFunctionSecretRes, error) {
+	res, err := c.sendDeleteFunctionSecret(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (res DeleteFunctionSecretRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteFunctionSecret"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/functions/{id}/secrets/{key}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteFunctionSecretOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/secrets/"
+	{
+		// Encode "key" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "key",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Key))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteFunctionSecretOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteFunctionSecretResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -2106,6 +2781,133 @@ func (c *Client) sendGetEmail(ctx context.Context, params GetEmailParams) (res G
 
 	stage = "DecodeResponse"
 	result, err := decodeGetEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetFunction invokes getFunction operation.
+//
+// Returns the full record for a function, including its current
+// source code and the deploy status / error from the most recent
+// deploy attempt.
+//
+// GET /functions/{id}
+func (c *Client) GetFunction(ctx context.Context, params GetFunctionParams) (GetFunctionRes, error) {
+	res, err := c.sendGetFunction(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetFunction(ctx context.Context, params GetFunctionParams) (res GetFunctionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getFunction"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/functions/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetFunctionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetFunctionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetFunctionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -3383,6 +4185,249 @@ func (c *Client) sendListFilters(ctx context.Context) (res ListFiltersRes, err e
 	return result, nil
 }
 
+// ListFunctionSecrets invokes listFunctionSecrets operation.
+//
+// Returns metadata for every secret bound to the function, with
+// managed entries (provisioned by Primitive) listed first and
+// user-set entries listed alphabetically after. **Values are
+// never returned.** Secret writes are write-only.
+// Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
+// `PRIMITIVE_API_KEY`) carry a `description` instead of
+// `created_at` / `updated_at`. They cannot be created, updated,
+// or deleted via this API.
+//
+// GET /functions/{id}/secrets
+func (c *Client) ListFunctionSecrets(ctx context.Context, params ListFunctionSecretsParams) (ListFunctionSecretsRes, error) {
+	res, err := c.sendListFunctionSecrets(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListFunctionSecrets(ctx context.Context, params ListFunctionSecretsParams) (res ListFunctionSecretsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listFunctionSecrets"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/functions/{id}/secrets"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListFunctionSecretsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/secrets"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListFunctionSecretsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListFunctionSecretsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListFunctions invokes listFunctions operation.
+//
+// Returns every active (non-deleted) function in the org, newest
+// first. Each entry carries the deploy status and the gateway URL
+// that the platform's webhook delivery loop posts to. To inspect
+// the source code or deploy errors, use `GET /functions/{id}`.
+//
+// GET /functions
+func (c *Client) ListFunctions(ctx context.Context) (ListFunctionsRes, error) {
+	res, err := c.sendListFunctions(ctx)
+	return res, err
+}
+
+func (c *Client) sendListFunctions(ctx context.Context) (res ListFunctionsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listFunctions"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/functions"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListFunctionsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/functions"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListFunctionsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListFunctionsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListSentEmails invokes listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -4342,6 +5387,157 @@ func (c *Client) sendSendEmail(ctx context.Context, request *SendMailInput, para
 	return result, nil
 }
 
+// SetFunctionSecret invokes setFunctionSecret operation.
+//
+// Path-keyed companion to `POST /functions/{id}/secrets`.
+// Idempotent: returns 201 the first time the key is set, 200 on
+// subsequent updates. Same validation rules and same write-only
+// guarantees as the POST verb; the new value lands in the running
+// handler on the next deploy.
+//
+// PUT /functions/{id}/secrets/{key}
+func (c *Client) SetFunctionSecret(ctx context.Context, request *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error) {
+	res, err := c.sendSetFunctionSecret(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendSetFunctionSecret(ctx context.Context, request *SetFunctionSecretInput, params SetFunctionSecretParams) (res SetFunctionSecretRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("setFunctionSecret"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/functions/{id}/secrets/{key}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, SetFunctionSecretOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/secrets/"
+	{
+		// Encode "key" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "key",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Key))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeSetFunctionSecretRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, SetFunctionSecretOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSetFunctionSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // StartCliLogin invokes startCliLogin operation.
 //
 // Starts a browser-assisted CLI login session. The response includes a
@@ -4544,6 +5740,142 @@ func (c *Client) sendTestEndpoint(ctx context.Context, params TestEndpointParams
 
 	stage = "DecodeResponse"
 	result, err := decodeTestEndpointResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// TestFunction invokes testFunction operation.
+//
+// Sends a real test email from a Primitive-controlled sender to a
+// synthetic local-part on one of the org's verified inbound
+// domains. The function fires through the normal MX delivery
+// path, so reply / send-mail calls from inside the handler
+// against the inbound's `email.id` work the same as in
+// production. Returns immediately after the send is queued; the
+// invocation appears on the function's invocations list within a
+// few seconds.
+// Requires that the function is currently `deployed`. Returns 422
+// if the function is in `pending` or `failed` state, or if the
+// org has no verified inbound domain to receive the test mail.
+//
+// POST /functions/{id}/test
+func (c *Client) TestFunction(ctx context.Context, params TestFunctionParams) (TestFunctionRes, error) {
+	res, err := c.sendTestFunction(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendTestFunction(ctx context.Context, params TestFunctionParams) (res TestFunctionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("testFunction"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/functions/{id}/test"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, TestFunctionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/test"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, TestFunctionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeTestFunctionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -5041,6 +6373,143 @@ func (c *Client) sendUpdateFilter(ctx context.Context, request *UpdateFilterInpu
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateFilterResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateFunction invokes updateFunction operation.
+//
+// Replaces the function's source code with the body's `code` and
+// triggers a redeploy. Same size limits as `POST /functions`.
+// Use this verb to push secret writes into the running handler:
+// passing the same `code` re-runs the deploy and refreshes the
+// binding set with the latest values from the secrets table.
+// On a 502 deploy failure, the previously-deployed code stays
+// live; the runtime never serves a half-built bundle. The
+// `deploy_error` field on the returned record carries the error
+// that came back from the runtime so you can surface it to users
+// without polling.
+//
+// PUT /functions/{id}
+func (c *Client) UpdateFunction(ctx context.Context, request *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error) {
+	res, err := c.sendUpdateFunction(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateFunction(ctx context.Context, request *UpdateFunctionInput, params UpdateFunctionParams) (res UpdateFunctionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateFunction"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/functions/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateFunctionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateFunctionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateFunctionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateFunctionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

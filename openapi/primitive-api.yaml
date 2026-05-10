@@ -143,6 +143,13 @@ tags:
     description: Manage whitelist and blocklist filter rules
   - name: Webhook Deliveries
     description: View and replay webhook delivery attempts
+  - name: Functions
+    description: |
+      Deploy JavaScript handlers that run on inbound mail. Each function
+      exports a default async handler receiving the `email.received`
+      event. Code runs on Primitive's edge runtime; there is no
+      infrastructure to manage. Secrets land in `env` as encrypted
+      bindings and are refreshed on every redeploy.
 
 paths:
   # ---------------------------------------------------------------------------
@@ -1610,6 +1617,412 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/SentEmailDetail'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ---------------------------------------------------------------------------
+  # Functions
+  # ---------------------------------------------------------------------------
+  /functions:
+    get:
+      operationId: listFunctions
+      summary: List functions
+      description: |
+        Returns every active (non-deleted) function in the org, newest
+        first. Each entry carries the deploy status and the gateway URL
+        that the platform's webhook delivery loop posts to. To inspect
+        the source code or deploy errors, use `GET /functions/{id}`.
+      tags: [Functions]
+      responses:
+        '200':
+          description: List of functions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FunctionListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createFunction
+      summary: Deploy a function
+      description: |
+        Creates and deploys a new function. The handler must be a single
+        ESM module that exports a default async function receiving the
+        `email.received` event (see the Webhook payload section for the
+        full schema). Code is bundled before being uploaded; ship a
+        single self-contained file rather than relying on external
+        imports.
+
+        **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
+        (optional) is capped at 5 MiB UTF-8 and is stored only on the
+        edge runtime side; it is not persisted in Primitive's database.
+
+        **Auto-wiring.** On successful deploy, Primitive automatically
+        creates a webhook endpoint that delivers inbound mail to the
+        function. There is nothing to configure on the Endpoints API
+        for this to work; the gateway URL returned here is for
+        reference only and is not directly callable from outside.
+
+        **Secrets.** New functions ship with the managed secrets
+        (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
+        bound. Add user-set secrets via
+        `POST /functions/{id}/secrets`; secret writes only land in the
+        running handler on the next redeploy.
+      tags: [Functions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFunctionInput'
+      responses:
+        '201':
+          description: Function created and deployed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreateFunctionResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: A function with this name already exists in the org
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /functions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    get:
+      operationId: getFunction
+      summary: Get a function
+      description: |
+        Returns the full record for a function, including its current
+        source code and the deploy status / error from the most recent
+        deploy attempt.
+      tags: [Functions]
+      responses:
+        '200':
+          description: Function record
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FunctionDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateFunction
+      summary: Update and redeploy a function
+      description: |
+        Replaces the function's source code with the body's `code` and
+        triggers a redeploy. Same size limits as `POST /functions`.
+        Use this verb to push secret writes into the running handler:
+        passing the same `code` re-runs the deploy and refreshes the
+        binding set with the latest values from the secrets table.
+
+        On a 502 deploy failure, the previously-deployed code stays
+        live; the runtime never serves a half-built bundle. The
+        `deploy_error` field on the returned record carries the error
+        that came back from the runtime so you can surface it to users
+        without polling.
+      tags: [Functions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFunctionInput'
+      responses:
+        '200':
+          description: Updated function
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FunctionDetail'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+    delete:
+      operationId: deleteFunction
+      summary: Delete a function
+      description: |
+        Soft-deletes the function row, removes the script from the edge
+        runtime, and deactivates the auto-wired webhook endpoint so no
+        further inbound mail is delivered. Past deploy history,
+        invocations, and logs are retained.
+
+        Returns 502 if the runtime delete fails partway; the function
+        row stays in place and the call is safe to retry until it
+        succeeds.
+      tags: [Functions]
+      responses:
+        '200':
+          $ref: '#/components/responses/Deleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /functions/{id}/test:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    post:
+      operationId: testFunction
+      summary: Send a test invocation
+      description: |
+        Sends a real test email from a Primitive-controlled sender to a
+        synthetic local-part on one of the org's verified inbound
+        domains. The function fires through the normal MX delivery
+        path, so reply / send-mail calls from inside the handler
+        against the inbound's `email.id` work the same as in
+        production. Returns immediately after the send is queued; the
+        invocation appears on the function's invocations list within a
+        few seconds.
+
+        Requires that the function is currently `deployed`. Returns 422
+        if the function is in `pending` or `failed` state, or if the
+        org has no verified inbound domain to receive the test mail.
+      tags: [Functions]
+      responses:
+        '200':
+          description: Test send queued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TestInvocationResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Function not in a state that can be invoked, or no inbound domain configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          description: Sending agent misconfigured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /functions/{id}/secrets:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    get:
+      operationId: listFunctionSecrets
+      summary: List a function's secrets
+      description: |
+        Returns metadata for every secret bound to the function, with
+        managed entries (provisioned by Primitive) listed first and
+        user-set entries listed alphabetically after. **Values are
+        never returned.** Secret writes are write-only.
+
+        Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
+        `PRIMITIVE_API_KEY`) carry a `description` instead of
+        `created_at` / `updated_at`. They cannot be created, updated,
+        or deleted via this API.
+      tags: [Functions]
+      responses:
+        '200':
+          description: List of secrets (metadata only, no values)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/FunctionSecretListItem'
+                        required: [items]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      operationId: createFunctionSecret
+      summary: Create or update a secret
+      description: |
+        Idempotent insert-or-update keyed on `(function_id, key)`.
+        Returns 201 the first time the key is set, 200 on subsequent
+        updates. Values are encrypted at rest and only become visible
+        to the running handler on the next deploy (`PUT /functions/{id}`
+        with the existing code is sufficient to refresh bindings).
+
+        Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+        digits, underscores; first character is a letter or
+        underscore). Values are at most 4096 UTF-8 bytes. System-
+        managed keys are reserved and rejected.
+      tags: [Functions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFunctionSecretInput'
+      responses:
+        '200':
+          description: Secret updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FunctionSecretWriteResult'
+        '201':
+          description: Secret created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FunctionSecretWriteResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /functions/{id}/secrets/{key}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+      - name: key
+        in: path
+        required: true
+        description: Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.
+        schema:
+          type: string
+          pattern: '^[A-Z_][A-Z0-9_]*$'
+
+    put:
+      operationId: setFunctionSecret
+      summary: Set a secret by key
+      description: |
+        Path-keyed companion to `POST /functions/{id}/secrets`.
+        Idempotent: returns 201 the first time the key is set, 200 on
+        subsequent updates. Same validation rules and same write-only
+        guarantees as the POST verb; the new value lands in the running
+        handler on the next deploy.
+      tags: [Functions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetFunctionSecretInput'
+      responses:
+        '200':
+          description: Secret updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FunctionSecretWriteResult'
+        '201':
+          description: Secret created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FunctionSecretWriteResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteFunctionSecret
+      summary: Delete a secret
+      description: |
+        Removes the secret. The binding stays live in the running
+        handler until the next deploy refreshes the binding set
+        (`PUT /functions/{id}` with the existing code is sufficient).
+        Returns 404 if the key did not exist. Managed system keys
+        cannot be deleted.
+      tags: [Functions]
+      responses:
+        '204':
+          description: Secret deleted
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -3347,3 +3760,280 @@ components:
             this call ran (no work was done). `false` if this call was
             the one that performed the discard.
       required: [discarded, already_discarded]
+
+    # -------------------------------------------------------------------------
+    # Functions
+    # -------------------------------------------------------------------------
+    FunctionDeployStatus:
+      type: string
+      enum: [pending, deployed, failed]
+      description: |
+        Lifecycle state of the latest deploy attempt:
+          * `pending` — deploy in flight; the runtime has not yet
+            confirmed the new bundle is live.
+          * `deployed` — the running edge handler is the latest code.
+          * `failed` — the most recent deploy attempt failed; the
+            previously-live code (if any) is still running. The
+            `deploy_error` field carries the error message.
+
+    FunctionListItem:
+      type: object
+      description: One row from the function listing.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Function id, also the script name in the edge runtime.
+        name:
+          type: string
+          description: Slug-style name set on creation. Stable; cannot be changed.
+        deploy_status:
+          $ref: '#/components/schemas/FunctionDeployStatus'
+        deployed_at:
+          type: [string, 'null']
+          format: date-time
+          description: Timestamp of the most recent successful deploy. Null until the first deploy succeeds.
+        gateway_url:
+          type: string
+          format: uri
+          description: |
+            URL the platform's webhook delivery loop posts to in order
+            to invoke the function. Reference only; not directly
+            callable from outside.
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - deploy_status
+        - gateway_url
+        - created_at
+        - updated_at
+
+    FunctionDetail:
+      type: object
+      description: Full function record returned by GET / PUT.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+          description: |
+            The bundled handler source. UTF-8 string up to 1 MiB. The
+            same value most recently passed as `code` to POST or PUT.
+        deploy_status:
+          $ref: '#/components/schemas/FunctionDeployStatus'
+        deploy_error:
+          type: [string, 'null']
+          description: |
+            Error message from the most recent failed deploy, or null
+            after a successful deploy. Surface this to users to explain
+            a `failed` status without polling.
+        deployed_at:
+          type: [string, 'null']
+          format: date-time
+        gateway_url:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - code
+        - deploy_status
+        - gateway_url
+        - updated_at
+
+    CreateFunctionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          pattern: '^[a-z0-9_-]{1,64}$'
+          description: |
+            Slug-style name. Lowercase letters, digits, hyphens, and
+            underscores. 1 to 64 characters. Must be unique within the
+            org; a 409 is returned on collision.
+        code:
+          type: string
+          minLength: 1
+          maxLength: 1048576
+          description: |
+            Bundled handler as a single ESM module. Up to 1 MiB UTF-8.
+            Must export a default `{ async fetch(req, env, ctx) { ... } }`
+            object.
+        sourceMap:
+          type: string
+          minLength: 1
+          maxLength: 5242880
+          description: |
+            Optional source map for the bundle. Up to 5 MiB UTF-8.
+            Stored only on the runtime side (not in Primitive's
+            database) and used to symbolicate stack traces in the
+            function's logs.
+      required: [name, code]
+
+    CreateFunctionResult:
+      type: object
+      description: Returned by POST /functions on a successful deploy.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        deploy_status:
+          $ref: '#/components/schemas/FunctionDeployStatus'
+        gateway_url:
+          type: string
+          format: uri
+      required: [id, name, deploy_status, gateway_url]
+
+    UpdateFunctionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 1048576
+          description: New bundled handler. Same rules as CreateFunctionInput.code.
+        sourceMap:
+          type: string
+          minLength: 1
+          maxLength: 5242880
+      required: [code]
+
+    TestInvocationResult:
+      type: object
+      description: |
+        Metadata returned by POST /functions/{id}/test. The send is
+        queued; the actual invocation lands on the function's
+        invocations list a few seconds later as the inbound mail
+        traverses the MX path.
+      properties:
+        inbound_domain:
+          type: string
+          description: Verified inbound domain the test email was sent to.
+        to:
+          type: string
+          description: Synthetic local-part plus inbound_domain. Visible in the org's inbox.
+        from:
+          type: string
+          description: Primitive-controlled outbound sender used for the test.
+        send_id:
+          type: string
+          description: |
+            Outbound message id from the underlying send. NOT the
+            inbound email's id; the inbound id is created when the
+            email arrives via MX and lands on the function's
+            invocations list.
+        subject:
+          type: string
+          description: Subject placed on the test email so it can be located in the inbox.
+        poll_since:
+          type: string
+          format: date-time
+          description: |
+            ISO timestamp suitable as a `since` lower bound when
+            polling /emails for the inbound's arrival. Captured
+            slightly before the send to absorb light clock skew.
+        watch_url:
+          type: string
+          format: uri
+          description: Function detail page where invocations show up live.
+      required: [inbound_domain, to, from, send_id, subject, poll_since, watch_url]
+
+    FunctionSecretListItem:
+      type: object
+      description: |
+        One row from GET /functions/{id}/secrets. Discriminate on the
+        `managed` field:
+          * `managed = true`  — system secret provisioned by Primitive.
+            `description` is set; `created_at` / `updated_at` are
+            null because the row is virtual (resolved at deploy time
+            from the managed registry, not stored in the secrets
+            table).
+          * `managed = false` — secret the user set via the API.
+            `created_at` / `updated_at` are set; `description` is
+            null.
+      properties:
+        key:
+          type: string
+        managed:
+          type: boolean
+          description: True for managed system secrets, false for user-set entries.
+        description:
+          type: [string, 'null']
+          description: Set on managed entries only; null on user-set entries.
+        created_at:
+          type: [string, 'null']
+          format: date-time
+          description: Set on user-set entries only; null on managed entries.
+        updated_at:
+          type: [string, 'null']
+          format: date-time
+          description: Set on user-set entries only; null on managed entries.
+      required: [key, managed]
+
+    CreateFunctionSecretInput:
+      type: object
+      additionalProperties: false
+      description: Body for POST /functions/{id}/secrets.
+      properties:
+        key:
+          type: string
+          pattern: '^[A-Z_][A-Z0-9_]*$'
+          description: |
+            Uppercase letters, digits, and underscores. Must start with
+            a letter or underscore. System-managed keys (e.g.
+            PRIMITIVE_WEBHOOK_SECRET) are reserved.
+        value:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: |
+            Secret value, up to 4096 UTF-8 bytes. Encrypted at rest.
+            Never returned by any read endpoint.
+      required: [key, value]
+
+    SetFunctionSecretInput:
+      type: object
+      additionalProperties: false
+      description: Body for PUT /functions/{id}/secrets/{key}. Key comes from the path.
+      properties:
+        value:
+          type: string
+          minLength: 1
+          maxLength: 4096
+      required: [value]
+
+    FunctionSecretWriteResult:
+      type: object
+      description: Returned by POST and PUT secret routes.
+      properties:
+        key:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+          description: True if this call inserted a new row, false if it updated an existing one.
+      required: [key, created_at, updated_at, created]

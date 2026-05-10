@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SendEmailData, SendEmailErrors, SendEmailResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -659,4 +659,219 @@ export const getSentEmail = <ThrowOnError extends boolean = false>(options: Opti
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/sent-emails/{id}',
     ...options
+});
+
+/**
+ * List functions
+ *
+ * Returns every active (non-deleted) function in the org, newest
+ * first. Each entry carries the deploy status and the gateway URL
+ * that the platform's webhook delivery loop posts to. To inspect
+ * the source code or deploy errors, use `GET /functions/{id}`.
+ *
+ */
+export const listFunctions = <ThrowOnError extends boolean = false>(options?: Options<ListFunctionsData, ThrowOnError>) => (options?.client ?? client).get<ListFunctionsResponses, ListFunctionsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions',
+    ...options
+});
+
+/**
+ * Deploy a function
+ *
+ * Creates and deploys a new function. The handler must be a single
+ * ESM module that exports a default async function receiving the
+ * `email.received` event (see the Webhook payload section for the
+ * full schema). Code is bundled before being uploaded; ship a
+ * single self-contained file rather than relying on external
+ * imports.
+ *
+ * **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
+ * (optional) is capped at 5 MiB UTF-8 and is stored only on the
+ * edge runtime side; it is not persisted in Primitive's database.
+ *
+ * **Auto-wiring.** On successful deploy, Primitive automatically
+ * creates a webhook endpoint that delivers inbound mail to the
+ * function. There is nothing to configure on the Endpoints API
+ * for this to work; the gateway URL returned here is for
+ * reference only and is not directly callable from outside.
+ *
+ * **Secrets.** New functions ship with the managed secrets
+ * (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
+ * bound. Add user-set secrets via
+ * `POST /functions/{id}/secrets`; secret writes only land in the
+ * running handler on the next redeploy.
+ *
+ */
+export const createFunction = <ThrowOnError extends boolean = false>(options: Options<CreateFunctionData, ThrowOnError>) => (options.client ?? client).post<CreateFunctionResponses, CreateFunctionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a function
+ *
+ * Soft-deletes the function row, removes the script from the edge
+ * runtime, and deactivates the auto-wired webhook endpoint so no
+ * further inbound mail is delivered. Past deploy history,
+ * invocations, and logs are retained.
+ *
+ * Returns 502 if the runtime delete fails partway; the function
+ * row stays in place and the call is safe to retry until it
+ * succeeds.
+ *
+ */
+export const deleteFunction = <ThrowOnError extends boolean = false>(options: Options<DeleteFunctionData, ThrowOnError>) => (options.client ?? client).delete<DeleteFunctionResponses, DeleteFunctionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions/{id}',
+    ...options
+});
+
+/**
+ * Get a function
+ *
+ * Returns the full record for a function, including its current
+ * source code and the deploy status / error from the most recent
+ * deploy attempt.
+ *
+ */
+export const getFunction = <ThrowOnError extends boolean = false>(options: Options<GetFunctionData, ThrowOnError>) => (options.client ?? client).get<GetFunctionResponses, GetFunctionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions/{id}',
+    ...options
+});
+
+/**
+ * Update and redeploy a function
+ *
+ * Replaces the function's source code with the body's `code` and
+ * triggers a redeploy. Same size limits as `POST /functions`.
+ * Use this verb to push secret writes into the running handler:
+ * passing the same `code` re-runs the deploy and refreshes the
+ * binding set with the latest values from the secrets table.
+ *
+ * On a 502 deploy failure, the previously-deployed code stays
+ * live; the runtime never serves a half-built bundle. The
+ * `deploy_error` field on the returned record carries the error
+ * that came back from the runtime so you can surface it to users
+ * without polling.
+ *
+ */
+export const updateFunction = <ThrowOnError extends boolean = false>(options: Options<UpdateFunctionData, ThrowOnError>) => (options.client ?? client).put<UpdateFunctionResponses, UpdateFunctionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Send a test invocation
+ *
+ * Sends a real test email from a Primitive-controlled sender to a
+ * synthetic local-part on one of the org's verified inbound
+ * domains. The function fires through the normal MX delivery
+ * path, so reply / send-mail calls from inside the handler
+ * against the inbound's `email.id` work the same as in
+ * production. Returns immediately after the send is queued; the
+ * invocation appears on the function's invocations list within a
+ * few seconds.
+ *
+ * Requires that the function is currently `deployed`. Returns 422
+ * if the function is in `pending` or `failed` state, or if the
+ * org has no verified inbound domain to receive the test mail.
+ *
+ */
+export const testFunction = <ThrowOnError extends boolean = false>(options: Options<TestFunctionData, ThrowOnError>) => (options.client ?? client).post<TestFunctionResponses, TestFunctionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions/{id}/test',
+    ...options
+});
+
+/**
+ * List a function's secrets
+ *
+ * Returns metadata for every secret bound to the function, with
+ * managed entries (provisioned by Primitive) listed first and
+ * user-set entries listed alphabetically after. **Values are
+ * never returned.** Secret writes are write-only.
+ *
+ * Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
+ * `PRIMITIVE_API_KEY`) carry a `description` instead of
+ * `created_at` / `updated_at`. They cannot be created, updated,
+ * or deleted via this API.
+ *
+ */
+export const listFunctionSecrets = <ThrowOnError extends boolean = false>(options: Options<ListFunctionSecretsData, ThrowOnError>) => (options.client ?? client).get<ListFunctionSecretsResponses, ListFunctionSecretsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions/{id}/secrets',
+    ...options
+});
+
+/**
+ * Create or update a secret
+ *
+ * Idempotent insert-or-update keyed on `(function_id, key)`.
+ * Returns 201 the first time the key is set, 200 on subsequent
+ * updates. Values are encrypted at rest and only become visible
+ * to the running handler on the next deploy (`PUT /functions/{id}`
+ * with the existing code is sufficient to refresh bindings).
+ *
+ * Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+ * digits, underscores; first character is a letter or
+ * underscore). Values are at most 4096 UTF-8 bytes. System-
+ * managed keys are reserved and rejected.
+ *
+ */
+export const createFunctionSecret = <ThrowOnError extends boolean = false>(options: Options<CreateFunctionSecretData, ThrowOnError>) => (options.client ?? client).post<CreateFunctionSecretResponses, CreateFunctionSecretErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions/{id}/secrets',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a secret
+ *
+ * Removes the secret. The binding stays live in the running
+ * handler until the next deploy refreshes the binding set
+ * (`PUT /functions/{id}` with the existing code is sufficient).
+ * Returns 404 if the key did not exist. Managed system keys
+ * cannot be deleted.
+ *
+ */
+export const deleteFunctionSecret = <ThrowOnError extends boolean = false>(options: Options<DeleteFunctionSecretData, ThrowOnError>) => (options.client ?? client).delete<DeleteFunctionSecretResponses, DeleteFunctionSecretErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions/{id}/secrets/{key}',
+    ...options
+});
+
+/**
+ * Set a secret by key
+ *
+ * Path-keyed companion to `POST /functions/{id}/secrets`.
+ * Idempotent: returns 201 the first time the key is set, 200 on
+ * subsequent updates. Same validation rules and same write-only
+ * guarantees as the POST verb; the new value lands in the running
+ * handler on the next deploy.
+ *
+ */
+export const setFunctionSecret = <ThrowOnError extends boolean = false>(options: Options<SetFunctionSecretData, ThrowOnError>) => (options.client ?? client).put<SetFunctionSecretResponses, SetFunctionSecretErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/functions/{id}/secrets/{key}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });

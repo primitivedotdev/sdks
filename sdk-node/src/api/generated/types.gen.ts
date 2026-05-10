@@ -1233,6 +1233,232 @@ export type DiscardContentResult = {
 };
 
 /**
+ * Lifecycle state of the latest deploy attempt:
+ * * `pending` — deploy in flight; the runtime has not yet
+ * confirmed the new bundle is live.
+ * * `deployed` — the running edge handler is the latest code.
+ * * `failed` — the most recent deploy attempt failed; the
+ * previously-live code (if any) is still running. The
+ * `deploy_error` field carries the error message.
+ *
+ */
+export type FunctionDeployStatus = 'pending' | 'deployed' | 'failed';
+
+/**
+ * One row from the function listing.
+ */
+export type FunctionListItem = {
+    /**
+     * Function id, also the script name in the edge runtime.
+     */
+    id: string;
+    /**
+     * Slug-style name set on creation. Stable; cannot be changed.
+     */
+    name: string;
+    deploy_status: FunctionDeployStatus;
+    /**
+     * Timestamp of the most recent successful deploy. Null until the first deploy succeeds.
+     */
+    deployed_at?: string | null;
+    /**
+     * URL the platform's webhook delivery loop posts to in order
+     * to invoke the function. Reference only; not directly
+     * callable from outside.
+     *
+     */
+    gateway_url: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Full function record returned by GET / PUT.
+ */
+export type FunctionDetail = {
+    id: string;
+    name: string;
+    /**
+     * The bundled handler source. UTF-8 string up to 1 MiB. The
+     * same value most recently passed as `code` to POST or PUT.
+     *
+     */
+    code: string;
+    deploy_status: FunctionDeployStatus;
+    /**
+     * Error message from the most recent failed deploy, or null
+     * after a successful deploy. Surface this to users to explain
+     * a `failed` status without polling.
+     *
+     */
+    deploy_error?: string | null;
+    deployed_at?: string | null;
+    gateway_url: string;
+    created_at?: string;
+    updated_at: string;
+};
+
+export type CreateFunctionInput = {
+    /**
+     * Slug-style name. Lowercase letters, digits, hyphens, and
+     * underscores. 1 to 64 characters. Must be unique within the
+     * org; a 409 is returned on collision.
+     *
+     */
+    name: string;
+    /**
+     * Bundled handler as a single ESM module. Up to 1 MiB UTF-8.
+     * Must export a default `{ async fetch(req, env, ctx) { ... } }`
+     * object.
+     *
+     */
+    code: string;
+    /**
+     * Optional source map for the bundle. Up to 5 MiB UTF-8.
+     * Stored only on the runtime side (not in Primitive's
+     * database) and used to symbolicate stack traces in the
+     * function's logs.
+     *
+     */
+    sourceMap?: string;
+};
+
+/**
+ * Returned by POST /functions on a successful deploy.
+ */
+export type CreateFunctionResult = {
+    id: string;
+    name: string;
+    deploy_status: FunctionDeployStatus;
+    gateway_url: string;
+};
+
+export type UpdateFunctionInput = {
+    /**
+     * New bundled handler. Same rules as CreateFunctionInput.code.
+     */
+    code: string;
+    sourceMap?: string;
+};
+
+/**
+ * Metadata returned by POST /functions/{id}/test. The send is
+ * queued; the actual invocation lands on the function's
+ * invocations list a few seconds later as the inbound mail
+ * traverses the MX path.
+ *
+ */
+export type TestInvocationResult = {
+    /**
+     * Verified inbound domain the test email was sent to.
+     */
+    inbound_domain: string;
+    /**
+     * Synthetic local-part plus inbound_domain. Visible in the org's inbox.
+     */
+    to: string;
+    /**
+     * Primitive-controlled outbound sender used for the test.
+     */
+    from: string;
+    /**
+     * Outbound message id from the underlying send. NOT the
+     * inbound email's id; the inbound id is created when the
+     * email arrives via MX and lands on the function's
+     * invocations list.
+     *
+     */
+    send_id: string;
+    /**
+     * Subject placed on the test email so it can be located in the inbox.
+     */
+    subject: string;
+    /**
+     * ISO timestamp suitable as a `since` lower bound when
+     * polling /emails for the inbound's arrival. Captured
+     * slightly before the send to absorb light clock skew.
+     *
+     */
+    poll_since: string;
+    /**
+     * Function detail page where invocations show up live.
+     */
+    watch_url: string;
+};
+
+/**
+ * One row from GET /functions/{id}/secrets. Discriminate on the
+ * `managed` field:
+ * * `managed = true`  — system secret provisioned by Primitive.
+ * `description` is set; `created_at` / `updated_at` are
+ * null because the row is virtual (resolved at deploy time
+ * from the managed registry, not stored in the secrets
+ * table).
+ * * `managed = false` — secret the user set via the API.
+ * `created_at` / `updated_at` are set; `description` is
+ * null.
+ *
+ */
+export type FunctionSecretListItem = {
+    key: string;
+    /**
+     * True for managed system secrets, false for user-set entries.
+     */
+    managed: boolean;
+    /**
+     * Set on managed entries only; null on user-set entries.
+     */
+    description?: string | null;
+    /**
+     * Set on user-set entries only; null on managed entries.
+     */
+    created_at?: string | null;
+    /**
+     * Set on user-set entries only; null on managed entries.
+     */
+    updated_at?: string | null;
+};
+
+/**
+ * Body for POST /functions/{id}/secrets.
+ */
+export type CreateFunctionSecretInput = {
+    /**
+     * Uppercase letters, digits, and underscores. Must start with
+     * a letter or underscore. System-managed keys (e.g.
+     * PRIMITIVE_WEBHOOK_SECRET) are reserved.
+     *
+     */
+    key: string;
+    /**
+     * Secret value, up to 4096 UTF-8 bytes. Encrypted at rest.
+     * Never returned by any read endpoint.
+     *
+     */
+    value: string;
+};
+
+/**
+ * Body for PUT /functions/{id}/secrets/{key}. Key comes from the path.
+ */
+export type SetFunctionSecretInput = {
+    value: string;
+};
+
+/**
+ * Returned by POST and PUT secret routes.
+ */
+export type FunctionSecretWriteResult = {
+    key: string;
+    created_at: string;
+    updated_at: string;
+    /**
+     * True if this call inserted a new row, false if it updated an existing one.
+     */
+    created: boolean;
+};
+
+/**
  * Resource UUID
  */
 export type ResourceId = string;
@@ -2741,3 +2967,419 @@ export type GetSentEmailResponses = {
 };
 
 export type GetSentEmailResponse = GetSentEmailResponses[keyof GetSentEmailResponses];
+
+export type ListFunctionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/functions';
+};
+
+export type ListFunctionsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type ListFunctionsError = ListFunctionsErrors[keyof ListFunctionsErrors];
+
+export type ListFunctionsResponses = {
+    /**
+     * List of functions
+     */
+    200: SuccessEnvelope & {
+        data?: Array<FunctionListItem>;
+    };
+};
+
+export type ListFunctionsResponse = ListFunctionsResponses[keyof ListFunctionsResponses];
+
+export type CreateFunctionData = {
+    body: CreateFunctionInput;
+    path?: never;
+    query?: never;
+    url: '/functions';
+};
+
+export type CreateFunctionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * A function with this name already exists in the org
+     */
+    409: ErrorResponse;
+    /**
+     * Primitive could not complete the downstream SMTP request
+     */
+    502: ErrorResponse;
+};
+
+export type CreateFunctionError = CreateFunctionErrors[keyof CreateFunctionErrors];
+
+export type CreateFunctionResponses = {
+    /**
+     * Function created and deployed
+     */
+    201: SuccessEnvelope & {
+        data?: CreateFunctionResult;
+    };
+};
+
+export type CreateFunctionResponse = CreateFunctionResponses[keyof CreateFunctionResponses];
+
+export type DeleteFunctionData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/functions/{id}';
+};
+
+export type DeleteFunctionErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Primitive could not complete the downstream SMTP request
+     */
+    502: ErrorResponse;
+};
+
+export type DeleteFunctionError = DeleteFunctionErrors[keyof DeleteFunctionErrors];
+
+export type DeleteFunctionResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteFunctionResponse = DeleteFunctionResponses[keyof DeleteFunctionResponses];
+
+export type GetFunctionData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/functions/{id}';
+};
+
+export type GetFunctionErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetFunctionError = GetFunctionErrors[keyof GetFunctionErrors];
+
+export type GetFunctionResponses = {
+    /**
+     * Function record
+     */
+    200: SuccessEnvelope & {
+        data?: FunctionDetail;
+    };
+};
+
+export type GetFunctionResponse = GetFunctionResponses[keyof GetFunctionResponses];
+
+export type UpdateFunctionData = {
+    body: UpdateFunctionInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/functions/{id}';
+};
+
+export type UpdateFunctionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Primitive could not complete the downstream SMTP request
+     */
+    502: ErrorResponse;
+};
+
+export type UpdateFunctionError = UpdateFunctionErrors[keyof UpdateFunctionErrors];
+
+export type UpdateFunctionResponses = {
+    /**
+     * Updated function
+     */
+    200: SuccessEnvelope & {
+        data?: FunctionDetail;
+    };
+};
+
+export type UpdateFunctionResponse = UpdateFunctionResponses[keyof UpdateFunctionResponses];
+
+export type TestFunctionData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/functions/{id}/test';
+};
+
+export type TestFunctionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Function not in a state that can be invoked, or no inbound domain configured
+     */
+    422: ErrorResponse;
+    /**
+     * Primitive could not complete the downstream SMTP request
+     */
+    502: ErrorResponse;
+    /**
+     * Sending agent misconfigured
+     */
+    503: ErrorResponse;
+};
+
+export type TestFunctionError = TestFunctionErrors[keyof TestFunctionErrors];
+
+export type TestFunctionResponses = {
+    /**
+     * Test send queued
+     */
+    200: SuccessEnvelope & {
+        data?: TestInvocationResult;
+    };
+};
+
+export type TestFunctionResponse = TestFunctionResponses[keyof TestFunctionResponses];
+
+export type ListFunctionSecretsData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/functions/{id}/secrets';
+};
+
+export type ListFunctionSecretsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type ListFunctionSecretsError = ListFunctionSecretsErrors[keyof ListFunctionSecretsErrors];
+
+export type ListFunctionSecretsResponses = {
+    /**
+     * List of secrets (metadata only, no values)
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            items: Array<FunctionSecretListItem>;
+        };
+    };
+};
+
+export type ListFunctionSecretsResponse = ListFunctionSecretsResponses[keyof ListFunctionSecretsResponses];
+
+export type CreateFunctionSecretData = {
+    body: CreateFunctionSecretInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/functions/{id}/secrets';
+};
+
+export type CreateFunctionSecretErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type CreateFunctionSecretError = CreateFunctionSecretErrors[keyof CreateFunctionSecretErrors];
+
+export type CreateFunctionSecretResponses = {
+    /**
+     * Secret updated
+     */
+    200: SuccessEnvelope & {
+        data?: FunctionSecretWriteResult;
+    };
+    /**
+     * Secret created
+     */
+    201: SuccessEnvelope & {
+        data?: FunctionSecretWriteResult;
+    };
+};
+
+export type CreateFunctionSecretResponse = CreateFunctionSecretResponses[keyof CreateFunctionSecretResponses];
+
+export type DeleteFunctionSecretData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+        /**
+         * Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.
+         */
+        key: string;
+    };
+    query?: never;
+    url: '/functions/{id}/secrets/{key}';
+};
+
+export type DeleteFunctionSecretErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteFunctionSecretError = DeleteFunctionSecretErrors[keyof DeleteFunctionSecretErrors];
+
+export type DeleteFunctionSecretResponses = {
+    /**
+     * Secret deleted
+     */
+    204: void;
+};
+
+export type DeleteFunctionSecretResponse = DeleteFunctionSecretResponses[keyof DeleteFunctionSecretResponses];
+
+export type SetFunctionSecretData = {
+    body: SetFunctionSecretInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+        /**
+         * Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.
+         */
+        key: string;
+    };
+    query?: never;
+    url: '/functions/{id}/secrets/{key}';
+};
+
+export type SetFunctionSecretErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type SetFunctionSecretError = SetFunctionSecretErrors[keyof SetFunctionSecretErrors];
+
+export type SetFunctionSecretResponses = {
+    /**
+     * Secret updated
+     */
+    200: SuccessEnvelope & {
+        data?: FunctionSecretWriteResult;
+    };
+    /**
+     * Secret created
+     */
+    201: SuccessEnvelope & {
+        data?: FunctionSecretWriteResult;
+    };
+};
+
+export type SetFunctionSecretResponse = SetFunctionSecretResponses[keyof SetFunctionSecretResponses];

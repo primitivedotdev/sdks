@@ -49,6 +49,44 @@ type Handler interface {
 	//
 	// POST /filters
 	CreateFilter(ctx context.Context, req *CreateFilterInput) (CreateFilterRes, error)
+	// CreateFunction implements createFunction operation.
+	//
+	// Creates and deploys a new function. The handler must be a single
+	// ESM module that exports a default async function receiving the
+	// `email.received` event (see the Webhook payload section for the
+	// full schema). Code is bundled before being uploaded; ship a
+	// single self-contained file rather than relying on external
+	// imports.
+	// **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
+	// (optional) is capped at 5 MiB UTF-8 and is stored only on the
+	// edge runtime side; it is not persisted in Primitive's database.
+	// **Auto-wiring.** On successful deploy, Primitive automatically
+	// creates a webhook endpoint that delivers inbound mail to the
+	// function. There is nothing to configure on the Endpoints API
+	// for this to work; the gateway URL returned here is for
+	// reference only and is not directly callable from outside.
+	// **Secrets.** New functions ship with the managed secrets
+	// (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
+	// bound. Add user-set secrets via
+	// `POST /functions/{id}/secrets`; secret writes only land in the
+	// running handler on the next redeploy.
+	//
+	// POST /functions
+	CreateFunction(ctx context.Context, req *CreateFunctionInput) (CreateFunctionRes, error)
+	// CreateFunctionSecret implements createFunctionSecret operation.
+	//
+	// Idempotent insert-or-update keyed on `(function_id, key)`.
+	// Returns 201 the first time the key is set, 200 on subsequent
+	// updates. Values are encrypted at rest and only become visible
+	// to the running handler on the next deploy (`PUT /functions/{id}`
+	// with the existing code is sufficient to refresh bindings).
+	// Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+	// digits, underscores; first character is a letter or
+	// underscore). Values are at most 4096 UTF-8 bytes. System-
+	// managed keys are reserved and rejected.
+	//
+	// POST /functions/{id}/secrets
+	CreateFunctionSecret(ctx context.Context, req *CreateFunctionSecretInput, params CreateFunctionSecretParams) (CreateFunctionSecretRes, error)
 	// DeleteDomain implements deleteDomain operation.
 	//
 	// Deletes a verified or unverified domain claim.
@@ -74,6 +112,28 @@ type Handler interface {
 	//
 	// DELETE /filters/{id}
 	DeleteFilter(ctx context.Context, params DeleteFilterParams) (DeleteFilterRes, error)
+	// DeleteFunction implements deleteFunction operation.
+	//
+	// Soft-deletes the function row, removes the script from the edge
+	// runtime, and deactivates the auto-wired webhook endpoint so no
+	// further inbound mail is delivered. Past deploy history,
+	// invocations, and logs are retained.
+	// Returns 502 if the runtime delete fails partway; the function
+	// row stays in place and the call is safe to retry until it
+	// succeeds.
+	//
+	// DELETE /functions/{id}
+	DeleteFunction(ctx context.Context, params DeleteFunctionParams) (DeleteFunctionRes, error)
+	// DeleteFunctionSecret implements deleteFunctionSecret operation.
+	//
+	// Removes the secret. The binding stays live in the running
+	// handler until the next deploy refreshes the binding set
+	// (`PUT /functions/{id}` with the existing code is sufficient).
+	// Returns 404 if the key did not exist. Managed system keys
+	// cannot be deleted.
+	//
+	// DELETE /functions/{id}/secrets/{key}
+	DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (DeleteFunctionSecretRes, error)
 	// DiscardEmailContent implements discardEmailContent operation.
 	//
 	// Permanently deletes the email's raw bytes, parsed body (text + HTML),
@@ -137,6 +197,14 @@ type Handler interface {
 	//
 	// GET /emails/{id}
 	GetEmail(ctx context.Context, params GetEmailParams) (GetEmailRes, error)
+	// GetFunction implements getFunction operation.
+	//
+	// Returns the full record for a function, including its current
+	// source code and the deploy status / error from the most recent
+	// deploy attempt.
+	//
+	// GET /functions/{id}
+	GetFunction(ctx context.Context, params GetFunctionParams) (GetFunctionRes, error)
 	// GetSendPermissions implements getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -251,6 +319,28 @@ type Handler interface {
 	//
 	// GET /filters
 	ListFilters(ctx context.Context) (ListFiltersRes, error)
+	// ListFunctionSecrets implements listFunctionSecrets operation.
+	//
+	// Returns metadata for every secret bound to the function, with
+	// managed entries (provisioned by Primitive) listed first and
+	// user-set entries listed alphabetically after. **Values are
+	// never returned.** Secret writes are write-only.
+	// Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
+	// `PRIMITIVE_API_KEY`) carry a `description` instead of
+	// `created_at` / `updated_at`. They cannot be created, updated,
+	// or deleted via this API.
+	//
+	// GET /functions/{id}/secrets
+	ListFunctionSecrets(ctx context.Context, params ListFunctionSecretsParams) (ListFunctionSecretsRes, error)
+	// ListFunctions implements listFunctions operation.
+	//
+	// Returns every active (non-deleted) function in the org, newest
+	// first. Each entry carries the deploy status and the gateway URL
+	// that the platform's webhook delivery loop posts to. To inspect
+	// the source code or deploy errors, use `GET /functions/{id}`.
+	//
+	// GET /functions
+	ListFunctions(ctx context.Context) (ListFunctionsRes, error)
 	// ListSentEmails implements listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -330,6 +420,16 @@ type Handler interface {
 	//
 	// POST /send-mail
 	SendEmail(ctx context.Context, req *SendMailInput, params SendEmailParams) (SendEmailRes, error)
+	// SetFunctionSecret implements setFunctionSecret operation.
+	//
+	// Path-keyed companion to `POST /functions/{id}/secrets`.
+	// Idempotent: returns 201 the first time the key is set, 200 on
+	// subsequent updates. Same validation rules and same write-only
+	// guarantees as the POST verb; the new value lands in the running
+	// handler on the next deploy.
+	//
+	// PUT /functions/{id}/secrets/{key}
+	SetFunctionSecret(ctx context.Context, req *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
 	// StartCliLogin implements startCliLogin operation.
 	//
 	// Starts a browser-assisted CLI login session. The response includes a
@@ -348,6 +448,22 @@ type Handler interface {
 	//
 	// POST /endpoints/{id}/test
 	TestEndpoint(ctx context.Context, params TestEndpointParams) (TestEndpointRes, error)
+	// TestFunction implements testFunction operation.
+	//
+	// Sends a real test email from a Primitive-controlled sender to a
+	// synthetic local-part on one of the org's verified inbound
+	// domains. The function fires through the normal MX delivery
+	// path, so reply / send-mail calls from inside the handler
+	// against the inbound's `email.id` work the same as in
+	// production. Returns immediately after the send is queued; the
+	// invocation appears on the function's invocations list within a
+	// few seconds.
+	// Requires that the function is currently `deployed`. Returns 422
+	// if the function is in `pending` or `failed` state, or if the
+	// org has no verified inbound domain to receive the test mail.
+	//
+	// POST /functions/{id}/test
+	TestFunction(ctx context.Context, params TestFunctionParams) (TestFunctionRes, error)
 	// UpdateAccount implements updateAccount operation.
 	//
 	// Update account settings.
@@ -375,6 +491,21 @@ type Handler interface {
 	//
 	// PATCH /filters/{id}
 	UpdateFilter(ctx context.Context, req *UpdateFilterInput, params UpdateFilterParams) (UpdateFilterRes, error)
+	// UpdateFunction implements updateFunction operation.
+	//
+	// Replaces the function's source code with the body's `code` and
+	// triggers a redeploy. Same size limits as `POST /functions`.
+	// Use this verb to push secret writes into the running handler:
+	// passing the same `code` re-runs the deploy and refreshes the
+	// binding set with the latest values from the secrets table.
+	// On a 502 deploy failure, the previously-deployed code stays
+	// live; the runtime never serves a half-built bundle. The
+	// `deploy_error` field on the returned record carries the error
+	// that came back from the runtime so you can surface it to users
+	// without polling.
+	//
+	// PUT /functions/{id}
+	UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
 	// VerifyDomain implements verifyDomain operation.
 	//
 	// Checks DNS records (MX and TXT) to verify domain ownership.
