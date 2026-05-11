@@ -68,6 +68,12 @@ export async function detectFunctionEndpoint(
   const rows = response.data?.data;
   if (!Array.isArray(rows)) return null;
 
+  // Relies on `listEndpoints` returning every endpoint in a single response.
+  // True today: the operation has `query?: never` in the generated types and
+  // the server returns all rows. If pagination is ever added, an endpoint on
+  // a later page would silently miss the redirect and reduce this to the
+  // original "Endpoint not found" UX. Update this call (filter-by-id or
+  // exhaust-pages) at the same time pagination lands on listEndpoints.
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
     if (row.id !== endpointId) continue;
