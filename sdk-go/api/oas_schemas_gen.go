@@ -4130,6 +4130,172 @@ func (s *FunctionListItem) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
+// One row from GET /functions/{id}/logs. Represents a single
+// captured log line emitted by the running handler (e.g. via
+// `console.log` / `console.error`).
+// Ref: #/components/schemas/FunctionLogRow
+type FunctionLogRow struct {
+	// Unique log row id (stable across pages).
+	ID uuid.UUID `json:"id"`
+	// The function this log row belongs to.
+	FunctionID uuid.UUID `json:"function_id"`
+	// Severity. `log` is the runtime's default for unannotated
+	// `console.log` calls; the other levels match standard
+	// `console.*` methods.
+	Level FunctionLogRowLevel `json:"level"`
+	// The textual message body. The runtime stringifies non-string
+	// arguments before persisting, so this is always a plain
+	// string.
+	Message string `json:"message"`
+	// When the handler emitted this line. Newest-first ordering
+	// on this column drives pagination; clock is the runtime's,
+	// not the gateway's.
+	Ts time.Time `json:"ts"`
+	// Optional structured payload the runtime attaches alongside
+	// the message (e.g. extra args passed to `console.log`).
+	// Shape is opaque; treat keys as untyped.
+	Metadata OptNilFunctionLogRowMetadata `json:"metadata"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionLogRow) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *FunctionLogRow) GetFunctionID() uuid.UUID {
+	return s.FunctionID
+}
+
+// GetLevel returns the value of Level.
+func (s *FunctionLogRow) GetLevel() FunctionLogRowLevel {
+	return s.Level
+}
+
+// GetMessage returns the value of Message.
+func (s *FunctionLogRow) GetMessage() string {
+	return s.Message
+}
+
+// GetTs returns the value of Ts.
+func (s *FunctionLogRow) GetTs() time.Time {
+	return s.Ts
+}
+
+// GetMetadata returns the value of Metadata.
+func (s *FunctionLogRow) GetMetadata() OptNilFunctionLogRowMetadata {
+	return s.Metadata
+}
+
+// SetID sets the value of ID.
+func (s *FunctionLogRow) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *FunctionLogRow) SetFunctionID(val uuid.UUID) {
+	s.FunctionID = val
+}
+
+// SetLevel sets the value of Level.
+func (s *FunctionLogRow) SetLevel(val FunctionLogRowLevel) {
+	s.Level = val
+}
+
+// SetMessage sets the value of Message.
+func (s *FunctionLogRow) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetTs sets the value of Ts.
+func (s *FunctionLogRow) SetTs(val time.Time) {
+	s.Ts = val
+}
+
+// SetMetadata sets the value of Metadata.
+func (s *FunctionLogRow) SetMetadata(val OptNilFunctionLogRowMetadata) {
+	s.Metadata = val
+}
+
+// Severity. `log` is the runtime's default for unannotated
+// `console.log` calls; the other levels match standard
+// `console.*` methods.
+type FunctionLogRowLevel string
+
+const (
+	FunctionLogRowLevelDebug FunctionLogRowLevel = "debug"
+	FunctionLogRowLevelLog   FunctionLogRowLevel = "log"
+	FunctionLogRowLevelInfo  FunctionLogRowLevel = "info"
+	FunctionLogRowLevelWarn  FunctionLogRowLevel = "warn"
+	FunctionLogRowLevelError FunctionLogRowLevel = "error"
+)
+
+// AllValues returns all FunctionLogRowLevel values.
+func (FunctionLogRowLevel) AllValues() []FunctionLogRowLevel {
+	return []FunctionLogRowLevel{
+		FunctionLogRowLevelDebug,
+		FunctionLogRowLevelLog,
+		FunctionLogRowLevelInfo,
+		FunctionLogRowLevelWarn,
+		FunctionLogRowLevelError,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s FunctionLogRowLevel) MarshalText() ([]byte, error) {
+	switch s {
+	case FunctionLogRowLevelDebug:
+		return []byte(s), nil
+	case FunctionLogRowLevelLog:
+		return []byte(s), nil
+	case FunctionLogRowLevelInfo:
+		return []byte(s), nil
+	case FunctionLogRowLevelWarn:
+		return []byte(s), nil
+	case FunctionLogRowLevelError:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *FunctionLogRowLevel) UnmarshalText(data []byte) error {
+	switch FunctionLogRowLevel(data) {
+	case FunctionLogRowLevelDebug:
+		*s = FunctionLogRowLevelDebug
+		return nil
+	case FunctionLogRowLevelLog:
+		*s = FunctionLogRowLevelLog
+		return nil
+	case FunctionLogRowLevelInfo:
+		*s = FunctionLogRowLevelInfo
+		return nil
+	case FunctionLogRowLevelWarn:
+		*s = FunctionLogRowLevelWarn
+		return nil
+	case FunctionLogRowLevelError:
+		*s = FunctionLogRowLevelError
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Optional structured payload the runtime attaches alongside
+// the message (e.g. extra args passed to `console.log`).
+// Shape is opaque; treat keys as untyped.
+type FunctionLogRowMetadata map[string]jx.Raw
+
+func (s *FunctionLogRowMetadata) init() FunctionLogRowMetadata {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
 // One row from GET /functions/{id}/secrets. Discriminate on the
 // `managed` field:
 // * `managed = true`  — system secret provisioned by Primitive.
@@ -4991,6 +5157,77 @@ func (s *ListFiltersOK) SetData(val []Filter) {
 }
 
 func (*ListFiltersOK) listFiltersRes() {}
+
+type ListFunctionLogsBadRequest ErrorResponse
+
+func (*ListFunctionLogsBadRequest) listFunctionLogsRes() {}
+
+type ListFunctionLogsForbidden ErrorResponse
+
+func (*ListFunctionLogsForbidden) listFunctionLogsRes() {}
+
+type ListFunctionLogsNotFound ErrorResponse
+
+func (*ListFunctionLogsNotFound) listFunctionLogsRes() {}
+
+// Merged schema.
+type ListFunctionLogsOK struct {
+	Success bool                   `json:"success"`
+	Data    ListFunctionLogsOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListFunctionLogsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListFunctionLogsOK) GetData() ListFunctionLogsOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListFunctionLogsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListFunctionLogsOK) SetData(val ListFunctionLogsOKData) {
+	s.Data = val
+}
+
+func (*ListFunctionLogsOK) listFunctionLogsRes() {}
+
+type ListFunctionLogsOKData struct {
+	Items []FunctionLogRow `json:"items"`
+	// Pass back as `cursor` to fetch the next
+	// page. `null` when no further rows exist.
+	NextCursor NilString `json:"next_cursor"`
+}
+
+// GetItems returns the value of Items.
+func (s *ListFunctionLogsOKData) GetItems() []FunctionLogRow {
+	return s.Items
+}
+
+// GetNextCursor returns the value of NextCursor.
+func (s *ListFunctionLogsOKData) GetNextCursor() NilString {
+	return s.NextCursor
+}
+
+// SetItems sets the value of Items.
+func (s *ListFunctionLogsOKData) SetItems(val []FunctionLogRow) {
+	s.Items = val
+}
+
+// SetNextCursor sets the value of NextCursor.
+func (s *ListFunctionLogsOKData) SetNextCursor(val NilString) {
+	s.NextCursor = val
+}
+
+type ListFunctionLogsUnauthorized ErrorResponse
+
+func (*ListFunctionLogsUnauthorized) listFunctionLogsRes() {}
 
 type ListFunctionSecretsNotFound ErrorResponse
 
@@ -6069,6 +6306,69 @@ func (o OptNilFloat64) Get() (v float64, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilFloat64) Or(d float64) float64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilFunctionLogRowMetadata returns new OptNilFunctionLogRowMetadata with value set to v.
+func NewOptNilFunctionLogRowMetadata(v FunctionLogRowMetadata) OptNilFunctionLogRowMetadata {
+	return OptNilFunctionLogRowMetadata{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilFunctionLogRowMetadata is optional nullable FunctionLogRowMetadata.
+type OptNilFunctionLogRowMetadata struct {
+	Value FunctionLogRowMetadata
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilFunctionLogRowMetadata was set.
+func (o OptNilFunctionLogRowMetadata) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilFunctionLogRowMetadata) Reset() {
+	var v FunctionLogRowMetadata
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilFunctionLogRowMetadata) SetTo(v FunctionLogRowMetadata) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilFunctionLogRowMetadata) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilFunctionLogRowMetadata) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v FunctionLogRowMetadata
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilFunctionLogRowMetadata) Get() (v FunctionLogRowMetadata, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilFunctionLogRowMetadata) Or(d FunctionLogRowMetadata) FunctionLogRowMetadata {
 	if v, ok := o.Get(); ok {
 		return v
 	}

@@ -339,6 +339,19 @@ type Invoker interface {
 	//
 	// GET /filters
 	ListFilters(ctx context.Context) (ListFiltersRes, error)
+	// ListFunctionLogs invokes listFunctionLogs operation.
+	//
+	// Returns the most recent `function_logs` rows for the function,
+	// newest first. Each row is a single `console.log` / `console.error`
+	// invocation captured from the running handler.
+	// Page through history with the opaque `cursor` returned as
+	// `next_cursor`; pass it back as the `cursor` query param on the
+	// next call. `next_cursor` is `null` when there are no further
+	// rows. The cursor format is an implementation detail and should
+	// not be parsed by callers.
+	//
+	// GET /functions/{id}/logs
+	ListFunctionLogs(ctx context.Context, params ListFunctionLogsParams) (ListFunctionLogsRes, error)
 	// ListFunctionSecrets invokes listFunctionSecrets operation.
 	//
 	// Returns metadata for every secret bound to the function, with
@@ -4209,6 +4222,177 @@ func (c *Client) sendListFilters(ctx context.Context) (res ListFiltersRes, err e
 
 	stage = "DecodeResponse"
 	result, err := decodeListFiltersResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListFunctionLogs invokes listFunctionLogs operation.
+//
+// Returns the most recent `function_logs` rows for the function,
+// newest first. Each row is a single `console.log` / `console.error`
+// invocation captured from the running handler.
+// Page through history with the opaque `cursor` returned as
+// `next_cursor`; pass it back as the `cursor` query param on the
+// next call. `next_cursor` is `null` when there are no further
+// rows. The cursor format is an implementation detail and should
+// not be parsed by callers.
+//
+// GET /functions/{id}/logs
+func (c *Client) ListFunctionLogs(ctx context.Context, params ListFunctionLogsParams) (ListFunctionLogsRes, error) {
+	res, err := c.sendListFunctionLogs(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListFunctionLogs(ctx context.Context, params ListFunctionLogsParams) (res ListFunctionLogsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listFunctionLogs"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/functions/{id}/logs"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListFunctionLogsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/logs"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListFunctionLogsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListFunctionLogsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

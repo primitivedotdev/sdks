@@ -109,6 +109,10 @@ type ListFiltersRes interface {
 	listFiltersRes()
 }
 
+type ListFunctionLogsRes interface {
+	listFunctionLogsRes()
+}
+
 type ListFunctionSecretsRes interface {
 	listFunctionSecretsRes()
 }

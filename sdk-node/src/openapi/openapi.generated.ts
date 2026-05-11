@@ -2892,6 +2892,99 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       }
+    },
+    "/functions/{id}/logs": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "operationId": "listFunctionLogs",
+        "summary": "List a function's execution logs",
+        "description": "Returns the most recent `function_logs` rows for the function,\nnewest first. Each row is a single `console.log` / `console.error`\ninvocation captured from the running handler.\n\nPage through history with the opaque `cursor` returned as\n`next_cursor`; pass it back as the `cursor` query param on the\nnext call. `next_cursor` is `null` when there are no further\nrows. The cursor format is an implementation detail and should\nnot be parsed by callers.\n",
+        "tags": [
+          "Functions"
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of rows to return. Clamped to 1..200; default\n50.\n",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque pagination cursor from a previous response's\n`next_cursor`. Omit on the first call.\n",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of log rows (newest first) plus pagination cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "$ref": "#/components/schemas/FunctionLogRow"
+                              }
+                            },
+                            "next_cursor": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "description": "Pass back as `cursor` to fetch the next\npage. `null` when no further rows exist.\n"
+                            }
+                          },
+                          "required": [
+                            "items",
+                            "next_cursor"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5500,6 +5593,57 @@ export const openapiDocument: Record<string, unknown> = {
           "subject",
           "poll_since",
           "watch_url"
+        ]
+      },
+      "FunctionLogRow": {
+        "type": "object",
+        "description": "One row from GET /functions/{id}/logs. Represents a single\ncaptured log line emitted by the running handler (e.g. via\n`console.log` / `console.error`).\n",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique log row id (stable across pages)."
+          },
+          "function_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The function this log row belongs to."
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "debug",
+              "log",
+              "info",
+              "warn",
+              "error"
+            ],
+            "description": "Severity. `log` is the runtime's default for unannotated\n`console.log` calls; the other levels match standard\n`console.*` methods.\n"
+          },
+          "message": {
+            "type": "string",
+            "description": "The textual message body. The runtime stringifies non-string\narguments before persisting, so this is always a plain\nstring.\n"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the handler emitted this line. Newest-first ordering\non this column drives pagination; clock is the runtime's,\nnot the gateway's.\n"
+          },
+          "metadata": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true,
+            "description": "Optional structured payload the runtime attaches alongside\nthe message (e.g. extra args passed to `console.log`).\nShape is opaque; treat keys as untyped.\n"
+          }
+        },
+        "required": [
+          "id",
+          "function_id",
+          "level",
+          "message",
+          "ts"
         ]
       },
       "FunctionSecretListItem": {

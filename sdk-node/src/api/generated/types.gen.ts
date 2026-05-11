@@ -1452,6 +1452,53 @@ export type TestInvocationResult = {
 };
 
 /**
+ * One row from GET /functions/{id}/logs. Represents a single
+ * captured log line emitted by the running handler (e.g. via
+ * `console.log` / `console.error`).
+ *
+ */
+export type FunctionLogRow = {
+    /**
+     * Unique log row id (stable across pages).
+     */
+    id: string;
+    /**
+     * The function this log row belongs to.
+     */
+    function_id: string;
+    /**
+     * Severity. `log` is the runtime's default for unannotated
+     * `console.log` calls; the other levels match standard
+     * `console.*` methods.
+     *
+     */
+    level: 'debug' | 'log' | 'info' | 'warn' | 'error';
+    /**
+     * The textual message body. The runtime stringifies non-string
+     * arguments before persisting, so this is always a plain
+     * string.
+     *
+     */
+    message: string;
+    /**
+     * When the handler emitted this line. Newest-first ordering
+     * on this column drives pagination; clock is the runtime's,
+     * not the gateway's.
+     *
+     */
+    ts: string;
+    /**
+     * Optional structured payload the runtime attaches alongside
+     * the message (e.g. extra args passed to `console.log`).
+     * Shape is opaque; treat keys as untyped.
+     *
+     */
+    metadata?: {
+        [key: string]: unknown;
+    } | null;
+};
+
+/**
  * One row from GET /functions/{id}/secrets. Discriminate on the
  * `managed` field:
  * * `managed = true`  — system secret provisioned by Primitive.
@@ -3568,3 +3615,68 @@ export type SetFunctionSecretResponses = {
 };
 
 export type SetFunctionSecretResponse = SetFunctionSecretResponses[keyof SetFunctionSecretResponses];
+
+export type ListFunctionLogsData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * Maximum number of rows to return. Clamped to 1..200; default
+         * 50.
+         *
+         */
+        limit?: number;
+        /**
+         * Opaque pagination cursor from a previous response's
+         * `next_cursor`. Omit on the first call.
+         *
+         */
+        cursor?: string;
+    };
+    url: '/functions/{id}/logs';
+};
+
+export type ListFunctionLogsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type ListFunctionLogsError = ListFunctionLogsErrors[keyof ListFunctionLogsErrors];
+
+export type ListFunctionLogsResponses = {
+    /**
+     * List of log rows (newest first) plus pagination cursor.
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            items: Array<FunctionLogRow>;
+            /**
+             * Pass back as `cursor` to fetch the next
+             * page. `null` when no further rows exist.
+             *
+             */
+            next_cursor: string | null;
+        };
+    };
+};
+
+export type ListFunctionLogsResponse = ListFunctionLogsResponses[keyof ListFunctionLogsResponses];
