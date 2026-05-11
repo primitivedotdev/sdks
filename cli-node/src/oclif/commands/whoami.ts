@@ -1,0 +1,122 @@
+import { Command, Errors, Flags } from "@oclif/core";
+import type { Account } from "@primitivedotdev/sdk/api";
+import { getAccount, PrimitiveApiClient } from "@primitivedotdev/sdk/api";
+import {
+  extractErrorPayload,
+  removeStaleSavedCredentialOnUnauthorized,
+  runWithTiming,
+  TIME_FLAG_DESCRIPTION,
+  writeErrorWithHints,
+} from "../api-command.js";
+import { resolveCliAuth } from "../auth.js";
+
+// `primitive whoami` is the credentials smoke-test the AGX
+// walkthrough kept asking for. Before this command, a user with a
+// suspect API key had no fast way to verify "is my key live and
+// pointed at the org I expect" short of trying any other call and
+// reading a 401. That ambiguity bit two consecutive walkthroughs.
+//
+// Implementation: thin wrapper over /api/v1/account that prints
+// the account email, plan, id, and onboarding status. Any auth
+// problem surfaces as the standard error envelope, same as the
+// generated commands.
+
+class WhoamiCommand extends Command {
+  static description =
+    `Print the account currently authenticated by the API key. Useful as a credentials smoke test: confirms the key is live and shows which account it belongs to.`;
+
+  static summary = "Print the authenticated account (credentials smoke test)";
+
+  static examples = [
+    "<%= config.bin %> whoami",
+    "<%= config.bin %> whoami --api-key prim_...",
+  ];
+
+  static flags = {
+    "api-key": Flags.string({
+      description:
+        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
+      env: "PRIMITIVE_API_KEY",
+    }),
+    "api-base-url-1": Flags.string({
+      description:
+        "Override the primary API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_1",
+      hidden: true,
+    }),
+    "api-base-url-2": Flags.string({
+      description:
+        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_2",
+      hidden: true,
+    }),
+    time: Flags.boolean({
+      description: TIME_FLAG_DESCRIPTION,
+    }),
+  };
+
+  async run(): Promise<void> {
+    const { flags } = await this.parse(WhoamiCommand);
+
+    await runWithTiming(flags.time, async () => {
+      const baseUrlOverridden =
+        flags["api-base-url-1"] !== undefined ||
+        flags["api-base-url-2"] !== undefined;
+      const auth = resolveCliAuth({
+        apiKey: flags["api-key"],
+        apiBaseUrl1: flags["api-base-url-1"],
+        apiBaseUrl2: flags["api-base-url-2"],
+        configDir: this.config.configDir,
+      });
+      const apiClient = new PrimitiveApiClient({
+        apiKey: auth.apiKey,
+        apiBaseUrl1: auth.apiBaseUrl1,
+        apiBaseUrl2: auth.apiBaseUrl2,
+      });
+
+      const result = await getAccount({
+        client: apiClient.client,
+        responseStyle: "fields",
+      });
+
+      if (result.error) {
+        const errorPayload = extractErrorPayload(result.error);
+        writeErrorWithHints(errorPayload);
+        removeStaleSavedCredentialOnUnauthorized({
+          auth,
+          baseUrlOverridden,
+          configDir: this.config.configDir,
+          payload: errorPayload,
+        });
+        process.exitCode = 1;
+        return;
+      }
+
+      const envelope = result.data as { data?: Account } | undefined;
+      const account = envelope?.data;
+      if (!account) {
+        process.stderr.write(
+          "Server returned an empty account body; this should not happen for a valid key.\n",
+        );
+        throw new Errors.CLIError("unexpected empty response");
+      }
+
+      // Concise human-readable summary on stderr; the full account
+      // JSON goes to stdout so a script can pipe it.
+      const onboarding =
+        account.onboarding_completed === true
+          ? "complete"
+          : account.onboarding_step
+            ? `in progress (step: ${account.onboarding_step})`
+            : "incomplete";
+      process.stderr.write(`Authenticated as ${account.email}\n`);
+      process.stderr.write(`  Account id: ${account.id}\n`);
+      process.stderr.write(`  Plan:       ${account.plan}\n`);
+      process.stderr.write(`  Onboarding: ${onboarding}\n`);
+
+      this.log(JSON.stringify(account, null, 2));
+    });
+  }
+}
+
+export default WhoamiCommand;

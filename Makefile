@@ -1,4 +1,5 @@
 .PHONY: node-install node-generate node-check-generated node-test node-check node-build node-smoke node-coverage
+.PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-coverage
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
 .PHONY: shared-check check build release-check ci
@@ -30,6 +31,26 @@ node-smoke: node-build
 
 node-coverage:
 	pnpm --dir sdk-node test:coverage
+
+cli-install:
+	pnpm --dir cli-node install --frozen-lockfile
+
+cli-test:
+	pnpm --dir cli-node test
+
+cli-check:
+	if command -v biome >/dev/null 2>&1; then cd cli-node && biome check --error-on-warnings src tests; else pnpm --dir cli-node lint; fi
+	pnpm --dir cli-node typecheck
+	$(MAKE) cli-test
+
+cli-build:
+	pnpm --dir cli-node build
+
+cli-smoke: cli-build
+	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && "$$smoke_dir/node_modules/.bin/primitive" list-operations >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion fish >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion bash >/dev/null
+
+cli-coverage:
+	pnpm --dir cli-node test:coverage
 
 python-sync:
 	cd sdk-python && uv sync --dev
@@ -80,19 +101,24 @@ shared-check:
 	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py
 	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures' ./...
 
-check: node-check python-check go-check shared-check
+check: node-check cli-check python-check go-check shared-check
 
-build: node-build python-build go-build
+build: node-build cli-build python-build go-build
 
-release-check: node-check node-build node-smoke python-check python-build python-smoke go-check go-build shared-check
+release-check: node-check node-build node-smoke cli-check cli-build cli-smoke python-check python-build python-smoke go-check go-build shared-check
 
 ci:
 	$(MAKE) node-install
+	$(MAKE) cli-install
 	$(MAKE) python-sync
 	$(MAKE) node-check
 	$(MAKE) node-build
 	$(MAKE) node-smoke
 	$(MAKE) node-coverage
+	$(MAKE) cli-check
+	$(MAKE) cli-build
+	$(MAKE) cli-smoke
+	$(MAKE) cli-coverage
 	$(MAKE) python-check
 	$(MAKE) python-build
 	$(MAKE) python-smoke

@@ -16,6 +16,7 @@ jobs:
       pull-requests: read
     outputs:
       node: ${{ steps.manual.outputs.node || steps.filter.outputs.node }}
+      cli: ${{ steps.manual.outputs.cli || steps.filter.outputs.cli }}
       python: ${{ steps.manual.outputs.python || steps.filter.outputs.python }}
       go: ${{ steps.manual.outputs.go || steps.filter.outputs.go }}
       shared: ${{ steps.manual.outputs.shared || steps.filter.outputs.shared }}
@@ -26,6 +27,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           printf 'node=true\n' >> "$GITHUB_OUTPUT"
+          printf 'cli=true\n' >> "$GITHUB_OUTPUT"
           printf 'python=true\n' >> "$GITHUB_OUTPUT"
           printf 'go=true\n' >> "$GITHUB_OUTPUT"
           printf 'shared=true\n' >> "$GITHUB_OUTPUT"
@@ -37,6 +39,9 @@ jobs:
           filters: |
             node:
               - 'sdk-node/**'
+              - 'openapi/**'
+            cli:
+              - 'cli-node/**'
               - 'openapi/**'
             python:
               - 'sdk-python/**'
@@ -87,6 +92,43 @@ jobs:
 
       - name: Collect node coverage
         run: make node-coverage
+
+  cli:
+    name: CLI (${{ matrix.node-version }})
+    needs: changes
+    if: ${{ needs.changes.outputs.cli == 'true' || needs.changes.outputs.shared == 'true' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        with:
+          version: 10
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: cli-node/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: make cli-install
+
+      - name: Run cli checks
+        run: make cli-check
+
+      - name: Build cli package
+        run: make cli-build
+
+      - name: Smoke test packed cli package
+        run: make cli-smoke
+
+      - name: Collect cli coverage
+        run: make cli-coverage
 
   python:
     name: Python (${{ matrix.python-version }})
@@ -188,13 +230,13 @@ jobs:
 
   ci:
     name: CI
-    needs: [changes, node, python, go, shared]
+    needs: [changes, node, cli, python, go, shared]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check results
         run: |
-          results=("${{ needs.changes.result }}" "${{ needs.node.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
+          results=("${{ needs.changes.result }}" "${{ needs.node.result }}" "${{ needs.cli.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
           for r in "${results[@]}"; do
             if [[ "$r" != "success" && "$r" != "skipped" ]]; then
               echo "Job failed with result: $r"
