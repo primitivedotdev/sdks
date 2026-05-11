@@ -25,6 +25,7 @@ export {
   type SendResult,
   type SendThreadInput,
 } from "./api/index.js";
+export { extractResponsesOutputText } from "./openai-responses.js";
 export * from "./webhook/index.js";
 
 import { client } from "./api/index.js";
