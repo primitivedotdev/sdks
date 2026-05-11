@@ -9,6 +9,7 @@ import EmailsWaitCommand from "./commands/emails-wait.js";
 import EmailsWatchCommand from "./commands/emails-watch.js";
 import FunctionsDeployCommand from "./commands/functions-deploy.js";
 import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
+import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
 import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
 import SendCommand from "./commands/send.js";
@@ -192,5 +193,12 @@ export const COMMANDS: Record<string, typeof Command> = {
   // available for callers that want the full surface.
   "functions:deploy": FunctionsDeployCommand,
   "functions:redeploy": FunctionsRedeployCommand,
+  // `functions:set-secret` is the one-call shortcut for "write a
+  // secret AND (optionally) push it live." The raw
+  // functions:set-function-secret / functions:create-function-secret
+  // operations only do the secret upsert; making the new value
+  // visible to the running handler requires a separate redeploy,
+  // which this shortcut folds in via --redeploy.
+  "functions:set-secret": FunctionsSetSecretCommand,
   ...generatedCommands,
 };

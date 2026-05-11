@@ -731,6 +731,30 @@ function collectValues(
   return values;
 }
 
+// Discoverability hints for generated commands that have a
+// hand-rolled ergonomic shortcut. Keyed by the manifest's
+// `sdkName` (camelCase, matches the generated SDK function). The
+// hint is appended to the operation's --help description so an
+// agent reading `<command> --help` finds the shortcut without
+// having to enumerate the full command list. AGX walkthrough:
+// an agent reached for `functions:update-function` to redeploy
+// (which forces a JSON-stringified `code` body) when
+// `functions:redeploy --file <bundle>` was the intended path.
+//
+// Add an entry here whenever a hand-rolled shortcut shadows a
+// generated operation; the COMMANDS map in `index.ts` is the
+// authoritative list of shortcuts.
+export const OPERATION_HINTS: Record<string, string> = {
+  createFunction:
+    "Tip: prefer `primitive functions:deploy --name <name> --file <bundle>` for file-input ergonomics. This raw command exists for callers passing JSON.",
+  updateFunction:
+    "Tip: prefer `primitive functions:redeploy --id <id> --file <bundle>` for file-input ergonomics. This raw command exists for callers passing JSON.",
+  createFunctionSecret:
+    "Tip: prefer `primitive functions:set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
+  setFunctionSecret:
+    "Tip: prefer `primitive functions:set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
+};
+
 export function createOperationCommand(
   operation: PrimitiveOperationManifest,
 ): typeof Command {
@@ -746,9 +770,13 @@ export function createOperationCommand(
   const schemaSummary = operation.hasJsonBody
     ? renderRequestSchemaSummary(operation.requestSchema)
     : null;
-  const fullDescription = schemaSummary
+  const hint = OPERATION_HINTS[operation.sdkName];
+  const descriptionWithSchema = schemaSummary
     ? `${baseDescription}\n\n${schemaSummary}`
     : baseDescription;
+  const fullDescription = hint
+    ? `${descriptionWithSchema}\n\n${hint}`
+    : descriptionWithSchema;
 
   class OperationCommand extends Command {
     static description = fullDescription;
