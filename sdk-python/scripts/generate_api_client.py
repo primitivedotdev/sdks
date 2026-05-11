@@ -58,6 +58,38 @@ def dedupe_imports(directory: Path) -> None:
         py_file.write_text("".join(new_lines))
 
 
+# Matches the openapi-python-client 0.28.3 codegen pattern for an
+# operation with an optional body. Captures the `if not isinstance(body,
+# Unset)` block, the (potentially multi-line) gap, and the unconditional
+# `headers["Content-Type"] = "application/json"` line. The substitution
+# moves the header assignment inside the if-block so the header only
+# ships when the body actually does.
+_OPTIONAL_BODY_CONTENT_TYPE = re.compile(
+    r"(    if not isinstance\(body, Unset\):\n"
+    r"        _kwargs\[\"json\"\] = body\.to_dict\(\)\n)"
+    r"(?:\s*\n)*"
+    r"    headers\[\"Content-Type\"\] = \"application/json\"\n"
+)
+
+
+def guard_optional_body_content_type(directory: Path) -> None:
+    """openapi-python-client 0.28.3 unconditionally emits
+    `headers["Content-Type"] = "application/json"` even for operations
+    with an optional body. When the caller omits the body, the server
+    still sees Content-Type: application/json with no body, which trips
+    middleware that expects either both or neither. Re-indent the header
+    assignment so it only fires when a body is actually sent.
+    """
+    for py_file in directory.rglob("*.py"):
+        text = py_file.read_text()
+        new_text = _OPTIONAL_BODY_CONTENT_TYPE.sub(
+            r'\1        headers["Content-Type"] = "application/json"\n',
+            text,
+        )
+        if new_text != text:
+            py_file.write_text(new_text)
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="primitive-python-api-") as temp_dir:
         output_path = Path(temp_dir) / "generated"
@@ -81,6 +113,7 @@ def main() -> None:
         remove_existing_generated_items()
         copy_generated_items(output_path)
         dedupe_imports(TARGET_PATH)
+        guard_optional_body_content_type(TARGET_PATH)
 
 
 if __name__ == "__main__":
