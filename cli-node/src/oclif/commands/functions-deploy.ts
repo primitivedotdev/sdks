@@ -1,6 +1,15 @@
 import { Command, Flags } from "@oclif/core";
-import type { CreateFunctionResult } from "@primitivedotdev/sdk/api";
-import { createFunction, PrimitiveApiClient } from "@primitivedotdev/sdk/api";
+import type {
+  CreateFunctionResult,
+  FunctionDetail,
+  FunctionSecretWriteResult,
+} from "@primitivedotdev/sdk/api";
+import {
+  createFunction,
+  PrimitiveApiClient,
+  setFunctionSecret,
+  updateFunction,
+} from "@primitivedotdev/sdk/api";
 import {
   extractErrorPayload,
   readTextFileFlag,
@@ -11,6 +20,11 @@ import {
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
+import {
+  parseSecretFlags,
+  SECRET_FLAG_SECURITY_NOTE,
+  type SecretFlagPair,
+} from "../secret-flags.js";
 
 // `primitive functions:deploy` is the agent-grade shortcut for
 // `functions:create-function`. The underlying operation takes `code`
@@ -28,6 +42,200 @@ import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
 //
 // For full control (raw body, --raw-body JSON, etc.) the underlying
 // `functions:create-function` operation stays available.
+//
+// `--secret KEY=VALUE` is the one-call shortcut for "deploy a new
+// function AND seed its secret bindings in the same command." The
+// flag is repeatable. After the create step the CLI writes each
+// secret in order, then re-deploys with the SAME bundle so the
+// running handler picks up the bindings. Without secrets the flow
+// is a single create call; with one or more --secret flags the
+// flow fans out to (create + N set-secret + redeploy) API calls.
+
+// Final payload runDeployWithSecrets produces on the happy path.
+// `created` is the initial create result; `redeploy` is the
+// updateFunction return value after secrets were written. When
+// secrets are present the CLI prints `redeploy` (the state the
+// user actually deployed); when no secrets are passed only
+// `created` is set.
+export type DeployWithSecretsResult = {
+  created: CreateFunctionResult;
+  secrets?: FunctionSecretWriteResult[];
+  redeploy?: FunctionDetail;
+};
+
+// Minimal client surface runDeployWithSecrets needs. Factored out
+// so the unit test can pass a fake without standing up a real
+// PrimitiveApiClient or the generated fetch stack. The real
+// implementation in run() passes thin wrappers around the
+// generated SDK functions.
+export type DeployApiSurface = {
+  createFunction: (params: {
+    name: string;
+    code: string;
+    sourceMap?: string;
+  }) => Promise<{
+    data?: { data?: CreateFunctionResult };
+    error?: unknown;
+  }>;
+  setSecret: (params: { id: string; key: string; value: string }) => Promise<{
+    data?: { data?: FunctionSecretWriteResult };
+    error?: unknown;
+  }>;
+  updateFunction: (params: {
+    id: string;
+    code: string;
+    sourceMap?: string;
+  }) => Promise<{
+    data?: { data?: FunctionDetail };
+    error?: unknown;
+  }>;
+};
+
+// Discriminated result from runDeployWithSecrets. The caller
+// surfaces either a success (with the final result payload) or an
+// error stage that identifies which step failed so run() can write
+// stage-specific stderr hints. `succeededKeys` / `failedKey` are
+// populated for `set-secret` failures so the hint can list which
+// keys landed before the failure.
+export type RunDeployWithSecretsResult =
+  | { kind: "ok"; result: DeployWithSecretsResult }
+  | {
+      kind: "error";
+      stage: "create";
+      payload: unknown;
+    }
+  | {
+      kind: "error";
+      stage: "set-secret";
+      payload: unknown;
+      created: CreateFunctionResult;
+      succeededKeys: string[];
+      failedKey: string;
+    }
+  | {
+      kind: "error";
+      stage: "redeploy";
+      payload: unknown;
+      created: CreateFunctionResult;
+      succeededKeys: string[];
+    };
+
+// Pure-ish orchestration of create + (optional secrets + redeploy).
+// Mirrors runSetSecret in functions-set-secret.ts so the failure
+// stages map directly onto stderr hints in run() below. Pulled out
+// as a named export so the unit test can drive every branch with a
+// fake DeployApiSurface, without spinning up a real client or the
+// oclif command lifecycle.
+export async function runDeployWithSecrets(
+  api: DeployApiSurface,
+  params: {
+    name: string;
+    code: string;
+    sourceMap?: string;
+    secrets: SecretFlagPair[];
+  },
+): Promise<RunDeployWithSecretsResult> {
+  const createResult = await api.createFunction({
+    code: params.code,
+    name: params.name,
+    ...(params.sourceMap !== undefined ? { sourceMap: params.sourceMap } : {}),
+  });
+  if (createResult.error) {
+    return {
+      kind: "error",
+      payload: extractErrorPayload(createResult.error),
+      stage: "create",
+    };
+  }
+  const created = createResult.data?.data;
+  if (!created) {
+    return {
+      kind: "error",
+      payload: {
+        code: "client_error",
+        message: "Create function returned no data",
+      },
+      stage: "create",
+    };
+  }
+
+  // Fast path: no secrets means no extra round-trips. The naked
+  // create result is exactly what the pre-secrets-flag command
+  // returned, so this branch is byte-identical to the previous
+  // behavior.
+  if (params.secrets.length === 0) {
+    return { kind: "ok", result: { created } };
+  }
+
+  const writtenSecrets: FunctionSecretWriteResult[] = [];
+  const succeededKeys: string[] = [];
+  for (const pair of params.secrets) {
+    const setResult = await api.setSecret({
+      id: created.id,
+      key: pair.key,
+      value: pair.value,
+    });
+    if (setResult.error) {
+      return {
+        created,
+        failedKey: pair.key,
+        kind: "error",
+        payload: extractErrorPayload(setResult.error),
+        stage: "set-secret",
+        succeededKeys,
+      };
+    }
+    const secret = setResult.data?.data;
+    if (!secret) {
+      return {
+        created,
+        failedKey: pair.key,
+        kind: "error",
+        payload: {
+          code: "client_error",
+          message: "Secret write returned no data",
+        },
+        stage: "set-secret",
+        succeededKeys,
+      };
+    }
+    writtenSecrets.push(secret);
+    succeededKeys.push(pair.key);
+  }
+
+  const updateResult = await api.updateFunction({
+    code: params.code,
+    id: created.id,
+    ...(params.sourceMap !== undefined ? { sourceMap: params.sourceMap } : {}),
+  });
+  if (updateResult.error) {
+    return {
+      created,
+      kind: "error",
+      payload: extractErrorPayload(updateResult.error),
+      stage: "redeploy",
+      succeededKeys,
+    };
+  }
+  const redeployed = updateResult.data?.data;
+  if (!redeployed) {
+    return {
+      created,
+      kind: "error",
+      payload: {
+        code: "client_error",
+        message: "Redeploy returned no data",
+      },
+      stage: "redeploy",
+      succeededKeys,
+    };
+  }
+
+  return {
+    kind: "ok",
+    result: { created, redeploy: redeployed, secrets: writtenSecrets },
+  };
+}
 
 class FunctionsDeployCommand extends Command {
   static description =
@@ -36,13 +244,26 @@ class FunctionsDeployCommand extends Command {
   Reads the bundle off disk (--file) instead of forcing the caller to
   serialize the source into a JSON body. Use the underlying operation
   \`functions:create-function\` if you need the full flag surface
-  (raw-body JSON, etc.).`;
+  (raw-body JSON, etc.).
+
+  Pass --secret KEY=VALUE (repeatable) to seed secret bindings in the
+  same command. Keys must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase
+  letters, digits, underscores; first character is a letter or
+  underscore). With one or more --secret flags the deploy fans out to
+  multiple API calls: create-function, set-secret per pair, then a
+  final update-function with the same bundle so the running handler
+  picks up the bindings. If a secret write fails after the create
+  step the function exists with whatever secrets succeeded and the
+  redeploy has NOT fired; re-run \`primitive functions:set-secret\`
+  for the missing keys, then \`primitive functions:redeploy\` to
+  push them live.`;
 
   static summary = "Deploy a new function from a bundled handler file";
 
   static examples = [
     "<%= config.bin %> functions:deploy --name forwarder --file ./bundle.js",
     "<%= config.bin %> functions:deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
+    "<%= config.bin %> functions:deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
   ];
 
   static flags = {
@@ -77,6 +298,10 @@ class FunctionsDeployCommand extends Command {
       description:
         "Optional path to a source map for the bundle. Stored only on the runtime side and used to symbolicate stack traces.",
     }),
+    secret: Flags.string({
+      description: `Secret KEY=VALUE to seed on the deployed function. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out the deploy to create-function, set-secret per pair, then a final redeploy so the running handler picks up the bindings. ${SECRET_FLAG_SECURITY_NOTE}`,
+      multiple: true,
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -86,6 +311,18 @@ class FunctionsDeployCommand extends Command {
     const { flags } = await this.parse(FunctionsDeployCommand);
 
     await runWithTiming(flags.time, async () => {
+      // Validate --secret pairs BEFORE any disk read or API call so
+      // a malformed input fails fast with a clear error and zero
+      // side effects. The fast path (no --secret flags) skips this
+      // entirely.
+      const rawSecrets = flags.secret ?? [];
+      const parsedSecrets = parseSecretFlags(rawSecrets);
+      if (parsedSecrets.kind === "error") {
+        process.stderr.write(`${parsedSecrets.message}\n`);
+        process.exitCode = 1;
+        return;
+      }
+
       // Reads are inside the timed block so --time captures disk I/O
       // alongside the API call. A pathological filesystem (NFS, slow
       // FUSE mount) showing up here is exactly the kind of latency
@@ -123,31 +360,86 @@ class FunctionsDeployCommand extends Command {
         configDir: this.config.configDir,
       };
 
-      const result = await createFunction({
-        body: {
-          name: flags.name,
-          code,
-          ...(sourceMap !== undefined ? { sourceMap } : {}),
-        },
-        client: apiClient.client,
-        responseStyle: "fields",
+      // Adapter: thin wrappers around the generated SDK calls,
+      // routed through host 1 (apiClient.client). The function
+      // CRUD and secrets endpoints are not on host 2.
+      const apiSurface: DeployApiSurface = {
+        createFunction: (p) =>
+          createFunction({
+            body: {
+              code: p.code,
+              name: p.name,
+              ...(p.sourceMap !== undefined ? { sourceMap: p.sourceMap } : {}),
+            },
+            client: apiClient.client,
+            responseStyle: "fields",
+          }),
+        setSecret: (p) =>
+          setFunctionSecret({
+            body: { value: p.value },
+            client: apiClient.client,
+            path: { id: p.id, key: p.key },
+            responseStyle: "fields",
+          }),
+        updateFunction: (p) =>
+          updateFunction({
+            body: {
+              code: p.code,
+              ...(p.sourceMap !== undefined ? { sourceMap: p.sourceMap } : {}),
+            },
+            client: apiClient.client,
+            path: { id: p.id },
+            responseStyle: "fields",
+          }),
+      };
+
+      const outcome = await runDeployWithSecrets(apiSurface, {
+        code,
+        name: flags.name,
+        secrets: parsedSecrets.secrets,
+        ...(sourceMap !== undefined ? { sourceMap } : {}),
       });
 
-      if (result.error) {
-        const errorPayload = extractErrorPayload(result.error);
-        writeErrorWithHints(errorPayload);
+      if (outcome.kind === "error") {
+        // Stage-specific framing on stderr so callers can tell
+        // whether the function was created before a downstream
+        // failure left it without secrets or without the
+        // redeploy. The JSON envelope still goes through
+        // writeErrorWithHints so any actionable hint (e.g.
+        // unauthorized) is surfaced.
+        if (outcome.stage === "set-secret") {
+          const succeeded =
+            outcome.succeededKeys.length > 0
+              ? outcome.succeededKeys.join(", ")
+              : "(none)";
+          process.stderr.write(
+            `Function ${outcome.created.name} (${outcome.created.id}) was created, but writing secret ${outcome.failedKey} failed; succeeded keys so far: ${succeeded}. The redeploy is NOT yet live. Re-run \`primitive functions:set-secret --id ${outcome.created.id} --key ${outcome.failedKey} --value <value> --redeploy\` after fixing the cause.\n`,
+          );
+        } else if (outcome.stage === "redeploy") {
+          const succeeded =
+            outcome.succeededKeys.length > 0
+              ? outcome.succeededKeys.join(", ")
+              : "(none)";
+          process.stderr.write(
+            `Function ${outcome.created.name} (${outcome.created.id}) was created and secrets [${succeeded}] were written, but the final redeploy failed; the new bindings are NOT yet live. Re-run \`primitive functions:redeploy --id ${outcome.created.id} --file <bundle>\` once the cause is fixed.\n`,
+          );
+        }
+        writeErrorWithHints(outcome.payload);
         removeStaleSavedCredentialOnUnauthorized({
           ...authFailureContext,
-          payload: errorPayload,
+          payload: outcome.payload,
         });
         process.exitCode = 1;
         return;
       }
 
-      const envelope = result.data as
-        | { data?: CreateFunctionResult }
-        | undefined;
-      this.log(JSON.stringify(envelope?.data ?? null, null, 2));
+      // On the happy path, prefer the redeployed FunctionDetail
+      // (when secrets fired) over the bare CreateFunctionResult,
+      // since the redeploy is the state the user actually
+      // deployed. When no secrets were passed, fall back to the
+      // create payload for byte-identical pre-flag behavior.
+      const payload = outcome.result.redeploy ?? outcome.result.created;
+      this.log(JSON.stringify(payload, null, 2));
     });
   }
 }

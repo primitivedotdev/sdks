@@ -1,6 +1,13 @@
 import { Command, Flags } from "@oclif/core";
-import type { FunctionDetail } from "@primitivedotdev/sdk/api";
-import { PrimitiveApiClient, updateFunction } from "@primitivedotdev/sdk/api";
+import type {
+  FunctionDetail,
+  FunctionSecretWriteResult,
+} from "@primitivedotdev/sdk/api";
+import {
+  PrimitiveApiClient,
+  setFunctionSecret,
+  updateFunction,
+} from "@primitivedotdev/sdk/api";
 import {
   extractErrorPayload,
   readTextFileFlag,
@@ -11,6 +18,11 @@ import {
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
+import {
+  parseSecretFlags,
+  SECRET_FLAG_SECURITY_NOTE,
+  type SecretFlagPair,
+} from "../secret-flags.js";
 
 // `primitive functions:redeploy` is the agent-grade shortcut for
 // `functions:update-function`. Same file-reading ergonomic as
@@ -19,6 +31,142 @@ import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
 // previously-deployed bundle (or any equivalent file) re-runs the
 // deploy and refreshes env from the secrets table, which is how
 // secret writes go live.
+//
+// `--secret KEY=VALUE` is the one-call shortcut for "write secrets
+// AND redeploy in the same command." The flag is repeatable. Secrets
+// are written FIRST so a single update-function call picks up every
+// new binding; this is the inverse order of functions:deploy where
+// the function must exist before secrets can be written.
+
+// Final payload runRedeployWithSecrets produces on the happy path.
+// `secrets` is omitted when no --secret flags were passed.
+export type RedeployWithSecretsResult = {
+  redeploy: FunctionDetail;
+  secrets?: FunctionSecretWriteResult[];
+};
+
+// Minimal client surface runRedeployWithSecrets needs. Mirrors
+// DeployApiSurface but without createFunction since the function
+// already exists.
+export type RedeployApiSurface = {
+  setSecret: (params: { id: string; key: string; value: string }) => Promise<{
+    data?: { data?: FunctionSecretWriteResult };
+    error?: unknown;
+  }>;
+  updateFunction: (params: {
+    id: string;
+    code: string;
+    sourceMap?: string;
+  }) => Promise<{
+    data?: { data?: FunctionDetail };
+    error?: unknown;
+  }>;
+};
+
+// Discriminated result from runRedeployWithSecrets. The caller
+// surfaces either a success or an error stage so run() can write
+// stage-specific stderr hints. `succeededKeys` / `failedKey` are
+// populated for `set-secret` failures so the hint can list which
+// keys landed before the failure.
+export type RunRedeployWithSecretsResult =
+  | { kind: "ok"; result: RedeployWithSecretsResult }
+  | {
+      kind: "error";
+      stage: "set-secret";
+      payload: unknown;
+      succeededKeys: string[];
+      failedKey: string;
+    }
+  | {
+      kind: "error";
+      stage: "redeploy";
+      payload: unknown;
+      succeededKeys: string[];
+    };
+
+// Pure-ish orchestration of (optional secrets +) update-function.
+// Writes every secret first, then re-deploys with the new bundle so
+// a single updateFunction call refreshes every binding the user
+// wrote. Pulled out as a named export so the unit test can drive
+// every branch with a fake RedeployApiSurface, without spinning up
+// a real client or the oclif command lifecycle.
+export async function runRedeployWithSecrets(
+  api: RedeployApiSurface,
+  params: {
+    id: string;
+    code: string;
+    sourceMap?: string;
+    secrets: SecretFlagPair[];
+  },
+): Promise<RunRedeployWithSecretsResult> {
+  const writtenSecrets: FunctionSecretWriteResult[] = [];
+  const succeededKeys: string[] = [];
+  for (const pair of params.secrets) {
+    const setResult = await api.setSecret({
+      id: params.id,
+      key: pair.key,
+      value: pair.value,
+    });
+    if (setResult.error) {
+      return {
+        failedKey: pair.key,
+        kind: "error",
+        payload: extractErrorPayload(setResult.error),
+        stage: "set-secret",
+        succeededKeys,
+      };
+    }
+    const secret = setResult.data?.data;
+    if (!secret) {
+      return {
+        failedKey: pair.key,
+        kind: "error",
+        payload: {
+          code: "client_error",
+          message: "Secret write returned no data",
+        },
+        stage: "set-secret",
+        succeededKeys,
+      };
+    }
+    writtenSecrets.push(secret);
+    succeededKeys.push(pair.key);
+  }
+
+  const updateResult = await api.updateFunction({
+    code: params.code,
+    id: params.id,
+    ...(params.sourceMap !== undefined ? { sourceMap: params.sourceMap } : {}),
+  });
+  if (updateResult.error) {
+    return {
+      kind: "error",
+      payload: extractErrorPayload(updateResult.error),
+      stage: "redeploy",
+      succeededKeys,
+    };
+  }
+  const redeployed = updateResult.data?.data;
+  if (!redeployed) {
+    return {
+      kind: "error",
+      payload: {
+        code: "client_error",
+        message: "Redeploy returned no data",
+      },
+      stage: "redeploy",
+      succeededKeys,
+    };
+  }
+
+  return {
+    kind: "ok",
+    result: {
+      redeploy: redeployed,
+      ...(writtenSecrets.length > 0 ? { secrets: writtenSecrets } : {}),
+    },
+  };
+}
 
 class FunctionsRedeployCommand extends Command {
   static description =
@@ -27,13 +175,21 @@ class FunctionsRedeployCommand extends Command {
   Use to push a new bundle OR to refresh secret bindings into the
   running handler. The same file is fine for both: the deploy reads
   the bindings table fresh on every call, so passing the existing
-  bundle picks up any secret writes since the last deploy.`;
+  bundle picks up any secret writes since the last deploy.
+
+  Pass --secret KEY=VALUE (repeatable) to write secrets BEFORE the
+  redeploy fires; one update-function call then refreshes every new
+  binding. Keys must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters,
+  digits, underscores; first character is a letter or underscore).
+  With one or more --secret flags the redeploy fans out to multiple
+  API calls (set-secret per pair, then update-function).`;
 
   static summary = "Redeploy a function from a bundled handler file";
 
   static examples = [
     "<%= config.bin %> functions:redeploy --id <fn-id> --file ./bundle.js",
     "<%= config.bin %> functions:redeploy --id <fn-id> --file ./bundle.js --source-map-file ./bundle.js.map",
+    "<%= config.bin %> functions:redeploy --id <fn-id> --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
   ];
 
   static flags = {
@@ -67,6 +223,10 @@ class FunctionsRedeployCommand extends Command {
       description:
         "Optional path to a source map for the bundle. Used to symbolicate stack traces in the function's logs.",
     }),
+    secret: Flags.string({
+      description: `Secret KEY=VALUE to write on the function before the redeploy fires. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out to set-secret per pair then a single update-function call so the new bindings land in the same redeploy. ${SECRET_FLAG_SECURITY_NOTE}`,
+      multiple: true,
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -76,6 +236,18 @@ class FunctionsRedeployCommand extends Command {
     const { flags } = await this.parse(FunctionsRedeployCommand);
 
     await runWithTiming(flags.time, async () => {
+      // Validate --secret pairs BEFORE any disk read or API call so
+      // a malformed input fails fast with a clear error and zero
+      // side effects. The fast path (no --secret flags) skips the
+      // secret-write loop entirely.
+      const rawSecrets = flags.secret ?? [];
+      const parsedSecrets = parseSecretFlags(rawSecrets);
+      if (parsedSecrets.kind === "error") {
+        process.stderr.write(`${parsedSecrets.message}\n`);
+        process.exitCode = 1;
+        return;
+      }
+
       // Reads inside the timed block: --time captures disk I/O too,
       // which is the latency the flag is meant to surface.
       const code = readTextFileFlag(flags.file, "--file");
@@ -111,29 +283,64 @@ class FunctionsRedeployCommand extends Command {
         configDir: this.config.configDir,
       };
 
-      const result = await updateFunction({
-        path: { id: flags.id },
-        body: {
-          code,
-          ...(sourceMap !== undefined ? { sourceMap } : {}),
-        },
-        client: apiClient.client,
-        responseStyle: "fields",
+      // Adapter: thin wrappers around the generated SDK calls,
+      // routed through host 1 (apiClient.client). The function
+      // CRUD and secrets endpoints are not on host 2.
+      const apiSurface: RedeployApiSurface = {
+        setSecret: (p) =>
+          setFunctionSecret({
+            body: { value: p.value },
+            client: apiClient.client,
+            path: { id: p.id, key: p.key },
+            responseStyle: "fields",
+          }),
+        updateFunction: (p) =>
+          updateFunction({
+            body: {
+              code: p.code,
+              ...(p.sourceMap !== undefined ? { sourceMap: p.sourceMap } : {}),
+            },
+            client: apiClient.client,
+            path: { id: p.id },
+            responseStyle: "fields",
+          }),
+      };
+
+      const outcome = await runRedeployWithSecrets(apiSurface, {
+        code,
+        id: flags.id,
+        secrets: parsedSecrets.secrets,
+        ...(sourceMap !== undefined ? { sourceMap } : {}),
       });
 
-      if (result.error) {
-        const errorPayload = extractErrorPayload(result.error);
-        writeErrorWithHints(errorPayload);
+      if (outcome.kind === "error") {
+        if (outcome.stage === "set-secret") {
+          const succeeded =
+            outcome.succeededKeys.length > 0
+              ? outcome.succeededKeys.join(", ")
+              : "(none)";
+          process.stderr.write(
+            `Writing secret ${outcome.failedKey} failed before the redeploy; succeeded keys so far: ${succeeded}. The new bundle has NOT been deployed. Re-run \`primitive functions:set-secret --id ${flags.id} --key ${outcome.failedKey} --value <value>\` after fixing the cause, then \`primitive functions:redeploy --id ${flags.id} --file <bundle>\`.\n`,
+          );
+        } else if (outcome.stage === "redeploy") {
+          const succeeded =
+            outcome.succeededKeys.length > 0
+              ? outcome.succeededKeys.join(", ")
+              : "(none)";
+          process.stderr.write(
+            `Secrets [${succeeded}] were written, but the redeploy step failed; the new bindings are NOT yet live. Re-run \`primitive functions:redeploy --id ${flags.id} --file <bundle>\` once the cause is fixed.\n`,
+          );
+        }
+        writeErrorWithHints(outcome.payload);
         removeStaleSavedCredentialOnUnauthorized({
           ...authFailureContext,
-          payload: errorPayload,
+          payload: outcome.payload,
         });
         process.exitCode = 1;
         return;
       }
 
-      const envelope = result.data as { data?: FunctionDetail } | undefined;
-      this.log(JSON.stringify(envelope?.data ?? null, null, 2));
+      this.log(JSON.stringify(outcome.result.redeploy, null, 2));
     });
   }
 }
