@@ -90,10 +90,15 @@ export default {
 
       // Self-reply guard: do not act on mail that this function itself
       // sent. Without this, an outbound reply that gets forwarded back
-      // into the inbox would trigger another reply, and so on. Adjust
-      // the predicate if you legitimately want to act on mail from your
-      // own domain.
-      if (event.email.headers.from === REPLY_FROM) {
+      // into the inbox would trigger another reply, and so on.
+      //
+      // event.email.headers.from is the raw RFC 2822 header value, so
+      // it may be either a bare address ("alice@example.com") or a
+      // display-name form ("Alice <alice@example.com>"). A substring
+      // check matches both. Tighten this predicate (e.g. parse the
+      // bracketed address) if you legitimately want to act on mail
+      // from your own domain.
+      if (event.email.headers.from?.includes(REPLY_FROM)) {
         return Response.json({ ok: true, skipped: "self-reply" });
       }
 

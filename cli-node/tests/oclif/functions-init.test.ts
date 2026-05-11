@@ -131,9 +131,18 @@ describe("renderHandler self-reply guard + REPLY_FROM constant", () => {
     // AGX feedback: without this guard, an outbound reply that gets
     // forwarded back into the inbox triggers another reply, and so on.
     // The scaffold defaults users into the safe shape.
+    //
+    // The predicate must be substring-based, not strict equality:
+    // event.email.headers.from is the raw RFC 2822 header value and
+    // commonly carries a display name ("Alice <alice@example.com>").
+    // A strict === check would silently miss those payloads.
     const handler = renderHandler();
-    expect(handler).toContain("event.email.headers.from === REPLY_FROM");
+    expect(handler).toContain("event.email.headers.from?.includes(REPLY_FROM)");
+    expect(handler).not.toContain("event.email.headers.from === REPLY_FROM");
     expect(handler).toMatch(/skipped:\s*["']self-reply["']/);
+    // The comment block above the guard must call out the RFC 2822
+    // shape so future authors know why .includes is used.
+    expect(handler).toMatch(/RFC 2822/);
   });
 
   it("includes a recipient-routing comment block pointing at event.email.headers.to", () => {
