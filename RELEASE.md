@@ -29,7 +29,7 @@ Releases are automated from `main`.
 
 1. Open a PR that bumps `sdk-node/package.json` to the target version.
 2. Merge that PR into `main`.
-3. The `Node Release` workflow verifies the version bump, publishes to npm, and creates the `sdk-node/vX.Y.Z` tag plus a GitHub release.
+3. The `Node Release` workflow verifies the version bump, publishes to npm through trusted publishing/OIDC, and creates the `sdk-node/vX.Y.Z` tag plus a GitHub release.
 4. Verify the package contents with `npm view @primitivedotdev/sdk version`.
 5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/api`, `@primitivedotdev/sdk/openapi`, `@primitivedotdev/sdk/contract`, `@primitivedotdev/sdk/parser`, and the `primitive` bin (the bin remains during the CLI deprecation window).
 
@@ -37,11 +37,13 @@ Releases are automated from `main`.
 
 1. Open a PR that bumps `cli-node/package.json` to the target version.
 2. Merge that PR into `main`.
-3. The `CLI Release` workflow verifies the version bump, publishes to npm, and creates the `cli-node/vX.Y.Z` tag plus a GitHub release.
+3. The `CLI Release` workflow verifies the version bump, publishes to npm through trusted publishing/OIDC, and creates the `cli-node/vX.Y.Z` tag plus a GitHub release.
 4. Verify the package contents with `npm view @primitivedotdev/cli version`.
 5. Confirm the packed artifact exposes the `primitive` bin and that `primitive list-operations` succeeds in a fresh install.
 
 Coordinate Node SDK and CLI releases when both ship in the same cycle: cut the SDK first (so its npm version is available), then bump CLI's `@primitivedotdev/sdk` dep range if needed and ship CLI.
+
+Both npm packages use npm trusted publishing from GitHub Actions. Do not add npm API tokens; configure npmjs trusted publishers for `@primitivedotdev/sdk` with `.github/workflows/node-release.yml` and `@primitivedotdev/cli` with `.github/workflows/cli-release.yml`.
 
 ## Python Release
 
