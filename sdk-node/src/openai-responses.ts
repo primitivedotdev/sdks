@@ -128,6 +128,13 @@ function extractPieceText(piece: unknown): string | undefined {
   if (piece === null || typeof piece !== "object") return undefined;
   const p = piece as Record<string, unknown>;
 
+  // Filter by `type` so we only pull text from pieces whose shape we
+  // actually understand. Without this, a future piece kind (e.g. an
+  // annotation echo) that happens to carry a `text` field would silently
+  // get concatenated into the output, drifting from the documented contract.
+  const type = p.type;
+  if (type !== "output_text" && type !== "text") return undefined;
+
   const text = p.text;
   if (typeof text === "string") {
     return text;

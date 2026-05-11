@@ -238,6 +238,22 @@ describe("extractResponsesOutputText", () => {
       );
     });
 
+    it("ignores pieces whose type is not output_text or text", () => {
+      // A future piece kind that happens to carry a `text` field must NOT
+      // be silently concatenated. Only the documented types contribute.
+      const response = {
+        output: [
+          {
+            content: [
+              { type: "annotation_echo", text: "should NOT be included" },
+              { type: "output_text", text: "Real text." },
+            ],
+          },
+        ],
+      };
+      expect(extractResponsesOutputText(response)).toBe("Real text.");
+    });
+
     it("throws on an array at the top level (not a Responses object)", () => {
       // typeof [] is "object" so the null/non-object guard does not reject
       // it, but the output_text/output walks both find nothing. We let the
