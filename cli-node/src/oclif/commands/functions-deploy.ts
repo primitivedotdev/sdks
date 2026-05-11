@@ -111,6 +111,7 @@ export type RunDeployWithSecretsResult =
       created: CreateFunctionResult;
       succeededKeys: string[];
       failedKey: string;
+      pendingKeys: string[];
     }
   | {
       kind: "error";
@@ -169,7 +170,15 @@ export async function runDeployWithSecrets(
 
   const writtenSecrets: FunctionSecretWriteResult[] = [];
   const succeededKeys: string[] = [];
-  for (const pair of params.secrets) {
+  for (let i = 0; i < params.secrets.length; i++) {
+    const pair = params.secrets[i];
+    // Pre-compute the keys that come AFTER the current pair so a
+    // set-secret failure can surface every key that was never
+    // attempted, not just the one that failed. Without this, a user
+    // following the recovery hint verbatim would re-run set-secret
+    // only for the failed key and silently leave the trailing keys
+    // un-written.
+    const pendingKeys = params.secrets.slice(i + 1).map((p) => p.key);
     const setResult = await api.setSecret({
       id: created.id,
       key: pair.key,
@@ -181,6 +190,7 @@ export async function runDeployWithSecrets(
         failedKey: pair.key,
         kind: "error",
         payload: extractErrorPayload(setResult.error),
+        pendingKeys,
         stage: "set-secret",
         succeededKeys,
       };
@@ -195,6 +205,7 @@ export async function runDeployWithSecrets(
           code: "client_error",
           message: "Secret write returned no data",
         },
+        pendingKeys,
         stage: "set-secret",
         succeededKeys,
       };
@@ -412,8 +423,15 @@ class FunctionsDeployCommand extends Command {
             outcome.succeededKeys.length > 0
               ? outcome.succeededKeys.join(", ")
               : "(none)";
+          const pending =
+            outcome.pendingKeys.length > 0
+              ? outcome.pendingKeys.join(", ")
+              : "(none)";
+          const allMissing = [outcome.failedKey, ...outcome.pendingKeys].join(
+            ", ",
+          );
           process.stderr.write(
-            `Function ${outcome.created.name} (${outcome.created.id}) was created, but writing secret ${outcome.failedKey} failed; succeeded keys so far: ${succeeded}. The redeploy is NOT yet live. Re-run \`primitive functions:set-secret --id ${outcome.created.id} --key ${outcome.failedKey} --value <value> --redeploy\` after fixing the cause.\n`,
+            `Function ${outcome.created.name} (${outcome.created.id}) was created, but writing secret ${outcome.failedKey} failed; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The redeploy is NOT yet live. Re-run \`primitive functions:set-secret\` for each of [${allMissing}], then \`primitive functions:redeploy --id ${outcome.created.id} --file <bundle>\` to push them live.\n`,
           );
         } else if (outcome.stage === "redeploy") {
           const succeeded =
