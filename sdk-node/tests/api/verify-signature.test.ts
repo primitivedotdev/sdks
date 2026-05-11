@@ -139,6 +139,31 @@ describe("verifyWebhookSignature (Web Crypto)", () => {
     ).resolves.toBe(true);
   });
 
+  it("accepts an uppercase-hex candidate to stay byte-for-byte compatible with the Node verifier", async () => {
+    // The Node verifier decodes via `Buffer.from(str, "hex")`, which
+    // is case-insensitive. A third-party signer that uppercases the
+    // digest should still verify against either implementation.
+    // Greptile flagged this divergence on PR review: HEX_PATTERN
+    // previously lacked the /i flag and the comparison ran on raw
+    // charCodeAt, so uppercase candidates fell through to
+    // SIGNATURE_MISMATCH on the Web Crypto path while the Node path
+    // accepted them. Regression guard.
+    const rawBody = "case-mix";
+    const ts = nowSec();
+    const signed = signWebhookPayload(rawBody, SECRET, ts);
+    const uppercased = signed.v1.toUpperCase();
+    const header = `t=${ts},v1=${uppercased}`;
+
+    await expect(
+      verifyWebhookSignature({
+        rawBody,
+        signatureHeader: header,
+        secret: SECRET,
+        nowSeconds: ts,
+      }),
+    ).resolves.toBe(true);
+  });
+
   it("rejects when every candidate signature is invalid hex", async () => {
     const ts = nowSec();
     const header = `t=${ts},v1=not_hex_at_all,v1=also_not_hex`;

@@ -43,8 +43,13 @@ export type { WebhookVerificationErrorCode } from "../webhook/errors.js";
 const DEFAULT_TOLERANCE_SECONDS = 5 * 60;
 // 60 second future tolerance for clock skew.
 const FUTURE_TOLERANCE_SECONDS = 60;
-// HMAC-SHA256 hex digest is 64 characters of [0-9a-f].
-const HEX_PATTERN = /^[a-f0-9]+$/;
+// HMAC-SHA256 hex digest is 64 characters. Accept either case to
+// stay byte-for-byte compatible with the Node verifier in
+// `../webhook/signing.ts`, which uses the same pattern with the `/i`
+// flag. Canonical Primitive signers emit lowercase, but tolerating
+// uppercase keeps third-party signers (and tests that hand-build
+// fixtures) from silently failing through to SIGNATURE_MISMATCH.
+const HEX_PATTERN = /^[0-9a-f]+$/i;
 const HEX_LENGTH = 64;
 const UNIX_SECONDS_PATTERN = /^\d{1,10}$/;
 
@@ -193,7 +198,12 @@ export async function verifyWebhookSignature(opts: VerifyOptions): Promise<true>
     nowSeconds,
   } = opts;
 
-  if (!secret || (typeof secret === "string" && secret.length === 0)) {
+  // `secret` is typed as `string` here (Node verifier also accepts
+  // Buffer, but Buffer isn't a thing in Workers and we deliberately
+  // don't include it in the Web Crypto API surface). `!secret` already
+  // catches undefined, null, and "" cleanly; no extra type guard
+  // needed.
+  if (!secret) {
     throw new WebhookVerificationError(
       "MISSING_SECRET",
       "Webhook secret is required but was empty or not provided",
@@ -234,10 +244,17 @@ export async function verifyWebhookSignature(opts: VerifyOptions): Promise<true>
   // [old, new] still verifies once the new key is live. Constant-time
   // comparison per candidate so a partial-match attacker can't binary
   // search hex characters by timing.
+  //
+  // Lowercase the candidate before comparing: HEX_PATTERN accepts
+  // either case (to match the Node verifier, which decodes via
+  // `Buffer.from(str, "hex")` and is case-insensitive), but
+  // expectedHex from `arrayBufferToHex` is always lowercase.
+  // Comparing raw `charCodeAt` would treat "AB" and "ab" as
+  // different and silently fail through to SIGNATURE_MISMATCH.
   let anyMatch = false;
   for (const candidate of signatures) {
     if (!isValidHex(candidate)) continue;
-    if (timingSafeEqualHex(candidate, expectedHex)) {
+    if (timingSafeEqualHex(candidate.toLowerCase(), expectedHex)) {
       anyMatch = true;
     }
   }
