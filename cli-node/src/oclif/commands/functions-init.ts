@@ -16,8 +16,11 @@ import { Args, Command, Errors, Flags } from "@oclif/core";
 // The SDK version range that ships in the scaffolded package.json's
 // dependencies. Pinned to the current shipped minor with a caret so
 // patch releases of the SDK pick up automatically. Update alongside
-// any major version bump of the SDK.
-const SDK_VERSION_RANGE = "^0.22.0";
+// any minor or major version bump of the SDK; keep in lockstep with
+// the CLI's own @primitivedotdev/sdk dep range in cli-node/package.json
+// so scaffolded projects use the same SDK version the CLI was built
+// and tested against.
+const SDK_VERSION_RANGE = "^0.23.0";
 
 // esbuild version range. Pinned to the latest stable major used
 // elsewhere in the Primitive codebase for bundling Workers-style

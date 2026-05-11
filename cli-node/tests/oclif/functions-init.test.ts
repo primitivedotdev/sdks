@@ -93,6 +93,23 @@ describe("renderPackageJson", () => {
     expect(parsed.devDependencies.esbuild).toMatch(/^\^/);
   });
 
+  it("ships the same @primitivedotdev/sdk version range the CLI itself depends on", () => {
+    // Regression guard: scaffolded projects must use the same SDK
+    // version range that this CLI was built and tested against.
+    // Lockstep avoids generating handlers that target an SDK release
+    // we haven't actually exercised.
+    const cliPkgPath = resolve(__dirname, "../../package.json");
+    const cliPkg = JSON.parse(readFileSync(cliPkgPath, "utf8")) as {
+      dependencies: Record<string, string>;
+    };
+    const scaffolded = JSON.parse(renderPackageJson("test-fn")) as {
+      dependencies: Record<string, string>;
+    };
+    expect(scaffolded.dependencies["@primitivedotdev/sdk"]).toBe(
+      cliPkg.dependencies["@primitivedotdev/sdk"],
+    );
+  });
+
   it("substitutes the function name into the deploy script", () => {
     const raw = renderPackageJson("forwarder");
     const parsed = JSON.parse(raw) as { scripts: Record<string, string> };
