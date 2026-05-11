@@ -20,7 +20,7 @@ import { Args, Command, Errors, Flags } from "@oclif/core";
 // the CLI's own @primitivedotdev/sdk dep range in cli-node/package.json
 // so scaffolded projects use the same SDK version the CLI was built
 // and tested against.
-const SDK_VERSION_RANGE = "^0.23.0";
+const SDK_VERSION_RANGE = "^0.25.0";
 
 // esbuild version range. Pinned to the latest stable major used
 // elsewhere in the Primitive codebase for bundling Workers-style
@@ -120,6 +120,14 @@ export function renderPackageJson(name: string): string {
       "@primitivedotdev/sdk": SDK_VERSION_RANGE,
     },
     devDependencies: {
+      // @primitivedotdev/cli ships the primitive bin. Including it as
+      // a devDep here means `node_modules/.bin/primitive` resolves to
+      // the real CLI inside the scaffolded project; otherwise the
+      // bin falls through to @primitivedotdev/sdk's deprecated CLI
+      // alias and every `npm run deploy` invocation prints the
+      // "CLI moved" stderr banner. Pinned in lockstep with the SDK
+      // range above so the scaffold ships a consistent pair.
+      "@primitivedotdev/cli": SDK_VERSION_RANGE,
       esbuild: ESBUILD_VERSION_RANGE,
       typescript: "^5.7.2",
     },

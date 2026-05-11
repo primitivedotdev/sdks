@@ -18,8 +18,8 @@ importers:
         specifier: ^6.2.44
         version: 6.2.48
       '@primitivedotdev/sdk':
-        specifier: ^0.23.0
-        version: 0.23.0
+        specifier: ^0.25.0
+        version: 0.25.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.10
@@ -733,8 +733,8 @@ packages:
     resolution: {integrity: sha512-h104Kh26rR8tm+a3Qkc5S4VLYint3FE48as7+/5oCEcKR2idC/pF1G6AhIXKI+eHPJa/3J9i5z0Al47IeGHPkA==}
     engines: {node: '>=12'}
 
-  '@primitivedotdev/sdk@0.23.0':
-    resolution: {integrity: sha512-HjBDadgWI+Yh2hsCLlXl3vftjnqpxV4CAzo6onRX5T1329CXTOBsTrrf4FsjDk+EcLKOCKFEoYUdafdmkFqSng==}
+  '@primitivedotdev/sdk@0.25.0':
+    resolution: {integrity: sha512-XsfbfcLezsOzCEMT9vjZ4s8aVIz5YOY4HIjRRgiAaSwtGmg+2fhaetpPnbg3eg1vwu3TEDMIbzYofKnfXVU32A==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -3259,7 +3259,7 @@ snapshots:
       '@pnpm/network.ca-file': 1.0.2
       config-chain: 1.1.13
 
-  '@primitivedotdev/sdk@0.23.0':
+  '@primitivedotdev/sdk@0.25.0':
     dependencies:
       '@oclif/core': 4.11.2
       '@oclif/plugin-autocomplete': 3.2.49

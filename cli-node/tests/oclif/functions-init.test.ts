@@ -130,6 +130,18 @@ describe("renderPackageJson", () => {
     expect(parsed.devDependencies.esbuild).toMatch(/^\^/);
   });
 
+  it("includes @primitivedotdev/cli as a devDependency so node_modules/.bin/primitive resolves to the new CLI, not the SDK alias", () => {
+    // AGX feedback: scaffolded projects with only the SDK as a dep
+    // hit the SDK package's deprecated CLI bin every time `npm run
+    // deploy` runs, which prints the "CLI moved" stderr banner.
+    // Pinning the CLI as a devDep makes the scaffold self-contained.
+    const raw = renderPackageJson("test-fn");
+    const parsed = JSON.parse(raw) as {
+      devDependencies: Record<string, string>;
+    };
+    expect(parsed.devDependencies["@primitivedotdev/cli"]).toMatch(/^\^/);
+  });
+
   it("ships the same @primitivedotdev/sdk version range the CLI itself depends on", () => {
     // Regression guard: scaffolded projects must use the same SDK
     // version range that this CLI was built and tested against.
