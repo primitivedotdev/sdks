@@ -18,7 +18,11 @@ import {
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
-import { parseSecretFlags, type SecretFlagPair } from "./functions-deploy.js";
+import {
+  parseSecretFlags,
+  SECRET_FLAG_SECURITY_NOTE,
+  type SecretFlagPair,
+} from "../secret-flags.js";
 
 // `primitive functions:redeploy` is the agent-grade shortcut for
 // `functions:update-function`. Same file-reading ergonomic as
@@ -220,8 +224,7 @@ class FunctionsRedeployCommand extends Command {
         "Optional path to a source map for the bundle. Used to symbolicate stack traces in the function's logs.",
     }),
     secret: Flags.string({
-      description:
-        "Secret KEY=VALUE to write on the function before the redeploy fires. Repeatable. KEY must match `^[A-Z_][A-Z0-9_]*$`; VALUE may contain `=` (only the first `=` is treated as a delimiter). Passing one or more --secret flags fans out to set-secret per pair then a single update-function call so the new bindings land in the same redeploy.",
+      description: `Secret KEY=VALUE to write on the function before the redeploy fires. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out to set-secret per pair then a single update-function call so the new bindings land in the same redeploy. ${SECRET_FLAG_SECURITY_NOTE}`,
       multiple: true,
     }),
     time: Flags.boolean({

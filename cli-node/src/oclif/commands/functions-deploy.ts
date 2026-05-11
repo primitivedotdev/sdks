@@ -20,6 +20,11 @@ import {
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
+import {
+  parseSecretFlags,
+  SECRET_FLAG_SECURITY_NOTE,
+  type SecretFlagPair,
+} from "../secret-flags.js";
 
 // `primitive functions:deploy` is the agent-grade shortcut for
 // `functions:create-function`. The underlying operation takes `code`
@@ -45,55 +50,6 @@ import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
 // running handler picks up the bindings. Without secrets the flow
 // is a single create call; with one or more --secret flags the
 // flow fans out to (create + N set-secret + redeploy) API calls.
-
-// Server-side constraint on secret keys. Mirrored client-side so
-// malformed input is rejected before any side-effecting API call.
-const SECRET_KEY_RE = /^[A-Z_][A-Z0-9_]*$/;
-
-// Parsed --secret K=V pair. Exported so the unit test can build
-// the same value the command produces internally.
-export type SecretFlagPair = { key: string; value: string };
-
-// Result of parsing the raw oclif --secret strings. Discriminated
-// so the caller can decide whether to write a stderr error before
-// touching the API surface.
-export type ParseSecretFlagsResult =
-  | { kind: "ok"; secrets: SecretFlagPair[] }
-  | { kind: "error"; message: string };
-
-// Split each `--secret KEY=VALUE` on the FIRST `=`. KEY must match
-// `^[A-Z_][A-Z0-9_]*$`; VALUE may contain `=` (only the first one
-// is treated as a delimiter). Returns a structured error rather
-// than throwing so the caller can write the message to stderr in
-// the same envelope shape used elsewhere.
-export function parseSecretFlags(raw: string[]): ParseSecretFlagsResult {
-  const secrets: SecretFlagPair[] = [];
-  for (const entry of raw) {
-    const eq = entry.indexOf("=");
-    if (eq === -1) {
-      return {
-        kind: "error",
-        message: `--secret expects KEY=VALUE (got ${JSON.stringify(entry)}). Example: --secret API_TOKEN=abc123`,
-      };
-    }
-    const key = entry.slice(0, eq);
-    const value = entry.slice(eq + 1);
-    if (key.length === 0) {
-      return {
-        kind: "error",
-        message: `--secret is missing a KEY before '=' (got ${JSON.stringify(entry)}). Example: --secret API_TOKEN=abc123`,
-      };
-    }
-    if (!SECRET_KEY_RE.test(key)) {
-      return {
-        kind: "error",
-        message: `--secret KEY ${JSON.stringify(key)} does not match ${SECRET_KEY_RE.source} (uppercase letters, digits, underscores; first character is a letter or underscore).`,
-      };
-    }
-    secrets.push({ key, value });
-  }
-  return { kind: "ok", secrets };
-}
 
 // Final payload runDeployWithSecrets produces on the happy path.
 // `created` is the initial create result; `redeploy` is the
@@ -343,8 +299,7 @@ class FunctionsDeployCommand extends Command {
         "Optional path to a source map for the bundle. Stored only on the runtime side and used to symbolicate stack traces.",
     }),
     secret: Flags.string({
-      description:
-        "Secret KEY=VALUE to seed on the deployed function. Repeatable. KEY must match `^[A-Z_][A-Z0-9_]*$`; VALUE may contain `=` (only the first `=` is treated as a delimiter). Passing one or more --secret flags fans out the deploy to create-function, set-secret per pair, then a final redeploy so the running handler picks up the bindings.",
+      description: `Secret KEY=VALUE to seed on the deployed function. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out the deploy to create-function, set-secret per pair, then a final redeploy so the running handler picks up the bindings. ${SECRET_FLAG_SECURITY_NOTE}`,
       multiple: true,
     }),
     time: Flags.boolean({

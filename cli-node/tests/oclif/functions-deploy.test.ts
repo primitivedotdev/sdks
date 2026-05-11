@@ -6,10 +6,10 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import {
   type DeployApiSurface,
-  parseSecretFlags,
   runDeployWithSecrets,
 } from "../../src/oclif/commands/functions-deploy.js";
 import { COMMANDS } from "../../src/oclif/index.js";
+import { parseSecretFlags } from "../../src/oclif/secret-flags.js";
 
 const FN_ID = "22222222-2222-4222-8222-222222222222";
 const FN_NAME = "test-fn";
@@ -223,6 +223,26 @@ describe("parseSecretFlags", () => {
       // (we bail on the first failure to avoid surfacing later noise).
       expect(result.message).toContain("bad");
       expect(result.message).not.toContain("ALSO_BAD");
+    }
+  });
+
+  it("rejects duplicate keys before any API call would fire", () => {
+    // Silently accepting two pairs with the same key fans out to two
+    // setFunctionSecret writes where only the second wins. That is
+    // almost always a typo, not the intent, so we error up front.
+    const result = parseSecretFlags(["API_TOKEN=first", "API_TOKEN=second"]);
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("API_TOKEN");
+      expect(result.message).toContain("more than once");
+    }
+  });
+
+  it("rejects duplicate keys even when other keys precede the dup", () => {
+    const result = parseSecretFlags(["FIRST=one", "SECOND=two", "FIRST=three"]);
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("FIRST");
     }
   });
 });
