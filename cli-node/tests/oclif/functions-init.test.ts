@@ -130,6 +130,60 @@ describe("renderPackageJson", () => {
     expect(parsed.devDependencies.esbuild).toMatch(/^\^/);
   });
 
+  it("includes @primitivedotdev/cli as a devDependency so node_modules/.bin/primitive resolves to the new CLI, not the SDK alias", () => {
+    // AGX feedback: scaffolded projects with only the SDK as a dep
+    // hit the SDK package's deprecated CLI bin every time `npm run
+    // deploy` runs, which prints the "CLI moved" stderr banner.
+    // Pinning the CLI as a devDep makes the scaffold self-contained.
+    const raw = renderPackageJson("test-fn");
+    const parsed = JSON.parse(raw) as {
+      devDependencies: Record<string, string>;
+    };
+    expect(parsed.devDependencies["@primitivedotdev/cli"]).toMatch(/^\^/);
+  });
+
+  it("ships @primitivedotdev/cli at a range that includes this CLI's own published version", () => {
+    // Regression guard: the scaffolded @primitivedotdev/cli devDep
+    // must include this CLI's own version. Otherwise a `primitive
+    // functions:init` run from CLI 0.26 could scaffold a project
+    // pinned at ^0.25.0, silently downgrading the bin the user just
+    // installed. The previous caret-only check was too weak: it
+    // passed even if the major or minor diverged. This test ties
+    // the constant to package.json so a version bump that forgets
+    // to update CLI_VERSION_RANGE fails CI.
+    const cliPkgPath = resolve(__dirname, "../../package.json");
+    const cliPkg = JSON.parse(readFileSync(cliPkgPath, "utf8")) as {
+      version: string;
+    };
+    const scaffolded = JSON.parse(renderPackageJson("test-fn")) as {
+      devDependencies: Record<string, string>;
+    };
+    const range = scaffolded.devDependencies["@primitivedotdev/cli"];
+
+    // Range must be a caret on a 3-part semver: ^X.Y.Z.
+    const rangeMatch = range.match(/^\^(\d+)\.(\d+)\.(\d+)$/);
+    expect(rangeMatch, `unexpected CLI range shape: ${range}`).not.toBeNull();
+    if (!rangeMatch) return;
+    const [, rangeMajor, rangeMinor, rangePatch] = rangeMatch;
+
+    // CLI's own version must satisfy the caret range. For 0.y.z
+    // packages, ^0.y.z resolves to >=0.y.z <0.(y+1).0, so the CLI's
+    // major must equal the range major (typically 0) AND the CLI's
+    // minor must equal the range minor AND the CLI's patch must be
+    // >= the range patch.
+    const cliMatch = cliPkg.version.match(/^(\d+)\.(\d+)\.(\d+)/);
+    expect(
+      cliMatch,
+      `CLI version not semver-shaped: ${cliPkg.version}`,
+    ).not.toBeNull();
+    if (!cliMatch) return;
+    const [, cliMajor, cliMinor, cliPatch] = cliMatch;
+
+    expect(cliMajor).toBe(rangeMajor);
+    expect(cliMinor).toBe(rangeMinor);
+    expect(Number(cliPatch)).toBeGreaterThanOrEqual(Number(rangePatch));
+  });
+
   it("ships the same @primitivedotdev/sdk version range the CLI itself depends on", () => {
     // Regression guard: scaffolded projects must use the same SDK
     // version range that this CLI was built and tested against.
