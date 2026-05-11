@@ -47,7 +47,7 @@ export const pollCliLogin = <ThrowOnError extends boolean = false>(options: Opti
     url: '/cli/login/poll',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -86,7 +86,7 @@ export const updateAccount = <ThrowOnError extends boolean = false>(options: Opt
     url: '/account',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -170,7 +170,7 @@ export const addDomain = <ThrowOnError extends boolean = false>(options: Options
     url: '/domains',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -198,7 +198,7 @@ export const updateDomain = <ThrowOnError extends boolean = false>(options: Opti
     url: '/domains/{id}',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -364,7 +364,7 @@ export const replyToEmail = <ThrowOnError extends boolean = false>(options: Opti
     url: '/emails/{id}/reply',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -446,7 +446,7 @@ export const createEndpoint = <ThrowOnError extends boolean = false>(options: Op
     url: '/endpoints',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -477,7 +477,7 @@ export const updateEndpoint = <ThrowOnError extends boolean = false>(options: Op
     url: '/endpoints/{id}',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -521,7 +521,7 @@ export const createFilter = <ThrowOnError extends boolean = false>(options: Opti
     url: '/filters',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -545,7 +545,7 @@ export const updateFilter = <ThrowOnError extends boolean = false>(options: Opti
     url: '/filters/{id}',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -642,7 +642,7 @@ export const sendEmail = <ThrowOnError extends boolean = false>(options: Options
     url: '/send-mail',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -739,7 +739,7 @@ export const createFunction = <ThrowOnError extends boolean = false>(options: Op
     url: '/functions',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -798,7 +798,7 @@ export const updateFunction = <ThrowOnError extends boolean = false>(options: Op
     url: '/functions/{id}',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -833,7 +833,7 @@ export const testFunction = <ThrowOnError extends boolean = false>(options: Opti
     url: '/functions/{id}/test',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -878,7 +878,7 @@ export const createFunctionSecret = <ThrowOnError extends boolean = false>(optio
     url: '/functions/{id}/secrets',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
@@ -914,7 +914,7 @@ export const setFunctionSecret = <ThrowOnError extends boolean = false>(options:
     url: '/functions/{id}/secrets/{key}',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
         ...options.headers
     }
 });
