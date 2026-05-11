@@ -60,11 +60,39 @@ function requireString(
   return raw;
 }
 
+/**
+ * Sentinel returned by parseCredentials when the on-disk credentials
+ * were written by a pre-dual-host CLI version (i.e. they have
+ * `base_url` instead of `api_base_url_1`). The caller treats this as
+ * "no saved credentials" after auto-cleaning the stale file. Defined
+ * as a class-tagged error so loadCliCredentials can distinguish it
+ * from a genuine malformed-credentials error.
+ */
+class StaleCredentialFormatError extends Error {
+  constructor() {
+    super("stale_credential_format");
+    this.name = "StaleCredentialFormatError";
+  }
+}
+
 function parseCredentials(raw: unknown): StoredCliCredentials {
   if (!isRecord(raw)) {
     throw new Error(
       `Stored Primitive CLI credentials are malformed: expected a JSON object. ${MALFORMED_CREDENTIALS_HINT}`,
     );
+  }
+
+  // Stored credentials from an older CLI version used the field name
+  // `base_url`; the dual-host rename moved this to `api_base_url_1`.
+  // Detect the old shape specifically so loadCliCredentials can wipe
+  // the stale file and emit a clear "you've been logged out" notice
+  // instead of every command hard-failing with a generic "malformed"
+  // error that doesn't surface the actual fix (re-login).
+  if (
+    typeof raw.api_base_url_1 !== "string" &&
+    typeof (raw as { base_url?: unknown }).base_url === "string"
+  ) {
+    throw new StaleCredentialFormatError();
   }
 
   const orgName = raw.org_name;
@@ -125,6 +153,25 @@ export function loadCliCredentials(
   try {
     return parseCredentials(JSON.parse(contents));
   } catch (error) {
+    if (error instanceof StaleCredentialFormatError) {
+      // Saved credentials were written by a pre-dual-host CLI version.
+      // The format is incompatible (base_url vs api_base_url_1) and
+      // cannot be recovered. Clear the file so the caller sees "no
+      // saved credentials" and emit a one-shot notice telling the
+      // user they need to log back in. Idempotent: once the file is
+      // gone, this branch never fires again.
+      try {
+        rmSync(path, { force: true });
+      } catch {
+        // Best-effort cleanup; if the unlink fails (permissions,
+        // racing process), the next CLI invocation will hit this
+        // path again and try once more.
+      }
+      process.stderr.write(
+        "You've been logged out: your saved Primitive CLI credentials were created by an older CLI version and are no longer compatible. Run `primitive login` to re-authenticate.\n",
+      );
+      return null;
+    }
     if (error instanceof SyntaxError) {
       throw new Error(
         "Stored Primitive CLI credentials are not valid JSON. Run `primitive logout` and then `primitive login`.",
