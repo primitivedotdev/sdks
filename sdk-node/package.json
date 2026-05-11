@@ -84,7 +84,7 @@
         "description": "View and replay webhook delivery attempts"
       },
       "functions": {
-        "description": "Deploy JavaScript handlers that run on inbound mail. Use `primitive functions:deploy --name <name> --file <bundle.js>` to create, `primitive functions:redeploy --id <id> --file <bundle.js>` to push a new bundle, and `primitive functions:set-secret --id <id> --key <KEY> --value <value> [--redeploy]` to write a secret (with optional one-call redeploy so the value lands in the running handler). The auto-generated functions:create-function / functions:update-function / functions:create-function-secret / functions:set-function-secret operations stay available for the full body-string surface."
+        "description": "Deploy JavaScript handlers that run on inbound mail. Use `primitive functions:init <name>` to scaffold a deployable project (handler, package.json, build script). Use `primitive functions:deploy --name <name> --file <bundle.js>` to create, `primitive functions:redeploy --id <id> --file <bundle.js>` to push a new bundle, and `primitive functions:set-secret --id <id> --key <KEY> --value <value> [--redeploy]` to write a secret (with optional one-call redeploy so the value lands in the running handler). The auto-generated functions:create-function / functions:update-function / functions:create-function-secret / functions:set-function-secret operations stay available for the full body-string surface."
       }
     },
     "topicSeparator": " "

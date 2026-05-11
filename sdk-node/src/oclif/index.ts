@@ -8,6 +8,7 @@ import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
 import EmailsWatchCommand from "./commands/emails-watch.js";
 import FunctionsDeployCommand from "./commands/functions-deploy.js";
+import FunctionsInitCommand from "./commands/functions-init.js";
 import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
 import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
 import LoginCommand from "./commands/login.js";
@@ -185,6 +186,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
   "emails:wait": EmailsWaitCommand,
+  // `functions:init` scaffolds a deployable Function project so a
+  // new author can go zero-to-deployed without writing the handler,
+  // package.json, build script, and tsconfig from scratch. The
+  // scaffolded handler imports from @primitivedotdev/sdk/api (the
+  // runtime-client subpath) and demonstrates client.send() so the
+  // first thing the author sees is the SDK pattern, not raw fetch.
+  "functions:init": FunctionsInitCommand,
   // `functions:deploy` and `functions:redeploy` are file-input
   // shortcuts for create-function / update-function. The underlying
   // ops take `code` as a body string, which is awkward at the CLI
