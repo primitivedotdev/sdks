@@ -394,6 +394,11 @@ describe("runDeployWithSecrets (--secret K=V)", () => {
     if (outcome.kind === "error" && outcome.stage === "set-secret") {
       expect(outcome.failedKey).toBe("SECOND");
       expect(outcome.succeededKeys).toEqual(["FIRST"]);
+      // pendingKeys must include every key after the failure so the
+      // CLI hint can list keys the user still needs to set; otherwise
+      // re-running set-secret only for failedKey silently leaves THIRD
+      // un-written.
+      expect(outcome.pendingKeys).toEqual(["THIRD"]);
       expect(outcome.created.id).toBe(FN_ID);
       expect(outcome.payload).toEqual({
         code: "validation",

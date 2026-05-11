@@ -217,6 +217,9 @@ describe("runRedeployWithSecrets (--secret K=V)", () => {
     if (outcome.kind === "error" && outcome.stage === "set-secret") {
       expect(outcome.failedKey).toBe("SECOND");
       expect(outcome.succeededKeys).toEqual(["FIRST"]);
+      // pendingKeys lists keys never attempted so the CLI hint can
+      // direct the user to re-set them too, not just the failed one.
+      expect(outcome.pendingKeys).toEqual(["THIRD"]);
       expect(outcome.payload).toEqual({
         code: "validation",
         message: "value too long",

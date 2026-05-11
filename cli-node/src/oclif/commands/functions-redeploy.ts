@@ -76,6 +76,7 @@ export type RunRedeployWithSecretsResult =
       payload: unknown;
       succeededKeys: string[];
       failedKey: string;
+      pendingKeys: string[];
     }
   | {
       kind: "error";
@@ -101,7 +102,12 @@ export async function runRedeployWithSecrets(
 ): Promise<RunRedeployWithSecretsResult> {
   const writtenSecrets: FunctionSecretWriteResult[] = [];
   const succeededKeys: string[] = [];
-  for (const pair of params.secrets) {
+  for (let i = 0; i < params.secrets.length; i++) {
+    const pair = params.secrets[i];
+    // Pre-compute the keys that come AFTER the current pair so a
+    // set-secret failure can surface every key that was never
+    // attempted, not just the one that failed.
+    const pendingKeys = params.secrets.slice(i + 1).map((p) => p.key);
     const setResult = await api.setSecret({
       id: params.id,
       key: pair.key,
@@ -112,6 +118,7 @@ export async function runRedeployWithSecrets(
         failedKey: pair.key,
         kind: "error",
         payload: extractErrorPayload(setResult.error),
+        pendingKeys,
         stage: "set-secret",
         succeededKeys,
       };
@@ -125,6 +132,7 @@ export async function runRedeployWithSecrets(
           code: "client_error",
           message: "Secret write returned no data",
         },
+        pendingKeys,
         stage: "set-secret",
         succeededKeys,
       };
@@ -319,8 +327,15 @@ class FunctionsRedeployCommand extends Command {
             outcome.succeededKeys.length > 0
               ? outcome.succeededKeys.join(", ")
               : "(none)";
+          const pending =
+            outcome.pendingKeys.length > 0
+              ? outcome.pendingKeys.join(", ")
+              : "(none)";
+          const allMissing = [outcome.failedKey, ...outcome.pendingKeys].join(
+            ", ",
+          );
           process.stderr.write(
-            `Writing secret ${outcome.failedKey} failed before the redeploy; succeeded keys so far: ${succeeded}. The new bundle has NOT been deployed. Re-run \`primitive functions:set-secret --id ${flags.id} --key ${outcome.failedKey} --value <value>\` after fixing the cause, then \`primitive functions:redeploy --id ${flags.id} --file <bundle>\`.\n`,
+            `Writing secret ${outcome.failedKey} failed before the redeploy; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The new bundle has NOT been deployed. Re-run \`primitive functions:set-secret\` for each of [${allMissing}], then \`primitive functions:redeploy --id ${flags.id} --file <bundle>\` to push them live.\n`,
           );
         } else if (outcome.stage === "redeploy") {
           const succeeded =
