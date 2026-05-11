@@ -33,6 +33,7 @@ const (
 	ListEmailsOperation           OperationName = "ListEmails"
 	ListEndpointsOperation        OperationName = "ListEndpoints"
 	ListFiltersOperation          OperationName = "ListFilters"
+	ListFunctionLogsOperation     OperationName = "ListFunctionLogs"
 	ListFunctionSecretsOperation  OperationName = "ListFunctionSecrets"
 	ListFunctionsOperation        OperationName = "ListFunctions"
 	ListSentEmailsOperation       OperationName = "ListSentEmails"

@@ -65,6 +65,7 @@ var operationRolesBearerAuth = map[string][]string{
 	ListEmailsOperation:           []string{},
 	ListEndpointsOperation:        []string{},
 	ListFiltersOperation:          []string{},
+	ListFunctionLogsOperation:     []string{},
 	ListFunctionSecretsOperation:  []string{},
 	ListFunctionsOperation:        []string{},
 	ListSentEmailsOperation:       []string{},

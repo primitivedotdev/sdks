@@ -65,6 +65,9 @@ from .filter_type import FilterType
 from .function_deploy_status import FunctionDeployStatus
 from .function_detail import FunctionDetail
 from .function_list_item import FunctionListItem
+from .function_log_row import FunctionLogRow
+from .function_log_row_level import FunctionLogRowLevel
+from .function_log_row_metadata_type_0 import FunctionLogRowMetadataType0
 from .function_secret_list_item import FunctionSecretListItem
 from .function_secret_write_result import FunctionSecretWriteResult
 from .gate_denial import GateDenial
@@ -86,6 +89,8 @@ from .list_emails_response_200 import ListEmailsResponse200
 from .list_endpoints_response_200 import ListEndpointsResponse200
 from .list_envelope import ListEnvelope
 from .list_filters_response_200 import ListFiltersResponse200
+from .list_function_logs_response_200 import ListFunctionLogsResponse200
+from .list_function_logs_response_200_data import ListFunctionLogsResponse200Data
 from .list_function_secrets_response_200 import ListFunctionSecretsResponse200
 from .list_function_secrets_response_200_data import ListFunctionSecretsResponse200Data
 from .list_functions_response_200 import ListFunctionsResponse200
@@ -214,6 +219,9 @@ __all__ = (
     "FunctionDeployStatus",
     "FunctionDetail",
     "FunctionListItem",
+    "FunctionLogRow",
+    "FunctionLogRowLevel",
+    "FunctionLogRowMetadataType0",
     "FunctionSecretListItem",
     "FunctionSecretWriteResult",
     "GateDenial",
@@ -235,6 +243,8 @@ __all__ = (
     "ListEndpointsResponse200",
     "ListEnvelope",
     "ListFiltersResponse200",
+    "ListFunctionLogsResponse200",
+    "ListFunctionLogsResponse200Data",
     "ListFunctionSecretsResponse200",
     "ListFunctionSecretsResponse200Data",
     "ListFunctionsResponse200",

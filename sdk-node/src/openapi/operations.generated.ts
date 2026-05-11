@@ -2848,6 +2848,116 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "list-function-logs",
+    "description": "Returns the most recent `function_logs` rows for the function,\nnewest first. Each row is a single `console.log` / `console.error`\ninvocation captured from the running handler.\n\nPage through history with the opaque `cursor` returned as\n`next_cursor`; pass it back as the `cursor` query param on the\nnext call. `next_cursor` is `null` when there are no further\nrows. The cursor format is an implementation detail and should\nnot be parsed by callers.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listFunctionLogs",
+    "path": "/functions/{id}/logs",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "Maximum number of rows to return. Clamped to 1..200; default\n50.\n",
+        "enum": null,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "Opaque pagination cursor from a previous response's\n`next_cursor`. Omit on the first call.\n",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "One row from GET /functions/{id}/logs. Represents a single\ncaptured log line emitted by the running handler (e.g. via\n`console.log` / `console.error`).\n",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Unique log row id (stable across pages)."
+              },
+              "function_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "The function this log row belongs to."
+              },
+              "level": {
+                "type": "string",
+                "enum": [
+                  "debug",
+                  "log",
+                  "info",
+                  "warn",
+                  "error"
+                ],
+                "description": "Severity. `log` is the runtime's default for unannotated\n`console.log` calls; the other levels match standard\n`console.*` methods.\n"
+              },
+              "message": {
+                "type": "string",
+                "description": "The textual message body. The runtime stringifies non-string\narguments before persisting, so this is always a plain\nstring.\n"
+              },
+              "ts": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When the handler emitted this line. Newest-first ordering\non this column drives pagination; clock is the runtime's,\nnot the gateway's.\n"
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true,
+                "description": "Optional structured payload the runtime attaches alongside\nthe message (e.g. extra args passed to `console.log`).\nShape is opaque; treat keys as untyped.\n"
+              }
+            },
+            "required": [
+              "id",
+              "function_id",
+              "level",
+              "message",
+              "ts"
+            ]
+          }
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Pass back as `cursor` to fetch the next\npage. `null` when no further rows exist.\n"
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ]
+    },
+    "sdkName": "listFunctionLogs",
+    "summary": "List a function's execution logs",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "list-function-secrets",
     "description": "Returns metadata for every secret bound to the function, with\nmanaged entries (provisioned by Primitive) listed first and\nuser-set entries listed alphabetically after. **Values are\nnever returned.** Secret writes are write-only.\n\nManaged entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,\n`PRIMITIVE_API_KEY`) carry a `description` instead of\n`created_at` / `updated_at`. They cannot be created, updated,\nor deleted via this API.\n",
     "hasJsonBody": false,

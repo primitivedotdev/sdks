@@ -405,6 +405,22 @@ func (UnimplementedHandler) ListFilters(ctx context.Context) (r ListFiltersRes, 
 	return r, ht.ErrNotImplemented
 }
 
+// ListFunctionLogs implements listFunctionLogs operation.
+//
+// Returns the most recent `function_logs` rows for the function,
+// newest first. Each row is a single `console.log` / `console.error`
+// invocation captured from the running handler.
+// Page through history with the opaque `cursor` returned as
+// `next_cursor`; pass it back as the `cursor` query param on the
+// next call. `next_cursor` is `null` when there are no further
+// rows. The cursor format is an implementation detail and should
+// not be parsed by callers.
+//
+// GET /functions/{id}/logs
+func (UnimplementedHandler) ListFunctionLogs(ctx context.Context, params ListFunctionLogsParams) (r ListFunctionLogsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListFunctionSecrets implements listFunctionSecrets operation.
 //
 // Returns metadata for every secret bound to the function, with
