@@ -1,0 +1,333 @@
+import { Command, Flags } from "@oclif/core";
+import {
+  getFunction,
+  setFunctionSecret,
+  updateFunction,
+} from "../../api/generated/sdk.gen.js";
+import type {
+  FunctionDetail,
+  FunctionSecretWriteResult,
+} from "../../api/generated/types.gen.js";
+import { PrimitiveApiClient } from "../../api/index.js";
+import {
+  extractErrorPayload,
+  removeStaleSavedCredentialOnUnauthorized,
+  runWithTiming,
+  TIME_FLAG_DESCRIPTION,
+  writeErrorWithHints,
+} from "../api-command.js";
+import { type ResolvedCliAuth, resolveCliAuth } from "../auth.js";
+
+// `primitive functions:set-secret` is the agent-grade shortcut for
+// writing a function secret and (optionally) pushing it live in the
+// same call. The underlying `functions:set-function-secret` /
+// `functions:create-function-secret` operations only do the secret
+// upsert; making the new value visible to the running handler
+// requires a separate `functions:redeploy` (or `functions:update-
+// function`) call with the existing bundle. AGX walkthrough flagged
+// the two-step dance as tedious: passing `--redeploy` here collapses
+// it into one command.
+//
+// Shape:
+//   primitive functions:set-secret --id <fn-id> --key <KEY> --value <value>
+//   primitive functions:set-secret --id <fn-id> --key <KEY> --value <value> --redeploy
+//
+// The raw `functions:set-function-secret` and `functions:create-
+// function-secret` operations stay available for callers that want
+// the unsugared form.
+//
+// Source map caveat for --redeploy: the redeploy step pulls the
+// function's current code via getFunction (which does not return the
+// source map, since source maps live only on the runtime side) and
+// re-uploads with no sourceMap field. The CF runtime treats a deploy
+// without sourceMap as "drop the existing one". Callers who need
+// stack-trace symbolication preserved should use
+// `functions:redeploy --file <bundle> --source-map-file <map>`
+// after the secret write instead of --redeploy here.
+
+// Shape of the API result the redeploy step returns. Exported only
+// so the unit test for runSetSecret can construct one in fake
+// fixtures without redefining the structure.
+export type SetSecretResult = {
+  secret: FunctionSecretWriteResult;
+  redeploy?: FunctionDetail;
+};
+
+// Minimal client surface runSetSecret needs. Factored out so the
+// unit test can pass a fake without standing up a real
+// PrimitiveApiClient or the generated fetch stack. The real
+// implementation in run() passes thin wrappers around the
+// generated SDK functions.
+export type SetSecretApiSurface = {
+  setSecret: (params: { id: string; key: string; value: string }) => Promise<{
+    data?: { data?: FunctionSecretWriteResult };
+    error?: unknown;
+  }>;
+  getFunction: (params: { id: string }) => Promise<{
+    data?: { data?: FunctionDetail };
+    error?: unknown;
+  }>;
+  updateFunction: (params: { id: string; code: string }) => Promise<{
+    data?: { data?: FunctionDetail };
+    error?: unknown;
+  }>;
+};
+
+// Discriminated result from runSetSecret. The caller surfaces
+// either a success (with the secret write payload and the optional
+// redeploy detail) or an error stage that identifies which step
+// failed so the CLI run() handler can write hints + clean up
+// credentials without re-deriving the failure source.
+export type RunSetSecretResult =
+  | { kind: "ok"; result: SetSecretResult }
+  | {
+      kind: "error";
+      stage: "set-secret" | "get-function" | "redeploy";
+      payload: unknown;
+    };
+
+// Pure-ish orchestration of the set-secret + optional redeploy
+// flow. Pulled out as a named export so the unit test can drive
+// both the happy path and each error stage with a fake API
+// surface, without spinning up a real client or the oclif
+// command lifecycle.
+//
+// The redeploy step uses the function's CURRENT code (fetched via
+// getFunction) as the new bundle. This is the documented way to
+// "refresh secret bindings without changing the handler": the
+// server-side deploy reads the secrets table fresh on every call,
+// so re-deploying the same code picks up the secret we just wrote.
+export async function runSetSecret(
+  api: SetSecretApiSurface,
+  params: { id: string; key: string; value: string; redeploy: boolean },
+): Promise<RunSetSecretResult> {
+  const setResult = await api.setSecret({
+    id: params.id,
+    key: params.key,
+    value: params.value,
+  });
+  if (setResult.error) {
+    return {
+      kind: "error",
+      payload: extractErrorPayload(setResult.error),
+      stage: "set-secret",
+    };
+  }
+  const secret = setResult.data?.data;
+  if (!secret) {
+    // Server returned 2xx with no `data` body. Treat as an error
+    // so we don't fabricate a success payload; this should not
+    // happen in practice but the shape forces us to handle it.
+    return {
+      kind: "error",
+      payload: {
+        code: "client_error",
+        message: "Secret write returned no data",
+      },
+      stage: "set-secret",
+    };
+  }
+
+  if (!params.redeploy) {
+    return { kind: "ok", result: { secret } };
+  }
+
+  const fnResult = await api.getFunction({ id: params.id });
+  if (fnResult.error) {
+    return {
+      kind: "error",
+      payload: extractErrorPayload(fnResult.error),
+      stage: "get-function",
+    };
+  }
+  const fn = fnResult.data?.data;
+  if (!fn) {
+    return {
+      kind: "error",
+      payload: {
+        code: "client_error",
+        message: "Could not read current function code for redeploy",
+      },
+      stage: "get-function",
+    };
+  }
+
+  const updateResult = await api.updateFunction({
+    code: fn.code,
+    id: params.id,
+  });
+  if (updateResult.error) {
+    return {
+      kind: "error",
+      payload: extractErrorPayload(updateResult.error),
+      stage: "redeploy",
+    };
+  }
+  const redeployed = updateResult.data?.data;
+  if (!redeployed) {
+    return {
+      kind: "error",
+      payload: {
+        code: "client_error",
+        message: "Redeploy returned no data",
+      },
+      stage: "redeploy",
+    };
+  }
+
+  return { kind: "ok", result: { redeploy: redeployed, secret } };
+}
+
+class FunctionsSetSecretCommand extends Command {
+  static description =
+    `Write a function secret and optionally redeploy so the new value lands in the running handler. Agent-grade shortcut for functions:set-function-secret + functions:redeploy.
+
+  Without --redeploy this is a plain secret upsert: the value is
+  encrypted at rest but is NOT visible to the running handler until
+  the next deploy. Pass --redeploy to re-run the deploy with the
+  function's current code in the same call, which refreshes the
+  binding set with the value you just wrote.
+
+  Keys must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters, digits,
+  underscores; first character is a letter or underscore). System-
+  managed keys are reserved and rejected.`;
+
+  static summary =
+    "Write a function secret (optionally redeploying to push it live)";
+
+  static examples = [
+    "<%= config.bin %> functions:set-secret --id <fn-id> --key API_TOKEN --value abc123",
+    "<%= config.bin %> functions:set-secret --id <fn-id> --key API_TOKEN --value abc123 --redeploy",
+  ];
+
+  static flags = {
+    "api-key": Flags.string({
+      description:
+        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
+      env: "PRIMITIVE_API_KEY",
+    }),
+    "api-base-url-1": Flags.string({
+      description:
+        "Override the primary API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_1",
+      hidden: true,
+    }),
+    "api-base-url-2": Flags.string({
+      description:
+        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_2",
+      hidden: true,
+    }),
+    id: Flags.string({
+      description: "Function id (UUID). The function must already exist.",
+      required: true,
+    }),
+    key: Flags.string({
+      description:
+        "Secret key. Uppercase letters, digits, underscores; must start with a letter or underscore. System-managed keys are reserved.",
+      required: true,
+    }),
+    value: Flags.string({
+      description: "Secret value (up to 4096 UTF-8 bytes). Encrypted at rest.",
+      required: true,
+    }),
+    redeploy: Flags.boolean({
+      description:
+        "Also redeploy the function with its current code so the new value lands in the running handler. Without this, the secret is written but not visible to the handler until the next deploy. Note: source maps are stored only on the runtime side and getFunction does not return them, so this redeploy drops any previously-uploaded source map. If preserving stack-trace symbolication matters, use `functions:redeploy --file <bundle.js> --source-map-file <bundle.js.map>` instead.",
+    }),
+    time: Flags.boolean({
+      description: TIME_FLAG_DESCRIPTION,
+    }),
+  };
+
+  async run(): Promise<void> {
+    const { flags } = await this.parse(FunctionsSetSecretCommand);
+
+    await runWithTiming(flags.time, async () => {
+      const baseUrlOverridden =
+        flags["api-base-url-1"] !== undefined ||
+        flags["api-base-url-2"] !== undefined;
+      const auth = resolveCliAuth({
+        apiKey: flags["api-key"],
+        apiBaseUrl1: flags["api-base-url-1"],
+        apiBaseUrl2: flags["api-base-url-2"],
+        configDir: this.config.configDir,
+      });
+      const apiClient = new PrimitiveApiClient({
+        apiKey: auth.apiKey,
+        apiBaseUrl1: auth.apiBaseUrl1,
+        apiBaseUrl2: auth.apiBaseUrl2,
+      });
+
+      const authFailureContext: {
+        auth: ResolvedCliAuth;
+        baseUrlOverridden: boolean;
+        configDir: string;
+      } = {
+        auth,
+        baseUrlOverridden,
+        configDir: this.config.configDir,
+      };
+
+      // Adapter: thin wrappers around the generated SDK calls,
+      // routed through host 1 (apiClient.client). The secrets and
+      // function-detail endpoints are not on host 2.
+      const apiSurface: SetSecretApiSurface = {
+        getFunction: (p) =>
+          getFunction({
+            client: apiClient.client,
+            path: { id: p.id },
+            responseStyle: "fields",
+          }),
+        setSecret: (p) =>
+          setFunctionSecret({
+            body: { value: p.value },
+            client: apiClient.client,
+            path: { id: p.id, key: p.key },
+            responseStyle: "fields",
+          }),
+        updateFunction: (p) =>
+          updateFunction({
+            body: { code: p.code },
+            client: apiClient.client,
+            path: { id: p.id },
+            responseStyle: "fields",
+          }),
+      };
+
+      const outcome = await runSetSecret(apiSurface, {
+        id: flags.id,
+        key: flags.key,
+        redeploy: flags.redeploy === true,
+        value: flags.value,
+      });
+
+      if (outcome.kind === "error") {
+        // Stage-specific framing on stderr so callers can tell
+        // whether the secret landed before a failed redeploy. The
+        // JSON envelope still goes through writeErrorWithHints so
+        // any actionable hint (e.g. unauthorized) is surfaced.
+        if (outcome.stage === "get-function") {
+          process.stderr.write(
+            "Secret was written, but reading current function code for redeploy failed; the secret is NOT yet live. Re-run with --redeploy, or call `primitive functions:redeploy --id <id> --file <bundle>` once you have the bundle.\n",
+          );
+        } else if (outcome.stage === "redeploy") {
+          process.stderr.write(
+            "Secret was written, but the redeploy step failed; the secret is NOT yet live. Inspect the function's deploy_error and re-run `primitive functions:redeploy --id <id> --file <bundle>` once the cause is fixed.\n",
+          );
+        }
+        writeErrorWithHints(outcome.payload);
+        removeStaleSavedCredentialOnUnauthorized({
+          ...authFailureContext,
+          payload: outcome.payload,
+        });
+        process.exitCode = 1;
+        return;
+      }
+
+      this.log(JSON.stringify(outcome.result, null, 2));
+    });
+  }
+}
+
+export default FunctionsSetSecretCommand;

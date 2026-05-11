@@ -4,11 +4,13 @@ import { join } from "node:path";
 import { Errors } from "@oclif/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createOperationCommand,
   extractErrorCode,
   extractErrorPayload,
   flagForParameter,
   formatElapsed,
   formatErrorPayload,
+  OPERATION_HINTS,
   readJsonBody,
   removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
@@ -19,6 +21,7 @@ import {
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../../src/oclif/auth.js";
+import type { PrimitiveOperationManifest } from "../../src/openapi/index.js";
 
 describe("formatErrorPayload", () => {
   it("wraps a fetch TypeError into a code/message payload instead of {}", () => {
@@ -534,5 +537,75 @@ describe("runWithTiming", () => {
     // is essentially unreachable, but matching it future-proofs the
     // assertion against any future format change.
     expect(writes[0]).toMatch(/^\[time: (?:\d+m )?\d+\.\d{2}s\]\n$/);
+  });
+});
+
+describe("OPERATION_HINTS", () => {
+  // The hint set is small and curated. Pin each entry to a known
+  // shortcut command so a typo or accidental rename in
+  // api-command.ts surfaces here instead of as a silently broken
+  // hint in --help output. Add a row whenever a new shortcut is
+  // introduced; the matching keys in the index.ts COMMANDS map are
+  // the authoritative shortcut surface.
+  it("points each generated op at its hand-rolled shortcut command", () => {
+    expect(OPERATION_HINTS.createFunction).toContain("functions:deploy");
+    expect(OPERATION_HINTS.updateFunction).toContain("functions:redeploy");
+    expect(OPERATION_HINTS.createFunctionSecret).toContain(
+      "functions:set-secret",
+    );
+    expect(OPERATION_HINTS.setFunctionSecret).toContain("functions:set-secret");
+  });
+});
+
+describe("createOperationCommand description", () => {
+  // Helper: minimal manifest entry so the description rendering is
+  // exercised in isolation. createOperationCommand reads only the
+  // fields touched here; the rest of the manifest shape is only
+  // needed by run(), which the test never invokes.
+  function makeOperation(
+    overrides: Partial<PrimitiveOperationManifest> = {},
+  ): PrimitiveOperationManifest {
+    const base: PrimitiveOperationManifest = {
+      binaryResponse: false,
+      bodyRequired: false,
+      command: "fake-op",
+      description: "Fake operation",
+      hasJsonBody: false,
+      method: "GET",
+      operationId: "fakeOp",
+      path: "/fake",
+      pathParams: [],
+      queryParams: [],
+      requestSchema: null,
+      responseSchema: null,
+      sdkName: "fakeOp",
+      summary: "Fake operation",
+      tag: "Fake",
+      tagCommand: "fake",
+    };
+    return { ...base, ...overrides };
+  }
+
+  it("appends the hint to the description when sdkName matches OPERATION_HINTS", () => {
+    const op = makeOperation({
+      description: "Update and redeploy a function",
+      sdkName: "updateFunction",
+    });
+    const Cmd = createOperationCommand(op) as unknown as {
+      description: string;
+    };
+    expect(Cmd.description).toContain("Update and redeploy a function");
+    expect(Cmd.description).toContain("functions:redeploy --id");
+  });
+
+  it("leaves the description untouched for operations without a hint", () => {
+    const op = makeOperation({
+      description: "No-shortcut operation",
+      sdkName: "someOtherOperation",
+    });
+    const Cmd = createOperationCommand(op) as unknown as {
+      description: string;
+    };
+    expect(Cmd.description).toBe("No-shortcut operation");
   });
 });
