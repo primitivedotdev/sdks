@@ -651,3 +651,17 @@ export type {
   ResponseStyle,
 } from "./generated/client/index.js";
 export * from "./generated/index.js";
+export type {
+  VerifyOptions as VerifyWebhookSignatureOptions,
+  WebhookVerificationErrorCode,
+} from "./verify-signature.js";
+// Web Crypto verifier for in-handler webhook verification. Mirrors
+// the surface of `verifyWebhookSignature` from `@primitivedotdev/sdk`
+// (the Node version) but implements HMAC-SHA256 with `crypto.subtle`
+// so it can be bundled into a Primitive Function without pulling in
+// a `node:crypto` polyfill.
+export {
+  PRIMITIVE_SIGNATURE_HEADER,
+  verifyWebhookSignature,
+  WebhookVerificationError,
+} from "./verify-signature.js";
