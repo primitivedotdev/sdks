@@ -100,21 +100,73 @@ func (e *APIError) Error() string {
 	return e.Message
 }
 
+// Client is the high-level Primitive SDK client. Internally it
+// constructs two generated clients (one per host) and routes each
+// operation to the right one so customers don't have to think about
+// the host split:
+//   - api / Host 1 (DefaultAPIBaseURL1, "https://www.primitive.dev/api/v1"):
+//     every operation except /send-mail. Today that's also where the
+//     reply / forward endpoints live.
+//   - apiSend / Host 2 (DefaultAPIBaseURL2, "https://api.primitive.dev/v1"):
+//     /send-mail. Cloudflare Worker with a larger request body cap to
+//     support attachment sends.
 type Client struct {
-	api sendAPI
+	api     sendAPI
+	apiSend sendAPI
+}
+
+// ClientOptions configures a NewClient call. Both base URLs default
+// to the production hosts and only need overriding for internal
+// staging/local testing. The overrides are not part of the publicly-
+// documented SDK surface.
+type ClientOptions struct {
+	// APIBaseURL1 overrides the primary API host. Empty = production default.
+	APIBaseURL1 string
+	// APIBaseURL2 overrides the attachments-supporting send host. Empty = production default.
+	APIBaseURL2 string
+	// Extra options forwarded to both underlying ogen clients (TLS, HTTP
+	// client, telemetry middleware, etc.).
+	Extra []primitiveapi.ClientOption
 }
 
 func NewClient(apiKey string, opts ...primitiveapi.ClientOption) (*Client, error) {
-	apiClient, err := primitiveapi.NewAPIClient(apiKey, opts...)
+	return NewClientWithOptions(apiKey, ClientOptions{Extra: opts})
+}
+
+// NewClientWithOptions builds a Client with explicit base-URL overrides.
+// Prefer NewClient unless you are running against staging or local.
+func NewClientWithOptions(apiKey string, options ClientOptions) (*Client, error) {
+	tokenSource := primitiveapi.NewStaticTokenSource(apiKey, "")
+
+	baseURL1 := options.APIBaseURL1
+	if baseURL1 == "" {
+		baseURL1 = primitiveapi.DefaultAPIBaseURL1
+	}
+	baseURL2 := options.APIBaseURL2
+	if baseURL2 == "" {
+		baseURL2 = primitiveapi.DefaultAPIBaseURL2
+	}
+
+	apiClient, err := primitiveapi.NewClient(baseURL1, tokenSource, options.Extra...)
+	if err != nil {
+		return nil, err
+	}
+	apiSendClient, err := primitiveapi.NewClient(baseURL2, tokenSource, options.Extra...)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Client{api: apiClient}, nil
+	return &Client{api: apiClient, apiSend: apiSendClient}, nil
 }
 
+// NewClientFromAPI wraps a customer-supplied generated client. Useful
+// for tests where the customer wants full control over the underlying
+// HTTP layer. The same client is used for both host-1 and host-2
+// operations; the caller is responsible for ensuring it points at a
+// host that can serve both shapes (typically only happens in tests
+// against a mock).
 func NewClientFromAPI(apiClient sendAPI) *Client {
-	return &Client{api: apiClient}
+	return &Client{api: apiClient, apiSend: apiClient}
 }
 
 func validateAddressHeader(field string, value string) error {
@@ -300,7 +352,10 @@ func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error
 		apiParams.IdempotencyKey = primitiveapi.NewOptString(params.IdempotencyKey)
 	}
 
-	res, err := c.api.SendEmail(ctx, request, apiParams)
+	// /send-mail routes to the host-2 (attachments-supporting) client so
+	// large attachment sends work without the customer thinking about
+	// the host split. The send body shape is identical on both hosts.
+	res, err := c.apiSend.SendEmail(ctx, request, apiParams)
 	if err != nil {
 		return zero, err
 	}

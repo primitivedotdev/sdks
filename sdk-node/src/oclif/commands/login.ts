@@ -22,7 +22,8 @@ import {
   acquireCliCredentialsLock,
   credentialsPath,
   loadCliCredentials,
-  normalizeBaseUrl,
+  normalizeApiBaseUrl1,
+  normalizeApiBaseUrl2,
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../auth.js";
@@ -69,20 +70,20 @@ type ExistingLoginStatus =
   | { status: "blocked"; message: string; payload: unknown };
 
 export async function checkExistingLogin(params: {
-  baseUrl?: string;
+  apiBaseUrl1?: string;
   configDir: string;
   credentials: StoredCliCredentials;
   checkAccount?: (
     apiClient: PrimitiveApiClient,
   ) => Promise<{ error?: unknown }>;
 }): Promise<ExistingLoginStatus> {
-  const baseUrlOverridden = params.baseUrl !== undefined;
-  const probeBaseUrl = baseUrlOverridden
-    ? normalizeBaseUrl(params.baseUrl)
-    : params.credentials.base_url;
+  const baseUrlOverridden = params.apiBaseUrl1 !== undefined;
+  const probeApiBaseUrl1 = baseUrlOverridden
+    ? normalizeApiBaseUrl1(params.apiBaseUrl1)
+    : params.credentials.api_base_url_1;
   const apiClient = new PrimitiveApiClient({
     apiKey: params.credentials.api_key,
-    baseUrl: probeBaseUrl,
+    apiBaseUrl1: probeApiBaseUrl1,
   });
   const result = await (
     params.checkAccount ??
@@ -98,7 +99,10 @@ export async function checkExistingLogin(params: {
   const payload = extractErrorPayload(result.error);
   const auth = {
     apiKey: params.credentials.api_key,
-    baseUrl: probeBaseUrl,
+    apiBaseUrl1: probeApiBaseUrl1,
+    // Host-2 isn't relevant to checkExistingLogin (login is on host-1
+    // only), but the auth shape requires it. Use the default.
+    apiBaseUrl2: normalizeApiBaseUrl2(undefined),
     credentials: params.credentials,
     source: "stored" as const,
   };
@@ -122,7 +126,7 @@ export async function checkExistingLogin(params: {
 }
 
 type LoginFlags = {
-  "base-url"?: string;
+  "api-base-url-1"?: string;
   "device-name"?: string;
   "no-browser"?: boolean;
   force?: boolean;
@@ -141,9 +145,11 @@ class LoginCommand extends Command {
   ];
 
   static flags = {
-    "base-url": Flags.string({
-      description: "API base URL (defaults to PRIMITIVE_API_URL or production)",
-      env: "PRIMITIVE_API_URL",
+    "api-base-url-1": Flags.string({
+      description:
+        "Override the primary API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_1",
+      hidden: true,
     }),
     "device-name": Flags.string({
       description: "Device name shown in the browser approval screen",
@@ -177,7 +183,7 @@ class LoginCommand extends Command {
   }
 
   private async runWithCredentialLock(flags: LoginFlags): Promise<void> {
-    const baseUrl = normalizeBaseUrl(flags["base-url"]);
+    const apiBaseUrl1 = normalizeApiBaseUrl1(flags["api-base-url-1"]);
     let existing: StoredCliCredentials | null;
     try {
       existing = loadCliCredentials(this.config.configDir);
@@ -196,7 +202,7 @@ class LoginCommand extends Command {
       );
     } else if (existing) {
       const existingStatus = await checkExistingLogin({
-        baseUrl: flags["base-url"],
+        apiBaseUrl1: flags["api-base-url-1"],
         configDir: this.config.configDir,
         credentials: existing,
       });
@@ -213,7 +219,7 @@ class LoginCommand extends Command {
       }
     }
 
-    const apiClient = new PrimitiveApiClient({ baseUrl });
+    const apiClient = new PrimitiveApiClient({ apiBaseUrl1 });
     const deviceName = flags["device-name"] ?? hostname();
     const started = await startCliLogin({
       body: {
@@ -268,7 +274,7 @@ class LoginCommand extends Command {
 
         saveCliCredentials(this.config.configDir, {
           api_key: login.api_key,
-          base_url: baseUrl,
+          api_base_url_1: apiBaseUrl1,
           created_at: new Date().toISOString(),
           key_id: login.key_id,
           key_prefix: login.key_prefix,

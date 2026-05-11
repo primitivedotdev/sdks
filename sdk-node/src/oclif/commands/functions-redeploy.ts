@@ -42,9 +42,17 @@ class FunctionsRedeployCommand extends Command {
         "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
-    "base-url": Flags.string({
-      description: "API base URL (defaults to PRIMITIVE_API_URL or production)",
-      env: "PRIMITIVE_API_URL",
+    "api-base-url-1": Flags.string({
+      description:
+        "Override the primary API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_1",
+      hidden: true,
+    }),
+    "api-base-url-2": Flags.string({
+      description:
+        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_2",
+      hidden: true,
     }),
     id: Flags.string({
       description: "Function id (UUID). The function must already exist.",
@@ -75,15 +83,19 @@ class FunctionsRedeployCommand extends Command {
         ? readTextFileFlag(flags["source-map-file"], "--source-map-file")
         : undefined;
 
-      const baseUrlOverridden = flags["base-url"] !== undefined;
+      const baseUrlOverridden =
+        flags["api-base-url-1"] !== undefined ||
+        flags["api-base-url-2"] !== undefined;
       const auth = resolveCliAuth({
         apiKey: flags["api-key"],
-        baseUrl: flags["base-url"],
+        apiBaseUrl1: flags["api-base-url-1"],
+        apiBaseUrl2: flags["api-base-url-2"],
         configDir: this.config.configDir,
       });
       const apiClient = new PrimitiveApiClient({
         apiKey: auth.apiKey,
-        baseUrl: auth.baseUrl,
+        apiBaseUrl1: auth.apiBaseUrl1,
+        apiBaseUrl2: auth.apiBaseUrl2,
       });
 
       const authFailureContext = {

@@ -9,13 +9,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acquireCliCredentialsLock,
   credentialsPath,
   deleteCliCredentials,
   loadCliCredentials,
-  normalizeBaseUrl,
+  normalizeApiBaseUrl1,
   resolveCliAuth,
   type StoredCliCredentials,
   saveCliCredentials,
@@ -23,7 +23,7 @@ import {
 
 const CREDENTIALS: StoredCliCredentials = {
   api_key: "prim_test",
-  base_url: "https://api.example.test/api/v1",
+  api_base_url_1: "https://api.example.test/api/v1",
   created_at: "2026-05-05T00:00:00.000Z",
   key_id: "11111111-1111-4111-8111-111111111111",
   key_prefix: "prim_abc",
@@ -66,7 +66,7 @@ describe("CLI auth credentials", () => {
   });
 
   it("normalizes explicit base URLs", () => {
-    expect(normalizeBaseUrl("https://api.example.test/api/v1///")).toBe(
+    expect(normalizeApiBaseUrl1("https://api.example.test/api/v1///")).toBe(
       "https://api.example.test/api/v1",
     );
   });
@@ -77,12 +77,12 @@ describe("CLI auth credentials", () => {
     expect(
       resolveCliAuth({
         apiKey: "prim_explicit",
-        baseUrl: "https://override.example/api/v1",
+        apiBaseUrl1: "https://override.example/api/v1",
         configDir: tempDir,
       }),
     ).toMatchObject({
       apiKey: "prim_explicit",
-      baseUrl: "https://override.example/api/v1",
+      apiBaseUrl1: "https://override.example/api/v1",
       source: "flag-or-env",
     });
   });
@@ -92,7 +92,7 @@ describe("CLI auth credentials", () => {
 
     expect(resolveCliAuth({ configDir: tempDir })).toMatchObject({
       apiKey: CREDENTIALS.api_key,
-      baseUrl: CREDENTIALS.base_url,
+      apiBaseUrl1: CREDENTIALS.api_base_url_1,
       source: "stored",
     });
   });
@@ -112,6 +112,42 @@ describe("CLI auth credentials", () => {
     );
 
     expect(() => loadCliCredentials(tempDir)).toThrow(/api_key/);
+  });
+
+  it("auto-logs-out pre-dual-host credentials and prints a re-login notice", () => {
+    // Pre-dual-host CLI versions wrote `base_url`; the rename to
+    // `api_base_url_1` makes those files unrecoverable. Verify the
+    // load detects the old shape, deletes the file, returns null,
+    // and writes a single-line notice to stderr so users on upgrade
+    // see "you've been logged out" instead of a generic "malformed
+    // credentials" error.
+    const stderrWrites: string[] = [];
+    const writeSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: unknown) => {
+        stderrWrites.push(typeof chunk === "string" ? chunk : String(chunk));
+        return true;
+      });
+    try {
+      // Old shape: `base_url` instead of `api_base_url_1`.
+      const stale = {
+        api_key: "prim_old",
+        base_url: "https://api.example.test/api/v1",
+        created_at: "2026-05-05T00:00:00.000Z",
+        key_id: "11111111-1111-4111-8111-111111111111",
+        key_prefix: "prim_old",
+        org_id: "22222222-2222-4222-8222-222222222222",
+        org_name: "Acme",
+      };
+      writeFileSync(credentialsPath(tempDir), `${JSON.stringify(stale)}\n`);
+
+      expect(loadCliCredentials(tempDir)).toBeNull();
+      expect(stderrWrites.join("")).toContain("logged out");
+      // Stale file should have been cleared so the next call is idempotent.
+      expect(loadCliCredentials(tempDir)).toBeNull();
+    } finally {
+      writeSpy.mockRestore();
+    }
   });
 
   it("serializes credential updates with a lock directory", () => {

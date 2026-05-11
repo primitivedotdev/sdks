@@ -113,7 +113,13 @@ def _install_capturing_transport(
         )
 
     transport = httpx.MockTransport(handler)
+    # Install the mock transport on BOTH underlying clients so /send-mail
+    # (which PrimitiveClient routes to api_send_client / host 2) and
+    # every other endpoint (api_client / host 1) both hit the mock.
     client.api_client.set_httpx_client(
+        httpx.Client(base_url=BASE_URL, transport=transport)
+    )
+    client.api_send_client.set_httpx_client(
         httpx.Client(base_url=BASE_URL, transport=transport)
     )
     del is_reply  # signature symmetry; both endpoints use the same envelope
@@ -137,6 +143,9 @@ async def _install_async_capturing_transport(
 
     transport = httpx.MockTransport(handler)
     client.api_client.set_async_httpx_client(
+        httpx.AsyncClient(base_url=BASE_URL, transport=transport)
+    )
+    client.api_send_client.set_async_httpx_client(
         httpx.AsyncClient(base_url=BASE_URL, transport=transport)
     )
 
@@ -225,7 +234,7 @@ def test_send_posts_payload_and_returns_send_result(
         client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
     )
 
-    client = PrimitiveClient("prim_test", base_url="https://example.test/api/v1")
+    client = PrimitiveClient("prim_test", api_base_url_1="https://example.test/api/v1", api_base_url_2="https://example.test/api/v1")
     result = client.send(
         from_email="support@example.com",
         to="alice@example.com",
@@ -276,7 +285,7 @@ async def test_asend_posts_payload_and_returns_send_result(
         client_module, "send_email_async_detailed", fake_send_email_async_detailed
     )
 
-    client = PrimitiveClient("prim_test", base_url="https://example.test/api/v1")
+    client = PrimitiveClient("prim_test", api_base_url_1="https://example.test/api/v1", api_base_url_2="https://example.test/api/v1")
     result = await client.asend(
         from_email="support@example.com",
         to="alice@example.com",
@@ -337,7 +346,7 @@ def test_send_passes_wait_options_and_idempotency_key() -> None:
     travels in the request headers.
     """
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(
         client,
         captured,
@@ -753,7 +762,7 @@ def test_reply_dict_from_overrides_default(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_send_extra_headers_appear_on_request() -> None:
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(client, captured)
 
     client.send(
@@ -770,7 +779,7 @@ def test_send_extra_headers_appear_on_request() -> None:
 
 def test_send_per_call_timeout_appears_on_request_extension() -> None:
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(client, captured)
 
     client.send(
@@ -790,7 +799,7 @@ def test_send_per_call_timeout_appears_on_request_extension() -> None:
 def test_send_per_call_options_do_not_leak_into_next_call() -> None:
     """Per-call kwargs must not leak into the next call on the same client."""
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(client, captured)
 
     client.send(
@@ -822,8 +831,10 @@ def test_send_propagates_httpx_timeout_exception() -> None:
         raise httpx.ReadTimeout("simulated", request=request)
 
     transport = httpx.MockTransport(handler)
-    client = PrimitiveClient("prim_test", base_url="https://example.test/api/v1")
-    client.api_client.set_httpx_client(
+    client = PrimitiveClient("prim_test", api_base_url_1="https://example.test/api/v1", api_base_url_2="https://example.test/api/v1")
+    # send() routes to api_send_client (host 2), so the transport has to
+    # live on that client for the timeout to bubble back to the caller.
+    client.api_send_client.set_httpx_client(
         httpx.Client(base_url="https://example.test/api/v1", transport=transport)
     )
 
@@ -857,8 +868,9 @@ def test_custom_httpx_client_is_not_replaced_by_per_call_options() -> None:
     # Mark the client so we can detect identity preservation.
     cast(Any, custom_client)._primitive_marker = "this-one"
 
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
-    client.api_client.set_httpx_client(custom_client)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
+    # send() routes to api_send_client; install the custom client there.
+    client.api_send_client.set_httpx_client(custom_client)
 
     client.send(
         from_email="support@example.com",
@@ -871,17 +883,18 @@ def test_custom_httpx_client_is_not_replaced_by_per_call_options() -> None:
     )
 
     assert request_count == 1
-    # The same custom client must still be installed after the per-call call.
-    assert client.api_client.get_httpx_client() is custom_client
+    # The same custom client must still be installed after the per-call
+    # call (on api_send_client, since send() routes there).
+    assert client.api_send_client.get_httpx_client() is custom_client
     assert (
-        cast(Any, client.api_client.get_httpx_client())._primitive_marker
+        cast(Any, client.api_send_client.get_httpx_client())._primitive_marker
         == "this-one"
     )
 
 
 def test_reply_threads_idempotency_key_through_to_request() -> None:
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(client, captured)
 
     client.reply(RECEIVED_EMAIL, "Thanks!", idempotency_key="reply-key")
@@ -892,7 +905,7 @@ def test_reply_threads_idempotency_key_through_to_request() -> None:
 
 def test_forward_threads_idempotency_key_through_to_request() -> None:
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(client, captured)
 
     client.forward(
@@ -908,7 +921,7 @@ def test_forward_threads_idempotency_key_through_to_request() -> None:
 
 def test_reply_per_call_extra_headers_and_timeout() -> None:
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(client, captured)
 
     client.reply(
@@ -927,7 +940,7 @@ def test_reply_per_call_extra_headers_and_timeout() -> None:
 
 def test_with_options_sets_default_timeout_for_subsequent_calls() -> None:
     captured: list[httpx.Request] = []
-    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    base = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(base, captured)
 
     fast = base.with_options(timeout=10.0, extra_headers={"X-Tenant": "acme"})
@@ -947,7 +960,7 @@ def test_with_options_sets_default_timeout_for_subsequent_calls() -> None:
 
 def test_with_options_per_call_timeout_overrides_default() -> None:
     captured: list[httpx.Request] = []
-    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    base = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(base, captured)
 
     fast = base.with_options(timeout=10.0)
@@ -967,7 +980,7 @@ def test_with_options_per_call_timeout_overrides_default() -> None:
 
 def test_with_options_does_not_mutate_base_client() -> None:
     captured: list[httpx.Request] = []
-    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    base = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(base, captured)
 
     base.with_options(timeout=10.0, extra_headers={"X-Tenant": "acme"})
@@ -989,7 +1002,7 @@ def test_with_options_does_not_mutate_base_client() -> None:
 
 def test_with_options_no_args_returns_a_clone() -> None:
     captured: list[httpx.Request] = []
-    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    base = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(base, captured)
 
     cloned = base.with_options()
@@ -1009,7 +1022,7 @@ def test_with_options_no_args_returns_a_clone() -> None:
 
 def test_with_options_timeout_none_clears_previously_set_timeout() -> None:
     captured: list[httpx.Request] = []
-    base = PrimitiveClient("prim_test", base_url=BASE_URL)
+    base = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     _install_capturing_transport(base, captured)
 
     fast = base.with_options(timeout=10.0)
@@ -1031,7 +1044,7 @@ def test_with_options_timeout_none_clears_previously_set_timeout() -> None:
 @pytest.mark.anyio
 async def test_asend_per_call_timeout_and_extra_headers() -> None:
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     await _install_async_capturing_transport(client, captured)
 
     await client.asend(
@@ -1055,7 +1068,7 @@ async def test_asend_per_call_timeout_and_extra_headers() -> None:
 @pytest.mark.anyio
 async def test_areply_threads_idempotency_key_through_to_request() -> None:
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     await _install_async_capturing_transport(client, captured)
 
     await client.areply(RECEIVED_EMAIL, "Thanks!", idempotency_key="areply-key")
@@ -1067,7 +1080,7 @@ async def test_areply_threads_idempotency_key_through_to_request() -> None:
 @pytest.mark.anyio
 async def test_aforward_threads_idempotency_key_through_to_request() -> None:
     captured: list[httpx.Request] = []
-    client = PrimitiveClient("prim_test", base_url=BASE_URL)
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
     await _install_async_capturing_transport(client, captured)
 
     await client.aforward(
@@ -1079,3 +1092,20 @@ async def test_aforward_threads_idempotency_key_through_to_request() -> None:
 
     assert len(captured) == 1
     assert captured[0].headers.get("Idempotency-Key") == "afwd-key"
+
+
+def test_primitive_client_rejects_legacy_base_url_kwarg() -> None:
+    """Pre-dual-host callers passing `base_url=...` should hit a clear
+    TypeError naming the rename, not the confusing 'multiple values for
+    keyword argument' traceback through internal SDK code that would
+    happen if **client_kwargs swallowed the value."""
+    with pytest.raises(TypeError, match=r"api_base_url_1"):
+        PrimitiveClient("prim_test", base_url="https://example.test/api/v1")  # pyright: ignore[reportCallIssue]
+
+
+def test_create_client_rejects_legacy_base_url_kwarg() -> None:
+    """The module-level factory inherits the guard via PrimitiveClient."""
+    from primitive.client import create_client
+
+    with pytest.raises(TypeError, match=r"api_base_url_1"):
+        create_client("prim_test", base_url="https://example.test/api/v1")  # pyright: ignore[reportCallIssue]

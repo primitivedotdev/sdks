@@ -627,6 +627,15 @@ export const getSendPermissions = <ThrowOnError extends boolean = false>(options
  * the request returns once the relay accepts the message for delivery.
  * Set `wait: true` to wait for the first downstream SMTP delivery outcome.
  *
+ * **Host routing.** /send-mail is served by the attachments-
+ * supporting host (`https://api.primitive.dev/v1`) so the
+ * request body can carry inline attachments up to ~30 MiB raw.
+ * The primary host (`https://www.primitive.dev/api/v1`) also
+ * accepts /send-mail for attachment-free sends; sends WITH
+ * attachments to the primary host return 413
+ * `attachments_unsupported_on_this_endpoint`. The typed SDKs
+ * route /send-mail to the attachments host automatically.
+ *
  */
 export const sendEmail = <ThrowOnError extends boolean = false>(options: Options<SendEmailData, ThrowOnError>) => (options.client ?? client).post<SendEmailResponses, SendEmailErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
