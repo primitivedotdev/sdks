@@ -89,13 +89,17 @@ function checkProxy(): CheckOutcome {
     return { status: "ok", message: "no proxy env vars set" };
   }
 
-  const hasProxyHost =
-    (process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY ?? "").length > 0;
+  // Identify which specific proxy host var(s) are set so the warning
+  // names what the shell actually has, not a hardcoded string. Order
+  // is reporting-only; if both are set, both surface in the message.
+  const proxyHostVars = (["HTTPS_PROXY", "HTTP_PROXY"] as const).filter(
+    (name) => (process.env[name] ?? "").length > 0,
+  );
   const proxyEnabled = process.env.NODE_USE_ENV_PROXY === "1";
-  if (hasProxyHost && !proxyEnabled) {
+  if (proxyHostVars.length > 0 && !proxyEnabled) {
     return {
       status: "warn",
-      message: `${present.join(", ")} (HTTPS_PROXY set, NODE_USE_ENV_PROXY not)`,
+      message: `${present.join(", ")} (${proxyHostVars.join(" / ")} set, NODE_USE_ENV_PROXY not)`,
       hint: "Node 22+ ignores HTTP(S)_PROXY by default. Re-run with NODE_USE_ENV_PROXY=1 if API calls fail with ENETUNREACH or ECONNREFUSED.",
     };
   }
@@ -118,19 +122,32 @@ function checkApiKey(opts: {
   }
   const credsPath = join(opts.configDir, "credentials.json");
   if (existsSync(credsPath)) {
+    let parsed: { api_key?: string } | null = null;
+    let parseError: string | null = null;
     try {
-      const parsed = JSON.parse(readFileSync(credsPath, "utf8")) as {
+      parsed = JSON.parse(readFileSync(credsPath, "utf8")) as {
         api_key?: string;
       };
-      if (parsed.api_key) {
-        return { status: "ok", message: `loaded from ${credsPath}` };
-      }
-    } catch {
-      // Fall through to fail below; the credentials file is malformed.
+    } catch (error) {
+      parseError = error instanceof Error ? error.message : String(error);
+    }
+
+    if (parsed?.api_key) {
+      return { status: "ok", message: `loaded from ${credsPath}` };
+    }
+    if (parsed) {
+      // File parsed but had no usable api_key. Different cause than a
+      // malformed file; surface the distinction so the user knows
+      // whether to re-run login or to inspect the file by hand.
+      return {
+        status: "fail",
+        message: `${credsPath} exists but contains no api_key`,
+        hint: "Run `primitive logout` to clear it, then `primitive login` to recreate.",
+      };
     }
     return {
       status: "fail",
-      message: `${credsPath} exists but is unreadable or malformed`,
+      message: `${credsPath} exists but is unreadable or malformed${parseError ? ` (${parseError})` : ""}`,
       hint: "Run `primitive logout` to clear it, then `primitive login` to recreate.",
     };
   }

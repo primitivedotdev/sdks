@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   checkApiKey,
@@ -117,6 +120,34 @@ describe("checkProxy", () => {
     expect(outcome.message).toContain("HTTPS_PROXY");
     expect(outcome.hint).toMatch(/NODE_USE_ENV_PROXY=1/);
   });
+
+  it("warns when only HTTP_PROXY is set and names HTTP_PROXY in the message", () => {
+    // Sibling case to the HTTPS_PROXY warn. The diagnostic must name
+    // the var the shell actually has; a hardcoded "HTTPS_PROXY set"
+    // string contradicts the user's environment and was the exact
+    // bug Greptile flagged on the doctor command.
+    const outcome = withProxyEnv({ HTTP_PROXY: "http://corp-proxy:8080" }, () =>
+      checkProxy(),
+    );
+    expect(outcome.status).toBe("warn");
+    if (outcome.status !== "warn") return;
+    expect(outcome.message).toContain("HTTP_PROXY");
+    expect(outcome.message).not.toMatch(/HTTPS_PROXY set/);
+    expect(outcome.hint).toMatch(/NODE_USE_ENV_PROXY=1/);
+  });
+
+  it("names both HTTPS_PROXY and HTTP_PROXY when both are set", () => {
+    const outcome = withProxyEnv(
+      {
+        HTTPS_PROXY: "http://corp-proxy:8443",
+        HTTP_PROXY: "http://corp-proxy:8080",
+      },
+      () => checkProxy(),
+    );
+    expect(outcome.status).toBe("warn");
+    if (outcome.status !== "warn") return;
+    expect(outcome.message).toMatch(/HTTPS_PROXY \/ HTTP_PROXY set/);
+  });
 });
 
 describe("checkApiKey", () => {
@@ -148,5 +179,36 @@ describe("checkApiKey", () => {
     if (outcome.status !== "fail") return;
     expect(outcome.hint).toMatch(/primitive login/);
     expect(outcome.hint).toMatch(/PRIMITIVE_API_KEY/);
+  });
+
+  it("distinguishes a valid-JSON-but-missing-key credentials file from a malformed one", () => {
+    // Greptile flagged that the original implementation labeled both
+    // "credentials.json parses but has no api_key" and "credentials.json
+    // fails to parse" as "unreadable or malformed", which contradicts
+    // the user's actual file state. The split below is the fix.
+    const tmp = mkdtempSync(join(tmpdir(), "primitive-doctor-test-"));
+    try {
+      writeFileSync(join(tmp, "credentials.json"), JSON.stringify({}));
+      const outcome = checkApiKey({ apiKey: undefined, configDir: tmp });
+      expect(outcome.status).toBe("fail");
+      if (outcome.status !== "fail") return;
+      expect(outcome.message).toMatch(/contains no api_key/);
+      expect(outcome.message).not.toMatch(/unreadable or malformed/);
+    } finally {
+      rmSync(tmp, { force: true, recursive: true });
+    }
+  });
+
+  it("labels a credentials file that fails JSON.parse as unreadable or malformed", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "primitive-doctor-test-"));
+    try {
+      writeFileSync(join(tmp, "credentials.json"), "{not valid json");
+      const outcome = checkApiKey({ apiKey: undefined, configDir: tmp });
+      expect(outcome.status).toBe("fail");
+      if (outcome.status !== "fail") return;
+      expect(outcome.message).toMatch(/unreadable or malformed/);
+    } finally {
+      rmSync(tmp, { force: true, recursive: true });
+    }
   });
 });

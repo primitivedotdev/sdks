@@ -351,6 +351,17 @@ describe("writeErrorWithHints", () => {
     expect(writes).toHaveLength(2);
     expect(writes[1]).toMatch(/DNS/);
   });
+
+  it("appends a connection-timeout hint for ETIMEDOUT", () => {
+    const error = new Error("fetch failed");
+    Object.assign(error, { cause: { code: "ETIMEDOUT" } });
+
+    writeErrorWithHints(error);
+
+    expect(writes).toHaveLength(2);
+    expect(writes[1]).toMatch(/timed out/);
+    expect(writes[1]).toMatch(/NODE_USE_ENV_PROXY=1/);
+  });
 });
 
 describe("removeStaleSavedCredentialOnUnauthorized", () => {
