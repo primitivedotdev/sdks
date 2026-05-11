@@ -514,6 +514,21 @@ class PrimitiveClient:
         api_base_url_2: str = DEFAULT_API_BASE_URL_2,
         **client_kwargs: Any,
     ) -> None:
+        # The dual-host rename moved `base_url` to `api_base_url_1`.
+        # Without this guard, a caller still passing `base_url=...`
+        # would have the value swallowed by **client_kwargs and then
+        # forwarded into AuthenticatedClient(base_url=api_base_url_1,
+        # **client_kwargs), yielding a confusing "got multiple values
+        # for keyword argument 'base_url'" traceback pointing at
+        # internal SDK code. Catch it here and raise a clear error
+        # that names the rename explicitly.
+        if "base_url" in client_kwargs:
+            raise TypeError(
+                "PrimitiveClient no longer accepts `base_url`; the dual-host "
+                "rename split it into `api_base_url_1` (primary API host) and "
+                "`api_base_url_2` (attachments-supporting send host). Pass "
+                "`api_base_url_1=...` instead of `base_url=...`.",
+            )
         # The primary AuthenticatedClient targets api_base_url_1 and is
         # what callers passing `client=primitive_client.api_client` to a
         # generated operation get. /send-mail routes to the host-2

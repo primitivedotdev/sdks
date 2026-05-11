@@ -1092,3 +1092,20 @@ async def test_aforward_threads_idempotency_key_through_to_request() -> None:
 
     assert len(captured) == 1
     assert captured[0].headers.get("Idempotency-Key") == "afwd-key"
+
+
+def test_primitive_client_rejects_legacy_base_url_kwarg() -> None:
+    """Pre-dual-host callers passing `base_url=...` should hit a clear
+    TypeError naming the rename, not the confusing 'multiple values for
+    keyword argument' traceback through internal SDK code that would
+    happen if **client_kwargs swallowed the value."""
+    with pytest.raises(TypeError, match=r"api_base_url_1"):
+        PrimitiveClient("prim_test", base_url="https://example.test/api/v1")  # pyright: ignore[reportCallIssue]
+
+
+def test_create_client_rejects_legacy_base_url_kwarg() -> None:
+    """The module-level factory inherits the guard via PrimitiveClient."""
+    from primitive.client import create_client
+
+    with pytest.raises(TypeError, match=r"api_base_url_1"):
+        create_client("prim_test", base_url="https://example.test/api/v1")  # pyright: ignore[reportCallIssue]
