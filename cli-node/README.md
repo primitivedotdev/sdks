@@ -1,0 +1,47 @@
+# @primitivedotdev/cli
+
+Official Primitive CLI. Deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal.
+
+```bash
+npm install -g @primitivedotdev/cli
+primitive whoami
+```
+
+Or with no install:
+
+```bash
+npx @primitivedotdev/cli@latest <command>
+```
+
+This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@primitivedotdev/sdk) runtime client with one-shot commands. For in-handler use (calling Primitive from inside a Function), import `createPrimitiveClient` from `@primitivedotdev/sdk/api` directly; the CLI is for operator and deploy workflows.
+
+## Quickstart
+
+```bash
+export PRIMITIVE_API_KEY=prim_...
+
+primitive whoami
+primitive functions:init my-fn
+cd my-fn && npm install && npm run build
+primitive functions:deploy --name my-fn --file ./dist/handler.js
+
+primitive send --to alice@example.com --body "Hello!" --wait
+primitive emails:latest --limit 5
+```
+
+Run `primitive --help` for the full command list. Per-command help (`primitive functions:deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
+
+## Migrating from `@primitivedotdev/sdk` CLI
+
+The CLI previously shipped inside `@primitivedotdev/sdk`. The shipped surface area is identical; only the package name changes.
+
+| Before | After |
+|--------|-------|
+| `npm install -g @primitivedotdev/sdk` | `npm install -g @primitivedotdev/cli` |
+| `npx @primitivedotdev/sdk@latest <cmd>` | `npx @primitivedotdev/cli@latest <cmd>` |
+
+`@primitivedotdev/sdk` continues to ship the runtime SDK (webhook, API client, contract, parser, openapi). Use it in your application code; use `@primitivedotdev/cli` in your shell and CI.
+
+## License
+
+MIT

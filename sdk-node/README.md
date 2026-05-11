@@ -1,13 +1,18 @@
 # `@primitivedotdev/sdk`
 
-The official Node.js SDK and command-line tool for [Primitive](https://primitive.dev), an email API for sending and receiving programmatic mail.
+The official Node.js library for [Primitive](https://primitive.dev), an email API for sending and receiving programmatic mail. Typed client for receiving and verifying inbound webhooks, sending mail, parsing raw MIME, and calling the full HTTP API.
 
-The package ships two things in one install:
+## Looking for the CLI?
 
-- A **`primitive` CLI** for interactive use, scripts, and agent workflows. Sends mail, reads inbound, inspects send history, manages domains and webhook endpoints, all in one binary.
-- A **typed Node library** for programmatic integration in app code. Receives and verifies inbound webhooks, sends mail, parses raw MIME, and exposes the full HTTP API as generated functions.
+The `primitive` CLI now ships as a separate package, [`@primitivedotdev/cli`](https://www.npmjs.com/package/@primitivedotdev/cli). Install it with:
 
-Pick whichever fits the call site. The two share the same auth (`PRIMITIVE_API_KEY`), the same data shapes, and the same OpenAPI spec.
+```bash
+npm install -g @primitivedotdev/cli
+# or, no-install:
+npx @primitivedotdev/cli@latest <command>
+```
+
+This package retains the CLI for a few minor releases for backward compatibility (`npx @primitivedotdev/sdk@latest <command>` still works and prints a one-line migration banner). The retained CLI snapshot will be removed in a future minor release.
 
 ## Install
 
@@ -15,55 +20,15 @@ Pick whichever fits the call site. The two share the same auth (`PRIMITIVE_API_K
 npm install @primitivedotdev/sdk
 ```
 
-For one-off CLI use, `npx @primitivedotdev/sdk@latest <command>` works without installing.
-
 Requires Node.js 22 or newer.
 
 ## Set your API key
 
-Get a key from your [dashboard](https://primitive.dev) and export it. Both the CLI and the library default to reading `PRIMITIVE_API_KEY` from the environment.
+Get a key from your [dashboard](https://primitive.dev) and export it. The library defaults to reading `PRIMITIVE_API_KEY` from the environment.
 
 ```bash
 export PRIMITIVE_API_KEY=prim_...
 ```
-
-## Command line
-
-Everything below assumes `PRIMITIVE_API_KEY` is set. Each command also accepts `--api-key <value>` if you want to pass it explicitly.
-
-```bash
-# Confirm the key is live and see which account it authenticates.
-primitive whoami
-
-# Send an email. --wait blocks until the receiving MTA returns a delivery
-# outcome (a synchronous SMTP 250 from Gmail, etc.); without it, the call
-# returns once Primitive has accepted the message for delivery.
-primitive send --to alice@example.com --body "Hi Alice!" --wait
-
-# See the most recent inbound emails as a compact text table.
-# IDs are full UUIDs when piped, truncated for interactive terminals.
-primitive emails:latest --limit 5
-
-# Read one inbound's full record (body, headers, threading metadata).
-primitive emails:get-email --id <uuid>
-
-# Reply to an inbound. Threading and the "Re:" subject are derived
-# server-side from the parent message; you supply only the body.
-primitive sending:reply-to-email --id <inbound-id> --body-text "..."
-
-# See where you are allowed to send. Returns a typed list of
-# permission rules (managed-zone wildcards, your own verified domains,
-# specific addresses with grants). The send-mail call enforces these
-# at request time.
-primitive sending:get-send-permissions
-
-# Look up an operation's request/response schema, including per-field
-# descriptions sourced from the OpenAPI spec.
-primitive describe emails:get-email
-primitive describe sending:send-email
-```
-
-Run `primitive --help` for the full topic list and `primitive <topic> --help` for the commands within each. Every command accepts `--help`, and the descriptions are detailed enough that the CLI is self-documenting for most workflows.
 
 ## Library
 

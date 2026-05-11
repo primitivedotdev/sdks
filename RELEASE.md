@@ -1,16 +1,18 @@
 # Release Process
 
-This repository publishes three language SDKs from one shared webhook contract and one shared API contract.
+This repository publishes three language SDKs plus a Node-only CLI from one shared webhook contract and one shared API contract.
 
-- Node: `@primitivedotdev/sdk`
+- Node SDK: `@primitivedotdev/sdk`
+- Node CLI: `@primitivedotdev/cli`
 - Python: `primitivedotdev`
 - Go: `github.com/primitivedotdev/sdks/sdk-go`
 
-Use this process when cutting a release for one or more SDKs.
+Use this process when cutting a release for one or more packages.
 
-Releases are now automated from `main`.
+Releases are automated from `main`.
 
 - If a PR merges with a new `sdk-node/package.json` version, GitHub Actions publishes the Node SDK.
+- If a PR merges with a new `cli-node/package.json` version, GitHub Actions publishes the CLI.
 - If a PR merges with a new `sdk-python/pyproject.toml` version, GitHub Actions publishes the Python SDK.
 - If a PR merges with a new `sdk-go/VERSION` value, GitHub Actions creates the Go module tag and GitHub release.
 
@@ -29,7 +31,17 @@ Releases are now automated from `main`.
 2. Merge that PR into `main`.
 3. The `Node Release` workflow verifies the version bump, publishes to npm, and creates the `sdk-node/vX.Y.Z` tag plus a GitHub release.
 4. Verify the package contents with `npm view @primitivedotdev/sdk version`.
-5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/api`, `@primitivedotdev/sdk/openapi`, `@primitivedotdev/sdk/contract`, `@primitivedotdev/sdk/parser`, and the `primitive` bin.
+5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/api`, `@primitivedotdev/sdk/openapi`, `@primitivedotdev/sdk/contract`, `@primitivedotdev/sdk/parser`, and the `primitive` bin (the bin remains during the CLI deprecation window).
+
+## CLI Release
+
+1. Open a PR that bumps `cli-node/package.json` to the target version.
+2. Merge that PR into `main`.
+3. The `CLI Release` workflow verifies the version bump, publishes to npm, and creates the `cli-node/vX.Y.Z` tag plus a GitHub release.
+4. Verify the package contents with `npm view @primitivedotdev/cli version`.
+5. Confirm the packed artifact exposes the `primitive` bin and that `primitive list-operations` succeeds in a fresh install.
+
+Coordinate Node SDK and CLI releases when both ship in the same cycle: cut the SDK first (so its npm version is available), then bump CLI's `@primitivedotdev/sdk` dep range if needed and ship CLI.
 
 ## Python Release
 
