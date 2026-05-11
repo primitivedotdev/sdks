@@ -2570,10 +2570,30 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "testFunction",
         "summary": "Send a test invocation",
-        "description": "Sends a real test email from a Primitive-controlled sender to a\nsynthetic local-part on one of the org's verified inbound\ndomains. The function fires through the normal MX delivery\npath, so reply / send-mail calls from inside the handler\nagainst the inbound's `email.id` work the same as in\nproduction. Returns immediately after the send is queued; the\ninvocation appears on the function's invocations list within a\nfew seconds.\n\nRequires that the function is currently `deployed`. Returns 422\nif the function is in `pending` or `failed` state, or if the\norg has no verified inbound domain to receive the test mail.\n",
+        "description": "Sends a real test email from a Primitive-controlled sender to a\nlocal-part on one of the org's verified inbound domains. By\ndefault the recipient is a synthetic\n`__primitive_function_test+<random>@<domain>` address that\nevery handler's catch-all routing receives identically; pass\n`local_part` to override and exercise routing logic that\nbranches on a specific recipient (the common pattern when one\nfunction handles multiple inboxes like `summarize@` and\n`action@`). The function fires through the normal MX delivery\npath, so reply / send-mail calls from inside the handler\nagainst the inbound's `email.id` work the same as in\nproduction. Returns immediately after the send is queued; the\ninvocation appears on the function's invocations list within a\nfew seconds.\n\nRequires that the function is currently `deployed`. Returns 422\nif the function is in `pending` or `failed` state, or if the\norg has no verified inbound domain to receive the test mail.\nReturns 400 if `local_part` is set to a value that does not\nmatch the local-part character set.\n",
         "tags": [
           "Functions"
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "local_part": {
+                    "type": "string",
+                    "description": "Override the synthetic local-part. When set, the\ntest email is sent to `<local_part>@<picked-domain>`\ninstead of the default\n`__primitive_function_test+<random>@<picked-domain>`.\nMust start with an alphanumeric and contain only\nletters, digits, dots, plus signs, hyphens, or\nunderscores; 1-64 characters total.\n",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$",
+                    "example": "summarize"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Test send queued",

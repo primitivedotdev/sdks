@@ -1986,8 +1986,14 @@ paths:
       summary: Send a test invocation
       description: |
         Sends a real test email from a Primitive-controlled sender to a
-        synthetic local-part on one of the org's verified inbound
-        domains. The function fires through the normal MX delivery
+        local-part on one of the org's verified inbound domains. By
+        default the recipient is a synthetic
+        `__primitive_function_test+<random>@<domain>` address that
+        every handler's catch-all routing receives identically; pass
+        `local_part` to override and exercise routing logic that
+        branches on a specific recipient (the common pattern when one
+        function handles multiple inboxes like `summarize@` and
+        `action@`). The function fires through the normal MX delivery
         path, so reply / send-mail calls from inside the handler
         against the inbound's `email.id` work the same as in
         production. Returns immediately after the send is queued; the
@@ -1997,7 +2003,30 @@ paths:
         Requires that the function is currently `deployed`. Returns 422
         if the function is in `pending` or `failed` state, or if the
         org has no verified inbound domain to receive the test mail.
+        Returns 400 if `local_part` is set to a value that does not
+        match the local-part character set.
       tags: [Functions]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                local_part:
+                  type: string
+                  description: |
+                    Override the synthetic local-part. When set, the
+                    test email is sent to `<local_part>@<picked-domain>`
+                    instead of the default
+                    `__primitive_function_test+<random>@<picked-domain>`.
+                    Must start with an alphanumeric and contain only
+                    letters, digits, dots, plus signs, hyphens, or
+                    underscores; 1-64 characters total.
+                  minLength: 1
+                  maxLength: 64
+                  pattern: '^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$'
+                  example: summarize
       responses:
         '200':
           description: Test send queued
