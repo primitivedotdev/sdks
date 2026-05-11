@@ -11,6 +11,10 @@ import {
   type ResolvedCliAuth,
   resolveCliAuth,
 } from "./auth.js";
+import {
+  type ListEndpointsFn,
+  maybeWriteFunctionEndpointRedirect,
+} from "./endpoints-test-redirect.js";
 
 type OperationName = keyof typeof operations;
 export type ApiErrorCode = ErrorResponse["error"]["code"];
@@ -917,6 +921,31 @@ export function createOperationCommand(
             baseUrlOverridden,
             configDir: this.config.configDir,
             payload: errorPayload,
+          });
+          // Function-endpoint redirect. POST /endpoints/{id}/test on a
+          // function-kind endpoint returns `not_found` even though the
+          // same id IS visible in `endpoints:list-endpoints`. The hook
+          // looks the id up via listEndpoints; if it matches a
+          // function-kind row, it prints a redirect to
+          // `functions:test-function` (with the function id) so the
+          // caller does not have to translate the id themselves.
+          // No-op for any other operation, any other error code, or
+          // when the lookup misses or fails.
+          const listClient = apiClient.client;
+          const listEndpointsFn: ListEndpointsFn = () =>
+            operations.listEndpoints({
+              client: listClient,
+              responseStyle: "fields",
+            }) as ReturnType<ListEndpointsFn>;
+          await maybeWriteFunctionEndpointRedirect({
+            sdkName: operation.sdkName,
+            errorCode: extractErrorCode(errorPayload),
+            endpointId:
+              typeof parsedFlags.id === "string" ? parsedFlags.id : undefined,
+            listEndpoints: listEndpointsFn,
+            writeStderr: (chunk) => {
+              process.stderr.write(chunk);
+            },
           });
           process.exitCode = 1;
           return;
