@@ -59,10 +59,16 @@ export function renderHandler(): string {
   return `// env.PRIMITIVE_API_KEY is auto-injected by the Primitive Functions runtime.
 import { createPrimitiveClient } from "@primitivedotdev/sdk/api";
 
+// TODO: replace with your verified sender address. Must be a domain
+// you own or your managed *.primitive.email subdomain. The
+// self-reply guard below compares incoming mail against this value
+// to avoid the handler replying to its own outbound traffic.
+const REPLY_FROM = "you@your-domain.primitive.email";
+
 interface EmailReceivedEvent {
   event: string;
   email: {
-    headers: { from?: string; subject?: string };
+    headers: { from?: string; to?: string; subject?: string };
   };
 }
 
@@ -82,6 +88,15 @@ export default {
         return Response.json({ ok: true, skipped: event.event });
       }
 
+      // Self-reply guard: do not act on mail that this function itself
+      // sent. Without this, an outbound reply that gets forwarded back
+      // into the inbox would trigger another reply, and so on. Adjust
+      // the predicate if you legitimately want to act on mail from your
+      // own domain.
+      if (event.email.headers.from === REPLY_FROM) {
+        return Response.json({ ok: true, skipped: "self-reply" });
+      }
+
       const client = createPrimitiveClient({ apiKey: env.PRIMITIVE_API_KEY });
 
       // Recipient gate
@@ -92,9 +107,14 @@ export default {
       // external addresses return 403 recipient_not_allowed with a
       // structured gates[] array until the recipient has authenticated
       // to you or support has enabled the gate.
+
+      // Recipient routing: a single function can handle multiple inbound
+      // addresses by branching on event.email.headers.to. For example,
+      // route "support@" to a ticketing flow and "sales@" to a lead
+      // capture flow before calling client.send.
       const reply = await client.send({
-        from: "you@your-domain.primitive.email",
-        to: event.email.headers.from ?? "you@your-domain.primitive.email",
+        from: REPLY_FROM,
+        to: event.email.headers.from ?? REPLY_FROM,
         subject: \`Re: \${event.email.headers.subject ?? ""}\`,
         bodyText: "Got your message.",
       });

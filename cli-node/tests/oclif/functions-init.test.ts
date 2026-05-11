@@ -113,6 +113,54 @@ describe("renderHandler", () => {
   });
 });
 
+describe("renderHandler self-reply guard + REPLY_FROM constant", () => {
+  it("declares a REPLY_FROM constant with a TODO marker in the preceding comment", () => {
+    // AGX feedback: the placeholder sender was buried inline as a
+    // string literal in two places. Lifting it into a named constant
+    // with a TODO marker makes the "replace me before deploying" step
+    // impossible to miss.
+    const handler = renderHandler();
+    expect(handler).toContain("const REPLY_FROM =");
+    // The TODO marker must appear in the comment block above the
+    // const so the scaffolded author sees it before the value.
+    const beforeConst = handler.slice(0, handler.indexOf("const REPLY_FROM"));
+    expect(beforeConst).toContain("TODO");
+  });
+
+  it("includes a self-reply guard predicate that returns skipped: self-reply", () => {
+    // AGX feedback: without this guard, an outbound reply that gets
+    // forwarded back into the inbox triggers another reply, and so on.
+    // The scaffold defaults users into the safe shape.
+    const handler = renderHandler();
+    expect(handler).toContain("event.email.headers.from === REPLY_FROM");
+    expect(handler).toMatch(/skipped:\s*["']self-reply["']/);
+  });
+
+  it("includes a recipient-routing comment block pointing at event.email.headers.to", () => {
+    // The recipient-routing pattern lets a single function fan out
+    // per-address logic (e.g. support@ vs sales@). A short comment in
+    // the scaffold surfaces the pattern without forcing the author to
+    // discover it in the docs.
+    const handler = renderHandler();
+    expect(handler).toContain("Recipient routing:");
+    expect(handler).toContain("event.email.headers.to");
+  });
+
+  it("uses the REPLY_FROM constant in both the from: and fallback to: slots, with no duplicated string literal", () => {
+    // Regression guard: the placeholder address must appear exactly
+    // once in the rendered handler (inside the REPLY_FROM const), not
+    // duplicated in the send() call.
+    const handler = renderHandler();
+    const occurrences = (
+      handler.match(/you@your-domain\.primitive\.email/g) ?? []
+    ).length;
+    expect(occurrences).toBe(1);
+    // And the send call references the constant, not the literal.
+    expect(handler).toContain("from: REPLY_FROM");
+    expect(handler).toContain("to: event.email.headers.from ?? REPLY_FROM");
+  });
+});
+
 describe("renderPackageJson", () => {
   it("is valid JSON and substitutes the function name into the package name", () => {
     const raw = renderPackageJson("test-fn");
