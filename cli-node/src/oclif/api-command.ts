@@ -407,6 +407,25 @@ const ERROR_CODE_HINTS = {
     "Hint: run `primitive login`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify a key is live.",
 } as const satisfies Partial<Record<ApiErrorCode, string>>;
 
+// Network-layer hints keyed by Node's `cause.code` on a fetch failure.
+// Separate from ERROR_CODE_HINTS because these aren't API-server error
+// codes — they're the values Node sets on the underlying system call
+// that failed before the request ever hit a server. The fix is almost
+// always proxy / DNS / firewall on the caller's side, and the bare
+// envelope (which just says `ENETUNREACH`) tells the user nothing they
+// can act on. AGX walkthroughs in restrictive container environments
+// hit this enough that the hint earns the extra lookup.
+const NETWORK_ERROR_HINTS: Record<string, string> = {
+  ENETUNREACH:
+    "Hint: the network is unreachable. If you're behind a proxy and set HTTP(S)_PROXY, re-run with NODE_USE_ENV_PROXY=1 (Node 22+ ignores those env vars by default). `primitive doctor` reports the local environment in one shot.",
+  ECONNREFUSED:
+    "Hint: the server refused the connection. Check that your firewall allows egress to *.primitive.dev, that your PRIMITIVE_API_BASE_URL_* overrides (if any) point at a reachable host, and re-run with NODE_USE_ENV_PROXY=1 if you're behind a proxy. `primitive doctor` reports the local environment in one shot.",
+  ETIMEDOUT:
+    "Hint: the connection timed out. Check egress rules and proxy configuration; if you're behind a proxy, re-run with NODE_USE_ENV_PROXY=1 and HTTPS_PROXY set. `primitive doctor` reports the local environment in one shot.",
+  EAI_AGAIN:
+    "Hint: DNS lookup failed. Check /etc/resolv.conf inside containers, and try `curl -v https://www.primitive.dev/api/v1/account` to confirm the host resolves. `primitive doctor` reports the local environment in one shot.",
+};
+
 // Write a server / SDK error to stderr in the canonical envelope
 // shape, plus an actionable hint when the code is one we know how
 // to advise on. Replaces the bare
@@ -415,9 +434,14 @@ const ERROR_CODE_HINTS = {
 export function writeErrorWithHints(payload: unknown): void {
   process.stderr.write(`${formatErrorPayload(payload)}\n`);
   const code = extractErrorCode(payload);
-  if (code && code in ERROR_CODE_HINTS) {
+  if (!code) return;
+  if (code in ERROR_CODE_HINTS) {
     const hint = ERROR_CODE_HINTS[code as keyof typeof ERROR_CODE_HINTS];
     process.stderr.write(`${hint}\n`);
+    return;
+  }
+  if (code in NETWORK_ERROR_HINTS) {
+    process.stderr.write(`${NETWORK_ERROR_HINTS[code]}\n`);
   }
 }
 

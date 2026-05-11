@@ -4,6 +4,7 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/sdk/openapi";
 import { createOperationCommand } from "./api-command.js";
+import DoctorCommand from "./commands/doctor.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
 import EmailsWatchCommand from "./commands/emails-watch.js";
@@ -178,6 +179,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   // wanting this before risking a real call against a possibly-
   // bad key.
   whoami: WhoamiCommand,
+  // `doctor` is the environment health check. Node version, proxy
+  // env, API key resolution, /account reachability, verified-domain
+  // status — every check that whoami implicitly assumes is fine.
+  // AGX walkthroughs that hit ENETUNREACH from inside containers
+  // had no single command to bisect "is the CLI / network / key /
+  // server broken"; doctor is that command.
+  doctor: DoctorCommand,
   // `emails:latest` is the inbox-triage shortcut: the most recent N
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
