@@ -35,6 +35,15 @@ import { type ResolvedCliAuth, resolveCliAuth } from "../auth.js";
 // The raw `functions:set-function-secret` and `functions:create-
 // function-secret` operations stay available for callers that want
 // the unsugared form.
+//
+// Source map caveat for --redeploy: the redeploy step pulls the
+// function's current code via getFunction (which does not return the
+// source map, since source maps live only on the runtime side) and
+// re-uploads with no sourceMap field. The CF runtime treats a deploy
+// without sourceMap as "drop the existing one". Callers who need
+// stack-trace symbolication preserved should use
+// `functions:redeploy --file <bundle> --source-map-file <map>`
+// after the secret write instead of --redeploy here.
 
 // Shape of the API result the redeploy step returns. Exported only
 // so the unit test for runSetSecret can construct one in fake
@@ -224,7 +233,7 @@ class FunctionsSetSecretCommand extends Command {
     }),
     redeploy: Flags.boolean({
       description:
-        "Also redeploy the function with its current code so the new value lands in the running handler. Without this, the secret is written but not visible to the handler until the next deploy.",
+        "Also redeploy the function with its current code so the new value lands in the running handler. Without this, the secret is written but not visible to the handler until the next deploy. Note: source maps are stored only on the runtime side and getFunction does not return them, so this redeploy drops any previously-uploaded source map. If preserving stack-trace symbolication matters, use `functions:redeploy --file <bundle.js> --source-map-file <bundle.js.map>` instead.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
