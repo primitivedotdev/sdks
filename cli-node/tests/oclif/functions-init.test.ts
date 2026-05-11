@@ -74,6 +74,43 @@ describe("renderHandler", () => {
     expect(handler).toContain("PRIMITIVE_API_KEY");
     expect(handler).toContain("auto-injected");
   });
+
+  it("branches on event.event so future event types do not retry-loop", () => {
+    // AGX feedback: handlers that assume every POST is email.received
+    // start throwing the day Primitive adds another event type, which
+    // Primitive then retries 6 times with backoff. A discriminator
+    // guard in the scaffold defaults users into the safe shape.
+    const handler = renderHandler();
+    expect(handler).toContain('event.event !== "email.received"');
+    expect(handler).toMatch(/skipped:\s*event\.event/);
+  });
+
+  it("wraps the body in try/catch returning 2xx on caught errors", () => {
+    // AGX feedback: a thrown handler is retried up to 6 times by the
+    // webhook delivery loop, which burns the invocation budget on
+    // bugs that won't fix themselves. Catching and returning 2xx is
+    // the safer default; the scaffold documents the tradeoff so the
+    // user can flip to 5xx if they actually want retries.
+    const handler = renderHandler();
+    expect(handler).toContain("try {");
+    expect(handler).toContain("} catch (err) {");
+    expect(handler).toContain("console.error(");
+    // Caught path still returns 2xx (status: 200 explicit on the
+    // error branch so the intent is unmistakable).
+    expect(handler).toMatch(/status:\s*200/);
+  });
+
+  it("explains the recipient gate above the SDK send call", () => {
+    // The single biggest "I think the product is broken" surprise
+    // across AGX runs is the outbound recipient gate. A short pointer
+    // to the docs above the send() call defuses it before the handler
+    // ships.
+    const handler = renderHandler();
+    expect(handler).toContain(
+      "https://www.primitive.dev/docs/sending#who-you-can-send-to",
+    );
+    expect(handler).toMatch(/recipient_not_allowed/i);
+  });
 });
 
 describe("renderPackageJson", () => {

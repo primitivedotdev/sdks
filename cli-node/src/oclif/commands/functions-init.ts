@@ -47,24 +47,58 @@ export function renderHandler(): string {
   return `// env.PRIMITIVE_API_KEY is auto-injected by the Primitive Functions runtime.
 import { createPrimitiveClient } from "@primitivedotdev/sdk/api";
 
+interface EmailReceivedEvent {
+  event: string;
+  email: {
+    headers: { from?: string; subject?: string };
+  };
+}
+
 export default {
   async fetch(
     req: Request,
     env: { PRIMITIVE_API_KEY: string },
   ): Promise<Response> {
-    const event = (await req.json()) as {
-      email: { headers: { from?: string; subject?: string } };
-    };
-    const client = createPrimitiveClient({ apiKey: env.PRIMITIVE_API_KEY });
+    try {
+      const event = (await req.json()) as EmailReceivedEvent;
 
-    const reply = await client.send({
-      from: "you@your-domain.primitive.email",
-      to: event.email.headers.from ?? "you@your-domain.primitive.email",
-      subject: \`Re: \${event.email.headers.subject ?? ""}\`,
-      bodyText: "Got your message.",
-    });
+      // Only "email.received" exists today. Future event types will
+      // arrive with a different discriminator; return 2xx so the
+      // delivery loop does not burn its retry budget on payloads you
+      // intentionally skipped.
+      if (event.event !== "email.received") {
+        return Response.json({ ok: true, skipped: event.event });
+      }
 
-    return Response.json({ ok: true, reply });
+      const client = createPrimitiveClient({ apiKey: env.PRIMITIVE_API_KEY });
+
+      // Recipient gate
+      // https://www.primitive.dev/docs/sending#who-you-can-send-to
+      // New accounts can send to *.primitive.email addresses,
+      // verified domains, addresses that have authenticated to you,
+      // and other org-member signup emails. Sends to arbitrary
+      // external addresses return 403 recipient_not_allowed with a
+      // structured gates[] array until the recipient has authenticated
+      // to you or support has enabled the gate.
+      const reply = await client.send({
+        from: "you@your-domain.primitive.email",
+        to: event.email.headers.from ?? "you@your-domain.primitive.email",
+        subject: \`Re: \${event.email.headers.subject ?? ""}\`,
+        bodyText: "Got your message.",
+      });
+
+      return Response.json({ ok: true, reply });
+    } catch (err) {
+      // Return 2xx so the webhook delivery loop does not retry a bug
+      // it cannot fix. The function-invocation row still records the
+      // error body for debugging. Flip to a 5xx status if you want
+      // transient failures retried (e.g. a flaky external API you call).
+      console.error("handler error:", err);
+      return Response.json(
+        { ok: false, error: err instanceof Error ? err.message : String(err) },
+        { status: 200 },
+      );
+    }
   },
 };
 `;
