@@ -11,6 +11,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
+import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
 
 // `primitive functions:deploy` is the agent-grade shortcut for
 // `functions:create-function`. The underlying operation takes `code`
@@ -94,6 +95,13 @@ class FunctionsDeployCommand extends Command {
       const sourceMap = flags["source-map-file"]
         ? readTextFileFlag(flags["source-map-file"], "--source-map-file")
         : undefined;
+
+      // Non-blocking deploy-time lint: if the bundle has a raw
+      // fetch(...) call against /send-mail, nudge the author toward
+      // `createPrimitiveClient` from `@primitivedotdev/sdk/api`.
+      // The warning lands on stderr so it never contaminates the
+      // JSON stdout the caller may pipe into jq.
+      emitRawSendMailFetchWarning(code, (chunk) => process.stderr.write(chunk));
 
       const baseUrlOverridden =
         flags["api-base-url-1"] !== undefined ||
