@@ -6758,6 +6758,52 @@ func (o OptString) Or(d string) string {
 	return d
 }
 
+// NewOptTestFunctionReq returns new OptTestFunctionReq with value set to v.
+func NewOptTestFunctionReq(v TestFunctionReq) OptTestFunctionReq {
+	return OptTestFunctionReq{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptTestFunctionReq is optional TestFunctionReq.
+type OptTestFunctionReq struct {
+	Value TestFunctionReq
+	Set   bool
+}
+
+// IsSet returns true if OptTestFunctionReq was set.
+func (o OptTestFunctionReq) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptTestFunctionReq) Reset() {
+	var v TestFunctionReq
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptTestFunctionReq) SetTo(v TestFunctionReq) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptTestFunctionReq) Get() (v TestFunctionReq, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptTestFunctionReq) Or(d TestFunctionReq) TestFunctionReq {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptUUID returns new OptUUID with value set to v.
 func NewOptUUID(v uuid.UUID) OptUUID {
 	return OptUUID{
@@ -9537,6 +9583,27 @@ func (s *TestFunctionOK) SetData(val TestInvocationResult) {
 }
 
 func (*TestFunctionOK) testFunctionRes() {}
+
+type TestFunctionReq struct {
+	// Override the synthetic local-part. When set, the
+	// test email is sent to `<local_part>@<picked-domain>`
+	// instead of the default
+	// `__primitive_function_test+<random>@<picked-domain>`.
+	// Must start with an alphanumeric and contain only
+	// letters, digits, dots, plus signs, hyphens, or
+	// underscores; 1-64 characters total.
+	LocalPart OptString `json:"local_part"`
+}
+
+// GetLocalPart returns the value of LocalPart.
+func (s *TestFunctionReq) GetLocalPart() OptString {
+	return s.LocalPart
+}
+
+// SetLocalPart sets the value of LocalPart.
+func (s *TestFunctionReq) SetLocalPart(val OptString) {
+	s.LocalPart = val
+}
 
 type TestFunctionServiceUnavailable ErrorResponse
 

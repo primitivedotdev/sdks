@@ -7760,8 +7760,14 @@ func (s *Server) handleTestEndpointRequest(args [1]string, argsEscaped bool, w h
 // handleTestFunctionRequest handles testFunction operation.
 //
 // Sends a real test email from a Primitive-controlled sender to a
-// synthetic local-part on one of the org's verified inbound
-// domains. The function fires through the normal MX delivery
+// local-part on one of the org's verified inbound domains. By
+// default the recipient is a synthetic
+// `__primitive_function_test+<random>@<domain>` address that
+// every handler's catch-all routing receives identically; pass
+// `local_part` to override and exercise routing logic that
+// branches on a specific recipient (the common pattern when one
+// function handles multiple inboxes like `summarize@` and
+// `action@`). The function fires through the normal MX delivery
 // path, so reply / send-mail calls from inside the handler
 // against the inbound's `email.id` work the same as in
 // production. Returns immediately after the send is queued; the
@@ -7770,6 +7776,8 @@ func (s *Server) handleTestEndpointRequest(args [1]string, argsEscaped bool, w h
 // Requires that the function is currently `deployed`. Returns 422
 // if the function is in `pending` or `failed` state, or if the
 // org has no verified inbound domain to receive the test mail.
+// Returns 400 if `local_part` is set to a value that does not
+// match the local-part character set.
 //
 // POST /functions/{id}/test
 func (s *Server) handleTestFunctionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -7899,6 +7907,21 @@ func (s *Server) handleTestFunctionRequest(args [1]string, argsEscaped bool, w h
 	}
 
 	var rawBody []byte
+	request, rawBody, close, err := s.decodeTestFunctionRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
 
 	var response TestFunctionRes
 	if m := s.cfg.Middleware; m != nil {
@@ -7907,7 +7930,7 @@ func (s *Server) handleTestFunctionRequest(args [1]string, argsEscaped bool, w h
 			OperationName:    TestFunctionOperation,
 			OperationSummary: "Send a test invocation",
 			OperationID:      "testFunction",
-			Body:             nil,
+			Body:             request,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
@@ -7919,7 +7942,7 @@ func (s *Server) handleTestFunctionRequest(args [1]string, argsEscaped bool, w h
 		}
 
 		type (
-			Request  = struct{}
+			Request  = OptTestFunctionReq
 			Params   = TestFunctionParams
 			Response = TestFunctionRes
 		)
@@ -7932,12 +7955,12 @@ func (s *Server) handleTestFunctionRequest(args [1]string, argsEscaped bool, w h
 			mreq,
 			unpackTestFunctionParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.TestFunction(ctx, params)
+				response, err = s.h.TestFunction(ctx, request, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.TestFunction(ctx, params)
+		response, err = s.h.TestFunction(ctx, request, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
