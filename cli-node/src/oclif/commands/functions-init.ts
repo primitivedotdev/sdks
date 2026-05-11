@@ -22,6 +22,18 @@ import { Args, Command, Errors, Flags } from "@oclif/core";
 // and tested against.
 const SDK_VERSION_RANGE = "^0.25.0";
 
+// The CLI version range that ships in the scaffolded devDependencies.
+// Pinned separately from SDK_VERSION_RANGE because @primitivedotdev/cli
+// and @primitivedotdev/sdk are independent packages on independent
+// release cadences. Coupling them silently breaks `npm install` in
+// every scaffolded project the day we bump one without publishing the
+// other. Must include this CLI's own version: a `primitive
+// functions:init` run from CLI v1.2.3 should scaffold a project that
+// resolves at least v1.2.3, so the user does not silently downgrade
+// the bin under themselves. The lockstep test in functions-init.test.ts
+// enforces that invariant.
+const CLI_VERSION_RANGE = "^0.25.0";
+
 // esbuild version range. Pinned to the latest stable major used
 // elsewhere in the Primitive codebase for bundling Workers-style
 // handlers. Caret range so patch fixes flow in automatically.
@@ -125,9 +137,10 @@ export function renderPackageJson(name: string): string {
       // the real CLI inside the scaffolded project; otherwise the
       // bin falls through to @primitivedotdev/sdk's deprecated CLI
       // alias and every `npm run deploy` invocation prints the
-      // "CLI moved" stderr banner. Pinned in lockstep with the SDK
-      // range above so the scaffold ships a consistent pair.
-      "@primitivedotdev/cli": SDK_VERSION_RANGE,
+      // "CLI moved" stderr banner. Pinned via CLI_VERSION_RANGE, a
+      // dedicated constant so the version is decoupled from the SDK
+      // range and bumps are explicit on both ends.
+      "@primitivedotdev/cli": CLI_VERSION_RANGE,
       esbuild: ESBUILD_VERSION_RANGE,
       typescript: "^5.7.2",
     },
