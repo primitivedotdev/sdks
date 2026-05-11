@@ -9,7 +9,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { DEFAULT_BASE_URL } from "../api/index.js";
+import {
+  DEFAULT_API_BASE_URL_1,
+  DEFAULT_API_BASE_URL_2,
+} from "../api/index.js";
 
 const CREDENTIALS_FILE = "credentials.json";
 const CREDENTIALS_LOCK_DIR = "credentials.lock";
@@ -17,19 +20,25 @@ const CREDENTIALS_LOCK_STALE_MS = 30 * 60 * 1000;
 const MALFORMED_CREDENTIALS_HINT =
   "Run `primitive logout` and then `primitive login`.";
 
+// Disk shape for saved CLI credentials. Only persists the primary
+// API host (api_base_url_1) because login is itself an operation on
+// that host; the secondary host (api_base_url_2) is for /send-mail
+// and isn't part of the login flow, so it never gets stored. At call
+// time api_base_url_2 falls back to env / production default.
 export type StoredCliCredentials = {
   api_key: string;
   key_id: string;
   key_prefix: string;
   org_id: string;
   org_name: string | null;
-  base_url: string;
+  api_base_url_1: string;
   created_at: string;
 };
 
 export type ResolvedCliAuth = {
   apiKey: string | undefined;
-  baseUrl: string;
+  apiBaseUrl1: string;
+  apiBaseUrl2: string;
   source: "flag-or-env" | "stored" | "none";
   credentials: StoredCliCredentials | null;
 };
@@ -51,11 +60,39 @@ function requireString(
   return raw;
 }
 
+/**
+ * Sentinel returned by parseCredentials when the on-disk credentials
+ * were written by a pre-dual-host CLI version (i.e. they have
+ * `base_url` instead of `api_base_url_1`). The caller treats this as
+ * "no saved credentials" after auto-cleaning the stale file. Defined
+ * as a class-tagged error so loadCliCredentials can distinguish it
+ * from a genuine malformed-credentials error.
+ */
+class StaleCredentialFormatError extends Error {
+  constructor() {
+    super("stale_credential_format");
+    this.name = "StaleCredentialFormatError";
+  }
+}
+
 function parseCredentials(raw: unknown): StoredCliCredentials {
   if (!isRecord(raw)) {
     throw new Error(
       `Stored Primitive CLI credentials are malformed: expected a JSON object. ${MALFORMED_CREDENTIALS_HINT}`,
     );
+  }
+
+  // Stored credentials from an older CLI version used the field name
+  // `base_url`; the dual-host rename moved this to `api_base_url_1`.
+  // Detect the old shape specifically so loadCliCredentials can wipe
+  // the stale file and emit a clear "you've been logged out" notice
+  // instead of every command hard-failing with a generic "malformed"
+  // error that doesn't surface the actual fix (re-login).
+  if (
+    typeof raw.api_base_url_1 !== "string" &&
+    typeof (raw as { base_url?: unknown }).base_url === "string"
+  ) {
+    throw new StaleCredentialFormatError();
   }
 
   const orgName = raw.org_name;
@@ -71,7 +108,7 @@ function parseCredentials(raw: unknown): StoredCliCredentials {
     key_prefix: requireString(raw, "key_prefix"),
     org_id: requireString(raw, "org_id"),
     org_name: orgName,
-    base_url: requireString(raw, "base_url"),
+    api_base_url_1: requireString(raw, "api_base_url_1"),
     created_at: requireString(raw, "created_at"),
   };
 }
@@ -80,10 +117,18 @@ export function credentialsPath(configDir: string): string {
   return join(configDir, CREDENTIALS_FILE);
 }
 
-export function normalizeBaseUrl(baseUrl: string | undefined): string {
-  const trimmed = baseUrl?.trim();
-  if (!trimmed) return DEFAULT_BASE_URL;
+function normalize(url: string | undefined, fallback: string): string {
+  const trimmed = url?.trim();
+  if (!trimmed) return fallback;
   return trimmed.replace(/\/+$/, "");
+}
+
+export function normalizeApiBaseUrl1(url: string | undefined): string {
+  return normalize(url, DEFAULT_API_BASE_URL_1);
+}
+
+export function normalizeApiBaseUrl2(url: string | undefined): string {
+  return normalize(url, DEFAULT_API_BASE_URL_2);
 }
 
 export function loadCliCredentials(
@@ -108,6 +153,25 @@ export function loadCliCredentials(
   try {
     return parseCredentials(JSON.parse(contents));
   } catch (error) {
+    if (error instanceof StaleCredentialFormatError) {
+      // Saved credentials were written by a pre-dual-host CLI version.
+      // The format is incompatible (base_url vs api_base_url_1) and
+      // cannot be recovered. Clear the file so the caller sees "no
+      // saved credentials" and emit a one-shot notice telling the
+      // user they need to log back in. Idempotent: once the file is
+      // gone, this branch never fires again.
+      try {
+        rmSync(path, { force: true });
+      } catch {
+        // Best-effort cleanup; if the unlink fails (permissions,
+        // racing process), the next CLI invocation will hit this
+        // path again and try once more.
+      }
+      process.stderr.write(
+        "You've been logged out: your saved Primitive CLI credentials were created by an older CLI version and are no longer compatible. Run `primitive login` to re-authenticate.\n",
+      );
+      return null;
+    }
     if (error instanceof SyntaxError) {
       throw new Error(
         "Stored Primitive CLI credentials are not valid JSON. Run `primitive logout` and then `primitive login`.",
@@ -207,13 +271,20 @@ export function acquireCliCredentialsLock(
 export function resolveCliAuth(params: {
   configDir: string;
   apiKey?: string;
-  baseUrl?: string;
+  apiBaseUrl1?: string;
+  apiBaseUrl2?: string;
 }): ResolvedCliAuth {
   const apiKey = params.apiKey?.trim();
+  // Host 2 (api_base_url_2) is never stored; either set by env/flag or
+  // falls back to the production default. The login flow only deals
+  // with host 1.
+  const apiBaseUrl2 = normalizeApiBaseUrl2(params.apiBaseUrl2);
+
   if (apiKey) {
     return {
       apiKey,
-      baseUrl: normalizeBaseUrl(params.baseUrl),
+      apiBaseUrl1: normalizeApiBaseUrl1(params.apiBaseUrl1),
+      apiBaseUrl2,
       credentials: null,
       source: "flag-or-env",
     };
@@ -223,9 +294,10 @@ export function resolveCliAuth(params: {
   if (credentials) {
     return {
       apiKey: credentials.api_key,
-      baseUrl: params.baseUrl
-        ? normalizeBaseUrl(params.baseUrl)
-        : credentials.base_url,
+      apiBaseUrl1: params.apiBaseUrl1
+        ? normalizeApiBaseUrl1(params.apiBaseUrl1)
+        : credentials.api_base_url_1,
+      apiBaseUrl2,
       credentials,
       source: "stored",
     };
@@ -233,7 +305,8 @@ export function resolveCliAuth(params: {
 
   return {
     apiKey: undefined,
-    baseUrl: normalizeBaseUrl(params.baseUrl),
+    apiBaseUrl1: normalizeApiBaseUrl1(params.apiBaseUrl1),
+    apiBaseUrl2,
     credentials: null,
     source: "none",
   };

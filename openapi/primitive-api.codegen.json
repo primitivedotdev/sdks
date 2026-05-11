@@ -16,7 +16,11 @@
   "servers": [
     {
       "url": "https://www.primitive.dev/api/v1",
-      "description": "Production"
+      "description": "Primary API host (PRIMITIVE_API_BASE_URL_1). Carries every operation\nexcept attachment-supporting send. Vercel-backed; request body is\ncapped at 4.5 MB by the platform.\n"
+    },
+    {
+      "url": "https://api.primitive.dev/v1",
+      "description": "Attachments-supporting send host (PRIMITIVE_API_BASE_URL_2).\nCloudflare Worker with a ~30 MiB raw request body cap (before\nbase64 encoding). Today only `/send-mail` is hosted here; future\nlarge-body operations will migrate here over time. SDK clients\nroute /send-mail to this server automatically.\n"
     }
   ],
   "security": [
@@ -2099,7 +2103,17 @@
       "post": {
         "operationId": "sendEmail",
         "summary": "Send outbound email",
-        "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n",
+        "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n\n**Host routing.** /send-mail is served by the attachments-\nsupporting host (`https://api.primitive.dev/v1`) so the\nrequest body can carry inline attachments up to ~30 MiB raw.\nThe primary host (`https://www.primitive.dev/api/v1`) also\naccepts /send-mail for attachment-free sends; sends WITH\nattachments to the primary host return 413\n`attachments_unsupported_on_this_endpoint`. The typed SDKs\nroute /send-mail to the attachments host automatically.\n",
+        "servers": [
+          {
+            "url": "https://api.primitive.dev/v1",
+            "description": "Attachments-supporting send host (recommended)"
+          },
+          {
+            "url": "https://www.primitive.dev/api/v1",
+            "description": "Primary host (attachment-free sends only)"
+          }
+        ],
         "tags": [
           "Sending"
         ],

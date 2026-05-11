@@ -121,7 +121,17 @@ info:
 
 servers:
   - url: https://www.primitive.dev/api/v1
-    description: Production
+    description: |
+      Primary API host (PRIMITIVE_API_BASE_URL_1). Carries every operation
+      except attachment-supporting send. Vercel-backed; request body is
+      capped at 4.5 MB by the platform.
+  - url: https://api.primitive.dev/v1
+    description: |
+      Attachments-supporting send host (PRIMITIVE_API_BASE_URL_2).
+      Cloudflare Worker with a ~30 MiB raw request body cap (before
+      base64 encoding). Today only `/send-mail` is hosted here; future
+      large-body operations will migrate here over time. SDK clients
+      route /send-mail to this server automatically.
 
 security:
   - BearerAuth: []
@@ -1600,6 +1610,20 @@ paths:
         Sends an outbound email through Primitive's outbound relay. By default
         the request returns once the relay accepts the message for delivery.
         Set `wait: true` to wait for the first downstream SMTP delivery outcome.
+
+        **Host routing.** /send-mail is served by the attachments-
+        supporting host (`https://api.primitive.dev/v1`) so the
+        request body can carry inline attachments up to ~30 MiB raw.
+        The primary host (`https://www.primitive.dev/api/v1`) also
+        accepts /send-mail for attachment-free sends; sends WITH
+        attachments to the primary host return 413
+        `attachments_unsupported_on_this_endpoint`. The typed SDKs
+        route /send-mail to the attachments host automatically.
+      servers:
+        - url: https://api.primitive.dev/v1
+          description: Attachments-supporting send host (recommended)
+        - url: https://www.primitive.dev/api/v1
+          description: Primary host (attachment-free sends only)
       tags: [Sending]
       parameters:
         - name: Idempotency-Key

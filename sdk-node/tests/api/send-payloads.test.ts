@@ -233,7 +233,12 @@ function captureFetch(): {
 function buildClient(fetchImpl: typeof fetch): PrimitiveClient {
   return new PrimitiveClient({
     apiKey: "prim_test",
-    baseUrl: "https://example.test/api/v1",
+    // Same URL for both bases so the existing assertions about "the
+    // fetch went to example.test/api/v1" still hold whether the path
+    // is /send-mail (routed to host 2) or /emails/{id}/reply (routed
+    // to host 1).
+    apiBaseUrl1: "https://example.test/api/v1",
+    apiBaseUrl2: "https://example.test/api/v1",
     fetch: fetchImpl,
   });
 }
