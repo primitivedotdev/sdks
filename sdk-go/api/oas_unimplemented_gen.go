@@ -599,8 +599,14 @@ func (UnimplementedHandler) TestEndpoint(ctx context.Context, params TestEndpoin
 // TestFunction implements testFunction operation.
 //
 // Sends a real test email from a Primitive-controlled sender to a
-// synthetic local-part on one of the org's verified inbound
-// domains. The function fires through the normal MX delivery
+// local-part on one of the org's verified inbound domains. By
+// default the recipient is a synthetic
+// `__primitive_function_test+<random>@<domain>` address that
+// every handler's catch-all routing receives identically; pass
+// `local_part` to override and exercise routing logic that
+// branches on a specific recipient (the common pattern when one
+// function handles multiple inboxes like `summarize@` and
+// `action@`). The function fires through the normal MX delivery
 // path, so reply / send-mail calls from inside the handler
 // against the inbound's `email.id` work the same as in
 // production. Returns immediately after the send is queued; the
@@ -609,9 +615,11 @@ func (UnimplementedHandler) TestEndpoint(ctx context.Context, params TestEndpoin
 // Requires that the function is currently `deployed`. Returns 422
 // if the function is in `pending` or `failed` state, or if the
 // org has no verified inbound domain to receive the test mail.
+// Returns 400 if `local_part` is set to a value that does not
+// match the local-part character set.
 //
 // POST /functions/{id}/test
-func (UnimplementedHandler) TestFunction(ctx context.Context, params TestFunctionParams) (r TestFunctionRes, _ error) {
+func (UnimplementedHandler) TestFunction(ctx context.Context, req OptTestFunctionReq, params TestFunctionParams) (r TestFunctionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

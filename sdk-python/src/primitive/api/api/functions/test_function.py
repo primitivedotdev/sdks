@@ -9,7 +9,9 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
+from ...models.test_function_body import TestFunctionBody
 from ...models.test_function_response_200 import TestFunctionResponse200
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -17,9 +19,12 @@ from uuid import UUID
 
 def _get_kwargs(
     id: UUID,
+    *,
+    body: TestFunctionBody | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
+    headers: dict[str, Any] = {}
+
 
     
 
@@ -30,7 +35,12 @@ def _get_kwargs(
         "url": "/functions/{id}/test".format(id=quote(str(id), safe=""),),
     }
 
+    
+    if not isinstance(body, Unset):
+        _kwargs["json"] = body.to_dict()
+        headers["Content-Type"] = "application/json"
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -104,13 +114,20 @@ def sync_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    body: TestFunctionBody | Unset = UNSET,
 
 ) -> Response[ErrorResponse | TestFunctionResponse200]:
     """ Send a test invocation
 
      Sends a real test email from a Primitive-controlled sender to a
-    synthetic local-part on one of the org's verified inbound
-    domains. The function fires through the normal MX delivery
+    local-part on one of the org's verified inbound domains. By
+    default the recipient is a synthetic
+    `__primitive_function_test+<random>@<domain>` address that
+    every handler's catch-all routing receives identically; pass
+    `local_part` to override and exercise routing logic that
+    branches on a specific recipient (the common pattern when one
+    function handles multiple inboxes like `summarize@` and
+    `action@`). The function fires through the normal MX delivery
     path, so reply / send-mail calls from inside the handler
     against the inbound's `email.id` work the same as in
     production. Returns immediately after the send is queued; the
@@ -120,9 +137,12 @@ def sync_detailed(
     Requires that the function is currently `deployed`. Returns 422
     if the function is in `pending` or `failed` state, or if the
     org has no verified inbound domain to receive the test mail.
+    Returns 400 if `local_part` is set to a value that does not
+    match the local-part character set.
 
     Args:
         id (UUID):
+        body (TestFunctionBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -135,6 +155,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+body=body,
 
     )
 
@@ -148,13 +169,20 @@ def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    body: TestFunctionBody | Unset = UNSET,
 
 ) -> ErrorResponse | TestFunctionResponse200 | None:
     """ Send a test invocation
 
      Sends a real test email from a Primitive-controlled sender to a
-    synthetic local-part on one of the org's verified inbound
-    domains. The function fires through the normal MX delivery
+    local-part on one of the org's verified inbound domains. By
+    default the recipient is a synthetic
+    `__primitive_function_test+<random>@<domain>` address that
+    every handler's catch-all routing receives identically; pass
+    `local_part` to override and exercise routing logic that
+    branches on a specific recipient (the common pattern when one
+    function handles multiple inboxes like `summarize@` and
+    `action@`). The function fires through the normal MX delivery
     path, so reply / send-mail calls from inside the handler
     against the inbound's `email.id` work the same as in
     production. Returns immediately after the send is queued; the
@@ -164,9 +192,12 @@ def sync(
     Requires that the function is currently `deployed`. Returns 422
     if the function is in `pending` or `failed` state, or if the
     org has no verified inbound domain to receive the test mail.
+    Returns 400 if `local_part` is set to a value that does not
+    match the local-part character set.
 
     Args:
         id (UUID):
+        body (TestFunctionBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -180,6 +211,7 @@ def sync(
     return sync_detailed(
         id=id,
 client=client,
+body=body,
 
     ).parsed
 
@@ -187,13 +219,20 @@ async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    body: TestFunctionBody | Unset = UNSET,
 
 ) -> Response[ErrorResponse | TestFunctionResponse200]:
     """ Send a test invocation
 
      Sends a real test email from a Primitive-controlled sender to a
-    synthetic local-part on one of the org's verified inbound
-    domains. The function fires through the normal MX delivery
+    local-part on one of the org's verified inbound domains. By
+    default the recipient is a synthetic
+    `__primitive_function_test+<random>@<domain>` address that
+    every handler's catch-all routing receives identically; pass
+    `local_part` to override and exercise routing logic that
+    branches on a specific recipient (the common pattern when one
+    function handles multiple inboxes like `summarize@` and
+    `action@`). The function fires through the normal MX delivery
     path, so reply / send-mail calls from inside the handler
     against the inbound's `email.id` work the same as in
     production. Returns immediately after the send is queued; the
@@ -203,9 +242,12 @@ async def asyncio_detailed(
     Requires that the function is currently `deployed`. Returns 422
     if the function is in `pending` or `failed` state, or if the
     org has no verified inbound domain to receive the test mail.
+    Returns 400 if `local_part` is set to a value that does not
+    match the local-part character set.
 
     Args:
         id (UUID):
+        body (TestFunctionBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -218,6 +260,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+body=body,
 
     )
 
@@ -231,13 +274,20 @@ async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    body: TestFunctionBody | Unset = UNSET,
 
 ) -> ErrorResponse | TestFunctionResponse200 | None:
     """ Send a test invocation
 
      Sends a real test email from a Primitive-controlled sender to a
-    synthetic local-part on one of the org's verified inbound
-    domains. The function fires through the normal MX delivery
+    local-part on one of the org's verified inbound domains. By
+    default the recipient is a synthetic
+    `__primitive_function_test+<random>@<domain>` address that
+    every handler's catch-all routing receives identically; pass
+    `local_part` to override and exercise routing logic that
+    branches on a specific recipient (the common pattern when one
+    function handles multiple inboxes like `summarize@` and
+    `action@`). The function fires through the normal MX delivery
     path, so reply / send-mail calls from inside the handler
     against the inbound's `email.id` work the same as in
     production. Returns immediately after the send is queued; the
@@ -247,9 +297,12 @@ async def asyncio(
     Requires that the function is currently `deployed`. Returns 422
     if the function is in `pending` or `failed` state, or if the
     org has no verified inbound domain to receive the test mail.
+    Returns 400 if `local_part` is set to a value that does not
+    match the local-part character set.
 
     Args:
         id (UUID):
+        body (TestFunctionBody | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -263,5 +316,6 @@ async def asyncio(
     return (await asyncio_detailed(
         id=id,
 client=client,
+body=body,
 
     )).parsed

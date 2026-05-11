@@ -44,15 +44,31 @@ function addJsExtension(file: string, specifier: string): string {
   return `${specifier}.js`;
 }
 
+// @hey-api/openapi-ts emits `headers: { 'Content-Type': 'application/json',
+// ...options.headers }` on every operation that has a request body in the
+// spec, regardless of whether the body is required or optional. For
+// optional-body operations (testFunction, cli_logout, start_cli_login,
+// search_emails) this sends the header without a payload when the caller
+// omits the body, which is wrong on the wire. Wrap the header in a
+// runtime check so it only fires when a body is present. Required-body
+// operations are unaffected (body is always defined by the type system).
+function guardOptionalBodyContentType(content: string): string {
+  return content.replace(
+    /(headers:\s*\{\n\s*)'Content-Type':\s*'application\/json',\n(\s*\.\.\.options\.headers\n\s*\})/g,
+    "$1...(options.body !== undefined && { 'Content-Type': 'application/json' }),\n$2",
+  );
+}
+
 for (const file of visit(generatedRoot)) {
   const content = readFileSync(file, "utf8");
-  const updated = content
+  let updated = content
     .replace(/(from\s+['"])(\.{1,2}\/[^'"]+)(['"])/g, (_, prefix, specifier, suffix) => {
       return `${prefix}${addJsExtension(file, specifier)}${suffix}`;
     })
     .replace(/(import\(\s*['"])(\.{1,2}\/[^'"]+)(['"]\s*\))/g, (_, prefix, specifier, suffix) => {
       return `${prefix}${addJsExtension(file, specifier)}${suffix}`;
     });
+  updated = guardOptionalBodyContentType(updated);
 
   if (updated !== content) {
     writeFileSync(file, updated);

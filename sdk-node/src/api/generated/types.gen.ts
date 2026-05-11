@@ -3330,7 +3330,19 @@ export type UpdateFunctionResponses = {
 export type UpdateFunctionResponse = UpdateFunctionResponses[keyof UpdateFunctionResponses];
 
 export type TestFunctionData = {
-    body?: never;
+    body?: {
+        /**
+         * Override the synthetic local-part. When set, the
+         * test email is sent to `<local_part>@<picked-domain>`
+         * instead of the default
+         * `__primitive_function_test+<random>@<picked-domain>`.
+         * Must start with an alphanumeric and contain only
+         * letters, digits, dots, plus signs, hyphens, or
+         * underscores; 1-64 characters total.
+         *
+         */
+        local_part?: string;
+    };
     path: {
         /**
          * Resource UUID

@@ -128,6 +128,7 @@ from .start_cli_login_response_201 import StartCliLoginResponse201
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
 from .test_endpoint_response_200 import TestEndpointResponse200
+from .test_function_body import TestFunctionBody
 from .test_function_response_200 import TestFunctionResponse200
 from .test_invocation_result import TestInvocationResult
 from .test_result import TestResult
@@ -276,6 +277,7 @@ __all__ = (
     "StorageStats",
     "SuccessEnvelope",
     "TestEndpointResponse200",
+    "TestFunctionBody",
     "TestFunctionResponse200",
     "TestInvocationResult",
     "TestResult",
