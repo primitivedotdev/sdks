@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Args, Command, Errors, Flags } from "@oclif/core";
 
@@ -193,18 +193,36 @@ export function writeScaffold(params: { name: string; outDir: string }): {
     );
   }
 
-  if (existsSync(params.outDir)) {
-    throw new Errors.CLIError(
-      `Target directory already exists: ${params.outDir}. Refusing to overwrite. Remove it or pick a different --out-dir.`,
-      { exit: 1 },
-    );
-  }
-
   const files = scaffoldFiles(params.name);
   const written: string[] = [];
 
+  // Create the target directory with recursive: false so the check
+  // and the create happen in one syscall. mkdirSync throws EEXIST
+  // atomically if the path already exists, which closes the TOCTOU
+  // window between a separate existsSync check and the mkdir call.
   try {
-    mkdirSync(params.outDir, { recursive: true });
+    mkdirSync(params.outDir, { recursive: false });
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "EEXIST") {
+      throw new Errors.CLIError(
+        `Target directory already exists: ${params.outDir}. Refusing to overwrite. Remove it or pick a different --out-dir.`,
+        { exit: 1 },
+      );
+    }
+    if (code === "ENOENT") {
+      throw new Errors.CLIError(
+        `Parent directory does not exist for ${params.outDir}. Create it first or pick a different --out-dir.`,
+        { exit: 1 },
+      );
+    }
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Errors.CLIError(`Failed to create ${params.outDir}: ${detail}`, {
+      exit: 1,
+    });
+  }
+
+  try {
     for (const file of files) {
       const fullPath = resolve(params.outDir, file.relativePath);
       mkdirSync(dirname(fullPath), { recursive: true });
@@ -274,7 +292,7 @@ class FunctionsInitCommand extends Command {
 
     this.log(`Scaffolded ${outDir}.`);
     this.log("Next:");
-    this.log(`  cd ${flags["out-dir"] ?? args.name}`);
+    this.log(`  cd ${outDir}`);
     this.log("  npm install");
     this.log("  npm run build");
     this.log(
