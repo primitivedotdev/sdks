@@ -316,6 +316,52 @@ describe("writeErrorWithHints", () => {
     expect(writes).toHaveLength(2);
     expect(writes[1]).toContain("--api-key");
   });
+
+  it("appends a NODE_USE_ENV_PROXY hint for ENETUNREACH network failures", () => {
+    // AGX walkthrough symptom: agent's shell exports HTTPS_PROXY but
+    // Node 22+ ignores it without NODE_USE_ENV_PROXY=1; the bare
+    // envelope says ENETUNREACH and nothing else. The hint shortcuts
+    // the right next step.
+    const error = new Error("fetch failed");
+    Object.assign(error, { cause: { code: "ENETUNREACH" } });
+
+    writeErrorWithHints(error);
+
+    expect(writes).toHaveLength(2);
+    expect(writes[1]).toContain("NODE_USE_ENV_PROXY=1");
+    expect(writes[1]).toContain("primitive doctor");
+  });
+
+  it("appends a connection-refused hint for ECONNREFUSED", () => {
+    const error = new Error("fetch failed");
+    Object.assign(error, { cause: { code: "ECONNREFUSED" } });
+
+    writeErrorWithHints(error);
+
+    expect(writes).toHaveLength(2);
+    expect(writes[1]).toMatch(/egress|firewall|proxy/i);
+  });
+
+  it("appends a DNS hint for EAI_AGAIN", () => {
+    const error = new Error("fetch failed");
+    Object.assign(error, { cause: { code: "EAI_AGAIN" } });
+
+    writeErrorWithHints(error);
+
+    expect(writes).toHaveLength(2);
+    expect(writes[1]).toMatch(/DNS/);
+  });
+
+  it("appends a connection-timeout hint for ETIMEDOUT", () => {
+    const error = new Error("fetch failed");
+    Object.assign(error, { cause: { code: "ETIMEDOUT" } });
+
+    writeErrorWithHints(error);
+
+    expect(writes).toHaveLength(2);
+    expect(writes[1]).toMatch(/timed out/);
+    expect(writes[1]).toMatch(/NODE_USE_ENV_PROXY=1/);
+  });
 });
 
 describe("removeStaleSavedCredentialOnUnauthorized", () => {
