@@ -4,7 +4,7 @@ The official Node.js library for [Primitive](https://primitive.dev), an email AP
 
 ## Looking for the CLI?
 
-The `primitive` CLI now ships as a separate package, [`@primitivedotdev/cli`](https://www.npmjs.com/package/@primitivedotdev/cli). Install it with:
+The `primitive` CLI ships as a separate package, [`@primitivedotdev/cli`](https://www.npmjs.com/package/@primitivedotdev/cli). Install it with:
 
 ```bash
 npm install -g @primitivedotdev/cli
@@ -12,7 +12,7 @@ npm install -g @primitivedotdev/cli
 npx @primitivedotdev/cli@latest <command>
 ```
 
-This package retains the CLI for a few minor releases for backward compatibility (`npx @primitivedotdev/sdk@latest <command>` still works and prints a one-line migration banner). The retained CLI snapshot will be removed in a future minor release.
+This package no longer ships a `primitive` bin. Install `@primitivedotdev/cli` to get the CLI.
 
 ## Install
 

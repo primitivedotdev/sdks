@@ -1,7 +1,7 @@
 {
   "name": "@primitivedotdev/sdk",
-  "version": "0.26.1",
-  "description": "Official Primitive Node.js SDK: webhook, api, openapi, contract, and parser runtime modules. The CLI moved to @primitivedotdev/cli; this package retains the CLI as a deprecated alias for a few minor releases.",
+  "version": "0.27.0",
+  "description": "Official Primitive Node.js SDK: webhook, api, openapi, contract, and parser runtime modules.",
   "type": "module",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -39,56 +39,8 @@
   },
   "sideEffects": false,
   "files": [
-    "bin",
-    "dist",
-    "oclif.manifest.json"
+    "dist"
   ],
-  "bin": {
-    "primitive": "./bin/run.js"
-  },
-  "oclif": {
-    "bin": "primitive",
-    "commands": {
-      "strategy": "explicit",
-      "target": "./dist/oclif/index.js",
-      "identifier": "COMMANDS"
-    },
-    "dirname": "primitive",
-    "plugins": [
-      "@oclif/plugin-help",
-      "@oclif/plugin-autocomplete"
-    ],
-    "topics": {
-      "cli": {
-        "description": "Browser-assisted CLI authentication"
-      },
-      "account": {
-        "description": "Manage your account settings, storage, and webhook secret"
-      },
-      "domains": {
-        "description": "Claim, verify, and manage email domains"
-      },
-      "emails": {
-        "description": "List, inspect, and wait for received emails. `primitive emails:latest` lists the most recent inbound, `primitive emails:wait` blocks until matching inbound arrives (filter with --to/--from/--subject/--q; bounded by --timeout and --number; ideal for agents and CI), and `primitive emails:watch` streams new matches indefinitely for long-running terminals."
-      },
-      "sending": {
-        "description": "Send outbound emails. For replies to inbound mail, use `sending:reply-to-email --id <inbound-id>` (threading and Re: subject derived server-side); for fresh sends, use `sending:send-email` or the `primitive send` shortcut."
-      },
-      "endpoints": {
-        "description": "Manage webhook endpoints that receive email events"
-      },
-      "filters": {
-        "description": "Manage whitelist and blocklist filter rules"
-      },
-      "webhook-deliveries": {
-        "description": "View and replay webhook delivery attempts"
-      },
-      "functions": {
-        "description": "Deploy JavaScript handlers that run on inbound mail. Use `primitive functions:init <name>` to scaffold a deployable project (handler, package.json, build script). Use `primitive functions:deploy --name <name> --file <bundle.js>` to create, `primitive functions:redeploy --id <id> --file <bundle.js>` to push a new bundle, and `primitive functions:set-secret --id <id> --key <KEY> --value <value> [--redeploy]` to write a secret (with optional one-call redeploy so the value lands in the running handler). The auto-generated functions:create-function / functions:update-function / functions:create-function-secret / functions:set-function-secret operations stay available for the full body-string surface."
-      }
-    },
-    "topicSeparator": " "
-  },
   "scripts": {
     "generate:openapi": "tsx scripts/generate-openapi-artifacts.ts",
     "generate:api": "openapi-ts -f openapi-ts.config.ts && tsx scripts/fix-generated-api-imports.ts",
@@ -96,17 +48,13 @@
     "generate:types": "tsx scripts/generate-types.ts",
     "generate:validator": "tsx scripts/generate-validator.ts",
     "generate": "pnpm generate:openapi && pnpm generate:api && pnpm generate:schema && pnpm generate:types && pnpm generate:validator",
-    "build:library": "pnpm generate && tsdown",
-    "build:oclif": "tsc -p tsconfig.oclif.json",
-    "build": "pnpm build:library && pnpm build:oclif",
+    "build": "pnpm generate && tsdown",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "pnpm generate && tsc --noEmit -p tsconfig.typecheck.json",
-    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/",
-    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/oclif tests/",
-    "prepack": "pnpm build && oclif manifest",
-    "postpack": "shx rm -f oclif.manifest.json",
+    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts tests/",
+    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts tests/",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
@@ -135,9 +83,6 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@oclif/core": "^4.10.5",
-    "@oclif/plugin-autocomplete": "^3.2.45",
-    "@oclif/plugin-help": "^6.2.44",
     "ajv": "^8.17.1",
     "isomorphic-dompurify": "^3.8.0",
     "mailparser": "^3.9.0",
@@ -156,8 +101,6 @@
     "@types/validator": "^13.15.10",
     "@vitest/coverage-v8": "^4.1.4",
     "json-schema-to-typescript": "^15.0.4",
-    "oclif": "^4.23.0",
-    "shx": "^0.3.4",
     "tsdown": "^0.21.10",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",

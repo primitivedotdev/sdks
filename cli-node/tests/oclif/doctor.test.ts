@@ -155,6 +155,7 @@ describe("checkApiKey", () => {
     const outcome = checkApiKey({
       apiKey: "prim_abc123",
       configDir: "/tmp/nonexistent-config",
+      env: {},
     });
     expect(outcome.status).toBe("ok");
     expect(outcome.message).toMatch(/prim_/);
@@ -164,6 +165,7 @@ describe("checkApiKey", () => {
     const outcome = checkApiKey({
       apiKey: "sk_live_wrong",
       configDir: "/tmp/nonexistent-config",
+      env: {},
     });
     expect(outcome.status).toBe("warn");
     if (outcome.status !== "warn") return;
@@ -174,6 +176,7 @@ describe("checkApiKey", () => {
     const outcome = checkApiKey({
       apiKey: undefined,
       configDir: "/tmp/definitely-does-not-exist-2026",
+      env: {},
     });
     expect(outcome.status).toBe("fail");
     if (outcome.status !== "fail") return;
@@ -189,7 +192,11 @@ describe("checkApiKey", () => {
     const tmp = mkdtempSync(join(tmpdir(), "primitive-doctor-test-"));
     try {
       writeFileSync(join(tmp, "credentials.json"), JSON.stringify({}));
-      const outcome = checkApiKey({ apiKey: undefined, configDir: tmp });
+      const outcome = checkApiKey({
+        apiKey: undefined,
+        configDir: tmp,
+        env: {},
+      });
       expect(outcome.status).toBe("fail");
       if (outcome.status !== "fail") return;
       expect(outcome.message).toMatch(/contains no api_key/);
@@ -203,12 +210,56 @@ describe("checkApiKey", () => {
     const tmp = mkdtempSync(join(tmpdir(), "primitive-doctor-test-"));
     try {
       writeFileSync(join(tmp, "credentials.json"), "{not valid json");
-      const outcome = checkApiKey({ apiKey: undefined, configDir: tmp });
+      const outcome = checkApiKey({
+        apiKey: undefined,
+        configDir: tmp,
+        env: {},
+      });
       expect(outcome.status).toBe("fail");
       if (outcome.status !== "fail") return;
       expect(outcome.message).toMatch(/unreadable or malformed/);
     } finally {
       rmSync(tmp, { force: true, recursive: true });
     }
+  });
+
+  it("fails with a rename hint when PRIMITIVE_KEY is set but PRIMITIVE_API_KEY is not", () => {
+    // AGX feedback: users on stale docs (or coming from other tools)
+    // set PRIMITIVE_KEY and then can't figure out why the CLI says "no
+    // API key found". The CLI reads PRIMITIVE_API_KEY only. Doctor must
+    // detect the mistake and name the fix.
+    const outcome = checkApiKey({
+      apiKey: undefined,
+      configDir: "/tmp/definitely-does-not-exist-2026",
+      env: { PRIMITIVE_KEY: "prim_legacy_var" },
+    });
+    expect(outcome.status).toBe("fail");
+    if (outcome.status !== "fail") return;
+    expect(outcome.message).toMatch(/PRIMITIVE_KEY/);
+    expect(outcome.message).toMatch(/PRIMITIVE_API_KEY/);
+    expect(outcome.hint).toMatch(/PRIMITIVE_API_KEY=\$PRIMITIVE_KEY/);
+  });
+
+  it("does not surface the PRIMITIVE_KEY rename hint when PRIMITIVE_API_KEY is also set", () => {
+    // If the user has both vars set, PRIMITIVE_API_KEY wins (that's
+    // what the CLI reads) and the rename hint is noise. The other
+    // checks downstream still apply via the resolveCliAuth path; this
+    // helper only fires when the API key was not passed in.
+    const outcome = checkApiKey({
+      apiKey: undefined,
+      configDir: "/tmp/definitely-does-not-exist-2026",
+      env: {
+        PRIMITIVE_KEY: "prim_legacy_var",
+        PRIMITIVE_API_KEY: "prim_canonical_var",
+      },
+    });
+    // No credentials file, no flag, but PRIMITIVE_API_KEY is set in the
+    // env. The caller (oclif Flags.string with env: PRIMITIVE_API_KEY)
+    // would normally surface that as opts.apiKey, but this helper is
+    // pure: it should ignore env-resolved values it didn't see on its
+    // input and only fail with the generic "no API key found" message.
+    expect(outcome.status).toBe("fail");
+    if (outcome.status !== "fail") return;
+    expect(outcome.message).not.toMatch(/PRIMITIVE_KEY is set/);
   });
 });
