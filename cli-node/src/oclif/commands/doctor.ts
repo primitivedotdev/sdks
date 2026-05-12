@@ -109,7 +109,12 @@ function checkProxy(): CheckOutcome {
 function checkApiKey(opts: {
   apiKey?: string;
   configDir: string;
+  env?: NodeJS.ProcessEnv;
 }): CheckOutcome {
+  // Take env explicitly so the unit test can inject a clean
+  // environment without mutating process.env across cases. Default to
+  // the live process env for real runs.
+  const env = opts.env ?? process.env;
   if (opts.apiKey?.startsWith("prim_")) {
     return { status: "ok", message: "provided via flag/env (prim_ prefix)" };
   }
@@ -118,6 +123,25 @@ function checkApiKey(opts: {
       status: "warn",
       message: "provided but does not start with prim_",
       hint: "Verify the key is a Primitive API key, not a value from another service.",
+    };
+  }
+  // PRIMITIVE_KEY rename detection. AGX feedback: users on older docs
+  // (or coming from other tools) set PRIMITIVE_KEY and then can't
+  // figure out why the CLI says "no API key found". The CLI reads
+  // PRIMITIVE_API_KEY only. Surface the rename hint when PRIMITIVE_KEY
+  // is set but PRIMITIVE_API_KEY is not, before falling through to
+  // the credentials.json / no-key checks. The hint runs before the
+  // credentials.json branch on purpose: if both PRIMITIVE_KEY and a
+  // valid credentials file are present, the credentials file wins
+  // silently and the user never sees the rename suggestion, which is
+  // the same trap by another name.
+  const primitiveKey = env.PRIMITIVE_KEY;
+  const primitiveApiKey = env.PRIMITIVE_API_KEY;
+  if ((primitiveKey?.length ?? 0) > 0 && (primitiveApiKey?.length ?? 0) === 0) {
+    return {
+      status: "fail",
+      message: "PRIMITIVE_KEY is set but the CLI reads PRIMITIVE_API_KEY",
+      hint: "Rename your env var, or re-run with PRIMITIVE_API_KEY=$PRIMITIVE_KEY.",
     };
   }
   const credsPath = join(opts.configDir, "credentials.json");
