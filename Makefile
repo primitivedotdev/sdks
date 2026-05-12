@@ -7,13 +7,13 @@
 PYTHON := $(shell if command -v python3 >/dev/null 2>&1; then printf python3; else printf python; fi)
 
 node-install:
-	pnpm --dir sdk-node install --frozen-lockfile
+	pnpm install --frozen-lockfile
 
 node-generate:
-	pnpm --dir sdk-node generate
+	pnpm --filter @primitivedotdev/sdk generate
 
 node-check-generated:
-	cd sdk-node && pnpm generate && git diff --exit-code -- ../openapi/primitive-api.codegen.json src/schema.generated.ts src/types.generated.ts src/generated/email-received-event.validator.generated.ts src/api/generated src/openapi/openapi.generated.ts src/openapi/operations.generated.ts
+	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated/email-received-event.validator.generated.ts packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts
 
 node-test:
 	pnpm --dir sdk-node test
@@ -33,7 +33,7 @@ node-coverage:
 	pnpm --dir sdk-node test:coverage
 
 cli-install:
-	pnpm --dir cli-node install --frozen-lockfile
+	pnpm install --frozen-lockfile
 
 cli-test:
 	pnpm --dir cli-node test

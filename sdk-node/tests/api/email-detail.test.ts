@@ -1,5 +1,5 @@
+import type { EmailDetail } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
-import type { EmailDetail } from "../../src/api/generated/index.js";
 
 // Round-trip pin for the new fields on EmailDetail (replies,
 // from_known_address, body_text, body_html). TS types are erased at

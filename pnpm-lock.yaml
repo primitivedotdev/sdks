@@ -66,6 +66,9 @@ importers:
 
   sdk-node:
     dependencies:
+      '@primitivedotdev/api-core':
+        specifier: workspace:*
+        version: link:../packages/api-core
       ajv:
         specifier: ^8.17.1
         version: 8.20.0
@@ -88,9 +91,6 @@ importers:
       '@biomejs/biome':
         specifier: ^2.4.10
         version: 2.4.15
-      '@hey-api/openapi-ts':
-        specifier: 0.96.0
-        version: 0.96.0(magicast@0.5.2)(typescript@5.9.3)
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
@@ -130,9 +130,6 @@ importers:
       vitest:
         specifier: ^4.1.4
         version: 4.1.6(@types/node@22.19.19)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.12(@types/node@22.19.19)(esbuild@0.27.7)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
-      yaml:
-        specifier: ^2.8.1
-        version: 2.9.0
 
 packages:
 

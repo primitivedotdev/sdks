@@ -42,12 +42,10 @@
     "dist"
   ],
   "scripts": {
-    "generate:openapi": "tsx scripts/generate-openapi-artifacts.ts",
-    "generate:api": "openapi-ts -f openapi-ts.config.ts && tsx scripts/fix-generated-api-imports.ts",
     "generate:schema": "tsx scripts/generate-schema-module.ts",
     "generate:types": "tsx scripts/generate-types.ts",
     "generate:validator": "tsx scripts/generate-validator.ts",
-    "generate": "pnpm generate:openapi && pnpm generate:api && pnpm generate:schema && pnpm generate:types && pnpm generate:validator",
+    "generate": "pnpm --filter @primitivedotdev/api-core generate && pnpm generate:schema && pnpm generate:types && pnpm generate:validator",
     "build": "pnpm generate && tsdown",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -83,6 +81,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@primitivedotdev/api-core": "workspace:*",
     "ajv": "^8.17.1",
     "isomorphic-dompurify": "^3.8.0",
     "mailparser": "^3.9.0",
@@ -92,7 +91,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
-    "@hey-api/openapi-ts": "0.96.0",
     "@types/json-schema": "^7.0.15",
     "@types/mailparser": "^3.4.6",
     "@types/node": "^22.10.2",
@@ -105,7 +103,6 @@
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^8.0.8",
-    "vitest": "^4.1.4",
-    "yaml": "^2.8.1"
+    "vitest": "^4.1.4"
   }
 }
