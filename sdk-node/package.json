@@ -69,7 +69,7 @@
         "description": "Claim, verify, and manage email domains"
       },
       "emails": {
-        "description": "List, inspect, and manage received emails. Use `primitive emails:latest` for a one-line-per-email summary of recent inbound mail."
+        "description": "List, inspect, and wait for received emails. `primitive emails:latest` lists the most recent inbound, `primitive emails:wait` blocks until matching inbound arrives (filter with --to/--from/--subject/--q; bounded by --timeout and --number; ideal for agents and CI), and `primitive emails:watch` streams new matches indefinitely for long-running terminals."
       },
       "sending": {
         "description": "Send outbound emails. For replies to inbound mail, use `sending:reply-to-email --id <inbound-id>` (threading and Re: subject derived server-side); for fresh sends, use `sending:send-email` or the `primitive send` shortcut."
