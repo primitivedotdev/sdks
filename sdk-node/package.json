@@ -46,7 +46,7 @@
     "generate:types": "tsx scripts/generate-types.ts",
     "generate:validator": "tsx scripts/generate-validator.ts",
     "generate": "pnpm --filter @primitivedotdev/api-core generate && pnpm generate:schema && pnpm generate:types && pnpm generate:validator",
-    "build": "pnpm generate && tsdown",
+    "build": "pnpm generate && NODE_OPTIONS=\"--max-old-space-size=4096\" tsdown",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
