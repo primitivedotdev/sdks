@@ -6,8 +6,7 @@
   "sideEffects": false,
   "files": [
     "bin",
-    "dist",
-    "oclif.manifest.json"
+    "dist"
   ],
   "bin": {
     "primitive": "./bin/run.js"
@@ -63,8 +62,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "lint": "biome check --error-on-warnings src tests",
     "lint:fix": "biome check --write --error-on-warnings src tests",
-    "prepack": "pnpm build && oclif manifest",
-    "postpack": "shx rm -f oclif.manifest.json",
+    "prepack": "pnpm build",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
@@ -99,7 +97,6 @@
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^4.1.4",
     "oclif": "^4.23.0",
-    "shx": "^0.3.4",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^8.0.8",
