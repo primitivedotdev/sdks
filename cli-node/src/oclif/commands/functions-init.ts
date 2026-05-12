@@ -194,11 +194,9 @@ export function renderPackageJson(name: string): string {
     devDependencies: {
       // @primitivedotdev/cli ships the primitive bin. Including it as
       // a devDep here means `node_modules/.bin/primitive` resolves to
-      // the real CLI inside the scaffolded project; otherwise the
-      // bin falls through to @primitivedotdev/sdk's deprecated CLI
-      // alias and every `npm run deploy` invocation prints the
-      // "CLI moved" stderr banner. Pinned via CLI_VERSION_RANGE, a
-      // dedicated constant so the version is decoupled from the SDK
+      // the real CLI inside the scaffolded project so `npm run deploy`
+      // works without a global install. Pinned via CLI_VERSION_RANGE,
+      // a dedicated constant so the version is decoupled from the SDK
       // range and bumps are explicit on both ends.
       "@primitivedotdev/cli": CLI_VERSION_RANGE,
       esbuild: ESBUILD_VERSION_RANGE,

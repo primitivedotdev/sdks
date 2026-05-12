@@ -31,7 +31,7 @@ Releases are automated from `main`.
 2. Merge that PR into `main`.
 3. The `Node Release` workflow verifies the version bump, publishes to npm through trusted publishing/OIDC, and creates the `sdk-node/vX.Y.Z` tag plus a GitHub release.
 4. Verify the package contents with `npm view @primitivedotdev/sdk version`.
-5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/api`, `@primitivedotdev/sdk/openapi`, `@primitivedotdev/sdk/contract`, `@primitivedotdev/sdk/parser`, and the `primitive` bin (the bin remains during the CLI deprecation window).
+5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/api`, `@primitivedotdev/sdk/openapi`, `@primitivedotdev/sdk/contract`, and `@primitivedotdev/sdk/parser`, and that it does NOT install a `primitive` bin (the CLI lives in `@primitivedotdev/cli`).
 
 ## CLI Release
 
