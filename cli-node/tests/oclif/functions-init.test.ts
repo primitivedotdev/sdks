@@ -113,7 +113,7 @@ describe("renderHandler", () => {
   });
 });
 
-describe("renderHandler self-reply guard + REPLY_FROM constant", () => {
+describe("renderHandler loop protection + REPLY_FROM constant", () => {
   it("declares a REPLY_FROM constant with a TODO marker in the preceding comment", () => {
     // AGX feedback: the placeholder sender was buried inline as a
     // string literal in two places. Lifting it into a named constant
@@ -127,22 +127,56 @@ describe("renderHandler self-reply guard + REPLY_FROM constant", () => {
     expect(beforeConst).toContain("TODO");
   });
 
-  it("includes a self-reply guard predicate that returns skipped: self-reply", () => {
-    // AGX feedback: without this guard, an outbound reply that gets
-    // forwarded back into the inbox triggers another reply, and so on.
-    // The scaffold defaults users into the safe shape.
-    //
-    // The predicate must be substring-based, not strict equality:
-    // event.email.headers.from is the raw RFC 2822 header value and
-    // commonly carries a display name ("Alice <alice@example.com>").
-    // A strict === check would silently miss those payloads.
+  it("exposes an isLoop helper that the handler calls before dispatching", () => {
+    // AGX feedback: a deployed function receives catch-all inbound for
+    // the managed *.primitive.email subdomain, including bounces from
+    // its own outbound traffic. Without a loop guard the handler can
+    // respond to its own bounces and fan out indefinitely. The default
+    // scaffold ships the guard so users do not have to discover the
+    // need for it after a fan-out incident.
     const handler = renderHandler();
-    expect(handler).toContain("event.email.headers.from?.includes(REPLY_FROM)");
-    expect(handler).not.toContain("event.email.headers.from === REPLY_FROM");
-    expect(handler).toMatch(/skipped:\s*["']self-reply["']/);
-    // The comment block above the guard must call out the RFC 2822
-    // shape so future authors know why .includes is used.
-    expect(handler).toMatch(/RFC 2822/);
+    expect(handler).toMatch(
+      /export function isLoop\(event: EmailReceivedEvent\): boolean/,
+    );
+    // The fetch dispatcher must call the helper and short-circuit on
+    // true; the early-return body marks the skip reason as "loop" so
+    // operators can filter invocation logs by it.
+    expect(handler).toContain("if (isLoop(event))");
+    expect(handler).toMatch(/skipped:\s*["']loop["']/);
+  });
+
+  it("isLoop covers the managed *.primitive.email suffix and the REPLY_FROM address", () => {
+    // The default predicate has two arms: any From on the catch-all
+    // managed subdomain (covers bounces from mailer-daemon@*.primitive.email
+    // as well as the simple self-reply case), and the configured
+    // REPLY_FROM. Comparisons are case-insensitive because RFC 2822
+    // email-address local parts are case-insensitive in practice.
+    const handler = renderHandler();
+    expect(handler).toContain(".primitive.email");
+    expect(handler).toContain("REPLY_FROM.toLowerCase()");
+    // Substring match (.includes), not strict equality: the From
+    // header can be a bare address or display-name form.
+    expect(handler).toMatch(/from\.includes\(["']\.primitive\.email["']\)/);
+    expect(handler).not.toMatch(
+      /event\.email\.headers\.from\s*===\s*REPLY_FROM/,
+    );
+  });
+
+  it("documents that the default isLoop is intentionally small and where to extend", () => {
+    // The default helper covers the catch-all case (anything on
+    // *.primitive.email). Auto-Submitted detection, Message-ID chain
+    // tracking, and signup-email matching are deliberately left to
+    // the user. The comment block above isLoop must list these as
+    // extension points so the next person knows where to add the
+    // sophistication.
+    const handler = renderHandler();
+    const beforeHelper = handler.slice(
+      0,
+      handler.indexOf("export function isLoop"),
+    );
+    expect(beforeHelper).toContain("auto-submitted");
+    expect(beforeHelper).toContain("Message-ID");
+    expect(beforeHelper).toMatch(/signup/i);
   });
 
   it("includes a recipient-routing comment block pointing at event.email.headers.to", () => {
