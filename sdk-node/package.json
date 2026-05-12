@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/sdk",
-  "version": "0.26.0",
+  "version": "0.26.1",
   "description": "Official Primitive Node.js SDK: webhook, api, openapi, contract, and parser runtime modules. The CLI moved to @primitivedotdev/cli; this package retains the CLI as a deprecated alias for a few minor releases.",
   "type": "module",
   "module": "./dist/index.js",
