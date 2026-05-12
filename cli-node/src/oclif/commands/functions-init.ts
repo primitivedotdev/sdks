@@ -83,7 +83,13 @@ interface EmailReceivedEvent {
 // The default check returns true when From is on any *.primitive.email
 // address (covers the managed subdomain catch-all, the simple
 // self-reply case, and bounces from mailer-daemon@*.primitive.email)
-// or when From matches REPLY_FROM exactly.
+// or when From contains REPLY_FROM as a case-insensitive substring.
+// Substring matching is deliberate so display-name forms like
+// "Support <support@example.com>" match a bare-address REPLY_FROM,
+// but it also accepts false positives where REPLY_FROM is a suffix
+// of another address (e.g. REPLY_FROM="info@x.com" matches
+// "mr.info@x.com"). For strict equality, parse the address out of the
+// header and exact-match against REPLY_FROM.
 //
 // Extend this helper if you need stricter detection. Common additions:
 //   - Match the org's signup / account-owner email (not auto-injected
