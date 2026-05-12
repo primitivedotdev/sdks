@@ -12,6 +12,7 @@ import FunctionsDeployCommand from "./commands/functions-deploy.js";
 import FunctionsInitCommand from "./commands/functions-init.js";
 import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
 import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
+import FunctionsTestFunctionCommand from "./commands/functions-test-function.js";
 import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
 import SendCommand from "./commands/send.js";
@@ -150,11 +151,22 @@ function commandId(operation: PrimitiveOperationManifest): string {
   return `${operation.tagCommand}:${operation.command}`;
 }
 
+// Operation ids whose surface is owned by a hand-rolled command in
+// COMMANDS below. The auto-generated wrapper is filtered out so the
+// hand-rolled command owns the id without a name collision.
+const OVERRIDDEN_OPERATION_IDS = new Set<string>([
+  // `functions:test-function` is hand-rolled to add --wait, --show-sends,
+  // and --timeout flags on top of the auto-generated POST /functions/{id}/test.
+  "functions:test-function",
+]);
+
 const generatedCommands = Object.fromEntries(
-  operationManifest.map((operation) => [
-    commandId(operation),
-    createOperationCommand(operation),
-  ]),
+  operationManifest
+    .filter((operation) => !OVERRIDDEN_OPERATION_IDS.has(commandId(operation)))
+    .map((operation) => [
+      commandId(operation),
+      createOperationCommand(operation),
+    ]),
 );
 
 export const COMMANDS: Record<string, typeof Command> = {
@@ -216,5 +228,12 @@ export const COMMANDS: Record<string, typeof Command> = {
   // visible to the running handler requires a separate redeploy,
   // which this shortcut folds in via --redeploy.
   "functions:set-secret": FunctionsSetSecretCommand,
+  // `functions:test-function` is hand-rolled to add --wait, --show-sends,
+  // and --timeout on top of POST /functions/{id}/test. Without those
+  // flags, agents had to manually thread queued-send + emails:wait +
+  // emails:get-email + sending:list-sent-emails to verify a function
+  // ran and see what it emitted; AGX walkthroughs flagged that loop as
+  // the single biggest verification time-sink.
+  "functions:test-function": FunctionsTestFunctionCommand,
   ...generatedCommands,
 };
