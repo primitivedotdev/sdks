@@ -539,19 +539,12 @@ export type {
   RequestResult as PrimitiveGeneratedApiRequestResult,
   ResponseStyle,
 } from "@primitivedotdev/api-core";
-// Re-export every generated operation + type by name so callers of
-// `@primitivedotdev/sdk/api` (CLI, customer code) keep working.
+// The single `export *` covers every generated operation / type
+// plus `operations`, `PrimitiveApiClient`, `createPrimitiveApiClient`,
+// `DEFAULT_API_BASE_URL_1/2`, and `PrimitiveApiError`. The aliased
+// re-exports below cover the historical `PrimitiveGeneratedApi*`
+// names so existing customer imports keep resolving.
 export * from "@primitivedotdev/api-core";
-export {
-  createPrimitiveApiClient,
-  DEFAULT_API_BASE_URL_1,
-  DEFAULT_API_BASE_URL_2,
-  operations,
-  PrimitiveApiClient,
-  type PrimitiveApiClientOptions,
-  PrimitiveApiError,
-  type PrimitiveApiErrorDetails,
-} from "@primitivedotdev/api-core";
 export type {
   VerifyOptions as VerifyWebhookSignatureOptions,
   WebhookVerificationErrorCode,

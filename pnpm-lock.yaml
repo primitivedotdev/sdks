@@ -66,9 +66,6 @@ importers:
 
   sdk-node:
     dependencies:
-      '@primitivedotdev/api-core':
-        specifier: workspace:*
-        version: link:../packages/api-core
       ajv:
         specifier: ^8.17.1
         version: 8.20.0
@@ -91,6 +88,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.4.10
         version: 2.4.15
+      '@primitivedotdev/api-core':
+        specifier: workspace:*
+        version: link:../packages/api-core
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
