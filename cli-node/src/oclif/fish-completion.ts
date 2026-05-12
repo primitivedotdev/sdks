@@ -2,7 +2,7 @@ import {
   openapiDocument,
   operationManifest,
   type PrimitiveOperationManifest,
-} from "@primitivedotdev/sdk/openapi";
+} from "@primitivedotdev/api-core";
 
 type OpenApiTag = {
   description?: string;

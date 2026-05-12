@@ -4,12 +4,12 @@ import type {
   ListDomainsResponse,
   SendMailResult,
   VerifiedDomain,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import {
   listDomains,
   PrimitiveApiClient,
   sendEmail,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import {
   API_ERROR_CODES,
   extractErrorCode,

@@ -12,7 +12,7 @@ import { join } from "node:path";
 import {
   DEFAULT_API_BASE_URL_1,
   DEFAULT_API_BASE_URL_2,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 
 const CREDENTIALS_FILE = "credentials.json";
 const CREDENTIALS_LOCK_DIR = "credentials.lock";

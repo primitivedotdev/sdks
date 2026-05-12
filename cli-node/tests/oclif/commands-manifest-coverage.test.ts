@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { operationManifest } from "@primitivedotdev/sdk/openapi";
+import { operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 import { COMMANDS } from "../../src/oclif/index.js";
 
@@ -30,7 +30,7 @@ describe("COMMANDS / manifest coverage", () => {
   it("does not declare a pre-built oclif.manifest.json in package files", () => {
     // A static `oclif.manifest.json` is a snapshot captured at
     // publish time. Because COMMANDS is built dynamically from the
-    // installed `@primitivedotdev/sdk` operation manifest, a stale
+    // bundled `@primitivedotdev/api-core` operation manifest, a stale
     // static snapshot can advertise commands the runtime can't reach
     // or, conversely, hide commands the runtime exposes. The CLI
     // resolves commands via the dynamic COMMANDS map at runtime; the

@@ -3,8 +3,8 @@ import type {
   PrimitiveApiClient,
   SearchEmailsData,
   SearchEmailsResponse,
-} from "@primitivedotdev/sdk/api";
-import { searchEmails } from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
+import { searchEmails } from "@primitivedotdev/api-core";
 
 export const DEFAULT_EMAIL_POLL_INTERVAL_SECONDS = 2;
 export const DEFAULT_EMAIL_POLL_PAGE_SIZE = 50;

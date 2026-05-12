@@ -1,12 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Command, Flags } from "@oclif/core";
-import type { Account } from "@primitivedotdev/sdk/api";
+import type { Account } from "@primitivedotdev/api-core";
 import {
   getAccount,
   listDomains,
   PrimitiveApiClient,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import { resolveCliAuth } from "../auth.js";
 
 // `primitive doctor` is a one-command health check the AGX walkthrough

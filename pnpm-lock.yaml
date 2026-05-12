@@ -17,13 +17,13 @@ importers:
       '@oclif/plugin-help':
         specifier: ^6.2.44
         version: 6.2.48
-      '@primitivedotdev/sdk':
-        specifier: ^0.26.0
-        version: 0.26.1
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.10
         version: 2.4.15
+      '@primitivedotdev/api-core':
+        specifier: workspace:*
+        version: link:../packages/api-core
       '@types/node':
         specifier: ^22.10.2
         version: 22.19.19
@@ -33,6 +33,9 @@ importers:
       oclif:
         specifier: ^4.23.0
         version: 4.23.0(@types/node@22.19.19)
+      tsdown:
+        specifier: ^0.21.10
+        version: 0.21.10(typescript@5.9.3)
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -873,11 +876,6 @@ packages:
   '@pnpm/npm-conf@3.0.2':
     resolution: {integrity: sha512-h104Kh26rR8tm+a3Qkc5S4VLYint3FE48as7+/5oCEcKR2idC/pF1G6AhIXKI+eHPJa/3J9i5z0Al47IeGHPkA==}
     engines: {node: '>=12'}
-
-  '@primitivedotdev/sdk@0.26.1':
-    resolution: {integrity: sha512-JfbzuT5Mj+jGUeTyIRbmEr63m16yAB5u+3Z4TZXXhhG2LyAvgYH8JUDfYnF32IAEbgvpERr9Nj17AwxKY4DapQ==}
-    engines: {node: '>=22'}
-    hasBin: true
 
   '@quansync/fs@1.0.0':
     resolution: {integrity: sha512-4TJ3DFtlf1L5LDMaM6CanJ/0lckGNtJcMjQ1NAV6zDmA0tEHKZtxNKin8EgPaVX1YzljbxckyT2tJrpQKAtngQ==}
@@ -3772,25 +3770,6 @@ snapshots:
       '@pnpm/config.env-replace': 1.1.0
       '@pnpm/network.ca-file': 1.0.2
       config-chain: 1.1.13
-
-  '@primitivedotdev/sdk@0.26.1':
-    dependencies:
-      '@oclif/core': 4.11.2
-      '@oclif/plugin-autocomplete': 3.2.49
-      '@oclif/plugin-help': 6.2.48
-      ajv: 8.20.0
-      isomorphic-dompurify: 3.12.0
-      mailparser: 3.9.8
-      nodemailer: 8.0.7
-      tar-stream: 3.2.0
-      validator: 13.15.35
-    transitivePeerDependencies:
-      - '@noble/hashes'
-      - bare-abort-controller
-      - bare-buffer
-      - canvas
-      - react-native-b4a
-      - supports-color
 
   '@quansync/fs@1.0.0':
     dependencies:

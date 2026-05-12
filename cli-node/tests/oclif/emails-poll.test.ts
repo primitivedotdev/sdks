@@ -1,4 +1,4 @@
-import type { EmailSearchResult } from "@primitivedotdev/sdk/api";
+import type { EmailSearchResult } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 import {
   buildEmailSearchQuery,

@@ -2,7 +2,7 @@ import { Args, Command, Errors } from "@oclif/core";
 import {
   operationManifest,
   type PrimitiveOperationManifest,
-} from "@primitivedotdev/sdk/openapi";
+} from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
 import DoctorCommand from "./commands/doctor.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";

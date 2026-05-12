@@ -1,11 +1,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { Command, Errors, Flags } from "@oclif/core";
-import type { ErrorResponse } from "@primitivedotdev/sdk/api";
-import { operations, PrimitiveApiClient } from "@primitivedotdev/sdk/api";
 import type {
+  ErrorResponse,
   PrimitiveOperationManifest,
   PrimitiveParameterManifest,
-} from "@primitivedotdev/sdk/openapi";
+} from "@primitivedotdev/api-core";
+import { operations, PrimitiveApiClient } from "@primitivedotdev/api-core";
 import {
   deleteCliCredentials,
   type ResolvedCliAuth,

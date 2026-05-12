@@ -1,6 +1,6 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import type { Account } from "@primitivedotdev/sdk/api";
-import { getAccount, PrimitiveApiClient } from "@primitivedotdev/sdk/api";
+import type { Account } from "@primitivedotdev/api-core";
+import { getAccount, PrimitiveApiClient } from "@primitivedotdev/api-core";
 import {
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,
