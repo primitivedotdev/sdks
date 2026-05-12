@@ -32,7 +32,7 @@ const SDK_VERSION_RANGE = "^0.25.0";
 // resolves at least v1.2.3, so the user does not silently downgrade
 // the bin under themselves. The lockstep test in functions-init.test.ts
 // enforces that invariant.
-const CLI_VERSION_RANGE = "^0.25.0";
+const CLI_VERSION_RANGE = "^0.26.0";
 
 // esbuild version range. Pinned to the latest stable major used
 // elsewhere in the Primitive codebase for bundling Workers-style
