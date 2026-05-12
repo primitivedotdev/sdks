@@ -39,10 +39,16 @@ jobs:
           filters: |
             node:
               - 'sdk-node/**'
+              - 'packages/api-core/**'
               - 'openapi/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
             cli:
               - 'cli-node/**'
+              - 'packages/api-core/**'
               - 'openapi/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
             python:
               - 'sdk-python/**'
               - 'openapi/**'
@@ -76,7 +82,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
-          cache-dependency-path: sdk-node/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: make node-install
@@ -86,6 +92,9 @@ jobs:
 
       - name: Build node package
         run: make node-build
+
+      - name: Assert SDK tarball does not leak api-core or cli into dependencies
+        run: make node-tarball-isolation
 
       - name: Smoke test packed node package
         run: make node-smoke
@@ -113,7 +122,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
-          cache-dependency-path: cli-node/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: make cli-install
@@ -123,6 +132,9 @@ jobs:
 
       - name: Build cli package
         run: make cli-build
+
+      - name: Assert CLI tarball does not leak api-core or sdk into dependencies
+        run: make cli-tarball-isolation
 
       - name: Smoke test packed cli package
         run: make cli-smoke
@@ -207,7 +219,7 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: sdk-node/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
         with:
