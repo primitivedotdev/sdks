@@ -102,11 +102,14 @@ def sync_detailed(
     """ Deploy a function
 
      Creates and deploys a new function. The handler must be a single
-    ESM module that exports a default async function receiving the
-    `email.received` event (see the Webhook payload section for the
-    full schema). Code is bundled before being uploaded; ship a
-    single self-contained file rather than relying on external
-    imports.
+    ESM module whose default export is an object with an async
+    `fetch(request, env)` method (Workers-style). The gateway
+    HMAC-verifies the POST against the org's webhook secret before
+    invoking the handler; the request body parses to an
+    `email.received` event (see `EmailReceivedEvent` and the
+    Webhook payload section for the full schema). Code is bundled
+    before being uploaded; ship a single self-contained file rather
+    than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
     (optional) is capped at 5 MiB UTF-8 and is stored only on the
@@ -156,11 +159,14 @@ def sync(
     """ Deploy a function
 
      Creates and deploys a new function. The handler must be a single
-    ESM module that exports a default async function receiving the
-    `email.received` event (see the Webhook payload section for the
-    full schema). Code is bundled before being uploaded; ship a
-    single self-contained file rather than relying on external
-    imports.
+    ESM module whose default export is an object with an async
+    `fetch(request, env)` method (Workers-style). The gateway
+    HMAC-verifies the POST against the org's webhook secret before
+    invoking the handler; the request body parses to an
+    `email.received` event (see `EmailReceivedEvent` and the
+    Webhook payload section for the full schema). Code is bundled
+    before being uploaded; ship a single self-contained file rather
+    than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
     (optional) is capped at 5 MiB UTF-8 and is stored only on the
@@ -205,11 +211,14 @@ async def asyncio_detailed(
     """ Deploy a function
 
      Creates and deploys a new function. The handler must be a single
-    ESM module that exports a default async function receiving the
-    `email.received` event (see the Webhook payload section for the
-    full schema). Code is bundled before being uploaded; ship a
-    single self-contained file rather than relying on external
-    imports.
+    ESM module whose default export is an object with an async
+    `fetch(request, env)` method (Workers-style). The gateway
+    HMAC-verifies the POST against the org's webhook secret before
+    invoking the handler; the request body parses to an
+    `email.received` event (see `EmailReceivedEvent` and the
+    Webhook payload section for the full schema). Code is bundled
+    before being uploaded; ship a single self-contained file rather
+    than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
     (optional) is capped at 5 MiB UTF-8 and is stored only on the
@@ -259,11 +268,14 @@ async def asyncio(
     """ Deploy a function
 
      Creates and deploys a new function. The handler must be a single
-    ESM module that exports a default async function receiving the
-    `email.received` event (see the Webhook payload section for the
-    full schema). Code is bundled before being uploaded; ship a
-    single self-contained file rather than relying on external
-    imports.
+    ESM module whose default export is an object with an async
+    `fetch(request, env)` method (Workers-style). The gateway
+    HMAC-verifies the POST against the org's webhook secret before
+    invoking the handler; the request body parses to an
+    `email.received` event (see `EmailReceivedEvent` and the
+    Webhook payload section for the full schema). Code is bundled
+    before being uploaded; ship a single self-contained file rather
+    than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
     (optional) is capped at 5 MiB UTF-8 and is stored only on the
