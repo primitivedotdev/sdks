@@ -107,9 +107,34 @@ describe("applyProxyAutoDetect", () => {
     applyProxyAutoDetect({ env, stderr });
     // Second invocation: still detects, still has NODE_USE_ENV_PROXY=1
     // from the first call, so it follows the "already set" path and
-    // writes nothing.
+    // writes nothing. This case validates the already-set guard, not
+    // the hint latch itself. See the next test for the latch.
     applyProxyAutoDetect({ env, stderr });
 
+    expect(stderr.writes).toHaveLength(1);
+  });
+
+  it("hint latch suppresses the second print when each call receives a fresh env", () => {
+    // The previous test exercises the already-set guard because both
+    // calls share an env object the first call mutated. The hint
+    // latch is only exercised when both calls reach the "apply" path,
+    // meaning each call sees a fresh env with the proxy var set and
+    // NODE_USE_ENV_PROXY absent. This case validates that.
+    const stderr = makeStderr();
+
+    const env1: NodeJS.ProcessEnv = { HTTP_PROXY: "http://corp-proxy:8080" };
+    const r1 = applyProxyAutoDetect({ env: env1, stderr });
+
+    const env2: NodeJS.ProcessEnv = { HTTP_PROXY: "http://corp-proxy:8080" };
+    const r2 = applyProxyAutoDetect({ env: env2, stderr });
+
+    // Both invocations apply: each mutates its own env's NODE_USE_ENV_PROXY.
+    expect(r1.applied).toBe(true);
+    expect(env1.NODE_USE_ENV_PROXY).toBe("1");
+    expect(r2.applied).toBe(true);
+    expect(env2.NODE_USE_ENV_PROXY).toBe("1");
+
+    // ...but the latch suppresses the second hint write.
     expect(stderr.writes).toHaveLength(1);
   });
 });
