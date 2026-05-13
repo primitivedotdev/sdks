@@ -275,21 +275,25 @@ describe("renderPackageJson", () => {
     expect(Number(cliPatch)).toBeGreaterThanOrEqual(Number(rangePatch));
   });
 
-  it("ships the same @primitivedotdev/sdk version range the CLI itself depends on", () => {
-    // Regression guard: scaffolded projects must use the same SDK
-    // version range that this CLI was built and tested against.
-    // Lockstep avoids generating handlers that target an SDK release
-    // we haven't actually exercised.
-    const cliPkgPath = resolve(__dirname, "../../package.json");
-    const cliPkg = JSON.parse(readFileSync(cliPkgPath, "utf8")) as {
-      dependencies: Record<string, string>;
-    };
+  it("pins the scaffolded @primitivedotdev/sdk to a 3-part caret range", () => {
+    // Regression guard: scaffolded projects target a specific SDK
+    // line. The cli used to derive that range from its own
+    // `@primitivedotdev/sdk` runtime dep, but the CLI no longer
+    // depends on the SDK at runtime (the generated API surface lives
+    // in the workspace-internal api-core package and is bundled into
+    // the CLI tarball). The scaffolded SDK range is now driven by
+    // the SDK_VERSION_RANGE constant in src/oclif/commands/
+    // functions-init.ts; this test pins the shape so a future bump
+    // to a malformed range fails CI.
     const scaffolded = JSON.parse(renderPackageJson("test-fn")) as {
       dependencies: Record<string, string>;
     };
-    expect(scaffolded.dependencies["@primitivedotdev/sdk"]).toBe(
-      cliPkg.dependencies["@primitivedotdev/sdk"],
-    );
+    const range = scaffolded.dependencies["@primitivedotdev/sdk"];
+    expect(range, "scaffolded SDK range is missing").toBeDefined();
+    expect(
+      range.match(/^\^\d+\.\d+\.\d+$/),
+      `unexpected SDK range shape: ${range}`,
+    ).not.toBeNull();
   });
 
   it("substitutes the function name into the deploy script", () => {

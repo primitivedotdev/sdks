@@ -1,64 +1,40 @@
 /**
  * Primitive API client module.
  *
- * Generated operations are exported directly, and `PrimitiveApiClient`
- * provides a configured fetch client for those operations.
+ * The generated API surface (operations, types, host-aware client,
+ * shared error type) lives in the workspace-internal
+ * `@primitivedotdev/api-core` package. The bundler inlines that
+ * code into the published `@primitivedotdev/sdk` tarball, so
+ * consumers see a single package; the split exists only to keep
+ * sdk-node and cli-node decoupled at the source level.
+ *
+ * This module re-exports the api-core surface and adds the
+ * higher-level `PrimitiveClient` (send / reply / forward) on top.
+ * Those high-level methods depend on the parsed `ReceivedEmail`
+ * shape from sdk-node's webhook module, which is why they live
+ * here rather than in api-core.
  */
 
+import {
+  type GateDenial,
+  type ErrorResponse as GeneratedErrorResponse,
+  type ReplyInput as GeneratedReplyInput,
+  type SendMailInput as GeneratedSendMailInput,
+  type SendMailResult as GeneratedSendMailResult,
+  operations as generatedOperations,
+  PrimitiveApiClient,
+  type PrimitiveApiClientOptions,
+  PrimitiveApiError,
+  type PrimitiveApiErrorDetails,
+} from "@primitivedotdev/api-core";
 import type { ReceivedEmail } from "../webhook/received-email.js";
 import { formatAddress } from "../webhook/received-email.js";
-import {
-  createClient,
-  createConfig,
-  type Client as GeneratedClient,
-  type Config as GeneratedConfig,
-} from "./generated/client/index.js";
-import type {
-  GateDenial,
-  ErrorResponse as GeneratedErrorResponse,
-  ReplyInput as GeneratedReplyInput,
-  SendMailInput as GeneratedSendMailInput,
-  SendMailResult as GeneratedSendMailResult,
-} from "./generated/index.js";
-import * as generatedOperations from "./generated/sdk.gen.js";
-
-// Default production hosts. Two-host split exists because /send-mail
-// needs a larger body cap than Vercel allows; host 2 is a Cloudflare
-// Worker that accepts ~30 MiB raw. Host 1 carries everything else.
-// Customers don't see this split: PrimitiveClient.send() always routes
-// to host 2 internally, every other operation routes to host 1.
-//
-// Both base URLs are independently overridable via constructor options.
-// Override is for internal staging/local testing; not part of the
-// publicly-supported surface.
-export const DEFAULT_API_BASE_URL_1 = "https://www.primitive.dev/api/v1";
-export const DEFAULT_API_BASE_URL_2 = "https://api.primitive.dev/v1";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_THREAD_REFERENCES = 100;
 const MAX_THREAD_HEADER_BYTES = 8 * 1024;
 const MAX_FROM_HEADER_LENGTH = 998;
 const MAX_TO_HEADER_LENGTH = 320;
-
-export interface PrimitiveApiClientOptions
-  extends Omit<GeneratedConfig, "auth" | "baseUrl"> {
-  apiKey?: string;
-  auth?: GeneratedConfig["auth"];
-  /** @internal Override for the primary API host. Production default is correct; this exists for staging/local testing only. */
-  apiBaseUrl1?: string;
-  /** @internal Override for the attachments-supporting send host. Production default is correct; this exists for staging/local testing only. */
-  apiBaseUrl2?: string;
-}
-
-function createDefaultAuth(apiKey?: string): GeneratedConfig["auth"] {
-  return (security) => {
-    if (security.type === "http" && security.scheme === "bearer") {
-      return apiKey;
-    }
-
-    return undefined;
-  };
-}
 
 function validateAddressHeader(field: "from" | "to", value: string): void {
   const trimmed = value.trim();
@@ -236,9 +212,20 @@ function validateForwardInput(input: ForwardInput): void {
   }
 }
 
-export type PrimitiveApiErrorDetails = NonNullable<
-  GeneratedErrorResponse["error"]["details"]
->;
+function isAbortLikeError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.name === "AbortError" || error.name === "TimeoutError";
+}
+
+function parseRetryAfterHeader(
+  response: Response | undefined,
+): number | undefined {
+  if (!response) return undefined;
+  const raw = response.headers.get("retry-after");
+  if (!raw) return undefined;
+  const seconds = Number.parseInt(raw, 10);
+  return Number.isFinite(seconds) ? seconds : undefined;
+}
 
 interface ParsedApiError {
   message: string;
@@ -291,109 +278,6 @@ function parseApiErrorPayload(payload: unknown): ParsedApiError {
   }
 
   return fallback;
-}
-
-export class PrimitiveApiError extends Error {
-  readonly status: number | undefined;
-  readonly code: string | undefined;
-  readonly gates: GateDenial[] | undefined;
-  readonly requestId: string | undefined;
-  readonly retryAfter: number | undefined;
-  readonly details: PrimitiveApiErrorDetails | undefined;
-  readonly payload: unknown;
-
-  constructor(
-    message: string,
-    options: {
-      payload: unknown;
-      status?: number;
-      code?: string;
-      gates?: GateDenial[];
-      requestId?: string;
-      retryAfter?: number;
-      details?: PrimitiveApiErrorDetails;
-    },
-  ) {
-    super(message);
-    this.name = "PrimitiveApiError";
-    this.payload = options.payload;
-    this.status = options.status;
-    this.code = options.code;
-    this.gates = options.gates;
-    this.requestId = options.requestId;
-    this.retryAfter = options.retryAfter;
-    this.details = options.details;
-  }
-}
-
-function isAbortLikeError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  return error.name === "AbortError" || error.name === "TimeoutError";
-}
-
-function parseRetryAfterHeader(
-  response: Response | undefined,
-): number | undefined {
-  if (!response) return undefined;
-  const raw = response.headers.get("retry-after");
-  if (!raw) return undefined;
-  const seconds = Number.parseInt(raw, 10);
-  return Number.isFinite(seconds) ? seconds : undefined;
-}
-
-export class PrimitiveApiClient {
-  /**
-   * Generated client targeting the primary API host (apiBaseUrl1). Use
-   * this when passing `client: ...` to a generated operation function
-   * for every endpoint EXCEPT /send-mail. The hand-written
-   * PrimitiveClient.send / .reply / .forward methods on the subclass
-   * route /send-mail to the host-2 client internally.
-   */
-  readonly client: GeneratedClient;
-  /**
-   * @internal Generated client targeting the attachments-supporting
-   * send host (apiBaseUrl2). Used by PrimitiveClient.send() under the
-   * hood. Exposed for the CLI's hand-rolled send command, which calls
-   * the generated sendEmail directly; not part of the publicly-
-   * documented SDK surface. Customer code should call .send() on the
-   * subclass instead.
-   */
-  readonly _sendClient: GeneratedClient;
-
-  constructor(options: PrimitiveApiClientOptions = {}) {
-    const {
-      apiKey,
-      auth,
-      apiBaseUrl1 = DEFAULT_API_BASE_URL_1,
-      apiBaseUrl2 = DEFAULT_API_BASE_URL_2,
-      ...config
-    } = options;
-
-    const resolvedAuth = auth ?? createDefaultAuth(apiKey);
-
-    this.client = createClient(
-      createConfig({
-        ...config,
-        auth: resolvedAuth,
-        baseUrl: apiBaseUrl1,
-      }),
-    );
-    this._sendClient = createClient(
-      createConfig({
-        ...config,
-        auth: resolvedAuth,
-        baseUrl: apiBaseUrl2,
-      }),
-    );
-  }
-
-  getConfig() {
-    return this.client.getConfig();
-  }
-
-  setConfig(config: GeneratedConfig) {
-    return this.client.setConfig(config);
-  }
 }
 
 export type PrimitiveClientOptions = PrimitiveApiClientOptions;
@@ -623,12 +507,6 @@ function mapSendResult(result: GeneratedSendMailResult): SendResult {
   };
 }
 
-export function createPrimitiveApiClient(
-  options: PrimitiveApiClientOptions = {},
-) {
-  return new PrimitiveApiClient(options);
-}
-
 export function createPrimitiveClient(options: PrimitiveClientOptions = {}) {
   return new PrimitiveClient(options);
 }
@@ -637,7 +515,18 @@ export function client(options: PrimitiveClientOptions = {}) {
   return new PrimitiveClient(options);
 }
 
-export const operations = generatedOperations;
+// ---------------------------------------------------------------------------
+// Re-exports from @primitivedotdev/api-core.
+//
+// sdk-node's `./api` subpath has historically owned every generated
+// operation, every generated type, the `operations` namespace, the
+// host-aware `PrimitiveApiClient`, the dual-host base URL constants,
+// and the shared error type. Customers import these as
+// `@primitivedotdev/sdk/api` and depend on the surface staying
+// stable. The implementations live in api-core now (so the CLI can
+// pick them up without a sdk-node dependency), and this module
+// passes them through unchanged.
+// ---------------------------------------------------------------------------
 
 export type {
   Auth,
@@ -649,8 +538,13 @@ export type {
   RequestOptions as PrimitiveGeneratedApiRequestOptions,
   RequestResult as PrimitiveGeneratedApiRequestResult,
   ResponseStyle,
-} from "./generated/client/index.js";
-export * from "./generated/index.js";
+} from "@primitivedotdev/api-core";
+// The single `export *` covers every generated operation / type
+// plus `operations`, `PrimitiveApiClient`, `createPrimitiveApiClient`,
+// `DEFAULT_API_BASE_URL_1/2`, and `PrimitiveApiError`. The aliased
+// re-exports below cover the historical `PrimitiveGeneratedApi*`
+// names so existing customer imports keep resolving.
+export * from "@primitivedotdev/api-core";
 export type {
   VerifyOptions as VerifyWebhookSignatureOptions,
   WebhookVerificationErrorCode,

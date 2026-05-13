@@ -1,7 +1,7 @@
 import type {
   FunctionDetail,
   FunctionSecretWriteResult,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import { describe, expect, it, vi } from "vitest";
 import {
   runSetSecret,

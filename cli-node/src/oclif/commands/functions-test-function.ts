@@ -5,7 +5,7 @@ import {
   PrimitiveApiClient,
   type TestInvocationResult,
   testFunction,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import {
   API_BASE_URL_1_FLAG_DESCRIPTION,
   API_BASE_URL_2_FLAG_DESCRIPTION,

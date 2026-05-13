@@ -2,7 +2,7 @@ import type {
   CreateFunctionResult,
   FunctionDetail,
   FunctionSecretWriteResult,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import { describe, expect, it, vi } from "vitest";
 import {
   type DeployApiSurface,

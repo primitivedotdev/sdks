@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { openapiDocument } from "@primitivedotdev/sdk/openapi";
+import { openapiDocument } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 
 function normalize(value: string): string {

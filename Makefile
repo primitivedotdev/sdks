@@ -1,5 +1,5 @@
-.PHONY: node-install node-generate node-check-generated node-test node-check node-build node-smoke node-coverage
-.PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-coverage
+.PHONY: node-install node-generate node-check-generated node-test node-check node-build node-smoke node-tarball-isolation node-coverage
+.PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-tarball-isolation cli-coverage
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
 .PHONY: shared-check check build release-check ci
@@ -7,13 +7,13 @@
 PYTHON := $(shell if command -v python3 >/dev/null 2>&1; then printf python3; else printf python; fi)
 
 node-install:
-	pnpm --dir sdk-node install --frozen-lockfile
+	pnpm install --frozen-lockfile
 
 node-generate:
-	pnpm --dir sdk-node generate
+	pnpm --filter @primitivedotdev/sdk generate
 
 node-check-generated:
-	cd sdk-node && pnpm generate && git diff --exit-code -- ../openapi/primitive-api.codegen.json src/schema.generated.ts src/types.generated.ts src/generated/email-received-event.validator.generated.ts src/api/generated src/openapi/openapi.generated.ts src/openapi/operations.generated.ts
+	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated/email-received-event.validator.generated.ts packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts
 
 node-test:
 	pnpm --dir sdk-node test
@@ -26,14 +26,17 @@ node-check: node-check-generated
 node-build:
 	pnpm --dir sdk-node build
 
-node-smoke: node-build
-	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd sdk-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && node --input-type=module -e "const root = await import('@primitivedotdev/sdk'); const webhook = await import('@primitivedotdev/sdk/webhook'); const api = await import('@primitivedotdev/sdk/api'); const openapi = await import('@primitivedotdev/sdk/openapi'); const contract = await import('@primitivedotdev/sdk/contract'); const parser = await import('@primitivedotdev/sdk/parser'); if (typeof root.handleWebhook !== 'function') throw new Error('missing root handleWebhook export'); if (typeof webhook.handleWebhook !== 'function') throw new Error('missing webhook handleWebhook export'); if (typeof api.createPrimitiveApiClient !== 'function') throw new Error('missing api client factory'); if (typeof openapi.openapiDocument !== 'object') throw new Error('missing openapi document export'); if (typeof contract.buildEmailReceivedEvent !== 'function') throw new Error('missing contract buildEmailReceivedEvent export'); if (typeof parser.parseEmail !== 'function') throw new Error('missing parser parseEmail export');" && if [ -e "$$smoke_dir/node_modules/.bin/primitive" ]; then echo "SDK tarball must not install a primitive bin (the CLI moved to @primitivedotdev/cli)"; exit 1; fi
+node-tarball-isolation:
+	node scripts/assert-tarball-isolation.mjs sdk-node "@primitivedotdev/cli"
+
+node-smoke: node-build node-tarball-isolation
+	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd sdk-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && node --input-type=module -e "const root = await import('@primitivedotdev/sdk'); const webhook = await import('@primitivedotdev/sdk/webhook'); const api = await import('@primitivedotdev/sdk/api'); const openapi = await import('@primitivedotdev/sdk/openapi'); const contract = await import('@primitivedotdev/sdk/contract'); const parser = await import('@primitivedotdev/sdk/parser'); if (typeof root.handleWebhook !== 'function') throw new Error('missing root handleWebhook export'); if (typeof webhook.handleWebhook !== 'function') throw new Error('missing webhook handleWebhook export'); if (typeof api.createPrimitiveApiClient !== 'function') throw new Error('missing api client factory'); if (typeof openapi.openapiDocument !== 'object') throw new Error('missing openapi document export'); if (typeof contract.buildEmailReceivedEvent !== 'function') throw new Error('missing contract buildEmailReceivedEvent export'); if (typeof parser.parseEmail !== 'function') throw new Error('missing parser parseEmail export');" && if [ -e "$$smoke_dir/node_modules/.bin/primitive" ]; then echo "SDK tarball must not install a primitive bin (the CLI moved to @primitivedotdev/cli)"; exit 1; fi && if [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "SDK tarball pulled @primitivedotdev/api-core into node_modules; the workspace-internal package must be bundled inline, not declared as a runtime dep."; exit 1; fi
 
 node-coverage:
 	pnpm --dir sdk-node test:coverage
 
 cli-install:
-	pnpm --dir cli-node install --frozen-lockfile
+	pnpm install --frozen-lockfile
 
 cli-test:
 	pnpm --dir cli-node test
@@ -46,8 +49,11 @@ cli-check:
 cli-build:
 	pnpm --dir cli-node build
 
-cli-smoke: cli-build
-	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && "$$smoke_dir/node_modules/.bin/primitive" list-operations >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion fish >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion bash >/dev/null
+cli-tarball-isolation:
+	node scripts/assert-tarball-isolation.mjs cli-node "@primitivedotdev/sdk"
+
+cli-smoke: cli-build cli-tarball-isolation
+	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && "$$smoke_dir/node_modules/.bin/primitive" list-operations >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion fish >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion bash >/dev/null && if [ -d "$$smoke_dir/node_modules/@primitivedotdev/sdk" ] || [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "CLI tarball pulled @primitivedotdev/sdk or @primitivedotdev/api-core into node_modules; both should be bundled inline."; exit 1; fi
 
 cli-coverage:
 	pnpm --dir cli-node test:coverage

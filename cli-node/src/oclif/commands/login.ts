@@ -4,13 +4,13 @@ import { Command, Errors, Flags } from "@oclif/core";
 import type {
   CliLoginPollResult,
   CliLoginStartResult,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import {
   getAccount,
   PrimitiveApiClient,
   pollCliLogin,
   startCliLogin,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import {
   API_ERROR_CODES,
   extractErrorCode,

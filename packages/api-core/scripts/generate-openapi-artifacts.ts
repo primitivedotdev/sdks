@@ -113,8 +113,12 @@ const HTTP_METHODS: HttpMethod[] = [
 
 const OCTET_STREAM = "application/octet-stream";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const specPath = resolve(scriptDir, "../../openapi/primitive-api.yaml");
-const codegenSpecPath = resolve(scriptDir, "../../openapi/primitive-api.codegen.json");
+// Paths are relative to packages/api-core/scripts. The shared
+// OpenAPI source lives at the repo root (also consumed by sdk-python
+// and sdk-go); the generated TypeScript outputs live inside the
+// api-core package's own src tree.
+const specPath = resolve(scriptDir, "../../../openapi/primitive-api.yaml");
+const codegenSpecPath = resolve(scriptDir, "../../../openapi/primitive-api.codegen.json");
 const openapiOutputPath = resolve(scriptDir, "../src/openapi/openapi.generated.ts");
 const manifestOutputPath = resolve(scriptDir, "../src/openapi/operations.generated.ts");
 

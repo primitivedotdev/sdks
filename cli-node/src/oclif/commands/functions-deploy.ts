@@ -3,13 +3,13 @@ import type {
   CreateFunctionResult,
   FunctionDetail,
   FunctionSecretWriteResult,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import {
   createFunction,
   PrimitiveApiClient,
   setFunctionSecret,
   updateFunction,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import {
   extractErrorPayload,
   readTextFileFlag,

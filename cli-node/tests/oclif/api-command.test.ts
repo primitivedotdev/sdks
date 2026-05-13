@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Errors } from "@oclif/core";
-import type { PrimitiveOperationManifest } from "@primitivedotdev/sdk/openapi";
+import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createOperationCommand,

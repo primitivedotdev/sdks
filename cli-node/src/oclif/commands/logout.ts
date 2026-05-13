@@ -1,6 +1,6 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import type { CliLogoutResult } from "@primitivedotdev/sdk/api";
-import { cliLogout, PrimitiveApiClient } from "@primitivedotdev/sdk/api";
+import type { CliLogoutResult } from "@primitivedotdev/api-core";
+import { cliLogout, PrimitiveApiClient } from "@primitivedotdev/api-core";
 import {
   API_ERROR_CODES,
   extractErrorCode,

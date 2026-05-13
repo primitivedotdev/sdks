@@ -55,7 +55,7 @@
     "topicSeparator": " "
   },
   "scripts": {
-    "build": "tsc -p tsconfig.oclif.json",
+    "build": "tsdown",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -89,14 +89,15 @@
   "dependencies": {
     "@oclif/core": "^4.10.5",
     "@oclif/plugin-autocomplete": "^3.2.45",
-    "@oclif/plugin-help": "^6.2.44",
-    "@primitivedotdev/sdk": "^0.26.0"
+    "@oclif/plugin-help": "^6.2.44"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
+    "@primitivedotdev/api-core": "workspace:*",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^4.1.4",
     "oclif": "^4.23.0",
+    "tsdown": "^0.21.10",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^8.0.8",

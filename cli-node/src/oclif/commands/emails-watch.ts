@@ -1,5 +1,5 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import { PrimitiveApiClient } from "@primitivedotdev/sdk/api";
+import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import {
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,

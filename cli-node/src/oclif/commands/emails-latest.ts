@@ -1,6 +1,6 @@
 import { Command, Flags } from "@oclif/core";
-import type { EmailSummary } from "@primitivedotdev/sdk/api";
-import { listEmails, PrimitiveApiClient } from "@primitivedotdev/sdk/api";
+import type { EmailSummary } from "@primitivedotdev/api-core";
+import { listEmails, PrimitiveApiClient } from "@primitivedotdev/api-core";
 import {
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,

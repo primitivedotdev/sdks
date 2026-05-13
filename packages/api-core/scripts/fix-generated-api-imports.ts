@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
-const generatedRoot = resolve(scriptDir, "../src/api/generated");
+const generatedRoot = resolve(scriptDir, "../src/api");
 
 function visit(directory: string, files: string[] = []): string[] {
   for (const entry of readdirSync(directory)) {

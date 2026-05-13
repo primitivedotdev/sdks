@@ -2,13 +2,13 @@ import { Command, Flags } from "@oclif/core";
 import type {
   FunctionDetail,
   FunctionSecretWriteResult,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import {
   getFunction,
   PrimitiveApiClient,
   setFunctionSecret,
   updateFunction,
-} from "@primitivedotdev/sdk/api";
+} from "@primitivedotdev/api-core";
 import {
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,
