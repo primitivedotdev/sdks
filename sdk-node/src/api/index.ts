@@ -30,6 +30,12 @@ import {
 import type { ReceivedEmail } from "../webhook/received-email.js";
 import { formatAddress } from "../webhook/received-email.js";
 
+// EmailReceivedEvent is the parsed JSON shape Functions handlers
+// receive in `await req.json()`. Re-exported from `/api` (Workers-safe)
+// so scaffolded handlers can type the request body without importing
+// from `@primitivedotdev/sdk` root or `/webhook` (both of which pull
+// node:crypto via the Node-crypto signing helpers).
+export type { EmailReceivedEvent } from "../types.js";
 // Re-export the inbound-email normalizer and its types from the
 // Workers-safe `/api` subpath so handler authors can pass the inbound
 // event into `client.reply()` without importing from
@@ -40,15 +46,12 @@ import { formatAddress } from "../webhook/received-email.js";
 // `webhook/received-email.ts` purely for proximity to other
 // inbound-shape helpers; the file itself has no node:crypto
 // dependency, so re-exporting it here is safe.
-export type { ReceivedEmail, ReceivedEmailAddress, ReceivedEmailThread } from "../webhook/received-email.js";
+export type {
+  ReceivedEmail,
+  ReceivedEmailAddress,
+  ReceivedEmailThread,
+} from "../webhook/received-email.js";
 export { normalizeReceivedEmail } from "../webhook/received-email.js";
-
-// EmailReceivedEvent is the parsed JSON shape Functions handlers
-// receive in `await req.json()`. Re-exported from `/api` (Workers-safe)
-// so scaffolded handlers can type the request body without importing
-// from `@primitivedotdev/sdk` root or `/webhook` (both of which pull
-// node:crypto via the Node-crypto signing helpers).
-export type { EmailReceivedEvent } from "../types.js";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_THREAD_REFERENCES = 100;
