@@ -15,6 +15,7 @@ import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
 } from "./endpoints-test-redirect.js";
+import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
 
 type OperationName = keyof typeof operations;
 export type ApiErrorCode = ErrorResponse["error"]["code"];
@@ -986,6 +987,18 @@ export function createOperationCommand(
           const hint = EMPTY_RESULT_HINTS[operation.sdkName];
           if (hint) process.stderr.write(`${hint}\n`);
         }
+
+        // Idempotent-replay banner. Send-mail (and any future
+        // operation that might surface this flag) carries
+        // `idempotent_replay: true` when the server short-circuited
+        // and returned a cached row. The helper is a no-op for
+        // responses without the flag so we can call it
+        // unconditionally without per-operation gating.
+        writeIdempotentReplayBannerIfReplay(envelope?.data, {
+          write: (chunk) => {
+            process.stderr.write(chunk);
+          },
+        });
 
         this.log(JSON.stringify(envelope?.data ?? null, null, 2));
       });
