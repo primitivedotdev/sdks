@@ -43,16 +43,21 @@ describe("isValidFunctionName", () => {
 });
 
 describe("renderHandler", () => {
-  it("imports createPrimitiveClient from @primitivedotdev/sdk/api, NOT the root", () => {
+  it("imports the SDK surface from @primitivedotdev/sdk/api, NOT the root", () => {
     // This is the regression guard for the Run 4 footgun: importing
     // from the package root pulls in node:crypto-dependent webhook
     // helpers and breaks Workers-style bundles. The scaffolder must
-    // teach the /api subpath specifically.
+    // teach the /api subpath specifically. The import block must
+    // include createPrimitiveClient (for outbound), normalizeReceivedEmail
+    // (so client.reply gets threading metadata so --show-sends works),
+    // and the EmailReceivedEvent type.
     const handler = renderHandler();
-    expect(handler).toContain(
-      'import { createPrimitiveClient } from "@primitivedotdev/sdk/api";',
-    );
+    expect(handler).toMatch(/from\s+"@primitivedotdev\/sdk\/api"/);
+    expect(handler).toContain("createPrimitiveClient");
+    expect(handler).toContain("normalizeReceivedEmail");
+    expect(handler).toContain("EmailReceivedEvent");
     expect(handler).not.toMatch(/from\s+"@primitivedotdev\/sdk"\s*;/);
+    expect(handler).not.toMatch(/from\s+"@primitivedotdev\/sdk\/webhook"/);
   });
 
   it("exports a Worker-style default with async fetch(req, env)", () => {
@@ -61,11 +66,17 @@ describe("renderHandler", () => {
     expect(handler).toContain("async fetch(");
   });
 
-  it("calls client.send to demonstrate the SDK reply pattern, not raw fetch", () => {
+  it("calls client.reply (not client.send) so the inbound's replies array gets populated", () => {
     // The whole point of this scaffolder is to ship a handler that
     // uses the SDK rather than raw fetch against /api/v1/send-mail.
+    // client.reply specifically (not client.send) so the server-side
+    // in_reply_to_email_id FK gets set, which is what makes the
+    // inbound's `replies` array populate and `functions:test-function
+    // --show-sends` surface this handler's outbound.
     const handler = renderHandler();
-    expect(handler).toContain("client.send(");
+    expect(handler).toContain("client.reply(");
+    expect(handler).toContain("normalizeReceivedEmail(event)");
+    expect(handler).not.toContain("client.send(");
     expect(handler).not.toContain("/api/v1/send-mail");
   });
 
@@ -114,17 +125,18 @@ describe("renderHandler", () => {
 });
 
 describe("renderHandler loop protection + REPLY_FROM constant", () => {
-  it("declares a REPLY_FROM constant with a TODO marker in the preceding comment", () => {
-    // AGX feedback: the placeholder sender was buried inline as a
-    // string literal in two places. Lifting it into a named constant
-    // with a TODO marker makes the "replace me before deploying" step
-    // impossible to miss.
+  it("declares a REPLY_FROM constant scoped to loop protection", () => {
+    // REPLY_FROM is the loop-protection knob: handlers that send
+    // outbound from a non-managed domain need to recognize replies
+    // returning to that address as self-traffic. The comment above
+    // the const must make it clear this is for the isLoop helper
+    // (not a literal "TODO replace before deploying" — the scaffolder
+    // no longer wires REPLY_FROM into the outbound from-address;
+    // client.reply lets the server default it).
     const handler = renderHandler();
     expect(handler).toContain("const REPLY_FROM =");
-    // The TODO marker must appear in the comment block above the
-    // const so the scaffolded author sees it before the value.
     const beforeConst = handler.slice(0, handler.indexOf("const REPLY_FROM"));
-    expect(beforeConst).toContain("TODO");
+    expect(beforeConst).toMatch(/loop[- ]protection/i);
   });
 
   it("exposes an isLoop helper that the handler calls before dispatching", () => {
@@ -189,18 +201,23 @@ describe("renderHandler loop protection + REPLY_FROM constant", () => {
     expect(handler).toContain("event.email.headers.to");
   });
 
-  it("uses the REPLY_FROM constant in both the from: and fallback to: slots, with no duplicated string literal", () => {
-    // Regression guard: the placeholder address must appear exactly
-    // once in the rendered handler (inside the REPLY_FROM const), not
-    // duplicated in the send() call.
+  it("uses REPLY_FROM only inside isLoop, never as an outbound from-address", () => {
+    // Post-client.reply scaffolder: REPLY_FROM is loop-protection-only.
+    // client.reply server-defaults the outbound from-address from the
+    // inbound recipient, so the scaffolded handler must NOT pass
+    // REPLY_FROM as `from` to any send/reply call. The placeholder
+    // address itself must still appear exactly once (in the const).
     const handler = renderHandler();
     const occurrences = (
       handler.match(/you@your-domain\.primitive\.email/g) ?? []
     ).length;
     expect(occurrences).toBe(1);
-    // And the send call references the constant, not the literal.
-    expect(handler).toContain("from: REPLY_FROM");
-    expect(handler).toContain("to: event.email.headers.from ?? REPLY_FROM");
+    expect(handler).not.toContain("from: REPLY_FROM");
+    expect(handler).not.toMatch(
+      /to:\s*event\.email\.headers\.from\s*\?\?\s*REPLY_FROM/,
+    );
+    // REPLY_FROM must still be referenced by isLoop (loop-protection use).
+    expect(handler).toMatch(/REPLY_FROM\.toLowerCase\(\)/);
   });
 });
 
@@ -352,9 +369,9 @@ describe("writeScaffold", () => {
     );
 
     const handler = readFileSync(resolve(outDir, "handler.ts"), "utf8");
-    expect(handler).toContain(
-      'import { createPrimitiveClient } from "@primitivedotdev/sdk/api";',
-    );
+    expect(handler).toMatch(/from\s+"@primitivedotdev\/sdk\/api"/);
+    expect(handler).toContain("createPrimitiveClient");
+    expect(handler).toContain("normalizeReceivedEmail");
 
     const pkg = JSON.parse(
       readFileSync(resolve(outDir, "package.json"), "utf8"),

@@ -57,22 +57,23 @@ export function isValidFunctionName(name: string): boolean {
 
 export function renderHandler(): string {
   return `// env.PRIMITIVE_API_KEY is auto-injected by the Primitive Functions runtime.
-import { createPrimitiveClient } from "@primitivedotdev/sdk/api";
+//
+// Imports are taken from the \`/api\` subpath, NOT the package root.
+// The root export pulls in webhook signing helpers that depend on
+// \`node:crypto\`, which breaks Workers-style bundles. The \`/api\`
+// subpath is Workers-safe and exposes everything a handler needs.
+import {
+  createPrimitiveClient,
+  normalizeReceivedEmail,
+  type EmailReceivedEvent,
+} from "@primitivedotdev/sdk/api";
 
-// TODO: replace with your verified sender address. Must be a domain
-// you own or your managed *.primitive.email subdomain. The isLoop
-// guard below compares incoming mail against this value (in addition
-// to the *.primitive.email suffix) so the handler does not reply to
-// its own outbound traffic when REPLY_FROM is on a non-managed
-// domain.
+// Loop-protection knob. Only used by the isLoop helper below; the
+// handler's outbound reply address is server-defaulted (no
+// from-address parameter is passed to client.reply). Update this if
+// you later switch to sending from a non-managed-domain address so
+// the loop guard recognizes mail returning to it as self-traffic.
 const REPLY_FROM = "you@your-domain.primitive.email";
-
-interface EmailReceivedEvent {
-  event: string;
-  email: {
-    headers: { from?: string; to?: string; subject?: string };
-  };
-}
 
 // Loop protection. A deployed Function receives catch-all inbound for
 // the managed *.primitive.email subdomain, which includes bounces and
@@ -141,22 +142,32 @@ export default {
 
       // Recipient gate
       // https://www.primitive.dev/docs/sending#who-you-can-send-to
-      // New accounts can send to *.primitive.email addresses,
-      // verified domains, addresses that have authenticated to you,
-      // and other org-member signup emails. Sends to arbitrary
-      // external addresses return 403 recipient_not_allowed with a
-      // structured gates[] array until the recipient has authenticated
-      // to you or support has enabled the gate.
+      // Even via client.reply, sends to the original sender are
+      // subject to the recipient gate. New accounts can send to
+      // *.primitive.email addresses, verified domains, addresses that
+      // have authenticated to you, and other org-member signup emails.
+      // Sends to arbitrary external addresses return 403
+      // recipient_not_allowed with a structured gates[] array until
+      // the recipient has authenticated to you or support has enabled
+      // the gate.
 
       // Recipient routing: a single function can handle multiple inbound
       // addresses by branching on event.email.headers.to. For example,
       // route "support@" to a ticketing flow and "sales@" to a lead
-      // capture flow before calling client.send.
-      const reply = await client.send({
-        from: REPLY_FROM,
-        to: event.email.headers.from ?? REPLY_FROM,
-        subject: \`Re: \${event.email.headers.subject ?? ""}\`,
-        bodyText: "Got your message.",
+      // capture flow before calling client.reply.
+
+      // client.reply routes through POST /api/v1/emails/{id}/reply
+      // (NOT /send-mail) so the server derives recipients, the
+      // \`Re: <parent>\` subject, threading headers, and the
+      // in_reply_to_email_id foreign key automatically. The FK is
+      // what populates the inbound's \`replies\` array on
+      // GET /emails/{id}; without it, \`primitive functions:test-function
+      // --show-sends\` would report no outbound emails for this handler
+      // because the join would miss. Use client.send only when you
+      // need to send to a different address than the inbound sender,
+      // and pass \`in_reply_to\` explicitly to preserve correlation.
+      const reply = await client.reply(normalizeReceivedEmail(event), {
+        text: "Got your message.",
       });
 
       return Response.json({ ok: true, reply });
