@@ -28,7 +28,7 @@ import {
   type PrimitiveApiErrorDetails,
 } from "@primitivedotdev/api-core";
 import type { ReceivedEmail } from "../webhook/received-email.js";
-import { formatAddress, normalizeReceivedEmail } from "../webhook/received-email.js";
+import { formatAddress } from "../webhook/received-email.js";
 
 // Re-export the inbound-email normalizer and its types from the
 // Workers-safe `/api` subpath so handler authors can pass the inbound
