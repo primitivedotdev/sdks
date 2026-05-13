@@ -79,7 +79,7 @@ describe("writeIdempotentReplayBannerIfReplay", () => {
     expect(banner).toMatch(/status=delivered/);
     // delivery_status should NOT also be listed separately when it
     // equals status (avoids "status=delivered, delivery_status=delivered").
-    expect(banner).not.toMatch(/delivery_status=delivered.*delivery_status/);
+    expect(banner).not.toMatch(/delivery_status=/);
     const occurrences = (banner.match(/delivered/g) ?? []).length;
     expect(occurrences).toBe(1);
   });
