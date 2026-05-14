@@ -141,6 +141,10 @@ type ReplyToEmailRes interface {
 	replyToEmailRes()
 }
 
+type ResendCliSignupVerificationRes interface {
+	resendCliSignupVerificationRes()
+}
+
 type RotateWebhookSecretRes interface {
 	rotateWebhookSecretRes()
 }
@@ -159,6 +163,10 @@ type SetFunctionSecretRes interface {
 
 type StartCliLoginRes interface {
 	startCliLoginRes()
+}
+
+type StartCliSignupRes interface {
+	startCliSignupRes()
 }
 
 type TestEndpointRes interface {
@@ -187,6 +195,10 @@ type UpdateFilterRes interface {
 
 type UpdateFunctionRes interface {
 	updateFunctionRes()
+}
+
+type VerifyCliSignupRes interface {
+	verifyCliSignupRes()
 }
 
 type VerifyDomainRes interface {

@@ -8,14 +8,16 @@ info:
 
     ## Authentication
 
-    All endpoints require a Bearer token in the `Authorization` header:
+    Most endpoints require a Bearer token in the `Authorization` header:
 
     ```
     Authorization: Bearer prim_<your_api_key>
     ```
 
     API keys are org-scoped. Create and manage them in your dashboard
-    under Settings > API Keys.
+    under Settings > API Keys. CLI login and signup endpoints explicitly
+    declare `security: []`; they do not require an API key because they
+    are used to mint one.
 
     ## Rate Limiting
 
@@ -292,6 +294,134 @@ paths:
                 error:
                   code: access_denied
                   message: CLI login was denied in the browser
+
+  /cli/signup/start:
+    post:
+      operationId: startCliSignup
+      summary: Start CLI account signup
+      description: |
+        Starts a terminal-native CLI signup. The API validates the signup code,
+        creates a pending signup session, sends an email verification code, and
+        returns an opaque signup token used by the resend and verify steps. This
+        endpoint does not require an API key.
+      tags: [CLI]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartCliSignupInput'
+      responses:
+        '201':
+          description: CLI signup session created and verification email sent
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Always `no-store`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CliSignupStartResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /cli/signup/resend:
+    post:
+      operationId: resendCliSignupVerification
+      summary: Resend CLI signup verification code
+      description: |
+        Sends a new email verification code for a pending CLI signup session.
+        This endpoint does not require an API key.
+      tags: [CLI]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendCliSignupVerificationInput'
+      responses:
+        '200':
+          description: Verification email resent
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Always `no-store`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CliSignupResendResult'
+        '400':
+          description: Invalid token, expired token, or resend requested too quickly
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before requesting another code when the error code is `slow_down`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /cli/signup/verify:
+    post:
+      operationId: verifyCliSignup
+      summary: Verify CLI signup and create API key
+      description: |
+        Verifies the email code for a CLI signup session, creates the account,
+        redeems the reserved signup code, mints an org-scoped CLI API key, and
+        returns the raw key exactly once. This endpoint does not require an API key.
+      tags: [CLI]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyCliSignupInput'
+      responses:
+        '200':
+          description: CLI signup verified and API key created
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Always `no-store`
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CliSignupVerifyResult'
+        '400':
+          description: Invalid request, invalid verification code, expired token, invalid signup code, rejected password, or account creation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /cli/logout:
     post:
       operationId: cliLogout
@@ -2683,6 +2813,114 @@ components:
       required: [device_code]
 
     CliLoginPollResult:
+      type: object
+      properties:
+        api_key:
+          type: string
+          description: Newly-created API key for CLI authentication
+        key_id:
+          type: string
+          format: uuid
+        key_prefix:
+          type: string
+        org_id:
+          type: string
+          format: uuid
+        org_name:
+          type: [string, 'null']
+      required: [api_key, key_id, key_prefix, org_id, org_name]
+
+    StartCliSignupInput:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        signup_code:
+          type: string
+          minLength: 1
+          maxLength: 128
+        terms_accepted:
+          type: boolean
+          const: true
+          description: Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy
+        device_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: Human-readable device name used for the created CLI API key
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or fewer
+      required: [email, signup_code, terms_accepted]
+
+    CliSignupStartResult:
+      type: object
+      properties:
+        signup_token:
+          type: string
+          description: Opaque token used to verify or resend the pending CLI signup
+        email:
+          type: string
+          format: email
+        expires_in:
+          type: integer
+          description: Seconds until the pending signup expires
+        resend_after:
+          type: integer
+          description: Minimum seconds before requesting another verification email
+        verification_code_length:
+          type: integer
+          description: Number of digits in the emailed verification code
+      required: [signup_token, email, expires_in, resend_after, verification_code_length]
+
+    ResendCliSignupVerificationInput:
+      type: object
+      additionalProperties: false
+      properties:
+        signup_token:
+          type: string
+          minLength: 1
+      required: [signup_token]
+
+    CliSignupResendResult:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        expires_in:
+          type: integer
+          description: Seconds until the pending signup expires
+        resend_after:
+          type: integer
+          description: Minimum seconds before requesting another verification email
+        verification_code_length:
+          type: integer
+          description: Number of digits in the emailed verification code
+      required: [email, expires_in, resend_after, verification_code_length]
+
+    VerifyCliSignupInput:
+      type: object
+      additionalProperties: false
+      properties:
+        signup_token:
+          type: string
+          minLength: 1
+        verification_code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        password:
+          type: string
+          minLength: 1
+          maxLength: 1024
+      required: [signup_token, verification_code, password]
+
+    CliSignupVerifyResult:
       type: object
       properties:
         api_key:

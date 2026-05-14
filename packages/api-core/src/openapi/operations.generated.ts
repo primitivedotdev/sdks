@@ -419,6 +419,62 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "resend-cli-signup-verification",
+    "description": "Sends a new email verification code for a pending CLI signup session.\nThis endpoint does not require an API key.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "resendCliSignupVerification",
+    "path": "/cli/signup/resend",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "signup_token": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "signup_token"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "expires_in": {
+          "type": "integer",
+          "description": "Seconds until the pending signup expires"
+        },
+        "resend_after": {
+          "type": "integer",
+          "description": "Minimum seconds before requesting another verification email"
+        },
+        "verification_code_length": {
+          "type": "integer",
+          "description": "Number of digits in the emailed verification code"
+        }
+      },
+      "required": [
+        "email",
+        "expires_in",
+        "resend_after",
+        "verification_code_length"
+      ]
+    },
+    "sdkName": "resendCliSignupVerification",
+    "summary": "Resend CLI signup verification code",
+    "tag": "CLI",
+    "tagCommand": "cli"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "start-cli-login",
     "description": "Starts a browser-assisted CLI login session. The response includes a\ndevice code for polling and a user code that the user approves in the\nbrowser. This endpoint does not require an API key.\n",
@@ -485,6 +541,165 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "startCliLogin",
     "summary": "Start CLI browser login",
+    "tag": "CLI",
+    "tagCommand": "cli"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "start-cli-signup",
+    "description": "Starts a terminal-native CLI signup. The API validates the signup code,\ncreates a pending signup session, sends an email verification code, and\nreturns an opaque signup token used by the resend and verify steps. This\nendpoint does not require an API key.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "startCliSignup",
+    "path": "/cli/signup/start",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "signup_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "terms_accepted": {
+          "type": "boolean",
+          "const": true,
+          "description": "Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy"
+        },
+        "device_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Human-readable device name used for the created CLI API key"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or fewer"
+        }
+      },
+      "required": [
+        "email",
+        "signup_code",
+        "terms_accepted"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "signup_token": {
+          "type": "string",
+          "description": "Opaque token used to verify or resend the pending CLI signup"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "expires_in": {
+          "type": "integer",
+          "description": "Seconds until the pending signup expires"
+        },
+        "resend_after": {
+          "type": "integer",
+          "description": "Minimum seconds before requesting another verification email"
+        },
+        "verification_code_length": {
+          "type": "integer",
+          "description": "Number of digits in the emailed verification code"
+        }
+      },
+      "required": [
+        "signup_token",
+        "email",
+        "expires_in",
+        "resend_after",
+        "verification_code_length"
+      ]
+    },
+    "sdkName": "startCliSignup",
+    "summary": "Start CLI account signup",
+    "tag": "CLI",
+    "tagCommand": "cli"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "verify-cli-signup",
+    "description": "Verifies the email code for a CLI signup session, creates the account,\nredeems the reserved signup code, mints an org-scoped CLI API key, and\nreturns the raw key exactly once. This endpoint does not require an API key.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "verifyCliSignup",
+    "path": "/cli/signup/verify",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "signup_token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verification_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "password": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "signup_token",
+        "verification_code",
+        "password"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "description": "Newly-created API key for CLI authentication"
+        },
+        "key_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "key_prefix": {
+          "type": "string"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "api_key",
+        "key_id",
+        "key_prefix",
+        "org_id",
+        "org_name"
+      ]
+    },
+    "sdkName": "verifyCliSignup",
+    "summary": "Verify CLI signup and create API key",
     "tag": "CLI",
     "tagCommand": "cli"
   },

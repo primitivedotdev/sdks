@@ -441,6 +441,13 @@ type Invoker interface {
 	//
 	// POST /emails/{id}/reply
 	ReplyToEmail(ctx context.Context, request *ReplyInput, params ReplyToEmailParams) (ReplyToEmailRes, error)
+	// ResendCliSignupVerification invokes resendCliSignupVerification operation.
+	//
+	// Sends a new email verification code for a pending CLI signup session.
+	// This endpoint does not require an API key.
+	//
+	// POST /cli/signup/resend
+	ResendCliSignupVerification(ctx context.Context, request *ResendCliSignupVerificationInput) (ResendCliSignupVerificationRes, error)
 	// RotateWebhookSecret invokes rotateWebhookSecret operation.
 	//
 	// Generates a new webhook signing secret, replacing the current one.
@@ -497,6 +504,15 @@ type Invoker interface {
 	//
 	// POST /cli/login/start
 	StartCliLogin(ctx context.Context, request OptStartCliLoginInput) (StartCliLoginRes, error)
+	// StartCliSignup invokes startCliSignup operation.
+	//
+	// Starts a terminal-native CLI signup. The API validates the signup code,
+	// creates a pending signup session, sends an email verification code, and
+	// returns an opaque signup token used by the resend and verify steps. This
+	// endpoint does not require an API key.
+	//
+	// POST /cli/signup/start
+	StartCliSignup(ctx context.Context, request *StartCliSignupInput) (StartCliSignupRes, error)
 	// TestEndpoint invokes testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -573,6 +589,14 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}
 	UpdateFunction(ctx context.Context, request *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
+	// VerifyCliSignup invokes verifyCliSignup operation.
+	//
+	// Verifies the email code for a CLI signup session, creates the account,
+	// redeems the reserved signup code, mints an org-scoped CLI API key, and
+	// returns the raw key exactly once. This endpoint does not require an API key.
+	//
+	// POST /cli/signup/verify
+	VerifyCliSignup(ctx context.Context, request *VerifyCliSignupInput) (VerifyCliSignupRes, error)
 	// VerifyDomain invokes verifyDomain operation.
 	//
 	// Checks DNS records (MX and TXT) to verify domain ownership.
@@ -5371,6 +5395,84 @@ func (c *Client) sendReplyToEmail(ctx context.Context, request *ReplyInput, para
 	return result, nil
 }
 
+// ResendCliSignupVerification invokes resendCliSignupVerification operation.
+//
+// Sends a new email verification code for a pending CLI signup session.
+// This endpoint does not require an API key.
+//
+// POST /cli/signup/resend
+func (c *Client) ResendCliSignupVerification(ctx context.Context, request *ResendCliSignupVerificationInput) (ResendCliSignupVerificationRes, error) {
+	res, err := c.sendResendCliSignupVerification(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendResendCliSignupVerification(ctx context.Context, request *ResendCliSignupVerificationInput) (res ResendCliSignupVerificationRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("resendCliSignupVerification"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/cli/signup/resend"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ResendCliSignupVerificationOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/cli/signup/resend"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeResendCliSignupVerificationRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeResendCliSignupVerificationResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // RotateWebhookSecret invokes rotateWebhookSecret operation.
 //
 // Generates a new webhook signing secret, replacing the current one.
@@ -6248,6 +6350,86 @@ func (c *Client) sendStartCliLogin(ctx context.Context, request OptStartCliLogin
 
 	stage = "DecodeResponse"
 	result, err := decodeStartCliLoginResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// StartCliSignup invokes startCliSignup operation.
+//
+// Starts a terminal-native CLI signup. The API validates the signup code,
+// creates a pending signup session, sends an email verification code, and
+// returns an opaque signup token used by the resend and verify steps. This
+// endpoint does not require an API key.
+//
+// POST /cli/signup/start
+func (c *Client) StartCliSignup(ctx context.Context, request *StartCliSignupInput) (StartCliSignupRes, error) {
+	res, err := c.sendStartCliSignup(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendStartCliSignup(ctx context.Context, request *StartCliSignupInput) (res StartCliSignupRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("startCliSignup"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/cli/signup/start"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, StartCliSignupOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/cli/signup/start"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeStartCliSignupRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeStartCliSignupResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -7159,6 +7341,85 @@ func (c *Client) sendUpdateFunction(ctx context.Context, request *UpdateFunction
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateFunctionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// VerifyCliSignup invokes verifyCliSignup operation.
+//
+// Verifies the email code for a CLI signup session, creates the account,
+// redeems the reserved signup code, mints an org-scoped CLI API key, and
+// returns the raw key exactly once. This endpoint does not require an API key.
+//
+// POST /cli/signup/verify
+func (c *Client) VerifyCliSignup(ctx context.Context, request *VerifyCliSignupInput) (VerifyCliSignupRes, error) {
+	res, err := c.sendVerifyCliSignup(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendVerifyCliSignup(ctx context.Context, request *VerifyCliSignupInput) (res VerifyCliSignupRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("verifyCliSignup"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/cli/signup/verify"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, VerifyCliSignupOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/cli/signup/verify"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeVerifyCliSignupRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeVerifyCliSignupResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

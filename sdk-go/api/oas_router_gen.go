@@ -21,17 +21,26 @@ var (
 	rn33AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
-	rn48AllowedHeaders = map[string]string{
+	rn50AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
 	rn40AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn53AllowedHeaders = map[string]string{
+	rn55AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn3AllowedHeaders = map[string]string{
 		"POST": "Authorization,Content-Type",
+	}
+	rn49AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn57AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn60AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
 	}
 	rn1AllowedHeaders = map[string]string{
 		"GET":  "Authorization",
@@ -41,13 +50,13 @@ var (
 		"DELETE": "Authorization",
 		"PATCH":  "Authorization,Content-Type",
 	}
-	rn56AllowedHeaders = map[string]string{
+	rn61AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
 	rn35AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
-	rn49AllowedHeaders = map[string]string{
+	rn51AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
 	rn15AllowedHeaders = map[string]string{
@@ -77,7 +86,7 @@ var (
 		"DELETE": "Authorization",
 		"PATCH":  "Authorization,Content-Type",
 	}
-	rn54AllowedHeaders = map[string]string{
+	rn58AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
 	rn5AllowedHeaders = map[string]string{
@@ -108,10 +117,10 @@ var (
 		"DELETE": "Authorization",
 		"PUT":    "Authorization,Content-Type",
 	}
-	rn55AllowedHeaders = map[string]string{
+	rn59AllowedHeaders = map[string]string{
 		"POST": "Authorization,Content-Type",
 	}
-	rn51AllowedHeaders = map[string]string{
+	rn53AllowedHeaders = map[string]string{
 		"POST": "Authorization,Content-Type,Idempotency-Key",
 	}
 	rn27AllowedHeaders = map[string]string{
@@ -285,7 +294,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn48AllowedHeaders,
+										allowedHeaders: rn50AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -300,9 +309,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 				}
 
-			case 'c': // Prefix: "cli/log"
+			case 'c': // Prefix: "cli/"
 
-				if l := len("cli/log"); len(elem) >= l && elem[0:l] == "cli/log" {
+				if l := len("cli/"); len(elem) >= l && elem[0:l] == "cli/" {
 					elem = elem[l:]
 				} else {
 					break
@@ -312,9 +321,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				switch elem[0] {
-				case 'i': // Prefix: "in/"
+				case 'l': // Prefix: "log"
 
-					if l := len("in/"); len(elem) >= l && elem[0:l] == "in/" {
+					if l := len("log"); len(elem) >= l && elem[0:l] == "log" {
 						elem = elem[l:]
 					} else {
 						break
@@ -324,9 +333,73 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						break
 					}
 					switch elem[0] {
-					case 'p': // Prefix: "poll"
+					case 'i': // Prefix: "in/"
 
-						if l := len("poll"); len(elem) >= l && elem[0:l] == "poll" {
+						if l := len("in/"); len(elem) >= l && elem[0:l] == "in/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case 'p': // Prefix: "poll"
+
+							if l := len("poll"); len(elem) >= l && elem[0:l] == "poll" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handlePollCliLoginRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn40AllowedHeaders,
+										acceptPost:     "application/json",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						case 's': // Prefix: "start"
+
+							if l := len("start"); len(elem) >= l && elem[0:l] == "start" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleStartCliLoginRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn55AllowedHeaders,
+										acceptPost:     "application/json",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						}
+
+					case 'o': // Prefix: "out"
+
+						if l := len("out"); len(elem) >= l && elem[0:l] == "out" {
 							elem = elem[l:]
 						} else {
 							break
@@ -336,11 +409,50 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							// Leaf node.
 							switch r.Method {
 							case "POST":
-								s.handlePollCliLoginRequest([0]string{}, elemIsEscaped, w, r)
+								s.handleCliLogoutRequest([0]string{}, elemIsEscaped, w, r)
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn40AllowedHeaders,
+									allowedHeaders: rn3AllowedHeaders,
+									acceptPost:     "application/json",
+									acceptPatch:    "",
+								})
+							}
+
+							return
+						}
+
+					}
+
+				case 's': // Prefix: "signup/"
+
+					if l := len("signup/"); len(elem) >= l && elem[0:l] == "signup/" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'r': // Prefix: "resend"
+
+						if l := len("resend"); len(elem) >= l && elem[0:l] == "resend" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleResendCliSignupVerificationRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "POST",
+									allowedHeaders: rn49AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -361,11 +473,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							// Leaf node.
 							switch r.Method {
 							case "POST":
-								s.handleStartCliLoginRequest([0]string{}, elemIsEscaped, w, r)
+								s.handleStartCliSignupRequest([0]string{}, elemIsEscaped, w, r)
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn53AllowedHeaders,
+									allowedHeaders: rn57AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -374,31 +486,31 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							return
 						}
 
-					}
+					case 'v': // Prefix: "verify"
 
-				case 'o': // Prefix: "out"
-
-					if l := len("out"); len(elem) >= l && elem[0:l] == "out" {
-						elem = elem[l:]
-					} else {
-						break
-					}
-
-					if len(elem) == 0 {
-						// Leaf node.
-						switch r.Method {
-						case "POST":
-							s.handleCliLogoutRequest([0]string{}, elemIsEscaped, w, r)
-						default:
-							s.notAllowed(w, r, notAllowedParams{
-								allowedMethods: "POST",
-								allowedHeaders: rn3AllowedHeaders,
-								acceptPost:     "application/json",
-								acceptPatch:    "",
-							})
+						if l := len("verify"); len(elem) >= l && elem[0:l] == "verify" {
+							elem = elem[l:]
+						} else {
+							break
 						}
 
-						return
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleVerifyCliSignupRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "POST",
+									allowedHeaders: rn60AllowedHeaders,
+									acceptPost:     "application/json",
+									acceptPatch:    "",
+								})
+							}
+
+							return
+						}
+
 					}
 
 				}
@@ -486,7 +598,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn56AllowedHeaders,
+									allowedHeaders: rn61AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -563,7 +675,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET",
-										allowedHeaders: rn49AllowedHeaders,
+										allowedHeaders: rn51AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -869,7 +981,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn54AllowedHeaders,
+										allowedHeaders: rn58AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -1164,7 +1276,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn55AllowedHeaders,
+											allowedHeaders: rn59AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -1221,7 +1333,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn51AllowedHeaders,
+									allowedHeaders: rn53AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -1622,9 +1734,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 
 				}
 
-			case 'c': // Prefix: "cli/log"
+			case 'c': // Prefix: "cli/"
 
-				if l := len("cli/log"); len(elem) >= l && elem[0:l] == "cli/log" {
+				if l := len("cli/"); len(elem) >= l && elem[0:l] == "cli/" {
 					elem = elem[l:]
 				} else {
 					break
@@ -1634,9 +1746,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					break
 				}
 				switch elem[0] {
-				case 'i': // Prefix: "in/"
+				case 'l': // Prefix: "log"
 
-					if l := len("in/"); len(elem) >= l && elem[0:l] == "in/" {
+					if l := len("log"); len(elem) >= l && elem[0:l] == "log" {
 						elem = elem[l:]
 					} else {
 						break
@@ -1646,9 +1758,73 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						break
 					}
 					switch elem[0] {
-					case 'p': // Prefix: "poll"
+					case 'i': // Prefix: "in/"
 
-						if l := len("poll"); len(elem) >= l && elem[0:l] == "poll" {
+						if l := len("in/"); len(elem) >= l && elem[0:l] == "in/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case 'p': // Prefix: "poll"
+
+							if l := len("poll"); len(elem) >= l && elem[0:l] == "poll" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = PollCliLoginOperation
+									r.summary = "Poll CLI browser login"
+									r.operationID = "pollCliLogin"
+									r.operationGroup = ""
+									r.pathPattern = "/cli/login/poll"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+						case 's': // Prefix: "start"
+
+							if l := len("start"); len(elem) >= l && elem[0:l] == "start" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = StartCliLoginOperation
+									r.summary = "Start CLI browser login"
+									r.operationID = "startCliLogin"
+									r.operationGroup = ""
+									r.pathPattern = "/cli/login/start"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+						}
+
+					case 'o': // Prefix: "out"
+
+						if l := len("out"); len(elem) >= l && elem[0:l] == "out" {
 							elem = elem[l:]
 						} else {
 							break
@@ -1658,11 +1834,50 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							// Leaf node.
 							switch method {
 							case "POST":
-								r.name = PollCliLoginOperation
-								r.summary = "Poll CLI browser login"
-								r.operationID = "pollCliLogin"
+								r.name = CliLogoutOperation
+								r.summary = "Revoke the current CLI API key"
+								r.operationID = "cliLogout"
 								r.operationGroup = ""
-								r.pathPattern = "/cli/login/poll"
+								r.pathPattern = "/cli/logout"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
+					}
+
+				case 's': // Prefix: "signup/"
+
+					if l := len("signup/"); len(elem) >= l && elem[0:l] == "signup/" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'r': // Prefix: "resend"
+
+						if l := len("resend"); len(elem) >= l && elem[0:l] == "resend" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "POST":
+								r.name = ResendCliSignupVerificationOperation
+								r.summary = "Resend CLI signup verification code"
+								r.operationID = "resendCliSignupVerification"
+								r.operationGroup = ""
+								r.pathPattern = "/cli/signup/resend"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1683,11 +1898,11 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							// Leaf node.
 							switch method {
 							case "POST":
-								r.name = StartCliLoginOperation
-								r.summary = "Start CLI browser login"
-								r.operationID = "startCliLogin"
+								r.name = StartCliSignupOperation
+								r.summary = "Start CLI account signup"
+								r.operationID = "startCliSignup"
 								r.operationGroup = ""
-								r.pathPattern = "/cli/login/start"
+								r.pathPattern = "/cli/signup/start"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1696,31 +1911,31 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							}
 						}
 
-					}
+					case 'v': // Prefix: "verify"
 
-				case 'o': // Prefix: "out"
-
-					if l := len("out"); len(elem) >= l && elem[0:l] == "out" {
-						elem = elem[l:]
-					} else {
-						break
-					}
-
-					if len(elem) == 0 {
-						// Leaf node.
-						switch method {
-						case "POST":
-							r.name = CliLogoutOperation
-							r.summary = "Revoke the current CLI API key"
-							r.operationID = "cliLogout"
-							r.operationGroup = ""
-							r.pathPattern = "/cli/logout"
-							r.args = args
-							r.count = 0
-							return r, true
-						default:
-							return
+						if l := len("verify"); len(elem) >= l && elem[0:l] == "verify" {
+							elem = elem[l:]
+						} else {
+							break
 						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "POST":
+								r.name = VerifyCliSignupOperation
+								r.summary = "Verify CLI signup and create API key"
+								r.operationID = "verifyCliSignup"
+								r.operationGroup = ""
+								r.pathPattern = "/cli/signup/verify"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
 					}
 
 				}

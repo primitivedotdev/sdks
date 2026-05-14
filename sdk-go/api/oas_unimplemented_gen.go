@@ -531,6 +531,16 @@ func (UnimplementedHandler) ReplyToEmail(ctx context.Context, req *ReplyInput, p
 	return r, ht.ErrNotImplemented
 }
 
+// ResendCliSignupVerification implements resendCliSignupVerification operation.
+//
+// Sends a new email verification code for a pending CLI signup session.
+// This endpoint does not require an API key.
+//
+// POST /cli/signup/resend
+func (UnimplementedHandler) ResendCliSignupVerification(ctx context.Context, req *ResendCliSignupVerificationInput) (r ResendCliSignupVerificationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // RotateWebhookSecret implements rotateWebhookSecret operation.
 //
 // Generates a new webhook signing secret, replacing the current one.
@@ -599,6 +609,18 @@ func (UnimplementedHandler) SetFunctionSecret(ctx context.Context, req *SetFunct
 //
 // POST /cli/login/start
 func (UnimplementedHandler) StartCliLogin(ctx context.Context, req OptStartCliLoginInput) (r StartCliLoginRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// StartCliSignup implements startCliSignup operation.
+//
+// Starts a terminal-native CLI signup. The API validates the signup code,
+// creates a pending signup session, sends an email verification code, and
+// returns an opaque signup token used by the resend and verify steps. This
+// endpoint does not require an API key.
+//
+// POST /cli/signup/start
+func (UnimplementedHandler) StartCliSignup(ctx context.Context, req *StartCliSignupInput) (r StartCliSignupRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -696,6 +718,17 @@ func (UnimplementedHandler) UpdateFilter(ctx context.Context, req *UpdateFilterI
 //
 // PUT /functions/{id}
 func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (r UpdateFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// VerifyCliSignup implements verifyCliSignup operation.
+//
+// Verifies the email code for a CLI signup session, creates the account,
+// redeems the reserved signup code, mints an org-scoped CLI API key, and
+// returns the raw key exactly once. This endpoint does not require an API key.
+//
+// POST /cli/signup/verify
+func (UnimplementedHandler) VerifyCliSignup(ctx context.Context, req *VerifyCliSignupInput) (r VerifyCliSignupRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
