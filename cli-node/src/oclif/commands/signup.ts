@@ -434,6 +434,7 @@ export async function runSignupWithCredentialLock(params: {
   let start: CliSignupStartResult | null = flags.force
     ? null
     : loadPendingCliSignup(configDir, apiBaseUrl1);
+  const resumed = Boolean(start);
 
   if (start) {
     process.stderr.write(
@@ -470,9 +471,15 @@ export async function runSignupWithCredentialLock(params: {
 
   let password = await promptNewPasswordFn();
 
-  process.stderr.write(
-    `Sent a ${start.verification_code_length}-digit verification code to ${start.email}.\n`,
-  );
+  if (resumed) {
+    process.stderr.write(
+      `Check your email for the ${start.verification_code_length}-digit verification code sent to ${start.email}.\n`,
+    );
+  } else {
+    process.stderr.write(
+      `Sent a ${start.verification_code_length}-digit verification code to ${start.email}.\n`,
+    );
+  }
   process.stderr.write(
     `The code expires in ${formatSignupSeconds(start.expires_in)}.\n`,
   );

@@ -366,15 +366,7 @@
             }
           },
           "400": {
-            "description": "Invalid token, expired token, or resend requested too quickly",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer"
-                },
-                "description": "Seconds to wait before requesting another code when the error code is `slow_down`"
-              }
-            },
+            "description": "Invalid token or expired token",
             "content": {
               "application/json": {
                 "schema": {
@@ -384,7 +376,22 @@
             }
           },
           "429": {
-            "$ref": "#/components/responses/RateLimited"
+            "description": "Global rate limit exceeded or resend requested too quickly",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }

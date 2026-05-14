@@ -3510,15 +3510,16 @@ func (s *ErrorResponse) SetError(val ErrorResponseError) {
 	s.Error = val
 }
 
-func (*ErrorResponse) getSendPermissionsRes() {}
-func (*ErrorResponse) listDomainsRes()        {}
-func (*ErrorResponse) listEndpointsRes()      {}
-func (*ErrorResponse) listFiltersRes()        {}
-func (*ErrorResponse) listFunctionsRes()      {}
-func (*ErrorResponse) pollCliLoginRes()       {}
-func (*ErrorResponse) startCliLoginRes()      {}
-func (*ErrorResponse) startCliSignupRes()     {}
-func (*ErrorResponse) verifyCliSignupRes()    {}
+func (*ErrorResponse) getSendPermissionsRes()          {}
+func (*ErrorResponse) listDomainsRes()                 {}
+func (*ErrorResponse) listEndpointsRes()               {}
+func (*ErrorResponse) listFiltersRes()                 {}
+func (*ErrorResponse) listFunctionsRes()               {}
+func (*ErrorResponse) pollCliLoginRes()                {}
+func (*ErrorResponse) resendCliSignupVerificationRes() {}
+func (*ErrorResponse) startCliLoginRes()               {}
+func (*ErrorResponse) startCliSignupRes()              {}
+func (*ErrorResponse) verifyCliSignupRes()             {}
 
 type ErrorResponseError struct {
 	Code    ErrorResponseErrorCode `json:"code"`
@@ -7508,17 +7509,16 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
-func (*RateLimitedHeaders) discardEmailContentRes()         {}
-func (*RateLimitedHeaders) replayDeliveryRes()              {}
-func (*RateLimitedHeaders) replayEmailWebhooksRes()         {}
-func (*RateLimitedHeaders) replyToEmailRes()                {}
-func (*RateLimitedHeaders) resendCliSignupVerificationRes() {}
-func (*RateLimitedHeaders) rotateWebhookSecretRes()         {}
-func (*RateLimitedHeaders) sendEmailRes()                   {}
-func (*RateLimitedHeaders) startCliLoginRes()               {}
-func (*RateLimitedHeaders) startCliSignupRes()              {}
-func (*RateLimitedHeaders) testEndpointRes()                {}
-func (*RateLimitedHeaders) verifyCliSignupRes()             {}
+func (*RateLimitedHeaders) discardEmailContentRes() {}
+func (*RateLimitedHeaders) replayDeliveryRes()      {}
+func (*RateLimitedHeaders) replayEmailWebhooksRes() {}
+func (*RateLimitedHeaders) replyToEmailRes()        {}
+func (*RateLimitedHeaders) rotateWebhookSecretRes() {}
+func (*RateLimitedHeaders) sendEmailRes()           {}
+func (*RateLimitedHeaders) startCliLoginRes()       {}
+func (*RateLimitedHeaders) startCliSignupRes()      {}
+func (*RateLimitedHeaders) testEndpointRes()        {}
+func (*RateLimitedHeaders) verifyCliSignupRes()     {}
 
 type ReplayDeliveryBadRequest ErrorResponse
 

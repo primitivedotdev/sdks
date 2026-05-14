@@ -1765,11 +1765,11 @@ export type ResendCliSignupVerificationData = {
 
 export type ResendCliSignupVerificationErrors = {
     /**
-     * Invalid token, expired token, or resend requested too quickly
+     * Invalid token or expired token
      */
     400: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Global rate limit exceeded or resend requested too quickly
      */
     429: ErrorResponse;
 };
