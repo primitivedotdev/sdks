@@ -292,6 +292,13 @@ export function shouldRetrySignupPassword(
   return errorCode === CLERK_PASSWORD_REJECTED;
 }
 
+function signupErrorMessage(payload: unknown): string | null {
+  if (!isRecord(payload)) return null;
+  const error = isRecord(payload.error) ? payload.error : payload;
+  const message = error.message;
+  return typeof message === "string" && message.trim() ? message : null;
+}
+
 async function promptRequired(question: string): Promise<string> {
   while (true) {
     const value = await promptLine(question);
@@ -442,8 +449,8 @@ export async function runSignupWithCredentialLock(params: {
     );
   } else {
     const signupCode = await promptRequiredFn("Signup code: ");
-    const email = await promptRequiredFn("Email: ");
     await confirmTermsFn();
+    const email = await promptRequiredFn("Email: ");
 
     const deviceName = flags["device-name"] ?? hostname();
     const started = await startFn({
@@ -468,8 +475,6 @@ export async function runSignupWithCredentialLock(params: {
     }
     start = savePendingCliSignup(configDir, startResult, apiBaseUrl1);
   }
-
-  let password = await promptNewPasswordFn();
 
   if (resumed) {
     process.stderr.write(
@@ -502,65 +507,71 @@ export async function runSignupWithCredentialLock(params: {
       continue;
     }
 
-    const verified = await verifyFn({
-      body: {
-        password,
-        signup_token: start.signup_token,
-        verification_code: verificationCode,
-      },
-      client: apiClient.client,
-      responseStyle: "fields",
-    });
+    let password = await promptNewPasswordFn();
+    while (true) {
+      const verified = await verifyFn({
+        body: {
+          password,
+          signup_token: start.signup_token,
+          verification_code: verificationCode,
+        },
+        client: apiClient.client,
+        responseStyle: "fields",
+      });
 
-    if (verified.data) {
-      const signup = unwrapData<CliSignupVerifyResult>(verified.data);
-      if (!signup) {
-        throw cliError(
-          "Primitive API returned an empty CLI signup verification response.",
+      if (verified.data) {
+        const signup = unwrapData<CliSignupVerifyResult>(verified.data);
+        if (!signup) {
+          throw cliError(
+            "Primitive API returned an empty CLI signup verification response.",
+          );
+        }
+
+        saveCliCredentials(configDir, {
+          api_key: signup.api_key,
+          api_base_url_1: apiBaseUrl1,
+          created_at: new Date().toISOString(),
+          key_id: signup.key_id,
+          key_prefix: signup.key_prefix,
+          org_id: signup.org_id,
+          org_name: signup.org_name,
+        });
+        deletePendingCliSignup(configDir);
+
+        const org = signup.org_name ? ` (${signup.org_name})` : "";
+        process.stderr.write(
+          `Created account and logged in to org ${signup.org_id}${org}.\n`,
         );
+        process.stderr.write(
+          `Saved credentials to ${credentialsPath(configDir)}.\n`,
+        );
+        return;
       }
 
-      saveCliCredentials(configDir, {
-        api_key: signup.api_key,
-        api_base_url_1: apiBaseUrl1,
-        created_at: new Date().toISOString(),
-        key_id: signup.key_id,
-        key_prefix: signup.key_prefix,
-        org_id: signup.org_id,
-        org_name: signup.org_name,
-      });
-      deletePendingCliSignup(configDir);
+      const payload = extractErrorPayload(verified.error);
+      const code = extractErrorCode(payload);
+      if (code === INVALID_VERIFICATION_CODE) {
+        process.stderr.write(
+          "Invalid verification code. Try again or type `resend`.\n",
+        );
+        break;
+      }
+      if (shouldRetrySignupPassword(code)) {
+        const message = signupErrorMessage(payload);
+        if (message) process.stderr.write(`Password rejected: ${message}\n`);
+        process.stderr.write("Choose a different password and try again.\n");
+        password = await promptNewPasswordFn();
+        continue;
+      }
+      if (code === EXPIRED_TOKEN || code === INVALID_SIGNUP_TOKEN) {
+        deletePendingCliSignup(configDir);
+      }
 
-      const org = signup.org_name ? ` (${signup.org_name})` : "";
-      process.stderr.write(
-        `Created account and logged in to org ${signup.org_id}${org}.\n`,
-      );
-      process.stderr.write(
-        `Saved credentials to ${credentialsPath(configDir)}.\n`,
-      );
-      return;
-    }
-
-    const payload = extractErrorPayload(verified.error);
-    const code = extractErrorCode(payload);
-    if (code === INVALID_VERIFICATION_CODE) {
-      process.stderr.write(
-        "Invalid verification code. Try again or type `resend`.\n",
-      );
-      continue;
-    }
-    if (shouldRetrySignupPassword(code)) {
       writeErrorWithHints(payload);
-      process.stderr.write("Choose a different password and try again.\n");
-      password = await promptNewPasswordFn();
-      continue;
+      throw cliError(
+        "Primitive CLI signup failed while verifying the account.",
+      );
     }
-    if (code === EXPIRED_TOKEN || code === INVALID_SIGNUP_TOKEN) {
-      deletePendingCliSignup(configDir);
-    }
-
-    writeErrorWithHints(payload);
-    throw cliError("Primitive CLI signup failed while verifying the account.");
   }
 }
 

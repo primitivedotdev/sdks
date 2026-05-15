@@ -39,13 +39,16 @@ function promptRequiredFrom(answers: string[]) {
 }
 
 function flowDeps(params: {
+  confirmTerms?: unknown;
   promptAnswers: string[];
+  promptNewPassword?: unknown;
   startCliSignup?: unknown;
   verifyCliSignup?: unknown;
 }) {
   return {
-    confirmTerms: vi.fn(async () => undefined),
-    promptNewPassword: vi.fn(async () => "valid-password"),
+    confirmTerms: params.confirmTerms ?? vi.fn(async () => undefined),
+    promptNewPassword:
+      params.promptNewPassword ?? vi.fn(async () => "valid-password"),
     promptRequired: promptRequiredFrom(params.promptAnswers),
     startCliSignup:
       params.startCliSignup ??
@@ -118,6 +121,28 @@ describe("runSignupWithCredentialLock", () => {
 
     await runSignupWithCredentialLock({ configDir: tempDir, deps, flags: {} });
 
+    const promptRequired = deps.promptRequired as ReturnType<typeof vi.fn>;
+    const confirmTerms = deps.confirmTerms as ReturnType<typeof vi.fn>;
+    const promptNewPassword = deps.promptNewPassword as ReturnType<
+      typeof vi.fn
+    >;
+
+    expect(promptRequired).toHaveBeenNthCalledWith(1, "Signup code: ");
+    expect(promptRequired).toHaveBeenNthCalledWith(2, "Email: ");
+    expect(promptRequired).toHaveBeenNthCalledWith(
+      3,
+      "Verification code (6 digits): ",
+    );
+    expect(confirmTerms.mock.invocationCallOrder[0]).toBeGreaterThan(
+      promptRequired.mock.invocationCallOrder[0],
+    );
+    expect(confirmTerms.mock.invocationCallOrder[0]).toBeLessThan(
+      promptRequired.mock.invocationCallOrder[1],
+    );
+    expect(promptNewPassword.mock.invocationCallOrder[0]).toBeGreaterThan(
+      promptRequired.mock.invocationCallOrder[2],
+    );
+
     expect(deps.startCliSignup).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
@@ -174,6 +199,61 @@ describe("runSignupWithCredentialLock", () => {
         }),
       }),
     );
+    expect(loadCliCredentials(tempDir)?.api_key).toBe(VERIFY_RESULT.api_key);
+  });
+
+  it("re-prompts for a different password when Clerk rejects the password", async () => {
+    const passwordMessage =
+      "Password has been found in an online data breach. For account safety, please use a different password.";
+    const promptNewPassword = vi
+      .fn()
+      .mockResolvedValueOnce("breached-password")
+      .mockResolvedValueOnce("stronger-password");
+    const verifyCliSignup = vi
+      .fn()
+      .mockResolvedValueOnce({
+        error: {
+          error: {
+            code: "clerk_password_rejected",
+            message: passwordMessage,
+          },
+        },
+      })
+      .mockResolvedValueOnce({ data: { data: VERIFY_RESULT } });
+    const deps = flowDeps({
+      promptAnswers: ["signup-code", "test@example.com", "123456"],
+      promptNewPassword,
+      verifyCliSignup,
+    });
+
+    await runSignupWithCredentialLock({ configDir: tempDir, deps, flags: {} });
+
+    expect(promptNewPassword).toHaveBeenCalledTimes(2);
+    expect(verifyCliSignup).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        body: {
+          password: "breached-password",
+          signup_token: START_RESULT.signup_token,
+          verification_code: "123456",
+        },
+      }),
+    );
+    expect(verifyCliSignup).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        body: {
+          password: "stronger-password",
+          signup_token: START_RESULT.signup_token,
+          verification_code: "123456",
+        },
+      }),
+    );
+    const stderr = writeSpy.mock.calls
+      .map((call: unknown[]) => String(call[0]))
+      .join("");
+    expect(stderr).toContain(`Password rejected: ${passwordMessage}\n`);
+    expect(stderr).toContain("Choose a different password and try again.\n");
     expect(loadCliCredentials(tempDir)?.api_key).toBe(VERIFY_RESULT.api_key);
   });
 
