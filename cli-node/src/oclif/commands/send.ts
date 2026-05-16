@@ -21,6 +21,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { type ResolvedCliAuth, resolveCliAuth } from "../auth.js";
+import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
 
 // `primitive send` is the agent-grade shortcut for the most common
 // case: send a fresh outbound email. It wraps `sending:send-email`
@@ -278,6 +279,14 @@ class SendCommand extends Command {
       }
 
       const envelope = result.data as { data?: SendMailResult } | undefined;
+      // Loud stderr banner when the server returned a cached row instead
+      // of putting fresh SMTP traffic on the wire. Stdout JSON is
+      // unchanged so `primitive send ... | jq ...` keeps parsing.
+      writeIdempotentReplayBannerIfReplay(envelope?.data, {
+        write: (chunk) => {
+          process.stderr.write(chunk);
+        },
+      });
       this.log(JSON.stringify(envelope?.data ?? null, null, 2));
     });
   }
