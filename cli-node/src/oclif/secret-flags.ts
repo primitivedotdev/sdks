@@ -64,17 +64,26 @@ export function resolveSecretFlags(
   const readFile = input.readFile ?? defaultReadFile;
   const envFileCache = new Map<string, Map<string, string>>();
 
-  const addSecret = (
+  const reserveSecretKey = (
     key: string,
-    value: string,
     sourceLabel: string,
-  ): ParseSecretFlagsResult | null => {
+  ): SecretInputError | null => {
     const keyError = validateKey(key, sourceLabel);
     if (keyError) return keyError;
     if (seenKeys.has(key)) {
       return duplicateKeyError(key);
     }
     seenKeys.add(key);
+    return null;
+  };
+
+  const addSecret = (
+    key: string,
+    value: string,
+    sourceLabel: string,
+  ): ParseSecretFlagsResult | null => {
+    const keyError = reserveSecretKey(key, sourceLabel);
+    if (keyError) return keyError;
     secrets.push({ key, value });
     return null;
   };
@@ -87,7 +96,7 @@ export function resolveSecretFlags(
   }
 
   for (const key of input.fromEnv ?? []) {
-    const keyError = validateKey(key, "--secret-from-env");
+    const keyError = reserveSecretKey(key, "--secret-from-env");
     if (keyError) return keyError;
     const value = env[key];
     if (value === undefined) {
@@ -96,22 +105,24 @@ export function resolveSecretFlags(
         message: `--secret-from-env ${key} could not read ${key}: environment variable is not set.`,
       };
     }
-    const error = addSecret(key, value, "--secret-from-env");
-    if (error) return error;
+    secrets.push({ key, value });
   }
 
   for (const entry of input.fromFile ?? []) {
     const parsed = parseKeyValueFlag(entry, "--secret-from-file");
     if (parsed.kind === "error") return parsed;
+    const keyError = reserveSecretKey(parsed.key, "--secret-from-file");
+    if (keyError) return keyError;
     const file = readSecretFile(parsed.value, "--secret-from-file", readFile);
     if (file.kind === "error") return file;
-    const error = addSecret(parsed.key, file.value, "--secret-from-file");
-    if (error) return error;
+    secrets.push({ key: parsed.key, value: file.value });
   }
 
   for (const entry of input.fromEnvFile ?? []) {
     const parsed = parseEnvFileKeyRef(entry, "--secret-from-env-file");
     if (parsed.kind === "error") return parsed;
+    const keyError = reserveSecretKey(parsed.key, "--secret-from-env-file");
+    if (keyError) return keyError;
     const file = readEnvFile(parsed.path, readFile, envFileCache);
     if (file.kind === "error") return file;
     const value = file.values.get(parsed.key);
@@ -121,8 +132,7 @@ export function resolveSecretFlags(
         message: `--secret-from-env-file ${entry} could not read ${parsed.key}: key is not present in ${parsed.path}.`,
       };
     }
-    const error = addSecret(parsed.key, value, "--secret-from-env-file");
-    if (error) return error;
+    secrets.push({ key: parsed.key, value });
   }
 
   return { kind: "ok", secrets };

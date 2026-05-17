@@ -345,6 +345,24 @@ describe("resolveSecretFlags", () => {
       expect(result.message).toContain(".env.local");
     }
   });
+
+  it("validates --secret-from-file keys before reading files", () => {
+    let reads = 0;
+    const result = resolveSecretFlags({
+      fromFile: ["lowercase=secret.txt"],
+      readFile: () => {
+        reads += 1;
+        return "should-not-read";
+      },
+    });
+
+    expect(result.kind).toBe("error");
+    expect(reads).toBe(0);
+    if (result.kind === "error") {
+      expect(result.message).toContain("lowercase");
+      expect(result.message).toContain("does not match");
+    }
+  });
 });
 
 describe("runDeployWithSecrets (no --secret)", () => {
