@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import FunctionsTestFunctionCommand, {
   buildFunctionTestOutcome,
+  findMatchingFunctionEndpoints,
+  formatFunctionEndpointNoiseWarning,
 } from "../../src/oclif/commands/functions-test-function.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
@@ -122,5 +124,150 @@ describe("buildFunctionTestOutcome", () => {
     });
 
     expect(outcome).not.toHaveProperty("sent_emails");
+  });
+});
+
+describe("function endpoint noise warnings", () => {
+  it("matches catch-all and same-domain function endpoints", () => {
+    const endpoints = findMatchingFunctionEndpoints({
+      currentFunctionId: "fn-current",
+      inboundDomainId: "domain-1",
+      endpoints: [
+        {
+          domain_id: "domain-1",
+          enabled: true,
+          function_id: "fn-current",
+          id: "endpoint-current",
+          kind: "function",
+        },
+        {
+          domain_id: null,
+          enabled: true,
+          function_id: "fn-catchall",
+          id: "endpoint-catchall",
+          kind: "function",
+        },
+        {
+          domain_id: "domain-2",
+          enabled: true,
+          function_id: "fn-other-domain",
+          id: "endpoint-other-domain",
+          kind: "function",
+        },
+        {
+          domain_id: null,
+          deactivated_at: "2026-05-17T19:00:00.000Z",
+          enabled: true,
+          function_id: "fn-deactivated",
+          id: "endpoint-deactivated",
+          kind: "function",
+        },
+        {
+          domain_id: null,
+          enabled: true,
+          function_id: "fn-http",
+          id: "endpoint-http",
+          kind: "http",
+        },
+        {
+          domain_id: null,
+          enabled: false,
+          function_id: "fn-disabled",
+          id: "endpoint-disabled",
+          kind: "function",
+        },
+      ],
+    });
+
+    expect(endpoints).toEqual([
+      {
+        function_id: "fn-current",
+        id: "endpoint-current",
+        is_current_function: true,
+        scope: "domain",
+      },
+      {
+        function_id: "fn-catchall",
+        id: "endpoint-catchall",
+        is_current_function: false,
+        scope: "catch-all",
+      },
+    ]);
+  });
+
+  it("matches only catch-all function endpoints when the inbound domain id is unknown", () => {
+    const endpoints = findMatchingFunctionEndpoints({
+      currentFunctionId: "fn-current",
+      inboundDomainId: null,
+      endpoints: [
+        {
+          domain_id: "domain-1",
+          enabled: true,
+          function_id: "fn-current",
+          id: "endpoint-current",
+          kind: "function",
+        },
+        {
+          domain_id: null,
+          enabled: true,
+          function_id: "fn-catchall",
+          id: "endpoint-catchall",
+          kind: "function",
+        },
+      ],
+    });
+
+    expect(endpoints).toEqual([
+      {
+        function_id: "fn-catchall",
+        id: "endpoint-catchall",
+        is_current_function: false,
+        scope: "catch-all",
+      },
+    ]);
+  });
+
+  it("formats a warning only when another function endpoint matches", () => {
+    expect(
+      formatFunctionEndpointNoiseWarning({
+        endpoints: [
+          {
+            function_id: "fn-current",
+            id: "endpoint-current",
+            is_current_function: true,
+            scope: "domain",
+          },
+        ],
+        inboundDomain: "long-ape.primitive.email",
+        toAddress: "summarize@long-ape.primitive.email",
+      }),
+    ).toBeNull();
+
+    const warning = formatFunctionEndpointNoiseWarning({
+      endpoints: [
+        {
+          function_id: "fn-current",
+          id: "endpoint-current",
+          is_current_function: true,
+          scope: "domain",
+        },
+        {
+          function_id: "fn-catchall",
+          id: "endpoint-catchall",
+          is_current_function: false,
+          scope: "catch-all",
+        },
+      ],
+      inboundDomain: "long-ape.primitive.email",
+      toAddress: "summarize@long-ape.primitive.email",
+    });
+
+    expect(warning).toContain(
+      "Warning: 2 function endpoints may receive mail for summarize@long-ape.primitive.email",
+    );
+    expect(warning).toContain("endpoint-current");
+    expect(warning).toContain("this function");
+    expect(warning).toContain("endpoint-catchall");
+    expect(warning).toContain("catch-all");
   });
 });
