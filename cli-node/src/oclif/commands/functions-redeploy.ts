@@ -200,6 +200,7 @@ class FunctionsRedeployCommand extends Command {
     "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --source-map-file ./bundle.js.map",
     "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
     "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret-from-env OPENAI_KEY --secret-from-file PRIVATE_KEY=./private-key.pem",
+    "printf '%s' \"$OPENAI_KEY\" | <%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret-from-stdin OPENAI_KEY",
   ];
 
   static flags = {
@@ -252,6 +253,10 @@ class FunctionsRedeployCommand extends Command {
         "Secret FILE:KEY to read from a dotenv-style file and write before the redeploy. Repeatable. Example: --secret-from-env-file .env.local:OPENAI_KEY.",
       multiple: true,
     }),
+    "secret-from-stdin": Flags.string({
+      description:
+        "Secret KEY to read from stdin and write before the redeploy. A single trailing line ending is stripped. Stdin is consumed once, so this flag is not repeatable.",
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -269,6 +274,7 @@ class FunctionsRedeployCommand extends Command {
         fromEnv: flags["secret-from-env"] ?? [],
         fromEnvFile: flags["secret-from-env-file"] ?? [],
         fromFile: flags["secret-from-file"] ?? [],
+        fromStdin: flags["secret-from-stdin"],
         inline: flags.secret ?? [],
       });
       if (parsedSecrets.kind === "error") {

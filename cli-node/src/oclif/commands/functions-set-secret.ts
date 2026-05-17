@@ -36,6 +36,7 @@ import {
 //   primitive functions:set-secret --id <fn-id> --key <KEY> --value <value>
 //   primitive functions:set-secret --id <fn-id> --key <KEY> --value-from-env <KEY> --redeploy
 //   primitive functions:set-secret --id <fn-id> --key <KEY> --value-from-env-file .env.local --redeploy
+//   printf '%s' "$VALUE" | primitive functions:set-secret --id <fn-id> --key <KEY> --stdin --redeploy
 //
 // The raw `functions:set-function-secret` and `functions:create-
 // function-secret` operations stay available for callers that want
@@ -203,6 +204,7 @@ class FunctionsSetSecretCommand extends Command {
     "<%= config.bin %> functions set-secret --id <fn-id> --key API_TOKEN --value abc123 --redeploy",
     "<%= config.bin %> functions set-secret --id <fn-id> --key OPENAI_KEY --value-from-env OPENAI_KEY --redeploy",
     "<%= config.bin %> functions set-secret --id <fn-id> --key OPENAI_KEY --value-from-env-file .env.local --redeploy",
+    "printf '%s' \"$OPENAI_KEY\" | <%= config.bin %> functions set-secret --id <fn-id> --key OPENAI_KEY --stdin --redeploy",
   ];
 
   static flags = {
@@ -248,6 +250,10 @@ class FunctionsSetSecretCommand extends Command {
       description:
         "Dotenv-style file to read as the secret value. Use FILE to read --key from that file, or FILE:KEY to read a different key.",
     }),
+    stdin: Flags.boolean({
+      description:
+        "Read the secret value from stdin. A single trailing line ending is stripped. Example: printf '%s' \"$OPENAI_KEY\" | primitive functions set-secret --id <fn-id> --key OPENAI_KEY --stdin",
+    }),
     redeploy: Flags.boolean({
       description:
         "Also redeploy the function with its current code so the new value lands in the running handler. Without this, the secret is written but not visible to the handler until the next deploy. Note: when --redeploy re-uploads the function's current live code without a sourceMap field, the API preserves the current stored source map. Use `functions redeploy --file <bundle.js> --source-map-file <bundle.js.map>` to replace or restore a map.",
@@ -292,6 +298,7 @@ class FunctionsSetSecretCommand extends Command {
         valueFile: flags["value-file"],
         valueFromEnv: flags["value-from-env"],
         valueFromEnvFile: flags["value-from-env-file"],
+        stdin: flags.stdin,
       });
       if (resolvedValue.kind === "error") {
         process.stderr.write(`${resolvedValue.message}\n`);

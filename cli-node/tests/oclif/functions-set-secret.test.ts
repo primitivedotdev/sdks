@@ -150,14 +150,50 @@ describe("resolveSingleSecretValue", () => {
     expect(result).toEqual({ kind: "ok", value: "from-other" });
   });
 
+  it("strips one trailing line ending from --stdin", () => {
+    const result = resolveSingleSecretValue({
+      key: "OPENAI_KEY",
+      readStdin: () => "sk-stdin\n",
+      stdin: true,
+    });
+
+    expect(result).toEqual({ kind: "ok", value: "sk-stdin" });
+  });
+
+  it("strips only one trailing line ending from --stdin", () => {
+    const result = resolveSingleSecretValue({
+      key: "OPENAI_KEY",
+      readStdin: () => "sk-stdin\n\n",
+      stdin: true,
+    });
+
+    expect(result).toEqual({ kind: "ok", value: "sk-stdin\n" });
+  });
+
+  it("reports --stdin read errors", () => {
+    const result = resolveSingleSecretValue({
+      key: "OPENAI_KEY",
+      readStdin: () => {
+        throw new Error("stdin is a TTY");
+      },
+      stdin: true,
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("Could not read --stdin");
+      expect(result.message).toContain("stdin is a TTY");
+    }
+  });
+
   it("rejects missing or ambiguous value sources", () => {
     const missing = resolveSingleSecretValue({ key: "API_TOKEN" });
     expect(missing.kind).toBe("error");
 
     const ambiguous = resolveSingleSecretValue({
       key: "API_TOKEN",
+      stdin: true,
       value: "direct",
-      valueFromEnv: "API_TOKEN",
     });
     expect(ambiguous.kind).toBe("error");
   });

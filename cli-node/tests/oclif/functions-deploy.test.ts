@@ -306,6 +306,34 @@ describe("resolveSecretFlags", () => {
     }
   });
 
+  it("strips one trailing line ending from a stdin secret value", () => {
+    const result = resolveSecretFlags({
+      fromStdin: "OPENAI_KEY",
+      readStdin: () => "sk-from-stdin\n",
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.secrets).toEqual([
+        { key: "OPENAI_KEY", value: "sk-from-stdin" },
+      ]);
+    }
+  });
+
+  it("strips a CRLF stdin line ending without trimming other content", () => {
+    const result = resolveSecretFlags({
+      fromStdin: "OPENAI_KEY",
+      readStdin: () => "  sk-from-stdin  \r\n",
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.secrets).toEqual([
+        { key: "OPENAI_KEY", value: "  sk-from-stdin  " },
+      ]);
+    }
+  });
+
   it("rejects duplicate keys across source types before API calls fire", () => {
     const result = resolveSecretFlags({
       env: { API_TOKEN: "from env" },
@@ -361,6 +389,39 @@ describe("resolveSecretFlags", () => {
     if (result.kind === "error") {
       expect(result.message).toContain("lowercase");
       expect(result.message).toContain("does not match");
+    }
+  });
+
+  it("validates --secret-from-stdin keys before reading stdin", () => {
+    let reads = 0;
+    const result = resolveSecretFlags({
+      fromStdin: "lowercase",
+      readStdin: () => {
+        reads += 1;
+        return "should-not-read";
+      },
+    });
+
+    expect(result.kind).toBe("error");
+    expect(reads).toBe(0);
+    if (result.kind === "error") {
+      expect(result.message).toContain("lowercase");
+      expect(result.message).toContain("does not match");
+    }
+  });
+
+  it("reports stdin read errors for --secret-from-stdin", () => {
+    const result = resolveSecretFlags({
+      fromStdin: "OPENAI_KEY",
+      readStdin: () => {
+        throw new Error("stdin is a TTY");
+      },
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("Could not read --secret-from-stdin");
+      expect(result.message).toContain("stdin is a TTY");
     }
   });
 });
