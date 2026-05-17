@@ -195,9 +195,9 @@ class FunctionsRedeployCommand extends Command {
   static summary = "Redeploy a function from a bundled handler file";
 
   static examples = [
-    "<%= config.bin %> functions:redeploy --id <fn-id> --file ./bundle.js",
-    "<%= config.bin %> functions:redeploy --id <fn-id> --file ./bundle.js --source-map-file ./bundle.js.map",
-    "<%= config.bin %> functions:redeploy --id <fn-id> --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
+    "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js",
+    "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --source-map-file ./bundle.js.map",
+    "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
   ];
 
   static flags = {
@@ -335,7 +335,7 @@ class FunctionsRedeployCommand extends Command {
             ", ",
           );
           process.stderr.write(
-            `Writing secret ${outcome.failedKey} failed before the redeploy; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The new bundle has NOT been deployed. Re-run \`primitive functions:set-secret\` for each of [${allMissing}], then \`primitive functions:redeploy --id ${flags.id} --file <bundle>\` to push them live.\n`,
+            `Writing secret ${outcome.failedKey} failed before the redeploy; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The new bundle has NOT been deployed. Re-run \`primitive functions set-secret\` for each of [${allMissing}], then \`primitive functions redeploy --id ${flags.id} --file <bundle>\` to push them live.\n`,
           );
         } else if (outcome.stage === "redeploy") {
           const succeeded =
@@ -343,7 +343,7 @@ class FunctionsRedeployCommand extends Command {
               ? outcome.succeededKeys.join(", ")
               : "(none)";
           process.stderr.write(
-            `Secrets [${succeeded}] were written, but the redeploy step failed; the new bindings are NOT yet live. Re-run \`primitive functions:redeploy --id ${flags.id} --file <bundle>\` once the cause is fixed.\n`,
+            `Secrets [${succeeded}] were written, but the redeploy step failed; the new bindings are NOT yet live. Re-run \`primitive functions redeploy --id ${flags.id} --file <bundle>\` once the cause is fixed.\n`,
           );
         }
         writeErrorWithHints(outcome.payload);

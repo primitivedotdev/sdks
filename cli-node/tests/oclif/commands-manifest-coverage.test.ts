@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
-import { COMMANDS } from "../../src/oclif/index.js";
+import {
+  CANONICAL_OPERATION_ALIASES,
+  COMMANDS,
+} from "../../src/oclif/index.js";
 
 // Regression guard for the discovery / execution surface staying in
 // sync. `primitive list-operations` enumerates the operation
@@ -56,5 +59,22 @@ describe("COMMANDS / manifest coverage", () => {
     // entry. Keeping this assertion separate from the bulk coverage
     // check above makes the named-regression failure mode obvious.
     expect(COMMANDS["functions:list-function-logs"]).toBeDefined();
+  });
+
+  it("registers canonical task aliases for generated API operations", () => {
+    for (const [alias, target] of Object.entries(CANONICAL_OPERATION_ALIASES)) {
+      expect(COMMANDS[target]).toBeDefined();
+      expect(COMMANDS[alias]).toBe(COMMANDS[target]);
+    }
+  });
+
+  it("registers the top-level reply shortcut", () => {
+    expect(COMMANDS.reply).toBeDefined();
+  });
+
+  it("registers the normal function test alias", () => {
+    expect(COMMANDS["functions:test"]).toBe(
+      COMMANDS["functions:test-function"],
+    );
   });
 });

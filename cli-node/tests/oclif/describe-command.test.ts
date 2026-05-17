@@ -26,6 +26,19 @@ describe("lookupOperation", () => {
     expect(match?.command).toBe("get-email");
   });
 
+  it("resolves canonical operation aliases", () => {
+    const { match, candidates } = lookupOperation("emails:list");
+    expect(match?.command).toBe("list-emails");
+    expect(match?.tagCommand).toBe("emails");
+    expect(candidates).toEqual([]);
+  });
+
+  it("resolves the top-level reply shortcut to the reply operation", () => {
+    const { match } = lookupOperation("reply");
+    expect(match?.command).toBe("reply-to-email");
+    expect(match?.tagCommand).toBe("sending");
+  });
+
   it("returns null match plus did-you-mean candidates for a typo", () => {
     const { match, candidates } = lookupOperation("emails:get-emial");
     expect(match).toBeNull();

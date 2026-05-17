@@ -68,10 +68,10 @@ class FunctionsTestFunctionCommand extends Command {
   static summary = "Trigger a test invocation; with --wait, watch it land";
 
   static examples = [
-    "<%= config.bin %> functions:test-function --id <fn-id>",
-    "<%= config.bin %> functions:test-function --id <fn-id> --local-part summarize",
-    "<%= config.bin %> functions:test-function --id <fn-id> --wait --show-sends",
-    "<%= config.bin %> functions:test-function --id <fn-id> --local-part summarize --wait --timeout 120",
+    "<%= config.bin %> functions test --id <fn-id>",
+    "<%= config.bin %> functions test --id <fn-id> --local-part summarize",
+    "<%= config.bin %> functions test --id <fn-id> --wait --show-sends",
+    "<%= config.bin %> functions test --id <fn-id> --local-part summarize --wait --timeout 120",
   ];
 
   static flags = {

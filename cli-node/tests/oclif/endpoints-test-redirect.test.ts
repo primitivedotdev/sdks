@@ -128,9 +128,7 @@ describe("formatFunctionEndpointRedirect", () => {
       functionId: FUNCTION_ID,
     });
 
-    expect(output).toContain(
-      `primitive functions:test-function --id ${FUNCTION_ID}`,
-    );
+    expect(output).toContain(`primitive functions test --id ${FUNCTION_ID}`);
   });
 
   it("surfaces both ids so the caller does not have to look up the function id", async () => {
@@ -172,9 +170,7 @@ describe("maybeWriteFunctionEndpointRedirect", () => {
       functionId: FUNCTION_ID,
     });
     const stderr = writes.join("");
-    expect(stderr).toContain(
-      `primitive functions:test-function --id ${FUNCTION_ID}`,
-    );
+    expect(stderr).toContain(`primitive functions test --id ${FUNCTION_ID}`);
     expect(stderr).toContain(`endpoint_id=${ENDPOINT_ID}`);
     expect(stderr).toContain(`function_id=${FUNCTION_ID}`);
   });

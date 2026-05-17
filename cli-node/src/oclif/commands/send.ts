@@ -120,7 +120,7 @@ async function pickDefaultFromAddress(
   const first = envelope?.data?.find(isVerifiedDomain);
   if (!first) {
     throw new Errors.CLIError(
-      "No active verified outbound domain found on this account; pass --from explicitly. To set up outbound, claim a domain via `primitive domains:add-domain` and verify it.",
+      "No active verified outbound domain found on this account; pass --from explicitly. To set up outbound, claim a domain via `primitive domains add` and verify it.",
     );
   }
   // Local-part: "agent". Any local-part is accepted on managed
@@ -134,13 +134,13 @@ async function pickDefaultFromAddress(
 
 class SendCommand extends Command {
   static description =
-    `Send an outbound email. Agent-grade shortcut for sending:send-email with sensible defaults.
+    `Send an outbound email. Agent-grade shortcut for sending send with sensible defaults.
 
   --from defaults to agent@<your-first-verified-outbound-domain> when omitted.
   --subject defaults to the first line of the body when omitted.
 
   For the full flag set (custom message-id threading on the wire,
-  references arrays, etc.), use \`primitive sending:send-email\`.`;
+  references arrays, etc.), use \`primitive sending send\`.`;
 
   static summary = "Send an email (simplified, agent-friendly)";
 
@@ -192,7 +192,7 @@ class SendCommand extends Command {
     }),
     "in-reply-to": Flags.string({
       description:
-        "Message-Id of the parent email when threading a reply on the wire. For replying to an inbound message you received, prefer `primitive sending:reply-to-email --id <inbound-id>`.",
+        "Message-Id of the parent email when threading a reply on the wire. For replying to an inbound message you received, prefer `primitive reply --id <inbound-id>`.",
     }),
     wait: Flags.boolean({
       description:
