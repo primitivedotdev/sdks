@@ -1896,6 +1896,8 @@ paths:
           $ref: '#/components/responses/DeployFailed'
         '429':
           $ref: '#/components/responses/DeployFailed'
+        '503':
+          $ref: '#/components/responses/DeployFailed'
 
   /functions/{id}:
     parameters:
@@ -1972,6 +1974,8 @@ paths:
         '424':
           $ref: '#/components/responses/DeployFailed'
         '429':
+          $ref: '#/components/responses/DeployFailed'
+        '503':
           $ref: '#/components/responses/DeployFailed'
 
     delete:

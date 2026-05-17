@@ -2446,6 +2446,9 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "429": {
             "$ref": "#/components/responses/DeployFailed"
+          },
+          "503": {
+            "$ref": "#/components/responses/DeployFailed"
           }
         }
       }
@@ -2554,6 +2557,9 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/responses/DeployFailed"
           },
           "429": {
+            "$ref": "#/components/responses/DeployFailed"
+          },
+          "503": {
             "$ref": "#/components/responses/DeployFailed"
           }
         }

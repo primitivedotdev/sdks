@@ -956,6 +956,10 @@ type CreateFunctionSecretUnauthorized ErrorResponse
 
 func (*CreateFunctionSecretUnauthorized) createFunctionSecretRes() {}
 
+type CreateFunctionServiceUnavailable ErrorResponse
+
+func (*CreateFunctionServiceUnavailable) createFunctionRes() {}
+
 type CreateFunctionTooManyRequests ErrorResponse
 
 func (*CreateFunctionTooManyRequests) createFunctionRes() {}
@@ -10476,6 +10480,10 @@ func (s *UpdateFunctionOK) SetData(val FunctionDetail) {
 }
 
 func (*UpdateFunctionOK) updateFunctionRes() {}
+
+type UpdateFunctionServiceUnavailable ErrorResponse
+
+func (*UpdateFunctionServiceUnavailable) updateFunctionRes() {}
 
 type UpdateFunctionTooManyRequests ErrorResponse
 

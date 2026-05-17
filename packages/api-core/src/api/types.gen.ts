@@ -3242,6 +3242,10 @@ export type CreateFunctionErrors = {
      * Function deploy could not be completed; previously deployed code remains live
      */
     429: ErrorResponse;
+    /**
+     * Function deploy could not be completed; previously deployed code remains live
+     */
+    503: ErrorResponse;
 };
 
 export type CreateFunctionError = CreateFunctionErrors[keyof CreateFunctionErrors];
@@ -3368,6 +3372,10 @@ export type UpdateFunctionErrors = {
      * Function deploy could not be completed; previously deployed code remains live
      */
     429: ErrorResponse;
+    /**
+     * Function deploy could not be completed; previously deployed code remains live
+     */
+    503: ErrorResponse;
 };
 
 export type UpdateFunctionError = UpdateFunctionErrors[keyof UpdateFunctionErrors];
