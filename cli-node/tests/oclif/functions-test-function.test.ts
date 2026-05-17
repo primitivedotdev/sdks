@@ -156,6 +156,14 @@ describe("function endpoint noise warnings", () => {
         },
         {
           domain_id: null,
+          deactivated_at: "2026-05-17T19:00:00.000Z",
+          enabled: true,
+          function_id: "fn-deactivated",
+          id: "endpoint-deactivated",
+          kind: "function",
+        },
+        {
+          domain_id: null,
           enabled: true,
           function_id: "fn-http",
           id: "endpoint-http",
@@ -178,6 +186,38 @@ describe("function endpoint noise warnings", () => {
         is_current_function: true,
         scope: "domain",
       },
+      {
+        function_id: "fn-catchall",
+        id: "endpoint-catchall",
+        is_current_function: false,
+        scope: "catch-all",
+      },
+    ]);
+  });
+
+  it("matches only catch-all function endpoints when the inbound domain id is unknown", () => {
+    const endpoints = findMatchingFunctionEndpoints({
+      currentFunctionId: "fn-current",
+      inboundDomainId: null,
+      endpoints: [
+        {
+          domain_id: "domain-1",
+          enabled: true,
+          function_id: "fn-current",
+          id: "endpoint-current",
+          kind: "function",
+        },
+        {
+          domain_id: null,
+          enabled: true,
+          function_id: "fn-catchall",
+          id: "endpoint-catchall",
+          kind: "function",
+        },
+      ],
+    });
+
+    expect(endpoints).toEqual([
       {
         function_id: "fn-catchall",
         id: "endpoint-catchall",

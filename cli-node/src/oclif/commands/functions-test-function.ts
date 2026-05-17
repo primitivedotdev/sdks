@@ -212,6 +212,7 @@ async function maybeWriteEndpointNoiseWarning(params: {
     ]);
 
     if (endpointsResult.error) return;
+    if (domainsResult.error) return;
 
     const domainsEnvelope = domainsResult.data as
       | { data?: Array<{ id?: string; domain?: string }> }
