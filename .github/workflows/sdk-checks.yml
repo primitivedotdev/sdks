@@ -5,6 +5,7 @@ env:
 
 on:
   pull_request:
+  merge_group:
   workflow_dispatch:
 
 jobs:
@@ -15,16 +16,16 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      node: ${{ steps.manual.outputs.node || steps.filter.outputs.node }}
-      cli: ${{ steps.manual.outputs.cli || steps.filter.outputs.cli }}
-      python: ${{ steps.manual.outputs.python || steps.filter.outputs.python }}
-      go: ${{ steps.manual.outputs.go || steps.filter.outputs.go }}
-      shared: ${{ steps.manual.outputs.shared || steps.filter.outputs.shared }}
+      node: ${{ steps.full.outputs.node || steps.filter.outputs.node }}
+      cli: ${{ steps.full.outputs.cli || steps.filter.outputs.cli }}
+      python: ${{ steps.full.outputs.python || steps.filter.outputs.python }}
+      go: ${{ steps.full.outputs.go || steps.filter.outputs.go }}
+      shared: ${{ steps.full.outputs.shared || steps.filter.outputs.shared }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - id: manual
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - id: full
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}
         run: |
           printf 'node=true\n' >> "$GITHUB_OUTPUT"
           printf 'cli=true\n' >> "$GITHUB_OUTPUT"
