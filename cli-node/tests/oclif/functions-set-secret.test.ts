@@ -150,14 +150,24 @@ describe("resolveSingleSecretValue", () => {
     expect(result).toEqual({ kind: "ok", value: "from-other" });
   });
 
+  it("reads --stdin as exact text", () => {
+    const result = resolveSingleSecretValue({
+      key: "OPENAI_KEY",
+      readStdin: () => "sk-stdin\n",
+      stdin: true,
+    });
+
+    expect(result).toEqual({ kind: "ok", value: "sk-stdin\n" });
+  });
+
   it("rejects missing or ambiguous value sources", () => {
     const missing = resolveSingleSecretValue({ key: "API_TOKEN" });
     expect(missing.kind).toBe("error");
 
     const ambiguous = resolveSingleSecretValue({
       key: "API_TOKEN",
+      stdin: true,
       value: "direct",
-      valueFromEnv: "API_TOKEN",
     });
     expect(ambiguous.kind).toBe("error");
   });

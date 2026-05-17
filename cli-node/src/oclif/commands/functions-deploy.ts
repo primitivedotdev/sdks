@@ -276,6 +276,7 @@ class FunctionsDeployCommand extends Command {
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-env OPENAI_KEY --secret-from-env-file .env.local:OWNER_EMAIL",
+    "printf '%s' \"$OPENAI_KEY\" | <%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-stdin OPENAI_KEY",
   ];
 
   static flags = {
@@ -329,6 +330,10 @@ class FunctionsDeployCommand extends Command {
         "Secret FILE:KEY to read from a dotenv-style file and seed on the deployed function. Repeatable. Example: --secret-from-env-file .env.local:OPENAI_KEY.",
       multiple: true,
     }),
+    "secret-from-stdin": Flags.string({
+      description:
+        "Secret KEY to read from stdin and seed on the deployed function. Stdin is consumed once, so this flag is not repeatable.",
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -346,6 +351,7 @@ class FunctionsDeployCommand extends Command {
         fromEnv: flags["secret-from-env"] ?? [],
         fromEnvFile: flags["secret-from-env-file"] ?? [],
         fromFile: flags["secret-from-file"] ?? [],
+        fromStdin: flags["secret-from-stdin"],
         inline: flags.secret ?? [],
       });
       if (parsedSecrets.kind === "error") {

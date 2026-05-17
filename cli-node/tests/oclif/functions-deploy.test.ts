@@ -306,6 +306,20 @@ describe("resolveSecretFlags", () => {
     }
   });
 
+  it("reads one secret value from stdin", () => {
+    const result = resolveSecretFlags({
+      fromStdin: "OPENAI_KEY",
+      readStdin: () => "sk-from-stdin\n",
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.secrets).toEqual([
+        { key: "OPENAI_KEY", value: "sk-from-stdin\n" },
+      ]);
+    }
+  });
+
   it("rejects duplicate keys across source types before API calls fire", () => {
     const result = resolveSecretFlags({
       env: { API_TOKEN: "from env" },
@@ -351,6 +365,24 @@ describe("resolveSecretFlags", () => {
     const result = resolveSecretFlags({
       fromFile: ["lowercase=secret.txt"],
       readFile: () => {
+        reads += 1;
+        return "should-not-read";
+      },
+    });
+
+    expect(result.kind).toBe("error");
+    expect(reads).toBe(0);
+    if (result.kind === "error") {
+      expect(result.message).toContain("lowercase");
+      expect(result.message).toContain("does not match");
+    }
+  });
+
+  it("validates --secret-from-stdin keys before reading stdin", () => {
+    let reads = 0;
+    const result = resolveSecretFlags({
+      fromStdin: "lowercase",
+      readStdin: () => {
         reads += 1;
         return "should-not-read";
       },

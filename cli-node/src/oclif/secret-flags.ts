@@ -31,8 +31,10 @@ export type SecretSourceFlags = {
   fromEnv?: string[];
   fromFile?: string[];
   fromEnvFile?: string[];
+  fromStdin?: string;
   env?: Record<string, string | undefined>;
   readFile?: (path: string) => string;
+  readStdin?: () => string;
 };
 
 export type SingleSecretValueFlags = {
@@ -41,8 +43,10 @@ export type SingleSecretValueFlags = {
   valueFromEnv?: string;
   valueFile?: string;
   valueFromEnvFile?: string;
+  stdin?: boolean;
   env?: Record<string, string | undefined>;
   readFile?: (path: string) => string;
+  readStdin?: () => string;
 };
 
 // Split each `--secret KEY=VALUE` on the FIRST `=`. KEY must match
@@ -62,6 +66,7 @@ export function resolveSecretFlags(
   const seenKeys = new Set<string>();
   const env = input.env ?? process.env;
   const readFile = input.readFile ?? defaultReadFile;
+  const readStdin = input.readStdin ?? defaultReadStdin;
   const envFileCache = new Map<string, Map<string, string>>();
 
   const reserveSecretKey = (
@@ -135,6 +140,14 @@ export function resolveSecretFlags(
     secrets.push({ key: parsed.key, value });
   }
 
+  if (input.fromStdin !== undefined) {
+    const keyError = reserveSecretKey(input.fromStdin, "--secret-from-stdin");
+    if (keyError) return keyError;
+    const stdin = readSecretStdin("--secret-from-stdin", readStdin);
+    if (stdin.kind === "error") return stdin;
+    secrets.push({ key: input.fromStdin, value: stdin.value });
+  }
+
   return { kind: "ok", secrets };
 }
 
@@ -146,18 +159,20 @@ export function resolveSingleSecretValue(
     input.valueFromEnv !== undefined ? "--value-from-env" : null,
     input.valueFile !== undefined ? "--value-file" : null,
     input.valueFromEnvFile !== undefined ? "--value-from-env-file" : null,
+    input.stdin === true ? "--stdin" : null,
   ].filter((v): v is string => v !== null);
 
   if (sources.length !== 1) {
     return {
       kind: "error",
       message:
-        "Pass exactly one of --value, --value-from-env, --value-file, or --value-from-env-file.",
+        "Pass exactly one of --value, --value-from-env, --value-file, --value-from-env-file, or --stdin.",
     };
   }
 
   const env = input.env ?? process.env;
   const readFile = input.readFile ?? defaultReadFile;
+  const readStdin = input.readStdin ?? defaultReadStdin;
 
   if (input.value !== undefined) {
     return { kind: "ok", value: input.value };
@@ -198,15 +213,23 @@ export function resolveSingleSecretValue(
     return { kind: "ok", value };
   }
 
+  if (input.stdin === true) {
+    return readSecretStdin("--stdin", readStdin);
+  }
+
   return {
     kind: "error",
     message:
-      "Pass exactly one of --value, --value-from-env, --value-file, or --value-from-env-file.",
+      "Pass exactly one of --value, --value-from-env, --value-file, --value-from-env-file, or --stdin.",
   };
 }
 
 function defaultReadFile(path: string): string {
   return readFileSync(path, "utf8");
+}
+
+function defaultReadStdin(): string {
+  return readFileSync(0, "utf8");
 }
 
 function parseKeyValueFlag(
@@ -260,6 +283,21 @@ function readSecretFile(
     return {
       kind: "error",
       message: `Could not read ${flagLabel} ${path}: ${detail}`,
+    };
+  }
+}
+
+function readSecretStdin(
+  flagLabel: string,
+  readStdin: () => string,
+): ResolveSingleSecretValueResult {
+  try {
+    return { kind: "ok", value: readStdin() };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Could not read ${flagLabel}: ${detail}`,
     };
   }
 }
@@ -390,10 +428,10 @@ function parseDoubleQuotedEnvValue(value: string): string {
 // /proc/[pid]/cmdline, so callers handling sensitive values should
 // use one of the non-argv sources below.
 export const SECRET_FLAG_SECURITY_NOTE =
-  "Note: values passed on the command line are visible in shell history (e.g. ~/.bash_history) and to other users via `ps aux` / /proc/[pid]/cmdline. For sensitive values prefer --secret-from-env, --secret-from-file, or --secret-from-env-file.";
+  "Note: values passed on the command line are visible in shell history (e.g. ~/.bash_history) and to other users via `ps aux` / /proc/[pid]/cmdline. For sensitive values prefer --secret-from-env, --secret-from-file, --secret-from-env-file, or --secret-from-stdin.";
 
 export const SECRET_SOURCE_FLAGS_DESCRIPTION =
-  "Safe sources: --secret-from-env KEY reads process.env[KEY], --secret-from-file KEY=PATH reads the full UTF-8 file contents, and --secret-from-env-file FILE:KEY reads KEY from a dotenv-style file.";
+  "Safe sources: --secret-from-env KEY reads process.env[KEY], --secret-from-file KEY=PATH reads the full UTF-8 file contents, --secret-from-env-file FILE:KEY reads KEY from a dotenv-style file, and --secret-from-stdin KEY reads the value from stdin.";
 
 export const SINGLE_SECRET_VALUE_SOURCE_DESCRIPTION =
-  "Instead of --value, use --value-from-env ENV_VAR, --value-file PATH, or --value-from-env-file FILE[:KEY] to avoid putting the secret value in shell history or process argv. If KEY is omitted from --value-from-env-file, the command's --key is used.";
+  "Instead of --value, use --value-from-env ENV_VAR, --value-file PATH, --value-from-env-file FILE[:KEY], or --stdin to avoid putting the secret value in shell history or process argv. If KEY is omitted from --value-from-env-file, the command's --key is used.";
