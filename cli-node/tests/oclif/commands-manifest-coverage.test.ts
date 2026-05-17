@@ -72,6 +72,14 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS.reply).toBeDefined();
   });
 
+  it("keeps reply wait flags aligned with send", () => {
+    const replyCommand = COMMANDS.reply as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(replyCommand.flags.wait).toBeDefined();
+    expect(replyCommand.flags["wait-timeout-ms"]).toBeDefined();
+  });
+
   it("registers the normal function test alias", () => {
     expect(COMMANDS["functions:test"]).toBe(
       COMMANDS["functions:test-function"],

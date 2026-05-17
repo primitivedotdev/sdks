@@ -134,7 +134,7 @@ async function pickDefaultFromAddress(
 
 class SendCommand extends Command {
   static description =
-    `Send an outbound email. Agent-grade shortcut for sending send with sensible defaults.
+    `Send an outbound email. Agent-grade shortcut for \`sending send\` with sensible defaults.
 
   --from defaults to agent@<your-first-verified-outbound-domain> when omitted.
   --subject defaults to the first line of the body when omitted.
