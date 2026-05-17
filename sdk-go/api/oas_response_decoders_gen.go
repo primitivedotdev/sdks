@@ -895,8 +895,8 @@ func decodeCreateFunctionResponse(resp *http.Response) (res CreateFunctionRes, _
 		default:
 			return res, validate.InvalidContentType(ct)
 		}
-	case 502:
-		// Code 502.
+	case 424:
+		// Code 424.
 		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 		if err != nil {
 			return res, errors.Wrap(err, "parse media type")
@@ -909,7 +909,51 @@ func decodeCreateFunctionResponse(resp *http.Response) (res CreateFunctionRes, _
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response CreateFunctionBadGateway
+			var response CreateFunctionFailedDependency
+			if err := func() error {
+				if err := response.Decode(d); err != nil {
+					return err
+				}
+				if err := d.Skip(); err != io.EOF {
+					return errors.New("unexpected trailing data")
+				}
+				return nil
+			}(); err != nil {
+				err = &ogenerrors.DecodeBodyError{
+					ContentType: ct,
+					Body:        buf,
+					Err:         err,
+				}
+				return res, err
+			}
+			// Validate response.
+			if err := func() error {
+				if err := response.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return res, errors.Wrap(err, "validate")
+			}
+			return &response, nil
+		default:
+			return res, validate.InvalidContentType(ct)
+		}
+	case 429:
+		// Code 429.
+		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if err != nil {
+			return res, errors.Wrap(err, "parse media type")
+		}
+		switch {
+		case ct == "application/json":
+			buf, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return res, err
+			}
+			d := jx.DecodeBytes(buf)
+
+			var response CreateFunctionTooManyRequests
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err
@@ -9093,8 +9137,8 @@ func decodeUpdateFunctionResponse(resp *http.Response) (res UpdateFunctionRes, _
 		default:
 			return res, validate.InvalidContentType(ct)
 		}
-	case 502:
-		// Code 502.
+	case 424:
+		// Code 424.
 		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 		if err != nil {
 			return res, errors.Wrap(err, "parse media type")
@@ -9107,7 +9151,51 @@ func decodeUpdateFunctionResponse(resp *http.Response) (res UpdateFunctionRes, _
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response UpdateFunctionBadGateway
+			var response UpdateFunctionFailedDependency
+			if err := func() error {
+				if err := response.Decode(d); err != nil {
+					return err
+				}
+				if err := d.Skip(); err != io.EOF {
+					return errors.New("unexpected trailing data")
+				}
+				return nil
+			}(); err != nil {
+				err = &ogenerrors.DecodeBodyError{
+					ContentType: ct,
+					Body:        buf,
+					Err:         err,
+				}
+				return res, err
+			}
+			// Validate response.
+			if err := func() error {
+				if err := response.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return res, errors.Wrap(err, "validate")
+			}
+			return &response, nil
+		default:
+			return res, validate.InvalidContentType(ct)
+		}
+	case 429:
+		// Code 429.
+		ct, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if err != nil {
+			return res, errors.Wrap(err, "parse media type")
+		}
+		switch {
+		case ct == "application/json":
+			buf, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return res, err
+			}
+			d := jx.DecodeBytes(buf)
+
+			var response UpdateFunctionTooManyRequests
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err

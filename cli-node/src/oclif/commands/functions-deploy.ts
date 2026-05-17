@@ -36,9 +36,9 @@ import {
 //     esbuild handler.ts --bundle --format=esm --outfile=bundle.js
 //     primitive functions:deploy --name myfn --file bundle.js
 //
-// Source maps follow the same shape via --source-map-file. They are
-// stored only on the runtime side (not in our database) so dropping
-// them later in the pipeline is fine; the CLI just hands them through.
+// Source maps follow the same shape via --source-map-file. The CLI
+// reads the map from disk and sends it with the bundle so deploy
+// diagnostics can map stack traces back to original source files.
 //
 // For full control (raw body, --raw-body JSON, etc.) the underlying
 // `functions:create-function` operation stays available.
@@ -307,7 +307,7 @@ class FunctionsDeployCommand extends Command {
     }),
     "source-map-file": Flags.string({
       description:
-        "Optional path to a source map for the bundle. Stored only on the runtime side and used to symbolicate stack traces.",
+        "Optional path to a source map for the bundle. Stored with the deployment attempt and used to symbolicate stack traces in function logs.",
     }),
     secret: Flags.string({
       description: `Secret KEY=VALUE to seed on the deployed function. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out the deploy to create-function, set-secret per pair, then a final redeploy so the running handler picks up the bindings. ${SECRET_FLAG_SECURITY_NOTE}`,

@@ -71,12 +71,19 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_409
 
-    if response.status_code == 502:
-        response_502 = ErrorResponse.from_dict(response.json())
+    if response.status_code == 424:
+        response_424 = ErrorResponse.from_dict(response.json())
 
 
 
-        return response_502
+        return response_424
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -112,8 +119,9 @@ def sync_detailed(
     than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
-    (optional) is capped at 5 MiB UTF-8 and is stored only on the
-    edge runtime side; it is not persisted in Primitive's database.
+    (optional) is capped at 5 MiB UTF-8, stored with each deployment
+    attempt, and sent to the runtime so stack traces can resolve to
+    original source files.
 
     **Auto-wiring.** On successful deploy, Primitive automatically
     creates a webhook endpoint that delivers inbound mail to the
@@ -169,8 +177,9 @@ def sync(
     than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
-    (optional) is capped at 5 MiB UTF-8 and is stored only on the
-    edge runtime side; it is not persisted in Primitive's database.
+    (optional) is capped at 5 MiB UTF-8, stored with each deployment
+    attempt, and sent to the runtime so stack traces can resolve to
+    original source files.
 
     **Auto-wiring.** On successful deploy, Primitive automatically
     creates a webhook endpoint that delivers inbound mail to the
@@ -221,8 +230,9 @@ async def asyncio_detailed(
     than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
-    (optional) is capped at 5 MiB UTF-8 and is stored only on the
-    edge runtime side; it is not persisted in Primitive's database.
+    (optional) is capped at 5 MiB UTF-8, stored with each deployment
+    attempt, and sent to the runtime so stack traces can resolve to
+    original source files.
 
     **Auto-wiring.** On successful deploy, Primitive automatically
     creates a webhook endpoint that delivers inbound mail to the
@@ -278,8 +288,9 @@ async def asyncio(
     than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
-    (optional) is capped at 5 MiB UTF-8 and is stored only on the
-    edge runtime side; it is not persisted in Primitive's database.
+    (optional) is capped at 5 MiB UTF-8, stored with each deployment
+    attempt, and sent to the runtime so stack traces can resolve to
+    original source files.
 
     **Auto-wiring.** On successful deploy, Primitive automatically
     creates a webhook endpoint that delivers inbound mail to the

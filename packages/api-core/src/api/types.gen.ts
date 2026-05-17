@@ -1380,9 +1380,8 @@ export type CreateFunctionInput = {
     code: string;
     /**
      * Optional source map for the bundle. Up to 5 MiB UTF-8.
-     * Stored only on the runtime side (not in Primitive's
-     * database) and used to symbolicate stack traces in the
-     * function's logs.
+     * Stored with the deployment attempt and sent to the runtime
+     * to symbolicate stack traces in the function's logs.
      *
      */
     sourceMap?: string;
@@ -3224,7 +3223,7 @@ export type CreateFunctionData = {
 
 export type CreateFunctionErrors = {
     /**
-     * Invalid request parameters
+     * Invalid request parameters or customer-correctable deploy rejection
      */
     400: ErrorResponse;
     /**
@@ -3236,9 +3235,13 @@ export type CreateFunctionErrors = {
      */
     409: ErrorResponse;
     /**
-     * Primitive could not complete the downstream SMTP request
+     * Function deploy could not be completed; previously deployed code remains live
      */
-    502: ErrorResponse;
+    424: ErrorResponse;
+    /**
+     * Function deploy could not be completed; previously deployed code remains live
+     */
+    429: ErrorResponse;
 };
 
 export type CreateFunctionError = CreateFunctionErrors[keyof CreateFunctionErrors];
@@ -3346,7 +3349,7 @@ export type UpdateFunctionData = {
 
 export type UpdateFunctionErrors = {
     /**
-     * Invalid request parameters
+     * Invalid request parameters or customer-correctable deploy rejection
      */
     400: ErrorResponse;
     /**
@@ -3358,9 +3361,13 @@ export type UpdateFunctionErrors = {
      */
     404: ErrorResponse;
     /**
-     * Primitive could not complete the downstream SMTP request
+     * Function deploy could not be completed; previously deployed code remains live
      */
-    502: ErrorResponse;
+    424: ErrorResponse;
+    /**
+     * Function deploy could not be completed; previously deployed code remains live
+     */
+    429: ErrorResponse;
 };
 
 export type UpdateFunctionError = UpdateFunctionErrors[keyof UpdateFunctionErrors];
