@@ -21,8 +21,9 @@ import {
 import { resolveCliAuth } from "../auth.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
 import {
-  parseSecretFlags,
+  resolveSecretFlags,
   SECRET_FLAG_SECURITY_NOTE,
+  SECRET_SOURCE_FLAGS_DESCRIPTION,
   type SecretFlagPair,
 } from "../secret-flags.js";
 
@@ -43,13 +44,13 @@ import {
 // For full control (raw body, --raw-body JSON, etc.) the underlying
 // `functions:create-function` operation stays available.
 //
-// `--secret KEY=VALUE` is the one-call shortcut for "deploy a new
-// function AND seed its secret bindings in the same command." The
-// flag is repeatable. After the create step the CLI writes each
-// secret in order, then re-deploys with the SAME bundle so the
-// running handler picks up the bindings. Without secrets the flow
-// is a single create call; with one or more --secret flags the
-// flow fans out to (create + N set-secret + redeploy) API calls.
+// Secret source flags are the one-call shortcut for "deploy a new
+// function AND seed its secret bindings in the same command." After
+// the create step the CLI writes each secret in order, then re-deploys
+// with the SAME bundle so the running handler picks up the bindings.
+// Without secrets the flow is a single create call; with one or more
+// secrets the flow fans out to (create + N set-secret + redeploy) API
+// calls.
 
 // Final payload runDeployWithSecrets produces on the happy path.
 // `created` is the initial create result; `redeploy` is the
@@ -257,17 +258,16 @@ class FunctionsDeployCommand extends Command {
   \`functions:create-function\` if you need the full flag surface
   (raw-body JSON, etc.).
 
-  Pass --secret KEY=VALUE (repeatable) to seed secret bindings in the
-  same command. Keys must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase
-  letters, digits, underscores; first character is a letter or
-  underscore). With one or more --secret flags the deploy fans out to
-  multiple API calls: create-function, set-secret per pair, then a
-  final update-function with the same bundle so the running handler
-  picks up the bindings. If a secret write fails after the create
-  step the function exists with whatever secrets succeeded and the
-  redeploy has NOT fired; re-run \`primitive functions set-secret\`
-  for the missing keys, then \`primitive functions redeploy\` to
-  push them live.`;
+  Pass secret source flags to seed bindings in the same command. Keys
+  must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters, digits,
+  underscores; first character is a letter or underscore). With one
+  or more secrets the deploy fans out to multiple API calls:
+  create-function, set-secret per pair, then a final update-function
+  with the same bundle so the running handler picks up the bindings.
+  If a secret write fails after the create step the function exists
+  with whatever secrets succeeded and the redeploy has NOT fired;
+  re-run \`primitive functions set-secret\` for the missing keys, then
+  \`primitive functions redeploy\` to push them live. ${SECRET_SOURCE_FLAGS_DESCRIPTION}`;
 
   static summary = "Deploy a new function from a bundled handler file";
 
@@ -275,6 +275,7 @@ class FunctionsDeployCommand extends Command {
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-env OPENAI_KEY --secret-from-env-file .env.local:OWNER_EMAIL",
   ];
 
   static flags = {
@@ -313,6 +314,21 @@ class FunctionsDeployCommand extends Command {
       description: `Secret KEY=VALUE to seed on the deployed function. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out the deploy to create-function, set-secret per pair, then a final redeploy so the running handler picks up the bindings. ${SECRET_FLAG_SECURITY_NOTE}`,
       multiple: true,
     }),
+    "secret-from-env": Flags.string({
+      description:
+        "Secret KEY to read from the environment and seed on the deployed function. Repeatable. Example: --secret-from-env OPENAI_KEY reads process.env.OPENAI_KEY.",
+      multiple: true,
+    }),
+    "secret-from-file": Flags.string({
+      description:
+        "Secret KEY=PATH to read from a UTF-8 file and seed on the deployed function. Repeatable. The full file contents become the value.",
+      multiple: true,
+    }),
+    "secret-from-env-file": Flags.string({
+      description:
+        "Secret FILE:KEY to read from a dotenv-style file and seed on the deployed function. Repeatable. Example: --secret-from-env-file .env.local:OPENAI_KEY.",
+      multiple: true,
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -326,8 +342,12 @@ class FunctionsDeployCommand extends Command {
       // a malformed input fails fast with a clear error and zero
       // side effects. The fast path (no --secret flags) skips this
       // entirely.
-      const rawSecrets = flags.secret ?? [];
-      const parsedSecrets = parseSecretFlags(rawSecrets);
+      const parsedSecrets = resolveSecretFlags({
+        fromEnv: flags["secret-from-env"] ?? [],
+        fromEnvFile: flags["secret-from-env-file"] ?? [],
+        fromFile: flags["secret-from-file"] ?? [],
+        inline: flags.secret ?? [],
+      });
       if (parsedSecrets.kind === "error") {
         process.stderr.write(`${parsedSecrets.message}\n`);
         process.exitCode = 1;

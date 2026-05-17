@@ -17,6 +17,10 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { type ResolvedCliAuth, resolveCliAuth } from "../auth.js";
+import {
+  resolveSingleSecretValue,
+  SINGLE_SECRET_VALUE_SOURCE_DESCRIPTION,
+} from "../secret-flags.js";
 
 // `primitive functions:set-secret` is the agent-grade shortcut for
 // writing a function secret and (optionally) pushing it live in the
@@ -30,7 +34,8 @@ import { type ResolvedCliAuth, resolveCliAuth } from "../auth.js";
 //
 // Shape:
 //   primitive functions:set-secret --id <fn-id> --key <KEY> --value <value>
-//   primitive functions:set-secret --id <fn-id> --key <KEY> --value <value> --redeploy
+//   primitive functions:set-secret --id <fn-id> --key <KEY> --value-from-env <KEY> --redeploy
+//   primitive functions:set-secret --id <fn-id> --key <KEY> --value-from-env-file .env.local --redeploy
 //
 // The raw `functions:set-function-secret` and `functions:create-
 // function-secret` operations stay available for callers that want
@@ -188,7 +193,7 @@ class FunctionsSetSecretCommand extends Command {
 
   Keys must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters, digits,
   underscores; first character is a letter or underscore). System-
-  managed keys are reserved and rejected.`;
+  managed keys are reserved and rejected. ${SINGLE_SECRET_VALUE_SOURCE_DESCRIPTION}`;
 
   static summary =
     "Write a function secret (optionally redeploying to push it live)";
@@ -196,6 +201,8 @@ class FunctionsSetSecretCommand extends Command {
   static examples = [
     "<%= config.bin %> functions set-secret --id <fn-id> --key API_TOKEN --value abc123",
     "<%= config.bin %> functions set-secret --id <fn-id> --key API_TOKEN --value abc123 --redeploy",
+    "<%= config.bin %> functions set-secret --id <fn-id> --key OPENAI_KEY --value-from-env OPENAI_KEY --redeploy",
+    "<%= config.bin %> functions set-secret --id <fn-id> --key OPENAI_KEY --value-from-env-file .env.local --redeploy",
   ];
 
   static flags = {
@@ -226,8 +233,20 @@ class FunctionsSetSecretCommand extends Command {
       required: true,
     }),
     value: Flags.string({
-      description: "Secret value (up to 4096 UTF-8 bytes). Encrypted at rest.",
-      required: true,
+      description:
+        "Secret value (up to 4096 UTF-8 bytes). Encrypted at rest. Visible in shell history and process argv; prefer a non-argv source for sensitive values.",
+    }),
+    "value-from-env": Flags.string({
+      description:
+        "Environment variable to read as the secret value. Example: --value-from-env OPENAI_KEY reads process.env.OPENAI_KEY.",
+    }),
+    "value-file": Flags.string({
+      description:
+        "UTF-8 file to read as the secret value. The full file contents become the value.",
+    }),
+    "value-from-env-file": Flags.string({
+      description:
+        "Dotenv-style file to read as the secret value. Use FILE to read --key from that file, or FILE:KEY to read a different key.",
     }),
     redeploy: Flags.boolean({
       description:
@@ -267,6 +286,19 @@ class FunctionsSetSecretCommand extends Command {
         configDir: this.config.configDir,
       };
 
+      const resolvedValue = resolveSingleSecretValue({
+        key: flags.key,
+        value: flags.value,
+        valueFile: flags["value-file"],
+        valueFromEnv: flags["value-from-env"],
+        valueFromEnvFile: flags["value-from-env-file"],
+      });
+      if (resolvedValue.kind === "error") {
+        process.stderr.write(`${resolvedValue.message}\n`);
+        process.exitCode = 1;
+        return;
+      }
+
       // Adapter: thin wrappers around the generated SDK calls,
       // routed through host 1 (apiClient.client). The secrets and
       // function-detail endpoints are not on host 2.
@@ -297,7 +329,7 @@ class FunctionsSetSecretCommand extends Command {
         id: flags.id,
         key: flags.key,
         redeploy: flags.redeploy === true,
-        value: flags.value,
+        value: resolvedValue.value,
       });
 
       if (outcome.kind === "error") {
