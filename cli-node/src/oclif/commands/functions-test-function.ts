@@ -2,6 +2,8 @@ import { Command, Flags } from "@oclif/core";
 import {
   type EmailDetail,
   getEmail,
+  listDomains,
+  listEndpoints,
   PrimitiveApiClient,
   type TestInvocationResult,
   testFunction,
@@ -105,6 +107,141 @@ export function buildFunctionTestOutcome(params: {
     outcome.sent_emails = params.detail.replies;
   }
   return outcome;
+}
+
+type RawEndpointRow = {
+  id?: unknown;
+  enabled?: unknown;
+  deactivated_at?: unknown;
+  domain_id?: unknown;
+  function_id?: unknown;
+  kind?: unknown;
+};
+
+export type MatchingFunctionEndpoint = {
+  id: string;
+  function_id: string | null;
+  is_current_function: boolean;
+  scope: "catch-all" | "domain";
+};
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+export function findMatchingFunctionEndpoints(params: {
+  endpoints: RawEndpointRow[];
+  currentFunctionId: string;
+  inboundDomainId: string | null;
+}): MatchingFunctionEndpoint[] {
+  const matches: MatchingFunctionEndpoint[] = [];
+  for (const endpoint of params.endpoints) {
+    if (endpoint.kind !== "function") continue;
+    if (endpoint.enabled === false) continue;
+    if (
+      endpoint.deactivated_at !== null &&
+      endpoint.deactivated_at !== undefined
+    ) {
+      continue;
+    }
+
+    const id = stringOrNull(endpoint.id);
+    if (!id) continue;
+    const domainId = stringOrNull(endpoint.domain_id);
+    if (
+      domainId !== null &&
+      (params.inboundDomainId === null || domainId !== params.inboundDomainId)
+    ) {
+      continue;
+    }
+
+    const functionId = stringOrNull(endpoint.function_id);
+    matches.push({
+      function_id: functionId,
+      id,
+      is_current_function: functionId === params.currentFunctionId,
+      scope: domainId === null ? "catch-all" : "domain",
+    });
+  }
+  return matches;
+}
+
+export function formatFunctionEndpointNoiseWarning(params: {
+  toAddress: string;
+  inboundDomain: string;
+  endpoints: MatchingFunctionEndpoint[];
+}): string | null {
+  const otherMatches = params.endpoints.filter(
+    (endpoint) => !endpoint.is_current_function,
+  );
+  if (otherMatches.length === 0) return null;
+
+  const lines = [
+    `Warning: ${params.endpoints.length} function endpoints may receive mail for ${params.toAddress}:`,
+  ];
+  for (const endpoint of params.endpoints) {
+    const scope =
+      endpoint.scope === "catch-all"
+        ? "catch-all"
+        : `scoped to ${params.inboundDomain}`;
+    const current = endpoint.is_current_function ? " (this function)" : "";
+    const target = endpoint.function_id
+      ? ` -> function ${endpoint.function_id}`
+      : "";
+    lines.push(`- endpoint ${endpoint.id}${target}, ${scope}${current}`);
+  }
+  return lines.join("\n");
+}
+
+async function maybeWriteEndpointNoiseWarning(params: {
+  apiClient: PrimitiveApiClient;
+  currentFunctionId: string;
+  invocation: TestInvocationResult;
+  writeStderr: (chunk: string) => void;
+}): Promise<void> {
+  try {
+    const [domainsResult, endpointsResult] = await Promise.all([
+      listDomains({
+        client: params.apiClient.client,
+        responseStyle: "fields",
+      }),
+      listEndpoints({
+        client: params.apiClient.client,
+        responseStyle: "fields",
+      }),
+    ]);
+
+    if (endpointsResult.error) return;
+
+    const domainsEnvelope = domainsResult.data as
+      | { data?: Array<{ id?: string; domain?: string }> }
+      | undefined;
+    const inboundDomainId =
+      domainsEnvelope?.data?.find(
+        (domain) =>
+          domain.domain?.toLowerCase() ===
+          params.invocation.inbound_domain.toLowerCase(),
+      )?.id ?? null;
+
+    const endpointsEnvelope = endpointsResult.data as
+      | { data?: RawEndpointRow[] }
+      | undefined;
+    const endpoints = findMatchingFunctionEndpoints({
+      currentFunctionId: params.currentFunctionId,
+      endpoints: endpointsEnvelope?.data ?? [],
+      inboundDomainId,
+    });
+    const warning = formatFunctionEndpointNoiseWarning({
+      endpoints,
+      inboundDomain: params.invocation.inbound_domain,
+      toAddress: params.invocation.to,
+    });
+    if (warning) {
+      params.writeStderr(`${warning}\n`);
+    }
+  } catch {
+    // Advisory only; never fail the test command because warning lookup failed.
+  }
 }
 
 class FunctionsTestFunctionCommand extends Command {
@@ -222,6 +359,15 @@ class FunctionsTestFunctionCommand extends Command {
         this.log(JSON.stringify(invocation, null, 2));
         return;
       }
+
+      await maybeWriteEndpointNoiseWarning({
+        apiClient,
+        currentFunctionId: flags.id,
+        invocation,
+        writeStderr: (chunk) => {
+          process.stderr.write(chunk);
+        },
+      });
 
       const startedAt = Date.now();
       const timeoutMs = flags.timeout * 1000;
