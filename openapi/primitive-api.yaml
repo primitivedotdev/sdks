@@ -1844,8 +1844,9 @@ paths:
         than relying on external imports.
 
         **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
-        (optional) is capped at 5 MiB UTF-8 and is stored only on the
-        edge runtime side; it is not persisted in Primitive's database.
+        (optional) is capped at 5 MiB UTF-8, stored with each deployment
+        attempt, and sent to the runtime so stack traces can resolve to
+        original source files.
 
         **Auto-wiring.** On successful deploy, Primitive automatically
         creates a webhook endpoint that delivers inbound mail to the
@@ -1878,7 +1879,11 @@ paths:
                       data:
                         $ref: '#/components/schemas/CreateFunctionResult'
         '400':
-          $ref: '#/components/responses/ValidationError'
+          description: Invalid request parameters or customer-correctable deploy rejection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '409':
@@ -1887,8 +1892,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '502':
-          $ref: '#/components/responses/BadGateway'
+        '424':
+          $ref: '#/components/responses/DeployFailed'
+        '429':
+          $ref: '#/components/responses/DeployFailed'
+        '503':
+          $ref: '#/components/responses/DeployFailed'
 
   /functions/{id}:
     parameters:
@@ -1929,11 +1938,10 @@ paths:
         passing the same `code` re-runs the deploy and refreshes the
         binding set with the latest values from the secrets table.
 
-        On a 502 deploy failure, the previously-deployed code stays
-        live; the runtime never serves a half-built bundle. The
-        `deploy_error` field on the returned record carries the error
-        that came back from the runtime so you can surface it to users
-        without polling.
+        On deploy failure, the previously-deployed code stays live; the
+        runtime never serves a half-built bundle. The response uses
+        `error.code` `deploy_failed`, and the function's `deploy_error`
+        field carries the latest deploy error for dashboard/API reads.
       tags: [Functions]
       requestBody:
         required: true
@@ -1954,13 +1962,21 @@ paths:
                       data:
                         $ref: '#/components/schemas/FunctionDetail'
         '400':
-          $ref: '#/components/responses/ValidationError'
+          description: Invalid request parameters or customer-correctable deploy rejection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-        '502':
-          $ref: '#/components/responses/BadGateway'
+        '424':
+          $ref: '#/components/responses/DeployFailed'
+        '429':
+          $ref: '#/components/responses/DeployFailed'
+        '503':
+          $ref: '#/components/responses/DeployFailed'
 
     delete:
       operationId: deleteFunction
@@ -2400,6 +2416,18 @@ components:
             error:
               code: validation_error
               message: Invalid domain format
+
+    DeployFailed:
+      description: Function deploy could not be completed; previously deployed code remains live
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: deploy_failed
+              message: Function deploy failed
 
     RateLimited:
       description: Rate limit exceeded
@@ -4248,9 +4276,8 @@ components:
           maxLength: 5242880
           description: |
             Optional source map for the bundle. Up to 5 MiB UTF-8.
-            Stored only on the runtime side (not in Primitive's
-            database) and used to symbolicate stack traces in the
-            function's logs.
+            Stored with the deployment attempt and sent to the runtime
+            to symbolicate stack traces in the function's logs.
       required: [name, code]
 
     CreateFunctionResult:

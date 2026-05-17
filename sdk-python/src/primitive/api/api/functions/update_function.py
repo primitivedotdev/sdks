@@ -73,12 +73,26 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_404
 
-    if response.status_code == 502:
-        response_502 = ErrorResponse.from_dict(response.json())
+    if response.status_code == 424:
+        response_424 = ErrorResponse.from_dict(response.json())
 
 
 
-        return response_502
+        return response_424
+
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
@@ -110,11 +124,10 @@ def sync_detailed(
     passing the same `code` re-runs the deploy and refreshes the
     binding set with the latest values from the secrets table.
 
-    On a 502 deploy failure, the previously-deployed code stays
-    live; the runtime never serves a half-built bundle. The
-    `deploy_error` field on the returned record carries the error
-    that came back from the runtime so you can surface it to users
-    without polling.
+    On deploy failure, the previously-deployed code stays live; the
+    runtime never serves a half-built bundle. The response uses
+    `error.code` `deploy_failed`, and the function's `deploy_error`
+    field carries the latest deploy error for dashboard/API reads.
 
     Args:
         id (UUID):
@@ -156,11 +169,10 @@ def sync(
     passing the same `code` re-runs the deploy and refreshes the
     binding set with the latest values from the secrets table.
 
-    On a 502 deploy failure, the previously-deployed code stays
-    live; the runtime never serves a half-built bundle. The
-    `deploy_error` field on the returned record carries the error
-    that came back from the runtime so you can surface it to users
-    without polling.
+    On deploy failure, the previously-deployed code stays live; the
+    runtime never serves a half-built bundle. The response uses
+    `error.code` `deploy_failed`, and the function's `deploy_error`
+    field carries the latest deploy error for dashboard/API reads.
 
     Args:
         id (UUID):
@@ -197,11 +209,10 @@ async def asyncio_detailed(
     passing the same `code` re-runs the deploy and refreshes the
     binding set with the latest values from the secrets table.
 
-    On a 502 deploy failure, the previously-deployed code stays
-    live; the runtime never serves a half-built bundle. The
-    `deploy_error` field on the returned record carries the error
-    that came back from the runtime so you can surface it to users
-    without polling.
+    On deploy failure, the previously-deployed code stays live; the
+    runtime never serves a half-built bundle. The response uses
+    `error.code` `deploy_failed`, and the function's `deploy_error`
+    field carries the latest deploy error for dashboard/API reads.
 
     Args:
         id (UUID):
@@ -243,11 +254,10 @@ async def asyncio(
     passing the same `code` re-runs the deploy and refreshes the
     binding set with the latest values from the secrets table.
 
-    On a 502 deploy failure, the previously-deployed code stays
-    live; the runtime never serves a half-built bundle. The
-    `deploy_error` field on the returned record carries the error
-    that came back from the runtime so you can surface it to users
-    without polling.
+    On deploy failure, the previously-deployed code stays live; the
+    runtime never serves a half-built bundle. The response uses
+    `error.code` `deploy_failed`, and the function's `deploy_error`
+    field carries the latest deploy error for dashboard/API reads.
 
     Args:
         id (UUID):

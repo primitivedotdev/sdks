@@ -370,14 +370,6 @@ func (s *CreateFilterUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *CreateFunctionBadGateway) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *CreateFunctionBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -413,6 +405,14 @@ func (s *CreateFunctionCreated) Validate() error {
 	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *CreateFunctionFailedDependency) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -603,6 +603,22 @@ func (s *CreateFunctionSecretNotFound) Validate() error {
 }
 
 func (s *CreateFunctionSecretUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CreateFunctionServiceUnavailable) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *CreateFunctionTooManyRequests) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -4111,7 +4127,7 @@ func (s *UpdateFilterUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *UpdateFunctionBadGateway) Validate() error {
+func (s *UpdateFunctionBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -4119,7 +4135,7 @@ func (s *UpdateFunctionBadGateway) Validate() error {
 	return nil
 }
 
-func (s *UpdateFunctionBadRequest) Validate() error {
+func (s *UpdateFunctionFailedDependency) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -4219,6 +4235,22 @@ func (s *UpdateFunctionOK) Validate() error {
 	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *UpdateFunctionServiceUnavailable) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateFunctionTooManyRequests) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
 	}
 	return nil
 }

@@ -2556,7 +2556,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-function",
-    "description": "Creates and deploys a new function. The handler must be a single\nESM module whose default export is an object with an async\n`fetch(request, env)` method (Workers-style). The gateway\nHMAC-verifies the POST against the org's webhook secret before\ninvoking the handler; the request body parses to an\n`email.received` event (see `EmailReceivedEvent` and the\nWebhook payload section for the full schema). Code is bundled\nbefore being uploaded; ship a single self-contained file rather\nthan relying on external imports.\n\n**Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`\n(optional) is capped at 5 MiB UTF-8 and is stored only on the\nedge runtime side; it is not persisted in Primitive's database.\n\n**Auto-wiring.** On successful deploy, Primitive automatically\ncreates a webhook endpoint that delivers inbound mail to the\nfunction. There is nothing to configure on the Endpoints API\nfor this to work; the gateway URL returned here is for\nreference only and is not directly callable from outside.\n\n**Secrets.** New functions ship with the managed secrets\n(`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already\nbound. Add user-set secrets via\n`POST /functions/{id}/secrets`; secret writes only land in the\nrunning handler on the next redeploy.\n",
+    "description": "Creates and deploys a new function. The handler must be a single\nESM module whose default export is an object with an async\n`fetch(request, env)` method (Workers-style). The gateway\nHMAC-verifies the POST against the org's webhook secret before\ninvoking the handler; the request body parses to an\n`email.received` event (see `EmailReceivedEvent` and the\nWebhook payload section for the full schema). Code is bundled\nbefore being uploaded; ship a single self-contained file rather\nthan relying on external imports.\n\n**Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`\n(optional) is capped at 5 MiB UTF-8, stored with each deployment\nattempt, and sent to the runtime so stack traces can resolve to\noriginal source files.\n\n**Auto-wiring.** On successful deploy, Primitive automatically\ncreates a webhook endpoint that delivers inbound mail to the\nfunction. There is nothing to configure on the Endpoints API\nfor this to work; the gateway URL returned here is for\nreference only and is not directly callable from outside.\n\n**Secrets.** New functions ship with the managed secrets\n(`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already\nbound. Add user-set secrets via\n`POST /functions/{id}/secrets`; secret writes only land in the\nrunning handler on the next redeploy.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createFunction",
@@ -2582,7 +2582,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 5242880,
-          "description": "Optional source map for the bundle. Up to 5 MiB UTF-8.\nStored only on the runtime side (not in Primitive's\ndatabase) and used to symbolicate stack traces in the\nfunction's logs.\n"
+          "description": "Optional source map for the bundle. Up to 5 MiB UTF-8.\nStored with the deployment attempt and sent to the runtime\nto symbolicate stack traces in the function's logs.\n"
         }
       },
       "required": [
@@ -3263,7 +3263,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-function",
-    "description": "Replaces the function's source code with the body's `code` and\ntriggers a redeploy. Same size limits as `POST /functions`.\nUse this verb to push secret writes into the running handler:\npassing the same `code` re-runs the deploy and refreshes the\nbinding set with the latest values from the secrets table.\n\nOn a 502 deploy failure, the previously-deployed code stays\nlive; the runtime never serves a half-built bundle. The\n`deploy_error` field on the returned record carries the error\nthat came back from the runtime so you can surface it to users\nwithout polling.\n",
+    "description": "Replaces the function's source code with the body's `code` and\ntriggers a redeploy. Same size limits as `POST /functions`.\nUse this verb to push secret writes into the running handler:\npassing the same `code` re-runs the deploy and refreshes the\nbinding set with the latest values from the secrets table.\n\nOn deploy failure, the previously-deployed code stays live; the\nruntime never serves a half-built bundle. The response uses\n`error.code` `deploy_failed`, and the function's `deploy_error`\nfield carries the latest deploy error for dashboard/API reads.\n",
     "hasJsonBody": true,
     "method": "PUT",
     "operationId": "updateFunction",

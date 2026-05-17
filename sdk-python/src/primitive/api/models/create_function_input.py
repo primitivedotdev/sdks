@@ -29,9 +29,8 @@ class CreateFunctionInput:
                 Must export a default `{ async fetch(req, env, ctx) { ... } }`
                 object.
             source_map (str | Unset): Optional source map for the bundle. Up to 5 MiB UTF-8.
-                Stored only on the runtime side (not in Primitive's
-                database) and used to symbolicate stack traces in the
-                function's logs.
+                Stored with the deployment attempt and sent to the runtime
+                to symbolicate stack traces in the function's logs.
      """
 
     name: str

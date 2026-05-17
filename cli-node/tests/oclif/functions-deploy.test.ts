@@ -4,7 +4,7 @@ import type {
   FunctionSecretWriteResult,
 } from "@primitivedotdev/api-core";
 import { describe, expect, it, vi } from "vitest";
-import {
+import FunctionsDeployCommand, {
   type DeployApiSurface,
   runDeployWithSecrets,
 } from "../../src/oclif/commands/functions-deploy.js";
@@ -117,6 +117,15 @@ function makeApi(overrides: Partial<DeployApiSurface> = {}): {
 describe("functions:deploy command", () => {
   it("registers in the COMMANDS map", () => {
     expect(COMMANDS["functions:deploy"]).toBeDefined();
+  });
+
+  it("documents source maps as stored with the deployment attempt", () => {
+    const description =
+      FunctionsDeployCommand.flags["source-map-file"].description ?? "";
+
+    expect(description).toContain("Stored with the deployment attempt");
+    expect(description).toContain("symbolicate stack traces");
+    expect(description).not.toContain("runtime side");
   });
 });
 
