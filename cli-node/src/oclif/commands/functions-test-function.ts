@@ -2,6 +2,8 @@ import { Command, Flags } from "@oclif/core";
 import {
   type EmailDetail,
   getEmail,
+  listDomains,
+  listEndpoints,
   PrimitiveApiClient,
   type TestInvocationResult,
   testFunction,
@@ -60,6 +62,188 @@ const DEFAULT_WAIT_TIMEOUT_SECONDS = 60;
 // `failed` are intermediate (`failed` is a temporary failure that may
 // retry into `fired` or eventually `exhausted`), so we keep polling.
 const TERMINAL_WEBHOOK_STATUSES = new Set<string>(["fired", "exhausted"]);
+
+export type FunctionTestOutcome = {
+  function_id: string;
+  inbound_domain: string;
+  inbound_id: string;
+  inbound_to: string;
+  test_send_id: string;
+  test_subject: string;
+  poll_since: string;
+  watch_url: string;
+  webhook_status: EmailDetail["webhook_status"];
+  webhook_attempt_count: EmailDetail["webhook_attempt_count"];
+  webhook_last_status_code: EmailDetail["webhook_last_status_code"];
+  webhook_last_error: EmailDetail["webhook_last_error"];
+  elapsed_seconds: number;
+  sent_emails?: EmailDetail["replies"];
+};
+
+export function buildFunctionTestOutcome(params: {
+  functionId: string;
+  inboundId: string;
+  invocation: TestInvocationResult;
+  detail: EmailDetail;
+  elapsedSeconds: number;
+  showSends: boolean;
+}): FunctionTestOutcome {
+  const outcome: FunctionTestOutcome = {
+    elapsed_seconds: params.elapsedSeconds,
+    function_id: params.functionId,
+    inbound_domain: params.invocation.inbound_domain,
+    inbound_id: params.inboundId,
+    inbound_to: params.invocation.to,
+    poll_since: params.invocation.poll_since,
+    test_send_id: params.invocation.send_id,
+    test_subject: params.invocation.subject,
+    watch_url: params.invocation.watch_url,
+    webhook_attempt_count: params.detail.webhook_attempt_count,
+    webhook_last_error: params.detail.webhook_last_error,
+    webhook_last_status_code: params.detail.webhook_last_status_code,
+    webhook_status: params.detail.webhook_status,
+  };
+  if (params.showSends) {
+    outcome.sent_emails = params.detail.replies;
+  }
+  return outcome;
+}
+
+type RawEndpointRow = {
+  id?: unknown;
+  enabled?: unknown;
+  deactivated_at?: unknown;
+  domain_id?: unknown;
+  function_id?: unknown;
+  kind?: unknown;
+};
+
+export type MatchingFunctionEndpoint = {
+  id: string;
+  function_id: string | null;
+  is_current_function: boolean;
+  scope: "catch-all" | "domain";
+};
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+export function findMatchingFunctionEndpoints(params: {
+  endpoints: RawEndpointRow[];
+  currentFunctionId: string;
+  inboundDomainId: string | null;
+}): MatchingFunctionEndpoint[] {
+  const matches: MatchingFunctionEndpoint[] = [];
+  for (const endpoint of params.endpoints) {
+    if (endpoint.kind !== "function") continue;
+    if (endpoint.enabled === false) continue;
+    if (
+      endpoint.deactivated_at !== null &&
+      endpoint.deactivated_at !== undefined
+    ) {
+      continue;
+    }
+
+    const id = stringOrNull(endpoint.id);
+    if (!id) continue;
+    const domainId = stringOrNull(endpoint.domain_id);
+    if (
+      domainId !== null &&
+      (params.inboundDomainId === null || domainId !== params.inboundDomainId)
+    ) {
+      continue;
+    }
+
+    const functionId = stringOrNull(endpoint.function_id);
+    matches.push({
+      function_id: functionId,
+      id,
+      is_current_function: functionId === params.currentFunctionId,
+      scope: domainId === null ? "catch-all" : "domain",
+    });
+  }
+  return matches;
+}
+
+export function formatFunctionEndpointNoiseWarning(params: {
+  toAddress: string;
+  inboundDomain: string;
+  endpoints: MatchingFunctionEndpoint[];
+}): string | null {
+  const otherMatches = params.endpoints.filter(
+    (endpoint) => !endpoint.is_current_function,
+  );
+  if (otherMatches.length === 0) return null;
+
+  const lines = [
+    `Warning: ${params.endpoints.length} function endpoints may receive mail for ${params.toAddress}:`,
+  ];
+  for (const endpoint of params.endpoints) {
+    const scope =
+      endpoint.scope === "catch-all"
+        ? "catch-all"
+        : `scoped to ${params.inboundDomain}`;
+    const current = endpoint.is_current_function ? " (this function)" : "";
+    const target = endpoint.function_id
+      ? ` -> function ${endpoint.function_id}`
+      : "";
+    lines.push(`- endpoint ${endpoint.id}${target}, ${scope}${current}`);
+  }
+  return lines.join("\n");
+}
+
+async function maybeWriteEndpointNoiseWarning(params: {
+  apiClient: PrimitiveApiClient;
+  currentFunctionId: string;
+  invocation: TestInvocationResult;
+  writeStderr: (chunk: string) => void;
+}): Promise<void> {
+  try {
+    const [domainsResult, endpointsResult] = await Promise.all([
+      listDomains({
+        client: params.apiClient.client,
+        responseStyle: "fields",
+      }),
+      listEndpoints({
+        client: params.apiClient.client,
+        responseStyle: "fields",
+      }),
+    ]);
+
+    if (endpointsResult.error) return;
+    if (domainsResult.error) return;
+
+    const domainsEnvelope = domainsResult.data as
+      | { data?: Array<{ id?: string; domain?: string }> }
+      | undefined;
+    const inboundDomainId =
+      domainsEnvelope?.data?.find(
+        (domain) =>
+          domain.domain?.toLowerCase() ===
+          params.invocation.inbound_domain.toLowerCase(),
+      )?.id ?? null;
+
+    const endpointsEnvelope = endpointsResult.data as
+      | { data?: RawEndpointRow[] }
+      | undefined;
+    const endpoints = findMatchingFunctionEndpoints({
+      currentFunctionId: params.currentFunctionId,
+      endpoints: endpointsEnvelope?.data ?? [],
+      inboundDomainId,
+    });
+    const warning = formatFunctionEndpointNoiseWarning({
+      endpoints,
+      inboundDomain: params.invocation.inbound_domain,
+      toAddress: params.invocation.to,
+    });
+    if (warning) {
+      params.writeStderr(`${warning}\n`);
+    }
+  } catch {
+    // Advisory only; never fail the test command because warning lookup failed.
+  }
+}
 
 class FunctionsTestFunctionCommand extends Command {
   static description =
@@ -177,6 +361,15 @@ class FunctionsTestFunctionCommand extends Command {
         return;
       }
 
+      await maybeWriteEndpointNoiseWarning({
+        apiClient,
+        currentFunctionId: flags.id,
+        invocation,
+        writeStderr: (chunk) => {
+          process.stderr.write(chunk);
+        },
+      });
+
       const startedAt = Date.now();
       const timeoutMs = flags.timeout * 1000;
       const pollIntervalMs = flags["poll-interval"] * 1000;
@@ -267,19 +460,14 @@ class FunctionsTestFunctionCommand extends Command {
 
       // 4. Emit the outcome.
       const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
-      const outcome: Record<string, unknown> = {
-        function_id: flags.id,
-        inbound_id: inboundId,
-        inbound_to: invocation.to,
-        webhook_status: detail.webhook_status,
-        webhook_attempt_count: detail.webhook_attempt_count,
-        webhook_last_status_code: detail.webhook_last_status_code,
-        webhook_last_error: detail.webhook_last_error,
-        elapsed_seconds: elapsedSeconds,
-      };
-      if (shouldShowSends) {
-        outcome.sent_emails = detail.replies;
-      }
+      const outcome = buildFunctionTestOutcome({
+        detail,
+        elapsedSeconds,
+        functionId: flags.id,
+        inboundId,
+        invocation,
+        showSends: shouldShowSends,
+      });
       this.log(JSON.stringify(outcome, null, 2));
 
       // Exit non-zero when the function failed permanently so CI
