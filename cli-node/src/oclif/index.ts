@@ -12,6 +12,7 @@ import FunctionsDeployCommand from "./commands/functions-deploy.js";
 import FunctionsInitCommand from "./commands/functions-init.js";
 import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
 import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
+import FunctionsTemplatesCommand from "./commands/functions-templates.js";
 import FunctionsTestFunctionCommand from "./commands/functions-test-function.js";
 import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
@@ -281,9 +282,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   // new author can go zero-to-deployed without writing the handler,
   // package.json, build script, and tsconfig from scratch. The
   // scaffolded handler imports from @primitivedotdev/sdk/api (the
-  // runtime-client subpath) and demonstrates client.send() so the
+  // runtime-client subpath) and demonstrates client.reply() so the
   // first thing the author sees is the SDK pattern, not raw fetch.
   "functions:init": FunctionsInitCommand,
+  // `functions:templates` is the local template catalog behind
+  // functions:init. It gives humans a table and agents stable JSON
+  // metadata before we have any remote template-search service.
+  "functions:templates": FunctionsTemplatesCommand,
   // `functions:deploy` and `functions:redeploy` are file-input
   // shortcuts for create-function / update-function. The underlying
   // ops take `code` as a body string, which is awkward at the CLI

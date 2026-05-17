@@ -3,17 +3,28 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  FUNCTION_TEMPLATES,
   isValidFunctionName,
   renderHandler,
   renderPackageJson,
   scaffoldFiles,
   writeScaffold,
 } from "../../src/oclif/commands/functions-init.js";
+import {
+  DEFAULT_FUNCTION_TEMPLATE_ID,
+  formatFunctionTemplateList,
+  PRIMITIVE_TEAM_AUTHOR,
+  serializeFunctionTemplate,
+} from "../../src/oclif/function-templates.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
 describe("functions:init command registration", () => {
   it("registers in the COMMANDS map", () => {
     expect(COMMANDS["functions:init"]).toBeDefined();
+  });
+
+  it("registers the template-listing command in the COMMANDS map", () => {
+    expect(COMMANDS["functions:templates"]).toBeDefined();
   });
 });
 
@@ -339,6 +350,52 @@ describe("scaffoldFiles", () => {
       "README.md",
     ]);
   });
+
+  it("uses the default email-reply template when no template is specified", () => {
+    const defaultFiles = scaffoldFiles("my-fn");
+    const explicitFiles = scaffoldFiles("my-fn", DEFAULT_FUNCTION_TEMPLATE_ID);
+    expect(defaultFiles).toEqual(explicitFiles);
+  });
+
+  it("rejects unknown template ids before writing files", () => {
+    expect(() => scaffoldFiles("my-fn", "does-not-exist")).toThrow(
+      /Unknown function template/,
+    );
+  });
+});
+
+describe("FUNCTION_TEMPLATES", () => {
+  it("starts as a Primitive-owned email-reply template", () => {
+    expect(FUNCTION_TEMPLATES.map((template) => template.id)).toEqual([
+      "email-reply",
+    ]);
+    expect(FUNCTION_TEMPLATES[0]?.author.id).toBe("primitive-team");
+    expect(FUNCTION_TEMPLATES[0]?.tags).toContain("email");
+  });
+
+  it("serializes metadata without renderer functions for agent discovery", () => {
+    const serialized = serializeFunctionTemplate(FUNCTION_TEMPLATES[0]);
+    expect(serialized).toMatchObject({
+      author: { id: "primitive-team", name: "Primitive Team" },
+      id: "email-reply",
+      title: "Email Reply",
+    });
+    expect(serialized).not.toHaveProperty("files");
+  });
+
+  it("defensively copies the template author in serialized metadata", () => {
+    const serialized = serializeFunctionTemplate(FUNCTION_TEMPLATES[0]);
+    serialized.author.name = "Mutated";
+    expect(PRIMITIVE_TEAM_AUTHOR.name).toBe("Primitive Team");
+    expect(FUNCTION_TEMPLATES[0]?.author.name).toBe("Primitive Team");
+  });
+
+  it("formats a human-readable template list with init guidance", () => {
+    const output = formatFunctionTemplateList(FUNCTION_TEMPLATES);
+    expect(output).toContain("email-reply");
+    expect(output).toContain("Primitive Team");
+    expect(output).toContain("primitive functions init <name> --template <id>");
+  });
 });
 
 describe("writeScaffold", () => {
@@ -428,6 +485,19 @@ describe("writeScaffold", () => {
 
     // The outDir was never created because we bail before touching
     // the filesystem.
+    expect(() => readdirSync(outDir)).toThrow();
+  });
+
+  it("rejects an unknown template id and writes nothing", () => {
+    const outDir = resolve(workRoot, "bad-template");
+    expect(() =>
+      writeScaffold({
+        name: "bad-template",
+        outDir,
+        templateId: "does-not-exist",
+      }),
+    ).toThrow(/Unknown function template/);
+
     expect(() => readdirSync(outDir)).toThrow();
   });
 });
