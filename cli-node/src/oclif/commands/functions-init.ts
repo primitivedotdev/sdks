@@ -20,7 +20,7 @@ import { Args, Command, Errors, Flags } from "@oclif/core";
 // the CLI's own @primitivedotdev/sdk dep range in cli-node/package.json
 // so scaffolded projects use the same SDK version the CLI was built
 // and tested against.
-const SDK_VERSION_RANGE = "^0.27.1";
+const SDK_VERSION_RANGE = "^0.28.0";
 
 // The CLI version range that ships in the scaffolded devDependencies.
 // Pinned separately from SDK_VERSION_RANGE because @primitivedotdev/cli
@@ -32,7 +32,7 @@ const SDK_VERSION_RANGE = "^0.27.1";
 // resolves at least v1.2.3, so the user does not silently downgrade
 // the bin under themselves. The lockstep test in functions-init.test.ts
 // enforces that invariant.
-const CLI_VERSION_RANGE = "^0.26.0";
+const CLI_VERSION_RANGE = "^0.27.0";
 
 // esbuild version range. Pinned to the latest stable major used
 // elsewhere in the Primitive codebase for bundling Workers-style
