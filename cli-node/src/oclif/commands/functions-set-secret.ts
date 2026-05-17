@@ -252,7 +252,7 @@ class FunctionsSetSecretCommand extends Command {
     }),
     stdin: Flags.boolean({
       description:
-        "Read the secret value from stdin. Example: printf '%s' \"$OPENAI_KEY\" | primitive functions set-secret --id <fn-id> --key OPENAI_KEY --stdin",
+        "Read the secret value from stdin. A single trailing line ending is stripped. Example: printf '%s' \"$OPENAI_KEY\" | primitive functions set-secret --id <fn-id> --key OPENAI_KEY --stdin",
     }),
     redeploy: Flags.boolean({
       description:

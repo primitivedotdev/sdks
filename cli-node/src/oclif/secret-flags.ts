@@ -229,6 +229,11 @@ function defaultReadFile(path: string): string {
 }
 
 function defaultReadStdin(): string {
+  if (process.stdin.isTTY) {
+    throw new Error(
+      "stdin is a TTY; pipe a value into this command or pass a file/env source instead.",
+    );
+  }
   return readFileSync(0, "utf8");
 }
 
@@ -292,7 +297,7 @@ function readSecretStdin(
   readStdin: () => string,
 ): ResolveSingleSecretValueResult {
   try {
-    return { kind: "ok", value: readStdin() };
+    return { kind: "ok", value: stripOneTrailingLineEnding(readStdin()) };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -300,6 +305,12 @@ function readSecretStdin(
       message: `Could not read ${flagLabel}: ${detail}`,
     };
   }
+}
+
+function stripOneTrailingLineEnding(value: string): string {
+  if (!value.endsWith("\n")) return value;
+  const withoutLf = value.slice(0, -1);
+  return withoutLf.endsWith("\r") ? withoutLf.slice(0, -1) : withoutLf;
 }
 
 function parseEnvFileKeyRef(

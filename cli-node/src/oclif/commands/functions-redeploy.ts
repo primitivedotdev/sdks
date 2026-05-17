@@ -255,7 +255,7 @@ class FunctionsRedeployCommand extends Command {
     }),
     "secret-from-stdin": Flags.string({
       description:
-        "Secret KEY to read from stdin and write before the redeploy. Stdin is consumed once, so this flag is not repeatable.",
+        "Secret KEY to read from stdin and write before the redeploy. A single trailing line ending is stripped. Stdin is consumed once, so this flag is not repeatable.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,

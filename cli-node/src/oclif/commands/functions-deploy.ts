@@ -332,7 +332,7 @@ class FunctionsDeployCommand extends Command {
     }),
     "secret-from-stdin": Flags.string({
       description:
-        "Secret KEY to read from stdin and seed on the deployed function. Stdin is consumed once, so this flag is not repeatable.",
+        "Secret KEY to read from stdin and seed on the deployed function. A single trailing line ending is stripped. Stdin is consumed once, so this flag is not repeatable.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,

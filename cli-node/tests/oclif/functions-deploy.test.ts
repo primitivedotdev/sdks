@@ -306,7 +306,7 @@ describe("resolveSecretFlags", () => {
     }
   });
 
-  it("reads one secret value from stdin", () => {
+  it("strips one trailing line ending from a stdin secret value", () => {
     const result = resolveSecretFlags({
       fromStdin: "OPENAI_KEY",
       readStdin: () => "sk-from-stdin\n",
@@ -315,7 +315,21 @@ describe("resolveSecretFlags", () => {
     expect(result.kind).toBe("ok");
     if (result.kind === "ok") {
       expect(result.secrets).toEqual([
-        { key: "OPENAI_KEY", value: "sk-from-stdin\n" },
+        { key: "OPENAI_KEY", value: "sk-from-stdin" },
+      ]);
+    }
+  });
+
+  it("strips a CRLF stdin line ending without trimming other content", () => {
+    const result = resolveSecretFlags({
+      fromStdin: "OPENAI_KEY",
+      readStdin: () => "  sk-from-stdin  \r\n",
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.secrets).toEqual([
+        { key: "OPENAI_KEY", value: "  sk-from-stdin  " },
       ]);
     }
   });
@@ -393,6 +407,21 @@ describe("resolveSecretFlags", () => {
     if (result.kind === "error") {
       expect(result.message).toContain("lowercase");
       expect(result.message).toContain("does not match");
+    }
+  });
+
+  it("reports stdin read errors for --secret-from-stdin", () => {
+    const result = resolveSecretFlags({
+      fromStdin: "OPENAI_KEY",
+      readStdin: () => {
+        throw new Error("stdin is a TTY");
+      },
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("Could not read --secret-from-stdin");
+      expect(result.message).toContain("stdin is a TTY");
     }
   });
 });
