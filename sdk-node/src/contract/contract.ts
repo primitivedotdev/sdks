@@ -71,6 +71,8 @@ export interface ParsedInputComplete {
   cc?: EmailAddress[] | null;
   /** Parsed BCC header addresses. Defaults to `null` when omitted. */
   bcc?: EmailAddress[] | null;
+  /** Parsed To header addresses. Defaults to `null` when omitted. */
+  to_addresses?: EmailAddress[] | null;
   /** In-Reply-To header values. Defaults to `null` when omitted. */
   in_reply_to?: string[] | null;
   /** References header values. Defaults to `null` when omitted. */
@@ -106,6 +108,8 @@ export interface EmailReceivedEventInput {
   sender: string;
   /** To header value. */
   recipient: string;
+  /** Full RFC 5322 To header value. Defaults to `recipient` for backwards compatibility. */
+  to_header?: string | null;
   /** Subject header value, if present. */
   subject: string | null;
   /** ISO 8601 timestamp when Primitive received the email. */
@@ -296,6 +300,7 @@ export function buildEmailReceivedEvent(
       reply_to: input.parsed.reply_to ?? null,
       cc: input.parsed.cc ?? null,
       bcc: input.parsed.bcc ?? null,
+      to_addresses: input.parsed.to_addresses ?? null,
       in_reply_to: input.parsed.in_reply_to ?? null,
       references: input.parsed.references ?? null,
       attachments: input.parsed.attachments,
@@ -313,6 +318,7 @@ export function buildEmailReceivedEvent(
       reply_to: null,
       cc: null,
       bcc: null,
+      to_addresses: null,
       in_reply_to: null,
       references: null,
       attachments: [],
@@ -331,6 +337,7 @@ export function buildEmailReceivedEvent(
       reply_to: null,
       cc: null,
       bcc: null,
+      to_addresses: null,
       in_reply_to: null,
       references: null,
       attachments: [],
@@ -359,7 +366,7 @@ export function buildEmailReceivedEvent(
         message_id: input.message_id,
         subject: input.subject,
         from: input.sender,
-        to: input.recipient,
+        to: input.to_header ?? input.recipient,
         date: input.date_header,
       },
       content: {
@@ -399,6 +406,8 @@ export interface BuildEventFromParsedDataOptions {
   sender: string;
   /** To header value. */
   recipient: string;
+  /** Full RFC 5322 To header value. Defaults to `recipient` for backwards compatibility. */
+  toHeader?: string | null;
   /** Subject header value, or null. */
   subject: string | null;
   /** ISO 8601 timestamp when the producer accepted the email. */
@@ -491,6 +500,7 @@ export function buildEventFromParsedData(
     reply_to: parsed.reply_to,
     cc: parsed.cc,
     bcc: parsed.bcc,
+    to_addresses: parsed.to_addresses,
     in_reply_to: parsed.in_reply_to,
     references: parsed.references,
     attachments: parsed.attachments,
@@ -502,6 +512,7 @@ export function buildEventFromParsedData(
     message_id: params.messageId,
     sender: params.sender,
     recipient: params.recipient,
+    to_header: params.toHeader,
     subject: params.subject,
     received_at: params.receivedAt,
     smtp_helo: params.smtpHelo,

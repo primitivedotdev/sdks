@@ -377,6 +377,7 @@ describe("contract", () => {
           expect(event.email.parsed.reply_to).toBeNull();
           expect(event.email.parsed.cc).toBeNull();
           expect(event.email.parsed.bcc).toBeNull();
+          expect(event.email.parsed.to_addresses).toBeNull();
           expect(event.email.parsed.in_reply_to).toBeNull();
           expect(event.email.parsed.references).toBeNull();
         }
@@ -448,6 +449,31 @@ describe("contract", () => {
         }
       });
 
+      it("includes to_addresses when provided", () => {
+        const parsed: ParsedInputComplete = {
+          status: "complete",
+          body_text: "Test body",
+          body_html: null,
+          to_addresses: [
+            { address: "to1@example.com", name: "To One" },
+            { address: "to2@example.com", name: null },
+          ],
+          attachments: [],
+          attachments_storage_key: null,
+        };
+
+        const event = buildEmailReceivedEvent({ ...baseInput, parsed });
+
+        if (event.email.parsed.status === "complete") {
+          expect(event.email.parsed.to_addresses).toHaveLength(2);
+          expect(event.email.parsed.to_addresses?.[0].address).toBe(
+            "to1@example.com",
+          );
+          expect(event.email.parsed.to_addresses?.[0].name).toBe("To One");
+          expect(event.email.parsed.to_addresses?.[1].name).toBeNull();
+        }
+      });
+
       it("includes in_reply_to when provided", () => {
         const parsed: ParsedInputComplete = {
           status: "complete",
@@ -497,6 +523,7 @@ describe("contract", () => {
           reply_to: [{ address: "reply@example.com", name: "Reply" }],
           cc: [{ address: "cc@example.com", name: null }],
           bcc: [{ address: "bcc@example.com", name: "Hidden" }],
+          to_addresses: [{ address: "to@example.com", name: "Visible" }],
           in_reply_to: ["<original@example.com>"],
           references: ["<ref1@example.com>", "<ref2@example.com>"],
           attachments: [],
@@ -509,6 +536,7 @@ describe("contract", () => {
           expect(event.email.parsed.reply_to).toHaveLength(1);
           expect(event.email.parsed.cc).toHaveLength(1);
           expect(event.email.parsed.bcc).toHaveLength(1);
+          expect(event.email.parsed.to_addresses).toHaveLength(1);
           expect(event.email.parsed.in_reply_to).toHaveLength(1);
           expect(event.email.parsed.references).toHaveLength(2);
         }
@@ -530,6 +558,7 @@ describe("contract", () => {
           expect(event.email.parsed.reply_to).toBeNull();
           expect(event.email.parsed.cc).toBeNull();
           expect(event.email.parsed.bcc).toBeNull();
+          expect(event.email.parsed.to_addresses).toBeNull();
           expect(event.email.parsed.in_reply_to).toBeNull();
           expect(event.email.parsed.references).toBeNull();
         }
@@ -542,6 +571,7 @@ describe("contract", () => {
           expect(event.email.parsed.reply_to).toBeNull();
           expect(event.email.parsed.cc).toBeNull();
           expect(event.email.parsed.bcc).toBeNull();
+          expect(event.email.parsed.to_addresses).toBeNull();
           expect(event.email.parsed.in_reply_to).toBeNull();
           expect(event.email.parsed.references).toBeNull();
         }
@@ -555,6 +585,7 @@ describe("contract", () => {
           reply_to: [],
           cc: [],
           bcc: [],
+          to_addresses: [],
           in_reply_to: [],
           references: [],
           attachments: [],
@@ -567,6 +598,7 @@ describe("contract", () => {
           expect(event.email.parsed.reply_to).toEqual([]);
           expect(event.email.parsed.cc).toEqual([]);
           expect(event.email.parsed.bcc).toEqual([]);
+          expect(event.email.parsed.to_addresses).toEqual([]);
           expect(event.email.parsed.in_reply_to).toEqual([]);
           expect(event.email.parsed.references).toEqual([]);
         }
@@ -580,6 +612,7 @@ describe("contract", () => {
           reply_to: null,
           cc: null,
           bcc: null,
+          to_addresses: null,
           in_reply_to: null,
           references: null,
           attachments: [],
@@ -592,10 +625,22 @@ describe("contract", () => {
           expect(event.email.parsed.reply_to).toBeNull();
           expect(event.email.parsed.cc).toBeNull();
           expect(event.email.parsed.bcc).toBeNull();
+          expect(event.email.parsed.to_addresses).toBeNull();
           expect(event.email.parsed.in_reply_to).toBeNull();
           expect(event.email.parsed.references).toBeNull();
         }
       });
+    });
+
+    it("uses explicit to_header for email.headers.to", () => {
+      const event = buildEmailReceivedEvent({
+        ...baseInput,
+        to_header: "To One <to1@example.com>, to2@example.com",
+      });
+
+      expect(event.email.headers.to).toBe(
+        "To One <to1@example.com>, to2@example.com",
+      );
     });
 
     it("handles null values correctly", () => {
@@ -771,6 +816,7 @@ describe("contract", () => {
       reply_to: null,
       cc: null,
       bcc: null,
+      to_addresses: null,
       in_reply_to: null,
       references: null,
       attachments: [],
@@ -909,6 +955,27 @@ describe("contract", () => {
         "first@example.com",
         "second@example.com",
       ]);
+    });
+
+    it("uses explicit toHeader for email.headers.to", () => {
+      const event = buildEventFromParsedData({
+        ...baseOptions,
+        toHeader: "To One <to1@example.com>, to2@example.com",
+        parsed: {
+          ...emptyParsed,
+          to_addresses: [
+            { address: "to1@example.com", name: "To One" },
+            { address: "to2@example.com", name: null },
+          ],
+        },
+      });
+
+      expect(event.email.headers.to).toBe(
+        "To One <to1@example.com>, to2@example.com",
+      );
+      if (event.email.parsed.status === "complete") {
+        expect(event.email.parsed.to_addresses).toHaveLength(2);
+      }
     });
 
     it("throws when attachmentsDownloadUrl is non-null with zero attachments", () => {

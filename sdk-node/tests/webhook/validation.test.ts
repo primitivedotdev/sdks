@@ -51,6 +51,7 @@ const validPayload = {
       reply_to: null,
       cc: null,
       bcc: null,
+      to_addresses: null,
       in_reply_to: null,
       references: null,
       attachments: [],

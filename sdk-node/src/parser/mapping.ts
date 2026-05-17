@@ -40,6 +40,7 @@ export function toParsedDataComplete(
     reply_to: parsed.replyTo,
     cc: parsed.cc,
     bcc: parsed.bcc,
+    to_addresses: parsed.toAddresses,
     in_reply_to: parsed.inReplyTo,
     references: parsed.references,
     attachments,

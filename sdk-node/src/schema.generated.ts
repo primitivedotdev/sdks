@@ -391,6 +391,20 @@ export const emailReceivedEventJsonSchema = {
           ],
           "description": "Parsed BCC header addresses. Null if the email had no BCC header. Note: BCC is only available for outgoing emails or when explicitly provided."
         },
+        "to_addresses": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EmailAddress"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parsed To header addresses. Null if the email had no To header."
+        },
         "in_reply_to": {
           "anyOf": [
             {
@@ -455,6 +469,7 @@ export const emailReceivedEventJsonSchema = {
         "reply_to",
         "cc",
         "bcc",
+        "to_addresses",
         "in_reply_to",
         "references",
         "attachments",
@@ -559,6 +574,10 @@ export const emailReceivedEventJsonSchema = {
           "type": "null",
           "description": "Always null when parsing fails."
         },
+        "to_addresses": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        },
         "in_reply_to": {
           "type": "null",
           "description": "Always null when parsing fails."
@@ -587,6 +606,7 @@ export const emailReceivedEventJsonSchema = {
         "reply_to",
         "cc",
         "bcc",
+        "to_addresses",
         "in_reply_to",
         "references",
         "attachments",
