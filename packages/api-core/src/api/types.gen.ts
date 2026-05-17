@@ -172,6 +172,82 @@ export type CliLoginPollResult = {
     org_name: string | null;
 };
 
+export type StartCliSignupInput = {
+    email: string;
+    signup_code: string;
+    /**
+     * Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy
+     */
+    terms_accepted: boolean;
+    /**
+     * Human-readable device name used for the created CLI API key
+     */
+    device_name?: string;
+    /**
+     * Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or fewer
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+};
+
+export type CliSignupStartResult = {
+    /**
+     * Opaque token used to verify or resend the pending CLI signup
+     */
+    signup_token: string;
+    email: string;
+    /**
+     * Seconds until the pending signup expires
+     */
+    expires_in: number;
+    /**
+     * Minimum seconds before requesting another verification email
+     */
+    resend_after: number;
+    /**
+     * Number of digits in the emailed verification code
+     */
+    verification_code_length: number;
+};
+
+export type ResendCliSignupVerificationInput = {
+    signup_token: string;
+};
+
+export type CliSignupResendResult = {
+    email: string;
+    /**
+     * Seconds until the pending signup expires
+     */
+    expires_in: number;
+    /**
+     * Minimum seconds before requesting another verification email
+     */
+    resend_after: number;
+    /**
+     * Number of digits in the emailed verification code
+     */
+    verification_code_length: number;
+};
+
+export type VerifyCliSignupInput = {
+    signup_token: string;
+    verification_code: string;
+    password: string;
+};
+
+export type CliSignupVerifyResult = {
+    /**
+     * Newly-created API key for CLI authentication
+     */
+    api_key: string;
+    key_id: string;
+    key_prefix: string;
+    org_id: string;
+    org_name: string | null;
+};
+
 export type CliLogoutInput = {
     /**
      * Optional key id guard; when provided it must match the authenticated API key
@@ -1647,6 +1723,99 @@ export type PollCliLoginResponses = {
 };
 
 export type PollCliLoginResponse = PollCliLoginResponses[keyof PollCliLoginResponses];
+
+export type StartCliSignupData = {
+    body: StartCliSignupInput;
+    path?: never;
+    query?: never;
+    url: '/cli/signup/start';
+};
+
+export type StartCliSignupErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type StartCliSignupError = StartCliSignupErrors[keyof StartCliSignupErrors];
+
+export type StartCliSignupResponses = {
+    /**
+     * CLI signup session created and verification email sent
+     */
+    201: SuccessEnvelope & {
+        data?: CliSignupStartResult;
+    };
+};
+
+export type StartCliSignupResponse = StartCliSignupResponses[keyof StartCliSignupResponses];
+
+export type ResendCliSignupVerificationData = {
+    body: ResendCliSignupVerificationInput;
+    path?: never;
+    query?: never;
+    url: '/cli/signup/resend';
+};
+
+export type ResendCliSignupVerificationErrors = {
+    /**
+     * Invalid token or expired token
+     */
+    400: ErrorResponse;
+    /**
+     * Global rate limit exceeded or resend requested too quickly
+     */
+    429: ErrorResponse;
+};
+
+export type ResendCliSignupVerificationError = ResendCliSignupVerificationErrors[keyof ResendCliSignupVerificationErrors];
+
+export type ResendCliSignupVerificationResponses = {
+    /**
+     * Verification email resent
+     */
+    200: SuccessEnvelope & {
+        data?: CliSignupResendResult;
+    };
+};
+
+export type ResendCliSignupVerificationResponse = ResendCliSignupVerificationResponses[keyof ResendCliSignupVerificationResponses];
+
+export type VerifyCliSignupData = {
+    body: VerifyCliSignupInput;
+    path?: never;
+    query?: never;
+    url: '/cli/signup/verify';
+};
+
+export type VerifyCliSignupErrors = {
+    /**
+     * Invalid request, invalid verification code, expired token, invalid signup code, rejected password, or account creation failure
+     */
+    400: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type VerifyCliSignupError = VerifyCliSignupErrors[keyof VerifyCliSignupErrors];
+
+export type VerifyCliSignupResponses = {
+    /**
+     * CLI signup verified and API key created
+     */
+    200: SuccessEnvelope & {
+        data?: CliSignupVerifyResult;
+    };
+};
+
+export type VerifyCliSignupResponse = VerifyCliSignupResponses[keyof VerifyCliSignupResponses];
 
 export type CliLogoutData = {
     body?: CliLogoutInput;

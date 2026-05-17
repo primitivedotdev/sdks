@@ -9,6 +9,9 @@ from .cli_login_start_result import CliLoginStartResult
 from .cli_logout_input import CliLogoutInput
 from .cli_logout_response_200 import CliLogoutResponse200
 from .cli_logout_result import CliLogoutResult
+from .cli_signup_resend_result import CliSignupResendResult
+from .cli_signup_start_result import CliSignupStartResult
+from .cli_signup_verify_result import CliSignupVerifyResult
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_rules import CreateEndpointInputRules
 from .create_endpoint_response_201 import CreateEndpointResponse201
@@ -103,6 +106,8 @@ from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
 from .reply_input import ReplyInput
 from .reply_to_email_response_200 import ReplyToEmailResponse200
+from .resend_cli_signup_verification_input import ResendCliSignupVerificationInput
+from .resend_cli_signup_verification_response_200 import ResendCliSignupVerificationResponse200
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
 from .search_emails_has_attachment import SearchEmailsHasAttachment
 from .search_emails_include_facets import SearchEmailsIncludeFacets
@@ -130,6 +135,9 @@ from .set_function_secret_response_201 import SetFunctionSecretResponse201
 from .start_cli_login_input import StartCliLoginInput
 from .start_cli_login_input_metadata import StartCliLoginInputMetadata
 from .start_cli_login_response_201 import StartCliLoginResponse201
+from .start_cli_signup_input import StartCliSignupInput
+from .start_cli_signup_input_metadata import StartCliSignupInputMetadata
+from .start_cli_signup_response_201 import StartCliSignupResponse201
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
 from .test_endpoint_response_200 import TestEndpointResponse200
@@ -150,6 +158,8 @@ from .update_filter_response_200 import UpdateFilterResponse200
 from .update_function_input import UpdateFunctionInput
 from .update_function_response_200 import UpdateFunctionResponse200
 from .verified_domain import VerifiedDomain
+from .verify_cli_signup_input import VerifyCliSignupInput
+from .verify_cli_signup_response_200 import VerifyCliSignupResponse200
 from .verify_domain_response_200 import VerifyDomainResponse200
 from .webhook_secret import WebhookSecret
 
@@ -163,6 +173,9 @@ __all__ = (
     "CliLogoutInput",
     "CliLogoutResponse200",
     "CliLogoutResult",
+    "CliSignupResendResult",
+    "CliSignupStartResult",
+    "CliSignupVerifyResult",
     "CreateEndpointInput",
     "CreateEndpointInputRules",
     "CreateEndpointResponse201",
@@ -257,6 +270,8 @@ __all__ = (
     "ReplayResult",
     "ReplyInput",
     "ReplyToEmailResponse200",
+    "ResendCliSignupVerificationInput",
+    "ResendCliSignupVerificationResponse200",
     "RotateWebhookSecretResponse200",
     "SearchEmailsHasAttachment",
     "SearchEmailsIncludeFacets",
@@ -284,6 +299,9 @@ __all__ = (
     "StartCliLoginInput",
     "StartCliLoginInputMetadata",
     "StartCliLoginResponse201",
+    "StartCliSignupInput",
+    "StartCliSignupInputMetadata",
+    "StartCliSignupResponse201",
     "StorageStats",
     "SuccessEnvelope",
     "TestEndpointResponse200",
@@ -304,6 +322,8 @@ __all__ = (
     "UpdateFunctionInput",
     "UpdateFunctionResponse200",
     "VerifiedDomain",
+    "VerifyCliSignupInput",
+    "VerifyCliSignupResponse200",
     "VerifyDomainResponse200",
     "WebhookSecret",
 )

@@ -17,6 +17,7 @@ import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
 import ReplyCommand from "./commands/reply.js";
 import SendCommand from "./commands/send.js";
+import SignupCommand from "./commands/signup.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
 
@@ -252,6 +253,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   reply: ReplyCommand,
   // `login` creates and stores an org-scoped CLI API key via browser approval.
   login: LoginCommand,
+  // `signup` creates an account, verifies email, and stores a CLI API key.
+  signup: SignupCommand,
   // `logout` revokes the saved CLI API key and removes local credentials.
   logout: LogoutCommand,
   // `whoami` is the credentials smoke test. Prints the account the

@@ -510,6 +510,180 @@ type CliLogoutUnauthorized ErrorResponse
 
 func (*CliLogoutUnauthorized) cliLogoutRes() {}
 
+// Ref: #/components/schemas/CliSignupResendResult
+type CliSignupResendResult struct {
+	Email string `json:"email"`
+	// Seconds until the pending signup expires.
+	ExpiresIn int `json:"expires_in"`
+	// Minimum seconds before requesting another verification email.
+	ResendAfter int `json:"resend_after"`
+	// Number of digits in the emailed verification code.
+	VerificationCodeLength int `json:"verification_code_length"`
+}
+
+// GetEmail returns the value of Email.
+func (s *CliSignupResendResult) GetEmail() string {
+	return s.Email
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *CliSignupResendResult) GetExpiresIn() int {
+	return s.ExpiresIn
+}
+
+// GetResendAfter returns the value of ResendAfter.
+func (s *CliSignupResendResult) GetResendAfter() int {
+	return s.ResendAfter
+}
+
+// GetVerificationCodeLength returns the value of VerificationCodeLength.
+func (s *CliSignupResendResult) GetVerificationCodeLength() int {
+	return s.VerificationCodeLength
+}
+
+// SetEmail sets the value of Email.
+func (s *CliSignupResendResult) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *CliSignupResendResult) SetExpiresIn(val int) {
+	s.ExpiresIn = val
+}
+
+// SetResendAfter sets the value of ResendAfter.
+func (s *CliSignupResendResult) SetResendAfter(val int) {
+	s.ResendAfter = val
+}
+
+// SetVerificationCodeLength sets the value of VerificationCodeLength.
+func (s *CliSignupResendResult) SetVerificationCodeLength(val int) {
+	s.VerificationCodeLength = val
+}
+
+// Ref: #/components/schemas/CliSignupStartResult
+type CliSignupStartResult struct {
+	// Opaque token used to verify or resend the pending CLI signup.
+	SignupToken string `json:"signup_token"`
+	Email       string `json:"email"`
+	// Seconds until the pending signup expires.
+	ExpiresIn int `json:"expires_in"`
+	// Minimum seconds before requesting another verification email.
+	ResendAfter int `json:"resend_after"`
+	// Number of digits in the emailed verification code.
+	VerificationCodeLength int `json:"verification_code_length"`
+}
+
+// GetSignupToken returns the value of SignupToken.
+func (s *CliSignupStartResult) GetSignupToken() string {
+	return s.SignupToken
+}
+
+// GetEmail returns the value of Email.
+func (s *CliSignupStartResult) GetEmail() string {
+	return s.Email
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *CliSignupStartResult) GetExpiresIn() int {
+	return s.ExpiresIn
+}
+
+// GetResendAfter returns the value of ResendAfter.
+func (s *CliSignupStartResult) GetResendAfter() int {
+	return s.ResendAfter
+}
+
+// GetVerificationCodeLength returns the value of VerificationCodeLength.
+func (s *CliSignupStartResult) GetVerificationCodeLength() int {
+	return s.VerificationCodeLength
+}
+
+// SetSignupToken sets the value of SignupToken.
+func (s *CliSignupStartResult) SetSignupToken(val string) {
+	s.SignupToken = val
+}
+
+// SetEmail sets the value of Email.
+func (s *CliSignupStartResult) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *CliSignupStartResult) SetExpiresIn(val int) {
+	s.ExpiresIn = val
+}
+
+// SetResendAfter sets the value of ResendAfter.
+func (s *CliSignupStartResult) SetResendAfter(val int) {
+	s.ResendAfter = val
+}
+
+// SetVerificationCodeLength sets the value of VerificationCodeLength.
+func (s *CliSignupStartResult) SetVerificationCodeLength(val int) {
+	s.VerificationCodeLength = val
+}
+
+// Ref: #/components/schemas/CliSignupVerifyResult
+type CliSignupVerifyResult struct {
+	// Newly-created API key for CLI authentication.
+	APIKey    string    `json:"api_key"`
+	KeyID     uuid.UUID `json:"key_id"`
+	KeyPrefix string    `json:"key_prefix"`
+	OrgID     uuid.UUID `json:"org_id"`
+	OrgName   NilString `json:"org_name"`
+}
+
+// GetAPIKey returns the value of APIKey.
+func (s *CliSignupVerifyResult) GetAPIKey() string {
+	return s.APIKey
+}
+
+// GetKeyID returns the value of KeyID.
+func (s *CliSignupVerifyResult) GetKeyID() uuid.UUID {
+	return s.KeyID
+}
+
+// GetKeyPrefix returns the value of KeyPrefix.
+func (s *CliSignupVerifyResult) GetKeyPrefix() string {
+	return s.KeyPrefix
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *CliSignupVerifyResult) GetOrgID() uuid.UUID {
+	return s.OrgID
+}
+
+// GetOrgName returns the value of OrgName.
+func (s *CliSignupVerifyResult) GetOrgName() NilString {
+	return s.OrgName
+}
+
+// SetAPIKey sets the value of APIKey.
+func (s *CliSignupVerifyResult) SetAPIKey(val string) {
+	s.APIKey = val
+}
+
+// SetKeyID sets the value of KeyID.
+func (s *CliSignupVerifyResult) SetKeyID(val uuid.UUID) {
+	s.KeyID = val
+}
+
+// SetKeyPrefix sets the value of KeyPrefix.
+func (s *CliSignupVerifyResult) SetKeyPrefix(val string) {
+	s.KeyPrefix = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *CliSignupVerifyResult) SetOrgID(val uuid.UUID) {
+	s.OrgID = val
+}
+
+// SetOrgName sets the value of OrgName.
+func (s *CliSignupVerifyResult) SetOrgName(val NilString) {
+	s.OrgName = val
+}
+
 type CreateEndpointBadRequest ErrorResponse
 
 func (*CreateEndpointBadRequest) createEndpointRes() {}
@@ -3343,13 +3517,16 @@ func (s *ErrorResponse) SetError(val ErrorResponseError) {
 	s.Error = val
 }
 
-func (*ErrorResponse) getSendPermissionsRes() {}
-func (*ErrorResponse) listDomainsRes()        {}
-func (*ErrorResponse) listEndpointsRes()      {}
-func (*ErrorResponse) listFiltersRes()        {}
-func (*ErrorResponse) listFunctionsRes()      {}
-func (*ErrorResponse) pollCliLoginRes()       {}
-func (*ErrorResponse) startCliLoginRes()      {}
+func (*ErrorResponse) getSendPermissionsRes()          {}
+func (*ErrorResponse) listDomainsRes()                 {}
+func (*ErrorResponse) listEndpointsRes()               {}
+func (*ErrorResponse) listFiltersRes()                 {}
+func (*ErrorResponse) listFunctionsRes()               {}
+func (*ErrorResponse) pollCliLoginRes()                {}
+func (*ErrorResponse) resendCliSignupVerificationRes() {}
+func (*ErrorResponse) startCliLoginRes()               {}
+func (*ErrorResponse) startCliSignupRes()              {}
+func (*ErrorResponse) verifyCliSignupRes()             {}
 
 type ErrorResponseError struct {
 	Code    ErrorResponseErrorCode `json:"code"`
@@ -3758,7 +3935,8 @@ func (s *ErrorResponseHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
-func (*ErrorResponseHeaders) pollCliLoginRes() {}
+func (*ErrorResponseHeaders) pollCliLoginRes()                {}
+func (*ErrorResponseHeaders) resendCliSignupVerificationRes() {}
 
 // Ref: #/components/schemas/Filter
 type Filter struct {
@@ -7019,6 +7197,52 @@ func (o OptStartCliLoginInputMetadata) Or(d StartCliLoginInputMetadata) StartCli
 	return d
 }
 
+// NewOptStartCliSignupInputMetadata returns new OptStartCliSignupInputMetadata with value set to v.
+func NewOptStartCliSignupInputMetadata(v StartCliSignupInputMetadata) OptStartCliSignupInputMetadata {
+	return OptStartCliSignupInputMetadata{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptStartCliSignupInputMetadata is optional StartCliSignupInputMetadata.
+type OptStartCliSignupInputMetadata struct {
+	Value StartCliSignupInputMetadata
+	Set   bool
+}
+
+// IsSet returns true if OptStartCliSignupInputMetadata was set.
+func (o OptStartCliSignupInputMetadata) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptStartCliSignupInputMetadata) Reset() {
+	var v StartCliSignupInputMetadata
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptStartCliSignupInputMetadata) SetTo(v StartCliSignupInputMetadata) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptStartCliSignupInputMetadata) Get() (v StartCliSignupInputMetadata, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptStartCliSignupInputMetadata) Or(d StartCliSignupInputMetadata) StartCliSignupInputMetadata {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptString returns new OptString with value set to v.
 func NewOptString(v string) OptString {
 	return OptString{
@@ -7299,7 +7523,9 @@ func (*RateLimitedHeaders) replyToEmailRes()        {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes() {}
 func (*RateLimitedHeaders) sendEmailRes()           {}
 func (*RateLimitedHeaders) startCliLoginRes()       {}
+func (*RateLimitedHeaders) startCliSignupRes()      {}
 func (*RateLimitedHeaders) testEndpointRes()        {}
+func (*RateLimitedHeaders) verifyCliSignupRes()     {}
 
 type ReplayDeliveryBadRequest ErrorResponse
 
@@ -7537,6 +7763,75 @@ func (*ReplyToEmailUnauthorized) replyToEmailRes() {}
 type ReplyToEmailUnprocessableEntity ErrorResponse
 
 func (*ReplyToEmailUnprocessableEntity) replyToEmailRes() {}
+
+// Ref: #/components/schemas/ResendCliSignupVerificationInput
+type ResendCliSignupVerificationInput struct {
+	SignupToken string `json:"signup_token"`
+}
+
+// GetSignupToken returns the value of SignupToken.
+func (s *ResendCliSignupVerificationInput) GetSignupToken() string {
+	return s.SignupToken
+}
+
+// SetSignupToken sets the value of SignupToken.
+func (s *ResendCliSignupVerificationInput) SetSignupToken(val string) {
+	s.SignupToken = val
+}
+
+// Merged schema.
+type ResendCliSignupVerificationOK struct {
+	Success bool                  `json:"success"`
+	Data    CliSignupResendResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ResendCliSignupVerificationOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ResendCliSignupVerificationOK) GetData() CliSignupResendResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ResendCliSignupVerificationOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ResendCliSignupVerificationOK) SetData(val CliSignupResendResult) {
+	s.Data = val
+}
+
+// ResendCliSignupVerificationOKHeaders wraps ResendCliSignupVerificationOK with response headers.
+type ResendCliSignupVerificationOKHeaders struct {
+	CacheControl OptString
+	Response     ResendCliSignupVerificationOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *ResendCliSignupVerificationOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *ResendCliSignupVerificationOKHeaders) GetResponse() ResendCliSignupVerificationOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *ResendCliSignupVerificationOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ResendCliSignupVerificationOKHeaders) SetResponse(val ResendCliSignupVerificationOK) {
+	s.Response = val
+}
+
+func (*ResendCliSignupVerificationOKHeaders) resendCliSignupVerificationRes() {}
 
 type RotateWebhookSecretBadRequest ErrorResponse
 
@@ -9735,6 +10030,136 @@ func (s *StartCliLoginInputMetadata) init() StartCliLoginInputMetadata {
 	return m
 }
 
+// Merged schema.
+type StartCliSignupCreated struct {
+	Success bool                 `json:"success"`
+	Data    CliSignupStartResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *StartCliSignupCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *StartCliSignupCreated) GetData() CliSignupStartResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *StartCliSignupCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *StartCliSignupCreated) SetData(val CliSignupStartResult) {
+	s.Data = val
+}
+
+// StartCliSignupCreatedHeaders wraps StartCliSignupCreated with response headers.
+type StartCliSignupCreatedHeaders struct {
+	CacheControl OptString
+	Response     StartCliSignupCreated
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *StartCliSignupCreatedHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *StartCliSignupCreatedHeaders) GetResponse() StartCliSignupCreated {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *StartCliSignupCreatedHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *StartCliSignupCreatedHeaders) SetResponse(val StartCliSignupCreated) {
+	s.Response = val
+}
+
+func (*StartCliSignupCreatedHeaders) startCliSignupRes() {}
+
+// Ref: #/components/schemas/StartCliSignupInput
+type StartCliSignupInput struct {
+	Email      string `json:"email"`
+	SignupCode string `json:"signup_code"`
+	// Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy.
+	TermsAccepted bool `json:"terms_accepted"`
+	// Human-readable device name used for the created CLI API key.
+	DeviceName OptString `json:"device_name"`
+	// Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or
+	// fewer.
+	Metadata OptStartCliSignupInputMetadata `json:"metadata"`
+}
+
+// GetEmail returns the value of Email.
+func (s *StartCliSignupInput) GetEmail() string {
+	return s.Email
+}
+
+// GetSignupCode returns the value of SignupCode.
+func (s *StartCliSignupInput) GetSignupCode() string {
+	return s.SignupCode
+}
+
+// GetTermsAccepted returns the value of TermsAccepted.
+func (s *StartCliSignupInput) GetTermsAccepted() bool {
+	return s.TermsAccepted
+}
+
+// GetDeviceName returns the value of DeviceName.
+func (s *StartCliSignupInput) GetDeviceName() OptString {
+	return s.DeviceName
+}
+
+// GetMetadata returns the value of Metadata.
+func (s *StartCliSignupInput) GetMetadata() OptStartCliSignupInputMetadata {
+	return s.Metadata
+}
+
+// SetEmail sets the value of Email.
+func (s *StartCliSignupInput) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetSignupCode sets the value of SignupCode.
+func (s *StartCliSignupInput) SetSignupCode(val string) {
+	s.SignupCode = val
+}
+
+// SetTermsAccepted sets the value of TermsAccepted.
+func (s *StartCliSignupInput) SetTermsAccepted(val bool) {
+	s.TermsAccepted = val
+}
+
+// SetDeviceName sets the value of DeviceName.
+func (s *StartCliSignupInput) SetDeviceName(val OptString) {
+	s.DeviceName = val
+}
+
+// SetMetadata sets the value of Metadata.
+func (s *StartCliSignupInput) SetMetadata(val OptStartCliSignupInputMetadata) {
+	s.Metadata = val
+}
+
+// Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or
+// fewer.
+type StartCliSignupInputMetadata map[string]jx.Raw
+
+func (s *StartCliSignupInputMetadata) init() StartCliSignupInputMetadata {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
 // Ref: #/components/schemas/StorageStats
 type StorageStats struct {
 	// Total storage used in bytes.
@@ -10584,6 +11009,97 @@ func (s *VerifiedDomain) SetVerificationToken(val OptNilString) {
 func (s *VerifiedDomain) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
+
+// Ref: #/components/schemas/VerifyCliSignupInput
+type VerifyCliSignupInput struct {
+	SignupToken      string `json:"signup_token"`
+	VerificationCode string `json:"verification_code"`
+	Password         string `json:"password"`
+}
+
+// GetSignupToken returns the value of SignupToken.
+func (s *VerifyCliSignupInput) GetSignupToken() string {
+	return s.SignupToken
+}
+
+// GetVerificationCode returns the value of VerificationCode.
+func (s *VerifyCliSignupInput) GetVerificationCode() string {
+	return s.VerificationCode
+}
+
+// GetPassword returns the value of Password.
+func (s *VerifyCliSignupInput) GetPassword() string {
+	return s.Password
+}
+
+// SetSignupToken sets the value of SignupToken.
+func (s *VerifyCliSignupInput) SetSignupToken(val string) {
+	s.SignupToken = val
+}
+
+// SetVerificationCode sets the value of VerificationCode.
+func (s *VerifyCliSignupInput) SetVerificationCode(val string) {
+	s.VerificationCode = val
+}
+
+// SetPassword sets the value of Password.
+func (s *VerifyCliSignupInput) SetPassword(val string) {
+	s.Password = val
+}
+
+// Merged schema.
+type VerifyCliSignupOK struct {
+	Success bool                  `json:"success"`
+	Data    CliSignupVerifyResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *VerifyCliSignupOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *VerifyCliSignupOK) GetData() CliSignupVerifyResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *VerifyCliSignupOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *VerifyCliSignupOK) SetData(val CliSignupVerifyResult) {
+	s.Data = val
+}
+
+// VerifyCliSignupOKHeaders wraps VerifyCliSignupOK with response headers.
+type VerifyCliSignupOKHeaders struct {
+	CacheControl OptString
+	Response     VerifyCliSignupOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *VerifyCliSignupOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *VerifyCliSignupOKHeaders) GetResponse() VerifyCliSignupOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *VerifyCliSignupOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *VerifyCliSignupOKHeaders) SetResponse(val VerifyCliSignupOK) {
+	s.Response = val
+}
+
+func (*VerifyCliSignupOKHeaders) verifyCliSignupRes() {}
 
 type VerifyDomainBadRequest ErrorResponse
 
