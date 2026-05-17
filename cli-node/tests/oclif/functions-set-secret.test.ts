@@ -8,6 +8,7 @@ import FunctionsSetSecretCommand, {
   type SetSecretApiSurface,
 } from "../../src/oclif/commands/functions-set-secret.js";
 import { COMMANDS } from "../../src/oclif/index.js";
+import { resolveSingleSecretValue } from "../../src/oclif/secret-flags.js";
 
 const FN_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -96,6 +97,83 @@ describe("functions:set-secret command", () => {
       "drops any previously-uploaded source map",
     );
     expect(description).not.toContain("runtime side");
+  });
+});
+
+describe("resolveSingleSecretValue", () => {
+  it("uses the direct --value source", () => {
+    const result = resolveSingleSecretValue({
+      key: "API_TOKEN",
+      value: "abc123",
+    });
+
+    expect(result).toEqual({ kind: "ok", value: "abc123" });
+  });
+
+  it("reads --value-from-env from the provided environment", () => {
+    const result = resolveSingleSecretValue({
+      env: { OPENAI_KEY: "sk-env" },
+      key: "OPENAI_KEY",
+      valueFromEnv: "OPENAI_KEY",
+    });
+
+    expect(result).toEqual({ kind: "ok", value: "sk-env" });
+  });
+
+  it("reads --value-file as exact UTF-8 text", () => {
+    const result = resolveSingleSecretValue({
+      key: "PRIVATE_KEY",
+      readFile: () => "pem\nwith newline\n",
+      valueFile: "private-key.pem",
+    });
+
+    expect(result).toEqual({ kind: "ok", value: "pem\nwith newline\n" });
+  });
+
+  it("reads --key from --value-from-env-file when no suffix is provided", () => {
+    const result = resolveSingleSecretValue({
+      key: "OPENAI_KEY",
+      readFile: () => "OPENAI_KEY=sk-file\n",
+      valueFromEnvFile: ".env.local",
+    });
+
+    expect(result).toEqual({ kind: "ok", value: "sk-file" });
+  });
+
+  it("reads an explicit key from --value-from-env-file FILE:KEY", () => {
+    const result = resolveSingleSecretValue({
+      key: "OPENAI_KEY",
+      readFile: () => "OTHER_KEY=from-other\n",
+      valueFromEnvFile: ".env.local:OTHER_KEY",
+    });
+
+    expect(result).toEqual({ kind: "ok", value: "from-other" });
+  });
+
+  it("rejects missing or ambiguous value sources", () => {
+    const missing = resolveSingleSecretValue({ key: "API_TOKEN" });
+    expect(missing.kind).toBe("error");
+
+    const ambiguous = resolveSingleSecretValue({
+      key: "API_TOKEN",
+      value: "direct",
+      valueFromEnv: "API_TOKEN",
+    });
+    expect(ambiguous.kind).toBe("error");
+  });
+
+  it("reports a missing --value-from-env variable", () => {
+    const result = resolveSingleSecretValue({
+      env: {},
+      key: "OPENAI_KEY",
+      valueFromEnv: "OPENAI_KEY",
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("OPENAI_KEY");
+      expect(result.message).toContain("not set");
+    }
   });
 });
 

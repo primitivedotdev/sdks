@@ -9,7 +9,10 @@ import FunctionsDeployCommand, {
   runDeployWithSecrets,
 } from "../../src/oclif/commands/functions-deploy.js";
 import { COMMANDS } from "../../src/oclif/index.js";
-import { parseSecretFlags } from "../../src/oclif/secret-flags.js";
+import {
+  parseSecretFlags,
+  resolveSecretFlags,
+} from "../../src/oclif/secret-flags.js";
 
 const FN_ID = "22222222-2222-4222-8222-222222222222";
 const FN_NAME = "test-fn";
@@ -252,6 +255,112 @@ describe("parseSecretFlags", () => {
     expect(result.kind).toBe("error");
     if (result.kind === "error") {
       expect(result.message).toContain("FIRST");
+    }
+  });
+});
+
+describe("resolveSecretFlags", () => {
+  it("reads secrets from inline, env, file, and dotenv sources in deterministic order", () => {
+    const result = resolveSecretFlags({
+      env: { OPENAI_KEY: "sk-env" },
+      fromEnv: ["OPENAI_KEY"],
+      fromEnvFile: [".env.local:OWNER_EMAIL"],
+      fromFile: ["PRIVATE_KEY=private-key.pem"],
+      inline: ["INLINE=abc"],
+      readFile: (path) => {
+        if (path === "private-key.pem") return "pem\nwith trailing newline\n";
+        if (path === ".env.local") {
+          return [
+            "# comment",
+            "OPENAI_KEY=ignored",
+            "OWNER_EMAIL='owner@example.com'",
+          ].join("\n");
+        }
+        throw new Error(`unexpected path ${path}`);
+      },
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.secrets).toEqual([
+        { key: "INLINE", value: "abc" },
+        { key: "OPENAI_KEY", value: "sk-env" },
+        { key: "PRIVATE_KEY", value: "pem\nwith trailing newline\n" },
+        { key: "OWNER_EMAIL", value: "owner@example.com" },
+      ]);
+    }
+  });
+
+  it("parses double-quoted dotenv escapes and unquoted inline comments", () => {
+    const result = resolveSecretFlags({
+      fromEnvFile: [".env:DOUBLE", ".env:UNQUOTED"],
+      readFile: () => 'DOUBLE="line1\\nline2"\nUNQUOTED=value # comment\n',
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") {
+      expect(result.secrets).toEqual([
+        { key: "DOUBLE", value: "line1\nline2" },
+        { key: "UNQUOTED", value: "value" },
+      ]);
+    }
+  });
+
+  it("rejects duplicate keys across source types before API calls fire", () => {
+    const result = resolveSecretFlags({
+      env: { API_TOKEN: "from env" },
+      fromEnv: ["API_TOKEN"],
+      inline: ["API_TOKEN=inline"],
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("API_TOKEN");
+      expect(result.message).toContain("more than once");
+    }
+  });
+
+  it("reports a missing environment variable by name", () => {
+    const result = resolveSecretFlags({
+      env: {},
+      fromEnv: ["OPENAI_KEY"],
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("OPENAI_KEY");
+      expect(result.message).toContain("not set");
+    }
+  });
+
+  it("reports a missing dotenv key with the file path", () => {
+    const result = resolveSecretFlags({
+      fromEnvFile: [".env.local:OPENAI_KEY"],
+      readFile: () => "OTHER=value\n",
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("OPENAI_KEY");
+      expect(result.message).toContain(".env.local");
+    }
+  });
+
+  it("validates --secret-from-file keys before reading files", () => {
+    let reads = 0;
+    const result = resolveSecretFlags({
+      fromFile: ["lowercase=secret.txt"],
+      readFile: () => {
+        reads += 1;
+        return "should-not-read";
+      },
+    });
+
+    expect(result.kind).toBe("error");
+    expect(reads).toBe(0);
+    if (result.kind === "error") {
+      expect(result.message).toContain("lowercase");
+      expect(result.message).toContain("does not match");
     }
   });
 });
