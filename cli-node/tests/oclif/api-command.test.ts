@@ -594,12 +594,12 @@ describe("OPERATION_HINTS", () => {
   // introduced; the matching keys in the index.ts COMMANDS map are
   // the authoritative shortcut surface.
   it("points each generated op at its hand-rolled shortcut command", () => {
-    expect(OPERATION_HINTS.createFunction).toContain("functions:deploy");
-    expect(OPERATION_HINTS.updateFunction).toContain("functions:redeploy");
+    expect(OPERATION_HINTS.createFunction).toContain("functions deploy");
+    expect(OPERATION_HINTS.updateFunction).toContain("functions redeploy");
     expect(OPERATION_HINTS.createFunctionSecret).toContain(
-      "functions:set-secret",
+      "functions set-secret",
     );
-    expect(OPERATION_HINTS.setFunctionSecret).toContain("functions:set-secret");
+    expect(OPERATION_HINTS.setFunctionSecret).toContain("functions set-secret");
   });
 });
 
@@ -641,7 +641,7 @@ describe("createOperationCommand description", () => {
       description: string;
     };
     expect(Cmd.description).toContain("Update and redeploy a function");
-    expect(Cmd.description).toContain("functions:redeploy --id");
+    expect(Cmd.description).toContain("functions redeploy --id");
   });
 
   it("leaves the description untouched for operations without a hint", () => {
@@ -653,5 +653,19 @@ describe("createOperationCommand description", () => {
       description: string;
     };
     expect(Cmd.description).toBe("No-shortcut operation");
+  });
+
+  it("renders canonical command names in generated descriptions", () => {
+    const op = makeOperation({
+      description:
+        "Use `primitive emails:latest` and `primitive describe emails:get-email | jq '.responseSchema.properties'`.",
+    });
+    const Cmd = createOperationCommand(op) as unknown as {
+      description: string;
+    };
+    expect(Cmd.description).toContain("`primitive emails latest`");
+    expect(Cmd.description).toContain("`primitive describe emails:get | jq");
+    expect(Cmd.description).not.toContain("emails:latest");
+    expect(Cmd.description).not.toContain("emails:get-email");
   });
 });

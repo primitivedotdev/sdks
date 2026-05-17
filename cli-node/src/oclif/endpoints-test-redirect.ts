@@ -98,7 +98,7 @@ export function formatFunctionEndpointRedirect(
   return [
     "This is a function endpoint. Function endpoints are tested differently. Run:",
     "",
-    `    primitive functions:test-function --id ${match.functionId}`,
+    `    primitive functions test --id ${match.functionId}`,
     "",
     `(pass the function id, not the endpoint id. endpoint_id=${match.endpointId} function_id=${match.functionId})`,
   ].join("\n");

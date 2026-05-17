@@ -3,7 +3,7 @@ import type {
   FunctionSecretWriteResult,
 } from "@primitivedotdev/api-core";
 import { describe, expect, it, vi } from "vitest";
-import {
+import FunctionsSetSecretCommand, {
   runSetSecret,
   type SetSecretApiSurface,
 } from "../../src/oclif/commands/functions-set-secret.js";
@@ -84,6 +84,18 @@ function makeApi(overrides: Partial<SetSecretApiSurface> = {}): {
 describe("functions:set-secret command", () => {
   it("registers in the COMMANDS map", () => {
     expect(COMMANDS["functions:set-secret"]).toBeDefined();
+  });
+
+  it("documents that --redeploy preserves the current source map", () => {
+    const description =
+      FunctionsSetSecretCommand.flags.redeploy.description ?? "";
+
+    expect(description).toContain("preserves the current stored source map");
+    expect(description).toContain("replace or restore a map");
+    expect(description).not.toContain(
+      "drops any previously-uploaded source map",
+    );
+    expect(description).not.toContain("runtime side");
   });
 });
 

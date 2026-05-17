@@ -772,8 +772,9 @@ export const listFunctions = <ThrowOnError extends boolean = false>(options?: Op
  * than relying on external imports.
  *
  * **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
- * (optional) is capped at 5 MiB UTF-8 and is stored only on the
- * edge runtime side; it is not persisted in Primitive's database.
+ * (optional) is capped at 5 MiB UTF-8, stored with each deployment
+ * attempt, and sent to the runtime so stack traces can resolve to
+ * original source files.
  *
  * **Auto-wiring.** On successful deploy, Primitive automatically
  * creates a webhook endpoint that delivers inbound mail to the
@@ -840,11 +841,10 @@ export const getFunction = <ThrowOnError extends boolean = false>(options: Optio
  * passing the same `code` re-runs the deploy and refreshes the
  * binding set with the latest values from the secrets table.
  *
- * On a 502 deploy failure, the previously-deployed code stays
- * live; the runtime never serves a half-built bundle. The
- * `deploy_error` field on the returned record carries the error
- * that came back from the runtime so you can surface it to users
- * without polling.
+ * On deploy failure, the previously-deployed code stays live; the
+ * runtime never serves a half-built bundle. The response uses
+ * `error.code` `deploy_failed`, and the function's `deploy_error`
+ * field carries the latest deploy error for dashboard/API reads.
  *
  */
 export const updateFunction = <ThrowOnError extends boolean = false>(options: Options<UpdateFunctionData, ThrowOnError>) => (options.client ?? client).put<UpdateFunctionResponses, UpdateFunctionErrors, ThrowOnError>({

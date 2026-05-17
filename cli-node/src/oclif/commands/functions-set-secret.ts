@@ -36,14 +36,12 @@ import { type ResolvedCliAuth, resolveCliAuth } from "../auth.js";
 // function-secret` operations stay available for callers that want
 // the unsugared form.
 //
-// Source map caveat for --redeploy: the redeploy step pulls the
-// function's current code via getFunction (which does not return the
-// source map, since source maps live only on the runtime side) and
-// re-uploads with no sourceMap field. The CF runtime treats a deploy
-// without sourceMap as "drop the existing one". Callers who need
-// stack-trace symbolication preserved should use
-// `functions:redeploy --file <bundle> --source-map-file <map>`
-// after the secret write instead of --redeploy here.
+// Source map behavior for --redeploy: the redeploy step pulls the
+// function's current live code via getFunction and re-uploads it
+// without a sourceMap field. The API preserves the current stored
+// source map when the code matches, so secret-only redeploys keep
+// stack-trace symbolication. To replace or restore a map, use
+// `functions:redeploy --file <bundle> --source-map-file <map>`.
 
 // Shape of the API result the redeploy step returns. Exported only
 // so the unit test for runSetSecret can construct one in fake
@@ -180,7 +178,7 @@ export async function runSetSecret(
 
 class FunctionsSetSecretCommand extends Command {
   static description =
-    `Write a function secret and optionally redeploy so the new value lands in the running handler. Agent-grade shortcut for functions:set-function-secret + functions:redeploy.
+    `Write a function secret and optionally redeploy so the new value lands in the running handler. Agent-grade shortcut for functions set-function-secret + functions redeploy.
 
   Without --redeploy this is a plain secret upsert: the value is
   encrypted at rest but is NOT visible to the running handler until
@@ -196,8 +194,8 @@ class FunctionsSetSecretCommand extends Command {
     "Write a function secret (optionally redeploying to push it live)";
 
   static examples = [
-    "<%= config.bin %> functions:set-secret --id <fn-id> --key API_TOKEN --value abc123",
-    "<%= config.bin %> functions:set-secret --id <fn-id> --key API_TOKEN --value abc123 --redeploy",
+    "<%= config.bin %> functions set-secret --id <fn-id> --key API_TOKEN --value abc123",
+    "<%= config.bin %> functions set-secret --id <fn-id> --key API_TOKEN --value abc123 --redeploy",
   ];
 
   static flags = {
@@ -233,7 +231,7 @@ class FunctionsSetSecretCommand extends Command {
     }),
     redeploy: Flags.boolean({
       description:
-        "Also redeploy the function with its current code so the new value lands in the running handler. Without this, the secret is written but not visible to the handler until the next deploy. Note: source maps are stored only on the runtime side and getFunction does not return them, so this redeploy drops any previously-uploaded source map. If preserving stack-trace symbolication matters, use `functions:redeploy --file <bundle.js> --source-map-file <bundle.js.map>` instead.",
+        "Also redeploy the function with its current code so the new value lands in the running handler. Without this, the secret is written but not visible to the handler until the next deploy. Note: when --redeploy re-uploads the function's current live code without a sourceMap field, the API preserves the current stored source map. Use `functions redeploy --file <bundle.js> --source-map-file <bundle.js.map>` to replace or restore a map.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
@@ -309,11 +307,11 @@ class FunctionsSetSecretCommand extends Command {
         // any actionable hint (e.g. unauthorized) is surfaced.
         if (outcome.stage === "get-function") {
           process.stderr.write(
-            "Secret was written, but reading current function code for redeploy failed; the secret is NOT yet live. Re-run with --redeploy, or call `primitive functions:redeploy --id <id> --file <bundle>` once you have the bundle.\n",
+            "Secret was written, but reading current function code for redeploy failed; the secret is NOT yet live. Re-run with --redeploy, or call `primitive functions redeploy --id <id> --file <bundle>` once you have the bundle.\n",
           );
         } else if (outcome.stage === "redeploy") {
           process.stderr.write(
-            "Secret was written, but the redeploy step failed; the secret is NOT yet live. Inspect the function's deploy_error and re-run `primitive functions:redeploy --id <id> --file <bundle>` once the cause is fixed.\n",
+            "Secret was written, but the redeploy step failed; the secret is NOT yet live. Inspect the function's deploy_error and re-run `primitive functions redeploy --id <id> --file <bundle>` once the cause is fixed.\n",
           );
         }
         writeErrorWithHints(outcome.payload);

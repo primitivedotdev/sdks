@@ -304,10 +304,36 @@ func encodeCreateFunctionResponse(response CreateFunctionRes, w http.ResponseWri
 
 		return nil
 
-	case *CreateFunctionBadGateway:
+	case *CreateFunctionFailedDependency:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(502)
-		span.SetStatus(codes.Error, http.StatusText(502))
+		w.WriteHeader(424)
+		span.SetStatus(codes.Error, http.StatusText(424))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CreateFunctionTooManyRequests:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(429)
+		span.SetStatus(codes.Error, http.StatusText(429))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CreateFunctionServiceUnavailable:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(503)
+		span.SetStatus(codes.Error, http.StatusText(503))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -3304,10 +3330,36 @@ func encodeUpdateFunctionResponse(response UpdateFunctionRes, w http.ResponseWri
 
 		return nil
 
-	case *UpdateFunctionBadGateway:
+	case *UpdateFunctionFailedDependency:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(502)
-		span.SetStatus(codes.Error, http.StatusText(502))
+		w.WriteHeader(424)
+		span.SetStatus(codes.Error, http.StatusText(424))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *UpdateFunctionTooManyRequests:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(429)
+		span.SetStatus(codes.Error, http.StatusText(429))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *UpdateFunctionServiceUnavailable:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(503)
+		span.SetStatus(codes.Error, http.StatusText(503))
 
 		e := new(jx.Encoder)
 		response.Encode(e)

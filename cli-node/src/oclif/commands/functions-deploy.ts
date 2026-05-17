@@ -36,9 +36,9 @@ import {
 //     esbuild handler.ts --bundle --format=esm --outfile=bundle.js
 //     primitive functions:deploy --name myfn --file bundle.js
 //
-// Source maps follow the same shape via --source-map-file. They are
-// stored only on the runtime side (not in our database) so dropping
-// them later in the pipeline is fine; the CLI just hands them through.
+// Source maps follow the same shape via --source-map-file. The CLI
+// reads the map from disk and sends it with the bundle so deploy
+// diagnostics can map stack traces back to original source files.
 //
 // For full control (raw body, --raw-body JSON, etc.) the underlying
 // `functions:create-function` operation stays available.
@@ -265,16 +265,16 @@ class FunctionsDeployCommand extends Command {
   final update-function with the same bundle so the running handler
   picks up the bindings. If a secret write fails after the create
   step the function exists with whatever secrets succeeded and the
-  redeploy has NOT fired; re-run \`primitive functions:set-secret\`
-  for the missing keys, then \`primitive functions:redeploy\` to
+  redeploy has NOT fired; re-run \`primitive functions set-secret\`
+  for the missing keys, then \`primitive functions redeploy\` to
   push them live.`;
 
   static summary = "Deploy a new function from a bundled handler file";
 
   static examples = [
-    "<%= config.bin %> functions:deploy --name forwarder --file ./bundle.js",
-    "<%= config.bin %> functions:deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
-    "<%= config.bin %> functions:deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
   ];
 
   static flags = {
@@ -307,7 +307,7 @@ class FunctionsDeployCommand extends Command {
     }),
     "source-map-file": Flags.string({
       description:
-        "Optional path to a source map for the bundle. Stored only on the runtime side and used to symbolicate stack traces.",
+        "Optional path to a source map for the bundle. Stored with the deployment attempt and used to symbolicate stack traces in function logs.",
     }),
     secret: Flags.string({
       description: `Secret KEY=VALUE to seed on the deployed function. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out the deploy to create-function, set-secret per pair, then a final redeploy so the running handler picks up the bindings. ${SECRET_FLAG_SECURITY_NOTE}`,
@@ -431,7 +431,7 @@ class FunctionsDeployCommand extends Command {
             ", ",
           );
           process.stderr.write(
-            `Function ${outcome.created.name} (${outcome.created.id}) was created, but writing secret ${outcome.failedKey} failed; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The redeploy is NOT yet live. Re-run \`primitive functions:set-secret\` for each of [${allMissing}], then \`primitive functions:redeploy --id ${outcome.created.id} --file <bundle>\` to push them live.\n`,
+            `Function ${outcome.created.name} (${outcome.created.id}) was created, but writing secret ${outcome.failedKey} failed; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The redeploy is NOT yet live. Re-run \`primitive functions set-secret\` for each of [${allMissing}], then \`primitive functions redeploy --id ${outcome.created.id} --file <bundle>\` to push them live.\n`,
           );
         } else if (outcome.stage === "redeploy") {
           const succeeded =
@@ -439,7 +439,7 @@ class FunctionsDeployCommand extends Command {
               ? outcome.succeededKeys.join(", ")
               : "(none)";
           process.stderr.write(
-            `Function ${outcome.created.name} (${outcome.created.id}) was created and secrets [${succeeded}] were written, but the final redeploy failed; the new bindings are NOT yet live. Re-run \`primitive functions:redeploy --id ${outcome.created.id} --file <bundle>\` once the cause is fixed.\n`,
+            `Function ${outcome.created.name} (${outcome.created.id}) was created and secrets [${succeeded}] were written, but the final redeploy failed; the new bindings are NOT yet live. Re-run \`primitive functions redeploy --id ${outcome.created.id} --file <bundle>\` once the cause is fixed.\n`,
           );
         }
         writeErrorWithHints(outcome.payload);

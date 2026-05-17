@@ -177,6 +177,7 @@ function buildReceivedEmail(c: CanonicalInbound): ReceivedEmail {
           reply_to: [],
           cc: [],
           bcc: [],
+          to_addresses: [{ address: c.received_by, name: null }],
           in_reply_to: [...c.thread.in_reply_to],
           references: [...c.thread.references],
           attachments: [],

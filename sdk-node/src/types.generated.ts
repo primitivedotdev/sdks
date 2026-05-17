@@ -320,6 +320,10 @@ cc: (EmailAddress[] | null)
  */
 bcc: (EmailAddress[] | null)
 /**
+ * Parsed To header addresses. Null if the email had no To header.
+ */
+to_addresses: (EmailAddress[] | null)
+/**
  * In-Reply-To header values (Message-IDs of the email(s) being replied to). Null if the email had no In-Reply-To header. Per RFC 5322, this can contain multiple Message-IDs, though typically just one.
  */
 in_reply_to: (string[] | null)
@@ -426,6 +430,10 @@ cc: null
  * Always null when parsing fails.
  */
 bcc: null
+/**
+ * Always null when parsing fails.
+ */
+to_addresses: null
 /**
  * Always null when parsing fails.
  */

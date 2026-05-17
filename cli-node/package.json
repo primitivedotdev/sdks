@@ -34,10 +34,13 @@
         "description": "Claim, verify, and manage email domains"
       },
       "emails": {
-        "description": "List, inspect, and wait for received emails. `primitive emails:latest` lists the most recent inbound, `primitive emails:wait` blocks until matching inbound arrives (filter with --to/--from/--subject/--q; bounded by --timeout and --number; ideal for agents and CI), and `primitive emails:watch` streams new matches indefinitely for long-running terminals."
+        "description": "List, inspect, and wait for received emails. Prefer task aliases like `primitive emails list`, `primitive emails get`, `primitive emails latest`, `primitive emails wait`, and `primitive emails watch`; generated API names remain available for compatibility."
       },
       "sending": {
-        "description": "Send outbound emails. For replies to inbound mail, use `sending:reply-to-email --id <inbound-id>` (threading and Re: subject derived server-side); for fresh sends, use `sending:send-email` or the `primitive send` shortcut."
+        "description": "Send outbound emails. Prefer `primitive send` for fresh sends and `primitive reply --id <inbound-id>` for replies; use `primitive sending list`, `primitive sending get`, and `primitive sending permissions` for outbound history and permissions."
+      },
+      "sent": {
+        "description": "Short aliases for outbound sent-email history: `primitive sent list` and `primitive sent get`."
       },
       "endpoints": {
         "description": "Manage webhook endpoints that receive email events"
@@ -46,10 +49,13 @@
         "description": "Manage whitelist and blocklist filter rules"
       },
       "webhook-deliveries": {
-        "description": "View and replay webhook delivery attempts"
+        "description": "View and replay webhook delivery attempts. Prefer `primitive webhook-deliveries list` and `primitive webhook-deliveries replay`."
+      },
+      "deliveries": {
+        "description": "Short aliases for webhook delivery attempts: `primitive deliveries list` and `primitive deliveries replay`."
       },
       "functions": {
-        "description": "Deploy JavaScript handlers that run on inbound mail. Use `primitive functions:init <name>` to scaffold a deployable project (handler, package.json, build script). Use `primitive functions:deploy --name <name> --file <bundle.js>` to create, `primitive functions:redeploy --id <id> --file <bundle.js>` to push a new bundle, and `primitive functions:set-secret --id <id> --key <KEY> --value <value> [--redeploy]` to write a secret (with optional one-call redeploy so the value lands in the running handler). The auto-generated functions:create-function / functions:update-function / functions:create-function-secret / functions:set-function-secret operations stay available for the full body-string surface."
+        "description": "Deploy JavaScript handlers that run on inbound mail. Prefer `primitive functions init`, `primitive functions deploy`, `primitive functions redeploy`, `primitive functions list`, `primitive functions get`, `primitive functions logs`, and `primitive functions set-secret`; generated API names remain available for compatibility."
       }
     },
     "topicSeparator": " "

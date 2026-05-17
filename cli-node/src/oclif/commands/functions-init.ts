@@ -195,9 +195,9 @@ export function renderPackageJson(name: string): string {
     type: "module",
     scripts: {
       build: "node build.mjs",
-      deploy: `npm run build && primitive functions:deploy --name ${name} --file ./dist/handler.js`,
+      deploy: `npm run build && primitive functions deploy --name ${name} --file ./dist/handler.js`,
       redeploy:
-        "npm run build && primitive functions:redeploy --id $PRIMITIVE_FUNCTION_ID --file ./dist/handler.js",
+        "npm run build && primitive functions redeploy --id $PRIMITIVE_FUNCTION_ID --file ./dist/handler.js",
     },
     dependencies: {
       "@primitivedotdev/sdk": SDK_VERSION_RANGE,
@@ -281,7 +281,7 @@ npm run build
 npm run deploy
 \`\`\`
 
-The deploy step calls \`primitive functions:deploy\` (provided by the
+The deploy step calls \`primitive functions deploy\` (provided by the
 \`@primitivedotdev/cli\` package; install with
 \`npm install -g @primitivedotdev/cli\` or run via
 \`npx @primitivedotdev/cli@latest <command>\`). It requires
@@ -385,17 +385,17 @@ class FunctionsInitCommand extends Command {
   \`@primitivedotdev/sdk/api\` and demonstrates the canonical pattern:
   parse the email.received event, send a reply via the SDK, return a
   JSON envelope. The build script uses esbuild's JS API and emits
-  ./dist/handler.js, ready to hand to \`primitive functions:deploy --file\`.
+  ./dist/handler.js, ready to hand to \`primitive functions deploy --file\`.
 
   Refuses to overwrite an existing directory. Use --out-dir to pick a
   different target path than ./<name>/.`;
 
   static summary =
-    "Scaffold a new Primitive Function project ready for functions:deploy";
+    "Scaffold a new Primitive Function project ready for functions deploy";
 
   static examples = [
-    "<%= config.bin %> functions:init my-fn",
-    "<%= config.bin %> functions:init my-fn --out-dir ./functions/my-fn",
+    "<%= config.bin %> functions init my-fn",
+    "<%= config.bin %> functions init my-fn --out-dir ./functions/my-fn",
   ];
 
   static args = {
@@ -426,7 +426,7 @@ class FunctionsInitCommand extends Command {
     this.log("  npm install");
     this.log("  npm run build");
     this.log(
-      `  primitive functions:deploy --name ${args.name} --file ./dist/handler.js`,
+      `  primitive functions deploy --name ${args.name} --file ./dist/handler.js`,
     );
   }
 }

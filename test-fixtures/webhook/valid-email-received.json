@@ -44,6 +44,12 @@
       "reply_to": null,
       "cc": null,
       "bcc": null,
+      "to_addresses": [
+        {
+          "address": "recipient@domain.com",
+          "name": null
+        }
+      ],
       "in_reply_to": null,
       "references": null,
       "attachments": [],

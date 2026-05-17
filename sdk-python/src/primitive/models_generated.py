@@ -460,6 +460,12 @@ class ParsedDataComplete(BaseModel):
             description="Parsed BCC header addresses. Null if the email had no BCC header. Note: BCC is only available for outgoing emails or when explicitly provided."
         ),
     ]
+    to_addresses: Annotated[
+        list[EmailAddress] | None,
+        Field(
+            description="Parsed To header addresses. Null if the email had no To header."
+        ),
+    ]
     in_reply_to: Annotated[
         list[str] | None,
         Field(
@@ -503,6 +509,7 @@ class ParsedDataFailed(BaseModel):
     reply_to: Annotated[None, Field(description="Always null when parsing fails.")]
     cc: Annotated[None, Field(description="Always null when parsing fails.")]
     bcc: Annotated[None, Field(description="Always null when parsing fails.")]
+    to_addresses: Annotated[None, Field(description="Always null when parsing fails.")]
     in_reply_to: Annotated[None, Field(description="Always null when parsing fails.")]
     references: Annotated[None, Field(description="Always null when parsing fails.")]
     attachments: Annotated[

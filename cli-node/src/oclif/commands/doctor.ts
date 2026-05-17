@@ -279,7 +279,7 @@ async function checkDomains(opts: {
       return {
         status: "warn",
         message: "could not list domains",
-        hint: "Run `primitive domains:list-domains` for the full error envelope.",
+        hint: "Run `primitive domains list` for the full error envelope.",
       };
     }
     const envelope = result.data as
@@ -298,7 +298,7 @@ async function checkDomains(opts: {
       return {
         status: "warn",
         message: `${rows.length} domain(s), none active`,
-        hint: "Run `primitive domains:verify-domain --id <id>` for any domain you intend to send / receive on.",
+        hint: "Run `primitive domains verify --id <id>` for any domain you intend to send / receive on.",
       };
     }
     return {

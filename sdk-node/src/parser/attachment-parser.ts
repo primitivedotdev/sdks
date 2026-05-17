@@ -68,6 +68,7 @@ export interface ParsedEmailWithAttachments {
   to: string | null;
 
   // Additional headers for threading and replies
+  toAddresses: EmailAddress[] | null;
   replyTo: EmailAddress[] | null;
   cc: EmailAddress[] | null;
   bcc: EmailAddress[] | null;
@@ -172,6 +173,7 @@ export async function parseEmailWithAttachments(
       : (parsed.to?.text ?? null),
 
     // Additional headers
+    toAddresses: extractAddresses(parsed.to),
     replyTo: extractAddresses(parsed.replyTo),
     cc: extractAddresses(parsed.cc),
     bcc: extractAddresses(parsed.bcc),
@@ -185,7 +187,11 @@ export async function parseEmailWithAttachments(
  * Handles both single AddressObject and arrays.
  */
 function extractAddresses(
-  addressObj: ParsedMail["replyTo"] | ParsedMail["cc"] | ParsedMail["bcc"],
+  addressObj:
+    | ParsedMail["to"]
+    | ParsedMail["replyTo"]
+    | ParsedMail["cc"]
+    | ParsedMail["bcc"],
 ): EmailAddress[] | null {
   if (!addressObj) return null;
 

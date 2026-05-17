@@ -96,11 +96,11 @@ export function formatHeader(idWidth: number): string {
 
 class EmailsLatestCommand extends Command {
   static description =
-    `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails:list-emails\` (full JSON envelope, cursor pagination, filters) or pass \`--json\` here for the same raw shape without pagination/filters.
+    `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails list\` (full JSON envelope, cursor pagination, filters) or pass \`--json\` here for the same raw shape without pagination/filters.
 
   ID display is TTY-aware. When STDOUT is a terminal, the table truncates each row's id to the first ${ID_DISPLAY_WIDTH_SHORT} characters for readability. When STDOUT is piped or redirected (the row stream is being consumed by another command), the full UUID is printed so the id can be fed straight back into \`emails:get-email\`, \`emails:delete-email\`, etc. without a separate \`--json\` round-trip.
 
-  Output streams: the column header line is written to STDERR so the row data on STDOUT stays grep/awk-friendly. \`--json\` writes everything (including the envelope) to STDOUT and is equivalent to running \`emails:list-emails --limit N\` for the same N.`;
+  Output streams: the column header line is written to STDERR so the row data on STDOUT stays grep/awk-friendly. \`--json\` writes everything (including the envelope) to STDOUT and is equivalent to running \`emails list --limit N\` for the same N.`;
 
   static summary = "Show the most recent inbound emails as a compact table";
 

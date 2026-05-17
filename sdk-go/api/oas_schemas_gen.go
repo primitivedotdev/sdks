@@ -895,10 +895,6 @@ type CreateFilterUnauthorized ErrorResponse
 
 func (*CreateFilterUnauthorized) createFilterRes() {}
 
-type CreateFunctionBadGateway ErrorResponse
-
-func (*CreateFunctionBadGateway) createFunctionRes() {}
-
 type CreateFunctionBadRequest ErrorResponse
 
 func (*CreateFunctionBadRequest) createFunctionRes() {}
@@ -935,6 +931,10 @@ func (s *CreateFunctionCreated) SetData(val CreateFunctionResult) {
 
 func (*CreateFunctionCreated) createFunctionRes() {}
 
+type CreateFunctionFailedDependency ErrorResponse
+
+func (*CreateFunctionFailedDependency) createFunctionRes() {}
+
 // Ref: #/components/schemas/CreateFunctionInput
 type CreateFunctionInput struct {
 	// Slug-style name. Lowercase letters, digits, hyphens, and
@@ -946,9 +946,8 @@ type CreateFunctionInput struct {
 	// object.
 	Code string `json:"code"`
 	// Optional source map for the bundle. Up to 5 MiB UTF-8.
-	// Stored only on the runtime side (not in Primitive's
-	// database) and used to symbolicate stack traces in the
-	// function's logs.
+	// Stored with the deployment attempt and sent to the runtime
+	// to symbolicate stack traces in the function's logs.
 	SourceMap OptString `json:"sourceMap"`
 }
 
@@ -1130,6 +1129,14 @@ func (*CreateFunctionSecretOK) createFunctionSecretRes() {}
 type CreateFunctionSecretUnauthorized ErrorResponse
 
 func (*CreateFunctionSecretUnauthorized) createFunctionSecretRes() {}
+
+type CreateFunctionServiceUnavailable ErrorResponse
+
+func (*CreateFunctionServiceUnavailable) createFunctionRes() {}
+
+type CreateFunctionTooManyRequests ErrorResponse
+
+func (*CreateFunctionTooManyRequests) createFunctionRes() {}
 
 type CreateFunctionUnauthorized ErrorResponse
 
@@ -10832,13 +10839,13 @@ type UpdateFilterUnauthorized ErrorResponse
 
 func (*UpdateFilterUnauthorized) updateFilterRes() {}
 
-type UpdateFunctionBadGateway ErrorResponse
-
-func (*UpdateFunctionBadGateway) updateFunctionRes() {}
-
 type UpdateFunctionBadRequest ErrorResponse
 
 func (*UpdateFunctionBadRequest) updateFunctionRes() {}
+
+type UpdateFunctionFailedDependency ErrorResponse
+
+func (*UpdateFunctionFailedDependency) updateFunctionRes() {}
 
 // Ref: #/components/schemas/UpdateFunctionInput
 type UpdateFunctionInput struct {
@@ -10898,6 +10905,14 @@ func (s *UpdateFunctionOK) SetData(val FunctionDetail) {
 }
 
 func (*UpdateFunctionOK) updateFunctionRes() {}
+
+type UpdateFunctionServiceUnavailable ErrorResponse
+
+func (*UpdateFunctionServiceUnavailable) updateFunctionRes() {}
+
+type UpdateFunctionTooManyRequests ErrorResponse
+
+func (*UpdateFunctionTooManyRequests) updateFunctionRes() {}
 
 type UpdateFunctionUnauthorized ErrorResponse
 

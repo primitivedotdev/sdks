@@ -50,6 +50,7 @@ function createParsedEmail(
     dateHeader: "Sun, 15 Jun 2025 10:30:00 +0000",
     from: "sender@example.com",
     to: "recipient@example.com",
+    toAddresses: [{ address: "recipient@example.com", name: null }],
     replyTo: [{ address: "reply@example.com", name: "Reply" }],
     cc: null,
     bcc: null,
@@ -77,6 +78,9 @@ describe("toParsedDataComplete", () => {
     ]);
     expect(result.cc).toBeNull();
     expect(result.bcc).toBeNull();
+    expect(result.to_addresses).toEqual([
+      { address: "recipient@example.com", name: null },
+    ]);
   });
 
   it("passes through bodyHtml without sanitizing it", () => {

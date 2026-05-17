@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { openapiDocument } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
+import { CANONICAL_OPERATION_ALIASES } from "../../src/oclif/index.js";
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/\s+/g, "-");
@@ -27,7 +28,7 @@ describe("oclif topics", () => {
     expect(missing).toEqual([]);
   });
 
-  it("has a spec tag for every topic entry", () => {
+  it("has a spec tag or canonical alias for every topic entry", () => {
     const packageJsonPath = fileURLToPath(
       new URL("../../package.json", import.meta.url),
     );
@@ -38,9 +39,14 @@ describe("oclif topics", () => {
     const normalizedSpecTags = (openapiDocument.tags as { name: string }[]).map(
       (tag) => normalize(tag.name),
     );
+    const aliasTopics = new Set(
+      Object.keys(CANONICAL_OPERATION_ALIASES).map((alias) =>
+        alias.slice(0, alias.indexOf(":")),
+      ),
+    );
 
     const orphans = topicKeys.filter(
-      (topic) => !normalizedSpecTags.includes(topic),
+      (topic) => !normalizedSpecTags.includes(topic) && !aliasTopics.has(topic),
     );
 
     expect(orphans).toEqual([]);
