@@ -406,6 +406,8 @@ export interface BuildEventFromParsedDataOptions {
   sender: string;
   /** To header value. */
   recipient: string;
+  /** Full RFC 5322 To header value. Defaults to `recipient` for backwards compatibility. */
+  toHeader?: string | null;
   /** Subject header value, or null. */
   subject: string | null;
   /** ISO 8601 timestamp when the producer accepted the email. */
@@ -510,6 +512,7 @@ export function buildEventFromParsedData(
     message_id: params.messageId,
     sender: params.sender,
     recipient: params.recipient,
+    to_header: params.toHeader,
     subject: params.subject,
     received_at: params.receivedAt,
     smtp_helo: params.smtpHelo,

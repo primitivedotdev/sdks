@@ -957,6 +957,27 @@ describe("contract", () => {
       ]);
     });
 
+    it("uses explicit toHeader for email.headers.to", () => {
+      const event = buildEventFromParsedData({
+        ...baseOptions,
+        toHeader: "To One <to1@example.com>, to2@example.com",
+        parsed: {
+          ...emptyParsed,
+          to_addresses: [
+            { address: "to1@example.com", name: "To One" },
+            { address: "to2@example.com", name: null },
+          ],
+        },
+      });
+
+      expect(event.email.headers.to).toBe(
+        "To One <to1@example.com>, to2@example.com",
+      );
+      if (event.email.parsed.status === "complete") {
+        expect(event.email.parsed.to_addresses).toHaveLength(2);
+      }
+    });
+
     it("throws when attachmentsDownloadUrl is non-null with zero attachments", () => {
       expect(() =>
         buildEventFromParsedData({
