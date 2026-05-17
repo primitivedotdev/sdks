@@ -61,6 +61,52 @@ const DEFAULT_WAIT_TIMEOUT_SECONDS = 60;
 // retry into `fired` or eventually `exhausted`), so we keep polling.
 const TERMINAL_WEBHOOK_STATUSES = new Set<string>(["fired", "exhausted"]);
 
+export type FunctionTestOutcome = {
+  function_id: string;
+  inbound_domain: string;
+  inbound_id: string;
+  inbound_to: string;
+  test_send_id: string;
+  test_subject: string;
+  poll_since: string;
+  watch_url: string;
+  webhook_status: EmailDetail["webhook_status"];
+  webhook_attempt_count: EmailDetail["webhook_attempt_count"];
+  webhook_last_status_code: EmailDetail["webhook_last_status_code"];
+  webhook_last_error: EmailDetail["webhook_last_error"];
+  elapsed_seconds: number;
+  sent_emails?: EmailDetail["replies"];
+};
+
+export function buildFunctionTestOutcome(params: {
+  functionId: string;
+  inboundId: string;
+  invocation: TestInvocationResult;
+  detail: EmailDetail;
+  elapsedSeconds: number;
+  showSends: boolean;
+}): FunctionTestOutcome {
+  const outcome: FunctionTestOutcome = {
+    elapsed_seconds: params.elapsedSeconds,
+    function_id: params.functionId,
+    inbound_domain: params.invocation.inbound_domain,
+    inbound_id: params.inboundId,
+    inbound_to: params.invocation.to,
+    poll_since: params.invocation.poll_since,
+    test_send_id: params.invocation.send_id,
+    test_subject: params.invocation.subject,
+    watch_url: params.invocation.watch_url,
+    webhook_attempt_count: params.detail.webhook_attempt_count,
+    webhook_last_error: params.detail.webhook_last_error,
+    webhook_last_status_code: params.detail.webhook_last_status_code,
+    webhook_status: params.detail.webhook_status,
+  };
+  if (params.showSends) {
+    outcome.sent_emails = params.detail.replies;
+  }
+  return outcome;
+}
+
 class FunctionsTestFunctionCommand extends Command {
   static description =
     "Send a real test email through MX to trigger this function. With --wait, blocks until the function has processed the inbound; with --show-sends, also prints any outbound sends the function emitted in response.";
@@ -267,19 +313,14 @@ class FunctionsTestFunctionCommand extends Command {
 
       // 4. Emit the outcome.
       const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
-      const outcome: Record<string, unknown> = {
-        function_id: flags.id,
-        inbound_id: inboundId,
-        inbound_to: invocation.to,
-        webhook_status: detail.webhook_status,
-        webhook_attempt_count: detail.webhook_attempt_count,
-        webhook_last_status_code: detail.webhook_last_status_code,
-        webhook_last_error: detail.webhook_last_error,
-        elapsed_seconds: elapsedSeconds,
-      };
-      if (shouldShowSends) {
-        outcome.sent_emails = detail.replies;
-      }
+      const outcome = buildFunctionTestOutcome({
+        detail,
+        elapsedSeconds,
+        functionId: flags.id,
+        inboundId,
+        invocation,
+        showSends: shouldShowSends,
+      });
       this.log(JSON.stringify(outcome, null, 2));
 
       // Exit non-zero when the function failed permanently so CI
