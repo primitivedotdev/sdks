@@ -268,6 +268,19 @@ func (UnimplementedHandler) GetFunction(ctx context.Context, params GetFunctionP
 	return r, ht.ErrNotImplemented
 }
 
+// GetFunctionTestRunTrace implements getFunctionTestRunTrace operation.
+//
+// Returns the current end-to-end trace for a function test run.
+// The trace is intentionally partial while the test is still in
+// flight: callers can poll this endpoint and watch it fill in
+// from send -> inbound -> webhook deliveries -> outbound
+// requests, logs, and replies.
+//
+// GET /functions/{id}/test-runs/{run_id}/trace
+func (UnimplementedHandler) GetFunctionTestRunTrace(ctx context.Context, params GetFunctionTestRunTraceParams) (r GetFunctionTestRunTraceRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetSendPermissions implements getSendPermissions operation.
 //
 // Returns a flat list of rules describing every recipient the

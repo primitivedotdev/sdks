@@ -1483,12 +1483,16 @@ export type UpdateFunctionInput = {
 
 /**
  * Metadata returned by POST /functions/{id}/test. The send is
- * queued; the actual invocation lands on the function's
- * invocations list a few seconds later as the inbound mail
- * traverses the MX path.
+ * queued; poll `trace_url` to watch the run progress through
+ * send -> inbound -> webhook deliveries -> outbound requests,
+ * logs, and replies.
  *
  */
 export type TestInvocationResult = {
+    /**
+     * Durable test run id used to fetch the run trace.
+     */
+    test_run_id: string;
     /**
      * Verified inbound domain the test email was sent to.
      */
@@ -1524,6 +1528,130 @@ export type TestInvocationResult = {
      * Function detail page where invocations show up live.
      */
     watch_url: string;
+    /**
+     * Relative API URL for GET /functions/{id}/test-runs/{test_run_id}/trace.
+     */
+    trace_url: string;
+};
+
+/**
+ * High-level state for a function test run trace:
+ * - `send_failed`: the initial test email send failed.
+ * - `waiting_for_send`: the test run was created but no send result has been recorded yet.
+ * - `waiting_for_inbound`: the test send was queued and the matching inbound email has not arrived yet.
+ * - `waiting_for_function`: the inbound email arrived and webhook/function processing is still in flight.
+ * - `completed`: the function webhook completed successfully.
+ * - `failed`: webhook delivery exhausted retries.
+ *
+ */
+export type FunctionTestRunState = 'send_failed' | 'waiting_for_send' | 'waiting_for_inbound' | 'waiting_for_function' | 'completed' | 'failed';
+
+export type FunctionTestRun = {
+    id: string;
+    function_id: string;
+    inbound_domain: string;
+    to: string;
+    from: string;
+    subject: string;
+    poll_since: string;
+    created_at: string;
+    sent_at: string | null;
+    send_error: string | null;
+};
+
+export type FunctionTestRunSend = {
+    id: string;
+    status: SentEmailStatus;
+    queue_id: string | null;
+    created_at: string;
+    updated_at: string;
+} | null;
+
+export type FunctionTestRunInboundEmail = {
+    id: string;
+    status: EmailStatus;
+    received_at: string;
+    from: string;
+    to: string;
+    subject: string | null;
+    webhook_status: EmailWebhookStatus;
+    webhook_attempt_count: number;
+    webhook_last_status_code: number | null;
+    webhook_last_error: string | null;
+} | null;
+
+export type FunctionTestRunDeliveryEndpoint = {
+    id: string;
+    /**
+     * Endpoint kind. Current traces may include `http` or `function`; future endpoint kinds may appear.
+     */
+    kind: string;
+    function_id: string | null;
+    function_name: string | null;
+    domain_id: string | null;
+    enabled: boolean;
+    deactivated_at: string | null;
+    is_current_function: boolean;
+} | null;
+
+export type FunctionTestRunDelivery = {
+    /**
+     * Webhook delivery id.
+     */
+    id: string;
+    endpoint_id: string;
+    endpoint_url: string;
+    status: 'pending' | 'delivered' | 'header_confirmed' | 'failed';
+    attempt_count: number;
+    duration_ms: number | null;
+    last_error: string | null;
+    last_error_code: string | null;
+    created_at: string;
+    updated_at: string;
+    endpoint: FunctionTestRunDeliveryEndpoint;
+};
+
+export type FunctionTestRunOutboundRequest = {
+    id: string;
+    function_id: string;
+    webhook_delivery_id: string | null;
+    email_id: string | null;
+    endpoint_id: string | null;
+    method: string;
+    url: string;
+    host: string;
+    path: string;
+    status_code: number | null;
+    ok: boolean | null;
+    duration_ms: number;
+    error: string | null;
+    ts: string;
+};
+
+export type FunctionTestRunReply = {
+    id: string;
+    status: SentEmailStatus;
+    to: string;
+    subject: string;
+    queue_id: string | null;
+    created_at: string;
+};
+
+/**
+ * End-to-end trace for a `POST /functions/{id}/test` run. The
+ * shape is stable, but many nested sections are null or empty
+ * until the corresponding phase has happened.
+ *
+ */
+export type FunctionTestRunTrace = {
+    state: FunctionTestRunState;
+    test_run: FunctionTestRun;
+    test_send: FunctionTestRunSend;
+    inbound_email: FunctionTestRunInboundEmail;
+    deliveries: Array<FunctionTestRunDelivery>;
+    outbound_requests: Array<FunctionTestRunOutboundRequest>;
+    logs: Array<FunctionLogRow>;
+    replies: Array<FunctionTestRunReply>;
 };
 
 /**
@@ -3623,6 +3751,54 @@ export type TestFunctionResponses = {
 };
 
 export type TestFunctionResponse = TestFunctionResponses[keyof TestFunctionResponses];
+
+export type GetFunctionTestRunTraceData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+        /**
+         * Function test run id returned by POST /functions/{id}/test.
+         */
+        run_id: string;
+    };
+    query?: never;
+    url: '/functions/{id}/test-runs/{run_id}/trace';
+};
+
+export type GetFunctionTestRunTraceErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetFunctionTestRunTraceError = GetFunctionTestRunTraceErrors[keyof GetFunctionTestRunTraceErrors];
+
+export type GetFunctionTestRunTraceResponses = {
+    /**
+     * Function test run trace
+     */
+    200: SuccessEnvelope & {
+        data?: FunctionTestRunTrace;
+    };
+};
+
+export type GetFunctionTestRunTraceResponse = GetFunctionTestRunTraceResponses[keyof GetFunctionTestRunTraceResponses];
 
 export type ListFunctionSecretsData = {
     body?: never;

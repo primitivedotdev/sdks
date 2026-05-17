@@ -36,7 +36,7 @@ import {
 // Shapes:
 //   primitive functions:test-function --id <fn-id>
 //       Fire-and-forget. Returns the TestInvocationResult JSON
-//       (recipient, poll_since, watch_url). Same behavior as the
+//       (recipient, poll_since, watch_url, trace_url). Same behavior as the
 //       auto-generated functions:test-function it replaces.
 //
 //   primitive functions:test-function --id <fn-id> --wait
@@ -68,9 +68,11 @@ export type FunctionTestOutcome = {
   inbound_domain: string;
   inbound_id: string;
   inbound_to: string;
+  test_run_id: string;
   test_send_id: string;
   test_subject: string;
   poll_since: string;
+  trace_url: string;
   watch_url: string;
   webhook_status: EmailDetail["webhook_status"];
   webhook_attempt_count: EmailDetail["webhook_attempt_count"];
@@ -95,8 +97,10 @@ export function buildFunctionTestOutcome(params: {
     inbound_id: params.inboundId,
     inbound_to: params.invocation.to,
     poll_since: params.invocation.poll_since,
+    test_run_id: params.invocation.test_run_id,
     test_send_id: params.invocation.send_id,
     test_subject: params.invocation.subject,
+    trace_url: params.invocation.trace_url,
     watch_url: params.invocation.watch_url,
     webhook_attempt_count: params.detail.webhook_attempt_count,
     webhook_last_error: params.detail.webhook_last_error,

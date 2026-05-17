@@ -2884,6 +2884,67 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/functions/{id}/test-runs/{run_id}/trace": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        },
+        {
+          "name": "run_id",
+          "in": "path",
+          "required": true,
+          "description": "Function test run id returned by POST /functions/{id}/test.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getFunctionTestRunTrace",
+        "summary": "Get a function test run trace",
+        "description": "Returns the current end-to-end trace for a function test run.\nThe trace is intentionally partial while the test is still in\nflight: callers can poll this endpoint and watch it fill in\nfrom send -> inbound -> webhook deliveries -> outbound\nrequests, logs, and replies.\n",
+        "tags": [
+          "Functions"
+        ],
+        "responses": {
+          "200": {
+            "description": "Function test run trace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/FunctionTestRunTrace"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
     "/functions/{id}/secrets": {
       "parameters": [
         {
@@ -5968,8 +6029,13 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "TestInvocationResult": {
         "type": "object",
-        "description": "Metadata returned by POST /functions/{id}/test. The send is\nqueued; the actual invocation lands on the function's\ninvocations list a few seconds later as the inbound mail\ntraverses the MX path.\n",
+        "description": "Metadata returned by POST /functions/{id}/test. The send is\nqueued; poll `trace_url` to watch the run progress through\nsend -> inbound -> webhook deliveries -> outbound requests,\nlogs, and replies.\n",
         "properties": {
+          "test_run_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Durable test run id used to fetch the run trace."
+          },
           "inbound_domain": {
             "type": "string",
             "description": "Verified inbound domain the test email was sent to."
@@ -5999,16 +6065,494 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "format": "uri",
             "description": "Function detail page where invocations show up live."
+          },
+          "trace_url": {
+            "type": "string",
+            "description": "Relative API URL for GET /functions/{id}/test-runs/{test_run_id}/trace."
           }
         },
         "required": [
+          "test_run_id",
           "inbound_domain",
           "to",
           "from",
           "send_id",
           "subject",
           "poll_since",
-          "watch_url"
+          "watch_url",
+          "trace_url"
+        ]
+      },
+      "FunctionTestRunState": {
+        "type": "string",
+        "description": "High-level state for a function test run trace:\n  - `send_failed`: the initial test email send failed.\n  - `waiting_for_send`: the test run was created but no send result has been recorded yet.\n  - `waiting_for_inbound`: the test send was queued and the matching inbound email has not arrived yet.\n  - `waiting_for_function`: the inbound email arrived and webhook/function processing is still in flight.\n  - `completed`: the function webhook completed successfully.\n  - `failed`: webhook delivery exhausted retries.\n",
+        "enum": [
+          "send_failed",
+          "waiting_for_send",
+          "waiting_for_inbound",
+          "waiting_for_function",
+          "completed",
+          "failed"
+        ]
+      },
+      "FunctionTestRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "function_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inbound_domain": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "poll_since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sent_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "send_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "function_id",
+          "inbound_domain",
+          "to",
+          "from",
+          "subject",
+          "poll_since",
+          "created_at",
+          "sent_at",
+          "send_error"
+        ]
+      },
+      "FunctionTestRunSend": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SentEmailStatus"
+          },
+          "queue_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "queue_id",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "FunctionTestRunInboundEmail": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EmailStatus"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "webhook_status": {
+            "$ref": "#/components/schemas/EmailWebhookStatus"
+          },
+          "webhook_attempt_count": {
+            "type": "integer"
+          },
+          "webhook_last_status_code": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "webhook_last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "received_at",
+          "from",
+          "to",
+          "subject",
+          "webhook_status",
+          "webhook_attempt_count",
+          "webhook_last_status_code",
+          "webhook_last_error"
+        ]
+      },
+      "FunctionTestRunDeliveryEndpoint": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Endpoint kind. Current traces may include `http` or `function`; future endpoint kinds may appear."
+          },
+          "function_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "function_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "domain_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "deactivated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "is_current_function": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "function_id",
+          "function_name",
+          "domain_id",
+          "enabled",
+          "deactivated_at",
+          "is_current_function"
+        ]
+      },
+      "FunctionTestRunDelivery": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Webhook delivery id."
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "endpoint_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "delivered",
+              "header_confirmed",
+              "failed"
+            ]
+          },
+          "attempt_count": {
+            "type": "integer"
+          },
+          "duration_ms": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_error_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endpoint": {
+            "$ref": "#/components/schemas/FunctionTestRunDeliveryEndpoint"
+          }
+        },
+        "required": [
+          "id",
+          "endpoint_id",
+          "endpoint_url",
+          "status",
+          "attempt_count",
+          "duration_ms",
+          "last_error",
+          "last_error_code",
+          "created_at",
+          "updated_at",
+          "endpoint"
+        ]
+      },
+      "FunctionTestRunOutboundRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "function_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "webhook_delivery_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "endpoint_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "method": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "host": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "status_code": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "ok": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "duration_ms": {
+            "type": "integer"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "function_id",
+          "webhook_delivery_id",
+          "email_id",
+          "endpoint_id",
+          "method",
+          "url",
+          "host",
+          "path",
+          "status_code",
+          "ok",
+          "duration_ms",
+          "error",
+          "ts"
+        ]
+      },
+      "FunctionTestRunReply": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SentEmailStatus"
+          },
+          "to": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "queue_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "to",
+          "subject",
+          "queue_id",
+          "created_at"
+        ]
+      },
+      "FunctionTestRunTrace": {
+        "type": "object",
+        "description": "End-to-end trace for a `POST /functions/{id}/test` run. The\nshape is stable, but many nested sections are null or empty\nuntil the corresponding phase has happened.\n",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/FunctionTestRunState"
+          },
+          "test_run": {
+            "$ref": "#/components/schemas/FunctionTestRun"
+          },
+          "test_send": {
+            "$ref": "#/components/schemas/FunctionTestRunSend"
+          },
+          "inbound_email": {
+            "$ref": "#/components/schemas/FunctionTestRunInboundEmail"
+          },
+          "deliveries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FunctionTestRunDelivery"
+            }
+          },
+          "outbound_requests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FunctionTestRunOutboundRequest"
+            }
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FunctionLogRow"
+            }
+          },
+          "replies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FunctionTestRunReply"
+            }
+          }
+        },
+        "required": [
+          "state",
+          "test_run",
+          "test_send",
+          "inbound_email",
+          "deliveries",
+          "outbound_requests",
+          "logs",
+          "replies"
         ]
       },
       "FunctionLogRow": {

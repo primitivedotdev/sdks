@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 
 from dateutil.parser import isoparse
 from typing import cast
+from uuid import UUID
 import datetime
 
 
@@ -24,11 +25,12 @@ T = TypeVar("T", bound="TestInvocationResult")
 @_attrs_define
 class TestInvocationResult:
     """ Metadata returned by POST /functions/{id}/test. The send is
-    queued; the actual invocation lands on the function's
-    invocations list a few seconds later as the inbound mail
-    traverses the MX path.
+    queued; poll `trace_url` to watch the run progress through
+    send -> inbound -> webhook deliveries -> outbound requests,
+    logs, and replies.
 
         Attributes:
+            test_run_id (UUID): Durable test run id used to fetch the run trace.
             inbound_domain (str): Verified inbound domain the test email was sent to.
             to (str): Synthetic local-part plus inbound_domain. Visible in the org's inbox.
             from_ (str): Primitive-controlled outbound sender used for the test.
@@ -41,8 +43,10 @@ class TestInvocationResult:
                 polling /emails for the inbound's arrival. Captured
                 slightly before the send to absorb light clock skew.
             watch_url (str): Function detail page where invocations show up live.
+            trace_url (str): Relative API URL for GET /functions/{id}/test-runs/{test_run_id}/trace.
      """
 
+    test_run_id: UUID
     inbound_domain: str
     to: str
     from_: str
@@ -50,6 +54,7 @@ class TestInvocationResult:
     subject: str
     poll_since: datetime.datetime
     watch_url: str
+    trace_url: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -57,6 +62,8 @@ class TestInvocationResult:
 
 
     def to_dict(self) -> dict[str, Any]:
+        test_run_id = str(self.test_run_id)
+
         inbound_domain = self.inbound_domain
 
         to = self.to
@@ -71,10 +78,13 @@ class TestInvocationResult:
 
         watch_url = self.watch_url
 
+        trace_url = self.trace_url
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "test_run_id": test_run_id,
             "inbound_domain": inbound_domain,
             "to": to,
             "from": from_,
@@ -82,6 +92,7 @@ class TestInvocationResult:
             "subject": subject,
             "poll_since": poll_since,
             "watch_url": watch_url,
+            "trace_url": trace_url,
         })
 
         return field_dict
@@ -91,6 +102,11 @@ class TestInvocationResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
+        test_run_id = UUID(d.pop("test_run_id"))
+
+
+
+
         inbound_domain = d.pop("inbound_domain")
 
         to = d.pop("to")
@@ -108,7 +124,10 @@ class TestInvocationResult:
 
         watch_url = d.pop("watch_url")
 
+        trace_url = d.pop("trace_url")
+
         test_invocation_result = cls(
+            test_run_id=test_run_id,
             inbound_domain=inbound_domain,
             to=to,
             from_=from_,
@@ -116,6 +135,7 @@ class TestInvocationResult:
             subject=subject,
             poll_since=poll_since,
             watch_url=watch_url,
+            trace_url=trace_url,
         )
 
 

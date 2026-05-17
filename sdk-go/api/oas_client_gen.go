@@ -229,6 +229,16 @@ type Invoker interface {
 	//
 	// GET /functions/{id}
 	GetFunction(ctx context.Context, params GetFunctionParams) (GetFunctionRes, error)
+	// GetFunctionTestRunTrace invokes getFunctionTestRunTrace operation.
+	//
+	// Returns the current end-to-end trace for a function test run.
+	// The trace is intentionally partial while the test is still in
+	// flight: callers can poll this endpoint and watch it fill in
+	// from send -> inbound -> webhook deliveries -> outbound
+	// requests, logs, and replies.
+	//
+	// GET /functions/{id}/test-runs/{run_id}/trace
+	GetFunctionTestRunTrace(ctx context.Context, params GetFunctionTestRunTraceParams) (GetFunctionTestRunTraceRes, error)
 	// GetSendPermissions invokes getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -2983,6 +2993,155 @@ func (c *Client) sendGetFunction(ctx context.Context, params GetFunctionParams) 
 
 	stage = "DecodeResponse"
 	result, err := decodeGetFunctionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetFunctionTestRunTrace invokes getFunctionTestRunTrace operation.
+//
+// Returns the current end-to-end trace for a function test run.
+// The trace is intentionally partial while the test is still in
+// flight: callers can poll this endpoint and watch it fill in
+// from send -> inbound -> webhook deliveries -> outbound
+// requests, logs, and replies.
+//
+// GET /functions/{id}/test-runs/{run_id}/trace
+func (c *Client) GetFunctionTestRunTrace(ctx context.Context, params GetFunctionTestRunTraceParams) (GetFunctionTestRunTraceRes, error) {
+	res, err := c.sendGetFunctionTestRunTrace(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetFunctionTestRunTrace(ctx context.Context, params GetFunctionTestRunTraceParams) (res GetFunctionTestRunTraceRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getFunctionTestRunTrace"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/functions/{id}/test-runs/{run_id}/trace"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetFunctionTestRunTraceOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [5]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/test-runs/"
+	{
+		// Encode "run_id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "run_id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.RunID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	pathParts[4] = "/trace"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetFunctionTestRunTraceOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetFunctionTestRunTraceResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
