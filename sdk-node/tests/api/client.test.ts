@@ -87,6 +87,7 @@ const RECEIVED_EMAIL: ReceivedEmail = {
         reply_to: [],
         cc: [],
         bcc: [],
+        to_addresses: [{ address: "support@example.com", name: null }],
         in_reply_to: [],
         references: ["<root@example.com>"],
         attachments: [],

@@ -382,6 +382,20 @@
           ],
           "description": "Parsed BCC header addresses. Null if the email had no BCC header. Note: BCC is only available for outgoing emails or when explicitly provided."
         },
+        "to_addresses": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EmailAddress"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Parsed To header addresses. Null if the email had no To header."
+        },
         "in_reply_to": {
           "anyOf": [
             {
@@ -446,6 +460,7 @@
         "reply_to",
         "cc",
         "bcc",
+        "to_addresses",
         "in_reply_to",
         "references",
         "attachments",
@@ -550,6 +565,10 @@
           "type": "null",
           "description": "Always null when parsing fails."
         },
+        "to_addresses": {
+          "type": "null",
+          "description": "Always null when parsing fails."
+        },
         "in_reply_to": {
           "type": "null",
           "description": "Always null when parsing fails."
@@ -578,6 +597,7 @@
         "reply_to",
         "cc",
         "bcc",
+        "to_addresses",
         "in_reply_to",
         "references",
         "attachments",

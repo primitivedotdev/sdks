@@ -207,6 +207,7 @@ type ParsedData struct {
 	ReplyTo                []EmailAddress      `json:"reply_to"`
 	CC                     []EmailAddress      `json:"cc"`
 	BCC                    []EmailAddress      `json:"bcc"`
+	ToAddresses            []EmailAddress      `json:"to_addresses"`
 	InReplyTo              []string            `json:"in_reply_to"`
 	References             []string            `json:"references"`
 	Attachments            []WebhookAttachment `json:"attachments"`

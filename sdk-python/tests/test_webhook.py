@@ -88,6 +88,7 @@ def test_parse_webhook_event_handles_known_and_unknown_events() -> None:
                         "reply_to": None,
                         "cc": None,
                         "bcc": None,
+                        "to_addresses": None,
                         "in_reply_to": None,
                         "references": None,
                         "attachments": [],
