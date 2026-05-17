@@ -19,8 +19,9 @@ import {
 import { resolveCliAuth } from "../auth.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
 import {
-  parseSecretFlags,
+  resolveSecretFlags,
   SECRET_FLAG_SECURITY_NOTE,
+  SECRET_SOURCE_FLAGS_DESCRIPTION,
   type SecretFlagPair,
 } from "../secret-flags.js";
 
@@ -32,11 +33,11 @@ import {
 // deploy and refreshes env from the secrets table, which is how
 // secret writes go live.
 //
-// `--secret KEY=VALUE` is the one-call shortcut for "write secrets
-// AND redeploy in the same command." The flag is repeatable. Secrets
-// are written FIRST so a single update-function call picks up every
-// new binding; this is the inverse order of functions:deploy where
-// the function must exist before secrets can be written.
+// Secret source flags are the one-call shortcut for "write secrets
+// AND redeploy in the same command." Secrets are written FIRST so a
+// single update-function call picks up every new binding; this is the
+// inverse order of functions:deploy where the function must exist
+// before secrets can be written.
 
 // Final payload runRedeployWithSecrets produces on the happy path.
 // `secrets` is omitted when no --secret flags were passed.
@@ -185,12 +186,12 @@ class FunctionsRedeployCommand extends Command {
   the bindings table fresh on every call, so passing the existing
   bundle picks up any secret writes since the last deploy.
 
-  Pass --secret KEY=VALUE (repeatable) to write secrets BEFORE the
-  redeploy fires; one update-function call then refreshes every new
-  binding. Keys must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters,
-  digits, underscores; first character is a letter or underscore).
-  With one or more --secret flags the redeploy fans out to multiple
-  API calls (set-secret per pair, then update-function).`;
+  Pass secret source flags to write secrets BEFORE the redeploy fires;
+  one update-function call then refreshes every new binding. Keys must
+  match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters, digits, underscores;
+  first character is a letter or underscore). With one or more secrets
+  the redeploy fans out to multiple API calls (set-secret per pair,
+  then update-function). ${SECRET_SOURCE_FLAGS_DESCRIPTION}`;
 
   static summary = "Redeploy a function from a bundled handler file";
 
@@ -198,6 +199,7 @@ class FunctionsRedeployCommand extends Command {
     "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js",
     "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --source-map-file ./bundle.js.map",
     "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
+    "<%= config.bin %> functions redeploy --id <fn-id> --file ./bundle.js --secret-from-env OPENAI_KEY --secret-from-file PRIVATE_KEY=./private-key.pem",
   ];
 
   static flags = {
@@ -235,6 +237,21 @@ class FunctionsRedeployCommand extends Command {
       description: `Secret KEY=VALUE to write on the function before the redeploy fires. Repeatable. KEY must match \`^[A-Z_][A-Z0-9_]*$\`; VALUE may contain \`=\` (only the first \`=\` is treated as a delimiter). Each KEY may only appear once per command. Passing one or more --secret flags fans out to set-secret per pair then a single update-function call so the new bindings land in the same redeploy. ${SECRET_FLAG_SECURITY_NOTE}`,
       multiple: true,
     }),
+    "secret-from-env": Flags.string({
+      description:
+        "Secret KEY to read from the environment and write before the redeploy. Repeatable. Example: --secret-from-env OPENAI_KEY reads process.env.OPENAI_KEY.",
+      multiple: true,
+    }),
+    "secret-from-file": Flags.string({
+      description:
+        "Secret KEY=PATH to read from a UTF-8 file and write before the redeploy. Repeatable. The full file contents become the value.",
+      multiple: true,
+    }),
+    "secret-from-env-file": Flags.string({
+      description:
+        "Secret FILE:KEY to read from a dotenv-style file and write before the redeploy. Repeatable. Example: --secret-from-env-file .env.local:OPENAI_KEY.",
+      multiple: true,
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -248,8 +265,12 @@ class FunctionsRedeployCommand extends Command {
       // a malformed input fails fast with a clear error and zero
       // side effects. The fast path (no --secret flags) skips the
       // secret-write loop entirely.
-      const rawSecrets = flags.secret ?? [];
-      const parsedSecrets = parseSecretFlags(rawSecrets);
+      const parsedSecrets = resolveSecretFlags({
+        fromEnv: flags["secret-from-env"] ?? [],
+        fromEnvFile: flags["secret-from-env-file"] ?? [],
+        fromFile: flags["secret-from-file"] ?? [],
+        inline: flags.secret ?? [],
+      });
       if (parsedSecrets.kind === "error") {
         process.stderr.write(`${parsedSecrets.message}\n`);
         process.exitCode = 1;
