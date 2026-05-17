@@ -265,16 +265,16 @@ class FunctionsDeployCommand extends Command {
   final update-function with the same bundle so the running handler
   picks up the bindings. If a secret write fails after the create
   step the function exists with whatever secrets succeeded and the
-  redeploy has NOT fired; re-run \`primitive functions:set-secret\`
-  for the missing keys, then \`primitive functions:redeploy\` to
+  redeploy has NOT fired; re-run \`primitive functions set-secret\`
+  for the missing keys, then \`primitive functions redeploy\` to
   push them live.`;
 
   static summary = "Deploy a new function from a bundled handler file";
 
   static examples = [
-    "<%= config.bin %> functions:deploy --name forwarder --file ./bundle.js",
-    "<%= config.bin %> functions:deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
-    "<%= config.bin %> functions:deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
   ];
 
   static flags = {
@@ -431,7 +431,7 @@ class FunctionsDeployCommand extends Command {
             ", ",
           );
           process.stderr.write(
-            `Function ${outcome.created.name} (${outcome.created.id}) was created, but writing secret ${outcome.failedKey} failed; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The redeploy is NOT yet live. Re-run \`primitive functions:set-secret\` for each of [${allMissing}], then \`primitive functions:redeploy --id ${outcome.created.id} --file <bundle>\` to push them live.\n`,
+            `Function ${outcome.created.name} (${outcome.created.id}) was created, but writing secret ${outcome.failedKey} failed; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The redeploy is NOT yet live. Re-run \`primitive functions set-secret\` for each of [${allMissing}], then \`primitive functions redeploy --id ${outcome.created.id} --file <bundle>\` to push them live.\n`,
           );
         } else if (outcome.stage === "redeploy") {
           const succeeded =
@@ -439,7 +439,7 @@ class FunctionsDeployCommand extends Command {
               ? outcome.succeededKeys.join(", ")
               : "(none)";
           process.stderr.write(
-            `Function ${outcome.created.name} (${outcome.created.id}) was created and secrets [${succeeded}] were written, but the final redeploy failed; the new bindings are NOT yet live. Re-run \`primitive functions:redeploy --id ${outcome.created.id} --file <bundle>\` once the cause is fixed.\n`,
+            `Function ${outcome.created.name} (${outcome.created.id}) was created and secrets [${succeeded}] were written, but the final redeploy failed; the new bindings are NOT yet live. Re-run \`primitive functions redeploy --id ${outcome.created.id} --file <bundle>\` once the cause is fixed.\n`,
           );
         }
         writeErrorWithHints(outcome.payload);

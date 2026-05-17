@@ -775,13 +775,13 @@ function collectValues(
 // authoritative list of shortcuts.
 export const OPERATION_HINTS: Record<string, string> = {
   createFunction:
-    "Tip: prefer `primitive functions:deploy --name <name> --file <bundle>` for file-input ergonomics. This raw command exists for callers passing JSON.",
+    "Tip: prefer `primitive functions deploy --name <name> --file <bundle>` for file-input ergonomics. This raw command exists for callers passing JSON.",
   updateFunction:
-    "Tip: prefer `primitive functions:redeploy --id <id> --file <bundle>` for file-input ergonomics. This raw command exists for callers passing JSON.",
+    "Tip: prefer `primitive functions redeploy --id <id> --file <bundle>` for file-input ergonomics. This raw command exists for callers passing JSON.",
   createFunctionSecret:
-    "Tip: prefer `primitive functions:set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
+    "Tip: prefer `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
   setFunctionSecret:
-    "Tip: prefer `primitive functions:set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
+    "Tip: prefer `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
 };
 
 export function createOperationCommand(
@@ -795,7 +795,9 @@ export function createOperationCommand(
   // had to probe the server with malformed payloads to discover
   // required fields. (CLI agent walkthrough surfaced this.)
   const baseDescription =
-    operation.description ?? `${operation.method} ${operation.path}`;
+    operation.description !== null && operation.description !== undefined
+      ? canonicalizeCliReferences(operation.description)
+      : `${operation.method} ${operation.path}`;
   const schemaSummary = operation.hasJsonBody
     ? renderRequestSchemaSummary(operation.requestSchema)
     : null;
@@ -1016,12 +1018,21 @@ export function createOperationCommand(
 // back to no hint (silent empty array, same as before).
 const EMPTY_RESULT_HINTS: Record<string, string> = {
   listDeliveries:
-    "(no results) No webhook deliveries logged yet. If you have an endpoint configured but expected to see test fires here: test deliveries from `primitive endpoints:test-endpoint` are NOT logged in this list, they're synchronous and visible only in the test-endpoint command's response. Real deliveries are logged when an inbound `email.received` event fans out to your endpoints. If you have no endpoints, run `primitive endpoints:list-endpoints` to check.",
+    "(no results) No webhook deliveries logged yet. If you have an endpoint configured but expected to see test fires here: test deliveries from `primitive endpoints test` are NOT logged in this list, they're synchronous and visible only in the test-endpoint command's response. Real deliveries are logged when an inbound `email.received` event fans out to your endpoints. If you have no endpoints, run `primitive endpoints list` to check.",
   listEndpoints:
-    "(no results) No webhook endpoints configured. Add one with `primitive endpoints:create-endpoint --url <your-url>`.",
+    "(no results) No webhook endpoints configured. Add one with `primitive endpoints create --url <your-url>`.",
   listEmails:
-    "(no results) No inbound emails received yet on this account. Send one to a verified domain to populate this list. For a compact view, prefer `primitive emails:latest`.",
+    "(no results) No inbound emails received yet on this account. Send one to a verified domain to populate this list. For a compact view, prefer `primitive emails latest`.",
   listDomains:
-    "(no results) No domains on this account. Add one with `primitive domains:add-domain --domain <yourdomain.example>`.",
+    "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",
 };
+
+function canonicalizeCliReferences(description: string): string {
+  return description
+    .replaceAll("`primitive emails:latest`", "`primitive emails latest`")
+    .replaceAll(
+      "`primitive describe emails:get-email | jq '.responseSchema.properties'`",
+      "`primitive describe emails:get | jq '.responseSchema.properties'`",
+    );
+}

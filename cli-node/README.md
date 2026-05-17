@@ -21,15 +21,32 @@ This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@pri
 export PRIMITIVE_API_KEY=prim_...
 
 primitive whoami
-primitive functions:init my-fn
+primitive functions init my-fn
 cd my-fn && npm install && npm run build
-primitive functions:deploy --name my-fn --file ./dist/handler.js
+primitive functions deploy --name my-fn --file ./dist/handler.js
 
 primitive send --to alice@example.com --body "Hello!" --wait
-primitive emails:latest --limit 5
+primitive emails latest --limit 5
 ```
 
-Run `primitive --help` for the full command list. Per-command help (`primitive functions:deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
+Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
+
+## Command style
+
+Use task-oriented commands for normal workflows:
+
+```bash
+primitive send --to alice@example.com --body "Hello"
+primitive reply --id <inbound-email-id> --body "Thanks"
+primitive emails list
+primitive emails get --id <inbound-email-id>
+primitive sent list
+primitive domains list
+primitive functions logs --id <function-id>
+primitive deliveries replay --id <delivery-id>
+```
+
+Generated API commands remain available for compatibility and full schema parity, for example `primitive emails:list-emails` and `primitive sending:reply-to-email`.
 
 ## Migrating from `@primitivedotdev/sdk` CLI
 
