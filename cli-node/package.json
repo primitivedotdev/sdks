@@ -55,7 +55,7 @@
         "description": "Short aliases for webhook delivery attempts: `primitive deliveries list` and `primitive deliveries replay`."
       },
       "functions": {
-        "description": "Deploy JavaScript handlers that run on inbound mail. Prefer `primitive functions init`, `primitive functions deploy`, `primitive functions redeploy`, `primitive functions list`, `primitive functions get`, `primitive functions logs`, and `primitive functions set-secret`; generated API names remain available for compatibility."
+        "description": "Deploy JavaScript handlers that run on inbound mail. Prefer `primitive functions templates`, `primitive functions init`, `primitive functions deploy`, `primitive functions redeploy`, `primitive functions list`, `primitive functions get`, `primitive functions logs`, and `primitive functions set-secret`; generated API names remain available for compatibility."
       }
     },
     "topicSeparator": " "

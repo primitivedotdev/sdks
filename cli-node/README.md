@@ -21,6 +21,7 @@ This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@pri
 export PRIMITIVE_API_KEY=prim_...
 
 primitive whoami
+primitive functions templates
 primitive functions init my-fn
 cd my-fn && npm install && npm run build
 primitive functions deploy --name my-fn --file ./dist/handler.js
@@ -42,6 +43,8 @@ primitive emails list
 primitive emails get --id <inbound-email-id>
 primitive sent list
 primitive domains list
+primitive functions templates
+primitive functions init my-fn --template email-reply
 primitive functions logs --id <function-id>
 primitive deliveries replay --id <delivery-id>
 ```
