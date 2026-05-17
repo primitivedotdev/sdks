@@ -63,30 +63,31 @@ describe("functions:test-function command registration", () => {
 });
 
 describe("buildFunctionTestOutcome", () => {
-  it("includes run-correlation fields that are known before polling", () => {
-    const invocation = {
-      from: "test@primitive.email",
-      inbound_domain: "long-ape.primitive.email",
-      poll_since: "2026-05-17T19:00:00.000Z",
-      send_id: "send-1",
-      subject: "Primitive Functions test invocation (summarize)",
-      to: "summarize@long-ape.primitive.email",
-      watch_url: "/app/functions/fn-1?tab=invocations",
-    } as Parameters<typeof buildFunctionTestOutcome>[0]["invocation"];
-    const detail = {
-      replies: [{ id: "reply-1", status: "delivered" }],
-      webhook_attempt_count: 1,
-      webhook_last_error: null,
-      webhook_last_status_code: 200,
-      webhook_status: "fired",
-    } as Parameters<typeof buildFunctionTestOutcome>[0]["detail"];
+  const BASE_INVOCATION = {
+    from: "test@primitive.email",
+    inbound_domain: "long-ape.primitive.email",
+    poll_since: "2026-05-17T19:00:00.000Z",
+    send_id: "send-1",
+    subject: "Primitive Functions test invocation (summarize)",
+    to: "summarize@long-ape.primitive.email",
+    watch_url: "/app/functions/fn-1?tab=invocations",
+  } as Parameters<typeof buildFunctionTestOutcome>[0]["invocation"];
 
+  const BASE_DETAIL = {
+    replies: [{ id: "reply-1", status: "delivered" }],
+    webhook_attempt_count: 1,
+    webhook_last_error: null,
+    webhook_last_status_code: 200,
+    webhook_status: "fired",
+  } as Parameters<typeof buildFunctionTestOutcome>[0]["detail"];
+
+  it("includes run-correlation fields that are known before polling", () => {
     const outcome = buildFunctionTestOutcome({
-      detail,
+      detail: BASE_DETAIL,
       elapsedSeconds: 4,
       functionId: "fn-1",
       inboundId: "inbound-1",
-      invocation,
+      invocation: BASE_INVOCATION,
       showSends: true,
     });
 
@@ -111,29 +112,12 @@ describe("buildFunctionTestOutcome", () => {
   });
 
   it("omits sent_emails unless --show-sends was requested", () => {
-    const invocation = {
-      from: "test@primitive.email",
-      inbound_domain: "long-ape.primitive.email",
-      poll_since: "2026-05-17T19:00:00.000Z",
-      send_id: "send-1",
-      subject: "Primitive Functions test invocation (summarize)",
-      to: "summarize@long-ape.primitive.email",
-      watch_url: "/app/functions/fn-1?tab=invocations",
-    } as Parameters<typeof buildFunctionTestOutcome>[0]["invocation"];
-    const detail = {
-      replies: [{ id: "reply-1", status: "delivered" }],
-      webhook_attempt_count: 1,
-      webhook_last_error: null,
-      webhook_last_status_code: 200,
-      webhook_status: "fired",
-    } as Parameters<typeof buildFunctionTestOutcome>[0]["detail"];
-
     const outcome = buildFunctionTestOutcome({
-      detail,
+      detail: BASE_DETAIL,
       elapsedSeconds: 4,
       functionId: "fn-1",
       inboundId: "inbound-1",
-      invocation,
+      invocation: BASE_INVOCATION,
       showSends: false,
     });
 
