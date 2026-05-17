@@ -73,6 +73,10 @@ type GetFunctionRes interface {
 	getFunctionRes()
 }
 
+type GetFunctionTestRunTraceRes interface {
+	getFunctionTestRunTraceRes()
+}
+
 type GetSendPermissionsRes interface {
 	getSendPermissionsRes()
 }

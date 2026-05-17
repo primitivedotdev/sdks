@@ -3063,6 +3063,577 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-function-test-run-trace",
+    "description": "Returns the current end-to-end trace for a function test run.\nThe trace is intentionally partial while the test is still in\nflight: callers can poll this endpoint and watch it fill in\nfrom send -> inbound -> webhook deliveries -> outbound\nrequests, logs, and replies.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getFunctionTestRunTrace",
+    "path": "/functions/{id}/test-runs/{run_id}/trace",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "Function test run id returned by POST /functions/{id}/test.",
+        "enum": null,
+        "name": "run_id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "End-to-end trace for a `POST /functions/{id}/test` run. The\nshape is stable, but many nested sections are null or empty\nuntil the corresponding phase has happened.\n",
+      "properties": {
+        "state": {
+          "type": "string",
+          "description": "High-level state for a function test run trace:\n  - `send_failed`: the initial test email send failed.\n  - `waiting_for_send`: the test run was created but no send result has been recorded yet.\n  - `waiting_for_inbound`: the test send was queued and the matching inbound email has not arrived yet.\n  - `waiting_for_function`: the inbound email arrived and webhook/function processing is still in flight.\n  - `completed`: the function webhook completed successfully.\n  - `failed`: webhook delivery exhausted retries.\n",
+          "enum": [
+            "send_failed",
+            "waiting_for_send",
+            "waiting_for_inbound",
+            "waiting_for_function",
+            "completed",
+            "failed"
+          ]
+        },
+        "test_run": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "function_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "inbound_domain": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "from": {
+              "type": "string"
+            },
+            "subject": {
+              "type": "string"
+            },
+            "poll_since": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "sent_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "send_error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "function_id",
+            "inbound_domain",
+            "to",
+            "from",
+            "subject",
+            "poll_since",
+            "created_at",
+            "sent_at",
+            "send_error"
+          ]
+        },
+        "test_send": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+              "enum": [
+                "queued",
+                "submitted_to_agent",
+                "agent_failed",
+                "gate_denied",
+                "unknown",
+                "delivered",
+                "bounced",
+                "deferred",
+                "wait_timeout"
+              ]
+            },
+            "queue_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "status",
+            "queue_id",
+            "created_at",
+            "updated_at"
+          ]
+        },
+        "inbound_email": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "description": "Lifecycle status of an INBOUND email (a row in the `emails`\ntable). Distinct from `SentEmailStatus`, which describes\nthe OUTBOUND lifecycle (the `sent_emails` table) and uses\na different vocabulary because the lifecycles differ.\nPossible values:\n\n  - `pending`: the row was inserted at ingestion (mx_main)\n    and has not yet completed the spam / filter / auth\n    pipeline. Body and parsed fields are present; webhook\n    delivery is not yet scheduled. Most rows transition out\n    of `pending` within seconds.\n  - `accepted`: the inbound passed the policy gates and is\n    queued for webhook delivery. The `webhook_status` field\n    tracks the separate webhook-delivery lifecycle from\n    this point.\n  - `completed`: terminal success. Webhook delivery\n    attempted and acknowledged by every active endpoint, OR\n    no endpoints are configured, so the row is durably\n    archived.\n  - `rejected`: terminal failure at ingestion (spam, blocked\n    sender, filter rule, malformed). The body and metadata\n    are stored for auditing but no webhook fires and the\n    row is not repliable.\n\nSee also `webhook_status` (separate enum tracking the\nwebhook-delivery state machine) and `SentEmailStatus` (the\noutbound vocabulary).\n",
+              "enum": [
+                "pending",
+                "accepted",
+                "completed",
+                "rejected"
+              ]
+            },
+            "received_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "from": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            },
+            "subject": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "webhook_status": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Webhook-delivery state for an inbound email. Tracks a\nSEPARATE lifecycle from the email's `status` field; the\nsame row carries both. Possible values:\n\n  - `pending`: ingestion is past `pending` (the email itself\n    is `accepted`) but the webhook fan-out has not yet\n    started for this row.\n  - `in_flight`: at least one delivery attempt is in flight.\n  - `fired`: terminal success. Every active endpoint\n    acknowledged the delivery (or accepted it after retries).\n  - `failed`: terminal partial-failure. At least one endpoint\n    exhausted its retry budget; some endpoints may still\n    have succeeded.\n  - `exhausted`: terminal failure. Every endpoint exhausted\n    its retry budget without success.\n  - `null`: no endpoints configured, so no webhook lifecycle\n    applies.\n\nNote that the value `pending` here does NOT mean the email\nis `pending`; it means the email is past ingestion but\nwebhook delivery has not yet begun. Two overlapping uses\nof the word `pending` for distinct lifecycle phases.\n",
+              "enum": [
+                "pending",
+                "in_flight",
+                "fired",
+                "failed",
+                "exhausted",
+                null
+              ]
+            },
+            "webhook_attempt_count": {
+              "type": "integer"
+            },
+            "webhook_last_status_code": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "webhook_last_error": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "status",
+            "received_at",
+            "from",
+            "to",
+            "subject",
+            "webhook_status",
+            "webhook_attempt_count",
+            "webhook_last_status_code",
+            "webhook_last_error"
+          ]
+        },
+        "deliveries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Webhook delivery id."
+              },
+              "endpoint_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "endpoint_url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "delivered",
+                  "header_confirmed",
+                  "failed"
+                ]
+              },
+              "attempt_count": {
+                "type": "integer"
+              },
+              "duration_ms": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "last_error": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "last_error_code": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "endpoint": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "description": "Endpoint kind. Current traces may include `http` or `function`; future endpoint kinds may appear."
+                  },
+                  "function_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "function_name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "domain_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "deactivated_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "is_current_function": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "kind",
+                  "function_id",
+                  "function_name",
+                  "domain_id",
+                  "enabled",
+                  "deactivated_at",
+                  "is_current_function"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "endpoint_id",
+              "endpoint_url",
+              "status",
+              "attempt_count",
+              "duration_ms",
+              "last_error",
+              "last_error_code",
+              "created_at",
+              "updated_at",
+              "endpoint"
+            ]
+          }
+        },
+        "outbound_requests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "function_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "webhook_delivery_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "endpoint_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "method": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "host": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "status_code": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "ok": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "duration_ms": {
+                "type": "integer"
+              },
+              "error": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ts": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "function_id",
+              "webhook_delivery_id",
+              "email_id",
+              "endpoint_id",
+              "method",
+              "url",
+              "host",
+              "path",
+              "status_code",
+              "ok",
+              "duration_ms",
+              "error",
+              "ts"
+            ]
+          }
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "One row from GET /functions/{id}/logs. Represents a single\ncaptured log line emitted by the running handler (e.g. via\n`console.log` / `console.error`).\n",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Unique log row id (stable across pages)."
+              },
+              "function_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "The function this log row belongs to."
+              },
+              "level": {
+                "type": "string",
+                "enum": [
+                  "debug",
+                  "log",
+                  "info",
+                  "warn",
+                  "error"
+                ],
+                "description": "Severity. `log` is the runtime's default for unannotated\n`console.log` calls; the other levels match standard\n`console.*` methods.\n"
+              },
+              "message": {
+                "type": "string",
+                "description": "The textual message body. The runtime stringifies non-string\narguments before persisting, so this is always a plain\nstring.\n"
+              },
+              "ts": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When the handler emitted this line. Newest-first ordering\non this column drives pagination; clock is the runtime's,\nnot the gateway's.\n"
+              },
+              "metadata": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true,
+                "description": "Optional structured payload the runtime attaches alongside\nthe message (e.g. extra args passed to `console.log`).\nShape is opaque; treat keys as untyped.\n"
+              }
+            },
+            "required": [
+              "id",
+              "function_id",
+              "level",
+              "message",
+              "ts"
+            ]
+          }
+        },
+        "replies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+                "enum": [
+                  "queued",
+                  "submitted_to_agent",
+                  "agent_failed",
+                  "gate_denied",
+                  "unknown",
+                  "delivered",
+                  "bounced",
+                  "deferred",
+                  "wait_timeout"
+                ]
+              },
+              "to": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string"
+              },
+              "queue_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "to",
+              "subject",
+              "queue_id",
+              "created_at"
+            ]
+          }
+        }
+      },
+      "required": [
+        "state",
+        "test_run",
+        "test_send",
+        "inbound_email",
+        "deliveries",
+        "outbound_requests",
+        "logs",
+        "replies"
+      ]
+    },
+    "sdkName": "getFunctionTestRunTrace",
+    "summary": "Get a function test run trace",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "list-function-logs",
     "description": "Returns the most recent `function_logs` rows for the function,\nnewest first. Each row is a single `console.log` / `console.error`\ninvocation captured from the running handler.\n\nPage through history with the opaque `cursor` returned as\n`next_cursor`; pass it back as the `cursor` query param on the\nnext call. `next_cursor` is `null` when there are no further\nrows. The cursor format is an implementation detail and should\nnot be parsed by callers.\n",
     "hasJsonBody": false,
@@ -3426,8 +3997,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "responseSchema": {
       "type": "object",
-      "description": "Metadata returned by POST /functions/{id}/test. The send is\nqueued; the actual invocation lands on the function's\ninvocations list a few seconds later as the inbound mail\ntraverses the MX path.\n",
+      "description": "Metadata returned by POST /functions/{id}/test. The send is\nqueued; poll `trace_url` to watch the run progress through\nsend -> inbound -> webhook deliveries -> outbound requests,\nlogs, and replies.\n",
       "properties": {
+        "test_run_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Durable test run id used to fetch the run trace."
+        },
         "inbound_domain": {
           "type": "string",
           "description": "Verified inbound domain the test email was sent to."
@@ -3457,16 +4033,22 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "format": "uri",
           "description": "Function detail page where invocations show up live."
+        },
+        "trace_url": {
+          "type": "string",
+          "description": "Relative API URL for GET /functions/{id}/test-runs/{test_run_id}/trace."
         }
       },
       "required": [
+        "test_run_id",
         "inbound_domain",
         "to",
         "from",
         "send_id",
         "subject",
         "poll_since",
-        "watch_url"
+        "watch_url",
+        "trace_url"
       ]
     },
     "sdkName": "testFunction",

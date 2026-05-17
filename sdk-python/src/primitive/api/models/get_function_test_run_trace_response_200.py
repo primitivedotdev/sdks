@@ -11,29 +11,28 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.test_invocation_result import TestInvocationResult
+  from ..models.function_test_run_trace import FunctionTestRunTrace
 
 
 
 
 
-T = TypeVar("T", bound="TestFunctionResponse200")
+T = TypeVar("T", bound="GetFunctionTestRunTraceResponse200")
 
 
 
 @_attrs_define
-class TestFunctionResponse200:
+class GetFunctionTestRunTraceResponse200:
     """ 
         Attributes:
             success (bool):
-            data (TestInvocationResult | Unset): Metadata returned by POST /functions/{id}/test. The send is
-                queued; poll `trace_url` to watch the run progress through
-                send -> inbound -> webhook deliveries -> outbound requests,
-                logs, and replies.
+            data (FunctionTestRunTrace | Unset): End-to-end trace for a `POST /functions/{id}/test` run. The
+                shape is stable, but many nested sections are null or empty
+                until the corresponding phase has happened.
      """
 
     success: bool
-    data: TestInvocationResult | Unset = UNSET
+    data: FunctionTestRunTrace | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -41,7 +40,7 @@ class TestFunctionResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.test_invocation_result import TestInvocationResult
+        from ..models.function_test_run_trace import FunctionTestRunTrace
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -63,28 +62,28 @@ class TestFunctionResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.test_invocation_result import TestInvocationResult
+        from ..models.function_test_run_trace import FunctionTestRunTrace
         d = dict(src_dict)
         success = d.pop("success")
 
         _data = d.pop("data", UNSET)
-        data: TestInvocationResult | Unset
+        data: FunctionTestRunTrace | Unset
         if isinstance(_data,  Unset):
             data = UNSET
         else:
-            data = TestInvocationResult.from_dict(_data)
+            data = FunctionTestRunTrace.from_dict(_data)
 
 
 
 
-        test_function_response_200 = cls(
+        get_function_test_run_trace_response_200 = cls(
             success=success,
             data=data,
         )
 
 
-        test_function_response_200.additional_properties = d
-        return test_function_response_200
+        get_function_test_run_trace_response_200.additional_properties = d
+        return get_function_test_run_trace_response_200
 
     @property
     def additional_keys(self) -> list[str]:

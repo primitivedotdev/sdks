@@ -4604,6 +4604,969 @@ func (s *FunctionSecretWriteResult) SetCreated(val bool) {
 	s.Created = val
 }
 
+// Ref: #/components/schemas/FunctionTestRun
+type FunctionTestRun struct {
+	ID            uuid.UUID   `json:"id"`
+	FunctionID    uuid.UUID   `json:"function_id"`
+	InboundDomain string      `json:"inbound_domain"`
+	To            string      `json:"to"`
+	From          string      `json:"from"`
+	Subject       string      `json:"subject"`
+	PollSince     time.Time   `json:"poll_since"`
+	CreatedAt     time.Time   `json:"created_at"`
+	SentAt        NilDateTime `json:"sent_at"`
+	SendError     NilString   `json:"send_error"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionTestRun) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *FunctionTestRun) GetFunctionID() uuid.UUID {
+	return s.FunctionID
+}
+
+// GetInboundDomain returns the value of InboundDomain.
+func (s *FunctionTestRun) GetInboundDomain() string {
+	return s.InboundDomain
+}
+
+// GetTo returns the value of To.
+func (s *FunctionTestRun) GetTo() string {
+	return s.To
+}
+
+// GetFrom returns the value of From.
+func (s *FunctionTestRun) GetFrom() string {
+	return s.From
+}
+
+// GetSubject returns the value of Subject.
+func (s *FunctionTestRun) GetSubject() string {
+	return s.Subject
+}
+
+// GetPollSince returns the value of PollSince.
+func (s *FunctionTestRun) GetPollSince() time.Time {
+	return s.PollSince
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *FunctionTestRun) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetSentAt returns the value of SentAt.
+func (s *FunctionTestRun) GetSentAt() NilDateTime {
+	return s.SentAt
+}
+
+// GetSendError returns the value of SendError.
+func (s *FunctionTestRun) GetSendError() NilString {
+	return s.SendError
+}
+
+// SetID sets the value of ID.
+func (s *FunctionTestRun) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *FunctionTestRun) SetFunctionID(val uuid.UUID) {
+	s.FunctionID = val
+}
+
+// SetInboundDomain sets the value of InboundDomain.
+func (s *FunctionTestRun) SetInboundDomain(val string) {
+	s.InboundDomain = val
+}
+
+// SetTo sets the value of To.
+func (s *FunctionTestRun) SetTo(val string) {
+	s.To = val
+}
+
+// SetFrom sets the value of From.
+func (s *FunctionTestRun) SetFrom(val string) {
+	s.From = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *FunctionTestRun) SetSubject(val string) {
+	s.Subject = val
+}
+
+// SetPollSince sets the value of PollSince.
+func (s *FunctionTestRun) SetPollSince(val time.Time) {
+	s.PollSince = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *FunctionTestRun) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetSentAt sets the value of SentAt.
+func (s *FunctionTestRun) SetSentAt(val NilDateTime) {
+	s.SentAt = val
+}
+
+// SetSendError sets the value of SendError.
+func (s *FunctionTestRun) SetSendError(val NilString) {
+	s.SendError = val
+}
+
+// Ref: #/components/schemas/FunctionTestRunDelivery
+type FunctionTestRunDelivery struct {
+	// Webhook delivery id.
+	ID            string                             `json:"id"`
+	EndpointID    uuid.UUID                          `json:"endpoint_id"`
+	EndpointURL   url.URL                            `json:"endpoint_url"`
+	Status        FunctionTestRunDeliveryStatus      `json:"status"`
+	AttemptCount  int                                `json:"attempt_count"`
+	DurationMs    NilInt                             `json:"duration_ms"`
+	LastError     NilString                          `json:"last_error"`
+	LastErrorCode NilString                          `json:"last_error_code"`
+	CreatedAt     time.Time                          `json:"created_at"`
+	UpdatedAt     time.Time                          `json:"updated_at"`
+	Endpoint      NilFunctionTestRunDeliveryEndpoint `json:"endpoint"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionTestRunDelivery) GetID() string {
+	return s.ID
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *FunctionTestRunDelivery) GetEndpointID() uuid.UUID {
+	return s.EndpointID
+}
+
+// GetEndpointURL returns the value of EndpointURL.
+func (s *FunctionTestRunDelivery) GetEndpointURL() url.URL {
+	return s.EndpointURL
+}
+
+// GetStatus returns the value of Status.
+func (s *FunctionTestRunDelivery) GetStatus() FunctionTestRunDeliveryStatus {
+	return s.Status
+}
+
+// GetAttemptCount returns the value of AttemptCount.
+func (s *FunctionTestRunDelivery) GetAttemptCount() int {
+	return s.AttemptCount
+}
+
+// GetDurationMs returns the value of DurationMs.
+func (s *FunctionTestRunDelivery) GetDurationMs() NilInt {
+	return s.DurationMs
+}
+
+// GetLastError returns the value of LastError.
+func (s *FunctionTestRunDelivery) GetLastError() NilString {
+	return s.LastError
+}
+
+// GetLastErrorCode returns the value of LastErrorCode.
+func (s *FunctionTestRunDelivery) GetLastErrorCode() NilString {
+	return s.LastErrorCode
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *FunctionTestRunDelivery) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *FunctionTestRunDelivery) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetEndpoint returns the value of Endpoint.
+func (s *FunctionTestRunDelivery) GetEndpoint() NilFunctionTestRunDeliveryEndpoint {
+	return s.Endpoint
+}
+
+// SetID sets the value of ID.
+func (s *FunctionTestRunDelivery) SetID(val string) {
+	s.ID = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *FunctionTestRunDelivery) SetEndpointID(val uuid.UUID) {
+	s.EndpointID = val
+}
+
+// SetEndpointURL sets the value of EndpointURL.
+func (s *FunctionTestRunDelivery) SetEndpointURL(val url.URL) {
+	s.EndpointURL = val
+}
+
+// SetStatus sets the value of Status.
+func (s *FunctionTestRunDelivery) SetStatus(val FunctionTestRunDeliveryStatus) {
+	s.Status = val
+}
+
+// SetAttemptCount sets the value of AttemptCount.
+func (s *FunctionTestRunDelivery) SetAttemptCount(val int) {
+	s.AttemptCount = val
+}
+
+// SetDurationMs sets the value of DurationMs.
+func (s *FunctionTestRunDelivery) SetDurationMs(val NilInt) {
+	s.DurationMs = val
+}
+
+// SetLastError sets the value of LastError.
+func (s *FunctionTestRunDelivery) SetLastError(val NilString) {
+	s.LastError = val
+}
+
+// SetLastErrorCode sets the value of LastErrorCode.
+func (s *FunctionTestRunDelivery) SetLastErrorCode(val NilString) {
+	s.LastErrorCode = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *FunctionTestRunDelivery) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *FunctionTestRunDelivery) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetEndpoint sets the value of Endpoint.
+func (s *FunctionTestRunDelivery) SetEndpoint(val NilFunctionTestRunDeliveryEndpoint) {
+	s.Endpoint = val
+}
+
+// Ref: #/components/schemas/FunctionTestRunDeliveryEndpoint
+type FunctionTestRunDeliveryEndpoint struct {
+	ID uuid.UUID `json:"id"`
+	// Endpoint kind. Current traces may include `http` or `function`; future endpoint kinds may appear.
+	Kind              string      `json:"kind"`
+	FunctionID        NilUUID     `json:"function_id"`
+	FunctionName      NilString   `json:"function_name"`
+	DomainID          NilUUID     `json:"domain_id"`
+	Enabled           bool        `json:"enabled"`
+	DeactivatedAt     NilDateTime `json:"deactivated_at"`
+	IsCurrentFunction bool        `json:"is_current_function"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionTestRunDeliveryEndpoint) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetKind returns the value of Kind.
+func (s *FunctionTestRunDeliveryEndpoint) GetKind() string {
+	return s.Kind
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *FunctionTestRunDeliveryEndpoint) GetFunctionID() NilUUID {
+	return s.FunctionID
+}
+
+// GetFunctionName returns the value of FunctionName.
+func (s *FunctionTestRunDeliveryEndpoint) GetFunctionName() NilString {
+	return s.FunctionName
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *FunctionTestRunDeliveryEndpoint) GetDomainID() NilUUID {
+	return s.DomainID
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *FunctionTestRunDeliveryEndpoint) GetEnabled() bool {
+	return s.Enabled
+}
+
+// GetDeactivatedAt returns the value of DeactivatedAt.
+func (s *FunctionTestRunDeliveryEndpoint) GetDeactivatedAt() NilDateTime {
+	return s.DeactivatedAt
+}
+
+// GetIsCurrentFunction returns the value of IsCurrentFunction.
+func (s *FunctionTestRunDeliveryEndpoint) GetIsCurrentFunction() bool {
+	return s.IsCurrentFunction
+}
+
+// SetID sets the value of ID.
+func (s *FunctionTestRunDeliveryEndpoint) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetKind sets the value of Kind.
+func (s *FunctionTestRunDeliveryEndpoint) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *FunctionTestRunDeliveryEndpoint) SetFunctionID(val NilUUID) {
+	s.FunctionID = val
+}
+
+// SetFunctionName sets the value of FunctionName.
+func (s *FunctionTestRunDeliveryEndpoint) SetFunctionName(val NilString) {
+	s.FunctionName = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *FunctionTestRunDeliveryEndpoint) SetDomainID(val NilUUID) {
+	s.DomainID = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *FunctionTestRunDeliveryEndpoint) SetEnabled(val bool) {
+	s.Enabled = val
+}
+
+// SetDeactivatedAt sets the value of DeactivatedAt.
+func (s *FunctionTestRunDeliveryEndpoint) SetDeactivatedAt(val NilDateTime) {
+	s.DeactivatedAt = val
+}
+
+// SetIsCurrentFunction sets the value of IsCurrentFunction.
+func (s *FunctionTestRunDeliveryEndpoint) SetIsCurrentFunction(val bool) {
+	s.IsCurrentFunction = val
+}
+
+type FunctionTestRunDeliveryStatus string
+
+const (
+	FunctionTestRunDeliveryStatusPending         FunctionTestRunDeliveryStatus = "pending"
+	FunctionTestRunDeliveryStatusDelivered       FunctionTestRunDeliveryStatus = "delivered"
+	FunctionTestRunDeliveryStatusHeaderConfirmed FunctionTestRunDeliveryStatus = "header_confirmed"
+	FunctionTestRunDeliveryStatusFailed          FunctionTestRunDeliveryStatus = "failed"
+)
+
+// AllValues returns all FunctionTestRunDeliveryStatus values.
+func (FunctionTestRunDeliveryStatus) AllValues() []FunctionTestRunDeliveryStatus {
+	return []FunctionTestRunDeliveryStatus{
+		FunctionTestRunDeliveryStatusPending,
+		FunctionTestRunDeliveryStatusDelivered,
+		FunctionTestRunDeliveryStatusHeaderConfirmed,
+		FunctionTestRunDeliveryStatusFailed,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s FunctionTestRunDeliveryStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case FunctionTestRunDeliveryStatusPending:
+		return []byte(s), nil
+	case FunctionTestRunDeliveryStatusDelivered:
+		return []byte(s), nil
+	case FunctionTestRunDeliveryStatusHeaderConfirmed:
+		return []byte(s), nil
+	case FunctionTestRunDeliveryStatusFailed:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *FunctionTestRunDeliveryStatus) UnmarshalText(data []byte) error {
+	switch FunctionTestRunDeliveryStatus(data) {
+	case FunctionTestRunDeliveryStatusPending:
+		*s = FunctionTestRunDeliveryStatusPending
+		return nil
+	case FunctionTestRunDeliveryStatusDelivered:
+		*s = FunctionTestRunDeliveryStatusDelivered
+		return nil
+	case FunctionTestRunDeliveryStatusHeaderConfirmed:
+		*s = FunctionTestRunDeliveryStatusHeaderConfirmed
+		return nil
+	case FunctionTestRunDeliveryStatusFailed:
+		*s = FunctionTestRunDeliveryStatusFailed
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/FunctionTestRunInboundEmail
+type FunctionTestRunInboundEmail struct {
+	ID                    uuid.UUID             `json:"id"`
+	Status                EmailStatus           `json:"status"`
+	ReceivedAt            time.Time             `json:"received_at"`
+	From                  string                `json:"from"`
+	To                    string                `json:"to"`
+	Subject               NilString             `json:"subject"`
+	WebhookStatus         NilEmailWebhookStatus `json:"webhook_status"`
+	WebhookAttemptCount   int                   `json:"webhook_attempt_count"`
+	WebhookLastStatusCode NilInt                `json:"webhook_last_status_code"`
+	WebhookLastError      NilString             `json:"webhook_last_error"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionTestRunInboundEmail) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *FunctionTestRunInboundEmail) GetStatus() EmailStatus {
+	return s.Status
+}
+
+// GetReceivedAt returns the value of ReceivedAt.
+func (s *FunctionTestRunInboundEmail) GetReceivedAt() time.Time {
+	return s.ReceivedAt
+}
+
+// GetFrom returns the value of From.
+func (s *FunctionTestRunInboundEmail) GetFrom() string {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *FunctionTestRunInboundEmail) GetTo() string {
+	return s.To
+}
+
+// GetSubject returns the value of Subject.
+func (s *FunctionTestRunInboundEmail) GetSubject() NilString {
+	return s.Subject
+}
+
+// GetWebhookStatus returns the value of WebhookStatus.
+func (s *FunctionTestRunInboundEmail) GetWebhookStatus() NilEmailWebhookStatus {
+	return s.WebhookStatus
+}
+
+// GetWebhookAttemptCount returns the value of WebhookAttemptCount.
+func (s *FunctionTestRunInboundEmail) GetWebhookAttemptCount() int {
+	return s.WebhookAttemptCount
+}
+
+// GetWebhookLastStatusCode returns the value of WebhookLastStatusCode.
+func (s *FunctionTestRunInboundEmail) GetWebhookLastStatusCode() NilInt {
+	return s.WebhookLastStatusCode
+}
+
+// GetWebhookLastError returns the value of WebhookLastError.
+func (s *FunctionTestRunInboundEmail) GetWebhookLastError() NilString {
+	return s.WebhookLastError
+}
+
+// SetID sets the value of ID.
+func (s *FunctionTestRunInboundEmail) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *FunctionTestRunInboundEmail) SetStatus(val EmailStatus) {
+	s.Status = val
+}
+
+// SetReceivedAt sets the value of ReceivedAt.
+func (s *FunctionTestRunInboundEmail) SetReceivedAt(val time.Time) {
+	s.ReceivedAt = val
+}
+
+// SetFrom sets the value of From.
+func (s *FunctionTestRunInboundEmail) SetFrom(val string) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *FunctionTestRunInboundEmail) SetTo(val string) {
+	s.To = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *FunctionTestRunInboundEmail) SetSubject(val NilString) {
+	s.Subject = val
+}
+
+// SetWebhookStatus sets the value of WebhookStatus.
+func (s *FunctionTestRunInboundEmail) SetWebhookStatus(val NilEmailWebhookStatus) {
+	s.WebhookStatus = val
+}
+
+// SetWebhookAttemptCount sets the value of WebhookAttemptCount.
+func (s *FunctionTestRunInboundEmail) SetWebhookAttemptCount(val int) {
+	s.WebhookAttemptCount = val
+}
+
+// SetWebhookLastStatusCode sets the value of WebhookLastStatusCode.
+func (s *FunctionTestRunInboundEmail) SetWebhookLastStatusCode(val NilInt) {
+	s.WebhookLastStatusCode = val
+}
+
+// SetWebhookLastError sets the value of WebhookLastError.
+func (s *FunctionTestRunInboundEmail) SetWebhookLastError(val NilString) {
+	s.WebhookLastError = val
+}
+
+// Ref: #/components/schemas/FunctionTestRunOutboundRequest
+type FunctionTestRunOutboundRequest struct {
+	ID                uuid.UUID `json:"id"`
+	FunctionID        uuid.UUID `json:"function_id"`
+	WebhookDeliveryID NilString `json:"webhook_delivery_id"`
+	EmailID           NilUUID   `json:"email_id"`
+	EndpointID        NilUUID   `json:"endpoint_id"`
+	Method            string    `json:"method"`
+	URL               url.URL   `json:"url"`
+	Host              string    `json:"host"`
+	Path              string    `json:"path"`
+	StatusCode        NilInt    `json:"status_code"`
+	Ok                NilBool   `json:"ok"`
+	DurationMs        int       `json:"duration_ms"`
+	Error             NilString `json:"error"`
+	Ts                time.Time `json:"ts"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionTestRunOutboundRequest) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *FunctionTestRunOutboundRequest) GetFunctionID() uuid.UUID {
+	return s.FunctionID
+}
+
+// GetWebhookDeliveryID returns the value of WebhookDeliveryID.
+func (s *FunctionTestRunOutboundRequest) GetWebhookDeliveryID() NilString {
+	return s.WebhookDeliveryID
+}
+
+// GetEmailID returns the value of EmailID.
+func (s *FunctionTestRunOutboundRequest) GetEmailID() NilUUID {
+	return s.EmailID
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *FunctionTestRunOutboundRequest) GetEndpointID() NilUUID {
+	return s.EndpointID
+}
+
+// GetMethod returns the value of Method.
+func (s *FunctionTestRunOutboundRequest) GetMethod() string {
+	return s.Method
+}
+
+// GetURL returns the value of URL.
+func (s *FunctionTestRunOutboundRequest) GetURL() url.URL {
+	return s.URL
+}
+
+// GetHost returns the value of Host.
+func (s *FunctionTestRunOutboundRequest) GetHost() string {
+	return s.Host
+}
+
+// GetPath returns the value of Path.
+func (s *FunctionTestRunOutboundRequest) GetPath() string {
+	return s.Path
+}
+
+// GetStatusCode returns the value of StatusCode.
+func (s *FunctionTestRunOutboundRequest) GetStatusCode() NilInt {
+	return s.StatusCode
+}
+
+// GetOk returns the value of Ok.
+func (s *FunctionTestRunOutboundRequest) GetOk() NilBool {
+	return s.Ok
+}
+
+// GetDurationMs returns the value of DurationMs.
+func (s *FunctionTestRunOutboundRequest) GetDurationMs() int {
+	return s.DurationMs
+}
+
+// GetError returns the value of Error.
+func (s *FunctionTestRunOutboundRequest) GetError() NilString {
+	return s.Error
+}
+
+// GetTs returns the value of Ts.
+func (s *FunctionTestRunOutboundRequest) GetTs() time.Time {
+	return s.Ts
+}
+
+// SetID sets the value of ID.
+func (s *FunctionTestRunOutboundRequest) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *FunctionTestRunOutboundRequest) SetFunctionID(val uuid.UUID) {
+	s.FunctionID = val
+}
+
+// SetWebhookDeliveryID sets the value of WebhookDeliveryID.
+func (s *FunctionTestRunOutboundRequest) SetWebhookDeliveryID(val NilString) {
+	s.WebhookDeliveryID = val
+}
+
+// SetEmailID sets the value of EmailID.
+func (s *FunctionTestRunOutboundRequest) SetEmailID(val NilUUID) {
+	s.EmailID = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *FunctionTestRunOutboundRequest) SetEndpointID(val NilUUID) {
+	s.EndpointID = val
+}
+
+// SetMethod sets the value of Method.
+func (s *FunctionTestRunOutboundRequest) SetMethod(val string) {
+	s.Method = val
+}
+
+// SetURL sets the value of URL.
+func (s *FunctionTestRunOutboundRequest) SetURL(val url.URL) {
+	s.URL = val
+}
+
+// SetHost sets the value of Host.
+func (s *FunctionTestRunOutboundRequest) SetHost(val string) {
+	s.Host = val
+}
+
+// SetPath sets the value of Path.
+func (s *FunctionTestRunOutboundRequest) SetPath(val string) {
+	s.Path = val
+}
+
+// SetStatusCode sets the value of StatusCode.
+func (s *FunctionTestRunOutboundRequest) SetStatusCode(val NilInt) {
+	s.StatusCode = val
+}
+
+// SetOk sets the value of Ok.
+func (s *FunctionTestRunOutboundRequest) SetOk(val NilBool) {
+	s.Ok = val
+}
+
+// SetDurationMs sets the value of DurationMs.
+func (s *FunctionTestRunOutboundRequest) SetDurationMs(val int) {
+	s.DurationMs = val
+}
+
+// SetError sets the value of Error.
+func (s *FunctionTestRunOutboundRequest) SetError(val NilString) {
+	s.Error = val
+}
+
+// SetTs sets the value of Ts.
+func (s *FunctionTestRunOutboundRequest) SetTs(val time.Time) {
+	s.Ts = val
+}
+
+// Ref: #/components/schemas/FunctionTestRunReply
+type FunctionTestRunReply struct {
+	ID        uuid.UUID       `json:"id"`
+	Status    SentEmailStatus `json:"status"`
+	To        string          `json:"to"`
+	Subject   string          `json:"subject"`
+	QueueID   NilString       `json:"queue_id"`
+	CreatedAt time.Time       `json:"created_at"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionTestRunReply) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *FunctionTestRunReply) GetStatus() SentEmailStatus {
+	return s.Status
+}
+
+// GetTo returns the value of To.
+func (s *FunctionTestRunReply) GetTo() string {
+	return s.To
+}
+
+// GetSubject returns the value of Subject.
+func (s *FunctionTestRunReply) GetSubject() string {
+	return s.Subject
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *FunctionTestRunReply) GetQueueID() NilString {
+	return s.QueueID
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *FunctionTestRunReply) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// SetID sets the value of ID.
+func (s *FunctionTestRunReply) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *FunctionTestRunReply) SetStatus(val SentEmailStatus) {
+	s.Status = val
+}
+
+// SetTo sets the value of To.
+func (s *FunctionTestRunReply) SetTo(val string) {
+	s.To = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *FunctionTestRunReply) SetSubject(val string) {
+	s.Subject = val
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *FunctionTestRunReply) SetQueueID(val NilString) {
+	s.QueueID = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *FunctionTestRunReply) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// Ref: #/components/schemas/FunctionTestRunSend
+type FunctionTestRunSend struct {
+	ID        uuid.UUID       `json:"id"`
+	Status    SentEmailStatus `json:"status"`
+	QueueID   NilString       `json:"queue_id"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionTestRunSend) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *FunctionTestRunSend) GetStatus() SentEmailStatus {
+	return s.Status
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *FunctionTestRunSend) GetQueueID() NilString {
+	return s.QueueID
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *FunctionTestRunSend) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *FunctionTestRunSend) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *FunctionTestRunSend) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *FunctionTestRunSend) SetStatus(val SentEmailStatus) {
+	s.Status = val
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *FunctionTestRunSend) SetQueueID(val NilString) {
+	s.QueueID = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *FunctionTestRunSend) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *FunctionTestRunSend) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// High-level state for a function test run trace:
+// - `send_failed`: the initial test email send failed.
+// - `waiting_for_send`: the test run was created but no send result has been recorded yet.
+// - `waiting_for_inbound`: the test send was queued and the matching inbound email has not arrived
+// yet.
+// - `waiting_for_function`: the inbound email arrived and webhook/function processing is still in
+// flight.
+// - `completed`: the function webhook completed successfully.
+// - `failed`: webhook delivery exhausted retries.
+// Ref: #/components/schemas/FunctionTestRunState
+type FunctionTestRunState string
+
+const (
+	FunctionTestRunStateSendFailed         FunctionTestRunState = "send_failed"
+	FunctionTestRunStateWaitingForSend     FunctionTestRunState = "waiting_for_send"
+	FunctionTestRunStateWaitingForInbound  FunctionTestRunState = "waiting_for_inbound"
+	FunctionTestRunStateWaitingForFunction FunctionTestRunState = "waiting_for_function"
+	FunctionTestRunStateCompleted          FunctionTestRunState = "completed"
+	FunctionTestRunStateFailed             FunctionTestRunState = "failed"
+)
+
+// AllValues returns all FunctionTestRunState values.
+func (FunctionTestRunState) AllValues() []FunctionTestRunState {
+	return []FunctionTestRunState{
+		FunctionTestRunStateSendFailed,
+		FunctionTestRunStateWaitingForSend,
+		FunctionTestRunStateWaitingForInbound,
+		FunctionTestRunStateWaitingForFunction,
+		FunctionTestRunStateCompleted,
+		FunctionTestRunStateFailed,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s FunctionTestRunState) MarshalText() ([]byte, error) {
+	switch s {
+	case FunctionTestRunStateSendFailed:
+		return []byte(s), nil
+	case FunctionTestRunStateWaitingForSend:
+		return []byte(s), nil
+	case FunctionTestRunStateWaitingForInbound:
+		return []byte(s), nil
+	case FunctionTestRunStateWaitingForFunction:
+		return []byte(s), nil
+	case FunctionTestRunStateCompleted:
+		return []byte(s), nil
+	case FunctionTestRunStateFailed:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *FunctionTestRunState) UnmarshalText(data []byte) error {
+	switch FunctionTestRunState(data) {
+	case FunctionTestRunStateSendFailed:
+		*s = FunctionTestRunStateSendFailed
+		return nil
+	case FunctionTestRunStateWaitingForSend:
+		*s = FunctionTestRunStateWaitingForSend
+		return nil
+	case FunctionTestRunStateWaitingForInbound:
+		*s = FunctionTestRunStateWaitingForInbound
+		return nil
+	case FunctionTestRunStateWaitingForFunction:
+		*s = FunctionTestRunStateWaitingForFunction
+		return nil
+	case FunctionTestRunStateCompleted:
+		*s = FunctionTestRunStateCompleted
+		return nil
+	case FunctionTestRunStateFailed:
+		*s = FunctionTestRunStateFailed
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// End-to-end trace for a `POST /functions/{id}/test` run. The
+// shape is stable, but many nested sections are null or empty
+// until the corresponding phase has happened.
+// Ref: #/components/schemas/FunctionTestRunTrace
+type FunctionTestRunTrace struct {
+	State            FunctionTestRunState             `json:"state"`
+	TestRun          FunctionTestRun                  `json:"test_run"`
+	TestSend         NilFunctionTestRunSend           `json:"test_send"`
+	InboundEmail     NilFunctionTestRunInboundEmail   `json:"inbound_email"`
+	Deliveries       []FunctionTestRunDelivery        `json:"deliveries"`
+	OutboundRequests []FunctionTestRunOutboundRequest `json:"outbound_requests"`
+	Logs             []FunctionLogRow                 `json:"logs"`
+	Replies          []FunctionTestRunReply           `json:"replies"`
+}
+
+// GetState returns the value of State.
+func (s *FunctionTestRunTrace) GetState() FunctionTestRunState {
+	return s.State
+}
+
+// GetTestRun returns the value of TestRun.
+func (s *FunctionTestRunTrace) GetTestRun() FunctionTestRun {
+	return s.TestRun
+}
+
+// GetTestSend returns the value of TestSend.
+func (s *FunctionTestRunTrace) GetTestSend() NilFunctionTestRunSend {
+	return s.TestSend
+}
+
+// GetInboundEmail returns the value of InboundEmail.
+func (s *FunctionTestRunTrace) GetInboundEmail() NilFunctionTestRunInboundEmail {
+	return s.InboundEmail
+}
+
+// GetDeliveries returns the value of Deliveries.
+func (s *FunctionTestRunTrace) GetDeliveries() []FunctionTestRunDelivery {
+	return s.Deliveries
+}
+
+// GetOutboundRequests returns the value of OutboundRequests.
+func (s *FunctionTestRunTrace) GetOutboundRequests() []FunctionTestRunOutboundRequest {
+	return s.OutboundRequests
+}
+
+// GetLogs returns the value of Logs.
+func (s *FunctionTestRunTrace) GetLogs() []FunctionLogRow {
+	return s.Logs
+}
+
+// GetReplies returns the value of Replies.
+func (s *FunctionTestRunTrace) GetReplies() []FunctionTestRunReply {
+	return s.Replies
+}
+
+// SetState sets the value of State.
+func (s *FunctionTestRunTrace) SetState(val FunctionTestRunState) {
+	s.State = val
+}
+
+// SetTestRun sets the value of TestRun.
+func (s *FunctionTestRunTrace) SetTestRun(val FunctionTestRun) {
+	s.TestRun = val
+}
+
+// SetTestSend sets the value of TestSend.
+func (s *FunctionTestRunTrace) SetTestSend(val NilFunctionTestRunSend) {
+	s.TestSend = val
+}
+
+// SetInboundEmail sets the value of InboundEmail.
+func (s *FunctionTestRunTrace) SetInboundEmail(val NilFunctionTestRunInboundEmail) {
+	s.InboundEmail = val
+}
+
+// SetDeliveries sets the value of Deliveries.
+func (s *FunctionTestRunTrace) SetDeliveries(val []FunctionTestRunDelivery) {
+	s.Deliveries = val
+}
+
+// SetOutboundRequests sets the value of OutboundRequests.
+func (s *FunctionTestRunTrace) SetOutboundRequests(val []FunctionTestRunOutboundRequest) {
+	s.OutboundRequests = val
+}
+
+// SetLogs sets the value of Logs.
+func (s *FunctionTestRunTrace) SetLogs(val []FunctionLogRow) {
+	s.Logs = val
+}
+
+// SetReplies sets the value of Replies.
+func (s *FunctionTestRunTrace) SetReplies(val []FunctionTestRunReply) {
+	s.Replies = val
+}
+
 // Ref: #/components/schemas/GateDenial
 type GateDenial struct {
 	// Public recipient-scope gate name that denied the send.
@@ -4954,6 +5917,50 @@ func (s *GetFunctionOK) SetData(val FunctionDetail) {
 }
 
 func (*GetFunctionOK) getFunctionRes() {}
+
+type GetFunctionTestRunTraceBadRequest ErrorResponse
+
+func (*GetFunctionTestRunTraceBadRequest) getFunctionTestRunTraceRes() {}
+
+type GetFunctionTestRunTraceForbidden ErrorResponse
+
+func (*GetFunctionTestRunTraceForbidden) getFunctionTestRunTraceRes() {}
+
+type GetFunctionTestRunTraceNotFound ErrorResponse
+
+func (*GetFunctionTestRunTraceNotFound) getFunctionTestRunTraceRes() {}
+
+// Merged schema.
+type GetFunctionTestRunTraceOK struct {
+	Success bool                 `json:"success"`
+	Data    FunctionTestRunTrace `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetFunctionTestRunTraceOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetFunctionTestRunTraceOK) GetData() FunctionTestRunTrace {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetFunctionTestRunTraceOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetFunctionTestRunTraceOK) SetData(val FunctionTestRunTrace) {
+	s.Data = val
+}
+
+func (*GetFunctionTestRunTraceOK) getFunctionTestRunTraceRes() {}
+
+type GetFunctionTestRunTraceUnauthorized ErrorResponse
+
+func (*GetFunctionTestRunTraceUnauthorized) getFunctionTestRunTraceRes() {}
 
 type GetFunctionUnauthorized ErrorResponse
 
@@ -5539,6 +6546,321 @@ type ListSentEmailsUnauthorized ErrorResponse
 
 func (*ListSentEmailsUnauthorized) listSentEmailsRes() {}
 
+// NewNilBool returns new NilBool with value set to v.
+func NewNilBool(v bool) NilBool {
+	return NilBool{
+		Value: v,
+	}
+}
+
+// NilBool is nullable bool.
+type NilBool struct {
+	Value bool
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilBool) SetTo(v bool) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilBool) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilBool) SetToNull() {
+	o.Null = true
+	var v bool
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilBool) Get() (v bool, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilBool) Or(d bool) bool {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilDateTime returns new NilDateTime with value set to v.
+func NewNilDateTime(v time.Time) NilDateTime {
+	return NilDateTime{
+		Value: v,
+	}
+}
+
+// NilDateTime is nullable time.Time.
+type NilDateTime struct {
+	Value time.Time
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilDateTime) SetTo(v time.Time) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilDateTime) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilDateTime) SetToNull() {
+	o.Null = true
+	var v time.Time
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilDateTime) Get() (v time.Time, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilDateTime) Or(d time.Time) time.Time {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilEmailWebhookStatus returns new NilEmailWebhookStatus with value set to v.
+func NewNilEmailWebhookStatus(v EmailWebhookStatus) NilEmailWebhookStatus {
+	return NilEmailWebhookStatus{
+		Value: v,
+	}
+}
+
+// NilEmailWebhookStatus is nullable EmailWebhookStatus.
+type NilEmailWebhookStatus struct {
+	Value EmailWebhookStatus
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilEmailWebhookStatus) SetTo(v EmailWebhookStatus) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilEmailWebhookStatus) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilEmailWebhookStatus) SetToNull() {
+	o.Null = true
+	var v EmailWebhookStatus
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilEmailWebhookStatus) Get() (v EmailWebhookStatus, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilEmailWebhookStatus) Or(d EmailWebhookStatus) EmailWebhookStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilFunctionTestRunDeliveryEndpoint returns new NilFunctionTestRunDeliveryEndpoint with value set to v.
+func NewNilFunctionTestRunDeliveryEndpoint(v FunctionTestRunDeliveryEndpoint) NilFunctionTestRunDeliveryEndpoint {
+	return NilFunctionTestRunDeliveryEndpoint{
+		Value: v,
+	}
+}
+
+// NilFunctionTestRunDeliveryEndpoint is nullable FunctionTestRunDeliveryEndpoint.
+type NilFunctionTestRunDeliveryEndpoint struct {
+	Value FunctionTestRunDeliveryEndpoint
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilFunctionTestRunDeliveryEndpoint) SetTo(v FunctionTestRunDeliveryEndpoint) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilFunctionTestRunDeliveryEndpoint) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilFunctionTestRunDeliveryEndpoint) SetToNull() {
+	o.Null = true
+	var v FunctionTestRunDeliveryEndpoint
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilFunctionTestRunDeliveryEndpoint) Get() (v FunctionTestRunDeliveryEndpoint, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilFunctionTestRunDeliveryEndpoint) Or(d FunctionTestRunDeliveryEndpoint) FunctionTestRunDeliveryEndpoint {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilFunctionTestRunInboundEmail returns new NilFunctionTestRunInboundEmail with value set to v.
+func NewNilFunctionTestRunInboundEmail(v FunctionTestRunInboundEmail) NilFunctionTestRunInboundEmail {
+	return NilFunctionTestRunInboundEmail{
+		Value: v,
+	}
+}
+
+// NilFunctionTestRunInboundEmail is nullable FunctionTestRunInboundEmail.
+type NilFunctionTestRunInboundEmail struct {
+	Value FunctionTestRunInboundEmail
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilFunctionTestRunInboundEmail) SetTo(v FunctionTestRunInboundEmail) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilFunctionTestRunInboundEmail) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilFunctionTestRunInboundEmail) SetToNull() {
+	o.Null = true
+	var v FunctionTestRunInboundEmail
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilFunctionTestRunInboundEmail) Get() (v FunctionTestRunInboundEmail, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilFunctionTestRunInboundEmail) Or(d FunctionTestRunInboundEmail) FunctionTestRunInboundEmail {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilFunctionTestRunSend returns new NilFunctionTestRunSend with value set to v.
+func NewNilFunctionTestRunSend(v FunctionTestRunSend) NilFunctionTestRunSend {
+	return NilFunctionTestRunSend{
+		Value: v,
+	}
+}
+
+// NilFunctionTestRunSend is nullable FunctionTestRunSend.
+type NilFunctionTestRunSend struct {
+	Value FunctionTestRunSend
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilFunctionTestRunSend) SetTo(v FunctionTestRunSend) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilFunctionTestRunSend) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilFunctionTestRunSend) SetToNull() {
+	o.Null = true
+	var v FunctionTestRunSend
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilFunctionTestRunSend) Get() (v FunctionTestRunSend, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilFunctionTestRunSend) Or(d FunctionTestRunSend) FunctionTestRunSend {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilInt returns new NilInt with value set to v.
+func NewNilInt(v int) NilInt {
+	return NilInt{
+		Value: v,
+	}
+}
+
+// NilInt is nullable int.
+type NilInt struct {
+	Value int
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilInt) SetTo(v int) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilInt) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilInt) SetToNull() {
+	o.Null = true
+	var v int
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilInt) Get() (v int, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilString returns new NilString with value set to v.
 func NewNilString(v string) NilString {
 	return NilString{
@@ -5578,6 +6900,51 @@ func (o NilString) Get() (v string, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilString) Or(d string) string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilUUID returns new NilUUID with value set to v.
+func NewNilUUID(v uuid.UUID) NilUUID {
+	return NilUUID{
+		Value: v,
+	}
+}
+
+// NilUUID is nullable uuid.UUID.
+type NilUUID struct {
+	Value uuid.UUID
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilUUID) SetTo(v uuid.UUID) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilUUID) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilUUID) SetToNull() {
+	o.Null = true
+	var v uuid.UUID
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilUUID) Get() (v uuid.UUID, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilUUID) Or(d uuid.UUID) uuid.UUID {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -10350,11 +11717,13 @@ type TestFunctionUnprocessableEntity ErrorResponse
 func (*TestFunctionUnprocessableEntity) testFunctionRes() {}
 
 // Metadata returned by POST /functions/{id}/test. The send is
-// queued; the actual invocation lands on the function's
-// invocations list a few seconds later as the inbound mail
-// traverses the MX path.
+// queued; poll `trace_url` to watch the run progress through
+// send -> inbound -> webhook deliveries -> outbound requests,
+// logs, and replies.
 // Ref: #/components/schemas/TestInvocationResult
 type TestInvocationResult struct {
+	// Durable test run id used to fetch the run trace.
+	TestRunID uuid.UUID `json:"test_run_id"`
 	// Verified inbound domain the test email was sent to.
 	InboundDomain string `json:"inbound_domain"`
 	// Synthetic local-part plus inbound_domain. Visible in the org's inbox.
@@ -10374,6 +11743,13 @@ type TestInvocationResult struct {
 	PollSince time.Time `json:"poll_since"`
 	// Function detail page where invocations show up live.
 	WatchURL url.URL `json:"watch_url"`
+	// Relative API URL for GET /functions/{id}/test-runs/{test_run_id}/trace.
+	TraceURL string `json:"trace_url"`
+}
+
+// GetTestRunID returns the value of TestRunID.
+func (s *TestInvocationResult) GetTestRunID() uuid.UUID {
+	return s.TestRunID
 }
 
 // GetInboundDomain returns the value of InboundDomain.
@@ -10411,6 +11787,16 @@ func (s *TestInvocationResult) GetWatchURL() url.URL {
 	return s.WatchURL
 }
 
+// GetTraceURL returns the value of TraceURL.
+func (s *TestInvocationResult) GetTraceURL() string {
+	return s.TraceURL
+}
+
+// SetTestRunID sets the value of TestRunID.
+func (s *TestInvocationResult) SetTestRunID(val uuid.UUID) {
+	s.TestRunID = val
+}
+
 // SetInboundDomain sets the value of InboundDomain.
 func (s *TestInvocationResult) SetInboundDomain(val string) {
 	s.InboundDomain = val
@@ -10444,6 +11830,11 @@ func (s *TestInvocationResult) SetPollSince(val time.Time) {
 // SetWatchURL sets the value of WatchURL.
 func (s *TestInvocationResult) SetWatchURL(val url.URL) {
 	s.WatchURL = val
+}
+
+// SetTraceURL sets the value of TraceURL.
+func (s *TestInvocationResult) SetTraceURL(val string) {
+	s.TraceURL = val
 }
 
 // Ref: #/components/schemas/TestResult

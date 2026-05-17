@@ -73,6 +73,16 @@ from .function_log_row_level import FunctionLogRowLevel
 from .function_log_row_metadata_type_0 import FunctionLogRowMetadataType0
 from .function_secret_list_item import FunctionSecretListItem
 from .function_secret_write_result import FunctionSecretWriteResult
+from .function_test_run import FunctionTestRun
+from .function_test_run_delivery import FunctionTestRunDelivery
+from .function_test_run_delivery_endpoint_type_0 import FunctionTestRunDeliveryEndpointType0
+from .function_test_run_delivery_status import FunctionTestRunDeliveryStatus
+from .function_test_run_inbound_email_type_0 import FunctionTestRunInboundEmailType0
+from .function_test_run_outbound_request import FunctionTestRunOutboundRequest
+from .function_test_run_reply import FunctionTestRunReply
+from .function_test_run_send_type_0 import FunctionTestRunSendType0
+from .function_test_run_state import FunctionTestRunState
+from .function_test_run_trace import FunctionTestRunTrace
 from .gate_denial import GateDenial
 from .gate_denial_name import GateDenialName
 from .gate_denial_reason import GateDenialReason
@@ -81,6 +91,7 @@ from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
 from .get_email_response_200 import GetEmailResponse200
 from .get_function_response_200 import GetFunctionResponse200
+from .get_function_test_run_trace_response_200 import GetFunctionTestRunTraceResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
 from .get_storage_stats_response_200 import GetStorageStatsResponse200
@@ -237,6 +248,16 @@ __all__ = (
     "FunctionLogRowMetadataType0",
     "FunctionSecretListItem",
     "FunctionSecretWriteResult",
+    "FunctionTestRun",
+    "FunctionTestRunDelivery",
+    "FunctionTestRunDeliveryEndpointType0",
+    "FunctionTestRunDeliveryStatus",
+    "FunctionTestRunInboundEmailType0",
+    "FunctionTestRunOutboundRequest",
+    "FunctionTestRunReply",
+    "FunctionTestRunSendType0",
+    "FunctionTestRunState",
+    "FunctionTestRunTrace",
     "GateDenial",
     "GateDenialName",
     "GateDenialReason",
@@ -245,6 +266,7 @@ __all__ = (
     "GetAccountResponse200",
     "GetEmailResponse200",
     "GetFunctionResponse200",
+    "GetFunctionTestRunTraceResponse200",
     "GetSendPermissionsResponse200",
     "GetSentEmailResponse200",
     "GetStorageStatsResponse200",

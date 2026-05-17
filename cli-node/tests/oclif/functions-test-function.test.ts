@@ -71,7 +71,9 @@ describe("buildFunctionTestOutcome", () => {
     poll_since: "2026-05-17T19:00:00.000Z",
     send_id: "send-1",
     subject: "Primitive Functions test invocation (summarize)",
+    test_run_id: "test-run-1",
     to: "summarize@long-ape.primitive.email",
+    trace_url: "/api/v1/functions/fn-1/test-runs/test-run-1/trace",
     watch_url: "/app/functions/fn-1?tab=invocations",
   } as Parameters<typeof buildFunctionTestOutcome>[0]["invocation"];
 
@@ -100,8 +102,10 @@ describe("buildFunctionTestOutcome", () => {
       inbound_id: "inbound-1",
       inbound_to: "summarize@long-ape.primitive.email",
       poll_since: "2026-05-17T19:00:00.000Z",
+      test_run_id: "test-run-1",
       test_send_id: "send-1",
       test_subject: "Primitive Functions test invocation (summarize)",
+      trace_url: "/api/v1/functions/fn-1/test-runs/test-run-1/trace",
       watch_url: "/app/functions/fn-1?tab=invocations",
       webhook_attempt_count: 1,
       webhook_last_error: null,

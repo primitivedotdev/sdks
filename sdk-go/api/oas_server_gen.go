@@ -209,6 +209,16 @@ type Handler interface {
 	//
 	// GET /functions/{id}
 	GetFunction(ctx context.Context, params GetFunctionParams) (GetFunctionRes, error)
+	// GetFunctionTestRunTrace implements getFunctionTestRunTrace operation.
+	//
+	// Returns the current end-to-end trace for a function test run.
+	// The trace is intentionally partial while the test is still in
+	// flight: callers can poll this endpoint and watch it fill in
+	// from send -> inbound -> webhook deliveries -> outbound
+	// requests, logs, and replies.
+	//
+	// GET /functions/{id}/test-runs/{run_id}/trace
+	GetFunctionTestRunTrace(ctx context.Context, params GetFunctionTestRunTraceParams) (GetFunctionTestRunTraceRes, error)
 	// GetSendPermissions implements getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
