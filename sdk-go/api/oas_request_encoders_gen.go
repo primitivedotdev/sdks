@@ -128,6 +128,20 @@ func encodeReplyToEmailRequest(
 	return nil
 }
 
+func encodeResendCliSignupVerificationRequest(
+	req *ResendCliSignupVerificationInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeSendEmailRequest(
 	req *SendMailInput,
 	r *http.Request,
@@ -170,6 +184,20 @@ func encodeStartCliLoginRequest(
 		if req.Set {
 			req.Encode(e)
 		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeStartCliSignupRequest(
+	req *StartCliSignupInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
 	}
 	encoded := e.Bytes()
 	ht.SetBody(r, bytes.NewReader(encoded), contentType)
@@ -254,6 +282,20 @@ func encodeUpdateFilterRequest(
 
 func encodeUpdateFunctionRequest(
 	req *UpdateFunctionInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeVerifyCliSignupRequest(
+	req *VerifyCliSignupInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
