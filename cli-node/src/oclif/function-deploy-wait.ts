@@ -103,6 +103,7 @@ export async function waitForFunctionDeploy(params: {
   const startedAt = now();
   const timeoutMs = params.timeoutSeconds * 1000;
   const pollIntervalMs = params.pollIntervalSeconds * 1000;
+  const hasTimeout = params.timeoutSeconds > 0;
   let last = params.initial ? toDeployWaitSnapshot(params.initial) : null;
   let lastStatus = last?.deploy_status ?? "unknown";
 
@@ -115,7 +116,8 @@ export async function waitForFunctionDeploy(params: {
   );
 
   while (true) {
-    if (params.timeoutSeconds > 0 && now() - startedAt >= timeoutMs) {
+    const elapsedMs = now() - startedAt;
+    if (hasTimeout && elapsedMs >= timeoutMs) {
       return {
         elapsedSeconds: elapsedSeconds(startedAt, now),
         kind: "timeout",
@@ -123,7 +125,18 @@ export async function waitForFunctionDeploy(params: {
       };
     }
 
-    await sleep(pollIntervalMs);
+    const sleepMs = hasTimeout
+      ? Math.min(pollIntervalMs, Math.max(0, timeoutMs - elapsedMs))
+      : pollIntervalMs;
+    await sleep(sleepMs);
+
+    if (hasTimeout && now() - startedAt >= timeoutMs) {
+      return {
+        elapsedSeconds: elapsedSeconds(startedAt, now),
+        kind: "timeout",
+        lastFunction: last,
+      };
+    }
 
     const result = await params.getFunction({ id: params.id });
     if (result.error) {

@@ -133,6 +133,35 @@ describe("waitForFunctionDeploy", () => {
     }
   });
 
+  it("caps sleep to the remaining timeout and does not poll past the deadline", async () => {
+    let currentTimeMs = 0;
+    const getFunction = vi.fn<GetFunctionForDeployWait>(async () => ({
+      data: { data: makeFunction({ deploy_status: "deployed" }) },
+    }));
+    const sleep = vi.fn(async (ms: number) => {
+      currentTimeMs += ms;
+    });
+
+    const result = await waitForFunctionDeploy({
+      getFunction,
+      id: FN_ID,
+      initial: makeFunction({ deploy_status: "pending" }),
+      now: () => currentTimeMs,
+      pollIntervalSeconds: 60,
+      sleep,
+      timeoutSeconds: 1,
+      writeStderr: () => undefined,
+    });
+
+    expect(result.kind).toBe("timeout");
+    if (result.kind === "timeout") {
+      expect(result.elapsedSeconds).toBe(1);
+      expect(result.lastFunction?.deploy_status).toBe("pending");
+    }
+    expect(sleep).toHaveBeenCalledWith(1000);
+    expect(getFunction).not.toHaveBeenCalled();
+  });
+
   it("returns an extracted API error payload when getFunction fails", async () => {
     const result = await waitForFunctionDeploy({
       getFunction: async () => ({

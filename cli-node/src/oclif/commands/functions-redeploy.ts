@@ -287,6 +287,16 @@ class FunctionsRedeployCommand extends Command {
     const { flags } = await this.parse(FunctionsRedeployCommand);
 
     await runWithTiming(flags.time, async () => {
+      const waitFlagError = validateDeployWaitFlags({
+        pollIntervalSeconds: flags["poll-interval"],
+        timeoutSeconds: flags.timeout,
+      });
+      if (waitFlagError) {
+        process.stderr.write(`${waitFlagError}\n`);
+        process.exitCode = 1;
+        return;
+      }
+
       // Validate --secret pairs BEFORE any disk read or API call so
       // a malformed input fails fast with a clear error and zero
       // side effects. The fast path (no --secret flags) skips the
@@ -338,15 +348,6 @@ class FunctionsRedeployCommand extends Command {
         baseUrlOverridden,
         configDir: this.config.configDir,
       };
-      const waitFlagError = validateDeployWaitFlags({
-        pollIntervalSeconds: flags["poll-interval"],
-        timeoutSeconds: flags.timeout,
-      });
-      if (waitFlagError) {
-        process.stderr.write(`${waitFlagError}\n`);
-        process.exitCode = 1;
-        return;
-      }
 
       // Adapter: thin wrappers around the generated SDK calls,
       // routed through host 1 (apiClient.client). The function
