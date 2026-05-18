@@ -198,6 +198,35 @@ describe("resolveSingleSecretValue", () => {
     expect(ambiguous.kind).toBe("error");
   });
 
+  it("rejects malformed --key values before reading a source", () => {
+    const readFile = vi.fn(() => "sk-file");
+
+    const result = resolveSingleSecretValue({
+      key: "openai-key",
+      readFile,
+      valueFile: "secret.txt",
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("openai-key");
+      expect(result.message).toContain("uppercase letters");
+    }
+    expect(readFile).not.toHaveBeenCalled();
+  });
+
+  it("rejects a --key that starts with a digit", () => {
+    const result = resolveSingleSecretValue({
+      key: "1KEY",
+      value: "abc123",
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("1KEY");
+    }
+  });
+
   it("reports a missing --value-from-env variable", () => {
     const result = resolveSingleSecretValue({
       env: {},
