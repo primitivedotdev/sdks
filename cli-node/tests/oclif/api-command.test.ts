@@ -502,6 +502,53 @@ describe("flagForParameter", () => {
 
     expect(flag.options).toBeUndefined();
   });
+
+  it("passes integer constraints and defaults through to oclif", () => {
+    const flag = flagForParameter({
+      default: 50,
+      description: "Number of results per page",
+      enum: null,
+      maximum: 100,
+      minimum: 1,
+      name: "limit",
+      required: false,
+      type: "integer",
+    }) as { default?: number; max?: number; min?: number };
+
+    expect(flag.default).toBe(50);
+    expect(flag.min).toBe(1);
+    expect(flag.max).toBe(100);
+  });
+
+  it("uses a number parser for decimal parameters", async () => {
+    const flag = flagForParameter({
+      description: "Spam threshold",
+      enum: null,
+      maximum: 15,
+      minimum: 0,
+      name: "spam_score_lt",
+      required: false,
+      type: "number",
+    }) as {
+      max?: number;
+      min?: number;
+      parse: (
+        input: string,
+        context: unknown,
+        options: unknown,
+      ) => Promise<number>;
+    };
+
+    expect(flag.min).toBe(0);
+    expect(flag.max).toBe(15);
+    await expect(flag.parse("10.5", {}, flag)).resolves.toBe(10.5);
+    await expect(flag.parse("nope", {}, flag)).rejects.toThrow(
+      /Expected a number/,
+    );
+    await expect(flag.parse("20", {}, flag)).rejects.toThrow(
+      /less than or equal to 15/,
+    );
+  });
 });
 
 describe("formatElapsed", () => {

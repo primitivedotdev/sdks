@@ -19,7 +19,10 @@ type OpenApiParameter = {
   name?: string;
   required?: boolean;
   schema?: {
+    default?: unknown;
     enum?: unknown[];
+    maximum?: number;
+    minimum?: number;
     type?: string;
   };
 };
@@ -56,8 +59,11 @@ type OpenApiPathItem = {
 };
 
 type PrimitiveParameterManifest = {
+  default?: boolean | number | string;
   description: string | null;
   enum: string[] | null;
+  maximum?: number;
+  minimum?: number;
   name: string;
   required: boolean;
   type: string;
@@ -239,9 +245,22 @@ function manifestParameters(
             (value): value is string => typeof value === "string",
           )
         : [];
+      const scalarDefault =
+        typeof parameter.schema?.default === "boolean" ||
+        typeof parameter.schema?.default === "number" ||
+        typeof parameter.schema?.default === "string"
+          ? parameter.schema.default
+          : undefined;
       return {
+        ...(scalarDefault !== undefined ? { default: scalarDefault } : {}),
         description: parameter.description ?? null,
         enum: enumValues.length > 0 ? enumValues : null,
+        ...(typeof parameter.schema?.maximum === "number"
+          ? { maximum: parameter.schema.maximum }
+          : {}),
+        ...(typeof parameter.schema?.minimum === "number"
+          ? { minimum: parameter.schema.minimum }
+          : {}),
         name: parameter.name!,
         required: Boolean(parameter.required),
         type: parameter.schema?.type ?? "string",
@@ -458,8 +477,11 @@ writeFileSync(
  */
 
 export type PrimitiveParameterManifest = {
+  default?: boolean | number | string;
   description: string | null;
   enum: string[] | null;
+  maximum?: number;
+  minimum?: number;
   name: string;
   required: boolean;
   type: string;

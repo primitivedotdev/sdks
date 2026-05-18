@@ -43,6 +43,47 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
   return parameter.description ?? parameter.name;
 }
 
+type NumericFlagOptions = {
+  max?: number;
+  min?: number;
+};
+
+const numberFlag = Flags.custom<number, NumericFlagOptions>({
+  async parse(input, _context, options) {
+    const value = Number(input);
+    if (!Number.isFinite(value)) {
+      throw new Errors.CLIError(`Expected a number but received: ${input}`);
+    }
+    if (options.min !== undefined && value < options.min) {
+      throw new Errors.CLIError(
+        `Expected a number greater than or equal to ${options.min} but received: ${input}`,
+      );
+    }
+    if (options.max !== undefined && value > options.max) {
+      throw new Errors.CLIError(
+        `Expected a number less than or equal to ${options.max} but received: ${input}`,
+      );
+    }
+    return value;
+  },
+});
+
+function numericFlagOptions(
+  parameter: PrimitiveParameterManifest,
+): NumericFlagOptions & { default?: number } {
+  return {
+    ...(typeof parameter.default === "number"
+      ? { default: parameter.default }
+      : {}),
+    ...(typeof parameter.maximum === "number"
+      ? { max: parameter.maximum }
+      : {}),
+    ...(typeof parameter.minimum === "number"
+      ? { min: parameter.minimum }
+      : {}),
+  };
+}
+
 // Description of a single top-level body property, normalized
 // from the JSON Schema on the operation manifest. `kind` tells the
 // CLI generator whether to expose the field as an individual
@@ -223,7 +264,11 @@ export function flagForParameter(
   }
 
   if (parameter.type === "integer") {
-    return Flags.integer(common);
+    return Flags.integer({ ...common, ...numericFlagOptions(parameter) });
+  }
+
+  if (parameter.type === "number") {
+    return numberFlag({ ...common, ...numericFlagOptions(parameter) });
   }
 
   if (parameter.enum && parameter.enum.length > 0) {
