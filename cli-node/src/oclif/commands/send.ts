@@ -22,6 +22,7 @@ import {
 } from "../api-command.js";
 import { type ResolvedCliAuth, resolveCliAuth } from "../auth.js";
 import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
+import { resolveMessageBodies } from "../message-body-sources.js";
 
 // `primitive send` is the agent-grade shortcut for the most common
 // case: send a fresh outbound email. It wraps `sending:send-email`
@@ -146,6 +147,7 @@ class SendCommand extends Command {
 
   static examples = [
     "<%= config.bin %> send --to alice@example.com --body 'Hi Alice!'",
+    "<%= config.bin %> send --to alice@example.com --body-file ./message.txt",
     "<%= config.bin %> send --to alice@example.com --from support@yourcompany.com --subject 'Quick question' --body 'Are you free Thursday?'",
     "<%= config.bin %> send --to alice@example.com --html '<p>Hello!</p>'",
     "<%= config.bin %> send --to alice@example.com --body 'Confirmed' --wait",
@@ -186,9 +188,25 @@ class SendCommand extends Command {
       description:
         "Plain-text message body. Either --body or --html (or both) is required.",
     }),
+    "body-file": Flags.string({
+      description:
+        "Read the plain-text message body from a UTF-8 file. Mutually exclusive with --body and --body-stdin.",
+    }),
+    "body-stdin": Flags.boolean({
+      description:
+        "Read the plain-text message body from stdin. Mutually exclusive with --body and --body-file. Stdin can only be consumed once.",
+    }),
     html: Flags.string({
       description:
         "HTML message body. Either --body or --html (or both) is required.",
+    }),
+    "html-file": Flags.string({
+      description:
+        "Read the HTML message body from a UTF-8 file. Mutually exclusive with --html and --html-stdin.",
+    }),
+    "html-stdin": Flags.boolean({
+      description:
+        "Read the HTML message body from stdin. Mutually exclusive with --html and --html-file. Stdin can only be consumed once.",
     }),
     "in-reply-to": Flags.string({
       description:
@@ -210,10 +228,16 @@ class SendCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(SendCommand);
 
-    if (!flags.body && !flags.html) {
-      throw new Errors.CLIError(
-        "Either --body or --html (or both) is required.",
-      );
+    const bodies = resolveMessageBodies({
+      body: flags.body,
+      bodyFile: flags["body-file"],
+      bodyStdin: flags["body-stdin"],
+      html: flags.html,
+      htmlFile: flags["html-file"],
+      htmlStdin: flags["html-stdin"],
+    });
+    if (bodies.kind === "error") {
+      throw new Errors.CLIError(bodies.message);
     }
 
     await runWithTiming(flags.time, async () => {
@@ -241,15 +265,15 @@ class SendCommand extends Command {
         flags.from ??
         (await pickDefaultFromAddress(apiClient, authFailureContext));
       const subject =
-        flags.subject ?? (flags.body ? deriveSubject(flags.body) : "Message");
+        flags.subject ?? (bodies.body ? deriveSubject(bodies.body) : "Message");
 
       const result = await sendEmail({
         body: {
           from,
           to: flags.to,
           subject,
-          ...(flags.body !== undefined ? { body_text: flags.body } : {}),
-          ...(flags.html !== undefined ? { body_html: flags.html } : {}),
+          ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
+          ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
           ...(flags["in-reply-to"] !== undefined
             ? { in_reply_to: flags["in-reply-to"] }
             : {}),

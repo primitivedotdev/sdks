@@ -10,6 +10,7 @@ import {
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
+import { resolveMessageBodies } from "../message-body-sources.js";
 
 class ReplyCommand extends Command {
   static description = `Reply to an inbound email.
@@ -20,6 +21,7 @@ class ReplyCommand extends Command {
 
   static examples = [
     "<%= config.bin %> reply --id <inbound-email-id> --body 'Thanks, got it.'",
+    "<%= config.bin %> reply --id <inbound-email-id> --body-file ./reply.txt",
     "<%= config.bin %> reply --id <inbound-email-id> --html '<p>Thanks, got it.</p>' --wait",
     "<%= config.bin %> reply --id <inbound-email-id> --from 'Support <support@example.com>' --body 'Thanks!'",
   ];
@@ -50,9 +52,25 @@ class ReplyCommand extends Command {
       description:
         "Plain-text reply body. Either --body or --html (or both) is required.",
     }),
+    "body-file": Flags.string({
+      description:
+        "Read the plain-text reply body from a UTF-8 file. Mutually exclusive with --body and --body-stdin.",
+    }),
+    "body-stdin": Flags.boolean({
+      description:
+        "Read the plain-text reply body from stdin. Mutually exclusive with --body and --body-file. Stdin can only be consumed once.",
+    }),
     html: Flags.string({
       description:
         "HTML reply body. Either --body or --html (or both) is required.",
+    }),
+    "html-file": Flags.string({
+      description:
+        "Read the HTML reply body from a UTF-8 file. Mutually exclusive with --html and --html-stdin.",
+    }),
+    "html-stdin": Flags.boolean({
+      description:
+        "Read the HTML reply body from stdin. Mutually exclusive with --html and --html-file. Stdin can only be consumed once.",
     }),
     from: Flags.string({
       description:
@@ -74,10 +92,16 @@ class ReplyCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(ReplyCommand);
 
-    if (!flags.body && !flags.html) {
-      throw new Errors.CLIError(
-        "Either --body or --html (or both) is required.",
-      );
+    const bodies = resolveMessageBodies({
+      body: flags.body,
+      bodyFile: flags["body-file"],
+      bodyStdin: flags["body-stdin"],
+      html: flags.html,
+      htmlFile: flags["html-file"],
+      htmlStdin: flags["html-stdin"],
+    });
+    if (bodies.kind === "error") {
+      throw new Errors.CLIError(bodies.message);
     }
 
     await runWithTiming(flags.time, async () => {
@@ -98,8 +122,8 @@ class ReplyCommand extends Command {
 
       const result = await replyToEmail({
         body: {
-          ...(flags.body !== undefined ? { body_text: flags.body } : {}),
-          ...(flags.html !== undefined ? { body_html: flags.html } : {}),
+          ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
+          ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
           ...(flags.from !== undefined ? { from: flags.from } : {}),
           ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
           ...(flags["wait-timeout-ms"] !== undefined
