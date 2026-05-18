@@ -3,6 +3,7 @@ import FunctionsTestFunctionCommand, {
   buildFunctionTestOutcome,
   findMatchingFunctionEndpoints,
   formatFunctionEndpointNoiseWarning,
+  writeFunctionTestProgress,
 } from "../../src/oclif/commands/functions-test-function.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
@@ -128,6 +129,21 @@ describe("buildFunctionTestOutcome", () => {
     });
 
     expect(outcome).not.toHaveProperty("sent_emails");
+  });
+});
+
+describe("writeFunctionTestProgress", () => {
+  it("writes progress lines to stderr so stdout can remain one JSON document", () => {
+    const chunks: string[] = [];
+
+    writeFunctionTestProgress(
+      "Waiting for test inbound to arrive...",
+      (chunk) => {
+        chunks.push(chunk);
+      },
+    );
+
+    expect(chunks).toEqual(["Waiting for test inbound to arrive...\n"]);
   });
 });
 
