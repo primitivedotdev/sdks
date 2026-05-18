@@ -154,6 +154,9 @@ export function resolveSecretFlags(
 export function resolveSingleSecretValue(
   input: SingleSecretValueFlags,
 ): ResolveSingleSecretValueResult {
+  const keyError = validateKey(input.key, "--key");
+  if (keyError) return keyError;
+
   const sources = [
     input.value !== undefined ? "--value" : null,
     input.valueFromEnv !== undefined ? "--value-from-env" : null,
