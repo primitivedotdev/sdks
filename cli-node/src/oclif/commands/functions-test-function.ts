@@ -113,6 +113,15 @@ export function buildFunctionTestOutcome(params: {
   return outcome;
 }
 
+export function writeFunctionTestProgress(
+  message: string,
+  writeStderr: (chunk: string) => void = (chunk) => {
+    process.stderr.write(chunk);
+  },
+): void {
+  writeStderr(`${message}\n`);
+}
+
 type RawEndpointRow = {
   id?: unknown;
   enabled?: unknown;
@@ -384,7 +393,9 @@ class FunctionsTestFunctionCommand extends Command {
       // recipient is unique per call (random suffix in the local-part
       // unless --local-part overrides), so `to` + `since` uniquely
       // identifies the test inbound row.
-      this.log(`Waiting for test inbound to arrive at ${invocation.to}...`);
+      writeFunctionTestProgress(
+        `Waiting for test inbound to arrive at ${invocation.to}...`,
+      );
       let inboundId: string | undefined;
       while (!isExpired()) {
         const page = await fetchEmailSearchPage({
@@ -424,7 +435,9 @@ class FunctionsTestFunctionCommand extends Command {
       // the email-detail endpoint because it already carries both the
       // webhook_status terminal state and the `replies` array we'll
       // print under --show-sends. No second endpoint needed.
-      this.log(`Inbound landed (${inboundId}). Waiting for function to run...`);
+      writeFunctionTestProgress(
+        `Inbound landed (${inboundId}). Waiting for function to run...`,
+      );
       let detail: EmailDetail | undefined;
       while (!isExpired()) {
         const result = await getEmail({
