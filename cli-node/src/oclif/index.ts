@@ -10,6 +10,7 @@ import EmailsWaitCommand from "./commands/emails-wait.js";
 import EmailsWatchCommand from "./commands/emails-watch.js";
 import FunctionsDeployCommand from "./commands/functions-deploy.js";
 import FunctionsInitCommand from "./commands/functions-init.js";
+import FunctionsLogsCommand from "./commands/functions-logs.js";
 import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
 import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
 import FunctionsTemplatesCommand from "./commands/functions-templates.js";
@@ -186,7 +187,6 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "functions:get": "functions:get-function",
   "functions:list": "functions:list-functions",
   "functions:list-secrets": "functions:list-function-secrets",
-  "functions:logs": "functions:list-function-logs",
   "sending:get": "sending:get-sent-email",
   "sending:list": "sending:list-sent-emails",
   "sending:permissions": "sending:get-send-permissions",
@@ -200,6 +200,7 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
 
 const DESCRIBE_OPERATION_ALIASES: Record<string, string> = {
   ...CANONICAL_OPERATION_ALIASES,
+  "functions:logs": "functions:list-function-logs",
   reply: "sending:reply-to-email",
 };
 
@@ -314,4 +315,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   "functions:test-function": FunctionsTestFunctionCommand,
   ...generatedCommandAliases,
   ...generatedCommands,
+  // `functions:logs` is the human/agent-friendly log viewer: compact
+  // text by default, --jsonl for streaming tools, and --follow for
+  // tailing. The raw generated functions:list-function-logs operation
+  // remains available for callers that want the full page envelope.
+  "functions:logs": FunctionsLogsCommand,
 };
