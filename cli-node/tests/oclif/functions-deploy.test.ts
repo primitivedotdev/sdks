@@ -130,6 +130,17 @@ describe("functions:deploy command", () => {
     expect(description).toContain("symbolicate stack traces");
     expect(description).not.toContain("runtime side");
   });
+
+  it("exposes --wait with deploy polling controls", () => {
+    const flags = FunctionsDeployCommand.flags as Record<
+      string,
+      { default?: number; description?: string }
+    >;
+
+    expect(flags.wait.description).toMatch(/deployed or failed/i);
+    expect(flags.timeout.default).toBeGreaterThan(0);
+    expect(flags["poll-interval"].default).toBeGreaterThan(0);
+  });
 });
 
 describe("parseSecretFlags", () => {

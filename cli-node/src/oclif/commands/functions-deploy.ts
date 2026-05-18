@@ -6,6 +6,7 @@ import type {
 } from "@primitivedotdev/api-core";
 import {
   createFunction,
+  getFunction,
   PrimitiveApiClient,
   setFunctionSecret,
   updateFunction,
@@ -19,6 +20,12 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
+import {
+  DEFAULT_DEPLOY_POLL_INTERVAL_SECONDS,
+  DEFAULT_DEPLOY_WAIT_TIMEOUT_SECONDS,
+  validateDeployWaitFlags,
+  waitForFunctionDeploy,
+} from "../function-deploy-wait.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
 import {
   resolveSecretFlags,
@@ -273,6 +280,7 @@ class FunctionsDeployCommand extends Command {
 
   static examples = [
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js",
+    "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --wait",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-env OPENAI_KEY --secret-from-env-file .env.local:OWNER_EMAIL",
@@ -334,6 +342,19 @@ class FunctionsDeployCommand extends Command {
       description:
         "Secret KEY to read from stdin and seed on the deployed function. A single trailing line ending is stripped. Stdin is consumed once, so this flag is not repeatable.",
     }),
+    wait: Flags.boolean({
+      description:
+        "Wait until the function deploy reaches deployed or failed. Progress is written to stderr; stdout remains the final JSON payload.",
+    }),
+    timeout: Flags.integer({
+      default: DEFAULT_DEPLOY_WAIT_TIMEOUT_SECONDS,
+      description:
+        "Seconds to wait when --wait is set before exiting non-zero. Use 0 to wait forever.",
+    }),
+    "poll-interval": Flags.integer({
+      default: DEFAULT_DEPLOY_POLL_INTERVAL_SECONDS,
+      description: "Seconds between deploy-status polls when --wait is set.",
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -343,6 +364,16 @@ class FunctionsDeployCommand extends Command {
     const { flags } = await this.parse(FunctionsDeployCommand);
 
     await runWithTiming(flags.time, async () => {
+      const waitFlagError = validateDeployWaitFlags({
+        pollIntervalSeconds: flags["poll-interval"],
+        timeoutSeconds: flags.timeout,
+      });
+      if (waitFlagError) {
+        process.stderr.write(`${waitFlagError}\n`);
+        process.exitCode = 1;
+        return;
+      }
+
       // Validate --secret pairs BEFORE any disk read or API call so
       // a malformed input fails fast with a clear error and zero
       // side effects. The fast path (no --secret flags) skips this
@@ -483,6 +514,53 @@ class FunctionsDeployCommand extends Command {
       // deployed. When no secrets were passed, fall back to the
       // create payload for byte-identical pre-flag behavior.
       const payload = outcome.result.redeploy ?? outcome.result.created;
+      if (flags.wait) {
+        const waitResult = await waitForFunctionDeploy({
+          getFunction: (p) =>
+            getFunction({
+              client: apiClient.client,
+              path: { id: p.id },
+              responseStyle: "fields",
+            }),
+          id: payload.id,
+          initial: payload,
+          pollIntervalSeconds: flags["poll-interval"],
+          timeoutSeconds: flags.timeout,
+          writeStderr: (chunk) => process.stderr.write(chunk),
+        });
+
+        if (waitResult.kind === "error") {
+          writeErrorWithHints(waitResult.payload);
+          removeStaleSavedCredentialOnUnauthorized({
+            ...authFailureContext,
+            payload: waitResult.payload,
+          });
+          process.exitCode = 1;
+          return;
+        }
+
+        if (waitResult.kind === "timeout") {
+          const status = waitResult.lastFunction?.deploy_status ?? "unknown";
+          process.stderr.write(
+            `Timed out after ${flags.timeout}s waiting for function ${payload.id} deploy to finish (last status: ${status}).\n`,
+          );
+          process.exitCode = 2;
+          return;
+        }
+
+        this.log(JSON.stringify(waitResult.function, null, 2));
+        if (waitResult.kind === "failed") {
+          const detail = waitResult.function.deploy_error
+            ? `: ${waitResult.function.deploy_error}`
+            : ".";
+          process.stderr.write(
+            `Function ${payload.id} deploy failed${detail}\n`,
+          );
+          process.exitCode = 1;
+        }
+        return;
+      }
+
       this.log(JSON.stringify(payload, null, 2));
     });
   }
