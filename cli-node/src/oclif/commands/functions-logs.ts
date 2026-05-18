@@ -44,9 +44,28 @@ export function filterNewFunctionLogs(
   rows: FunctionLogRow[],
   seenIds: Set<string>,
 ): FunctionLogRow[] {
-  const fresh = rows.filter((row) => !seenIds.has(row.id));
-  for (const row of fresh) seenIds.add(row.id);
-  return orderFunctionLogsForDisplay(fresh);
+  return orderFunctionLogsForDisplay(
+    collectFreshFunctionLogsFromPage(rows, seenIds).freshNewestFirst,
+  );
+}
+
+export function collectFreshFunctionLogsFromPage(
+  rows: FunctionLogRow[],
+  seenIds: Set<string>,
+): { freshNewestFirst: FunctionLogRow[]; reachedSeen: boolean } {
+  const freshNewestFirst: FunctionLogRow[] = [];
+  let reachedSeen = false;
+
+  for (const row of rows) {
+    if (seenIds.has(row.id)) {
+      reachedSeen = true;
+      continue;
+    }
+    freshNewestFirst.push(row);
+    seenIds.add(row.id);
+  }
+
+  return { freshNewestFirst, reachedSeen };
 }
 
 function emitLogRows(rows: FunctionLogRow[], jsonl: boolean): void {
@@ -143,44 +162,78 @@ class FunctionsLogsCommand extends Command {
         apiBaseUrl2: auth.apiBaseUrl2,
       });
       const seenIds = new Set<string>();
+      let completedInitialFollowPoll = false;
+      let hasObservedLogs = false;
       let wroteEmptyHint = false;
 
       while (true) {
-        const result = await listFunctionLogs({
-          client: apiClient.client,
-          path: { id: flags.id },
-          query: {
-            ...(flags.cursor ? { cursor: flags.cursor } : {}),
-            limit: flags.limit,
-          },
-          responseStyle: "fields",
-        });
+        let cursor = flags.cursor;
+        let nextCursor: string | null = null;
+        let rows: FunctionLogRow[] = [];
 
-        if (result.error) {
-          const errorPayload = extractErrorPayload(result.error);
-          writeErrorWithHints(errorPayload);
-          removeStaleSavedCredentialOnUnauthorized({
-            auth,
-            baseUrlOverridden,
-            configDir: this.config.configDir,
-            payload: errorPayload,
+        while (true) {
+          const result = await listFunctionLogs({
+            client: apiClient.client,
+            path: { id: flags.id },
+            query: {
+              ...(cursor ? { cursor } : {}),
+              limit: flags.limit,
+            },
+            responseStyle: "fields",
           });
-          process.exitCode = 1;
-          return;
-        }
 
-        const envelope = result.data as
-          | { data?: FunctionLogsEnvelope }
-          | undefined;
-        const page = envelope?.data ?? { items: [], next_cursor: null };
-        const rows = flags.follow
-          ? filterNewFunctionLogs(page.items, seenIds)
-          : orderFunctionLogsForDisplay(page.items);
+          if (result.error) {
+            const errorPayload = extractErrorPayload(result.error);
+            writeErrorWithHints(errorPayload);
+            removeStaleSavedCredentialOnUnauthorized({
+              auth,
+              baseUrlOverridden,
+              configDir: this.config.configDir,
+              payload: errorPayload,
+            });
+            process.exitCode = 1;
+            return;
+          }
+
+          const envelope = result.data as
+            | { data?: FunctionLogsEnvelope }
+            | undefined;
+          const page = envelope?.data ?? { items: [], next_cursor: null };
+          nextCursor = page.next_cursor;
+
+          if (!flags.follow) {
+            rows = orderFunctionLogsForDisplay(page.items);
+            break;
+          }
+
+          if (page.items.length > 0) {
+            hasObservedLogs = true;
+          }
+
+          const collected = collectFreshFunctionLogsFromPage(
+            page.items,
+            seenIds,
+          );
+          rows.push(...collected.freshNewestFirst);
+
+          if (
+            !completedInitialFollowPoll ||
+            collected.reachedSeen ||
+            !page.next_cursor
+          ) {
+            rows = orderFunctionLogsForDisplay(rows);
+            break;
+          }
+
+          cursor = page.next_cursor;
+        }
 
         if (rows.length === 0 && !wroteEmptyHint) {
           process.stderr.write(
             flags.follow
-              ? "No function logs yet. Waiting for new rows...\n"
+              ? hasObservedLogs
+                ? "Waiting for new function logs...\n"
+                : "No function logs yet. Waiting for new rows...\n"
               : "No function logs yet. Trigger the function, then run this command again.\n",
           );
           wroteEmptyHint = true;
@@ -189,12 +242,13 @@ class FunctionsLogsCommand extends Command {
         emitLogRows(rows, flags.jsonl);
 
         if (!flags.follow) {
-          if (page.next_cursor) {
-            process.stderr.write(`next cursor: ${page.next_cursor}\n`);
+          if (nextCursor) {
+            process.stderr.write(`next cursor: ${nextCursor}\n`);
           }
           return;
         }
 
+        completedInitialFollowPoll = true;
         await sleep(flags["poll-interval"] * 1000);
       }
     });

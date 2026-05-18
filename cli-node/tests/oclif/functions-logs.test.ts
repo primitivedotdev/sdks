@@ -1,6 +1,7 @@
 import type { FunctionLogRow } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 import FunctionsLogsCommand, {
+  collectFreshFunctionLogsFromPage,
   filterNewFunctionLogs,
   formatFunctionLogLine,
   orderFunctionLogsForDisplay,
@@ -75,5 +76,29 @@ describe("functions logs command", () => {
     ]);
     expect(seenIds).toEqual(new Set(["already-seen", "newest", "older"]));
     expect(filterNewFunctionLogs([newest, older, seen], seenIds)).toEqual([]);
+  });
+
+  it("collects fresh follow rows and reports when a page reached known history", () => {
+    const seenIds = new Set<string>(["seen"]);
+    const newest = makeLog({ id: "newest", ts: "2026-05-17T12:00:03.000Z" });
+    const newer = makeLog({ id: "newer", ts: "2026-05-17T12:00:02.000Z" });
+    const seen = makeLog({ id: "seen", ts: "2026-05-17T12:00:01.000Z" });
+    const olderButUnseen = makeLog({
+      id: "older-but-unseen",
+      ts: "2026-05-17T12:00:00.000Z",
+    });
+
+    expect(
+      collectFreshFunctionLogsFromPage(
+        [newest, newer, seen, olderButUnseen],
+        seenIds,
+      ),
+    ).toEqual({
+      freshNewestFirst: [newest, newer, olderButUnseen],
+      reachedSeen: true,
+    });
+    expect(seenIds).toEqual(
+      new Set(["seen", "newest", "newer", "older-but-unseen"]),
+    );
   });
 });
