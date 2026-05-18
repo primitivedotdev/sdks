@@ -662,6 +662,7 @@ const RESERVED_FLAG_NAMES = new Set([
   "api-base-url-2",
   "raw-body",
   "body-file",
+  "envelope",
   "output",
 ]);
 
@@ -733,6 +734,13 @@ function buildFlags(operation: PrimitiveOperationManifest): {
       description: TIME_FLAG_DESCRIPTION,
     }),
   };
+
+  if (!operation.binaryResponse) {
+    flags.envelope = Flags.boolean({
+      description:
+        "Print the full response envelope, including pagination metadata such as meta.cursor. Defaults to printing only the data payload for backward compatibility.",
+    });
+  }
 
   for (const parameter of [...operation.pathParams, ...operation.queryParams]) {
     flags[flagName(parameter.name)] = flagForParameter(parameter);
@@ -824,6 +832,18 @@ function collectValues(
   }
 
   return values;
+}
+
+type OperationResponseEnvelope =
+  | { data?: unknown; meta?: { cursor?: string | null } }
+  | null
+  | undefined;
+
+export function operationOutputPayload(
+  envelope: OperationResponseEnvelope,
+  includeEnvelope: boolean,
+): unknown {
+  return includeEnvelope ? (envelope ?? null) : (envelope?.data ?? null);
 }
 
 // Discoverability hints for generated commands that have a
@@ -1034,10 +1054,7 @@ export function createOperationCommand(
           return;
         }
 
-        const envelope = result.data as
-          | { data?: unknown; meta?: { cursor?: string | null } }
-          | null
-          | undefined;
+        const envelope = result.data as OperationResponseEnvelope;
         const cursor = envelope?.meta?.cursor;
         if (cursor) {
           process.stderr.write(`next cursor: ${cursor}\n`);
@@ -1068,7 +1085,13 @@ export function createOperationCommand(
           },
         });
 
-        this.log(JSON.stringify(envelope?.data ?? null, null, 2));
+        this.log(
+          JSON.stringify(
+            operationOutputPayload(envelope, parsedFlags.envelope === true),
+            null,
+            2,
+          ),
+        );
       });
     }
   }

@@ -12,6 +12,7 @@ import {
   formatElapsed,
   formatErrorPayload,
   OPERATION_HINTS,
+  operationOutputPayload,
   readJsonBody,
   removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
@@ -640,6 +641,23 @@ describe("runWithTiming", () => {
   });
 });
 
+describe("operationOutputPayload", () => {
+  it("keeps generated command stdout backward-compatible by default", () => {
+    expect(
+      operationOutputPayload(
+        { data: [{ id: "email-1" }], meta: { cursor: "next" } },
+        false,
+      ),
+    ).toEqual([{ id: "email-1" }]);
+  });
+
+  it("returns the full envelope when --envelope is requested", () => {
+    const envelope = { data: [{ id: "email-1" }], meta: { cursor: "next" } };
+
+    expect(operationOutputPayload(envelope, true)).toEqual(envelope);
+  });
+});
+
 describe("OPERATION_HINTS", () => {
   // The hint set is small and curated. Pin each entry to a known
   // shortcut command so a typo or accidental rename in
@@ -786,5 +804,23 @@ describe("createOperationCommand description", () => {
 
     expect(flag.min).toBe(1000);
     expect(flag.max).toBe(30000);
+  });
+
+  it("adds --envelope to non-binary generated commands", () => {
+    const Cmd = createOperationCommand(makeOperation()) as unknown as {
+      flags: Record<string, unknown>;
+    };
+
+    expect(Cmd.flags.envelope).toBeDefined();
+  });
+
+  it("does not add --envelope to binary download commands", () => {
+    const Cmd = createOperationCommand(
+      makeOperation({ binaryResponse: true }),
+    ) as unknown as {
+      flags: Record<string, unknown>;
+    };
+
+    expect(Cmd.flags.envelope).toBeUndefined();
   });
 });
