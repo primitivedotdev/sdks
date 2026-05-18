@@ -6,8 +6,11 @@
  */
 
 export type PrimitiveParameterManifest = {
+  default?: boolean | number | string;
   description: string | null;
   enum: string[] | null;
+  maximum?: number;
+  minimum?: number;
   name: string;
   required: boolean;
   type: string;
@@ -1515,8 +1518,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
+        "default": 50,
         "description": "Number of results per page",
         "enum": null,
+        "maximum": 100,
+        "minimum": 1,
         "name": "limit",
         "required": false,
         "type": "integer"
@@ -1828,13 +1834,17 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
+        "default": 50,
         "description": "Number of results per page",
         "enum": null,
+        "maximum": 100,
+        "minimum": 1,
         "name": "limit",
         "required": false,
         "type": "integer"
       },
       {
+        "default": "true",
         "description": "Include subject/body highlight snippets when text search is active.",
         "enum": [
           "true",
@@ -1845,6 +1855,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
+        "default": "true",
         "description": "Include facet counts for sender, domain, status, and attachment presence.",
         "enum": [
           "true",
@@ -3651,8 +3662,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [
       {
+        "default": 50,
         "description": "Maximum number of rows to return. Clamped to 1..200; default\n50.\n",
         "enum": null,
+        "maximum": 200,
+        "minimum": 1,
         "name": "limit",
         "required": false,
         "type": "integer"
@@ -4624,8 +4638,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
+        "default": 50,
         "description": "Number of results per page",
         "enum": null,
+        "maximum": 100,
+        "minimum": 1,
         "name": "limit",
         "required": false,
         "type": "integer"
@@ -5275,8 +5292,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
+        "default": 50,
         "description": "Number of results per page",
         "enum": null,
+        "maximum": 100,
+        "minimum": 1,
         "name": "limit",
         "required": false,
         "type": "integer"

@@ -43,6 +43,53 @@ function flagDescription(parameter: PrimitiveParameterManifest): string {
   return parameter.description ?? parameter.name;
 }
 
+type NumericFlagOptions = {
+  max?: number;
+  min?: number;
+};
+
+const numberFlag = Flags.custom<number, NumericFlagOptions>({
+  async parse(input, _context, options) {
+    const trimmed = input.trim();
+    if (trimmed === "") {
+      throw new Errors.CLIError(`Expected a number but received: ${input}`);
+    }
+    const value = Number(trimmed);
+    if (!Number.isFinite(value)) {
+      throw new Errors.CLIError(`Expected a number but received: ${input}`);
+    }
+    if (options.min !== undefined && value < options.min) {
+      throw new Errors.CLIError(
+        `Expected a number greater than or equal to ${options.min} but received: ${input}`,
+      );
+    }
+    if (options.max !== undefined && value > options.max) {
+      throw new Errors.CLIError(
+        `Expected a number less than or equal to ${options.max} but received: ${input}`,
+      );
+    }
+    return value;
+  },
+});
+
+function numericFlagOptions(parameter: {
+  default?: unknown;
+  maximum?: number;
+  minimum?: number;
+}): NumericFlagOptions & { default?: number } {
+  return {
+    ...(typeof parameter.default === "number"
+      ? { default: parameter.default }
+      : {}),
+    ...(typeof parameter.maximum === "number"
+      ? { max: parameter.maximum }
+      : {}),
+    ...(typeof parameter.minimum === "number"
+      ? { min: parameter.minimum }
+      : {}),
+  };
+}
+
 // Description of a single top-level body property, normalized
 // from the JSON Schema on the operation manifest. `kind` tells the
 // CLI generator whether to expose the field as an individual
@@ -57,7 +104,9 @@ interface BodyFieldDescriptor {
   // Either a CLI flag-able scalar kind or "complex" (array, object,
   // mixed-non-nullable, unknown). Complex fields cannot be
   // expressed as a single CLI flag and must go through --raw-body.
-  kind: "string" | "integer" | "boolean" | "complex";
+  kind: "string" | "integer" | "number" | "boolean" | "complex";
+  maximum?: number;
+  minimum?: number;
   // Restricted-string enum, when the schema had `enum: [...]` and
   // the type is string. Used to bound the generated flag.
   enumValues?: readonly string[];
@@ -89,7 +138,8 @@ function extractBodyFields(
     if (typeof t === "string") {
       displayType = t;
       if (t === "string") kind = "string";
-      else if (t === "integer" || t === "number") kind = "integer";
+      else if (t === "integer") kind = "integer";
+      else if (t === "number") kind = "number";
       else if (t === "boolean") kind = "boolean";
       else if (t === "array") {
         const items = propSchema.items;
@@ -112,7 +162,8 @@ function extractBodyFields(
         const single = nonNull[0];
         displayType = `${single}?`;
         if (single === "string") kind = "string";
-        else if (single === "integer" || single === "number") kind = "integer";
+        else if (single === "integer") kind = "integer";
+        else if (single === "number") kind = "number";
         else if (single === "boolean") kind = "boolean";
         else kind = "complex";
       } else {
@@ -153,6 +204,12 @@ function extractBodyFields(
       displayType,
       kind,
       ...(enumValues && enumValues.length > 0 ? { enumValues } : {}),
+      ...(typeof propSchema.maximum === "number"
+        ? { maximum: propSchema.maximum }
+        : {}),
+      ...(typeof propSchema.minimum === "number"
+        ? { minimum: propSchema.minimum }
+        : {}),
     });
   }
   return fields.sort((a, b) => {
@@ -223,7 +280,11 @@ export function flagForParameter(
   }
 
   if (parameter.type === "integer") {
-    return Flags.integer(common);
+    return Flags.integer({ ...common, ...numericFlagOptions(parameter) });
+  }
+
+  if (parameter.type === "number") {
+    return numberFlag({ ...common, ...numericFlagOptions(parameter) });
   }
 
   if (parameter.enum && parameter.enum.length > 0) {
@@ -624,7 +685,12 @@ function bodyFieldFlag(field: BodyFieldDescriptor): unknown {
     description: field.description || field.name,
   };
   if (field.kind === "boolean") return Flags.boolean(common);
-  if (field.kind === "integer") return Flags.integer(common);
+  if (field.kind === "integer") {
+    return Flags.integer({ ...common, ...numericFlagOptions(field) });
+  }
+  if (field.kind === "number") {
+    return numberFlag({ ...common, ...numericFlagOptions(field) });
+  }
   if (field.enumValues) {
     return Flags.string({ ...common, options: field.enumValues });
   }
