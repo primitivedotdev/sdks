@@ -50,7 +50,11 @@ type NumericFlagOptions = {
 
 const numberFlag = Flags.custom<number, NumericFlagOptions>({
   async parse(input, _context, options) {
-    const value = Number(input);
+    const trimmed = input.trim();
+    if (trimmed === "") {
+      throw new Errors.CLIError(`Expected a number but received: ${input}`);
+    }
+    const value = Number(trimmed);
     if (!Number.isFinite(value)) {
       throw new Errors.CLIError(`Expected a number but received: ${input}`);
     }
@@ -68,9 +72,11 @@ const numberFlag = Flags.custom<number, NumericFlagOptions>({
   },
 });
 
-function numericFlagOptions(
-  parameter: PrimitiveParameterManifest,
-): NumericFlagOptions & { default?: number } {
+function numericFlagOptions(parameter: {
+  default?: unknown;
+  maximum?: number;
+  minimum?: number;
+}): NumericFlagOptions & { default?: number } {
   return {
     ...(typeof parameter.default === "number"
       ? { default: parameter.default }
@@ -98,7 +104,9 @@ interface BodyFieldDescriptor {
   // Either a CLI flag-able scalar kind or "complex" (array, object,
   // mixed-non-nullable, unknown). Complex fields cannot be
   // expressed as a single CLI flag and must go through --raw-body.
-  kind: "string" | "integer" | "boolean" | "complex";
+  kind: "string" | "integer" | "number" | "boolean" | "complex";
+  maximum?: number;
+  minimum?: number;
   // Restricted-string enum, when the schema had `enum: [...]` and
   // the type is string. Used to bound the generated flag.
   enumValues?: readonly string[];
@@ -130,7 +138,8 @@ function extractBodyFields(
     if (typeof t === "string") {
       displayType = t;
       if (t === "string") kind = "string";
-      else if (t === "integer" || t === "number") kind = "integer";
+      else if (t === "integer") kind = "integer";
+      else if (t === "number") kind = "number";
       else if (t === "boolean") kind = "boolean";
       else if (t === "array") {
         const items = propSchema.items;
@@ -153,7 +162,8 @@ function extractBodyFields(
         const single = nonNull[0];
         displayType = `${single}?`;
         if (single === "string") kind = "string";
-        else if (single === "integer" || single === "number") kind = "integer";
+        else if (single === "integer") kind = "integer";
+        else if (single === "number") kind = "number";
         else if (single === "boolean") kind = "boolean";
         else kind = "complex";
       } else {
@@ -194,6 +204,12 @@ function extractBodyFields(
       displayType,
       kind,
       ...(enumValues && enumValues.length > 0 ? { enumValues } : {}),
+      ...(typeof propSchema.maximum === "number"
+        ? { maximum: propSchema.maximum }
+        : {}),
+      ...(typeof propSchema.minimum === "number"
+        ? { minimum: propSchema.minimum }
+        : {}),
     });
   }
   return fields.sort((a, b) => {
@@ -669,7 +685,12 @@ function bodyFieldFlag(field: BodyFieldDescriptor): unknown {
     description: field.description || field.name,
   };
   if (field.kind === "boolean") return Flags.boolean(common);
-  if (field.kind === "integer") return Flags.integer(common);
+  if (field.kind === "integer") {
+    return Flags.integer({ ...common, ...numericFlagOptions(field) });
+  }
+  if (field.kind === "number") {
+    return numberFlag({ ...common, ...numericFlagOptions(field) });
+  }
   if (field.enumValues) {
     return Flags.string({ ...common, options: field.enumValues });
   }

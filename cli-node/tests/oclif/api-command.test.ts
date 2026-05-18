@@ -542,8 +542,15 @@ describe("flagForParameter", () => {
     expect(flag.min).toBe(0);
     expect(flag.max).toBe(15);
     await expect(flag.parse("10.5", {}, flag)).resolves.toBe(10.5);
+    await expect(flag.parse("", {}, flag)).rejects.toThrow(/Expected a number/);
+    await expect(flag.parse("   ", {}, flag)).rejects.toThrow(
+      /Expected a number/,
+    );
     await expect(flag.parse("nope", {}, flag)).rejects.toThrow(
       /Expected a number/,
+    );
+    await expect(flag.parse("-1", {}, flag)).rejects.toThrow(
+      /greater than or equal to 0/,
     );
     await expect(flag.parse("20", {}, flag)).rejects.toThrow(
       /less than or equal to 15/,
@@ -714,5 +721,70 @@ describe("createOperationCommand description", () => {
     expect(Cmd.description).toContain("`primitive describe emails:get | jq");
     expect(Cmd.description).not.toContain("emails:latest");
     expect(Cmd.description).not.toContain("emails:get-email");
+  });
+
+  it("carries numeric constraints into generated decimal body flags", async () => {
+    const op = makeOperation({
+      hasJsonBody: true,
+      method: "PATCH",
+      requestSchema: {
+        properties: {
+          spam_threshold: {
+            description: "Spam threshold",
+            maximum: 15,
+            minimum: 0,
+            type: ["number", "null"],
+          },
+        },
+        type: "object",
+      },
+    });
+    const Cmd = createOperationCommand(op) as unknown as {
+      flags: Record<string, unknown>;
+    };
+    const flag = Cmd.flags["spam-threshold"] as {
+      max?: number;
+      min?: number;
+      parse: (
+        input: string,
+        context: unknown,
+        options: unknown,
+      ) => Promise<number>;
+    };
+
+    expect(flag.min).toBe(0);
+    expect(flag.max).toBe(15);
+    await expect(flag.parse("10.5", {}, flag)).resolves.toBe(10.5);
+    await expect(flag.parse("20", {}, flag)).rejects.toThrow(
+      /less than or equal to 15/,
+    );
+  });
+
+  it("carries numeric constraints into generated integer body flags", () => {
+    const op = makeOperation({
+      hasJsonBody: true,
+      method: "POST",
+      requestSchema: {
+        properties: {
+          wait_timeout_ms: {
+            description: "Wait timeout",
+            maximum: 30000,
+            minimum: 1000,
+            type: "integer",
+          },
+        },
+        type: "object",
+      },
+    });
+    const Cmd = createOperationCommand(op) as unknown as {
+      flags: Record<string, unknown>;
+    };
+    const flag = Cmd.flags["wait-timeout-ms"] as {
+      max?: number;
+      min?: number;
+    };
+
+    expect(flag.min).toBe(1000);
+    expect(flag.max).toBe(30000);
   });
 });
