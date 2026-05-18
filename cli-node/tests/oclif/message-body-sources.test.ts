@@ -85,6 +85,49 @@ describe("resolveMessageBodies", () => {
       expect(result.message).toContain("ENOENT");
     }
   });
+
+  it("rejects missing body sources", () => {
+    const result = resolveMessageBodies({});
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("body");
+      expect(result.message).toContain("required");
+    }
+  });
+
+  it("rejects empty direct body strings", () => {
+    const result = resolveMessageBodies({ body: "", html: "" });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("non-empty");
+    }
+  });
+
+  it("rejects empty file bodies after reading them", () => {
+    const result = resolveMessageBodies({
+      bodyFile: "empty.txt",
+      readFile: () => "",
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("non-empty");
+    }
+  });
+
+  it("rejects empty stdin bodies after reading stdin", () => {
+    const result = resolveMessageBodies({
+      bodyStdin: true,
+      readStdin: () => "",
+    });
+
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("non-empty");
+    }
+  });
 });
 
 describe("message body source flags", () => {

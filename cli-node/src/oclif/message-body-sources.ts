@@ -15,6 +15,10 @@ export type ResolvedMessageBodies =
   | { kind: "ok"; body?: string; html?: string }
   | { kind: "error"; message: string };
 
+type TextSourceResult =
+  | { kind: "ok"; content: string }
+  | { kind: "error"; message: string };
+
 function defaultReadFile(path: string): string {
   return readFileSync(path, "utf8");
 }
@@ -38,9 +42,9 @@ function readTextFile(
   path: string,
   label: string,
   readFile: (path: string) => string,
-): ResolvedMessageBodies {
+): TextSourceResult {
   try {
-    return { body: readFile(path), kind: "ok" };
+    return { content: readFile(path), kind: "ok" };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -53,9 +57,9 @@ function readTextFile(
 function readTextStdin(
   label: string,
   readStdin: () => string,
-): ResolvedMessageBodies {
+): TextSourceResult {
   try {
-    return { body: readStdin(), kind: "ok" };
+    return { content: readStdin(), kind: "ok" };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -119,22 +123,30 @@ export function resolveMessageBodies(
   if (input.bodyFile !== undefined) {
     const result = readTextFile(input.bodyFile, "--body-file", readFile);
     if (result.kind === "error") return result;
-    body = result.body;
+    body = result.content;
   }
   if (input.bodyStdin === true) {
     const result = readTextStdin("--body-stdin", readStdin);
     if (result.kind === "error") return result;
-    body = result.body;
+    body = result.content;
   }
   if (input.htmlFile !== undefined) {
     const result = readTextFile(input.htmlFile, "--html-file", readFile);
     if (result.kind === "error") return result;
-    html = result.body;
+    html = result.content;
   }
   if (input.htmlStdin === true) {
     const result = readTextStdin("--html-stdin", readStdin);
     if (result.kind === "error") return result;
-    html = result.body;
+    html = result.content;
+  }
+
+  if (!body && !html) {
+    return {
+      kind: "error",
+      message:
+        "Either a non-empty plain-text body or a non-empty HTML body is required.",
+    };
   }
 
   return {
