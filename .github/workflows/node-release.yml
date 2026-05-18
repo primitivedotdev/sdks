@@ -77,7 +77,7 @@ jobs:
 
       - name: Publish package to npm
         if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
-        run: cd sdk-node && npm publish --access public --provenance
+        run: scripts/npm-publish-with-retry.sh --package @primitivedotdev/sdk --version "${{ steps.version.outputs.current }}" --directory sdk-node
 
       - name: Check GitHub release state
         if: ${{ steps.version.outputs.changed == 'true' }}
