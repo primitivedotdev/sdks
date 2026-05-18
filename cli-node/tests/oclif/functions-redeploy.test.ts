@@ -84,6 +84,18 @@ describe("functions:redeploy command", () => {
   it("registers in the COMMANDS map", () => {
     expect(COMMANDS["functions:redeploy"]).toBeDefined();
   });
+
+  it("exposes --wait with deploy polling controls", () => {
+    const command = COMMANDS["functions:redeploy"];
+    const flags = command.flags as Record<
+      string,
+      { default?: number; description?: string }
+    >;
+
+    expect(flags.wait.description).toMatch(/deployed or failed/i);
+    expect(flags.timeout.default).toBeGreaterThan(0);
+    expect(flags["poll-interval"].default).toBeGreaterThan(0);
+  });
 });
 
 describe("runRedeployWithSecrets (no --secret)", () => {
