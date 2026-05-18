@@ -114,6 +114,12 @@ export function renderFishCompletion(binName: string): string {
         // when typed explicitly.
       );
 
+      if (!operation.binaryResponse) {
+        lines.push(
+          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'envelope' -d 'Print the full response envelope, including pagination metadata'`,
+        );
+      }
+
       if (operation.hasJsonBody) {
         lines.push(
           `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'body' -r -d 'JSON request body'`,
