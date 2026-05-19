@@ -148,7 +148,7 @@ describe("writeFunctionTestProgress", () => {
 });
 
 describe("function endpoint noise warnings", () => {
-  it("matches catch-all and same-domain function endpoints", () => {
+  it("uses same-domain function endpoints and suppresses fallback endpoints", () => {
     const endpoints = findMatchingFunctionEndpoints({
       currentFunctionId: "fn-current",
       inboundDomainId: "domain-1",
@@ -206,16 +206,55 @@ describe("function endpoint noise warnings", () => {
         is_current_function: true,
         scope: "domain",
       },
+    ]);
+  });
+
+  it("matches fallback function endpoints when no same-domain endpoint exists", () => {
+    const endpoints = findMatchingFunctionEndpoints({
+      currentFunctionId: "fn-current",
+      inboundDomainId: "domain-1",
+      endpoints: [
+        {
+          domain_id: "domain-2",
+          enabled: true,
+          function_id: "fn-other-domain",
+          id: "endpoint-other-domain",
+          kind: "function",
+        },
+        {
+          domain_id: null,
+          enabled: true,
+          function_id: "fn-current",
+          id: "endpoint-current-fallback",
+          kind: "function",
+        },
+        {
+          domain_id: null,
+          enabled: true,
+          function_id: "fn-other-fallback",
+          id: "endpoint-other-fallback",
+          kind: "function",
+        },
+      ],
+    });
+
+    expect(endpoints).toEqual([
       {
-        function_id: "fn-catchall",
-        id: "endpoint-catchall",
+        function_id: "fn-current",
+        id: "endpoint-current-fallback",
+        is_current_function: true,
+        scope: "fallback",
+      },
+      {
+        function_id: "fn-other-fallback",
+        id: "endpoint-other-fallback",
         is_current_function: false,
-        scope: "catch-all",
+        scope: "fallback",
       },
     ]);
   });
 
-  it("matches only catch-all function endpoints when the inbound domain id is unknown", () => {
+  it("matches only fallback function endpoints when the inbound domain id is unknown", () => {
     const endpoints = findMatchingFunctionEndpoints({
       currentFunctionId: "fn-current",
       inboundDomainId: null,
@@ -242,7 +281,7 @@ describe("function endpoint noise warnings", () => {
         function_id: "fn-catchall",
         id: "endpoint-catchall",
         is_current_function: false,
-        scope: "catch-all",
+        scope: "fallback",
       },
     ]);
   });
@@ -272,10 +311,10 @@ describe("function endpoint noise warnings", () => {
           scope: "domain",
         },
         {
-          function_id: "fn-catchall",
-          id: "endpoint-catchall",
+          function_id: "fn-other-domain",
+          id: "endpoint-other-domain",
           is_current_function: false,
-          scope: "catch-all",
+          scope: "domain",
         },
       ],
       inboundDomain: "long-ape.primitive.email",
@@ -287,7 +326,32 @@ describe("function endpoint noise warnings", () => {
     );
     expect(warning).toContain("endpoint-current");
     expect(warning).toContain("this function");
-    expect(warning).toContain("endpoint-catchall");
-    expect(warning).toContain("catch-all");
+    expect(warning).toContain("endpoint-other-domain");
+    expect(warning).toContain("scoped to long-ape.primitive.email");
+  });
+
+  it("formats fallback endpoint warnings using fallback terminology", () => {
+    const warning = formatFunctionEndpointNoiseWarning({
+      endpoints: [
+        {
+          function_id: "fn-current",
+          id: "endpoint-current",
+          is_current_function: true,
+          scope: "fallback",
+        },
+        {
+          function_id: "fn-other-fallback",
+          id: "endpoint-other-fallback",
+          is_current_function: false,
+          scope: "fallback",
+        },
+      ],
+      inboundDomain: "long-ape.primitive.email",
+      toAddress: "summarize@long-ape.primitive.email",
+    });
+
+    expect(warning).toContain("endpoint-other-fallback");
+    expect(warning).toContain("fallback");
+    expect(warning).not.toContain("catch-all");
   });
 });

@@ -151,12 +151,13 @@ describe("renderHandler loop protection + REPLY_FROM constant", () => {
   });
 
   it("exposes an isLoop helper that the handler calls before dispatching", () => {
-    // AGX feedback: a deployed function receives catch-all inbound for
-    // the managed *.primitive.email subdomain, including bounces from
-    // its own outbound traffic. Without a loop guard the handler can
+    // AGX feedback: a newly deployed function starts as a fallback
+    // endpoint for managed *.primitive.email domains, including bounces
+    // from its own outbound traffic when no domain-scoped endpoint
+    // suppresses fallback routing. Without a loop guard the handler can
     // respond to its own bounces and fan out indefinitely. The default
-    // scaffold ships the guard so users do not have to discover the
-    // need for it after a fan-out incident.
+    // scaffold ships the guard so users do not have to discover the need
+    // for it after a fan-out incident.
     const handler = renderHandler();
     expect(handler).toMatch(
       /export function isLoop\(event: EmailReceivedEvent\): boolean/,
@@ -169,9 +170,10 @@ describe("renderHandler loop protection + REPLY_FROM constant", () => {
   });
 
   it("isLoop covers the managed *.primitive.email suffix and the REPLY_FROM address", () => {
-    // The default predicate has two arms: any From on the catch-all
-    // managed subdomain (covers bounces from mailer-daemon@*.primitive.email
-    // as well as the simple self-reply case), and the configured
+    // The default predicate has two arms: any From on a managed
+    // *.primitive.email address (covers bounces from
+    // mailer-daemon@*.primitive.email as well as the simple self-reply
+    // case), and the configured
     // REPLY_FROM. Comparisons are case-insensitive because RFC 2822
     // email-address local parts are case-insensitive in practice.
     const handler = renderHandler();
@@ -186,7 +188,7 @@ describe("renderHandler loop protection + REPLY_FROM constant", () => {
   });
 
   it("documents that the default isLoop is intentionally small and where to extend", () => {
-    // The default helper covers the catch-all case (anything on
+    // The default helper covers managed-domain mail (anything on
     // *.primitive.email). Auto-Submitted detection, Message-ID chain
     // tracking, and signup-email matching are deliberately left to
     // the user. The comment block above isLoop must list these as

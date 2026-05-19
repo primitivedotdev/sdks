@@ -135,7 +135,7 @@ export type MatchingFunctionEndpoint = {
   id: string;
   function_id: string | null;
   is_current_function: boolean;
-  scope: "catch-all" | "domain";
+  scope: "fallback" | "domain";
 };
 
 function stringOrNull(value: unknown): string | null {
@@ -147,7 +147,8 @@ export function findMatchingFunctionEndpoints(params: {
   currentFunctionId: string;
   inboundDomainId: string | null;
 }): MatchingFunctionEndpoint[] {
-  const matches: MatchingFunctionEndpoint[] = [];
+  const domainMatches: MatchingFunctionEndpoint[] = [];
+  const fallbackMatches: MatchingFunctionEndpoint[] = [];
   for (const endpoint of params.endpoints) {
     if (endpoint.kind !== "function") continue;
     if (endpoint.enabled === false) continue;
@@ -169,14 +170,18 @@ export function findMatchingFunctionEndpoints(params: {
     }
 
     const functionId = stringOrNull(endpoint.function_id);
-    matches.push({
+    const match = {
       function_id: functionId,
       id,
       is_current_function: functionId === params.currentFunctionId,
-      scope: domainId === null ? "catch-all" : "domain",
-    });
+      scope: domainId === null ? "fallback" : "domain",
+    } satisfies MatchingFunctionEndpoint;
+
+    if (domainId === null) fallbackMatches.push(match);
+    else domainMatches.push(match);
   }
-  return matches;
+
+  return domainMatches.length > 0 ? domainMatches : fallbackMatches;
 }
 
 export function formatFunctionEndpointNoiseWarning(params: {
@@ -194,8 +199,8 @@ export function formatFunctionEndpointNoiseWarning(params: {
   ];
   for (const endpoint of params.endpoints) {
     const scope =
-      endpoint.scope === "catch-all"
-        ? "catch-all"
+      endpoint.scope === "fallback"
+        ? "fallback"
         : `scoped to ${params.inboundDomain}`;
     const current = endpoint.is_current_function ? " (this function)" : "";
     const target = endpoint.function_id
