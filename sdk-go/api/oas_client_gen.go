@@ -539,17 +539,18 @@ type Invoker interface {
 	// Sends a real test email from a Primitive-controlled sender to a
 	// local-part on one of the org's verified inbound domains. By
 	// default the recipient is a synthetic
-	// `__primitive_function_test+<random>@<domain>` address that
-	// every handler's catch-all routing receives identically; pass
-	// `local_part` to override and exercise routing logic that
-	// branches on a specific recipient (the common pattern when one
-	// function handles multiple inboxes like `summarize@` and
-	// `action@`). The function fires through the normal MX delivery
-	// path, so reply / send-mail calls from inside the handler
-	// against the inbound's `email.id` work the same as in
-	// production. Returns immediately after the send is queued; the
-	// invocation appears on the function's invocations list within a
-	// few seconds.
+	// `__primitive_function_test+<random>@<domain>` address on a
+	// domain selected to route to the function. Scoped functions use
+	// their scoped domain; fallback functions use a domain that has
+	// no enabled domain-scoped endpoint. Pass `local_part` to
+	// override and exercise routing logic that branches on a specific
+	// recipient (the common pattern when one function handles multiple
+	// inboxes like `summarize@` and `action@`). The function fires
+	// through the normal MX delivery path, so reply / send-mail calls
+	// from inside the handler against the inbound's `email.id` work
+	// the same as in production. Returns immediately after the send is
+	// queued; the invocation appears on the function's invocations
+	// list within a few seconds.
 	// Requires that the function is currently `deployed`. Returns 422
 	// if the function is in `pending` or `failed` state, or if the
 	// org has no verified inbound domain to receive the test mail.
@@ -6732,17 +6733,18 @@ func (c *Client) sendTestEndpoint(ctx context.Context, params TestEndpointParams
 // Sends a real test email from a Primitive-controlled sender to a
 // local-part on one of the org's verified inbound domains. By
 // default the recipient is a synthetic
-// `__primitive_function_test+<random>@<domain>` address that
-// every handler's catch-all routing receives identically; pass
-// `local_part` to override and exercise routing logic that
-// branches on a specific recipient (the common pattern when one
-// function handles multiple inboxes like `summarize@` and
-// `action@`). The function fires through the normal MX delivery
-// path, so reply / send-mail calls from inside the handler
-// against the inbound's `email.id` work the same as in
-// production. Returns immediately after the send is queued; the
-// invocation appears on the function's invocations list within a
-// few seconds.
+// `__primitive_function_test+<random>@<domain>` address on a
+// domain selected to route to the function. Scoped functions use
+// their scoped domain; fallback functions use a domain that has
+// no enabled domain-scoped endpoint. Pass `local_part` to
+// override and exercise routing logic that branches on a specific
+// recipient (the common pattern when one function handles multiple
+// inboxes like `summarize@` and `action@`). The function fires
+// through the normal MX delivery path, so reply / send-mail calls
+// from inside the handler against the inbound's `email.id` work
+// the same as in production. Returns immediately after the send is
+// queued; the invocation appears on the function's invocations
+// list within a few seconds.
 // Requires that the function is currently `deployed`. Returns 422
 // if the function is in `pending` or `failed` state, or if the
 // org has no verified inbound domain to receive the test mail.
