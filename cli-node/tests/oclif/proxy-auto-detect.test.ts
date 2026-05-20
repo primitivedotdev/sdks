@@ -156,4 +156,90 @@ describe("restartWithProxyEnvIfNeeded", () => {
     expect(exit).not.toHaveBeenCalled();
     expect(stderr.writes).toEqual([]);
   });
+
+  it("respects an explicit NODE_USE_ENV_PROXY=1 opt-in", () => {
+    const spawn = vi.fn() as unknown as typeof spawnSync;
+    const exit = vi.fn() as unknown as typeof process.exit;
+    const stderr = makeStderr();
+
+    const result = restartWithProxyEnvIfNeeded({
+      argv: ["/usr/bin/node", "/app/bin/run.js", "whoami"],
+      env: {
+        HTTPS_PROXY: "http://corp-proxy:8080",
+        NODE_USE_ENV_PROXY: "1",
+      },
+      exit,
+      spawn,
+      stderr,
+    });
+
+    expect(result.applied).toBe(false);
+    expect(result.reason).toBe("node_use_env_proxy_already_set");
+    expect(result.detectedVars).toEqual(["HTTPS_PROXY"]);
+    expect(spawn).not.toHaveBeenCalled();
+    expect(exit).not.toHaveBeenCalled();
+    expect(stderr.writes).toEqual([]);
+  });
+
+  it("returns missing_entrypoint when the node entrypoint is absent", () => {
+    const spawn = vi.fn() as unknown as typeof spawnSync;
+    const exit = vi.fn() as unknown as typeof process.exit;
+    const stderr = makeStderr();
+
+    const result = restartWithProxyEnvIfNeeded({
+      argv: ["/usr/bin/node"],
+      env: { HTTP_PROXY: "http://corp-proxy:8080" },
+      exit,
+      spawn,
+      stderr,
+    });
+
+    expect(result).toEqual({
+      applied: false,
+      detectedVars: ["HTTP_PROXY"],
+      reason: "missing_entrypoint",
+    });
+    expect(spawn).not.toHaveBeenCalled();
+    expect(exit).not.toHaveBeenCalled();
+    expect(stderr.writes).toEqual([]);
+  });
+
+  it("re-raises child termination signals before exiting", () => {
+    const stderr = makeStderr();
+    const exitCalls: Array<string | number | null | undefined> = [];
+    const killCalls: Array<[number, NodeJS.Signals | number]> = [];
+    const exit = ((code?: string | number | null | undefined) => {
+      exitCalls.push(code);
+      throw new Error("process exit");
+    }) as typeof process.exit;
+    const kill = ((pid: number, signal: NodeJS.Signals | number) => {
+      killCalls.push([pid, signal]);
+      return true;
+    }) as (pid: number, signal: NodeJS.Signals | number) => true;
+    const spawn = vi.fn(() => ({
+      output: [],
+      pid: 123,
+      signal: "SIGTERM",
+      status: null,
+      stderr: null,
+      stdout: null,
+    })) as unknown as typeof spawnSync;
+
+    expect(() =>
+      restartWithProxyEnvIfNeeded({
+        argv: ["/usr/bin/node", "/app/bin/run.js", "whoami"],
+        env: { HTTPS_PROXY: "http://corp-proxy:8080" },
+        exit,
+        kill,
+        pid: 456,
+        spawn,
+        stderr,
+      }),
+    ).toThrow("process exit");
+
+    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(killCalls).toEqual([[456, "SIGTERM"]]);
+    expect(exitCalls).toEqual([1]);
+    expect(stderr.writes[0]).toContain("restarting with NODE_USE_ENV_PROXY=1");
+  });
 });
