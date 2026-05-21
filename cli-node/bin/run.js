@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { execute } from "@oclif/core";
-import { applyProxyAutoDetect } from "../dist/oclif/proxy-auto-detect.js";
+import { restartWithProxyEnvIfNeeded } from "../dist/oclif/proxy-auto-detect.js";
 
-// Auto-set NODE_USE_ENV_PROXY=1 when HTTP(S)_PROXY is in the env.
-// Must run before any network init (e.g. before oclif loads commands
-// that touch fetch). See proxy-auto-detect.ts for the full rationale.
-applyProxyAutoDetect();
+// Auto-restart with NODE_USE_ENV_PROXY=1 when HTTP(S)_PROXY is in the env.
+// Node reads NODE_USE_ENV_PROXY during process startup, so mutating
+// process.env inside this process is too late for built-in fetch.
+restartWithProxyEnvIfNeeded();
 
+const { execute } = await import("@oclif/core");
 await execute({ dir: import.meta.url });

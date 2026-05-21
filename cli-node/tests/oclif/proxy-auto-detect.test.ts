@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import type { spawnSync } from "node:child_process";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   _resetHintLatchForTest,
-  applyProxyAutoDetect,
+  restartWithProxyEnvIfNeeded,
 } from "../../src/oclif/proxy-auto-detect.js";
 
 // Captures stderr writes so we can assert on the hint without
@@ -20,121 +21,225 @@ function makeStderr(): {
   };
 }
 
-describe("applyProxyAutoDetect", () => {
+describe("restartWithProxyEnvIfNeeded", () => {
   beforeEach(() => {
     _resetHintLatchForTest();
   });
 
-  it("leaves NODE_USE_ENV_PROXY untouched when no proxy env is set", () => {
-    const env: NodeJS.ProcessEnv = {};
+  it("does nothing when no proxy env is set", () => {
+    const spawn = vi.fn() as unknown as typeof spawnSync;
+    const exit = vi.fn() as unknown as typeof process.exit;
     const stderr = makeStderr();
 
-    const result = applyProxyAutoDetect({ env, stderr });
+    const result = restartWithProxyEnvIfNeeded({
+      argv: ["/usr/bin/node", "/app/bin/run.js", "whoami"],
+      env: {},
+      exit,
+      spawn,
+      stderr,
+    });
 
-    expect(result.applied).toBe(false);
-    expect(result.reason).toBe("no_proxy_env");
-    expect(env.NODE_USE_ENV_PROXY).toBeUndefined();
+    expect(result).toEqual({
+      applied: false,
+      detectedVars: [],
+      reason: "no_proxy_env",
+    });
+    expect(spawn).not.toHaveBeenCalled();
+    expect(exit).not.toHaveBeenCalled();
     expect(stderr.writes).toEqual([]);
   });
 
-  it("sets NODE_USE_ENV_PROXY=1 and writes a hint when HTTP_PROXY is set", () => {
-    const env: NodeJS.ProcessEnv = { HTTP_PROXY: "http://corp-proxy:8080" };
+  it("re-runs the CLI with NODE_USE_ENV_PROXY=1 at Node startup", () => {
+    const env: NodeJS.ProcessEnv = {
+      HTTPS_PROXY: "http://corp-proxy:8080",
+      PRIMITIVE_API_KEY: "prim_test",
+    };
     const stderr = makeStderr();
+    const exitCalls: Array<string | number | null | undefined> = [];
+    const exit = ((code?: string | number | null | undefined) => {
+      exitCalls.push(code);
+      throw new Error("process exit");
+    }) as typeof process.exit;
+    const spawn = vi.fn(() => ({
+      output: [],
+      pid: 123,
+      signal: null,
+      status: 7,
+      stderr: null,
+      stdout: null,
+    })) as unknown as typeof spawnSync;
 
-    const result = applyProxyAutoDetect({ env, stderr });
+    expect(() =>
+      restartWithProxyEnvIfNeeded({
+        argv: ["/usr/bin/node", "/app/bin/run.js", "whoami", "--json"],
+        env,
+        execArgv: ["--enable-source-maps"],
+        execPath: "/usr/local/bin/node",
+        exit,
+        spawn,
+        stderr,
+      }),
+    ).toThrow("process exit");
 
-    expect(result.applied).toBe(true);
-    expect(result.reason).toBe("applied");
-    expect(result.detectedVars).toEqual(["HTTP_PROXY"]);
-    expect(env.NODE_USE_ENV_PROXY).toBe("1");
+    expect(spawn).toHaveBeenCalledWith(
+      "/usr/local/bin/node",
+      ["--enable-source-maps", "/app/bin/run.js", "whoami", "--json"],
+      {
+        env: {
+          ...env,
+          NODE_USE_ENV_PROXY: "1",
+        },
+        stdio: "inherit",
+      },
+    );
+    expect(exitCalls).toEqual([7]);
     expect(stderr.writes).toHaveLength(1);
-    expect(stderr.writes[0]).toContain("HTTP_PROXY");
-    expect(stderr.writes[0]).toContain("NODE_USE_ENV_PROXY=1");
+    expect(stderr.writes[0]).toContain("HTTPS_PROXY");
+    expect(stderr.writes[0]).toContain("restarting with NODE_USE_ENV_PROXY=1");
   });
 
-  it("also picks up HTTPS_PROXY and lowercase variants", () => {
-    for (const name of ["HTTPS_PROXY", "http_proxy", "https_proxy"] as const) {
+  it("detects uppercase and lowercase proxy env vars", () => {
+    for (const name of [
+      "HTTP_PROXY",
+      "HTTPS_PROXY",
+      "http_proxy",
+      "https_proxy",
+    ] as const) {
       _resetHintLatchForTest();
-      const env: NodeJS.ProcessEnv = { [name]: "http://corp-proxy:8080" };
       const stderr = makeStderr();
+      const exit = (() => {
+        throw new Error("process exit");
+      }) as typeof process.exit;
+      const spawn = vi.fn(() => ({
+        output: [],
+        pid: 123,
+        signal: null,
+        status: 0,
+        stderr: null,
+        stdout: null,
+      })) as unknown as typeof spawnSync;
 
-      const result = applyProxyAutoDetect({ env, stderr });
+      expect(() =>
+        restartWithProxyEnvIfNeeded({
+          argv: ["/usr/bin/node", "/app/bin/run.js", "whoami"],
+          env: { [name]: "http://corp-proxy:8080" },
+          exit,
+          spawn,
+          stderr,
+        }),
+      ).toThrow("process exit");
 
-      expect(result.applied).toBe(true);
-      expect(env.NODE_USE_ENV_PROXY).toBe("1");
+      expect(spawn).toHaveBeenCalledTimes(1);
       expect(stderr.writes[0]).toContain(name);
     }
   });
 
-  it("respects an explicit NODE_USE_ENV_PROXY=0 and does not override it", () => {
-    // User opted out for this invocation. Auto-detection must not
-    // silently undo that choice.
-    const env: NodeJS.ProcessEnv = {
-      HTTP_PROXY: "http://corp-proxy:8080",
-      NODE_USE_ENV_PROXY: "0",
-    };
+  it("respects explicit NODE_USE_ENV_PROXY values", () => {
+    const spawn = vi.fn() as unknown as typeof spawnSync;
+    const exit = vi.fn() as unknown as typeof process.exit;
     const stderr = makeStderr();
 
-    const result = applyProxyAutoDetect({ env, stderr });
+    const result = restartWithProxyEnvIfNeeded({
+      argv: ["/usr/bin/node", "/app/bin/run.js", "whoami"],
+      env: {
+        HTTP_PROXY: "http://corp-proxy:8080",
+        NODE_USE_ENV_PROXY: "0",
+      },
+      exit,
+      spawn,
+      stderr,
+    });
 
     expect(result.applied).toBe(false);
     expect(result.reason).toBe("node_use_env_proxy_already_set");
-    expect(env.NODE_USE_ENV_PROXY).toBe("0");
+    expect(spawn).not.toHaveBeenCalled();
+    expect(exit).not.toHaveBeenCalled();
     expect(stderr.writes).toEqual([]);
   });
 
-  it("respects an explicit NODE_USE_ENV_PROXY=1 and does not duplicate the hint", () => {
-    // User has already opted in manually. We should not print the
-    // automatic-detection hint because nothing changed.
-    const env: NodeJS.ProcessEnv = {
-      HTTPS_PROXY: "http://corp-proxy:8080",
-      NODE_USE_ENV_PROXY: "1",
-    };
+  it("respects an explicit NODE_USE_ENV_PROXY=1 opt-in", () => {
+    const spawn = vi.fn() as unknown as typeof spawnSync;
+    const exit = vi.fn() as unknown as typeof process.exit;
     const stderr = makeStderr();
 
-    const result = applyProxyAutoDetect({ env, stderr });
+    const result = restartWithProxyEnvIfNeeded({
+      argv: ["/usr/bin/node", "/app/bin/run.js", "whoami"],
+      env: {
+        HTTPS_PROXY: "http://corp-proxy:8080",
+        NODE_USE_ENV_PROXY: "1",
+      },
+      exit,
+      spawn,
+      stderr,
+    });
 
     expect(result.applied).toBe(false);
     expect(result.reason).toBe("node_use_env_proxy_already_set");
-    expect(env.NODE_USE_ENV_PROXY).toBe("1");
+    expect(result.detectedVars).toEqual(["HTTPS_PROXY"]);
+    expect(spawn).not.toHaveBeenCalled();
+    expect(exit).not.toHaveBeenCalled();
     expect(stderr.writes).toEqual([]);
   });
 
-  it("prints the hint only once per process even on repeat calls", () => {
-    const env: NodeJS.ProcessEnv = { HTTP_PROXY: "http://corp-proxy:8080" };
+  it("returns missing_entrypoint when the node entrypoint is absent", () => {
+    const spawn = vi.fn() as unknown as typeof spawnSync;
+    const exit = vi.fn() as unknown as typeof process.exit;
     const stderr = makeStderr();
 
-    applyProxyAutoDetect({ env, stderr });
-    // Second invocation: still detects, still has NODE_USE_ENV_PROXY=1
-    // from the first call, so it follows the "already set" path and
-    // writes nothing. This case validates the already-set guard, not
-    // the hint latch itself. See the next test for the latch.
-    applyProxyAutoDetect({ env, stderr });
+    const result = restartWithProxyEnvIfNeeded({
+      argv: ["/usr/bin/node"],
+      env: { HTTP_PROXY: "http://corp-proxy:8080" },
+      exit,
+      spawn,
+      stderr,
+    });
 
-    expect(stderr.writes).toHaveLength(1);
+    expect(result).toEqual({
+      applied: false,
+      detectedVars: ["HTTP_PROXY"],
+      reason: "missing_entrypoint",
+    });
+    expect(spawn).not.toHaveBeenCalled();
+    expect(exit).not.toHaveBeenCalled();
+    expect(stderr.writes).toEqual([]);
   });
 
-  it("hint latch suppresses the second print when each call receives a fresh env", () => {
-    // The previous test exercises the already-set guard because both
-    // calls share an env object the first call mutated. The hint
-    // latch is only exercised when both calls reach the "apply" path,
-    // meaning each call sees a fresh env with the proxy var set and
-    // NODE_USE_ENV_PROXY absent. This case validates that.
+  it("re-raises child termination signals before exiting", () => {
     const stderr = makeStderr();
+    const exitCalls: Array<string | number | null | undefined> = [];
+    const killCalls: Array<[number, NodeJS.Signals | number]> = [];
+    const exit = ((code?: string | number | null | undefined) => {
+      exitCalls.push(code);
+      throw new Error("process exit");
+    }) as typeof process.exit;
+    const kill = ((pid: number, signal: NodeJS.Signals | number) => {
+      killCalls.push([pid, signal]);
+      return true;
+    }) as (pid: number, signal: NodeJS.Signals | number) => true;
+    const spawn = vi.fn(() => ({
+      output: [],
+      pid: 123,
+      signal: "SIGTERM",
+      status: null,
+      stderr: null,
+      stdout: null,
+    })) as unknown as typeof spawnSync;
 
-    const env1: NodeJS.ProcessEnv = { HTTP_PROXY: "http://corp-proxy:8080" };
-    const r1 = applyProxyAutoDetect({ env: env1, stderr });
+    expect(() =>
+      restartWithProxyEnvIfNeeded({
+        argv: ["/usr/bin/node", "/app/bin/run.js", "whoami"],
+        env: { HTTPS_PROXY: "http://corp-proxy:8080" },
+        exit,
+        kill,
+        pid: 456,
+        spawn,
+        stderr,
+      }),
+    ).toThrow("process exit");
 
-    const env2: NodeJS.ProcessEnv = { HTTP_PROXY: "http://corp-proxy:8080" };
-    const r2 = applyProxyAutoDetect({ env: env2, stderr });
-
-    // Both invocations apply: each mutates its own env's NODE_USE_ENV_PROXY.
-    expect(r1.applied).toBe(true);
-    expect(env1.NODE_USE_ENV_PROXY).toBe("1");
-    expect(r2.applied).toBe(true);
-    expect(env2.NODE_USE_ENV_PROXY).toBe("1");
-
-    // ...but the latch suppresses the second hint write.
-    expect(stderr.writes).toHaveLength(1);
+    expect(spawn).toHaveBeenCalledTimes(1);
+    expect(killCalls).toEqual([[456, "SIGTERM"]]);
+    expect(exitCalls).toEqual([1]);
+    expect(stderr.writes[0]).toContain("restarting with NODE_USE_ENV_PROXY=1");
   });
 });
