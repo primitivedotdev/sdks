@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/cli",
-  "version": "0.30.2",
+  "version": "0.30.3",
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
   "sideEffects": false,
@@ -26,6 +26,10 @@
     "topics": {
       "cli": {
         "description": "CLI authentication"
+      },
+      "config": {
+        "description": "Manage local Primitive CLI request environments",
+        "hidden": true
       },
       "account": {
         "description": "Manage your account settings, storage, and webhook secret"

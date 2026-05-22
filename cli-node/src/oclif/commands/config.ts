@@ -28,8 +28,7 @@ function redactConfig(config: ReturnType<typeof emptyCliConfig>) {
 }
 
 export class ConfigSetCommand extends Command {
-  static hidden = true;
-  static summary = "Set hidden Primitive CLI request config";
+  static summary = "Set a Primitive CLI request environment";
 
   static flags = {
     environment: Flags.string({
@@ -84,8 +83,7 @@ export class ConfigSetCommand extends Command {
 }
 
 export class ConfigUseCommand extends Command {
-  static hidden = true;
-  static summary = "Switch active Primitive CLI request config";
+  static summary = "Switch the active Primitive CLI request environment";
 
   static args = {
     environment: Args.string({
@@ -115,8 +113,7 @@ export class ConfigUseCommand extends Command {
 }
 
 export class ConfigListCommand extends Command {
-  static hidden = true;
-  static summary = "List hidden Primitive CLI request configs";
+  static summary = "List Primitive CLI request environments";
 
   static flags = {
     json: Flags.boolean({
@@ -162,8 +159,7 @@ export class ConfigListCommand extends Command {
 }
 
 export class ConfigResetCommand extends Command {
-  static hidden = true;
-  static summary = "Reset hidden Primitive CLI request config";
+  static summary = "Reset Primitive CLI request environments";
 
   static flags = {
     environment: Flags.string({
@@ -197,4 +193,11 @@ export class ConfigResetCommand extends Command {
     }
     process.stderr.write(`Primitive CLI environment ${environment} removed.\n`);
   }
+}
+
+export class ConfigCommand extends ConfigListCommand {
+  static hidden = true;
+  static summary = "Manage Primitive CLI request environments";
+  static description =
+    "Manage local Primitive CLI request environments for API endpoint overrides and request headers.";
 }

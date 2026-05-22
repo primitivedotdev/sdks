@@ -33,9 +33,11 @@ describe("oclif topics", () => {
       new URL("../../package.json", import.meta.url),
     );
     const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
-      oclif: { topics: Record<string, unknown> };
+      oclif: { topics: Record<string, { hidden?: boolean }> };
     };
-    const topicKeys = Object.keys(packageJson.oclif.topics);
+    const visibleTopicKeys = Object.entries(packageJson.oclif.topics)
+      .filter(([, topic]) => !topic.hidden)
+      .map(([name]) => name);
     const normalizedSpecTags = (openapiDocument.tags as { name: string }[]).map(
       (tag) => normalize(tag.name),
     );
@@ -45,7 +47,7 @@ describe("oclif topics", () => {
       ),
     );
 
-    const orphans = topicKeys.filter(
+    const orphans = visibleTopicKeys.filter(
       (topic) => !normalizedSpecTags.includes(topic) && !aliasTopics.has(topic),
     );
 
