@@ -4,21 +4,20 @@ import {
   getEmail,
   listDomains,
   listEndpoints,
-  PrimitiveApiClient,
+  type PrimitiveApiClient,
   type TestInvocationResult,
   testFunction,
 } from "@primitivedotdev/api-core";
+import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_1_FLAG_DESCRIPTION,
   API_BASE_URL_2_FLAG_DESCRIPTION,
-  baseUrlOverriddenFromFlags,
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
-import { resolveCliAuth } from "../auth.js";
 import {
   DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
   fetchEmailSearchPage,
@@ -332,18 +331,13 @@ class FunctionsTestFunctionCommand extends Command {
     const shouldWait = flags.wait || flags["show-sends"];
     const shouldShowSends = flags["show-sends"];
 
-    const baseUrlOverridden = baseUrlOverriddenFromFlags(flags);
-    const auth = resolveCliAuth({
-      apiKey: flags["api-key"],
-      apiBaseUrl1: flags["api-base-url-1"],
-      apiBaseUrl2: flags["api-base-url-2"],
-      configDir: this.config.configDir,
-    });
-    const apiClient = new PrimitiveApiClient({
-      apiKey: auth.apiKey,
-      apiBaseUrl1: auth.apiBaseUrl1,
-      apiBaseUrl2: auth.apiBaseUrl2,
-    });
+    const { apiClient, auth, baseUrlOverridden } =
+      createAuthenticatedCliApiClient({
+        apiKey: flags["api-key"],
+        apiBaseUrl1: flags["api-base-url-1"],
+        apiBaseUrl2: flags["api-base-url-2"],
+        configDir: this.config.configDir,
+      });
 
     await runWithTiming(flags.time, async () => {
       // 1. Trigger the test send.

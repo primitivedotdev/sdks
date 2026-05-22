@@ -16,13 +16,14 @@ import type {
   CliSignupResendResult,
   CliSignupStartResult,
   CliSignupVerifyResult,
+  PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import {
-  PrimitiveApiClient,
   resendCliSignupVerification,
   startCliSignup,
   verifyCliSignup,
 } from "@primitivedotdev/api-core";
+import { createCliApiClient } from "../api-client.js";
 import {
   extractErrorCode,
   extractErrorPayload,
@@ -32,7 +33,6 @@ import {
   acquireCliCredentialsLock,
   credentialsPath,
   loadCliCredentials,
-  normalizeApiBaseUrl1,
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../auth.js";
@@ -397,7 +397,11 @@ export async function runSignupWithCredentialLock(params: {
   const startFn = deps.startCliSignup ?? startCliSignup;
   const verifyFn = deps.verifyCliSignup ?? verifyCliSignup;
   const checkExistingLoginFn = deps.checkExistingLogin ?? checkExistingLogin;
-  const apiBaseUrl1 = normalizeApiBaseUrl1(flags["api-base-url-1"]);
+  const { apiClient, requestConfig } = createCliApiClient({
+    apiBaseUrl1: flags["api-base-url-1"],
+    configDir,
+  });
+  const apiBaseUrl1 = requestConfig.resolvedApiBaseUrl1;
   let existing: StoredCliCredentials | null;
   try {
     existing = loadCliCredentials(configDir);
@@ -437,7 +441,6 @@ export async function runSignupWithCredentialLock(params: {
     deletePendingCliSignup(configDir);
   }
 
-  const apiClient = new PrimitiveApiClient({ apiBaseUrl1 });
   let start: CliSignupStartResult | null = flags.force
     ? null
     : loadPendingCliSignup(configDir, apiBaseUrl1);

@@ -1,9 +1,7 @@
 import { Command, Flags } from "@oclif/core";
 import type { FunctionLogRow } from "@primitivedotdev/api-core";
-import {
-  listFunctionLogs,
-  PrimitiveApiClient,
-} from "@primitivedotdev/api-core";
+import { listFunctionLogs } from "@primitivedotdev/api-core";
+import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,
@@ -11,7 +9,6 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
-import { resolveCliAuth } from "../auth.js";
 import { sleep } from "./emails-poll.js";
 
 const DEFAULT_LOG_LIMIT = 50;
@@ -147,20 +144,13 @@ class FunctionsLogsCommand extends Command {
     }
 
     await runWithTiming(flags.time, async () => {
-      const baseUrlOverridden =
-        flags["api-base-url-1"] !== undefined ||
-        flags["api-base-url-2"] !== undefined;
-      const auth = resolveCliAuth({
-        apiKey: flags["api-key"],
-        apiBaseUrl1: flags["api-base-url-1"],
-        apiBaseUrl2: flags["api-base-url-2"],
-        configDir: this.config.configDir,
-      });
-      const apiClient = new PrimitiveApiClient({
-        apiKey: auth.apiKey,
-        apiBaseUrl1: auth.apiBaseUrl1,
-        apiBaseUrl2: auth.apiBaseUrl2,
-      });
+      const { apiClient, auth, baseUrlOverridden } =
+        createAuthenticatedCliApiClient({
+          apiKey: flags["api-key"],
+          apiBaseUrl1: flags["api-base-url-1"],
+          apiBaseUrl2: flags["api-base-url-2"],
+          configDir: this.config.configDir,
+        });
       const seenIds = new Set<string>();
       let completedInitialFollowPoll = false;
       let hasObservedLogs = false;

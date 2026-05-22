@@ -12,6 +12,10 @@ import {
   startCliLogin,
 } from "@primitivedotdev/api-core";
 import {
+  createCliApiClient,
+  resolveCliApiRequestConfig,
+} from "../api-client.js";
+import {
   API_ERROR_CODES,
   extractErrorCode,
   extractErrorPayload,
@@ -22,7 +26,6 @@ import {
   acquireCliCredentialsLock,
   credentialsPath,
   loadCliCredentials,
-  normalizeApiBaseUrl1,
   normalizeApiBaseUrl2,
   type StoredCliCredentials,
   saveCliCredentials,
@@ -77,13 +80,17 @@ export async function checkExistingLogin(params: {
     apiClient: PrimitiveApiClient,
   ) => Promise<{ error?: unknown }>;
 }): Promise<ExistingLoginStatus> {
-  const baseUrlOverridden = params.apiBaseUrl1 !== undefined;
-  const probeApiBaseUrl1 = baseUrlOverridden
-    ? normalizeApiBaseUrl1(params.apiBaseUrl1)
-    : params.credentials.api_base_url_1;
+  const requestConfig = resolveCliApiRequestConfig({
+    apiBaseUrl1: params.apiBaseUrl1,
+    configDir: params.configDir,
+  });
+  const probeApiBaseUrl1 =
+    requestConfig.apiBaseUrl1 ?? params.credentials.api_base_url_1;
   const apiClient = new PrimitiveApiClient({
     apiKey: params.credentials.api_key,
     apiBaseUrl1: probeApiBaseUrl1,
+    apiBaseUrl2: requestConfig.resolvedApiBaseUrl2,
+    headers: requestConfig.headers,
   });
   const result = await (
     params.checkAccount ??
@@ -108,7 +115,7 @@ export async function checkExistingLogin(params: {
   };
   const removed = removeStaleSavedCredentialOnUnauthorized({
     auth,
-    baseUrlOverridden,
+    baseUrlOverridden: requestConfig.baseUrlOverridden,
     configDir: params.configDir,
     payload,
   });
@@ -183,7 +190,11 @@ class LoginCommand extends Command {
   }
 
   private async runWithCredentialLock(flags: LoginFlags): Promise<void> {
-    const apiBaseUrl1 = normalizeApiBaseUrl1(flags["api-base-url-1"]);
+    const { apiClient, requestConfig } = createCliApiClient({
+      apiBaseUrl1: flags["api-base-url-1"],
+      configDir: this.config.configDir,
+    });
+    const apiBaseUrl1 = requestConfig.resolvedApiBaseUrl1;
     let existing: StoredCliCredentials | null;
     try {
       existing = loadCliCredentials(this.config.configDir);
@@ -219,7 +230,6 @@ class LoginCommand extends Command {
       }
     }
 
-    const apiClient = new PrimitiveApiClient({ apiBaseUrl1 });
     const deviceName = flags["device-name"] ?? hostname();
     const started = await startCliLogin({
       body: {

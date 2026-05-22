@@ -85,4 +85,11 @@ describe("COMMANDS / manifest coverage", () => {
       COMMANDS["functions:test-function"],
     );
   });
+
+  it("registers hidden config environment commands", () => {
+    expect(COMMANDS["config:set"]).toBeDefined();
+    expect(COMMANDS["config:use"]).toBeDefined();
+    expect(COMMANDS["config:list"]).toBeDefined();
+    expect(COMMANDS["config:reset"]).toBeDefined();
+  });
 });
