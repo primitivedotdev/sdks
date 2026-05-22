@@ -86,11 +86,39 @@ describe("COMMANDS / manifest coverage", () => {
     );
   });
 
-  it("registers hidden config environment commands", () => {
-    expect(COMMANDS.config).toBe(COMMANDS["config:list"]);
+  it("registers config environment commands", () => {
+    expect(COMMANDS.config).toBeDefined();
+    expect(COMMANDS.config.hidden).toBe(true);
     expect(COMMANDS["config:set"]).toBeDefined();
     expect(COMMANDS["config:use"]).toBeDefined();
     expect(COMMANDS["config:list"]).toBeDefined();
     expect(COMMANDS["config:reset"]).toBeDefined();
+    expect(COMMANDS["config:set"].hidden).toBeFalsy();
+    expect(COMMANDS["config:use"].hidden).toBeFalsy();
+    expect(COMMANDS["config:list"].hidden).toBeFalsy();
+    expect(COMMANDS["config:reset"].hidden).toBeFalsy();
+    for (const command of [
+      COMMANDS.config,
+      COMMANDS["config:set"],
+      COMMANDS["config:use"],
+      COMMANDS["config:list"],
+      COMMANDS["config:reset"],
+    ]) {
+      expect(command.summary).not.toMatch(/hidden/i);
+      expect(command.description ?? "").not.toMatch(/hidden/i);
+    }
+  });
+
+  it("keeps the config topic out of root help", () => {
+    const packageJsonPath = fileURLToPath(
+      new URL("../../package.json", import.meta.url),
+    );
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+      oclif?: {
+        topics?: Record<string, { hidden?: boolean }>;
+      };
+    };
+
+    expect(packageJson.oclif?.topics?.config?.hidden).toBe(true);
   });
 });

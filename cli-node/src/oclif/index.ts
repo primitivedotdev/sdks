@@ -5,6 +5,7 @@ import {
 } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
 import {
+  ConfigCommand,
   ConfigListCommand,
   ConfigResetCommand,
   ConfigSetCommand,
@@ -245,7 +246,7 @@ const generatedCommandAliases = Object.fromEntries(
 export const COMMANDS: Record<string, typeof Command> = {
   completion: CompletionCommand,
   "list-operations": ListOperationsCommand,
-  config: ConfigListCommand,
+  config: ConfigCommand,
   "config:list": ConfigListCommand,
   "config:reset": ConfigResetCommand,
   "config:set": ConfigSetCommand,
