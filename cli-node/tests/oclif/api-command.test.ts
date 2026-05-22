@@ -438,6 +438,7 @@ describe("removeStaleSavedCredentialOnUnauthorized", () => {
     expect(removed).toBe(false);
     expect(loadCliCredentials(tempDir)).toEqual(credentials);
     expect(writes.join("")).toContain("local credential was not removed");
+    expect(writes.join("")).toContain("primitive config reset");
   });
 
   it("ignores non-auth errors", () => {

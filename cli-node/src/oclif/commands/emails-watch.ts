@@ -1,11 +1,10 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import { PrimitiveApiClient } from "@primitivedotdev/api-core";
+import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,
   writeErrorWithHints,
 } from "../api-command.js";
-import { resolveCliAuth } from "../auth.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
   collectNewAcceptedEmails,
@@ -116,20 +115,13 @@ class EmailsWatchCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(EmailsWatchCommand);
-    const baseUrlOverridden =
-      flags["api-base-url-1"] !== undefined ||
-      flags["api-base-url-2"] !== undefined;
-    const auth = resolveCliAuth({
-      apiKey: flags["api-key"],
-      apiBaseUrl1: flags["api-base-url-1"],
-      apiBaseUrl2: flags["api-base-url-2"],
-      configDir: this.config.configDir,
-    });
-    const apiClient = new PrimitiveApiClient({
-      apiKey: auth.apiKey,
-      apiBaseUrl1: auth.apiBaseUrl1,
-      apiBaseUrl2: auth.apiBaseUrl2,
-    });
+    const { apiClient, auth, baseUrlOverridden } =
+      createAuthenticatedCliApiClient({
+        apiKey: flags["api-key"],
+        apiBaseUrl1: flags["api-base-url-1"],
+        apiBaseUrl2: flags["api-base-url-2"],
+        configDir: this.config.configDir,
+      });
 
     let since: string | undefined;
     try {

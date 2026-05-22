@@ -5,10 +5,10 @@ import type {
 } from "@primitivedotdev/api-core";
 import {
   getFunction,
-  PrimitiveApiClient,
   setFunctionSecret,
   updateFunction,
 } from "@primitivedotdev/api-core";
+import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,
@@ -16,7 +16,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
-import { type ResolvedCliAuth, resolveCliAuth } from "../auth.js";
+import type { ResolvedCliAuth } from "../auth.js";
 import {
   resolveSingleSecretValue,
   SINGLE_SECRET_VALUE_SOURCE_DESCRIPTION,
@@ -267,20 +267,13 @@ class FunctionsSetSecretCommand extends Command {
     const { flags } = await this.parse(FunctionsSetSecretCommand);
 
     await runWithTiming(flags.time, async () => {
-      const baseUrlOverridden =
-        flags["api-base-url-1"] !== undefined ||
-        flags["api-base-url-2"] !== undefined;
-      const auth = resolveCliAuth({
-        apiKey: flags["api-key"],
-        apiBaseUrl1: flags["api-base-url-1"],
-        apiBaseUrl2: flags["api-base-url-2"],
-        configDir: this.config.configDir,
-      });
-      const apiClient = new PrimitiveApiClient({
-        apiKey: auth.apiKey,
-        apiBaseUrl1: auth.apiBaseUrl1,
-        apiBaseUrl2: auth.apiBaseUrl2,
-      });
+      const { apiClient, auth, baseUrlOverridden } =
+        createAuthenticatedCliApiClient({
+          apiKey: flags["api-key"],
+          apiBaseUrl1: flags["api-base-url-1"],
+          apiBaseUrl2: flags["api-base-url-2"],
+          configDir: this.config.configDir,
+        });
 
       const authFailureContext: {
         auth: ResolvedCliAuth;

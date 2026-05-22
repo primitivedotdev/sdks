@@ -1,6 +1,7 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import type { CliLogoutResult } from "@primitivedotdev/api-core";
 import { cliLogout, PrimitiveApiClient } from "@primitivedotdev/api-core";
+import { resolveCliApiRequestConfig } from "../api-client.js";
 import {
   API_ERROR_CODES,
   extractErrorCode,
@@ -80,12 +81,17 @@ class LogoutCommand extends Command {
       );
     }
 
-    const apiBaseUrl1 = flags["api-base-url-1"]
-      ? normalizeApiBaseUrl1(flags["api-base-url-1"])
+    const requestConfig = resolveCliApiRequestConfig({
+      apiBaseUrl1: flags["api-base-url-1"],
+      configDir: this.config.configDir,
+    });
+    const apiBaseUrl1 = requestConfig.apiBaseUrl1
+      ? normalizeApiBaseUrl1(requestConfig.apiBaseUrl1)
       : credentials.api_base_url_1;
     const apiClient = new PrimitiveApiClient({
       apiKey: credentials.api_key,
       apiBaseUrl1,
+      headers: requestConfig.headers,
     });
 
     const result = await cliLogout({

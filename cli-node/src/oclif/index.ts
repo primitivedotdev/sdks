@@ -4,6 +4,12 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
+import {
+  ConfigListCommand,
+  ConfigResetCommand,
+  ConfigSetCommand,
+  ConfigUseCommand,
+} from "./commands/config.js";
 import DoctorCommand from "./commands/doctor.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
@@ -239,6 +245,10 @@ const generatedCommandAliases = Object.fromEntries(
 export const COMMANDS: Record<string, typeof Command> = {
   completion: CompletionCommand,
   "list-operations": ListOperationsCommand,
+  "config:list": ConfigListCommand,
+  "config:reset": ConfigResetCommand,
+  "config:set": ConfigSetCommand,
+  "config:use": ConfigUseCommand,
   // `describe` prints a single operation's full manifest entry
   // (path, request schema, response schema, per-field descriptions).
   // The same data is in `list-operations` but agents don't reach for

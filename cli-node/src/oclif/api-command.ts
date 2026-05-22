@@ -5,7 +5,8 @@ import type {
   PrimitiveOperationManifest,
   PrimitiveParameterManifest,
 } from "@primitivedotdev/api-core";
-import { operations, PrimitiveApiClient } from "@primitivedotdev/api-core";
+import { operations } from "@primitivedotdev/api-core";
+import { createAuthenticatedCliApiClient } from "./api-client.js";
 import {
   deleteCliCredentials,
   type ResolvedCliAuth,
@@ -530,11 +531,11 @@ export function removeStaleSavedCredentialOnUnauthorized(params: {
     params.auth.apiBaseUrl1 !== params.auth.credentials.api_base_url_1;
 
   if (baseUrlDiffersFromSaved) {
-    // Override env vars (PRIMITIVE_API_BASE_URL_1 / _2) are intentionally
-    // not advertised in --help; this hint is the only customer-visible
-    // mention. They're for internal staging/local testing.
+    // API URL overrides are intentionally hidden from --help because
+    // they are for internal staging/local testing. Keep this hint as
+    // the visible recovery path when an override rejects saved creds.
     process.stderr.write(
-      "Saved Primitive CLI credentials were rejected by the overridden API base URL. The local credential was not removed; unset PRIMITIVE_API_BASE_URL_1, or run `primitive logout` to remove the stored credential.\n",
+      "Saved Primitive CLI credentials were rejected by the overridden API base URL. The local credential was not removed; unset PRIMITIVE_API_BASE_URL_1, run `primitive config reset` to clear configured URL overrides, or run `primitive logout` to remove the stored credential.\n",
     );
     return false;
   }
@@ -907,29 +908,22 @@ export function createOperationCommand(
       const { flags } = await this.parse(OperationCommand as never);
       const parsedFlags = flags as Record<string, unknown>;
       await runWithTiming(parsedFlags.time === true, async () => {
-        const baseUrlOverridden =
-          typeof parsedFlags["api-base-url-1"] === "string" ||
-          typeof parsedFlags["api-base-url-2"] === "string";
-        const auth = resolveCliAuth({
-          apiKey:
-            typeof parsedFlags["api-key"] === "string"
-              ? (parsedFlags["api-key"] as string)
-              : undefined,
-          apiBaseUrl1:
-            typeof parsedFlags["api-base-url-1"] === "string"
-              ? (parsedFlags["api-base-url-1"] as string)
-              : undefined,
-          apiBaseUrl2:
-            typeof parsedFlags["api-base-url-2"] === "string"
-              ? (parsedFlags["api-base-url-2"] as string)
-              : undefined,
-          configDir: this.config.configDir,
-        });
-        const apiClient = new PrimitiveApiClient({
-          apiKey: auth.apiKey,
-          apiBaseUrl1: auth.apiBaseUrl1,
-          apiBaseUrl2: auth.apiBaseUrl2,
-        });
+        const { apiClient, auth, baseUrlOverridden } =
+          createAuthenticatedCliApiClient({
+            apiKey:
+              typeof parsedFlags["api-key"] === "string"
+                ? (parsedFlags["api-key"] as string)
+                : undefined,
+            apiBaseUrl1:
+              typeof parsedFlags["api-base-url-1"] === "string"
+                ? (parsedFlags["api-base-url-1"] as string)
+                : undefined,
+            apiBaseUrl2:
+              typeof parsedFlags["api-base-url-2"] === "string"
+                ? (parsedFlags["api-base-url-2"] as string)
+                : undefined,
+            configDir: this.config.configDir,
+          });
 
         // Two body sources, merged: explicit JSON via --body /
         // --body-file (the base) plus per-field flags (the

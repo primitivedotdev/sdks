@@ -1,6 +1,7 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import type { Account } from "@primitivedotdev/api-core";
-import { getAccount, PrimitiveApiClient } from "@primitivedotdev/api-core";
+import { getAccount } from "@primitivedotdev/api-core";
+import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
   removeStaleSavedCredentialOnUnauthorized,
@@ -8,7 +9,6 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
-import { resolveCliAuth } from "../auth.js";
 
 // `primitive whoami` is the credentials smoke-test the AGX
 // walkthrough kept asking for. Before this command, a user with a
@@ -59,20 +59,13 @@ class WhoamiCommand extends Command {
     const { flags } = await this.parse(WhoamiCommand);
 
     await runWithTiming(flags.time, async () => {
-      const baseUrlOverridden =
-        flags["api-base-url-1"] !== undefined ||
-        flags["api-base-url-2"] !== undefined;
-      const auth = resolveCliAuth({
-        apiKey: flags["api-key"],
-        apiBaseUrl1: flags["api-base-url-1"],
-        apiBaseUrl2: flags["api-base-url-2"],
-        configDir: this.config.configDir,
-      });
-      const apiClient = new PrimitiveApiClient({
-        apiKey: auth.apiKey,
-        apiBaseUrl1: auth.apiBaseUrl1,
-        apiBaseUrl2: auth.apiBaseUrl2,
-      });
+      const { apiClient, auth, baseUrlOverridden } =
+        createAuthenticatedCliApiClient({
+          apiKey: flags["api-key"],
+          apiBaseUrl1: flags["api-base-url-1"],
+          apiBaseUrl2: flags["api-base-url-2"],
+          configDir: this.config.configDir,
+        });
 
       const result = await getAccount({
         client: apiClient.client,

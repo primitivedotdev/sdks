@@ -7,10 +7,10 @@ import type {
 import {
   createFunction,
   getFunction,
-  PrimitiveApiClient,
   setFunctionSecret,
   updateFunction,
 } from "@primitivedotdev/api-core";
+import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
   readTextFileFlag,
@@ -19,7 +19,6 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
-import { resolveCliAuth } from "../auth.js";
 import {
   DEFAULT_DEPLOY_POLL_INTERVAL_SECONDS,
   DEFAULT_DEPLOY_WAIT_TIMEOUT_SECONDS,
@@ -407,20 +406,13 @@ class FunctionsDeployCommand extends Command {
       // JSON stdout the caller may pipe into jq.
       emitRawSendMailFetchWarning(code, (chunk) => process.stderr.write(chunk));
 
-      const baseUrlOverridden =
-        flags["api-base-url-1"] !== undefined ||
-        flags["api-base-url-2"] !== undefined;
-      const auth = resolveCliAuth({
-        apiKey: flags["api-key"],
-        apiBaseUrl1: flags["api-base-url-1"],
-        apiBaseUrl2: flags["api-base-url-2"],
-        configDir: this.config.configDir,
-      });
-      const apiClient = new PrimitiveApiClient({
-        apiKey: auth.apiKey,
-        apiBaseUrl1: auth.apiBaseUrl1,
-        apiBaseUrl2: auth.apiBaseUrl2,
-      });
+      const { apiClient, auth, baseUrlOverridden } =
+        createAuthenticatedCliApiClient({
+          apiKey: flags["api-key"],
+          apiBaseUrl1: flags["api-base-url-1"],
+          apiBaseUrl2: flags["api-base-url-2"],
+          configDir: this.config.configDir,
+        });
 
       const authFailureContext = {
         auth,

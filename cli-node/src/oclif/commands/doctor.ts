@@ -5,9 +5,9 @@ import type { Account } from "@primitivedotdev/api-core";
 import {
   getAccount,
   listDomains,
-  PrimitiveApiClient,
+  type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
-import { resolveCliAuth } from "../auth.js";
+import { createAuthenticatedCliApiClient } from "../api-client.js";
 
 // `primitive doctor` is a one-command health check the AGX walkthrough
 // kept asking for. Before this command, a user with a misconfigured
@@ -182,17 +182,10 @@ function checkApiKey(opts: {
   };
 }
 
-async function checkAccount(opts: {
-  apiKey: string;
-  apiBaseUrl1?: string;
-  apiBaseUrl2?: string;
-}): Promise<{ outcome: CheckOutcome; account: Account | null }> {
+async function checkAccount(
+  client: PrimitiveApiClient,
+): Promise<{ outcome: CheckOutcome; account: Account | null }> {
   try {
-    const client = new PrimitiveApiClient({
-      apiKey: opts.apiKey,
-      apiBaseUrl1: opts.apiBaseUrl1,
-      apiBaseUrl2: opts.apiBaseUrl2,
-    });
     const result = await getAccount({
       client: client.client,
       responseStyle: "fields",
@@ -260,17 +253,8 @@ async function checkAccount(opts: {
   }
 }
 
-async function checkDomains(opts: {
-  apiKey: string;
-  apiBaseUrl1?: string;
-  apiBaseUrl2?: string;
-}): Promise<CheckOutcome> {
+async function checkDomains(client: PrimitiveApiClient): Promise<CheckOutcome> {
   try {
-    const client = new PrimitiveApiClient({
-      apiKey: opts.apiKey,
-      apiBaseUrl1: opts.apiBaseUrl1,
-      apiBaseUrl2: opts.apiBaseUrl2,
-    });
     const result = await listDomains({
       client: client.client,
       responseStyle: "fields",
@@ -363,7 +347,7 @@ class DoctorCommand extends Command {
     // Reporting the network-failure case without a key would just
     // confuse the user; the missing-key row above already covers it.
     if (apiKeyCheck.status !== "fail") {
-      const auth = resolveCliAuth({
+      const { apiClient, auth } = createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
         apiBaseUrl1: flags["api-base-url-1"],
         apiBaseUrl2: flags["api-base-url-2"],
@@ -374,19 +358,11 @@ class DoctorCommand extends Command {
       // undefined branch shouldn't fire in practice. Skip the live
       // checks defensively rather than passing "" to the API.
       if (auth.apiKey !== undefined) {
-        const accountCheck = await checkAccount({
-          apiKey: auth.apiKey,
-          apiBaseUrl1: auth.apiBaseUrl1,
-          apiBaseUrl2: auth.apiBaseUrl2,
-        });
+        const accountCheck = await checkAccount(apiClient);
         rows.push({ label: "API auth", outcome: accountCheck.outcome });
 
         if (accountCheck.outcome.status === "ok") {
-          const domainsOutcome = await checkDomains({
-            apiKey: auth.apiKey,
-            apiBaseUrl1: auth.apiBaseUrl1,
-            apiBaseUrl2: auth.apiBaseUrl2,
-          });
+          const domainsOutcome = await checkDomains(apiClient);
           rows.push({ label: "Domains", outcome: domainsOutcome });
         }
       }
