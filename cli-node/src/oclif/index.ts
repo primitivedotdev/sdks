@@ -245,6 +245,7 @@ const generatedCommandAliases = Object.fromEntries(
 export const COMMANDS: Record<string, typeof Command> = {
   completion: CompletionCommand,
   "list-operations": ListOperationsCommand,
+  config: ConfigListCommand,
   "config:list": ConfigListCommand,
   "config:reset": ConfigResetCommand,
   "config:set": ConfigSetCommand,

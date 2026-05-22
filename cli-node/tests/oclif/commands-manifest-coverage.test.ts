@@ -87,6 +87,7 @@ describe("COMMANDS / manifest coverage", () => {
   });
 
   it("registers hidden config environment commands", () => {
+    expect(COMMANDS.config).toBe(COMMANDS["config:list"]);
     expect(COMMANDS["config:set"]).toBeDefined();
     expect(COMMANDS["config:use"]).toBeDefined();
     expect(COMMANDS["config:list"]).toBeDefined();
