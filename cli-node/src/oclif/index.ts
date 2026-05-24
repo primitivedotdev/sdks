@@ -27,7 +27,11 @@ import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
 import ReplyCommand from "./commands/reply.js";
 import SendCommand from "./commands/send.js";
-import SignupCommand from "./commands/signup.js";
+import SignupCommand, {
+  SignupConfirmCommand,
+  SignupInteractiveCommand,
+  SignupResendCommand,
+} from "./commands/signup.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
 
@@ -274,8 +278,12 @@ export const COMMANDS: Record<string, typeof Command> = {
   chat: ChatCommand,
   // `login` creates and stores an org-scoped OAuth session via browser approval.
   login: LoginCommand,
-  // `signup` creates an account, verifies email, and stores an OAuth session.
+  // `signup` starts account signup. Subcommands confirm, resend, or run the
+  // whole flow in one interactive session.
   signup: SignupCommand,
+  "signup:confirm": SignupConfirmCommand,
+  "signup:interactive": SignupInteractiveCommand,
+  "signup:resend": SignupResendCommand,
   // `logout` revokes the saved OAuth grant and removes local credentials.
   logout: LogoutCommand,
   // `whoami` is the credentials smoke test. Prints the account the

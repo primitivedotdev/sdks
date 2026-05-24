@@ -72,6 +72,13 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS.reply).toBeDefined();
   });
 
+  it("registers signup commands", () => {
+    expect(COMMANDS.signup).toBeDefined();
+    expect(COMMANDS["signup:confirm"]).toBeDefined();
+    expect(COMMANDS["signup:interactive"]).toBeDefined();
+    expect(COMMANDS["signup:resend"]).toBeDefined();
+  });
+
   it("keeps reply wait flags aligned with send", () => {
     const replyCommand = COMMANDS.reply as unknown as {
       flags: Record<string, unknown>;

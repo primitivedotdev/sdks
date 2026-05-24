@@ -316,6 +316,284 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "resend-agent-signup-verification",
+    "description": "Sends a new email verification code for a pending agent signup session.\nThis endpoint does not require an API key.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "resendAgentSignupVerification",
+    "path": "/agent/signup/resend",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "signup_token": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "signup_token"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "expires_in": {
+          "type": "integer",
+          "description": "Seconds until the pending signup expires"
+        },
+        "resend_after": {
+          "type": "integer",
+          "description": "Minimum seconds before requesting another verification email"
+        },
+        "verification_code_length": {
+          "type": "integer",
+          "description": "Number of digits in the emailed verification code"
+        }
+      },
+      "required": [
+        "email",
+        "expires_in",
+        "resend_after",
+        "verification_code_length"
+      ]
+    },
+    "sdkName": "resendAgentSignupVerification",
+    "summary": "Resend agent signup verification code",
+    "tag": "Agent",
+    "tagCommand": "agent"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "start-agent-signup",
+    "description": "Starts an agent-native signup session. The API validates the signup code,\ncreates a pending signup session, sends an email verification code, and\nreturns an opaque signup token used by the resend and verify steps. This\nendpoint does not require an API key.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "startAgentSignup",
+    "path": "/agent/signup/start",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "signup_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "terms_accepted": {
+          "type": "boolean",
+          "const": true,
+          "description": "Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy"
+        },
+        "device_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Human-readable device name used for the created agent OAuth session"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or fewer"
+        }
+      },
+      "required": [
+        "email",
+        "signup_code",
+        "terms_accepted"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "signup_token": {
+          "type": "string",
+          "description": "Opaque token used to verify or resend the pending agent signup"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "expires_in": {
+          "type": "integer",
+          "description": "Seconds until the pending signup expires"
+        },
+        "resend_after": {
+          "type": "integer",
+          "description": "Minimum seconds before requesting another verification email"
+        },
+        "verification_code_length": {
+          "type": "integer",
+          "description": "Number of digits in the emailed verification code"
+        }
+      },
+      "required": [
+        "signup_token",
+        "email",
+        "expires_in",
+        "resend_after",
+        "verification_code_length"
+      ]
+    },
+    "sdkName": "startAgentSignup",
+    "summary": "Start agent account signup",
+    "tag": "Agent",
+    "tagCommand": "agent"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "verify-agent-signup",
+    "description": "Verifies the email code for an agent signup session, creates the account\nwhen needed, redeems the reserved signup code, mints an org-scoped OAuth\nsession for CLI authentication, and returns the raw tokens exactly once.\nFor existing users, the optional `org_id` selects which accessible\nworkspace should receive the new session.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "verifyAgentSignup",
+    "path": "/agent/signup/verify",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "signup_token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verification_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Optional workspace id to target when the verified email already belongs to multiple workspaces"
+        }
+      },
+      "required": [
+        "signup_token",
+        "verification_code"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "description": "Legacy alias for access_token. New CLI builds should persist access_token and refresh_token."
+        },
+        "key_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Legacy alias for oauth_grant_id"
+        },
+        "key_prefix": {
+          "type": "string",
+          "description": "Legacy display prefix derived from access_token"
+        },
+        "access_token": {
+          "type": "string",
+          "description": "OAuth access token for CLI API authentication"
+        },
+        "refresh_token": {
+          "type": "string",
+          "description": "OAuth refresh token used by the CLI to renew access"
+        },
+        "token_type": {
+          "type": "string",
+          "enum": [
+            "Bearer"
+          ]
+        },
+        "expires_in": {
+          "type": "integer",
+          "description": "Seconds until access_token expires"
+        },
+        "auth_method": {
+          "type": "string",
+          "enum": [
+            "oauth"
+          ]
+        },
+        "oauth_grant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "oauth_client_id": {
+          "type": "string"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "orgs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          },
+          "description": "Workspaces available to the verified email. The minted session targets `org_id`."
+        }
+      },
+      "required": [
+        "api_key",
+        "key_id",
+        "key_prefix",
+        "access_token",
+        "refresh_token",
+        "token_type",
+        "expires_in",
+        "auth_method",
+        "oauth_grant_id",
+        "oauth_client_id",
+        "org_id",
+        "org_name",
+        "orgs"
+      ]
+    },
+    "sdkName": "verifyAgentSignup",
+    "summary": "Verify agent signup and create OAuth tokens",
+    "tag": "Agent",
+    "tagCommand": "agent"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "cli-logout",
     "description": "Revokes the OAuth grant used to authenticate the request. API-key\nauthenticated legacy logout requests succeed without deleting server API\nkeys so old local CLI state can be cleared safely.\n",

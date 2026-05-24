@@ -546,6 +546,16 @@ func (UnimplementedHandler) ReplyToEmail(ctx context.Context, req *ReplyInput, p
 	return r, ht.ErrNotImplemented
 }
 
+// ResendAgentSignupVerification implements resendAgentSignupVerification operation.
+//
+// Sends a new email verification code for a pending agent signup session.
+// This endpoint does not require an API key.
+//
+// POST /agent/signup/resend
+func (UnimplementedHandler) ResendAgentSignupVerification(ctx context.Context, req *ResendAgentSignupVerificationInput) (r ResendAgentSignupVerificationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ResendCliSignupVerification implements resendCliSignupVerification operation.
 //
 // Sends a new email verification code for a pending CLI signup session.
@@ -613,6 +623,18 @@ func (UnimplementedHandler) SendEmail(ctx context.Context, req *SendMailInput, p
 //
 // PUT /functions/{id}/secrets/{key}
 func (UnimplementedHandler) SetFunctionSecret(ctx context.Context, req *SetFunctionSecretInput, params SetFunctionSecretParams) (r SetFunctionSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// StartAgentSignup implements startAgentSignup operation.
+//
+// Starts an agent-native signup session. The API validates the signup code,
+// creates a pending signup session, sends an email verification code, and
+// returns an opaque signup token used by the resend and verify steps. This
+// endpoint does not require an API key.
+//
+// POST /agent/signup/start
+func (UnimplementedHandler) StartAgentSignup(ctx context.Context, req *StartAgentSignupInput) (r StartAgentSignupRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -733,6 +755,19 @@ func (UnimplementedHandler) UpdateFilter(ctx context.Context, req *UpdateFilterI
 //
 // PUT /functions/{id}
 func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (r UpdateFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// VerifyAgentSignup implements verifyAgentSignup operation.
+//
+// Verifies the email code for an agent signup session, creates the account
+// when needed, redeems the reserved signup code, mints an org-scoped OAuth
+// session for CLI authentication, and returns the raw tokens exactly once.
+// For existing users, the optional `org_id` selects which accessible
+// workspace should receive the new session.
+//
+// POST /agent/signup/verify
+func (UnimplementedHandler) VerifyAgentSignup(ctx context.Context, req *VerifyAgentSignupInput) (r VerifyAgentSignupRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

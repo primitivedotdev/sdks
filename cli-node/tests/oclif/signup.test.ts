@@ -6,19 +6,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadCliCredentials } from "../../src/oclif/auth.js";
 import {
   formatSignupSeconds,
-  loadPendingCliSignup,
-  promptHidden,
+  loadPendingAgentSignup,
   retryAfterSeconds,
-  runSignupWithCredentialLock,
-  savePendingCliSignup,
-  shouldRetrySignupPassword,
+  runSignupConfirmWithCredentialLock,
+  runSignupInteractiveWithCredentialLock,
+  runSignupResendWithCredentialLock,
+  runSignupStartWithCredentialLock,
+  savePendingAgentSignup,
 } from "../../src/oclif/commands/signup.js";
 
 const START_RESULT = {
   email: "test@example.com",
   expires_in: 1800,
   resend_after: 60,
-  signup_token: "prim_cli_signup_test",
+  signup_token: "prim_agent_signup_test",
+  verification_code_length: 6,
+};
+
+const RESEND_RESULT = {
+  email: "test@example.com",
+  expires_in: 1200,
+  resend_after: 60,
   verification_code_length: 6,
 };
 
@@ -33,6 +41,7 @@ const VERIFY_RESULT = {
   oauth_grant_id: "11111111-1111-4111-8111-111111111111",
   org_id: "22222222-2222-4222-8222-222222222222",
   org_name: "Test Org",
+  orgs: [{ id: "22222222-2222-4222-8222-222222222222", name: "Test Org" }],
   refresh_token: "prim_ort_test_refresh",
   token_type: "Bearer",
 };
@@ -47,26 +56,25 @@ function promptRequiredFrom(answers: string[]) {
 
 function flowDeps(params: {
   confirmTerms?: unknown;
-  promptAnswers: string[];
-  promptNewPassword?: unknown;
-  promptSetPassword?: unknown;
-  startCliSignup?: unknown;
-  verifyCliSignup?: unknown;
+  promptAnswers?: string[];
+  resendAgentSignupVerification?: unknown;
+  startAgentSignup?: unknown;
+  verifyAgentSignup?: unknown;
 }) {
   return {
     confirmTerms: params.confirmTerms ?? vi.fn(async () => undefined),
-    promptNewPassword:
-      params.promptNewPassword ?? vi.fn(async () => "valid-password"),
-    promptSetPassword: params.promptSetPassword ?? vi.fn(async () => false),
-    promptRequired: promptRequiredFrom(params.promptAnswers),
-    startCliSignup:
-      params.startCliSignup ??
+    promptRequired: promptRequiredFrom(params.promptAnswers ?? []),
+    resendAgentSignupVerification:
+      params.resendAgentSignupVerification ??
+      vi.fn(async () => ({ data: { data: RESEND_RESULT } })),
+    startAgentSignup:
+      params.startAgentSignup ??
       vi.fn(async () => ({ data: { data: START_RESULT } })),
-    verifyCliSignup:
-      params.verifyCliSignup ??
+    verifyAgentSignup:
+      params.verifyAgentSignup ??
       vi.fn(async () => ({ data: { data: VERIFY_RESULT } })),
   } as unknown as NonNullable<
-    Parameters<typeof runSignupWithCredentialLock>[0]["deps"]
+    Parameters<typeof runSignupStartWithCredentialLock>[0]["deps"]
   >;
 }
 
@@ -83,33 +91,9 @@ describe("signup command helpers", () => {
     expect(retryAfterSeconds({ response })).toBe(45);
     expect(retryAfterSeconds({ response: new Response(null) })).toBeNull();
   });
-
-  it("only re-prompts the password for explicit Clerk password rejection errors", () => {
-    expect(shouldRetrySignupPassword("clerk_password_rejected")).toBe(true);
-    expect(shouldRetrySignupPassword("clerk_signup_failed")).toBe(false);
-    expect(shouldRetrySignupPassword(undefined)).toBe(false);
-  });
-
-  it("fails closed instead of echoing passwords when hidden input is unavailable", async () => {
-    const original = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
-    Object.defineProperty(process.stdin, "isTTY", {
-      configurable: true,
-      value: false,
-    });
-
-    try {
-      await expect(promptHidden("Password: ")).rejects.toThrow(
-        /hidden input support/,
-      );
-    } finally {
-      if (original) {
-        Object.defineProperty(process.stdin, "isTTY", original);
-      }
-    }
-  });
 });
 
-describe("runSignupWithCredentialLock", () => {
+describe("agent signup commands", () => {
   let tempDir: string;
   let writeSpy: ReturnType<typeof vi.spyOn>;
 
@@ -123,40 +107,21 @@ describe("runSignupWithCredentialLock", () => {
     rmSync(tempDir, { force: true, recursive: true });
   });
 
-  it("completes passwordless signup and saves returned credentials", async () => {
-    const deps = flowDeps({
-      promptAnswers: ["signup-code", "test@example.com", "123456"],
+  it("starts signup from email and saves the pending token", async () => {
+    const deps = flowDeps({});
+
+    await runSignupStartWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      email: "test@example.com",
+      flags: {
+        "accept-terms": true,
+        "signup-code": "signup-code",
+      },
     });
 
-    await runSignupWithCredentialLock({ configDir: tempDir, deps, flags: {} });
-
-    const promptRequired = deps.promptRequired as ReturnType<typeof vi.fn>;
-    const confirmTerms = deps.confirmTerms as ReturnType<typeof vi.fn>;
-    const promptNewPassword = deps.promptNewPassword as ReturnType<
-      typeof vi.fn
-    >;
-    const promptSetPassword = deps.promptSetPassword as ReturnType<
-      typeof vi.fn
-    >;
-
-    expect(promptRequired).toHaveBeenNthCalledWith(1, "Signup code: ");
-    expect(promptRequired).toHaveBeenNthCalledWith(2, "Email: ");
-    expect(promptRequired).toHaveBeenNthCalledWith(
-      3,
-      "Verification code (6 digits): ",
-    );
-    expect(confirmTerms.mock.invocationCallOrder[0]).toBeGreaterThan(
-      promptRequired.mock.invocationCallOrder[0],
-    );
-    expect(confirmTerms.mock.invocationCallOrder[0]).toBeLessThan(
-      promptRequired.mock.invocationCallOrder[1],
-    );
-    expect(promptSetPassword.mock.invocationCallOrder[0]).toBeGreaterThan(
-      promptRequired.mock.invocationCallOrder[2],
-    );
-    expect(promptNewPassword).not.toHaveBeenCalled();
-
-    expect(deps.startCliSignup).toHaveBeenCalledWith(
+    expect(deps.confirmTerms).not.toHaveBeenCalled();
+    expect(deps.startAgentSignup).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           email: "test@example.com",
@@ -165,7 +130,51 @@ describe("runSignupWithCredentialLock", () => {
         }),
       }),
     );
-    expect(deps.verifyCliSignup).toHaveBeenCalledWith(
+    expect(
+      loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL_1),
+    ).toMatchObject({
+      email: START_RESULT.email,
+      signup_token: START_RESULT.signup_token,
+    });
+  });
+
+  it("prompts for missing email, signup code, and terms", async () => {
+    const deps = flowDeps({
+      promptAnswers: ["test@example.com", "signup-code"],
+    });
+
+    await runSignupStartWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      flags: {},
+    });
+
+    expect(deps.promptRequired).toHaveBeenNthCalledWith(1, "Email: ");
+    expect(deps.promptRequired).toHaveBeenNthCalledWith(2, "Signup code: ");
+    expect(deps.confirmTerms).toHaveBeenCalledOnce();
+    expect(deps.startAgentSignup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          email: "test@example.com",
+          signup_code: "signup-code",
+        }),
+      }),
+    );
+  });
+
+  it("confirms signup and saves returned OAuth credentials", async () => {
+    const deps = flowDeps({});
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    await runSignupConfirmWithCredentialLock({
+      code: "123456",
+      configDir: tempDir,
+      deps,
+      email: "test@example.com",
+      flags: {},
+    });
+
+    expect(deps.verifyAgentSignup).toHaveBeenCalledWith(
       expect.objectContaining({
         body: {
           signup_token: START_RESULT.signup_token,
@@ -181,119 +190,132 @@ describe("runSignupWithCredentialLock", () => {
       org_name: VERIFY_RESULT.org_name,
       refresh_token: VERIFY_RESULT.refresh_token,
     });
-    const credentials = loadCliCredentials(tempDir);
-    expect(credentials).not.toBeNull();
-    expect(
-      loadPendingCliSignup(tempDir, credentials?.api_base_url_1 ?? ""),
-    ).toBeNull();
+    expect(loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL_1)).toBeNull();
   });
 
-  it("resumes a persisted signup token instead of starting a duplicate session", async () => {
-    const apiBaseUrl1 = "https://api.example.test/api/v1";
-    savePendingCliSignup(tempDir, START_RESULT, apiBaseUrl1);
-    const startCliSignup = vi.fn(async () => ({
-      data: { data: START_RESULT },
-    }));
-    const deps = flowDeps({
-      promptAnswers: ["123456"],
-      startCliSignup,
-    });
+  it("passes org id during confirmation when provided", async () => {
+    const deps = flowDeps({});
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
 
-    await runSignupWithCredentialLock({
+    await runSignupConfirmWithCredentialLock({
+      code: "123456",
       configDir: tempDir,
       deps,
-      flags: { "api-base-url-1": apiBaseUrl1 },
+      email: "test@example.com",
+      flags: { "org-id": "33333333-3333-4333-8333-333333333333" },
     });
 
-    expect(startCliSignup).not.toHaveBeenCalled();
-    expect(deps.verifyCliSignup).toHaveBeenCalledWith(
+    expect(deps.verifyAgentSignup).toHaveBeenCalledWith(
       expect.objectContaining({
-        body: expect.objectContaining({
+        body: {
+          org_id: "33333333-3333-4333-8333-333333333333",
           signup_token: START_RESULT.signup_token,
-        }),
+          verification_code: "123456",
+        },
       }),
     );
+  });
+
+  it("resends a pending signup verification code", async () => {
+    const deps = flowDeps({});
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    await runSignupResendWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      email: "test@example.com",
+      flags: {},
+    });
+
+    expect(deps.resendAgentSignupVerification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: { signup_token: START_RESULT.signup_token },
+      }),
+    );
+    expect(
+      loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL_1),
+    ).toMatchObject({
+      email: RESEND_RESULT.email,
+      expires_in: expect.any(Number),
+      signup_token: START_RESULT.signup_token,
+    });
+  });
+
+  it("runs the full interactive flow when requested", async () => {
+    const deps = flowDeps({
+      promptAnswers: ["test@example.com", "signup-code", "123456"],
+    });
+
+    await runSignupInteractiveWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      flags: {},
+    });
+
+    expect(deps.startAgentSignup).toHaveBeenCalledOnce();
+    expect(deps.verifyAgentSignup).toHaveBeenCalledOnce();
     expect(loadCliCredentials(tempDir)?.access_token).toBe(
       VERIFY_RESULT.access_token,
     );
   });
 
-  it("re-prompts for a different password when Clerk rejects the password", async () => {
-    const passwordMessage =
-      "Password has been found in an online data breach. For account safety, please use a different password.";
-    const promptNewPassword = vi
-      .fn()
-      .mockResolvedValueOnce("breached-password")
-      .mockResolvedValueOnce("stronger-password");
-    const verifyCliSignup = vi
+  it("keeps interactive signup open after an invalid verification code", async () => {
+    const verifyAgentSignup = vi
       .fn()
       .mockResolvedValueOnce({
         error: {
           error: {
-            code: "clerk_password_rejected",
-            message: passwordMessage,
+            code: "invalid_verification_code",
+            message: "Invalid verification code",
           },
         },
       })
       .mockResolvedValueOnce({ data: { data: VERIFY_RESULT } });
     const deps = flowDeps({
-      promptAnswers: ["signup-code", "test@example.com", "123456"],
-      promptNewPassword,
-      promptSetPassword: vi.fn(async () => true),
-      verifyCliSignup,
+      promptAnswers: ["test@example.com", "signup-code", "000000", "123456"],
+      verifyAgentSignup,
     });
 
-    await runSignupWithCredentialLock({ configDir: tempDir, deps, flags: {} });
+    await runSignupInteractiveWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      flags: {},
+    });
 
-    expect(promptNewPassword).toHaveBeenCalledTimes(2);
-    expect(verifyCliSignup).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        body: {
-          password: "breached-password",
-          signup_token: START_RESULT.signup_token,
-          verification_code: "123456",
-        },
-      }),
-    );
-    expect(verifyCliSignup).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        body: {
-          password: "stronger-password",
-          signup_token: START_RESULT.signup_token,
-          verification_code: "123456",
-        },
-      }),
-    );
-    const stderr = writeSpy.mock.calls
-      .map((call: unknown[]) => String(call[0]))
-      .join("");
-    expect(stderr).toContain(`Password rejected: ${passwordMessage}\n`);
-    expect(stderr).toContain("Choose a different password and try again.\n");
+    expect(verifyAgentSignup).toHaveBeenCalledTimes(2);
     expect(loadCliCredentials(tempDir)?.access_token).toBe(
       VERIFY_RESULT.access_token,
     );
+    expect(
+      writeSpy.mock.calls.map((call: unknown[]) => String(call[0])).join(""),
+    ).toContain("Invalid verification code. Try again or type `resend`.\n");
   });
 
-  it("keeps the pending signup token when provisioning fails after start", async () => {
+  it("keeps the pending token after invalid verification code", async () => {
     const deps = flowDeps({
-      promptAnswers: ["signup-code", "test@example.com", "123456"],
-      verifyCliSignup: vi.fn(async () => ({
+      verifyAgentSignup: vi.fn(async () => ({
         error: {
           error: {
-            code: "clerk_signup_failed",
-            message: "temporary provisioning failure",
+            code: "invalid_verification_code",
+            message: "Invalid verification code",
           },
         },
       })),
     });
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
 
     await expect(
-      runSignupWithCredentialLock({ configDir: tempDir, deps, flags: {} }),
-    ).rejects.toThrow(/signup failed/);
+      runSignupConfirmWithCredentialLock({
+        code: "000000",
+        configDir: tempDir,
+        deps,
+        email: "test@example.com",
+        flags: {},
+      }),
+    ).rejects.toThrow(/Invalid verification code/);
 
-    const pending = loadPendingCliSignup(tempDir, DEFAULT_API_BASE_URL_1);
-    expect(pending?.signup_token).toBe(START_RESULT.signup_token);
+    expect(
+      loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL_1)?.signup_token,
+    ).toBe(START_RESULT.signup_token);
   });
 });
