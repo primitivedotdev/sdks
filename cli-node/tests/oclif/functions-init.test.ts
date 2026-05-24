@@ -116,8 +116,14 @@ describe("renderHandler", () => {
   it("documents that PRIMITIVE_API_KEY is auto-injected by the runtime", () => {
     const handler = renderHandler();
     expect(handler).toContain("PRIMITIVE_API_KEY");
+    expect(handler).toContain("PRIMITIVE_API_BASE_URL");
     expect(handler).toContain("PRIMITIVE_WEBHOOK_SECRET");
     expect(handler).toContain("auto-injected");
+  });
+
+  it("passes the injected Primitive API base URL to the SDK client", () => {
+    const handler = renderHandler();
+    expect(handler).toContain("apiBaseUrl1: env.PRIMITIVE_API_BASE_URL");
   });
 
   it("branches on event.event so future event types do not retry-loop", () => {

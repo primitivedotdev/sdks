@@ -76,8 +76,8 @@ const ESBUILD_VERSION_RANGE = "^0.27.0";
 // oclif command lifecycle.
 
 export function renderHandler(): string {
-  return `// env.PRIMITIVE_API_KEY and env.PRIMITIVE_WEBHOOK_SECRET are auto-injected
-// by the Primitive Functions runtime.
+  return `// env.PRIMITIVE_API_KEY, env.PRIMITIVE_WEBHOOK_SECRET, and
+// env.PRIMITIVE_API_BASE_URL are auto-injected by the Primitive Functions runtime.
 //
 // Imports are taken from the \`/api\` subpath, NOT the package root.
 // The root export pulls in webhook signing helpers that depend on
@@ -95,6 +95,7 @@ import {
 
 interface Env {
   PRIMITIVE_API_KEY: string;
+  PRIMITIVE_API_BASE_URL: string;
   PRIMITIVE_WEBHOOK_SECRET: string;
 }
 
@@ -183,7 +184,10 @@ export default {
         return Response.json({ ok: true, skipped: "loop" });
       }
 
-      const client = createPrimitiveClient({ apiKey: env.PRIMITIVE_API_KEY });
+      const client = createPrimitiveClient({
+        apiKey: env.PRIMITIVE_API_KEY,
+        apiBaseUrl1: env.PRIMITIVE_API_BASE_URL,
+      });
 
       // Recipient gate
       // https://www.primitive.dev/docs/sending#who-you-can-send-to
