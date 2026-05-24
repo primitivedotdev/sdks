@@ -18,6 +18,7 @@ import {
   collectNewAcceptedEmails,
   DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
   DEFAULT_EMAIL_POLL_PAGE_SIZE,
+  encodeReceivedAtSearchCursor,
   fetchEmailSearchPage,
   sleep,
 } from "./emails-poll.js";
@@ -282,7 +283,11 @@ class ChatCommand extends Command {
         };
         this.log(JSON.stringify(envelope, null, 2));
       } else {
-        const body = reply.body_text ?? "";
+        // Fall back to body_html when the reply has no body_text. HTML-
+        // only replies are rare but real (some clients send multipart
+        // with the text part empty), and emitting an empty string with
+        // exit 0 would silently lose the message.
+        const body = reply.body_text ?? reply.body_html ?? "";
         this.log(body);
       }
     });
@@ -324,13 +329,6 @@ async function waitForReply(
     : totalDeadline === null
       ? strictDeadlineFromBudget
       : Math.min(strictDeadlineFromBudget, totalDeadline);
-  const seenIds = new Set<string>();
-  // Strict and fallback phases scroll independent cursors against the
-  // search endpoint because they pass different filters; sharing a
-  // cursor across filter changes would skip valid matches.
-  let strictCursor: string | null = null;
-  let fallbackCursor: string | null = null;
-
   type Phase = {
     label: "strict" | "fallback";
     filters: { from?: string; to?: string; replyToSentEmailId?: string };
@@ -361,8 +359,12 @@ async function waitForReply(
 
   for (const phase of phases) {
     if (phase.label === "strict" && strictFilterUnsupported) continue;
-    let cursor: string | null =
-      phase.label === "strict" ? strictCursor : fallbackCursor;
+    // Per-phase seenIds: when the strict phase silently drops the
+    // filter (old server), the actual reply may surface in both
+    // phases' result sets. A shared Set would let strict's rejection
+    // poison fallback's view of the same row.
+    const seenIds = new Set<string>();
+    let cursor: string | null = null;
     while (true) {
       if (phase.deadline !== null && Date.now() >= phase.deadline) break;
       const page = await fetchEmailSearchPage({
@@ -383,9 +385,22 @@ async function waitForReply(
         throw new Errors.CLIError("Failed to poll for reply.", { exit: 1 });
       }
 
-      cursor = page.cursor ?? cursor;
-      if (phase.label === "strict") strictCursor = cursor;
-      else fallbackCursor = cursor;
+      // Advance cursor only to the last accepted/completed row in the
+      // page. If we instead used page.cursor we would skip past
+      // pending/processing rows that we deliberately ignored in
+      // collectNewAcceptedEmails; when those later flip to accepted,
+      // our next poll would start past them and never see them.
+      let lastAccepted: (typeof page.rows)[number] | undefined;
+      for (let i = page.rows.length - 1; i >= 0; i--) {
+        const row = page.rows[i];
+        if (row.status === "accepted" || row.status === "completed") {
+          lastAccepted = row;
+          break;
+        }
+      }
+      if (lastAccepted) {
+        cursor = encodeReceivedAtSearchCursor(lastAccepted);
+      }
 
       const matches = collectNewAcceptedEmails(page.rows, seenIds);
       for (const match of matches) {
@@ -428,10 +443,14 @@ async function waitForReply(
           // back to our send. The most likely cause is the server
           // hasn't shipped reply_to_sent_email_id filtering yet and
           // silently dropped the param. Skip this candidate, mark
-          // strict phase unsupported, and let fallback handle it.
+          // strict phase unsupported, and let fallback handle it (or
+          // give up immediately when --strict-only is set, in which
+          // case we say so plainly).
           if (!strictFilterUnsupported) {
             process.stderr.write(
-              "Strict-phase reply matching is not supported by this Primitive API host; falling back to time-window matching.\n",
+              params.strictOnly
+                ? "Strict-phase reply matching is not supported by this Primitive API host; --strict-only requires server support so the command will exit without a match.\n"
+                : "Strict-phase reply matching is not supported by this Primitive API host; falling back to time-window matching.\n",
             );
           }
           strictFilterUnsupported = true;

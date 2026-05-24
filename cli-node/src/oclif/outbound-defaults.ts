@@ -29,7 +29,7 @@ import type { ResolvedCliAuth } from "./auth.js";
 // listings. Real spam scoring engines don't penalize subjects under
 // ~200 chars, so 200 is both more useful and still well under the
 // practical wire limit.
-export const SUBJECT_MAX_LENGTH = 200;
+const SUBJECT_MAX_LENGTH = 200;
 
 export function deriveSubject(body: string): string {
   for (const line of body.split("\n")) {
@@ -42,7 +42,7 @@ export function deriveSubject(body: string): string {
   return "Message";
 }
 
-export function isVerifiedDomain(domain: Domain): domain is VerifiedDomain {
+function isVerifiedDomain(domain: Domain): domain is VerifiedDomain {
   return (domain as VerifiedDomain).is_active === true;
 }
 
