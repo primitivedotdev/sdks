@@ -21,17 +21,8 @@ var (
 	rn37AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
-	rn53AllowedHeaders = map[string]string{
+	rn55AllowedHeaders = map[string]string{
 		"POST": "Authorization",
-	}
-	rn43AllowedHeaders = map[string]string{
-		"POST": "Content-Type",
-	}
-	rn58AllowedHeaders = map[string]string{
-		"POST": "Content-Type",
-	}
-	rn3AllowedHeaders = map[string]string{
-		"POST": "Authorization,Content-Type",
 	}
 	rn52AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
@@ -39,7 +30,25 @@ var (
 	rn60AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn63AllowedHeaders = map[string]string{
+	rn67AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn43AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn62AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn3AllowedHeaders = map[string]string{
+		"POST": "Authorization,Content-Type",
+	}
+	rn54AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn64AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn68AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn1AllowedHeaders = map[string]string{
@@ -50,13 +59,13 @@ var (
 		"DELETE": "Authorization",
 		"PATCH":  "Authorization,Content-Type",
 	}
-	rn64AllowedHeaders = map[string]string{
+	rn69AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
 	rn39AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
-	rn54AllowedHeaders = map[string]string{
+	rn56AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
 	rn15AllowedHeaders = map[string]string{
@@ -86,7 +95,7 @@ var (
 		"DELETE": "Authorization",
 		"PATCH":  "Authorization,Content-Type",
 	}
-	rn61AllowedHeaders = map[string]string{
+	rn65AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
 	rn5AllowedHeaders = map[string]string{
@@ -117,13 +126,13 @@ var (
 		"DELETE": "Authorization",
 		"PUT":    "Authorization,Content-Type",
 	}
-	rn62AllowedHeaders = map[string]string{
+	rn66AllowedHeaders = map[string]string{
 		"POST": "Authorization,Content-Type",
 	}
 	rn30AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
-	rn56AllowedHeaders = map[string]string{
+	rn58AllowedHeaders = map[string]string{
 		"POST": "Authorization,Content-Type,Idempotency-Key",
 	}
 	rn31AllowedHeaders = map[string]string{
@@ -194,35 +203,139 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			switch elem[0] {
-			case 'a': // Prefix: "account"
+			case 'a': // Prefix: "a"
 
-				if l := len("account"); len(elem) >= l && elem[0:l] == "account" {
+				if l := len("a"); len(elem) >= l && elem[0:l] == "a" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					switch r.Method {
-					case "GET":
-						s.handleGetAccountRequest([0]string{}, elemIsEscaped, w, r)
-					case "PATCH":
-						s.handleUpdateAccountRequest([0]string{}, elemIsEscaped, w, r)
-					default:
-						s.notAllowed(w, r, notAllowedParams{
-							allowedMethods: "GET,PATCH",
-							allowedHeaders: rn26AllowedHeaders,
-							acceptPost:     "",
-							acceptPatch:    "application/json",
-						})
-					}
-
-					return
+					break
 				}
 				switch elem[0] {
-				case '/': // Prefix: "/"
+				case 'c': // Prefix: "ccount"
 
-					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					if l := len("ccount"); len(elem) >= l && elem[0:l] == "ccount" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						switch r.Method {
+						case "GET":
+							s.handleGetAccountRequest([0]string{}, elemIsEscaped, w, r)
+						case "PATCH":
+							s.handleUpdateAccountRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "GET,PATCH",
+								allowedHeaders: rn26AllowedHeaders,
+								acceptPost:     "",
+								acceptPatch:    "application/json",
+							})
+						}
+
+						return
+					}
+					switch elem[0] {
+					case '/': // Prefix: "/"
+
+						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case 's': // Prefix: "storage"
+
+							if l := len("storage"); len(elem) >= l && elem[0:l] == "storage" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleGetStorageStatsRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET",
+										allowedHeaders: rn35AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						case 'w': // Prefix: "webhook-secret"
+
+							if l := len("webhook-secret"); len(elem) >= l && elem[0:l] == "webhook-secret" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								switch r.Method {
+								case "GET":
+									s.handleGetWebhookSecretRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET",
+										allowedHeaders: rn37AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+							switch elem[0] {
+							case '/': // Prefix: "/rotate"
+
+								if l := len("/rotate"); len(elem) >= l && elem[0:l] == "/rotate" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch r.Method {
+									case "POST":
+										s.handleRotateWebhookSecretRequest([0]string{}, elemIsEscaped, w, r)
+									default:
+										s.notAllowed(w, r, notAllowedParams{
+											allowedMethods: "POST",
+											allowedHeaders: rn55AllowedHeaders,
+											acceptPost:     "",
+											acceptPatch:    "",
+										})
+									}
+
+									return
+								}
+
+							}
+
+						}
+
+					}
+
+				case 'g': // Prefix: "gent/signup/"
+
+					if l := len("gent/signup/"); len(elem) >= l && elem[0:l] == "gent/signup/" {
 						elem = elem[l:]
 					} else {
 						break
@@ -232,9 +345,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						break
 					}
 					switch elem[0] {
-					case 's': // Prefix: "storage"
+					case 'r': // Prefix: "resend"
 
-						if l := len("storage"); len(elem) >= l && elem[0:l] == "storage" {
+						if l := len("resend"); len(elem) >= l && elem[0:l] == "resend" {
 							elem = elem[l:]
 						} else {
 							break
@@ -243,13 +356,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						if len(elem) == 0 {
 							// Leaf node.
 							switch r.Method {
-							case "GET":
-								s.handleGetStorageStatsRequest([0]string{}, elemIsEscaped, w, r)
+							case "POST":
+								s.handleResendAgentSignupVerificationRequest([0]string{}, elemIsEscaped, w, r)
 							default:
 								s.notAllowed(w, r, notAllowedParams{
-									allowedMethods: "GET",
-									allowedHeaders: rn35AllowedHeaders,
-									acceptPost:     "",
+									allowedMethods: "POST",
+									allowedHeaders: rn52AllowedHeaders,
+									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
 							}
@@ -257,55 +370,54 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							return
 						}
 
-					case 'w': // Prefix: "webhook-secret"
+					case 's': // Prefix: "start"
 
-						if l := len("webhook-secret"); len(elem) >= l && elem[0:l] == "webhook-secret" {
+						if l := len("start"); len(elem) >= l && elem[0:l] == "start" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
 						if len(elem) == 0 {
+							// Leaf node.
 							switch r.Method {
-							case "GET":
-								s.handleGetWebhookSecretRequest([0]string{}, elemIsEscaped, w, r)
+							case "POST":
+								s.handleStartAgentSignupRequest([0]string{}, elemIsEscaped, w, r)
 							default:
 								s.notAllowed(w, r, notAllowedParams{
-									allowedMethods: "GET",
-									allowedHeaders: rn37AllowedHeaders,
-									acceptPost:     "",
+									allowedMethods: "POST",
+									allowedHeaders: rn60AllowedHeaders,
+									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
 							}
 
 							return
 						}
-						switch elem[0] {
-						case '/': // Prefix: "/rotate"
 
-							if l := len("/rotate"); len(elem) >= l && elem[0:l] == "/rotate" {
-								elem = elem[l:]
-							} else {
-								break
+					case 'v': // Prefix: "verify"
+
+						if l := len("verify"); len(elem) >= l && elem[0:l] == "verify" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleVerifyAgentSignupRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "POST",
+									allowedHeaders: rn67AllowedHeaders,
+									acceptPost:     "application/json",
+									acceptPatch:    "",
+								})
 							}
 
-							if len(elem) == 0 {
-								// Leaf node.
-								switch r.Method {
-								case "POST":
-									s.handleRotateWebhookSecretRequest([0]string{}, elemIsEscaped, w, r)
-								default:
-									s.notAllowed(w, r, notAllowedParams{
-										allowedMethods: "POST",
-										allowedHeaders: rn53AllowedHeaders,
-										acceptPost:     "",
-										acceptPatch:    "",
-									})
-								}
-
-								return
-							}
-
+							return
 						}
 
 					}
@@ -389,7 +501,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn58AllowedHeaders,
+										allowedHeaders: rn62AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -455,7 +567,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn52AllowedHeaders,
+									allowedHeaders: rn54AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -480,7 +592,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn60AllowedHeaders,
+									allowedHeaders: rn64AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -505,7 +617,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn63AllowedHeaders,
+									allowedHeaders: rn68AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -601,7 +713,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn64AllowedHeaders,
+									allowedHeaders: rn69AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -678,7 +790,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET",
-										allowedHeaders: rn54AllowedHeaders,
+										allowedHeaders: rn56AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -984,7 +1096,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn61AllowedHeaders,
+										allowedHeaders: rn65AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -1278,7 +1390,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "POST",
-											allowedHeaders: rn62AllowedHeaders,
+											allowedHeaders: rn66AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
@@ -1388,7 +1500,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn56AllowedHeaders,
+									allowedHeaders: rn58AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -1664,42 +1776,146 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				break
 			}
 			switch elem[0] {
-			case 'a': // Prefix: "account"
+			case 'a': // Prefix: "a"
 
-				if l := len("account"); len(elem) >= l && elem[0:l] == "account" {
+				if l := len("a"); len(elem) >= l && elem[0:l] == "a" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					switch method {
-					case "GET":
-						r.name = GetAccountOperation
-						r.summary = "Get account info"
-						r.operationID = "getAccount"
-						r.operationGroup = ""
-						r.pathPattern = "/account"
-						r.args = args
-						r.count = 0
-						return r, true
-					case "PATCH":
-						r.name = UpdateAccountOperation
-						r.summary = "Update account settings"
-						r.operationID = "updateAccount"
-						r.operationGroup = ""
-						r.pathPattern = "/account"
-						r.args = args
-						r.count = 0
-						return r, true
-					default:
-						return
-					}
+					break
 				}
 				switch elem[0] {
-				case '/': // Prefix: "/"
+				case 'c': // Prefix: "ccount"
 
-					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					if l := len("ccount"); len(elem) >= l && elem[0:l] == "ccount" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						switch method {
+						case "GET":
+							r.name = GetAccountOperation
+							r.summary = "Get account info"
+							r.operationID = "getAccount"
+							r.operationGroup = ""
+							r.pathPattern = "/account"
+							r.args = args
+							r.count = 0
+							return r, true
+						case "PATCH":
+							r.name = UpdateAccountOperation
+							r.summary = "Update account settings"
+							r.operationID = "updateAccount"
+							r.operationGroup = ""
+							r.pathPattern = "/account"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+					switch elem[0] {
+					case '/': // Prefix: "/"
+
+						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case 's': // Prefix: "storage"
+
+							if l := len("storage"); len(elem) >= l && elem[0:l] == "storage" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = GetStorageStatsOperation
+									r.summary = "Get storage usage"
+									r.operationID = "getStorageStats"
+									r.operationGroup = ""
+									r.pathPattern = "/account/storage"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+						case 'w': // Prefix: "webhook-secret"
+
+							if l := len("webhook-secret"); len(elem) >= l && elem[0:l] == "webhook-secret" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								switch method {
+								case "GET":
+									r.name = GetWebhookSecretOperation
+									r.summary = "Get webhook signing secret"
+									r.operationID = "getWebhookSecret"
+									r.operationGroup = ""
+									r.pathPattern = "/account/webhook-secret"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+							switch elem[0] {
+							case '/': // Prefix: "/rotate"
+
+								if l := len("/rotate"); len(elem) >= l && elem[0:l] == "/rotate" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch method {
+									case "POST":
+										r.name = RotateWebhookSecretOperation
+										r.summary = "Rotate webhook signing secret"
+										r.operationID = "rotateWebhookSecret"
+										r.operationGroup = ""
+										r.pathPattern = "/account/webhook-secret/rotate"
+										r.args = args
+										r.count = 0
+										return r, true
+									default:
+										return
+									}
+								}
+
+							}
+
+						}
+
+					}
+
+				case 'g': // Prefix: "gent/signup/"
+
+					if l := len("gent/signup/"); len(elem) >= l && elem[0:l] == "gent/signup/" {
 						elem = elem[l:]
 					} else {
 						break
@@ -1709,9 +1925,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						break
 					}
 					switch elem[0] {
-					case 's': // Prefix: "storage"
+					case 'r': // Prefix: "resend"
 
-						if l := len("storage"); len(elem) >= l && elem[0:l] == "storage" {
+						if l := len("resend"); len(elem) >= l && elem[0:l] == "resend" {
 							elem = elem[l:]
 						} else {
 							break
@@ -1720,12 +1936,12 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						if len(elem) == 0 {
 							// Leaf node.
 							switch method {
-							case "GET":
-								r.name = GetStorageStatsOperation
-								r.summary = "Get storage usage"
-								r.operationID = "getStorageStats"
+							case "POST":
+								r.name = ResendAgentSignupVerificationOperation
+								r.summary = "Resend agent signup verification code"
+								r.operationID = "resendAgentSignupVerification"
 								r.operationGroup = ""
-								r.pathPattern = "/account/storage"
+								r.pathPattern = "/agent/signup/resend"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1734,22 +1950,23 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							}
 						}
 
-					case 'w': // Prefix: "webhook-secret"
+					case 's': // Prefix: "start"
 
-						if l := len("webhook-secret"); len(elem) >= l && elem[0:l] == "webhook-secret" {
+						if l := len("start"); len(elem) >= l && elem[0:l] == "start" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
 						if len(elem) == 0 {
+							// Leaf node.
 							switch method {
-							case "GET":
-								r.name = GetWebhookSecretOperation
-								r.summary = "Get webhook signing secret"
-								r.operationID = "getWebhookSecret"
+							case "POST":
+								r.name = StartAgentSignupOperation
+								r.summary = "Start agent account signup"
+								r.operationID = "startAgentSignup"
 								r.operationGroup = ""
-								r.pathPattern = "/account/webhook-secret"
+								r.pathPattern = "/agent/signup/start"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1757,32 +1974,30 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								return
 							}
 						}
-						switch elem[0] {
-						case '/': // Prefix: "/rotate"
 
-							if l := len("/rotate"); len(elem) >= l && elem[0:l] == "/rotate" {
-								elem = elem[l:]
-							} else {
-								break
+					case 'v': // Prefix: "verify"
+
+						if l := len("verify"); len(elem) >= l && elem[0:l] == "verify" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "POST":
+								r.name = VerifyAgentSignupOperation
+								r.summary = "Verify agent signup and create OAuth tokens"
+								r.operationID = "verifyAgentSignup"
+								r.operationGroup = ""
+								r.pathPattern = "/agent/signup/verify"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
 							}
-
-							if len(elem) == 0 {
-								// Leaf node.
-								switch method {
-								case "POST":
-									r.name = RotateWebhookSecretOperation
-									r.summary = "Rotate webhook signing secret"
-									r.operationID = "rotateWebhookSecret"
-									r.operationGroup = ""
-									r.pathPattern = "/account/webhook-secret/rotate"
-									r.args = args
-									r.count = 0
-									return r, true
-								default:
-									return
-								}
-							}
-
 						}
 
 					}

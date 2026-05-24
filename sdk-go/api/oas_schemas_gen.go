@@ -263,6 +263,368 @@ type AddDomainUnauthorized ErrorResponse
 
 func (*AddDomainUnauthorized) addDomainRes() {}
 
+// Ref: #/components/schemas/AgentOrgRef
+type AgentOrgRef struct {
+	ID   uuid.UUID `json:"id"`
+	Name NilString `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *AgentOrgRef) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *AgentOrgRef) GetName() NilString {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *AgentOrgRef) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *AgentOrgRef) SetName(val NilString) {
+	s.Name = val
+}
+
+// Ref: #/components/schemas/AgentSignupResendResult
+type AgentSignupResendResult struct {
+	Email string `json:"email"`
+	// Seconds until the pending signup expires.
+	ExpiresIn int `json:"expires_in"`
+	// Minimum seconds before requesting another verification email.
+	ResendAfter int `json:"resend_after"`
+	// Number of digits in the emailed verification code.
+	VerificationCodeLength int `json:"verification_code_length"`
+}
+
+// GetEmail returns the value of Email.
+func (s *AgentSignupResendResult) GetEmail() string {
+	return s.Email
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *AgentSignupResendResult) GetExpiresIn() int {
+	return s.ExpiresIn
+}
+
+// GetResendAfter returns the value of ResendAfter.
+func (s *AgentSignupResendResult) GetResendAfter() int {
+	return s.ResendAfter
+}
+
+// GetVerificationCodeLength returns the value of VerificationCodeLength.
+func (s *AgentSignupResendResult) GetVerificationCodeLength() int {
+	return s.VerificationCodeLength
+}
+
+// SetEmail sets the value of Email.
+func (s *AgentSignupResendResult) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *AgentSignupResendResult) SetExpiresIn(val int) {
+	s.ExpiresIn = val
+}
+
+// SetResendAfter sets the value of ResendAfter.
+func (s *AgentSignupResendResult) SetResendAfter(val int) {
+	s.ResendAfter = val
+}
+
+// SetVerificationCodeLength sets the value of VerificationCodeLength.
+func (s *AgentSignupResendResult) SetVerificationCodeLength(val int) {
+	s.VerificationCodeLength = val
+}
+
+// Ref: #/components/schemas/AgentSignupStartResult
+type AgentSignupStartResult struct {
+	// Opaque token used to verify or resend the pending agent signup.
+	SignupToken string `json:"signup_token"`
+	Email       string `json:"email"`
+	// Seconds until the pending signup expires.
+	ExpiresIn int `json:"expires_in"`
+	// Minimum seconds before requesting another verification email.
+	ResendAfter int `json:"resend_after"`
+	// Number of digits in the emailed verification code.
+	VerificationCodeLength int `json:"verification_code_length"`
+}
+
+// GetSignupToken returns the value of SignupToken.
+func (s *AgentSignupStartResult) GetSignupToken() string {
+	return s.SignupToken
+}
+
+// GetEmail returns the value of Email.
+func (s *AgentSignupStartResult) GetEmail() string {
+	return s.Email
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *AgentSignupStartResult) GetExpiresIn() int {
+	return s.ExpiresIn
+}
+
+// GetResendAfter returns the value of ResendAfter.
+func (s *AgentSignupStartResult) GetResendAfter() int {
+	return s.ResendAfter
+}
+
+// GetVerificationCodeLength returns the value of VerificationCodeLength.
+func (s *AgentSignupStartResult) GetVerificationCodeLength() int {
+	return s.VerificationCodeLength
+}
+
+// SetSignupToken sets the value of SignupToken.
+func (s *AgentSignupStartResult) SetSignupToken(val string) {
+	s.SignupToken = val
+}
+
+// SetEmail sets the value of Email.
+func (s *AgentSignupStartResult) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *AgentSignupStartResult) SetExpiresIn(val int) {
+	s.ExpiresIn = val
+}
+
+// SetResendAfter sets the value of ResendAfter.
+func (s *AgentSignupStartResult) SetResendAfter(val int) {
+	s.ResendAfter = val
+}
+
+// SetVerificationCodeLength sets the value of VerificationCodeLength.
+func (s *AgentSignupStartResult) SetVerificationCodeLength(val int) {
+	s.VerificationCodeLength = val
+}
+
+// Ref: #/components/schemas/AgentSignupVerifyResult
+type AgentSignupVerifyResult struct {
+	// Legacy alias for access_token. New CLI builds should persist access_token and refresh_token.
+	APIKey string `json:"api_key"`
+	// Legacy alias for oauth_grant_id.
+	KeyID uuid.UUID `json:"key_id"`
+	// Legacy display prefix derived from access_token.
+	KeyPrefix string `json:"key_prefix"`
+	// OAuth access token for CLI API authentication.
+	AccessToken string `json:"access_token"`
+	// OAuth refresh token used by the CLI to renew access.
+	RefreshToken string                           `json:"refresh_token"`
+	TokenType    AgentSignupVerifyResultTokenType `json:"token_type"`
+	// Seconds until access_token expires.
+	ExpiresIn     int                               `json:"expires_in"`
+	AuthMethod    AgentSignupVerifyResultAuthMethod `json:"auth_method"`
+	OAuthGrantID  uuid.UUID                         `json:"oauth_grant_id"`
+	OAuthClientID string                            `json:"oauth_client_id"`
+	OrgID         uuid.UUID                         `json:"org_id"`
+	OrgName       NilString                         `json:"org_name"`
+	// Workspaces available to the verified email. The minted session targets `org_id`.
+	Orgs []AgentOrgRef `json:"orgs"`
+}
+
+// GetAPIKey returns the value of APIKey.
+func (s *AgentSignupVerifyResult) GetAPIKey() string {
+	return s.APIKey
+}
+
+// GetKeyID returns the value of KeyID.
+func (s *AgentSignupVerifyResult) GetKeyID() uuid.UUID {
+	return s.KeyID
+}
+
+// GetKeyPrefix returns the value of KeyPrefix.
+func (s *AgentSignupVerifyResult) GetKeyPrefix() string {
+	return s.KeyPrefix
+}
+
+// GetAccessToken returns the value of AccessToken.
+func (s *AgentSignupVerifyResult) GetAccessToken() string {
+	return s.AccessToken
+}
+
+// GetRefreshToken returns the value of RefreshToken.
+func (s *AgentSignupVerifyResult) GetRefreshToken() string {
+	return s.RefreshToken
+}
+
+// GetTokenType returns the value of TokenType.
+func (s *AgentSignupVerifyResult) GetTokenType() AgentSignupVerifyResultTokenType {
+	return s.TokenType
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *AgentSignupVerifyResult) GetExpiresIn() int {
+	return s.ExpiresIn
+}
+
+// GetAuthMethod returns the value of AuthMethod.
+func (s *AgentSignupVerifyResult) GetAuthMethod() AgentSignupVerifyResultAuthMethod {
+	return s.AuthMethod
+}
+
+// GetOAuthGrantID returns the value of OAuthGrantID.
+func (s *AgentSignupVerifyResult) GetOAuthGrantID() uuid.UUID {
+	return s.OAuthGrantID
+}
+
+// GetOAuthClientID returns the value of OAuthClientID.
+func (s *AgentSignupVerifyResult) GetOAuthClientID() string {
+	return s.OAuthClientID
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *AgentSignupVerifyResult) GetOrgID() uuid.UUID {
+	return s.OrgID
+}
+
+// GetOrgName returns the value of OrgName.
+func (s *AgentSignupVerifyResult) GetOrgName() NilString {
+	return s.OrgName
+}
+
+// GetOrgs returns the value of Orgs.
+func (s *AgentSignupVerifyResult) GetOrgs() []AgentOrgRef {
+	return s.Orgs
+}
+
+// SetAPIKey sets the value of APIKey.
+func (s *AgentSignupVerifyResult) SetAPIKey(val string) {
+	s.APIKey = val
+}
+
+// SetKeyID sets the value of KeyID.
+func (s *AgentSignupVerifyResult) SetKeyID(val uuid.UUID) {
+	s.KeyID = val
+}
+
+// SetKeyPrefix sets the value of KeyPrefix.
+func (s *AgentSignupVerifyResult) SetKeyPrefix(val string) {
+	s.KeyPrefix = val
+}
+
+// SetAccessToken sets the value of AccessToken.
+func (s *AgentSignupVerifyResult) SetAccessToken(val string) {
+	s.AccessToken = val
+}
+
+// SetRefreshToken sets the value of RefreshToken.
+func (s *AgentSignupVerifyResult) SetRefreshToken(val string) {
+	s.RefreshToken = val
+}
+
+// SetTokenType sets the value of TokenType.
+func (s *AgentSignupVerifyResult) SetTokenType(val AgentSignupVerifyResultTokenType) {
+	s.TokenType = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *AgentSignupVerifyResult) SetExpiresIn(val int) {
+	s.ExpiresIn = val
+}
+
+// SetAuthMethod sets the value of AuthMethod.
+func (s *AgentSignupVerifyResult) SetAuthMethod(val AgentSignupVerifyResultAuthMethod) {
+	s.AuthMethod = val
+}
+
+// SetOAuthGrantID sets the value of OAuthGrantID.
+func (s *AgentSignupVerifyResult) SetOAuthGrantID(val uuid.UUID) {
+	s.OAuthGrantID = val
+}
+
+// SetOAuthClientID sets the value of OAuthClientID.
+func (s *AgentSignupVerifyResult) SetOAuthClientID(val string) {
+	s.OAuthClientID = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *AgentSignupVerifyResult) SetOrgID(val uuid.UUID) {
+	s.OrgID = val
+}
+
+// SetOrgName sets the value of OrgName.
+func (s *AgentSignupVerifyResult) SetOrgName(val NilString) {
+	s.OrgName = val
+}
+
+// SetOrgs sets the value of Orgs.
+func (s *AgentSignupVerifyResult) SetOrgs(val []AgentOrgRef) {
+	s.Orgs = val
+}
+
+type AgentSignupVerifyResultAuthMethod string
+
+const (
+	AgentSignupVerifyResultAuthMethodOAuth AgentSignupVerifyResultAuthMethod = "oauth"
+)
+
+// AllValues returns all AgentSignupVerifyResultAuthMethod values.
+func (AgentSignupVerifyResultAuthMethod) AllValues() []AgentSignupVerifyResultAuthMethod {
+	return []AgentSignupVerifyResultAuthMethod{
+		AgentSignupVerifyResultAuthMethodOAuth,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AgentSignupVerifyResultAuthMethod) MarshalText() ([]byte, error) {
+	switch s {
+	case AgentSignupVerifyResultAuthMethodOAuth:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AgentSignupVerifyResultAuthMethod) UnmarshalText(data []byte) error {
+	switch AgentSignupVerifyResultAuthMethod(data) {
+	case AgentSignupVerifyResultAuthMethodOAuth:
+		*s = AgentSignupVerifyResultAuthMethodOAuth
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type AgentSignupVerifyResultTokenType string
+
+const (
+	AgentSignupVerifyResultTokenTypeBearer AgentSignupVerifyResultTokenType = "Bearer"
+)
+
+// AllValues returns all AgentSignupVerifyResultTokenType values.
+func (AgentSignupVerifyResultTokenType) AllValues() []AgentSignupVerifyResultTokenType {
+	return []AgentSignupVerifyResultTokenType{
+		AgentSignupVerifyResultTokenTypeBearer,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AgentSignupVerifyResultTokenType) MarshalText() ([]byte, error) {
+	switch s {
+	case AgentSignupVerifyResultTokenTypeBearer:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AgentSignupVerifyResultTokenType) UnmarshalText(data []byte) error {
+	switch AgentSignupVerifyResultTokenType(data) {
+	case AgentSignupVerifyResultTokenTypeBearer:
+		*s = AgentSignupVerifyResultTokenTypeBearer
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type BearerAuth struct {
 	Token string
 	Roles []string
@@ -3842,16 +4204,18 @@ func (s *ErrorResponse) SetError(val ErrorResponseError) {
 	s.Error = val
 }
 
-func (*ErrorResponse) getSendPermissionsRes()          {}
-func (*ErrorResponse) listDomainsRes()                 {}
-func (*ErrorResponse) listEndpointsRes()               {}
-func (*ErrorResponse) listFiltersRes()                 {}
-func (*ErrorResponse) listFunctionsRes()               {}
-func (*ErrorResponse) pollCliLoginRes()                {}
-func (*ErrorResponse) resendCliSignupVerificationRes() {}
-func (*ErrorResponse) startCliLoginRes()               {}
-func (*ErrorResponse) startCliSignupRes()              {}
-func (*ErrorResponse) verifyCliSignupRes()             {}
+func (*ErrorResponse) getSendPermissionsRes()            {}
+func (*ErrorResponse) listDomainsRes()                   {}
+func (*ErrorResponse) listEndpointsRes()                 {}
+func (*ErrorResponse) listFiltersRes()                   {}
+func (*ErrorResponse) listFunctionsRes()                 {}
+func (*ErrorResponse) pollCliLoginRes()                  {}
+func (*ErrorResponse) resendAgentSignupVerificationRes() {}
+func (*ErrorResponse) resendCliSignupVerificationRes()   {}
+func (*ErrorResponse) startAgentSignupRes()              {}
+func (*ErrorResponse) startCliLoginRes()                 {}
+func (*ErrorResponse) startCliSignupRes()                {}
+func (*ErrorResponse) verifyCliSignupRes()               {}
 
 type ErrorResponseError struct {
 	Code    ErrorResponseErrorCode `json:"code"`
@@ -3944,6 +4308,13 @@ const (
 	ErrorResponseErrorCodeAccessDenied              ErrorResponseErrorCode = "access_denied"
 	ErrorResponseErrorCodeExpiredToken              ErrorResponseErrorCode = "expired_token"
 	ErrorResponseErrorCodeInvalidDeviceCode         ErrorResponseErrorCode = "invalid_device_code"
+	ErrorResponseErrorCodeInvalidSignupCode         ErrorResponseErrorCode = "invalid_signup_code"
+	ErrorResponseErrorCodeInvalidSignupToken        ErrorResponseErrorCode = "invalid_signup_token"
+	ErrorResponseErrorCodeInvalidVerificationCode   ErrorResponseErrorCode = "invalid_verification_code"
+	ErrorResponseErrorCodeEmailDeliveryFailed       ErrorResponseErrorCode = "email_delivery_failed"
+	ErrorResponseErrorCodeClerkSignupFailed         ErrorResponseErrorCode = "clerk_signup_failed"
+	ErrorResponseErrorCodeNoOrgsForUser             ErrorResponseErrorCode = "no_orgs_for_user"
+	ErrorResponseErrorCodeOrgNotAccessible          ErrorResponseErrorCode = "org_not_accessible"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -3974,6 +4345,13 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeAccessDenied,
 		ErrorResponseErrorCodeExpiredToken,
 		ErrorResponseErrorCodeInvalidDeviceCode,
+		ErrorResponseErrorCodeInvalidSignupCode,
+		ErrorResponseErrorCodeInvalidSignupToken,
+		ErrorResponseErrorCodeInvalidVerificationCode,
+		ErrorResponseErrorCodeEmailDeliveryFailed,
+		ErrorResponseErrorCodeClerkSignupFailed,
+		ErrorResponseErrorCodeNoOrgsForUser,
+		ErrorResponseErrorCodeOrgNotAccessible,
 	}
 }
 
@@ -4029,6 +4407,20 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeExpiredToken:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInvalidDeviceCode:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidSignupCode:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidSignupToken:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidVerificationCode:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeEmailDeliveryFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeClerkSignupFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNoOrgsForUser:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOrgNotAccessible:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -4112,6 +4504,27 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeInvalidDeviceCode:
 		*s = ErrorResponseErrorCodeInvalidDeviceCode
+		return nil
+	case ErrorResponseErrorCodeInvalidSignupCode:
+		*s = ErrorResponseErrorCodeInvalidSignupCode
+		return nil
+	case ErrorResponseErrorCodeInvalidSignupToken:
+		*s = ErrorResponseErrorCodeInvalidSignupToken
+		return nil
+	case ErrorResponseErrorCodeInvalidVerificationCode:
+		*s = ErrorResponseErrorCodeInvalidVerificationCode
+		return nil
+	case ErrorResponseErrorCodeEmailDeliveryFailed:
+		*s = ErrorResponseErrorCodeEmailDeliveryFailed
+		return nil
+	case ErrorResponseErrorCodeClerkSignupFailed:
+		*s = ErrorResponseErrorCodeClerkSignupFailed
+		return nil
+	case ErrorResponseErrorCodeNoOrgsForUser:
+		*s = ErrorResponseErrorCodeNoOrgsForUser
+		return nil
+	case ErrorResponseErrorCodeOrgNotAccessible:
+		*s = ErrorResponseErrorCodeOrgNotAccessible
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -4260,8 +4673,9 @@ func (s *ErrorResponseHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
-func (*ErrorResponseHeaders) pollCliLoginRes()                {}
-func (*ErrorResponseHeaders) resendCliSignupVerificationRes() {}
+func (*ErrorResponseHeaders) pollCliLoginRes()                  {}
+func (*ErrorResponseHeaders) resendAgentSignupVerificationRes() {}
+func (*ErrorResponseHeaders) resendCliSignupVerificationRes()   {}
 
 // Ref: #/components/schemas/Filter
 type Filter struct {
@@ -8772,6 +9186,52 @@ func (o OptSentEmailStatus) Or(d SentEmailStatus) SentEmailStatus {
 	return d
 }
 
+// NewOptStartAgentSignupInputMetadata returns new OptStartAgentSignupInputMetadata with value set to v.
+func NewOptStartAgentSignupInputMetadata(v StartAgentSignupInputMetadata) OptStartAgentSignupInputMetadata {
+	return OptStartAgentSignupInputMetadata{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptStartAgentSignupInputMetadata is optional StartAgentSignupInputMetadata.
+type OptStartAgentSignupInputMetadata struct {
+	Value StartAgentSignupInputMetadata
+	Set   bool
+}
+
+// IsSet returns true if OptStartAgentSignupInputMetadata was set.
+func (o OptStartAgentSignupInputMetadata) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptStartAgentSignupInputMetadata) Reset() {
+	var v StartAgentSignupInputMetadata
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptStartAgentSignupInputMetadata) SetTo(v StartAgentSignupInputMetadata) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptStartAgentSignupInputMetadata) Get() (v StartAgentSignupInputMetadata, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptStartAgentSignupInputMetadata) Or(d StartAgentSignupInputMetadata) StartAgentSignupInputMetadata {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptStartCliLoginInput returns new OptStartCliLoginInput with value set to v.
 func NewOptStartCliLoginInput(v StartCliLoginInput) OptStartCliLoginInput {
 	return OptStartCliLoginInput{
@@ -9189,9 +9649,11 @@ func (*RateLimitedHeaders) replayEmailWebhooksRes() {}
 func (*RateLimitedHeaders) replyToEmailRes()        {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes() {}
 func (*RateLimitedHeaders) sendEmailRes()           {}
+func (*RateLimitedHeaders) startAgentSignupRes()    {}
 func (*RateLimitedHeaders) startCliLoginRes()       {}
 func (*RateLimitedHeaders) startCliSignupRes()      {}
 func (*RateLimitedHeaders) testEndpointRes()        {}
+func (*RateLimitedHeaders) verifyAgentSignupRes()   {}
 func (*RateLimitedHeaders) verifyCliSignupRes()     {}
 
 type ReplayDeliveryBadRequest ErrorResponse
@@ -9430,6 +9892,75 @@ func (*ReplyToEmailUnauthorized) replyToEmailRes() {}
 type ReplyToEmailUnprocessableEntity ErrorResponse
 
 func (*ReplyToEmailUnprocessableEntity) replyToEmailRes() {}
+
+// Ref: #/components/schemas/ResendAgentSignupVerificationInput
+type ResendAgentSignupVerificationInput struct {
+	SignupToken string `json:"signup_token"`
+}
+
+// GetSignupToken returns the value of SignupToken.
+func (s *ResendAgentSignupVerificationInput) GetSignupToken() string {
+	return s.SignupToken
+}
+
+// SetSignupToken sets the value of SignupToken.
+func (s *ResendAgentSignupVerificationInput) SetSignupToken(val string) {
+	s.SignupToken = val
+}
+
+// Merged schema.
+type ResendAgentSignupVerificationOK struct {
+	Success bool                    `json:"success"`
+	Data    AgentSignupResendResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ResendAgentSignupVerificationOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ResendAgentSignupVerificationOK) GetData() AgentSignupResendResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ResendAgentSignupVerificationOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ResendAgentSignupVerificationOK) SetData(val AgentSignupResendResult) {
+	s.Data = val
+}
+
+// ResendAgentSignupVerificationOKHeaders wraps ResendAgentSignupVerificationOK with response headers.
+type ResendAgentSignupVerificationOKHeaders struct {
+	CacheControl OptString
+	Response     ResendAgentSignupVerificationOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *ResendAgentSignupVerificationOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *ResendAgentSignupVerificationOKHeaders) GetResponse() ResendAgentSignupVerificationOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *ResendAgentSignupVerificationOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ResendAgentSignupVerificationOKHeaders) SetResponse(val ResendAgentSignupVerificationOK) {
+	s.Response = val
+}
+
+func (*ResendAgentSignupVerificationOKHeaders) resendAgentSignupVerificationRes() {}
 
 // Ref: #/components/schemas/ResendCliSignupVerificationInput
 type ResendCliSignupVerificationInput struct {
@@ -11604,6 +12135,136 @@ type SetFunctionSecretUnauthorized ErrorResponse
 func (*SetFunctionSecretUnauthorized) setFunctionSecretRes() {}
 
 // Merged schema.
+type StartAgentSignupCreated struct {
+	Success bool                   `json:"success"`
+	Data    AgentSignupStartResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *StartAgentSignupCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *StartAgentSignupCreated) GetData() AgentSignupStartResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *StartAgentSignupCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *StartAgentSignupCreated) SetData(val AgentSignupStartResult) {
+	s.Data = val
+}
+
+// StartAgentSignupCreatedHeaders wraps StartAgentSignupCreated with response headers.
+type StartAgentSignupCreatedHeaders struct {
+	CacheControl OptString
+	Response     StartAgentSignupCreated
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *StartAgentSignupCreatedHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *StartAgentSignupCreatedHeaders) GetResponse() StartAgentSignupCreated {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *StartAgentSignupCreatedHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *StartAgentSignupCreatedHeaders) SetResponse(val StartAgentSignupCreated) {
+	s.Response = val
+}
+
+func (*StartAgentSignupCreatedHeaders) startAgentSignupRes() {}
+
+// Ref: #/components/schemas/StartAgentSignupInput
+type StartAgentSignupInput struct {
+	Email      string `json:"email"`
+	SignupCode string `json:"signup_code"`
+	// Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy.
+	TermsAccepted bool `json:"terms_accepted"`
+	// Human-readable device name used for the created agent OAuth session.
+	DeviceName OptString `json:"device_name"`
+	// Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or
+	// fewer.
+	Metadata OptStartAgentSignupInputMetadata `json:"metadata"`
+}
+
+// GetEmail returns the value of Email.
+func (s *StartAgentSignupInput) GetEmail() string {
+	return s.Email
+}
+
+// GetSignupCode returns the value of SignupCode.
+func (s *StartAgentSignupInput) GetSignupCode() string {
+	return s.SignupCode
+}
+
+// GetTermsAccepted returns the value of TermsAccepted.
+func (s *StartAgentSignupInput) GetTermsAccepted() bool {
+	return s.TermsAccepted
+}
+
+// GetDeviceName returns the value of DeviceName.
+func (s *StartAgentSignupInput) GetDeviceName() OptString {
+	return s.DeviceName
+}
+
+// GetMetadata returns the value of Metadata.
+func (s *StartAgentSignupInput) GetMetadata() OptStartAgentSignupInputMetadata {
+	return s.Metadata
+}
+
+// SetEmail sets the value of Email.
+func (s *StartAgentSignupInput) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetSignupCode sets the value of SignupCode.
+func (s *StartAgentSignupInput) SetSignupCode(val string) {
+	s.SignupCode = val
+}
+
+// SetTermsAccepted sets the value of TermsAccepted.
+func (s *StartAgentSignupInput) SetTermsAccepted(val bool) {
+	s.TermsAccepted = val
+}
+
+// SetDeviceName sets the value of DeviceName.
+func (s *StartAgentSignupInput) SetDeviceName(val OptString) {
+	s.DeviceName = val
+}
+
+// SetMetadata sets the value of Metadata.
+func (s *StartAgentSignupInput) SetMetadata(val OptStartAgentSignupInputMetadata) {
+	s.Metadata = val
+}
+
+// Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or
+// fewer.
+type StartAgentSignupInputMetadata map[string]jx.Raw
+
+func (s *StartAgentSignupInputMetadata) init() StartAgentSignupInputMetadata {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Merged schema.
 type StartCliLoginCreated struct {
 	Success bool                `json:"success"`
 	Data    CliLoginStartResult `json:"data"`
@@ -12700,6 +13361,110 @@ func (s *VerifiedDomain) SetVerificationToken(val OptNilString) {
 func (s *VerifiedDomain) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
+
+type VerifyAgentSignupBadRequest ErrorResponse
+
+func (*VerifyAgentSignupBadRequest) verifyAgentSignupRes() {}
+
+type VerifyAgentSignupConflict ErrorResponse
+
+func (*VerifyAgentSignupConflict) verifyAgentSignupRes() {}
+
+type VerifyAgentSignupForbidden ErrorResponse
+
+func (*VerifyAgentSignupForbidden) verifyAgentSignupRes() {}
+
+// Ref: #/components/schemas/VerifyAgentSignupInput
+type VerifyAgentSignupInput struct {
+	SignupToken      string `json:"signup_token"`
+	VerificationCode string `json:"verification_code"`
+	// Optional workspace id to target when the verified email already belongs to multiple workspaces.
+	OrgID OptUUID `json:"org_id"`
+}
+
+// GetSignupToken returns the value of SignupToken.
+func (s *VerifyAgentSignupInput) GetSignupToken() string {
+	return s.SignupToken
+}
+
+// GetVerificationCode returns the value of VerificationCode.
+func (s *VerifyAgentSignupInput) GetVerificationCode() string {
+	return s.VerificationCode
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *VerifyAgentSignupInput) GetOrgID() OptUUID {
+	return s.OrgID
+}
+
+// SetSignupToken sets the value of SignupToken.
+func (s *VerifyAgentSignupInput) SetSignupToken(val string) {
+	s.SignupToken = val
+}
+
+// SetVerificationCode sets the value of VerificationCode.
+func (s *VerifyAgentSignupInput) SetVerificationCode(val string) {
+	s.VerificationCode = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *VerifyAgentSignupInput) SetOrgID(val OptUUID) {
+	s.OrgID = val
+}
+
+// Merged schema.
+type VerifyAgentSignupOK struct {
+	Success bool                    `json:"success"`
+	Data    AgentSignupVerifyResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *VerifyAgentSignupOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *VerifyAgentSignupOK) GetData() AgentSignupVerifyResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *VerifyAgentSignupOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *VerifyAgentSignupOK) SetData(val AgentSignupVerifyResult) {
+	s.Data = val
+}
+
+// VerifyAgentSignupOKHeaders wraps VerifyAgentSignupOK with response headers.
+type VerifyAgentSignupOKHeaders struct {
+	CacheControl OptString
+	Response     VerifyAgentSignupOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *VerifyAgentSignupOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *VerifyAgentSignupOKHeaders) GetResponse() VerifyAgentSignupOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *VerifyAgentSignupOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *VerifyAgentSignupOKHeaders) SetResponse(val VerifyAgentSignupOK) {
+	s.Response = val
+}
+
+func (*VerifyAgentSignupOKHeaders) verifyAgentSignupRes() {}
 
 // Ref: #/components/schemas/VerifyCliSignupInput
 type VerifyCliSignupInput struct {

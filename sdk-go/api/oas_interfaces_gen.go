@@ -145,6 +145,10 @@ type ReplyToEmailRes interface {
 	replyToEmailRes()
 }
 
+type ResendAgentSignupVerificationRes interface {
+	resendAgentSignupVerificationRes()
+}
+
 type ResendCliSignupVerificationRes interface {
 	resendCliSignupVerificationRes()
 }
@@ -163,6 +167,10 @@ type SendEmailRes interface {
 
 type SetFunctionSecretRes interface {
 	setFunctionSecretRes()
+}
+
+type StartAgentSignupRes interface {
+	startAgentSignupRes()
 }
 
 type StartCliLoginRes interface {
@@ -199,6 +207,10 @@ type UpdateFilterRes interface {
 
 type UpdateFunctionRes interface {
 	updateFunctionRes()
+}
+
+type VerifyAgentSignupRes interface {
+	verifyAgentSignupRes()
 }
 
 type VerifyCliSignupRes interface {

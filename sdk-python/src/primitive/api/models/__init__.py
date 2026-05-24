@@ -4,6 +4,12 @@ from .account import Account
 from .account_updated import AccountUpdated
 from .add_domain_input import AddDomainInput
 from .add_domain_response_201 import AddDomainResponse201
+from .agent_org_ref import AgentOrgRef
+from .agent_signup_resend_result import AgentSignupResendResult
+from .agent_signup_start_result import AgentSignupStartResult
+from .agent_signup_verify_result import AgentSignupVerifyResult
+from .agent_signup_verify_result_auth_method import AgentSignupVerifyResultAuthMethod
+from .agent_signup_verify_result_token_type import AgentSignupVerifyResultTokenType
 from .cli_login_poll_result import CliLoginPollResult
 from .cli_login_poll_result_auth_method import CliLoginPollResultAuthMethod
 from .cli_login_poll_result_token_type import CliLoginPollResultTokenType
@@ -121,6 +127,8 @@ from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
 from .reply_input import ReplyInput
 from .reply_to_email_response_200 import ReplyToEmailResponse200
+from .resend_agent_signup_verification_input import ResendAgentSignupVerificationInput
+from .resend_agent_signup_verification_response_200 import ResendAgentSignupVerificationResponse200
 from .resend_cli_signup_verification_input import ResendCliSignupVerificationInput
 from .resend_cli_signup_verification_response_200 import ResendCliSignupVerificationResponse200
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
@@ -147,6 +155,9 @@ from .sent_email_summary import SentEmailSummary
 from .set_function_secret_input import SetFunctionSecretInput
 from .set_function_secret_response_200 import SetFunctionSecretResponse200
 from .set_function_secret_response_201 import SetFunctionSecretResponse201
+from .start_agent_signup_input import StartAgentSignupInput
+from .start_agent_signup_input_metadata import StartAgentSignupInputMetadata
+from .start_agent_signup_response_201 import StartAgentSignupResponse201
 from .start_cli_login_input import StartCliLoginInput
 from .start_cli_login_input_metadata import StartCliLoginInputMetadata
 from .start_cli_login_response_201 import StartCliLoginResponse201
@@ -173,6 +184,8 @@ from .update_filter_response_200 import UpdateFilterResponse200
 from .update_function_input import UpdateFunctionInput
 from .update_function_response_200 import UpdateFunctionResponse200
 from .verified_domain import VerifiedDomain
+from .verify_agent_signup_input import VerifyAgentSignupInput
+from .verify_agent_signup_response_200 import VerifyAgentSignupResponse200
 from .verify_cli_signup_input import VerifyCliSignupInput
 from .verify_cli_signup_response_200 import VerifyCliSignupResponse200
 from .verify_domain_response_200 import VerifyDomainResponse200
@@ -183,6 +196,12 @@ __all__ = (
     "AccountUpdated",
     "AddDomainInput",
     "AddDomainResponse201",
+    "AgentOrgRef",
+    "AgentSignupResendResult",
+    "AgentSignupStartResult",
+    "AgentSignupVerifyResult",
+    "AgentSignupVerifyResultAuthMethod",
+    "AgentSignupVerifyResultTokenType",
     "CliLoginPollResult",
     "CliLoginPollResultAuthMethod",
     "CliLoginPollResultTokenType",
@@ -300,6 +319,8 @@ __all__ = (
     "ReplayResult",
     "ReplyInput",
     "ReplyToEmailResponse200",
+    "ResendAgentSignupVerificationInput",
+    "ResendAgentSignupVerificationResponse200",
     "ResendCliSignupVerificationInput",
     "ResendCliSignupVerificationResponse200",
     "RotateWebhookSecretResponse200",
@@ -326,6 +347,9 @@ __all__ = (
     "SetFunctionSecretInput",
     "SetFunctionSecretResponse200",
     "SetFunctionSecretResponse201",
+    "StartAgentSignupInput",
+    "StartAgentSignupInputMetadata",
+    "StartAgentSignupResponse201",
     "StartCliLoginInput",
     "StartCliLoginInputMetadata",
     "StartCliLoginResponse201",
@@ -352,6 +376,8 @@ __all__ = (
     "UpdateFunctionInput",
     "UpdateFunctionResponse200",
     "VerifiedDomain",
+    "VerifyAgentSignupInput",
+    "VerifyAgentSignupResponse200",
     "VerifyCliSignupInput",
     "VerifyCliSignupResponse200",
     "VerifyDomainResponse200",

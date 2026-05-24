@@ -453,6 +453,13 @@ type Invoker interface {
 	//
 	// POST /emails/{id}/reply
 	ReplyToEmail(ctx context.Context, request *ReplyInput, params ReplyToEmailParams) (ReplyToEmailRes, error)
+	// ResendAgentSignupVerification invokes resendAgentSignupVerification operation.
+	//
+	// Sends a new email verification code for a pending agent signup session.
+	// This endpoint does not require an API key.
+	//
+	// POST /agent/signup/resend
+	ResendAgentSignupVerification(ctx context.Context, request *ResendAgentSignupVerificationInput) (ResendAgentSignupVerificationRes, error)
 	// ResendCliSignupVerification invokes resendCliSignupVerification operation.
 	//
 	// Sends a new email verification code for a pending CLI signup session.
@@ -508,6 +515,15 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}/secrets/{key}
 	SetFunctionSecret(ctx context.Context, request *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
+	// StartAgentSignup invokes startAgentSignup operation.
+	//
+	// Starts an agent-native signup session. The API validates the signup code,
+	// creates a pending signup session, sends an email verification code, and
+	// returns an opaque signup token used by the resend and verify steps. This
+	// endpoint does not require an API key.
+	//
+	// POST /agent/signup/start
+	StartAgentSignup(ctx context.Context, request *StartAgentSignupInput) (StartAgentSignupRes, error)
 	// StartCliLogin invokes startCliLogin operation.
 	//
 	// Starts a browser-assisted CLI login session. The response includes a
@@ -601,6 +617,16 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}
 	UpdateFunction(ctx context.Context, request *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
+	// VerifyAgentSignup invokes verifyAgentSignup operation.
+	//
+	// Verifies the email code for an agent signup session, creates the account
+	// when needed, redeems the reserved signup code, mints an org-scoped OAuth
+	// session for CLI authentication, and returns the raw tokens exactly once.
+	// For existing users, the optional `org_id` selects which accessible
+	// workspace should receive the new session.
+	//
+	// POST /agent/signup/verify
+	VerifyAgentSignup(ctx context.Context, request *VerifyAgentSignupInput) (VerifyAgentSignupRes, error)
 	// VerifyCliSignup invokes verifyCliSignup operation.
 	//
 	// Verifies the email code for a CLI signup session, creates the account,
@@ -5559,6 +5585,84 @@ func (c *Client) sendReplyToEmail(ctx context.Context, request *ReplyInput, para
 	return result, nil
 }
 
+// ResendAgentSignupVerification invokes resendAgentSignupVerification operation.
+//
+// Sends a new email verification code for a pending agent signup session.
+// This endpoint does not require an API key.
+//
+// POST /agent/signup/resend
+func (c *Client) ResendAgentSignupVerification(ctx context.Context, request *ResendAgentSignupVerificationInput) (ResendAgentSignupVerificationRes, error) {
+	res, err := c.sendResendAgentSignupVerification(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendResendAgentSignupVerification(ctx context.Context, request *ResendAgentSignupVerificationInput) (res ResendAgentSignupVerificationRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("resendAgentSignupVerification"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent/signup/resend"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ResendAgentSignupVerificationOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent/signup/resend"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeResendAgentSignupVerificationRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeResendAgentSignupVerificationResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ResendCliSignupVerification invokes resendCliSignupVerification operation.
 //
 // Sends a new email verification code for a pending CLI signup session.
@@ -6452,6 +6556,86 @@ func (c *Client) sendSetFunctionSecret(ctx context.Context, request *SetFunction
 
 	stage = "DecodeResponse"
 	result, err := decodeSetFunctionSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// StartAgentSignup invokes startAgentSignup operation.
+//
+// Starts an agent-native signup session. The API validates the signup code,
+// creates a pending signup session, sends an email verification code, and
+// returns an opaque signup token used by the resend and verify steps. This
+// endpoint does not require an API key.
+//
+// POST /agent/signup/start
+func (c *Client) StartAgentSignup(ctx context.Context, request *StartAgentSignupInput) (StartAgentSignupRes, error) {
+	res, err := c.sendStartAgentSignup(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendStartAgentSignup(ctx context.Context, request *StartAgentSignupInput) (res StartAgentSignupRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("startAgentSignup"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent/signup/start"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, StartAgentSignupOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent/signup/start"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeStartAgentSignupRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeStartAgentSignupResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -7522,6 +7706,87 @@ func (c *Client) sendUpdateFunction(ctx context.Context, request *UpdateFunction
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateFunctionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// VerifyAgentSignup invokes verifyAgentSignup operation.
+//
+// Verifies the email code for an agent signup session, creates the account
+// when needed, redeems the reserved signup code, mints an org-scoped OAuth
+// session for CLI authentication, and returns the raw tokens exactly once.
+// For existing users, the optional `org_id` selects which accessible
+// workspace should receive the new session.
+//
+// POST /agent/signup/verify
+func (c *Client) VerifyAgentSignup(ctx context.Context, request *VerifyAgentSignupInput) (VerifyAgentSignupRes, error) {
+	res, err := c.sendVerifyAgentSignup(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendVerifyAgentSignup(ctx context.Context, request *VerifyAgentSignupInput) (res VerifyAgentSignupRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("verifyAgentSignup"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent/signup/verify"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, VerifyAgentSignupOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent/signup/verify"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeVerifyAgentSignupRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeVerifyAgentSignupResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

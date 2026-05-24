@@ -433,6 +433,13 @@ type Handler interface {
 	//
 	// POST /emails/{id}/reply
 	ReplyToEmail(ctx context.Context, req *ReplyInput, params ReplyToEmailParams) (ReplyToEmailRes, error)
+	// ResendAgentSignupVerification implements resendAgentSignupVerification operation.
+	//
+	// Sends a new email verification code for a pending agent signup session.
+	// This endpoint does not require an API key.
+	//
+	// POST /agent/signup/resend
+	ResendAgentSignupVerification(ctx context.Context, req *ResendAgentSignupVerificationInput) (ResendAgentSignupVerificationRes, error)
 	// ResendCliSignupVerification implements resendCliSignupVerification operation.
 	//
 	// Sends a new email verification code for a pending CLI signup session.
@@ -488,6 +495,15 @@ type Handler interface {
 	//
 	// PUT /functions/{id}/secrets/{key}
 	SetFunctionSecret(ctx context.Context, req *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
+	// StartAgentSignup implements startAgentSignup operation.
+	//
+	// Starts an agent-native signup session. The API validates the signup code,
+	// creates a pending signup session, sends an email verification code, and
+	// returns an opaque signup token used by the resend and verify steps. This
+	// endpoint does not require an API key.
+	//
+	// POST /agent/signup/start
+	StartAgentSignup(ctx context.Context, req *StartAgentSignupInput) (StartAgentSignupRes, error)
 	// StartCliLogin implements startCliLogin operation.
 	//
 	// Starts a browser-assisted CLI login session. The response includes a
@@ -581,6 +597,16 @@ type Handler interface {
 	//
 	// PUT /functions/{id}
 	UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
+	// VerifyAgentSignup implements verifyAgentSignup operation.
+	//
+	// Verifies the email code for an agent signup session, creates the account
+	// when needed, redeems the reserved signup code, mints an org-scoped OAuth
+	// session for CLI authentication, and returns the raw tokens exactly once.
+	// For existing users, the optional `org_id` selects which accessible
+	// workspace should receive the new session.
+	//
+	// POST /agent/signup/verify
+	VerifyAgentSignup(ctx context.Context, req *VerifyAgentSignupInput) (VerifyAgentSignupRes, error)
 	// VerifyCliSignup implements verifyCliSignup operation.
 	//
 	// Verifies the email code for a CLI signup session, creates the account,

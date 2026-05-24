@@ -31,7 +31,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -290,6 +290,116 @@ export type CliSignupVerifyResult = {
     oauth_client_id: string;
     org_id: string;
     org_name: string | null;
+};
+
+export type StartAgentSignupInput = {
+    email: string;
+    signup_code: string;
+    /**
+     * Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy
+     */
+    terms_accepted: boolean;
+    /**
+     * Human-readable device name used for the created agent OAuth session
+     */
+    device_name?: string;
+    /**
+     * Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or fewer
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+};
+
+export type AgentSignupStartResult = {
+    /**
+     * Opaque token used to verify or resend the pending agent signup
+     */
+    signup_token: string;
+    email: string;
+    /**
+     * Seconds until the pending signup expires
+     */
+    expires_in: number;
+    /**
+     * Minimum seconds before requesting another verification email
+     */
+    resend_after: number;
+    /**
+     * Number of digits in the emailed verification code
+     */
+    verification_code_length: number;
+};
+
+export type ResendAgentSignupVerificationInput = {
+    signup_token: string;
+};
+
+export type AgentSignupResendResult = {
+    email: string;
+    /**
+     * Seconds until the pending signup expires
+     */
+    expires_in: number;
+    /**
+     * Minimum seconds before requesting another verification email
+     */
+    resend_after: number;
+    /**
+     * Number of digits in the emailed verification code
+     */
+    verification_code_length: number;
+};
+
+export type VerifyAgentSignupInput = {
+    signup_token: string;
+    verification_code: string;
+    /**
+     * Optional workspace id to target when the verified email already belongs to multiple workspaces
+     */
+    org_id?: string;
+};
+
+export type AgentOrgRef = {
+    id: string;
+    name: string | null;
+};
+
+export type AgentSignupVerifyResult = {
+    /**
+     * Legacy alias for access_token. New CLI builds should persist access_token and refresh_token.
+     */
+    api_key: string;
+    /**
+     * Legacy alias for oauth_grant_id
+     */
+    key_id: string;
+    /**
+     * Legacy display prefix derived from access_token
+     */
+    key_prefix: string;
+    /**
+     * OAuth access token for CLI API authentication
+     */
+    access_token: string;
+    /**
+     * OAuth refresh token used by the CLI to renew access
+     */
+    refresh_token: string;
+    token_type: 'Bearer';
+    /**
+     * Seconds until access_token expires
+     */
+    expires_in: number;
+    auth_method: 'oauth';
+    oauth_grant_id: string;
+    oauth_client_id: string;
+    org_id: string;
+    org_name: string | null;
+    /**
+     * Workspaces available to the verified email. The minted session targets `org_id`.
+     */
+    orgs: Array<AgentOrgRef>;
 };
 
 export type CliLogoutInput = {
@@ -2003,6 +2113,107 @@ export type VerifyCliSignupResponses = {
 };
 
 export type VerifyCliSignupResponse = VerifyCliSignupResponses[keyof VerifyCliSignupResponses];
+
+export type StartAgentSignupData = {
+    body: StartAgentSignupInput;
+    path?: never;
+    query?: never;
+    url: '/agent/signup/start';
+};
+
+export type StartAgentSignupErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type StartAgentSignupError = StartAgentSignupErrors[keyof StartAgentSignupErrors];
+
+export type StartAgentSignupResponses = {
+    /**
+     * Agent signup session created and verification email sent
+     */
+    201: SuccessEnvelope & {
+        data?: AgentSignupStartResult;
+    };
+};
+
+export type StartAgentSignupResponse = StartAgentSignupResponses[keyof StartAgentSignupResponses];
+
+export type ResendAgentSignupVerificationData = {
+    body: ResendAgentSignupVerificationInput;
+    path?: never;
+    query?: never;
+    url: '/agent/signup/resend';
+};
+
+export type ResendAgentSignupVerificationErrors = {
+    /**
+     * Invalid token or expired token
+     */
+    400: ErrorResponse;
+    /**
+     * Global rate limit exceeded or resend requested too quickly
+     */
+    429: ErrorResponse;
+};
+
+export type ResendAgentSignupVerificationError = ResendAgentSignupVerificationErrors[keyof ResendAgentSignupVerificationErrors];
+
+export type ResendAgentSignupVerificationResponses = {
+    /**
+     * Verification email resent
+     */
+    200: SuccessEnvelope & {
+        data?: AgentSignupResendResult;
+    };
+};
+
+export type ResendAgentSignupVerificationResponse = ResendAgentSignupVerificationResponses[keyof ResendAgentSignupVerificationResponses];
+
+export type VerifyAgentSignupData = {
+    body: VerifyAgentSignupInput;
+    path?: never;
+    query?: never;
+    url: '/agent/signup/verify';
+};
+
+export type VerifyAgentSignupErrors = {
+    /**
+     * Invalid request, invalid verification code, expired token, invalid signup code, or account creation failure
+     */
+    400: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Existing account is not in a usable workspace state
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type VerifyAgentSignupError = VerifyAgentSignupErrors[keyof VerifyAgentSignupErrors];
+
+export type VerifyAgentSignupResponses = {
+    /**
+     * Agent signup verified and OAuth tokens created
+     */
+    200: SuccessEnvelope & {
+        data?: AgentSignupVerifyResult;
+    };
+};
+
+export type VerifyAgentSignupResponse = VerifyAgentSignupResponses[keyof VerifyAgentSignupResponses];
 
 export type CliLogoutData = {
     body?: CliLogoutInput;
