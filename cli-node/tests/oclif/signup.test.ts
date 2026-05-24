@@ -180,6 +180,33 @@ describe("agent signup commands", () => {
     );
   });
 
+  it("continues an existing pending signup without saying a new code was sent", async () => {
+    const deps = flowDeps({});
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    await runSignupStartWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      email: "test@example.com",
+      flags: {
+        "accept-terms": true,
+        "signup-code": "signup-code",
+      },
+    });
+
+    const stderr = writeSpy.mock.calls
+      .map((call: unknown[]) => String(call[0]))
+      .join("");
+    expect(deps.startAgentSignup).not.toHaveBeenCalled();
+    expect(stderr).toContain(
+      "Continuing pending Primitive signup for test@example.com.\n",
+    );
+    expect(stderr).toContain(
+      "Run `primitive signup confirm test@example.com <code>` to finish, or `primitive signup resend test@example.com` to send a new code.\n",
+    );
+    expect(stderr).not.toContain("Sent a 6-digit verification code");
+  });
+
   it("checks existing credentials as an already-locked operation", async () => {
     saveCliCredentials(tempDir, EXISTING_CREDENTIALS);
     const checkExistingLogin = vi.fn(async () => ({

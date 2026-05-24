@@ -78,6 +78,11 @@ type SignupFlowDeps = {
   verifyAgentSignup?: typeof verifyAgentSignup;
 };
 
+type StartSignupResult = {
+  pending: PendingAgentSignup;
+  started: boolean;
+};
+
 type ResendVerificationCodeResult = {
   pending: PendingAgentSignup;
   resent: boolean;
@@ -389,7 +394,7 @@ async function startSignup(params: {
   deps: SignupFlowDeps;
   email: string;
   flags: SignupFlags;
-}): Promise<PendingAgentSignup> {
+}): Promise<StartSignupResult> {
   const existingPending = loadPendingAgentSignup(
     params.configDir,
     params.apiBaseUrl1,
@@ -404,7 +409,7 @@ async function startSignup(params: {
       process.stderr.write(
         `Run \`primitive signup confirm ${existingPending.email} <code>\` to finish, or \`primitive signup resend ${existingPending.email}\` to send a new code.\n`,
       );
-      return existingPending;
+      return { pending: existingPending, started: false };
     }
     throw cliError(
       `Pending signup is for ${existingPending.email}. Run \`primitive signup ${params.email} --force\` to replace it.`,
@@ -439,11 +444,14 @@ async function startSignup(params: {
   if (!startResult) {
     throw cliError("Primitive API returned an empty agent signup response.");
   }
-  return savePendingAgentSignup(
-    params.configDir,
-    startResult,
-    params.apiBaseUrl1,
-  );
+  return {
+    pending: savePendingAgentSignup(
+      params.configDir,
+      startResult,
+      params.apiBaseUrl1,
+    ),
+    started: true,
+  };
 }
 
 async function resendVerificationCode(params: {
@@ -520,7 +528,7 @@ export async function runSignupStartWithCredentialLock(params: {
     apiBaseUrl1: flags["api-base-url-1"],
     configDir,
   });
-  const pending = await startSignup({
+  const start = await startSignup({
     apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
     apiClient,
     configDir,
@@ -528,7 +536,7 @@ export async function runSignupStartWithCredentialLock(params: {
     email,
     flags,
   });
-  writeStartInstructions(pending);
+  if (start.started) writeStartInstructions(start.pending);
 }
 
 export async function runSignupConfirmWithCredentialLock(params: {
@@ -664,7 +672,7 @@ export async function runSignupInteractiveWithCredentialLock(params: {
     );
   } else {
     const email = await promptRequiredFn("Email: ");
-    start = await startSignup({
+    const started = await startSignup({
       apiBaseUrl1,
       apiClient,
       configDir,
@@ -672,6 +680,7 @@ export async function runSignupInteractiveWithCredentialLock(params: {
       email,
       flags,
     });
+    start = started.pending;
   }
 
   process.stderr.write(
