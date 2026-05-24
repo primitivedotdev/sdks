@@ -76,17 +76,28 @@ const ESBUILD_VERSION_RANGE = "^0.27.0";
 // oclif command lifecycle.
 
 export function renderHandler(): string {
-  return `// env.PRIMITIVE_API_KEY is auto-injected by the Primitive Functions runtime.
+  return `// env.PRIMITIVE_API_KEY, env.PRIMITIVE_WEBHOOK_SECRET, and
+// env.PRIMITIVE_API_BASE_URL are auto-injected by the Primitive Functions runtime.
 //
 // Imports are taken from the \`/api\` subpath, NOT the package root.
 // The root export pulls in webhook signing helpers that depend on
 // \`node:crypto\`, which breaks Workers-style bundles. The \`/api\`
-// subpath is Workers-safe and exposes everything a handler needs.
+// subpath is Workers-safe and exposes everything a handler needs,
+// including Web Crypto signature verification.
 import {
   createPrimitiveClient,
   normalizeReceivedEmail,
+  PRIMITIVE_SIGNATURE_HEADER,
   type EmailReceivedEvent,
+  verifyWebhookSignature,
+  WebhookVerificationError,
 } from "@primitivedotdev/sdk/api";
+
+interface Env {
+  PRIMITIVE_API_KEY: string;
+  PRIMITIVE_API_BASE_URL: string;
+  PRIMITIVE_WEBHOOK_SECRET: string;
+}
 
 // Loop-protection knob. Only used by the isLoop helper below; the
 // handler's outbound reply address is server-defaulted (no
@@ -137,10 +148,26 @@ export function isLoop(event: EmailReceivedEvent): boolean {
 export default {
   async fetch(
     req: Request,
-    env: { PRIMITIVE_API_KEY: string },
+    env: Env,
   ): Promise<Response> {
     try {
-      const event = (await req.json()) as EmailReceivedEvent;
+      const rawBody = await req.text();
+      const signatureHeader = req.headers.get(PRIMITIVE_SIGNATURE_HEADER) ?? "";
+
+      try {
+        await verifyWebhookSignature({
+          rawBody,
+          signatureHeader,
+          secret: env.PRIMITIVE_WEBHOOK_SECRET,
+        });
+      } catch (signatureError) {
+        if (signatureError instanceof WebhookVerificationError) {
+          return new Response("invalid signature", { status: 401 });
+        }
+        throw signatureError;
+      }
+
+      const event = JSON.parse(rawBody) as EmailReceivedEvent;
 
       // Only "email.received" exists today. Future event types will
       // arrive with a different discriminator; return 2xx so the
@@ -150,15 +177,17 @@ export default {
         return Response.json({ ok: true, skipped: event.event });
       }
 
-      // Loop protection runs immediately after the event-type check
-      // (the gateway has already HMAC-verified the request before it
-      // reaches this handler). See isLoop above for what's covered and
-      // how to extend it.
+      // Loop protection runs immediately after signature verification
+      // and the event-type check. See isLoop above for what's covered
+      // and how to extend it.
       if (isLoop(event)) {
         return Response.json({ ok: true, skipped: "loop" });
       }
 
-      const client = createPrimitiveClient({ apiKey: env.PRIMITIVE_API_KEY });
+      const client = createPrimitiveClient({
+        apiKey: env.PRIMITIVE_API_KEY,
+        apiBaseUrl1: env.PRIMITIVE_API_BASE_URL,
+      });
 
       // Recipient gate
       // https://www.primitive.dev/docs/sending#who-you-can-send-to
@@ -327,7 +356,7 @@ export const FUNCTION_TEMPLATES: FunctionTemplate[] = [
     author: PRIMITIVE_TEAM_AUTHOR,
     dependencies: ["@primitivedotdev/sdk"],
     description:
-      "A deployable TypeScript email handler that validates email.received events, skips likely loops, and replies with the Primitive SDK.",
+      "A deployable TypeScript email handler that verifies signed email.received events, skips likely loops, and replies with the Primitive SDK.",
     devDependencies: ["@primitivedotdev/cli", "esbuild", "typescript"],
     files: ({ name }) => renderEmailReplyTemplateFiles(name),
     id: DEFAULT_FUNCTION_TEMPLATE_ID,
