@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_API_BASE_URL_1 } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadCliCredentials } from "../../src/oclif/auth.js";
+import {
+  loadCliCredentials,
+  type StoredCliCredentials,
+  saveCliCredentials,
+} from "../../src/oclif/auth.js";
 import {
   formatSignupSeconds,
   loadPendingAgentSignup,
@@ -43,6 +47,20 @@ const VERIFY_RESULT = {
   org_name: "Test Org",
   orgs: [{ id: "22222222-2222-4222-8222-222222222222", name: "Test Org" }],
   refresh_token: "prim_ort_test_refresh",
+  token_type: "Bearer",
+};
+
+const EXISTING_CREDENTIALS: StoredCliCredentials = {
+  access_token: "prim_oat_existing",
+  api_base_url_1: DEFAULT_API_BASE_URL_1,
+  auth_method: "oauth",
+  created_at: "2026-05-05T00:00:00.000Z",
+  expires_at: "2099-05-05T00:00:00.000Z",
+  oauth_client_id: "primitive-cli",
+  oauth_grant_id: "11111111-1111-4111-8111-111111111111",
+  org_id: "33333333-3333-4333-8333-333333333333",
+  org_name: "Existing Org",
+  refresh_token: "prim_ort_existing",
   token_type: "Bearer",
 };
 
@@ -162,6 +180,37 @@ describe("agent signup commands", () => {
     );
   });
 
+  it("checks existing credentials as an already-locked operation", async () => {
+    saveCliCredentials(tempDir, EXISTING_CREDENTIALS);
+    const checkExistingLogin = vi.fn(async () => ({
+      status: "valid" as const,
+    }));
+    const deps = flowDeps({}) as ReturnType<typeof flowDeps> & {
+      checkExistingLogin: typeof checkExistingLogin;
+    };
+    deps.checkExistingLogin = checkExistingLogin;
+
+    await expect(
+      runSignupStartWithCredentialLock({
+        configDir: tempDir,
+        deps,
+        email: "test@example.com",
+        flags: {
+          "accept-terms": true,
+          "signup-code": "signup-code",
+        },
+      }),
+    ).rejects.toThrow(/Already logged in/);
+
+    expect(checkExistingLogin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        configDir: tempDir,
+        credentials: EXISTING_CREDENTIALS,
+        credentialsLockHeld: true,
+      }),
+    );
+  });
+
   it("confirms signup and saves returned OAuth credentials", async () => {
     const deps = flowDeps({});
     savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
@@ -241,6 +290,64 @@ describe("agent signup commands", () => {
     });
   });
 
+  it("does not claim a resend occurred when the API says to slow down", async () => {
+    const deps = flowDeps({
+      resendAgentSignupVerification: vi.fn(async () => ({
+        error: {
+          error: {
+            code: "slow_down",
+            message: "Verification email was sent recently",
+          },
+        },
+        response: new Response(null, { headers: { "Retry-After": "45" } }),
+      })),
+    });
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    await runSignupResendWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      email: "test@example.com",
+      flags: {},
+    });
+
+    const stderr = writeSpy.mock.calls
+      .map((call: unknown[]) => String(call[0]))
+      .join("");
+    expect(stderr).toContain(
+      "Verification email was sent recently. Wait 45 seconds before trying again.\n",
+    );
+    expect(stderr).not.toContain("Sent a new");
+    expect(
+      loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL_1)?.signup_token,
+    ).toBe(START_RESULT.signup_token);
+  });
+
+  it("clears dead pending signup state when resend sees an expired token", async () => {
+    const deps = flowDeps({
+      resendAgentSignupVerification: vi.fn(async () => ({
+        error: {
+          error: {
+            code: "expired_token",
+            message: "Signup token expired",
+          },
+        },
+      })),
+    });
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    await expect(
+      runSignupResendWithCredentialLock({
+        configDir: tempDir,
+        deps,
+        email: "test@example.com",
+        flags: {},
+      }),
+    ).rejects.toThrow(/Could not resend/);
+
+    expect(loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL_1)).toBeNull();
+  });
+
   it("runs the full interactive flow when requested", async () => {
     const deps = flowDeps({
       promptAnswers: ["test@example.com", "signup-code", "123456"],
@@ -257,6 +364,37 @@ describe("agent signup commands", () => {
     expect(loadCliCredentials(tempDir)?.access_token).toBe(
       VERIFY_RESULT.access_token,
     );
+  });
+
+  it("keeps interactive resend in-place when the API says to slow down", async () => {
+    const deps = flowDeps({
+      promptAnswers: ["resend", "123456"],
+      resendAgentSignupVerification: vi.fn(async () => ({
+        error: {
+          error: {
+            code: "slow_down",
+            message: "Verification email was sent recently",
+          },
+        },
+        response: new Response(null, { headers: { "Retry-After": "30" } }),
+      })),
+    });
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    await runSignupInteractiveWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      flags: {},
+    });
+
+    const stderr = writeSpy.mock.calls
+      .map((call: unknown[]) => String(call[0]))
+      .join("");
+    expect(stderr).toContain(
+      "Verification email was sent recently. Wait 30 seconds before trying again.\n",
+    );
+    expect(stderr).not.toContain("Sent a new 6-digit verification code.");
+    expect(deps.verifyAgentSignup).toHaveBeenCalledOnce();
   });
 
   it("keeps interactive signup open after an invalid verification code", async () => {
@@ -289,6 +427,43 @@ describe("agent signup commands", () => {
     expect(
       writeSpy.mock.calls.map((call: unknown[]) => String(call[0])).join(""),
     ).toContain("Invalid verification code. Try again or type `resend`.\n");
+  });
+
+  it("does not repeat the force replacement warning on interactive code retries", async () => {
+    saveCliCredentials(tempDir, EXISTING_CREDENTIALS);
+    const verifyAgentSignup = vi
+      .fn()
+      .mockResolvedValueOnce({
+        error: {
+          error: {
+            code: "invalid_verification_code",
+            message: "Invalid verification code",
+          },
+        },
+      })
+      .mockResolvedValueOnce({ data: { data: VERIFY_RESULT } });
+    const deps = flowDeps({
+      promptAnswers: ["test@example.com", "signup-code", "000000", "123456"],
+      verifyAgentSignup,
+    });
+
+    await runSignupInteractiveWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      flags: {
+        force: true,
+      },
+    });
+
+    const stderr = writeSpy.mock.calls
+      .map((call: unknown[]) => String(call[0]))
+      .join("");
+    expect(
+      stderr.match(
+        /Replacing saved Primitive CLI credentials after signup because --force was set\./g,
+      ) ?? [],
+    ).toHaveLength(1);
+    expect(verifyAgentSignup).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the pending token after invalid verification code", async () => {

@@ -78,6 +78,11 @@ type SignupFlowDeps = {
   verifyAgentSignup?: typeof verifyAgentSignup;
 };
 
+type ResendVerificationCodeResult = {
+  pending: PendingAgentSignup;
+  resent: boolean;
+};
+
 function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
 }
@@ -328,6 +333,7 @@ async function checkExistingCredentials(params: {
     apiBaseUrl1: params.apiBaseUrl1,
     configDir: params.configDir,
     credentials: existing,
+    credentialsLockHeld: true,
   });
   if (existingStatus.status === "removed_stale") {
     process.stderr.write("Continuing with Primitive signup...\n");
@@ -446,7 +452,7 @@ async function resendVerificationCode(params: {
   configDir: string;
   deps: SignupFlowDeps;
   start: PendingAgentSignup;
-}): Promise<PendingAgentSignup> {
+}): Promise<ResendVerificationCodeResult> {
   const resendFn =
     params.deps.resendAgentSignupVerification ?? resendAgentSignupVerification;
   const resent = await resendFn({
@@ -466,7 +472,14 @@ async function resendVerificationCode(params: {
           verification_code_length: resend.verification_code_length,
         }
       : params.start;
-    return savePendingAgentSignup(params.configDir, next, params.apiBaseUrl1);
+    return {
+      pending: savePendingAgentSignup(
+        params.configDir,
+        next,
+        params.apiBaseUrl1,
+      ),
+      resent: true,
+    };
   }
 
   const payload = extractErrorPayload(resent.error);
@@ -476,7 +489,10 @@ async function resendVerificationCode(params: {
     process.stderr.write(
       `Verification email was sent recently. Wait ${formatSignupSeconds(retryAfter)} before trying again.\n`,
     );
-    return params.start;
+    return { pending: params.start, resent: false };
+  }
+  if (code === EXPIRED_TOKEN || code === INVALID_SIGNUP_TOKEN) {
+    deletePendingAgentSignup(params.configDir);
   }
 
   writeErrorWithHints(payload);
@@ -521,15 +537,18 @@ export async function runSignupConfirmWithCredentialLock(params: {
   deps?: SignupFlowDeps;
   email: string;
   flags: SignupConfirmFlags;
+  skipExistingCredentialCheck?: boolean;
 }): Promise<void> {
   const { configDir, flags } = params;
   const deps = params.deps ?? {};
-  await checkExistingCredentials({
-    apiBaseUrl1: flags["api-base-url-1"],
-    configDir,
-    deps,
-    flags,
-  });
+  if (!params.skipExistingCredentialCheck) {
+    await checkExistingCredentials({
+      apiBaseUrl1: flags["api-base-url-1"],
+      configDir,
+      deps,
+      flags,
+    });
+  }
 
   const { apiClient, requestConfig } = createCliApiClient({
     apiBaseUrl1: flags["api-base-url-1"],
@@ -601,16 +620,18 @@ export async function runSignupResendWithCredentialLock(params: {
     configDir: params.configDir,
     email: params.email,
   });
-  const next = await resendVerificationCode({
+  const resend = await resendVerificationCode({
     apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
     apiClient,
     configDir: params.configDir,
     deps,
     start: pending,
   });
-  process.stderr.write(
-    `Sent a new ${next.verification_code_length}-digit verification code to ${next.email}. It expires in ${formatSignupSeconds(next.expires_in)}.\n`,
-  );
+  if (resend.resent) {
+    process.stderr.write(
+      `Sent a new ${resend.pending.verification_code_length}-digit verification code to ${resend.pending.email}. It expires in ${formatSignupSeconds(resend.pending.expires_in)}.\n`,
+    );
+  }
 }
 
 export async function runSignupInteractiveWithCredentialLock(params: {
@@ -668,16 +689,19 @@ export async function runSignupInteractiveWithCredentialLock(params: {
       `Verification code (${start.verification_code_length} digits): `,
     );
     if (verificationCode.toLowerCase() === "resend") {
-      start = await resendVerificationCode({
+      const resend = await resendVerificationCode({
         apiBaseUrl1,
         apiClient,
         configDir,
         deps,
         start,
       });
-      process.stderr.write(
-        `Sent a new ${start.verification_code_length}-digit verification code. It expires in ${formatSignupSeconds(start.expires_in)}.\n`,
-      );
+      start = resend.pending;
+      if (resend.resent) {
+        process.stderr.write(
+          `Sent a new ${start.verification_code_length}-digit verification code. It expires in ${formatSignupSeconds(start.expires_in)}.\n`,
+        );
+      }
       continue;
     }
 
@@ -691,6 +715,7 @@ export async function runSignupInteractiveWithCredentialLock(params: {
           "api-base-url-1": flags["api-base-url-1"],
           force: true,
         },
+        skipExistingCredentialCheck: true,
       });
       return;
     } catch (error) {
@@ -868,11 +893,23 @@ export class SignupResendCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(SignupResendCommand);
-    await runSignupResendWithCredentialLock({
-      configDir: this.config.configDir,
-      email: args.email,
-      flags,
-    });
+    let releaseCredentialsLock: () => void;
+    try {
+      releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw cliError(detail);
+    }
+
+    try {
+      await runSignupResendWithCredentialLock({
+        configDir: this.config.configDir,
+        email: args.email,
+        flags,
+      });
+    } finally {
+      releaseCredentialsLock();
+    }
   }
 }
 
