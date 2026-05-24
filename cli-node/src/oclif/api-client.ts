@@ -21,6 +21,8 @@ import {
 
 const API_HEADERS_ENV = "PRIMITIVE_API_HEADERS";
 const OAUTH_REFRESH_SKEW_MS = 60 * 1000;
+export const SAVED_CLI_OAUTH_SESSION_EXPIRED_MESSAGE =
+  "Saved Primitive CLI OAuth session expired or was revoked. Run `primitive login` to authenticate again.";
 
 type Env = Record<string, string | undefined>;
 
@@ -281,10 +283,9 @@ export async function refreshStoredCliCredentials(params: {
       const description = oauthErrorDescription(payload);
       if (code === "invalid_grant") {
         deleteCliCredentials(params.configDir);
-        throw new Errors.CLIError(
-          "Saved Primitive CLI OAuth session expired or was revoked. Run `primitive login` to authenticate again.",
-          { exit: 1 },
-        );
+        throw new Errors.CLIError(SAVED_CLI_OAUTH_SESSION_EXPIRED_MESSAGE, {
+          exit: 1,
+        });
       }
       throw new Errors.CLIError(
         `Could not refresh saved Primitive CLI OAuth credentials${description ? `: ${description}` : "."}`,

@@ -1,7 +1,10 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import type { CliLogoutResult } from "@primitivedotdev/api-core";
 import { cliLogout } from "@primitivedotdev/api-core";
-import { createAuthenticatedCliApiClient } from "../api-client.js";
+import {
+  createAuthenticatedCliApiClient,
+  SAVED_CLI_OAUTH_SESSION_EXPIRED_MESSAGE,
+} from "../api-client.js";
 import {
   API_ERROR_CODES,
   extractErrorCode,
@@ -26,6 +29,102 @@ function unwrapData<T>(value: unknown): T | null {
 type LogoutFlags = {
   "api-base-url-1"?: string;
 };
+
+type LogoutDeps = {
+  cliLogout?: typeof cliLogout;
+  createAuthenticatedCliApiClient?: typeof createAuthenticatedCliApiClient;
+};
+
+function isSavedOAuthSessionExpiredError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message === SAVED_CLI_OAUTH_SESSION_EXPIRED_MESSAGE
+  );
+}
+
+export async function runLogoutWithCredentialLock(params: {
+  configDir: string;
+  deps?: LogoutDeps;
+  flags: LogoutFlags;
+}): Promise<void> {
+  const deps = {
+    cliLogout,
+    createAuthenticatedCliApiClient,
+    ...params.deps,
+  };
+  let credentials: ReturnType<typeof loadCliCredentials>;
+  try {
+    credentials = loadCliCredentials(params.configDir);
+  } catch (error) {
+    deleteCliCredentials(params.configDir);
+    const detail = error instanceof Error ? error.message : String(error);
+    process.stderr.write(
+      `Removed unreadable Primitive CLI credentials. Backing OAuth grant was not revoked: ${detail}\n`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  if (!credentials) {
+    throw cliError(
+      "Not logged in. Run `primitive login` to create saved CLI credentials.",
+    );
+  }
+
+  let authenticated: Awaited<
+    ReturnType<typeof createAuthenticatedCliApiClient>
+  >;
+  try {
+    authenticated = await deps.createAuthenticatedCliApiClient({
+      apiBaseUrl1: params.flags["api-base-url-1"],
+      configDir: params.configDir,
+      credentialsLockHeld: true,
+    });
+  } catch (error) {
+    if (
+      isSavedOAuthSessionExpiredError(error) &&
+      loadCliCredentials(params.configDir) === null
+    ) {
+      process.stderr.write(
+        "Logged out (OAuth session was already expired or revoked on the server).\n",
+      );
+      return;
+    }
+    throw error;
+  }
+  const freshCredentials = authenticated.auth.credentials ?? credentials;
+
+  const result = await deps.cliLogout({
+    body: { key_id: freshCredentials.oauth_grant_id },
+    client: authenticated.apiClient.client,
+    responseStyle: "fields",
+  });
+
+  if (result.error) {
+    const payload = extractErrorPayload(result.error);
+    const code = extractErrorCode(payload);
+    if (
+      code === API_ERROR_CODES.unauthorized ||
+      code === API_ERROR_CODES.notFound
+    ) {
+      deleteCliCredentials(params.configDir);
+      writeErrorWithHints(payload);
+      process.stderr.write(
+        "Removed saved Primitive CLI credentials because the backing OAuth grant is already unavailable.\n",
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    writeErrorWithHints(payload);
+    throw cliError("Could not revoke the saved Primitive CLI OAuth grant.");
+  }
+
+  const logout = unwrapData<CliLogoutResult>(result.data);
+  deleteCliCredentials(params.configDir);
+
+  const grantId = logout?.oauth_grant_id ?? freshCredentials.oauth_grant_id;
+  process.stderr.write(`Logged out and revoked OAuth grant ${grantId}.\n`);
+}
 
 class LogoutCommand extends Command {
   static description =
@@ -55,69 +154,13 @@ class LogoutCommand extends Command {
     }
 
     try {
-      await this.runWithCredentialLock(flags);
+      await runLogoutWithCredentialLock({
+        configDir: this.config.configDir,
+        flags,
+      });
     } finally {
       releaseCredentialsLock();
     }
-  }
-
-  private async runWithCredentialLock(flags: LogoutFlags): Promise<void> {
-    let credentials: ReturnType<typeof loadCliCredentials>;
-    try {
-      credentials = loadCliCredentials(this.config.configDir);
-    } catch (error) {
-      deleteCliCredentials(this.config.configDir);
-      const detail = error instanceof Error ? error.message : String(error);
-      process.stderr.write(
-        `Removed unreadable Primitive CLI credentials. Backing OAuth grant was not revoked: ${detail}\n`,
-      );
-      process.exitCode = 1;
-      return;
-    }
-    if (!credentials) {
-      throw cliError(
-        "Not logged in. Run `primitive login` to create saved CLI credentials.",
-      );
-    }
-
-    const { apiClient, auth } = await createAuthenticatedCliApiClient({
-      apiBaseUrl1: flags["api-base-url-1"],
-      configDir: this.config.configDir,
-      credentialsLockHeld: true,
-    });
-    const freshCredentials = auth.credentials ?? credentials;
-
-    const result = await cliLogout({
-      body: { key_id: freshCredentials.oauth_grant_id },
-      client: apiClient.client,
-      responseStyle: "fields",
-    });
-
-    if (result.error) {
-      const payload = extractErrorPayload(result.error);
-      const code = extractErrorCode(payload);
-      if (
-        code === API_ERROR_CODES.unauthorized ||
-        code === API_ERROR_CODES.notFound
-      ) {
-        deleteCliCredentials(this.config.configDir);
-        writeErrorWithHints(payload);
-        process.stderr.write(
-          "Removed saved Primitive CLI credentials because the backing OAuth grant is already unavailable.\n",
-        );
-        process.exitCode = 1;
-        return;
-      }
-
-      writeErrorWithHints(payload);
-      throw cliError("Could not revoke the saved Primitive CLI OAuth grant.");
-    }
-
-    const logout = unwrapData<CliLogoutResult>(result.data);
-    deleteCliCredentials(this.config.configDir);
-
-    const grantId = logout?.oauth_grant_id ?? freshCredentials.oauth_grant_id;
-    process.stderr.write(`Logged out and revoked OAuth grant ${grantId}.\n`);
   }
 }
 
