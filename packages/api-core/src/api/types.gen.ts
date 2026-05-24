@@ -597,6 +597,19 @@ export type EmailDetail = {
      *
      */
     replies: Array<EmailDetailReply>;
+    /**
+     * The `sent_emails.id` of the outbound this inbound was a
+     * reply to, when resolvable. Set at inbound ingest by
+     * matching the parsed In-Reply-To (or References, as a
+     * fallback) against `sent_emails.message_id` in the same
+     * org. The mirror of `sent_emails.in_reply_to_email_id` for
+     * the inbound side of a thread. NULL when the inbound is
+     * not a threaded reply to one of your sends, when neither
+     * header survived the path through intermediate MTAs, or on
+     * inbound received before this auto-link landed.
+     *
+     */
+    reply_to_sent_email_id?: string | null;
 };
 
 export type EmailDetailReply = {
@@ -2438,6 +2451,21 @@ export type SearchEmailsData = {
          * Filter by domain ID.
          */
         domain_id?: string;
+        /**
+         * Filter to inbound emails that are replies to a specific
+         * outbound send. The value is a `sent_emails.id` (UUID). At
+         * inbound ingest, Primitive matches the parsed In-Reply-To
+         * header (or References as a fallback) against
+         * `sent_emails.message_id` in the same org and records the
+         * resolved id on `emails.reply_to_sent_email_id`. This filter
+         * is the strict-threading lookup behind `primitive chat` and
+         * any UI that wants to show the inbound reply to a given
+         * send. NULL on inbound that isn't a threaded reply to one
+         * of your sends, so existing emails received before this
+         * ingestion landed will not match.
+         *
+         */
+        reply_to_sent_email_id?: string;
         /**
          * Filter by inbound email lifecycle status.
          */

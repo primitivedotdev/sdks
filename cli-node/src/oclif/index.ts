@@ -4,6 +4,7 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
+import ChatCommand from "./commands/chat.js";
 import {
   ConfigCommand,
   ConfigListCommand,
@@ -265,6 +266,12 @@ export const COMMANDS: Record<string, typeof Command> = {
   // stored-inbound reply flow. The generated operation remains
   // available as sending:reply-to-email for full API parity.
   reply: ReplyCommand,
+  // `chat` is the first-party verb for agent-to-agent communication
+  // over email. `send` is transport (fire-and-forget); `chat` is
+  // semantic (send + wait for the threaded reply, then print the
+  // body). Positioned as the canonical verb for the
+  // agents-behind-email-addresses paradigm.
+  chat: ChatCommand,
   // `login` creates and stores an org-scoped CLI API key via browser approval.
   login: LoginCommand,
   // `signup` creates an account, verifies email, and stores a CLI API key.

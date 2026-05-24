@@ -2091,6 +2091,16 @@ type EmailDetail struct {
 	// attempts that were gate-denied, so the array reflects every
 	// recorded reply attempt regardless of outcome.
 	Replies []EmailDetailReply `json:"replies"`
+	// The `sent_emails.id` of the outbound this inbound was a
+	// reply to, when resolvable. Set at inbound ingest by
+	// matching the parsed In-Reply-To (or References, as a
+	// fallback) against `sent_emails.message_id` in the same
+	// org. The mirror of `sent_emails.in_reply_to_email_id` for
+	// the inbound side of a thread. NULL when the inbound is
+	// not a threaded reply to one of your sends, when neither
+	// header survived the path through intermediate MTAs, or on
+	// inbound received before this auto-link landed.
+	ReplyToSentEmailID OptNilUUID `json:"reply_to_sent_email_id"`
 }
 
 // GetID returns the value of ID.
@@ -2258,6 +2268,11 @@ func (s *EmailDetail) GetReplies() []EmailDetailReply {
 	return s.Replies
 }
 
+// GetReplyToSentEmailID returns the value of ReplyToSentEmailID.
+func (s *EmailDetail) GetReplyToSentEmailID() OptNilUUID {
+	return s.ReplyToSentEmailID
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -2421,6 +2436,11 @@ func (s *EmailDetail) SetFromKnownAddress(val OptBool) {
 // SetReplies sets the value of Replies.
 func (s *EmailDetail) SetReplies(val []EmailDetailReply) {
 	s.Replies = val
+}
+
+// SetReplyToSentEmailID sets the value of ReplyToSentEmailID.
+func (s *EmailDetail) SetReplyToSentEmailID(val OptNilUUID) {
+	s.ReplyToSentEmailID = val
 }
 
 // Ref: #/components/schemas/EmailDetailReply

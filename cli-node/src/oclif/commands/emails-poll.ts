@@ -17,6 +17,7 @@ export type EmailPollFilters = {
   from?: string;
   hasAttachment?: boolean;
   q?: string;
+  replyToSentEmailId?: string;
   spamScoreGte?: number;
   spamScoreLt?: number;
   subject?: string;
@@ -30,6 +31,7 @@ export type EmailPollFilterFlags = {
   from?: string;
   "has-attachment"?: boolean;
   q?: string;
+  "reply-to-sent-email-id"?: string;
   "spam-score-gte"?: number;
   "spam-score-lt"?: number;
   subject?: string;
@@ -76,6 +78,7 @@ export function filtersFromFlags(
     from: flags.from,
     hasAttachment: flags["has-attachment"],
     q: flags.q,
+    replyToSentEmailId: flags["reply-to-sent-email-id"],
     spamScoreGte: flags["spam-score-gte"],
     spamScoreLt: flags["spam-score-lt"],
     subject: flags.subject,
@@ -117,6 +120,9 @@ export function buildEmailSearchQuery(params: {
   }
   if (params.filters.spamScoreLt !== undefined) {
     query.spam_score_lt = params.filters.spamScoreLt;
+  }
+  if (params.filters.replyToSentEmailId) {
+    query.reply_to_sent_email_id = params.filters.replyToSentEmailId;
   }
   if (params.filters.subject) query.subject = params.filters.subject;
   if (params.filters.to) query.to = params.filters.to;

@@ -6546,9 +6546,15 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 		}
 		e.ArrEnd()
 	}
+	{
+		if s.ReplyToSentEmailID.Set {
+			e.FieldStart("reply_to_sent_email_id")
+			s.ReplyToSentEmailID.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailDetail = [33]string{
+var jsonFieldsNameOfEmailDetail = [34]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -6582,6 +6588,7 @@ var jsonFieldsNameOfEmailDetail = [33]string{
 	30: "to_email",
 	31: "from_known_address",
 	32: "replies",
+	33: "reply_to_sent_email_id",
 }
 
 // Decode decodes EmailDetail from json.
@@ -6948,6 +6955,16 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"replies\"")
+			}
+		case "reply_to_sent_email_id":
+			if err := func() error {
+				s.ReplyToSentEmailID.Reset()
+				if err := s.ReplyToSentEmailID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reply_to_sent_email_id\"")
 			}
 		default:
 			return d.Skip()

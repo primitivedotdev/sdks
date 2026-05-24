@@ -2962,6 +2962,18 @@ type SearchEmailsParams struct {
 	Body OptString `json:",omitempty,omitzero"`
 	// Filter by domain ID.
 	DomainID OptUUID `json:",omitempty,omitzero"`
+	// Filter to inbound emails that are replies to a specific
+	// outbound send. The value is a `sent_emails.id` (UUID). At
+	// inbound ingest, Primitive matches the parsed In-Reply-To
+	// header (or References as a fallback) against
+	// `sent_emails.message_id` in the same org and records the
+	// resolved id on `emails.reply_to_sent_email_id`. This filter
+	// is the strict-threading lookup behind `primitive chat` and
+	// any UI that wants to show the inbound reply to a given
+	// send. NULL on inbound that isn't a threaded reply to one
+	// of your sends, so existing emails received before this
+	// ingestion landed will not match.
+	ReplyToSentEmailID OptUUID `json:",omitempty,omitzero"`
 	// Filter by inbound email lifecycle status.
 	Status OptEmailStatus `json:",omitempty,omitzero"`
 	// Filter emails received on or after this timestamp.
@@ -3040,6 +3052,15 @@ func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmails
 		}
 		if v, ok := packed[key]; ok {
 			params.DomainID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "reply_to_sent_email_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ReplyToSentEmailID = v.(OptUUID)
 		}
 	}
 	{
@@ -3523,6 +3544,47 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "domain_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: reply_to_sent_email_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "reply_to_sent_email_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotReplyToSentEmailIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotReplyToSentEmailIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ReplyToSentEmailID.SetTo(paramsDotReplyToSentEmailIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "reply_to_sent_email_id",
 			In:   "query",
 			Err:  err,
 		}
