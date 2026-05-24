@@ -19,14 +19,13 @@ import {
   API_ERROR_CODES,
   extractErrorCode,
   extractErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
   writeErrorWithHints,
 } from "../api-command.js";
 import {
   acquireCliCredentialsLock,
   credentialsPath,
+  deleteCliCredentials,
   loadCliCredentials,
-  normalizeApiBaseUrl2,
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../auth.js";
@@ -104,30 +103,37 @@ export async function checkExistingLogin(params: {
   if (!result.error) return { status: "valid" };
 
   const payload = extractErrorPayload(result.error);
-  const auth = {
-    apiKey: params.credentials.api_key,
-    apiBaseUrl1: probeApiBaseUrl1,
-    // Host-2 isn't relevant to checkExistingLogin (login is on host-1
-    // only), but the auth shape requires it. Use the default.
-    apiBaseUrl2: normalizeApiBaseUrl2(undefined),
-    credentials: params.credentials,
-    source: "stored" as const,
-  };
-  const removed = removeStaleSavedCredentialOnUnauthorized({
-    auth,
-    baseUrlOverridden: requestConfig.baseUrlOverridden,
-    configDir: params.configDir,
-    payload,
-  });
-  if (removed) return { status: "removed_stale" };
-
   const code = extractErrorCode(payload);
+
+  // checkExistingLogin is the one place auto-deleting saved
+  // credentials on 401 is the right move: the user explicitly ran
+  // `primitive login`, we probed the existing credential, and it was
+  // rejected. Mint a new key on top. Other 401 paths surface a hint
+  // and leave the saved credential alone (see surfaceUnauthorizedHint
+  // in api-command.ts for the reasoning).
+  //
+  // Skip the auto-delete when an API URL override is in play and the
+  // override URL differs from the URL the credentials were saved
+  // with. The most likely cause there is "saved against env A,
+  // probing against env B" — the credential may still be valid
+  // against its original host.
+  const baseUrlDiffersFromSaved =
+    requestConfig.baseUrlOverridden &&
+    requestConfig.apiBaseUrl1 !== params.credentials.api_base_url_1;
+  if (code === API_ERROR_CODES.unauthorized && !baseUrlDiffersFromSaved) {
+    deleteCliCredentials(params.configDir);
+    process.stderr.write(
+      "Removed saved Primitive CLI credentials because the existing key was rejected during login. Continuing with a fresh login.\n",
+    );
+    return { status: "removed_stale" };
+  }
+
   return {
     status: "blocked",
     payload,
     message:
       code === API_ERROR_CODES.unauthorized
-        ? "Saved Primitive CLI credentials were rejected. Run `primitive logout` to remove them before logging in again."
+        ? "Saved Primitive CLI credentials were rejected by an API URL different from the one they were saved with. Run `primitive logout` to remove them, or switch back to the original environment before logging in again."
         : "A saved Primitive CLI login exists, but the CLI could not verify whether it is still valid. Run `primitive logout` before logging in again.",
   };
 }

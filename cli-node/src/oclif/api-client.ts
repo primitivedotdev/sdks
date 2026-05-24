@@ -6,6 +6,7 @@ import {
   resolveCliAuth,
 } from "./auth.js";
 import {
+  DEFAULT_ENVIRONMENT,
   loadCliConfig,
   resolveConfigEnvironment,
   validateCliHeaderName,
@@ -87,6 +88,26 @@ export function resolveCliApiRequestConfig(params: {
   const currentEnvironment = resolveConfigEnvironment(cliConfig);
   const configuredApiBaseUrl1 = currentEnvironment?.config.api_base_url_1;
   const configuredApiBaseUrl2 = currentEnvironment?.config.api_base_url_2;
+
+  // Refuse to silently fall through to the production default when an
+  // explicit non-default environment is active but does not specify
+  // its own API base URL(s). This was a real footgun: a user on
+  // `primitive config use staging` whose staging environment block
+  // had no api_base_url_1 set could log in, talk to production by
+  // default, and end up with a production URL persisted into
+  // credentials.json - every subsequent command would then hit
+  // production with a key minted against the wrong environment.
+  if (
+    currentEnvironment !== null &&
+    currentEnvironment.name !== DEFAULT_ENVIRONMENT &&
+    params.apiBaseUrl1 === undefined &&
+    configuredApiBaseUrl1 === undefined
+  ) {
+    throw new Errors.CLIError(
+      `The active Primitive CLI environment \`${currentEnvironment.name}\` does not specify an api_base_url_1. Set one with \`primitive config set --environment ${currentEnvironment.name} --api-base-url-1 https://...\`, or switch to a different environment with \`primitive config use <name>\`. Refusing to fall back to the production default for a non-default environment.`,
+      { exit: 1 },
+    );
+  }
 
   const apiBaseUrl1 =
     params.apiBaseUrl1 !== undefined
