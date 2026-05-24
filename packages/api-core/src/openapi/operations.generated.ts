@@ -2797,7 +2797,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-function",
-    "description": "Creates and deploys a new function. The handler must be a single\nESM module whose default export is an object with an async\n`fetch(request, env)` method (Workers-style). The gateway\nHMAC-verifies the POST against the org's webhook secret before\ninvoking the handler; the request body parses to an\n`email.received` event (see `EmailReceivedEvent` and the\nWebhook payload section for the full schema). Code is bundled\nbefore being uploaded; ship a single self-contained file rather\nthan relying on external imports.\n\n**Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`\n(optional) is capped at 5 MiB UTF-8, stored with each deployment\nattempt, and sent to the runtime so stack traces can resolve to\noriginal source files.\n\n**Auto-wiring.** On successful deploy, Primitive automatically\ncreates a webhook endpoint that delivers inbound mail to the\nfunction. There is nothing to configure on the Endpoints API\nfor this to work; the gateway URL returned here is for\nreference only and is not directly callable from outside.\n\n**Secrets.** New functions ship with the managed secrets\n(`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already\nbound. Add user-set secrets via\n`POST /functions/{id}/secrets`; secret writes only land in the\nrunning handler on the next redeploy.\n",
+    "description": "Creates and deploys a new function. The handler must be a single\nESM module whose default export is an object with an async\n`fetch(request, env)` method (Workers-style). Primitive signs\neach delivery and forwards the `Primitive-Signature` header to\nthe handler. Verify the raw request body with\n`PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification\nthe request body parses to an `email.received` event (see\n`EmailReceivedEvent` and the Webhook payload section for the full\nschema). Code is bundled before being uploaded; ship a single\nself-contained file rather than relying on external imports.\n\n**Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`\n(optional) is capped at 5 MiB UTF-8, stored with each deployment\nattempt, and sent to the runtime so stack traces can resolve to\noriginal source files.\n\n**Auto-wiring.** On successful deploy, Primitive automatically\ncreates a webhook endpoint that delivers inbound mail to the\nfunction. There is nothing to configure on the Endpoints API\nfor this to work; the internal runtime URL is not returned by\nthe API and is not a customer-facing integration surface.\n\n**Secrets.** New functions ship with the managed secrets\n(`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,\n`PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via\n`POST /functions/{id}/secrets`; secret writes only land in the\nrunning handler on the next redeploy.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createFunction",
@@ -2850,17 +2850,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "failed"
           ],
           "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
-        },
-        "gateway_url": {
-          "type": "string",
-          "format": "uri"
         }
       },
       "required": [
         "id",
         "name",
-        "deploy_status",
-        "gateway_url"
+        "deploy_status"
       ]
     },
     "sdkName": "createFunction",
@@ -2895,7 +2890,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "key": {
           "type": "string",
           "pattern": "^[A-Z_][A-Z0-9_]*$",
-          "description": "Uppercase letters, digits, and underscores. Must start with\na letter or underscore. System-managed keys (e.g.\nPRIMITIVE_WEBHOOK_SECRET) are reserved.\n"
+          "description": "Uppercase letters, digits, and underscores. Must start with\na letter or underscore. System-managed keys (e.g.\nPRIMITIVE_WEBHOOK_SECRET, PRIMITIVE_API_KEY, and\nPRIMITIVE_API_BASE_URL) are reserved.\n"
         },
         "value": {
           "type": "string",
@@ -3058,10 +3053,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "format": "date-time"
         },
-        "gateway_url": {
-          "type": "string",
-          "format": "uri"
-        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -3076,7 +3067,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name",
         "code",
         "deploy_status",
-        "gateway_url",
         "created_at",
         "updated_at"
       ]
@@ -3774,7 +3764,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-function-secrets",
-    "description": "Returns metadata for every secret bound to the function, with\nmanaged entries (provisioned by Primitive) listed first and\nuser-set entries listed alphabetically after. **Values are\nnever returned.** Secret writes are write-only.\n\nManaged entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,\n`PRIMITIVE_API_KEY`) carry a `description` instead of\n`created_at` / `updated_at`. They cannot be created, updated,\nor deleted via this API.\n",
+    "description": "Returns metadata for every secret bound to the function, with\nmanaged entries (provisioned by Primitive) listed first and\nuser-set entries listed alphabetically after. **Values are\nnever returned.** Secret writes are write-only.\n\nManaged entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,\n`PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a\n`description` instead of `created_at` / `updated_at`. They\ncannot be created, updated, or deleted via this API.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listFunctionSecrets",
@@ -3850,7 +3840,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-functions",
-    "description": "Returns every active (non-deleted) function in the org, newest\nfirst. Each entry carries the deploy status and the gateway URL\nthat the platform's webhook delivery loop posts to. To inspect\nthe source code or deploy errors, use `GET /functions/{id}`.\n",
+    "description": "Returns every active (non-deleted) function in the org, newest\nfirst. Each entry carries deploy status and timestamps. To\ninspect the source code or deploy errors, use `GET /functions/{id}`.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "listFunctions",
@@ -3890,11 +3880,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "format": "date-time",
             "description": "Timestamp of the most recent successful deploy. Null until the first deploy succeeds."
           },
-          "gateway_url": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL the platform's webhook delivery loop posts to in order\nto invoke the function. Reference only; not directly\ncallable from outside.\n"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -3908,7 +3893,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "id",
           "name",
           "deploy_status",
-          "gateway_url",
           "created_at",
           "updated_at"
         ]
@@ -4162,10 +4146,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "format": "date-time"
         },
-        "gateway_url": {
-          "type": "string",
-          "format": "uri"
-        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -4180,7 +4160,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name",
         "code",
         "deploy_status",
-        "gateway_url",
         "created_at",
         "updated_at"
       ]

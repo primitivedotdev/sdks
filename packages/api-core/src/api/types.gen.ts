@@ -1415,13 +1415,6 @@ export type FunctionListItem = {
      * Timestamp of the most recent successful deploy. Null until the first deploy succeeds.
      */
     deployed_at?: string | null;
-    /**
-     * URL the platform's webhook delivery loop posts to in order
-     * to invoke the function. Reference only; not directly
-     * callable from outside.
-     *
-     */
-    gateway_url: string;
     created_at: string;
     updated_at: string;
 };
@@ -1447,7 +1440,6 @@ export type FunctionDetail = {
      */
     deploy_error?: string | null;
     deployed_at?: string | null;
-    gateway_url: string;
     created_at: string;
     updated_at: string;
 };
@@ -1483,7 +1475,6 @@ export type CreateFunctionResult = {
     id: string;
     name: string;
     deploy_status: FunctionDeployStatus;
-    gateway_url: string;
 };
 
 export type UpdateFunctionInput = {
@@ -1754,7 +1745,8 @@ export type CreateFunctionSecretInput = {
     /**
      * Uppercase letters, digits, and underscores. Must start with
      * a letter or underscore. System-managed keys (e.g.
-     * PRIMITIVE_WEBHOOK_SECRET) are reserved.
+     * PRIMITIVE_WEBHOOK_SECRET, PRIMITIVE_API_KEY, and
+     * PRIMITIVE_API_BASE_URL) are reserved.
      *
      */
     key: string;
