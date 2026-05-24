@@ -351,7 +351,16 @@ async function waitForReply(
     });
   }
 
+  // If the server is older than the reply_to_sent_email_id rollout it
+  // silently drops the unknown query param (Zod .strip() on the search
+  // schema), so a strict-phase search will return any inbound from the
+  // recipient. We detect that here by verifying the candidate's FK
+  // post-fetch; if it doesn't match we abort strict phase early and let
+  // the fallback handle it (or time out under --strict-only).
+  let strictFilterUnsupported = false;
+
   for (const phase of phases) {
+    if (phase.label === "strict" && strictFilterUnsupported) continue;
     let cursor: string | null =
       phase.label === "strict" ? strictCursor : fallbackCursor;
     while (true) {
@@ -379,11 +388,10 @@ async function waitForReply(
       else fallbackCursor = cursor;
 
       const matches = collectNewAcceptedEmails(page.rows, seenIds);
-      if (matches.length > 0) {
-        const firstId = matches[0].id;
+      for (const match of matches) {
         const full = await getEmail({
           client: params.apiClient.client,
-          path: { id: firstId },
+          path: { id: match.id },
           responseStyle: "fields",
         });
         if (full.error) {
@@ -394,7 +402,7 @@ async function waitForReply(
             payload,
           });
           throw new Errors.CLIError(
-            `Reply landed but fetching the full body failed (id=${firstId}).`,
+            `Reply landed but fetching the full body failed (id=${match.id}).`,
             { exit: 1 },
           );
         }
@@ -408,13 +416,31 @@ async function waitForReply(
           null;
         if (!detail) {
           throw new Errors.CLIError(
-            `Reply landed but the email body could not be loaded (id=${firstId}).`,
+            `Reply landed but the email body could not be loaded (id=${match.id}).`,
             { exit: 1 },
           );
+        }
+        if (
+          phase.label === "strict" &&
+          detail.reply_to_sent_email_id !== params.sentId
+        ) {
+          // Server returned a candidate that doesn't actually thread
+          // back to our send. The most likely cause is the server
+          // hasn't shipped reply_to_sent_email_id filtering yet and
+          // silently dropped the param. Skip this candidate, mark
+          // strict phase unsupported, and let fallback handle it.
+          if (!strictFilterUnsupported) {
+            process.stderr.write(
+              "Strict-phase reply matching is not supported by this Primitive API host; falling back to time-window matching.\n",
+            );
+          }
+          strictFilterUnsupported = true;
+          continue;
         }
         return detail;
       }
 
+      if (strictFilterUnsupported && phase.label === "strict") break;
       if (page.rows.length > 0) continue;
       if (phase.deadline !== null && Date.now() >= phase.deadline) break;
       if (totalDeadline !== null && Date.now() >= totalDeadline) return null;
