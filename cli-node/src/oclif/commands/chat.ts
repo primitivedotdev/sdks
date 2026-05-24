@@ -460,7 +460,13 @@ async function waitForReply(
       }
 
       if (strictFilterUnsupported && phase.label === "strict") break;
-      if (page.rows.length > 0) continue;
+      // Skip the sleep only when the cursor actually advanced, i.e.
+      // there are more accepted/completed rows to page through. If a
+      // page is full of pending/processing rows, lastAccepted is
+      // undefined and the cursor didn't move; fetching again
+      // immediately would return the same page and spin until those
+      // rows transition state.
+      if (lastAccepted !== undefined) continue;
       if (phase.deadline !== null && Date.now() >= phase.deadline) break;
       if (totalDeadline !== null && Date.now() >= totalDeadline) return null;
       await sleep(params.interval * 1000);
