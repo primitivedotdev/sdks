@@ -5,6 +5,8 @@ from .account_updated import AccountUpdated
 from .add_domain_input import AddDomainInput
 from .add_domain_response_201 import AddDomainResponse201
 from .cli_login_poll_result import CliLoginPollResult
+from .cli_login_poll_result_auth_method import CliLoginPollResultAuthMethod
+from .cli_login_poll_result_token_type import CliLoginPollResultTokenType
 from .cli_login_start_result import CliLoginStartResult
 from .cli_logout_input import CliLogoutInput
 from .cli_logout_response_200 import CliLogoutResponse200
@@ -12,6 +14,8 @@ from .cli_logout_result import CliLogoutResult
 from .cli_signup_resend_result import CliSignupResendResult
 from .cli_signup_start_result import CliSignupStartResult
 from .cli_signup_verify_result import CliSignupVerifyResult
+from .cli_signup_verify_result_auth_method import CliSignupVerifyResultAuthMethod
+from .cli_signup_verify_result_token_type import CliSignupVerifyResultTokenType
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_rules import CreateEndpointInputRules
 from .create_endpoint_response_201 import CreateEndpointResponse201
@@ -180,6 +184,8 @@ __all__ = (
     "AddDomainInput",
     "AddDomainResponse201",
     "CliLoginPollResult",
+    "CliLoginPollResultAuthMethod",
+    "CliLoginPollResultTokenType",
     "CliLoginStartResult",
     "CliLogoutInput",
     "CliLogoutResponse200",
@@ -187,6 +193,8 @@ __all__ = (
     "CliSignupResendResult",
     "CliSignupStartResult",
     "CliSignupVerifyResult",
+    "CliSignupVerifyResultAuthMethod",
+    "CliSignupVerifyResultTokenType",
     "CreateEndpointInput",
     "CreateEndpointInputRules",
     "CreateEndpointResponse201",

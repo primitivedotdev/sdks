@@ -184,7 +184,7 @@ describe("checkApiKey", () => {
     expect(outcome.hint).toMatch(/PRIMITIVE_API_KEY/);
   });
 
-  it("distinguishes a valid-JSON-but-missing-key credentials file from a malformed one", () => {
+  it("distinguishes a valid-JSON-but-missing-token credentials file from a malformed one", () => {
     // Greptile flagged that the original implementation labeled both
     // "credentials.json parses but has no api_key" and "credentials.json
     // fails to parse" as "unreadable or malformed", which contradicts
@@ -199,8 +199,52 @@ describe("checkApiKey", () => {
       });
       expect(outcome.status).toBe("fail");
       if (outcome.status !== "fail") return;
-      expect(outcome.message).toMatch(/contains no api_key/);
+      expect(outcome.message).toMatch(/contains no OAuth access_token/);
       expect(outcome.message).not.toMatch(/unreadable or malformed/);
+    } finally {
+      rmSync(tmp, { force: true, recursive: true });
+    }
+  });
+
+  it("fails with a login hint for legacy saved API-key credentials", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "primitive-doctor-test-"));
+    try {
+      writeFileSync(
+        join(tmp, "credentials.json"),
+        JSON.stringify({ api_key: "prim_legacy_saved" }),
+      );
+      const outcome = checkApiKey({
+        apiKey: undefined,
+        configDir: tmp,
+        env: {},
+      });
+      expect(outcome.status).toBe("fail");
+      if (outcome.status !== "fail") return;
+      expect(outcome.message).toMatch(/legacy API-key login state/);
+      expect(outcome.hint).toMatch(/primitive login/);
+      expect(outcome.hint).toMatch(/--api-key/);
+    } finally {
+      rmSync(tmp, { force: true, recursive: true });
+    }
+  });
+
+  it("returns ok for saved OAuth credentials", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "primitive-doctor-test-"));
+    try {
+      writeFileSync(
+        join(tmp, "credentials.json"),
+        JSON.stringify({
+          access_token: "prim_oat_saved",
+          auth_method: "oauth",
+        }),
+      );
+      const outcome = checkApiKey({
+        apiKey: undefined,
+        configDir: tmp,
+        env: {},
+      });
+      expect(outcome.status).toBe("ok");
+      expect(outcome.message).toMatch(/OAuth session/);
     } finally {
       rmSync(tmp, { force: true, recursive: true });
     }
@@ -257,7 +301,7 @@ describe("checkApiKey", () => {
     // env. The caller (oclif Flags.string with env: PRIMITIVE_API_KEY)
     // would normally surface that as opts.apiKey, but this helper is
     // pure: it should ignore env-resolved values it didn't see on its
-    // input and only fail with the generic "no API key found" message.
+    // input and only fail with the generic missing-auth message.
     expect(outcome.status).toBe("fail");
     if (outcome.status !== "fail") return;
     expect(outcome.message).not.toMatch(/PRIMITIVE_KEY is set/);

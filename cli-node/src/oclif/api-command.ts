@@ -471,7 +471,7 @@ export function extractErrorCode(payload: unknown): string | undefined {
 // special-case every command.
 const ERROR_CODE_HINTS = {
   [API_ERROR_CODES.unauthorized]:
-    "Hint: run `primitive login`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify a key is live.",
+    "Hint: run `primitive login`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify auth is live.",
 } as const satisfies Partial<Record<ApiErrorCode, string>>;
 
 // Network-layer hints keyed by Node's `cause.code` on a fetch failure.
@@ -542,7 +542,7 @@ export function removeStaleSavedCredentialOnUnauthorized(params: {
 
   deleteCliCredentials(params.configDir);
   process.stderr.write(
-    "Removed saved Primitive CLI credentials because the backing API key is no longer valid. Run `primitive login` to create a new one.\n",
+    "Removed saved Primitive CLI OAuth credentials because the backing token is no longer valid. Run `primitive login` to create a new session.\n",
   );
   return true;
 }
@@ -711,7 +711,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   const flags: Record<string, unknown> = {
     "api-key": Flags.string({
       description:
-        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
+        "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     // Two override knobs for the dual-host setup. Hidden because they
@@ -909,7 +909,7 @@ export function createOperationCommand(
       const parsedFlags = flags as Record<string, unknown>;
       await runWithTiming(parsedFlags.time === true, async () => {
         const { apiClient, auth, baseUrlOverridden } =
-          createAuthenticatedCliApiClient({
+          await createAuthenticatedCliApiClient({
             apiKey:
               typeof parsedFlags["api-key"] === "string"
                 ? (parsedFlags["api-key"] as string)

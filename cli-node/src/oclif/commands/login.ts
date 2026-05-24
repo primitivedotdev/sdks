@@ -13,6 +13,7 @@ import {
 } from "@primitivedotdev/api-core";
 import {
   createCliApiClient,
+  refreshStoredCliCredentials,
   resolveCliApiRequestConfig,
 } from "../api-client.js";
 import {
@@ -24,6 +25,7 @@ import {
 } from "../api-command.js";
 import {
   acquireCliCredentialsLock,
+  cliAccessTokenExpiresAt,
   credentialsPath,
   loadCliCredentials,
   normalizeApiBaseUrl2,
@@ -86,8 +88,28 @@ export async function checkExistingLogin(params: {
   });
   const probeApiBaseUrl1 =
     requestConfig.apiBaseUrl1 ?? params.credentials.api_base_url_1;
+  let credentials = params.credentials;
+  try {
+    credentials = await refreshStoredCliCredentials({
+      apiBaseUrl1: probeApiBaseUrl1,
+      configDir: params.configDir,
+      credentials,
+      headers: requestConfig.headers,
+    });
+  } catch (error) {
+    if (loadCliCredentials(params.configDir) === null) {
+      return { status: "removed_stale" };
+    }
+    return {
+      status: "blocked",
+      payload: error,
+      message:
+        "A saved Primitive CLI OAuth session exists, but the CLI could not refresh it. Run `primitive logout` before logging in again.",
+    };
+  }
+
   const apiClient = new PrimitiveApiClient({
-    apiKey: params.credentials.api_key,
+    apiKey: credentials.access_token,
     apiBaseUrl1: probeApiBaseUrl1,
     apiBaseUrl2: requestConfig.resolvedApiBaseUrl2,
     headers: requestConfig.headers,
@@ -105,12 +127,12 @@ export async function checkExistingLogin(params: {
 
   const payload = extractErrorPayload(result.error);
   const auth = {
-    apiKey: params.credentials.api_key,
+    apiKey: credentials.access_token,
     apiBaseUrl1: probeApiBaseUrl1,
     // Host-2 isn't relevant to checkExistingLogin (login is on host-1
     // only), but the auth shape requires it. Use the default.
     apiBaseUrl2: normalizeApiBaseUrl2(undefined),
-    credentials: params.credentials,
+    credentials,
     source: "stored" as const,
   };
   const removed = removeStaleSavedCredentialOnUnauthorized({
@@ -127,8 +149,8 @@ export async function checkExistingLogin(params: {
     payload,
     message:
       code === API_ERROR_CODES.unauthorized
-        ? "Saved Primitive CLI credentials were rejected. Run `primitive logout` to remove them before logging in again."
-        : "A saved Primitive CLI login exists, but the CLI could not verify whether it is still valid. Run `primitive logout` before logging in again.",
+        ? "Saved Primitive CLI OAuth credentials were rejected. Run `primitive logout` to remove them before logging in again."
+        : "A saved Primitive CLI OAuth session exists, but the CLI could not verify whether it is still valid. Run `primitive logout` before logging in again.",
   };
 }
 
@@ -141,7 +163,7 @@ type LoginFlags = {
 
 class LoginCommand extends Command {
   static description =
-    "Log in by opening Primitive in your browser and saving an org-scoped CLI API key locally.";
+    "Log in by opening Primitive in your browser and saving an org-scoped OAuth session locally.";
 
   static summary = "Log in with browser approval";
 
@@ -283,13 +305,17 @@ class LoginCommand extends Command {
         }
 
         saveCliCredentials(this.config.configDir, {
-          api_key: login.api_key,
+          access_token: login.access_token,
           api_base_url_1: apiBaseUrl1,
+          auth_method: "oauth",
           created_at: new Date().toISOString(),
-          key_id: login.key_id,
-          key_prefix: login.key_prefix,
+          expires_at: cliAccessTokenExpiresAt(login.expires_in),
+          oauth_client_id: login.oauth_client_id,
+          oauth_grant_id: login.oauth_grant_id,
           org_id: login.org_id,
           org_name: login.org_name,
+          refresh_token: login.refresh_token,
+          token_type: login.token_type,
         });
 
         const org = login.org_name ? ` (${login.org_name})` : "";

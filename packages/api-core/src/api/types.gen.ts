@@ -163,11 +163,33 @@ export type PollCliLoginInput = {
 
 export type CliLoginPollResult = {
     /**
-     * Newly-created API key for CLI authentication
+     * Legacy alias for access_token. New CLI builds should persist access_token and refresh_token.
      */
     api_key: string;
+    /**
+     * Legacy alias for oauth_grant_id
+     */
     key_id: string;
+    /**
+     * Legacy display prefix derived from access_token
+     */
     key_prefix: string;
+    /**
+     * OAuth access token for CLI API authentication
+     */
+    access_token: string;
+    /**
+     * OAuth refresh token used by the CLI to renew access
+     */
+    refresh_token: string;
+    token_type: 'Bearer';
+    /**
+     * Seconds until access_token expires
+     */
+    expires_in: number;
+    auth_method: 'oauth';
+    oauth_grant_id: string;
+    oauth_client_id: string;
     org_id: string;
     org_name: string | null;
 };
@@ -180,7 +202,7 @@ export type StartCliSignupInput = {
      */
     terms_accepted: boolean;
     /**
-     * Human-readable device name used for the created CLI API key
+     * Human-readable device name used for the created CLI OAuth grant
      */
     device_name?: string;
     /**
@@ -234,30 +256,62 @@ export type CliSignupResendResult = {
 export type VerifyCliSignupInput = {
     signup_token: string;
     verification_code: string;
-    password: string;
+    password?: string;
 };
 
 export type CliSignupVerifyResult = {
     /**
-     * Newly-created API key for CLI authentication
+     * Legacy alias for access_token. New CLI builds should persist access_token and refresh_token.
      */
     api_key: string;
+    /**
+     * Legacy alias for oauth_grant_id
+     */
     key_id: string;
+    /**
+     * Legacy display prefix derived from access_token
+     */
     key_prefix: string;
+    /**
+     * OAuth access token for CLI API authentication
+     */
+    access_token: string;
+    /**
+     * OAuth refresh token used by the CLI to renew access
+     */
+    refresh_token: string;
+    token_type: 'Bearer';
+    /**
+     * Seconds until access_token expires
+     */
+    expires_in: number;
+    auth_method: 'oauth';
+    oauth_grant_id: string;
+    oauth_client_id: string;
     org_id: string;
     org_name: string | null;
 };
 
 export type CliLogoutInput = {
     /**
-     * Optional key id guard; when provided it must match the authenticated API key
+     * Optional id guard; when provided it must match the authenticated OAuth grant id or API key id
      */
     key_id?: string;
 };
 
 export type CliLogoutResult = {
+    /**
+     * True when an OAuth grant was revoked. False for API-key-authenticated legacy logout, which only clears local CLI state.
+     */
     revoked: boolean;
-    key_id: string;
+    /**
+     * API key id for API-key-authenticated legacy logout
+     */
+    key_id?: string;
+    /**
+     * OAuth grant id revoked by OAuth-authenticated logout
+     */
+    oauth_grant_id?: string;
 };
 
 export type Account = {
@@ -1843,7 +1897,7 @@ export type PollCliLoginError = PollCliLoginErrors[keyof PollCliLoginErrors];
 
 export type PollCliLoginResponses = {
     /**
-     * CLI login approved and API key created
+     * CLI login approved and OAuth token set created
      */
     200: SuccessEnvelope & {
         data?: CliLoginPollResult;
@@ -1936,7 +1990,7 @@ export type VerifyCliSignupError = VerifyCliSignupErrors[keyof VerifyCliSignupEr
 
 export type VerifyCliSignupResponses = {
     /**
-     * CLI signup verified and API key created
+     * CLI signup verified and OAuth token set created
      */
     200: SuccessEnvelope & {
         data?: CliSignupVerifyResult;
@@ -1975,7 +2029,7 @@ export type CliLogoutError = CliLogoutErrors[keyof CliLogoutErrors];
 
 export type CliLogoutResponses = {
     /**
-     * CLI API key revoked
+     * CLI logout completed
      */
     200: SuccessEnvelope & {
         data?: CliLogoutResult;

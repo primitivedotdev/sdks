@@ -22,13 +22,17 @@ import {
 } from "../../src/oclif/auth.js";
 
 const CREDENTIALS: StoredCliCredentials = {
-  api_key: "prim_test",
+  access_token: "prim_oat_test",
   api_base_url_1: "https://api.example.test/api/v1",
+  auth_method: "oauth",
   created_at: "2026-05-05T00:00:00.000Z",
-  key_id: "11111111-1111-4111-8111-111111111111",
-  key_prefix: "prim_abc",
+  expires_at: "2099-05-05T00:00:00.000Z",
+  oauth_client_id: "primitive-cli",
+  oauth_grant_id: "11111111-1111-4111-8111-111111111111",
   org_id: "22222222-2222-4222-8222-222222222222",
   org_name: "Acme",
+  refresh_token: "prim_ort_test",
+  token_type: "Bearer",
 };
 
 describe("CLI auth credentials", () => {
@@ -91,7 +95,7 @@ describe("CLI auth credentials", () => {
     saveCliCredentials(tempDir, CREDENTIALS);
 
     expect(resolveCliAuth({ configDir: tempDir })).toMatchObject({
-      apiKey: CREDENTIALS.api_key,
+      apiKey: CREDENTIALS.access_token,
       apiBaseUrl1: CREDENTIALS.api_base_url_1,
       source: "stored",
     });
@@ -108,19 +112,13 @@ describe("CLI auth credentials", () => {
   it("throws a field-specific error for malformed credential fields", () => {
     writeFileSync(
       credentialsPath(tempDir),
-      `${JSON.stringify({ ...CREDENTIALS, api_key: "" })}\n`,
+      `${JSON.stringify({ ...CREDENTIALS, access_token: "" })}\n`,
     );
 
-    expect(() => loadCliCredentials(tempDir)).toThrow(/api_key/);
+    expect(() => loadCliCredentials(tempDir)).toThrow(/access_token/);
   });
 
-  it("auto-logs-out pre-dual-host credentials and prints a re-login notice", () => {
-    // Pre-dual-host CLI versions wrote `base_url`; the rename to
-    // `api_base_url_1` makes those files unrecoverable. Verify the
-    // load detects the old shape, deletes the file, returns null,
-    // and writes a single-line notice to stderr so users on upgrade
-    // see "you've been logged out" instead of a generic "malformed
-    // credentials" error.
+  it("ignores legacy saved API-key credentials and prints a re-login notice", () => {
     const stderrWrites: string[] = [];
     const writeSpy = vi
       .spyOn(process.stderr, "write")
@@ -129,7 +127,6 @@ describe("CLI auth credentials", () => {
         return true;
       });
     try {
-      // Old shape: `base_url` instead of `api_base_url_1`.
       const stale = {
         api_key: "prim_old",
         base_url: "https://api.example.test/api/v1",
@@ -142,7 +139,7 @@ describe("CLI auth credentials", () => {
       writeFileSync(credentialsPath(tempDir), `${JSON.stringify(stale)}\n`);
 
       expect(loadCliCredentials(tempDir)).toBeNull();
-      expect(stderrWrites.join("")).toContain("logged out");
+      expect(stderrWrites.join("")).toContain("No API key was revoked");
       // Stale file should have been cleared so the next call is idempotent.
       expect(loadCliCredentials(tempDir)).toBeNull();
     } finally {

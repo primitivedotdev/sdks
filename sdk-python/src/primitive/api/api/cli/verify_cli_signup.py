@@ -85,11 +85,12 @@ def sync_detailed(
     body: VerifyCliSignupInput,
 
 ) -> Response[ErrorResponse | VerifyCliSignupResponse200]:
-    """ Verify CLI signup and create API key
+    """ Verify CLI signup and create OAuth session
 
      Verifies the email code for a CLI signup session, creates the account,
-    redeems the reserved signup code, mints an org-scoped CLI API key, and
-    returns the raw key exactly once. This endpoint does not require an API key.
+    redeems the reserved signup code, creates an org-scoped OAuth CLI
+    session, and returns the token set exactly once. This endpoint does not
+    require an API key.
 
     Args:
         body (VerifyCliSignupInput):
@@ -120,11 +121,12 @@ def sync(
     body: VerifyCliSignupInput,
 
 ) -> ErrorResponse | VerifyCliSignupResponse200 | None:
-    """ Verify CLI signup and create API key
+    """ Verify CLI signup and create OAuth session
 
      Verifies the email code for a CLI signup session, creates the account,
-    redeems the reserved signup code, mints an org-scoped CLI API key, and
-    returns the raw key exactly once. This endpoint does not require an API key.
+    redeems the reserved signup code, creates an org-scoped OAuth CLI
+    session, and returns the token set exactly once. This endpoint does not
+    require an API key.
 
     Args:
         body (VerifyCliSignupInput):
@@ -150,11 +152,12 @@ async def asyncio_detailed(
     body: VerifyCliSignupInput,
 
 ) -> Response[ErrorResponse | VerifyCliSignupResponse200]:
-    """ Verify CLI signup and create API key
+    """ Verify CLI signup and create OAuth session
 
      Verifies the email code for a CLI signup session, creates the account,
-    redeems the reserved signup code, mints an org-scoped CLI API key, and
-    returns the raw key exactly once. This endpoint does not require an API key.
+    redeems the reserved signup code, creates an org-scoped OAuth CLI
+    session, and returns the token set exactly once. This endpoint does not
+    require an API key.
 
     Args:
         body (VerifyCliSignupInput):
@@ -185,11 +188,12 @@ async def asyncio(
     body: VerifyCliSignupInput,
 
 ) -> ErrorResponse | VerifyCliSignupResponse200 | None:
-    """ Verify CLI signup and create API key
+    """ Verify CLI signup and create OAuth session
 
      Verifies the email code for a CLI signup session, creates the account,
-    redeems the reserved signup code, mints an org-scoped CLI API key, and
-    returns the raw key exactly once. This endpoint does not require an API key.
+    redeems the reserved signup code, creates an org-scoped OAuth CLI
+    session, and returns the token set exactly once. This endpoint does not
+    require an API key.
 
     Args:
         body (VerifyCliSignupInput):

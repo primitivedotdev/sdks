@@ -8,6 +8,8 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.cli_signup_verify_result_auth_method import CliSignupVerifyResultAuthMethod
+from ..models.cli_signup_verify_result_token_type import CliSignupVerifyResultTokenType
 from typing import cast
 from uuid import UUID
 
@@ -24,9 +26,16 @@ T = TypeVar("T", bound="CliSignupVerifyResult")
 class CliSignupVerifyResult:
     """ 
         Attributes:
-            api_key (str): Newly-created API key for CLI authentication
-            key_id (UUID):
-            key_prefix (str):
+            api_key (str): Legacy alias for access_token. New CLI builds should persist access_token and refresh_token.
+            key_id (UUID): Legacy alias for oauth_grant_id
+            key_prefix (str): Legacy display prefix derived from access_token
+            access_token (str): OAuth access token for CLI API authentication
+            refresh_token (str): OAuth refresh token used by the CLI to renew access
+            token_type (CliSignupVerifyResultTokenType):
+            expires_in (int): Seconds until access_token expires
+            auth_method (CliSignupVerifyResultAuthMethod):
+            oauth_grant_id (UUID):
+            oauth_client_id (str):
             org_id (UUID):
             org_name (None | str):
      """
@@ -34,6 +43,13 @@ class CliSignupVerifyResult:
     api_key: str
     key_id: UUID
     key_prefix: str
+    access_token: str
+    refresh_token: str
+    token_type: CliSignupVerifyResultTokenType
+    expires_in: int
+    auth_method: CliSignupVerifyResultAuthMethod
+    oauth_grant_id: UUID
+    oauth_client_id: str
     org_id: UUID
     org_name: None | str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -49,6 +65,20 @@ class CliSignupVerifyResult:
 
         key_prefix = self.key_prefix
 
+        access_token = self.access_token
+
+        refresh_token = self.refresh_token
+
+        token_type = self.token_type.value
+
+        expires_in = self.expires_in
+
+        auth_method = self.auth_method.value
+
+        oauth_grant_id = str(self.oauth_grant_id)
+
+        oauth_client_id = self.oauth_client_id
+
         org_id = str(self.org_id)
 
         org_name: None | str
@@ -61,6 +91,13 @@ class CliSignupVerifyResult:
             "api_key": api_key,
             "key_id": key_id,
             "key_prefix": key_prefix,
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": token_type,
+            "expires_in": expires_in,
+            "auth_method": auth_method,
+            "oauth_grant_id": oauth_grant_id,
+            "oauth_client_id": oauth_client_id,
             "org_id": org_id,
             "org_name": org_name,
         })
@@ -81,6 +118,29 @@ class CliSignupVerifyResult:
 
         key_prefix = d.pop("key_prefix")
 
+        access_token = d.pop("access_token")
+
+        refresh_token = d.pop("refresh_token")
+
+        token_type = CliSignupVerifyResultTokenType(d.pop("token_type"))
+
+
+
+
+        expires_in = d.pop("expires_in")
+
+        auth_method = CliSignupVerifyResultAuthMethod(d.pop("auth_method"))
+
+
+
+
+        oauth_grant_id = UUID(d.pop("oauth_grant_id"))
+
+
+
+
+        oauth_client_id = d.pop("oauth_client_id")
+
         org_id = UUID(d.pop("org_id"))
 
 
@@ -98,6 +158,13 @@ class CliSignupVerifyResult:
             api_key=api_key,
             key_id=key_id,
             key_prefix=key_prefix,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type=token_type,
+            expires_in=expires_in,
+            auth_method=auth_method,
+            oauth_grant_id=oauth_grant_id,
+            oauth_client_id=oauth_client_id,
             org_id=org_id,
             org_name=org_name,
         )

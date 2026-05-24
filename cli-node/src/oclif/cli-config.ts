@@ -69,7 +69,7 @@ export function validateCliHeaderName(name: string): string {
   }
   if (trimmed.toLowerCase() === "authorization") {
     throw new Errors.CLIError(
-      "The Authorization header is managed by PRIMITIVE_API_KEY or saved CLI credentials.",
+      "The Authorization header is managed by PRIMITIVE_API_KEY or saved OAuth CLI credentials.",
       { exit: 1 },
     );
   }

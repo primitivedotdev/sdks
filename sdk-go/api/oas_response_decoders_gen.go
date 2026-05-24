@@ -5509,6 +5509,15 @@ func decodePollCliLoginResponse(resp *http.Response) (res PollCliLoginRes, _ err
 				}
 				return res, err
 			}
+			// Validate response.
+			if err := func() error {
+				if err := response.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return res, errors.Wrap(err, "validate")
+			}
 			var wrapper PollCliLoginOKHeaders
 			wrapper.Response = response
 			h := uri.NewHeaderDecoder(resp.Header)
@@ -10011,6 +10020,15 @@ func decodeVerifyCliSignupResponse(resp *http.Response) (res VerifyCliSignupRes,
 					Err:         err,
 				}
 				return res, err
+			}
+			// Validate response.
+			if err := func() error {
+				if err := response.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return res, errors.Wrap(err, "validate")
 			}
 			var wrapper VerifyCliSignupOKHeaders
 			wrapper.Response = response

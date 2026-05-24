@@ -1,7 +1,7 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import type { CliLogoutResult } from "@primitivedotdev/api-core";
-import { cliLogout, PrimitiveApiClient } from "@primitivedotdev/api-core";
-import { resolveCliApiRequestConfig } from "../api-client.js";
+import { cliLogout } from "@primitivedotdev/api-core";
+import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_ERROR_CODES,
   extractErrorCode,
@@ -12,7 +12,6 @@ import {
   acquireCliCredentialsLock,
   deleteCliCredentials,
   loadCliCredentials,
-  normalizeApiBaseUrl1,
 } from "../auth.js";
 
 function cliError(message: string): Errors.CLIError {
@@ -30,9 +29,9 @@ type LogoutFlags = {
 
 class LogoutCommand extends Command {
   static description =
-    "Log out by revoking the saved Primitive CLI API key and deleting local credentials.";
+    "Log out by revoking the saved Primitive CLI OAuth grant and deleting local credentials.";
 
-  static summary = "Log out and revoke the saved CLI key";
+  static summary = "Log out and revoke the saved CLI OAuth grant";
 
   static examples = ["<%= config.bin %> logout"];
 
@@ -70,7 +69,7 @@ class LogoutCommand extends Command {
       deleteCliCredentials(this.config.configDir);
       const detail = error instanceof Error ? error.message : String(error);
       process.stderr.write(
-        `Removed unreadable Primitive CLI credentials. Backing API key was not revoked: ${detail}\n`,
+        `Removed unreadable Primitive CLI credentials. Backing OAuth grant was not revoked: ${detail}\n`,
       );
       process.exitCode = 1;
       return;
@@ -81,21 +80,14 @@ class LogoutCommand extends Command {
       );
     }
 
-    const requestConfig = resolveCliApiRequestConfig({
+    const { apiClient, auth } = await createAuthenticatedCliApiClient({
       apiBaseUrl1: flags["api-base-url-1"],
       configDir: this.config.configDir,
     });
-    const apiBaseUrl1 = requestConfig.apiBaseUrl1
-      ? normalizeApiBaseUrl1(requestConfig.apiBaseUrl1)
-      : credentials.api_base_url_1;
-    const apiClient = new PrimitiveApiClient({
-      apiKey: credentials.api_key,
-      apiBaseUrl1,
-      headers: requestConfig.headers,
-    });
+    const freshCredentials = auth.credentials ?? credentials;
 
     const result = await cliLogout({
-      body: { key_id: credentials.key_id },
+      body: { key_id: freshCredentials.oauth_grant_id },
       client: apiClient.client,
       responseStyle: "fields",
     });
@@ -110,21 +102,21 @@ class LogoutCommand extends Command {
         deleteCliCredentials(this.config.configDir);
         writeErrorWithHints(payload);
         process.stderr.write(
-          "Removed saved Primitive CLI credentials because the backing API key is already unavailable.\n",
+          "Removed saved Primitive CLI credentials because the backing OAuth grant is already unavailable.\n",
         );
         process.exitCode = 1;
         return;
       }
 
       writeErrorWithHints(payload);
-      throw cliError("Could not revoke the saved Primitive CLI API key.");
+      throw cliError("Could not revoke the saved Primitive CLI OAuth grant.");
     }
 
     const logout = unwrapData<CliLogoutResult>(result.data);
     deleteCliCredentials(this.config.configDir);
 
-    const keyId = logout?.key_id ?? credentials.key_id;
-    process.stderr.write(`Logged out and revoked API key ${keyId}.\n`);
+    const grantId = logout?.oauth_grant_id ?? freshCredentials.oauth_grant_id;
+    process.stderr.write(`Logged out and revoked OAuth grant ${grantId}.\n`);
   }
 }
 

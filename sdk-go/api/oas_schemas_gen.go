@@ -290,12 +290,24 @@ func (s *BearerAuth) SetRoles(val []string) {
 
 // Ref: #/components/schemas/CliLoginPollResult
 type CliLoginPollResult struct {
-	// Newly-created API key for CLI authentication.
-	APIKey    string    `json:"api_key"`
-	KeyID     uuid.UUID `json:"key_id"`
-	KeyPrefix string    `json:"key_prefix"`
-	OrgID     uuid.UUID `json:"org_id"`
-	OrgName   NilString `json:"org_name"`
+	// Legacy alias for access_token. New CLI builds should persist access_token and refresh_token.
+	APIKey string `json:"api_key"`
+	// Legacy alias for oauth_grant_id.
+	KeyID uuid.UUID `json:"key_id"`
+	// Legacy display prefix derived from access_token.
+	KeyPrefix string `json:"key_prefix"`
+	// OAuth access token for CLI API authentication.
+	AccessToken string `json:"access_token"`
+	// OAuth refresh token used by the CLI to renew access.
+	RefreshToken string                      `json:"refresh_token"`
+	TokenType    CliLoginPollResultTokenType `json:"token_type"`
+	// Seconds until access_token expires.
+	ExpiresIn     int                          `json:"expires_in"`
+	AuthMethod    CliLoginPollResultAuthMethod `json:"auth_method"`
+	OAuthGrantID  uuid.UUID                    `json:"oauth_grant_id"`
+	OAuthClientID string                       `json:"oauth_client_id"`
+	OrgID         uuid.UUID                    `json:"org_id"`
+	OrgName       NilString                    `json:"org_name"`
 }
 
 // GetAPIKey returns the value of APIKey.
@@ -311,6 +323,41 @@ func (s *CliLoginPollResult) GetKeyID() uuid.UUID {
 // GetKeyPrefix returns the value of KeyPrefix.
 func (s *CliLoginPollResult) GetKeyPrefix() string {
 	return s.KeyPrefix
+}
+
+// GetAccessToken returns the value of AccessToken.
+func (s *CliLoginPollResult) GetAccessToken() string {
+	return s.AccessToken
+}
+
+// GetRefreshToken returns the value of RefreshToken.
+func (s *CliLoginPollResult) GetRefreshToken() string {
+	return s.RefreshToken
+}
+
+// GetTokenType returns the value of TokenType.
+func (s *CliLoginPollResult) GetTokenType() CliLoginPollResultTokenType {
+	return s.TokenType
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *CliLoginPollResult) GetExpiresIn() int {
+	return s.ExpiresIn
+}
+
+// GetAuthMethod returns the value of AuthMethod.
+func (s *CliLoginPollResult) GetAuthMethod() CliLoginPollResultAuthMethod {
+	return s.AuthMethod
+}
+
+// GetOAuthGrantID returns the value of OAuthGrantID.
+func (s *CliLoginPollResult) GetOAuthGrantID() uuid.UUID {
+	return s.OAuthGrantID
+}
+
+// GetOAuthClientID returns the value of OAuthClientID.
+func (s *CliLoginPollResult) GetOAuthClientID() string {
+	return s.OAuthClientID
 }
 
 // GetOrgID returns the value of OrgID.
@@ -338,6 +385,41 @@ func (s *CliLoginPollResult) SetKeyPrefix(val string) {
 	s.KeyPrefix = val
 }
 
+// SetAccessToken sets the value of AccessToken.
+func (s *CliLoginPollResult) SetAccessToken(val string) {
+	s.AccessToken = val
+}
+
+// SetRefreshToken sets the value of RefreshToken.
+func (s *CliLoginPollResult) SetRefreshToken(val string) {
+	s.RefreshToken = val
+}
+
+// SetTokenType sets the value of TokenType.
+func (s *CliLoginPollResult) SetTokenType(val CliLoginPollResultTokenType) {
+	s.TokenType = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *CliLoginPollResult) SetExpiresIn(val int) {
+	s.ExpiresIn = val
+}
+
+// SetAuthMethod sets the value of AuthMethod.
+func (s *CliLoginPollResult) SetAuthMethod(val CliLoginPollResultAuthMethod) {
+	s.AuthMethod = val
+}
+
+// SetOAuthGrantID sets the value of OAuthGrantID.
+func (s *CliLoginPollResult) SetOAuthGrantID(val uuid.UUID) {
+	s.OAuthGrantID = val
+}
+
+// SetOAuthClientID sets the value of OAuthClientID.
+func (s *CliLoginPollResult) SetOAuthClientID(val string) {
+	s.OAuthClientID = val
+}
+
 // SetOrgID sets the value of OrgID.
 func (s *CliLoginPollResult) SetOrgID(val uuid.UUID) {
 	s.OrgID = val
@@ -346,6 +428,74 @@ func (s *CliLoginPollResult) SetOrgID(val uuid.UUID) {
 // SetOrgName sets the value of OrgName.
 func (s *CliLoginPollResult) SetOrgName(val NilString) {
 	s.OrgName = val
+}
+
+type CliLoginPollResultAuthMethod string
+
+const (
+	CliLoginPollResultAuthMethodOAuth CliLoginPollResultAuthMethod = "oauth"
+)
+
+// AllValues returns all CliLoginPollResultAuthMethod values.
+func (CliLoginPollResultAuthMethod) AllValues() []CliLoginPollResultAuthMethod {
+	return []CliLoginPollResultAuthMethod{
+		CliLoginPollResultAuthMethodOAuth,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CliLoginPollResultAuthMethod) MarshalText() ([]byte, error) {
+	switch s {
+	case CliLoginPollResultAuthMethodOAuth:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CliLoginPollResultAuthMethod) UnmarshalText(data []byte) error {
+	switch CliLoginPollResultAuthMethod(data) {
+	case CliLoginPollResultAuthMethodOAuth:
+		*s = CliLoginPollResultAuthMethodOAuth
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CliLoginPollResultTokenType string
+
+const (
+	CliLoginPollResultTokenTypeBearer CliLoginPollResultTokenType = "Bearer"
+)
+
+// AllValues returns all CliLoginPollResultTokenType values.
+func (CliLoginPollResultTokenType) AllValues() []CliLoginPollResultTokenType {
+	return []CliLoginPollResultTokenType{
+		CliLoginPollResultTokenTypeBearer,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CliLoginPollResultTokenType) MarshalText() ([]byte, error) {
+	switch s {
+	case CliLoginPollResultTokenTypeBearer:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CliLoginPollResultTokenType) UnmarshalText(data []byte) error {
+	switch CliLoginPollResultTokenType(data) {
+	case CliLoginPollResultTokenTypeBearer:
+		*s = CliLoginPollResultTokenTypeBearer
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/CliLoginStartResult
@@ -434,7 +584,7 @@ func (*CliLogoutForbidden) cliLogoutRes() {}
 
 // Ref: #/components/schemas/CliLogoutInput
 type CliLogoutInput struct {
-	// Optional key id guard; when provided it must match the authenticated API key.
+	// Optional id guard; when provided it must match the authenticated OAuth grant id or API key id.
 	KeyID OptUUID `json:"key_id"`
 }
 
@@ -482,8 +632,13 @@ func (*CliLogoutOK) cliLogoutRes() {}
 
 // Ref: #/components/schemas/CliLogoutResult
 type CliLogoutResult struct {
-	Revoked bool      `json:"revoked"`
-	KeyID   uuid.UUID `json:"key_id"`
+	// True when an OAuth grant was revoked. False for API-key-authenticated legacy logout, which only
+	// clears local CLI state.
+	Revoked bool `json:"revoked"`
+	// API key id for API-key-authenticated legacy logout.
+	KeyID OptUUID `json:"key_id"`
+	// OAuth grant id revoked by OAuth-authenticated logout.
+	OAuthGrantID OptUUID `json:"oauth_grant_id"`
 }
 
 // GetRevoked returns the value of Revoked.
@@ -492,8 +647,13 @@ func (s *CliLogoutResult) GetRevoked() bool {
 }
 
 // GetKeyID returns the value of KeyID.
-func (s *CliLogoutResult) GetKeyID() uuid.UUID {
+func (s *CliLogoutResult) GetKeyID() OptUUID {
 	return s.KeyID
+}
+
+// GetOAuthGrantID returns the value of OAuthGrantID.
+func (s *CliLogoutResult) GetOAuthGrantID() OptUUID {
+	return s.OAuthGrantID
 }
 
 // SetRevoked sets the value of Revoked.
@@ -502,8 +662,13 @@ func (s *CliLogoutResult) SetRevoked(val bool) {
 }
 
 // SetKeyID sets the value of KeyID.
-func (s *CliLogoutResult) SetKeyID(val uuid.UUID) {
+func (s *CliLogoutResult) SetKeyID(val OptUUID) {
 	s.KeyID = val
+}
+
+// SetOAuthGrantID sets the value of OAuthGrantID.
+func (s *CliLogoutResult) SetOAuthGrantID(val OptUUID) {
+	s.OAuthGrantID = val
 }
 
 type CliLogoutUnauthorized ErrorResponse
@@ -626,12 +791,24 @@ func (s *CliSignupStartResult) SetVerificationCodeLength(val int) {
 
 // Ref: #/components/schemas/CliSignupVerifyResult
 type CliSignupVerifyResult struct {
-	// Newly-created API key for CLI authentication.
-	APIKey    string    `json:"api_key"`
-	KeyID     uuid.UUID `json:"key_id"`
-	KeyPrefix string    `json:"key_prefix"`
-	OrgID     uuid.UUID `json:"org_id"`
-	OrgName   NilString `json:"org_name"`
+	// Legacy alias for access_token. New CLI builds should persist access_token and refresh_token.
+	APIKey string `json:"api_key"`
+	// Legacy alias for oauth_grant_id.
+	KeyID uuid.UUID `json:"key_id"`
+	// Legacy display prefix derived from access_token.
+	KeyPrefix string `json:"key_prefix"`
+	// OAuth access token for CLI API authentication.
+	AccessToken string `json:"access_token"`
+	// OAuth refresh token used by the CLI to renew access.
+	RefreshToken string                         `json:"refresh_token"`
+	TokenType    CliSignupVerifyResultTokenType `json:"token_type"`
+	// Seconds until access_token expires.
+	ExpiresIn     int                             `json:"expires_in"`
+	AuthMethod    CliSignupVerifyResultAuthMethod `json:"auth_method"`
+	OAuthGrantID  uuid.UUID                       `json:"oauth_grant_id"`
+	OAuthClientID string                          `json:"oauth_client_id"`
+	OrgID         uuid.UUID                       `json:"org_id"`
+	OrgName       NilString                       `json:"org_name"`
 }
 
 // GetAPIKey returns the value of APIKey.
@@ -647,6 +824,41 @@ func (s *CliSignupVerifyResult) GetKeyID() uuid.UUID {
 // GetKeyPrefix returns the value of KeyPrefix.
 func (s *CliSignupVerifyResult) GetKeyPrefix() string {
 	return s.KeyPrefix
+}
+
+// GetAccessToken returns the value of AccessToken.
+func (s *CliSignupVerifyResult) GetAccessToken() string {
+	return s.AccessToken
+}
+
+// GetRefreshToken returns the value of RefreshToken.
+func (s *CliSignupVerifyResult) GetRefreshToken() string {
+	return s.RefreshToken
+}
+
+// GetTokenType returns the value of TokenType.
+func (s *CliSignupVerifyResult) GetTokenType() CliSignupVerifyResultTokenType {
+	return s.TokenType
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *CliSignupVerifyResult) GetExpiresIn() int {
+	return s.ExpiresIn
+}
+
+// GetAuthMethod returns the value of AuthMethod.
+func (s *CliSignupVerifyResult) GetAuthMethod() CliSignupVerifyResultAuthMethod {
+	return s.AuthMethod
+}
+
+// GetOAuthGrantID returns the value of OAuthGrantID.
+func (s *CliSignupVerifyResult) GetOAuthGrantID() uuid.UUID {
+	return s.OAuthGrantID
+}
+
+// GetOAuthClientID returns the value of OAuthClientID.
+func (s *CliSignupVerifyResult) GetOAuthClientID() string {
+	return s.OAuthClientID
 }
 
 // GetOrgID returns the value of OrgID.
@@ -674,6 +886,41 @@ func (s *CliSignupVerifyResult) SetKeyPrefix(val string) {
 	s.KeyPrefix = val
 }
 
+// SetAccessToken sets the value of AccessToken.
+func (s *CliSignupVerifyResult) SetAccessToken(val string) {
+	s.AccessToken = val
+}
+
+// SetRefreshToken sets the value of RefreshToken.
+func (s *CliSignupVerifyResult) SetRefreshToken(val string) {
+	s.RefreshToken = val
+}
+
+// SetTokenType sets the value of TokenType.
+func (s *CliSignupVerifyResult) SetTokenType(val CliSignupVerifyResultTokenType) {
+	s.TokenType = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *CliSignupVerifyResult) SetExpiresIn(val int) {
+	s.ExpiresIn = val
+}
+
+// SetAuthMethod sets the value of AuthMethod.
+func (s *CliSignupVerifyResult) SetAuthMethod(val CliSignupVerifyResultAuthMethod) {
+	s.AuthMethod = val
+}
+
+// SetOAuthGrantID sets the value of OAuthGrantID.
+func (s *CliSignupVerifyResult) SetOAuthGrantID(val uuid.UUID) {
+	s.OAuthGrantID = val
+}
+
+// SetOAuthClientID sets the value of OAuthClientID.
+func (s *CliSignupVerifyResult) SetOAuthClientID(val string) {
+	s.OAuthClientID = val
+}
+
 // SetOrgID sets the value of OrgID.
 func (s *CliSignupVerifyResult) SetOrgID(val uuid.UUID) {
 	s.OrgID = val
@@ -682,6 +929,74 @@ func (s *CliSignupVerifyResult) SetOrgID(val uuid.UUID) {
 // SetOrgName sets the value of OrgName.
 func (s *CliSignupVerifyResult) SetOrgName(val NilString) {
 	s.OrgName = val
+}
+
+type CliSignupVerifyResultAuthMethod string
+
+const (
+	CliSignupVerifyResultAuthMethodOAuth CliSignupVerifyResultAuthMethod = "oauth"
+)
+
+// AllValues returns all CliSignupVerifyResultAuthMethod values.
+func (CliSignupVerifyResultAuthMethod) AllValues() []CliSignupVerifyResultAuthMethod {
+	return []CliSignupVerifyResultAuthMethod{
+		CliSignupVerifyResultAuthMethodOAuth,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CliSignupVerifyResultAuthMethod) MarshalText() ([]byte, error) {
+	switch s {
+	case CliSignupVerifyResultAuthMethodOAuth:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CliSignupVerifyResultAuthMethod) UnmarshalText(data []byte) error {
+	switch CliSignupVerifyResultAuthMethod(data) {
+	case CliSignupVerifyResultAuthMethodOAuth:
+		*s = CliSignupVerifyResultAuthMethodOAuth
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CliSignupVerifyResultTokenType string
+
+const (
+	CliSignupVerifyResultTokenTypeBearer CliSignupVerifyResultTokenType = "Bearer"
+)
+
+// AllValues returns all CliSignupVerifyResultTokenType values.
+func (CliSignupVerifyResultTokenType) AllValues() []CliSignupVerifyResultTokenType {
+	return []CliSignupVerifyResultTokenType{
+		CliSignupVerifyResultTokenTypeBearer,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CliSignupVerifyResultTokenType) MarshalText() ([]byte, error) {
+	switch s {
+	case CliSignupVerifyResultTokenTypeBearer:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CliSignupVerifyResultTokenType) UnmarshalText(data []byte) error {
+	switch CliSignupVerifyResultTokenType(data) {
+	case CliSignupVerifyResultTokenTypeBearer:
+		*s = CliSignupVerifyResultTokenTypeBearer
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type CreateEndpointBadRequest ErrorResponse
@@ -11457,7 +11772,7 @@ type StartCliSignupInput struct {
 	SignupCode string `json:"signup_code"`
 	// Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy.
 	TermsAccepted bool `json:"terms_accepted"`
-	// Human-readable device name used for the created CLI API key.
+	// Human-readable device name used for the created CLI OAuth grant.
 	DeviceName OptString `json:"device_name"`
 	// Optional client metadata stored with the signup session; serialized JSON must be 2048 bytes or
 	// fewer.
@@ -12403,9 +12718,9 @@ func (s *VerifiedDomain) SetCreatedAt(val time.Time) {
 
 // Ref: #/components/schemas/VerifyCliSignupInput
 type VerifyCliSignupInput struct {
-	SignupToken      string `json:"signup_token"`
-	VerificationCode string `json:"verification_code"`
-	Password         string `json:"password"`
+	SignupToken      string    `json:"signup_token"`
+	VerificationCode string    `json:"verification_code"`
+	Password         OptString `json:"password"`
 }
 
 // GetSignupToken returns the value of SignupToken.
@@ -12419,7 +12734,7 @@ func (s *VerifyCliSignupInput) GetVerificationCode() string {
 }
 
 // GetPassword returns the value of Password.
-func (s *VerifyCliSignupInput) GetPassword() string {
+func (s *VerifyCliSignupInput) GetPassword() OptString {
 	return s.Password
 }
 
@@ -12434,7 +12749,7 @@ func (s *VerifyCliSignupInput) SetVerificationCode(val string) {
 }
 
 // SetPassword sets the value of Password.
-func (s *VerifyCliSignupInput) SetPassword(val string) {
+func (s *VerifyCliSignupInput) SetPassword(val OptString) {
 	s.Password = val
 }
 

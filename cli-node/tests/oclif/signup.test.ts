@@ -23,11 +23,18 @@ const START_RESULT = {
 };
 
 const VERIFY_RESULT = {
-  api_key: "prim_test_raw_key",
+  access_token: "prim_oat_test_access",
+  api_key: "prim_oat_test_access",
+  auth_method: "oauth",
+  expires_in: 3600,
   key_id: "11111111-1111-4111-8111-111111111111",
-  key_prefix: "prim_tes",
+  key_prefix: "prim_oat_test...",
+  oauth_client_id: "primitive-cli",
+  oauth_grant_id: "11111111-1111-4111-8111-111111111111",
   org_id: "22222222-2222-4222-8222-222222222222",
   org_name: "Test Org",
+  refresh_token: "prim_ort_test_refresh",
+  token_type: "Bearer",
 };
 
 function promptRequiredFrom(answers: string[]) {
@@ -42,6 +49,7 @@ function flowDeps(params: {
   confirmTerms?: unknown;
   promptAnswers: string[];
   promptNewPassword?: unknown;
+  promptSetPassword?: unknown;
   startCliSignup?: unknown;
   verifyCliSignup?: unknown;
 }) {
@@ -49,6 +57,7 @@ function flowDeps(params: {
     confirmTerms: params.confirmTerms ?? vi.fn(async () => undefined),
     promptNewPassword:
       params.promptNewPassword ?? vi.fn(async () => "valid-password"),
+    promptSetPassword: params.promptSetPassword ?? vi.fn(async () => false),
     promptRequired: promptRequiredFrom(params.promptAnswers),
     startCliSignup:
       params.startCliSignup ??
@@ -114,7 +123,7 @@ describe("runSignupWithCredentialLock", () => {
     rmSync(tempDir, { force: true, recursive: true });
   });
 
-  it("completes signup and saves returned credentials", async () => {
+  it("completes passwordless signup and saves returned credentials", async () => {
     const deps = flowDeps({
       promptAnswers: ["signup-code", "test@example.com", "123456"],
     });
@@ -124,6 +133,9 @@ describe("runSignupWithCredentialLock", () => {
     const promptRequired = deps.promptRequired as ReturnType<typeof vi.fn>;
     const confirmTerms = deps.confirmTerms as ReturnType<typeof vi.fn>;
     const promptNewPassword = deps.promptNewPassword as ReturnType<
+      typeof vi.fn
+    >;
+    const promptSetPassword = deps.promptSetPassword as ReturnType<
       typeof vi.fn
     >;
 
@@ -139,9 +151,10 @@ describe("runSignupWithCredentialLock", () => {
     expect(confirmTerms.mock.invocationCallOrder[0]).toBeLessThan(
       promptRequired.mock.invocationCallOrder[1],
     );
-    expect(promptNewPassword.mock.invocationCallOrder[0]).toBeGreaterThan(
+    expect(promptSetPassword.mock.invocationCallOrder[0]).toBeGreaterThan(
       promptRequired.mock.invocationCallOrder[2],
     );
+    expect(promptNewPassword).not.toHaveBeenCalled();
 
     expect(deps.startCliSignup).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -155,17 +168,18 @@ describe("runSignupWithCredentialLock", () => {
     expect(deps.verifyCliSignup).toHaveBeenCalledWith(
       expect.objectContaining({
         body: {
-          password: "valid-password",
           signup_token: START_RESULT.signup_token,
           verification_code: "123456",
         },
       }),
     );
     expect(loadCliCredentials(tempDir)).toMatchObject({
-      api_key: VERIFY_RESULT.api_key,
-      key_id: VERIFY_RESULT.key_id,
+      access_token: VERIFY_RESULT.access_token,
+      auth_method: "oauth",
+      oauth_grant_id: VERIFY_RESULT.oauth_grant_id,
       org_id: VERIFY_RESULT.org_id,
       org_name: VERIFY_RESULT.org_name,
+      refresh_token: VERIFY_RESULT.refresh_token,
     });
     const credentials = loadCliCredentials(tempDir);
     expect(credentials).not.toBeNull();
@@ -199,7 +213,9 @@ describe("runSignupWithCredentialLock", () => {
         }),
       }),
     );
-    expect(loadCliCredentials(tempDir)?.api_key).toBe(VERIFY_RESULT.api_key);
+    expect(loadCliCredentials(tempDir)?.access_token).toBe(
+      VERIFY_RESULT.access_token,
+    );
   });
 
   it("re-prompts for a different password when Clerk rejects the password", async () => {
@@ -223,6 +239,7 @@ describe("runSignupWithCredentialLock", () => {
     const deps = flowDeps({
       promptAnswers: ["signup-code", "test@example.com", "123456"],
       promptNewPassword,
+      promptSetPassword: vi.fn(async () => true),
       verifyCliSignup,
     });
 
@@ -254,7 +271,9 @@ describe("runSignupWithCredentialLock", () => {
       .join("");
     expect(stderr).toContain(`Password rejected: ${passwordMessage}\n`);
     expect(stderr).toContain("Choose a different password and try again.\n");
-    expect(loadCliCredentials(tempDir)?.api_key).toBe(VERIFY_RESULT.api_key);
+    expect(loadCliCredentials(tempDir)?.access_token).toBe(
+      VERIFY_RESULT.access_token,
+    );
   });
 
   it("keeps the pending signup token when provisioning fails after start", async () => {

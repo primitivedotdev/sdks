@@ -10,13 +10,17 @@ import {
 import { checkExistingLogin } from "../../src/oclif/commands/login.js";
 
 const CREDENTIALS: StoredCliCredentials = {
-  api_key: "prim_existing",
+  access_token: "prim_oat_existing",
   api_base_url_1: "https://www.primitive.dev/api/v1",
+  auth_method: "oauth",
   created_at: "2026-05-05T00:00:00.000Z",
-  key_id: "11111111-1111-4111-8111-111111111111",
-  key_prefix: "prim_exi...",
+  expires_at: "2099-05-05T00:00:00.000Z",
+  oauth_client_id: "primitive-cli",
+  oauth_grant_id: "11111111-1111-4111-8111-111111111111",
   org_id: "22222222-2222-4222-8222-222222222222",
   org_name: "Acme",
+  refresh_token: "prim_ort_existing",
+  token_type: "Bearer",
 };
 
 describe("checkExistingLogin", () => {

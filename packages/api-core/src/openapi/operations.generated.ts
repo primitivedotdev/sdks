@@ -318,7 +318,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "cli-logout",
-    "description": "Revokes the API key used to authenticate the request. CLI clients use\nthis endpoint during `primitive logout` before removing local credentials.\n",
+    "description": "Revokes the OAuth grant used to authenticate the request. API-key\nauthenticated legacy logout requests succeed without deleting server API\nkeys so old local CLI state can be cleared safely.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "cliLogout",
@@ -332,7 +332,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "key_id": {
           "type": "string",
           "format": "uuid",
-          "description": "Optional key id guard; when provided it must match the authenticated API key"
+          "description": "Optional id guard; when provided it must match the authenticated OAuth grant id or API key id"
         }
       }
     },
@@ -341,20 +341,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "properties": {
         "revoked": {
           "type": "boolean",
-          "const": true
+          "description": "True when an OAuth grant was revoked. False for API-key-authenticated legacy logout, which only clears local CLI state."
         },
         "key_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "API key id for API-key-authenticated legacy logout"
+        },
+        "oauth_grant_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "OAuth grant id revoked by OAuth-authenticated logout"
         }
       },
       "required": [
-        "revoked",
-        "key_id"
+        "revoked"
       ]
     },
     "sdkName": "cliLogout",
-    "summary": "Revoke the current CLI API key",
+    "summary": "Revoke the current CLI OAuth session",
     "tag": "CLI",
     "tagCommand": "cli"
   },
@@ -362,7 +367,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "poll-cli-login",
-    "description": "Polls a CLI login session until the browser approval either succeeds,\nis denied, expires, or is polled too quickly. The API key is generated\nonly after approval and is returned exactly once.\n",
+    "description": "Polls a CLI login session until the browser approval either succeeds,\nis denied, expires, or is polled too quickly. The OAuth token set is\ncreated only after approval and is returned exactly once.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "pollCliLogin",
@@ -387,13 +392,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "properties": {
         "api_key": {
           "type": "string",
-          "description": "Newly-created API key for CLI authentication"
+          "description": "Legacy alias for access_token. New CLI builds should persist access_token and refresh_token."
         },
         "key_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Legacy alias for oauth_grant_id"
         },
         "key_prefix": {
+          "type": "string",
+          "description": "Legacy display prefix derived from access_token"
+        },
+        "access_token": {
+          "type": "string",
+          "description": "OAuth access token for CLI API authentication"
+        },
+        "refresh_token": {
+          "type": "string",
+          "description": "OAuth refresh token used by the CLI to renew access"
+        },
+        "token_type": {
+          "type": "string",
+          "enum": [
+            "Bearer"
+          ]
+        },
+        "expires_in": {
+          "type": "integer",
+          "description": "Seconds until access_token expires"
+        },
+        "auth_method": {
+          "type": "string",
+          "enum": [
+            "oauth"
+          ]
+        },
+        "oauth_grant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "oauth_client_id": {
           "type": "string"
         },
         "org_id": {
@@ -411,6 +449,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "api_key",
         "key_id",
         "key_prefix",
+        "access_token",
+        "refresh_token",
+        "token_type",
+        "expires_in",
+        "auth_method",
+        "oauth_grant_id",
+        "oauth_client_id",
         "org_id",
         "org_name"
       ]
@@ -581,7 +626,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 80,
-          "description": "Human-readable device name used for the created CLI API key"
+          "description": "Human-readable device name used for the created CLI OAuth grant"
         },
         "metadata": {
           "type": "object",
@@ -636,7 +681,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "verify-cli-signup",
-    "description": "Verifies the email code for a CLI signup session, creates the account,\nredeems the reserved signup code, mints an org-scoped CLI API key, and\nreturns the raw key exactly once. This endpoint does not require an API key.\n",
+    "description": "Verifies the email code for a CLI signup session, creates the account,\nredeems the reserved signup code, creates an org-scoped OAuth CLI\nsession, and returns the token set exactly once. This endpoint does not\nrequire an API key.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "verifyCliSignup",
@@ -664,8 +709,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       "required": [
         "signup_token",
-        "verification_code",
-        "password"
+        "verification_code"
       ]
     },
     "responseSchema": {
@@ -673,13 +717,46 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "properties": {
         "api_key": {
           "type": "string",
-          "description": "Newly-created API key for CLI authentication"
+          "description": "Legacy alias for access_token. New CLI builds should persist access_token and refresh_token."
         },
         "key_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Legacy alias for oauth_grant_id"
         },
         "key_prefix": {
+          "type": "string",
+          "description": "Legacy display prefix derived from access_token"
+        },
+        "access_token": {
+          "type": "string",
+          "description": "OAuth access token for CLI API authentication"
+        },
+        "refresh_token": {
+          "type": "string",
+          "description": "OAuth refresh token used by the CLI to renew access"
+        },
+        "token_type": {
+          "type": "string",
+          "enum": [
+            "Bearer"
+          ]
+        },
+        "expires_in": {
+          "type": "integer",
+          "description": "Seconds until access_token expires"
+        },
+        "auth_method": {
+          "type": "string",
+          "enum": [
+            "oauth"
+          ]
+        },
+        "oauth_grant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "oauth_client_id": {
           "type": "string"
         },
         "org_id": {
@@ -697,12 +774,19 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "api_key",
         "key_id",
         "key_prefix",
+        "access_token",
+        "refresh_token",
+        "token_type",
+        "expires_in",
+        "auth_method",
+        "oauth_grant_id",
+        "oauth_client_id",
         "org_id",
         "org_name"
       ]
     },
     "sdkName": "verifyCliSignup",
-    "summary": "Verify CLI signup and create API key",
+    "summary": "Verify CLI signup and create OAuth session",
     "tag": "CLI",
     "tagCommand": "cli"
   },

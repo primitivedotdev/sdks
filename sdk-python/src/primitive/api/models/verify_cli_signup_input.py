@@ -24,12 +24,12 @@ class VerifyCliSignupInput:
         Attributes:
             signup_token (str):
             verification_code (str):
-            password (str):
+            password (str | Unset):
      """
 
     signup_token: str
     verification_code: str
-    password: str
+    password: str | Unset = UNSET
 
 
 
@@ -48,8 +48,9 @@ class VerifyCliSignupInput:
         field_dict.update({
             "signup_token": signup_token,
             "verification_code": verification_code,
-            "password": password,
         })
+        if password is not UNSET:
+            field_dict["password"] = password
 
         return field_dict
 
@@ -62,7 +63,7 @@ class VerifyCliSignupInput:
 
         verification_code = d.pop("verification_code")
 
-        password = d.pop("password")
+        password = d.pop("password", UNSET)
 
         verify_cli_signup_input = cls(
             signup_token=signup_token,

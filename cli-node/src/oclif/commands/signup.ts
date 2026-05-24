@@ -31,6 +31,7 @@ import {
 } from "../api-command.js";
 import {
   acquireCliCredentialsLock,
+  cliAccessTokenExpiresAt,
   credentialsPath,
   loadCliCredentials,
   type StoredCliCredentials,
@@ -60,6 +61,7 @@ export type PendingCliSignup = CliSignupStartResult & {
 type SignupFlowDeps = {
   checkExistingLogin?: typeof checkExistingLogin;
   confirmTerms?: typeof confirmTerms;
+  promptSetPassword?: typeof promptSetPassword;
   promptNewPassword?: typeof promptNewPassword;
   promptRequired?: typeof promptRequired;
   resendCliSignupVerification?: typeof resendCliSignupVerification;
@@ -324,6 +326,13 @@ async function promptNewPassword(): Promise<string> {
   }
 }
 
+async function promptSetPassword(): Promise<boolean> {
+  const answer = (await promptLine("Set a dashboard password? [y/N]: "))
+    .toLowerCase()
+    .trim();
+  return answer === "y" || answer === "yes";
+}
+
 async function confirmTerms(): Promise<void> {
   process.stderr.write(
     "By creating an account, you agree to Primitive's Terms of Service and Privacy Policy:\n",
@@ -392,6 +401,7 @@ export async function runSignupWithCredentialLock(params: {
   const { configDir, flags } = params;
   const deps = params.deps ?? {};
   const promptRequiredFn = deps.promptRequired ?? promptRequired;
+  const promptSetPasswordFn = deps.promptSetPassword ?? promptSetPassword;
   const promptNewPasswordFn = deps.promptNewPassword ?? promptNewPassword;
   const confirmTermsFn = deps.confirmTerms ?? confirmTerms;
   const startFn = deps.startCliSignup ?? startCliSignup;
@@ -510,11 +520,13 @@ export async function runSignupWithCredentialLock(params: {
       continue;
     }
 
-    let password = await promptNewPasswordFn();
+    let password = (await promptSetPasswordFn())
+      ? await promptNewPasswordFn()
+      : undefined;
     while (true) {
       const verified = await verifyFn({
         body: {
-          password,
+          ...(password ? { password } : {}),
           signup_token: start.signup_token,
           verification_code: verificationCode,
         },
@@ -531,13 +543,17 @@ export async function runSignupWithCredentialLock(params: {
         }
 
         saveCliCredentials(configDir, {
-          api_key: signup.api_key,
+          access_token: signup.access_token,
           api_base_url_1: apiBaseUrl1,
+          auth_method: "oauth",
           created_at: new Date().toISOString(),
-          key_id: signup.key_id,
-          key_prefix: signup.key_prefix,
+          expires_at: cliAccessTokenExpiresAt(signup.expires_in),
+          oauth_client_id: signup.oauth_client_id,
+          oauth_grant_id: signup.oauth_grant_id,
           org_id: signup.org_id,
           org_name: signup.org_name,
+          refresh_token: signup.refresh_token,
+          token_type: signup.token_type,
         });
         deletePendingCliSignup(configDir);
 
@@ -580,7 +596,7 @@ export async function runSignupWithCredentialLock(params: {
 
 class SignupCommand extends Command {
   static description =
-    "Create a Primitive account from the terminal, verify your email, and save an org-scoped CLI API key locally.";
+    "Create a Primitive account from the terminal, verify your email, and save an org-scoped OAuth session locally.";
 
   static summary = "Create an account and log in";
 
@@ -598,7 +614,7 @@ class SignupCommand extends Command {
       hidden: true,
     }),
     "device-name": Flags.string({
-      description: "Device name used for the created CLI API key",
+      description: "Device name used for the created CLI OAuth grant",
     }),
     force: Flags.boolean({
       char: "f",

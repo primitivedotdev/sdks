@@ -38,8 +38,9 @@ type Invoker interface {
 	AddDomain(ctx context.Context, request *AddDomainInput) (AddDomainRes, error)
 	// CliLogout invokes cliLogout operation.
 	//
-	// Revokes the API key used to authenticate the request. CLI clients use
-	// this endpoint during `primitive logout` before removing local credentials.
+	// Revokes the OAuth grant used to authenticate the request. API-key
+	// authenticated legacy logout requests succeed without deleting server API
+	// keys so old local CLI state can be cleared safely.
 	//
 	// POST /cli/logout
 	CliLogout(ctx context.Context, request OptCliLogoutInput) (CliLogoutRes, error)
@@ -411,8 +412,8 @@ type Invoker interface {
 	// PollCliLogin invokes pollCliLogin operation.
 	//
 	// Polls a CLI login session until the browser approval either succeeds,
-	// is denied, expires, or is polled too quickly. The API key is generated
-	// only after approval and is returned exactly once.
+	// is denied, expires, or is polled too quickly. The OAuth token set is
+	// created only after approval and is returned exactly once.
 	//
 	// POST /cli/login/poll
 	PollCliLogin(ctx context.Context, request *PollCliLoginInput) (PollCliLoginRes, error)
@@ -603,8 +604,9 @@ type Invoker interface {
 	// VerifyCliSignup invokes verifyCliSignup operation.
 	//
 	// Verifies the email code for a CLI signup session, creates the account,
-	// redeems the reserved signup code, mints an org-scoped CLI API key, and
-	// returns the raw key exactly once. This endpoint does not require an API key.
+	// redeems the reserved signup code, creates an org-scoped OAuth CLI
+	// session, and returns the token set exactly once. This endpoint does not
+	// require an API key.
 	//
 	// POST /cli/signup/verify
 	VerifyCliSignup(ctx context.Context, request *VerifyCliSignupInput) (VerifyCliSignupRes, error)
@@ -773,8 +775,9 @@ func (c *Client) sendAddDomain(ctx context.Context, request *AddDomainInput) (re
 
 // CliLogout invokes cliLogout operation.
 //
-// Revokes the API key used to authenticate the request. CLI clients use
-// this endpoint during `primitive logout` before removing local credentials.
+// Revokes the OAuth grant used to authenticate the request. API-key
+// authenticated legacy logout requests succeed without deleting server API
+// keys so old local CLI state can be cleared safely.
 //
 // POST /cli/logout
 func (c *Client) CliLogout(ctx context.Context, request OptCliLogoutInput) (CliLogoutRes, error) {
@@ -5081,8 +5084,8 @@ func (c *Client) sendListSentEmails(ctx context.Context, params ListSentEmailsPa
 // PollCliLogin invokes pollCliLogin operation.
 //
 // Polls a CLI login session until the browser approval either succeeds,
-// is denied, expires, or is polled too quickly. The API key is generated
-// only after approval and is returned exactly once.
+// is denied, expires, or is polled too quickly. The OAuth token set is
+// created only after approval and is returned exactly once.
 //
 // POST /cli/login/poll
 func (c *Client) PollCliLogin(ctx context.Context, request *PollCliLoginInput) (PollCliLoginRes, error) {
@@ -7512,8 +7515,9 @@ func (c *Client) sendUpdateFunction(ctx context.Context, request *UpdateFunction
 // VerifyCliSignup invokes verifyCliSignup operation.
 //
 // Verifies the email code for a CLI signup session, creates the account,
-// redeems the reserved signup code, mints an org-scoped CLI API key, and
-// returns the raw key exactly once. This endpoint does not require an API key.
+// redeems the reserved signup code, creates an org-scoped OAuth CLI
+// session, and returns the token set exactly once. This endpoint does not
+// require an API key.
 //
 // POST /cli/signup/verify
 func (c *Client) VerifyCliSignup(ctx context.Context, request *VerifyCliSignupInput) (VerifyCliSignupRes, error) {

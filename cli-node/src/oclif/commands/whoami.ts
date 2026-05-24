@@ -12,7 +12,7 @@ import {
 
 // `primitive whoami` is the credentials smoke-test the AGX
 // walkthrough kept asking for. Before this command, a user with a
-// suspect API key had no fast way to verify "is my key live and
+// suspect CLI auth had no fast way to verify "is this token live and
 // pointed at the org I expect" short of trying any other call and
 // reading a 401. That ambiguity bit two consecutive walkthroughs.
 //
@@ -23,7 +23,7 @@ import {
 
 class WhoamiCommand extends Command {
   static description =
-    `Print the account currently authenticated by the API key. Useful as a credentials smoke test: confirms the key is live and shows which account it belongs to.`;
+    `Print the account currently authenticated by saved OAuth credentials or an explicit API key. Useful as a credentials smoke test: confirms auth is live and shows which account it belongs to.`;
 
   static summary = "Print the authenticated account (credentials smoke test)";
 
@@ -35,7 +35,7 @@ class WhoamiCommand extends Command {
   static flags = {
     "api-key": Flags.string({
       description:
-        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
+        "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "api-base-url-1": Flags.string({
@@ -60,7 +60,7 @@ class WhoamiCommand extends Command {
 
     await runWithTiming(flags.time, async () => {
       const { apiClient, auth, baseUrlOverridden } =
-        createAuthenticatedCliApiClient({
+        await createAuthenticatedCliApiClient({
           apiKey: flags["api-key"],
           apiBaseUrl1: flags["api-base-url-1"],
           apiBaseUrl2: flags["api-base-url-2"],

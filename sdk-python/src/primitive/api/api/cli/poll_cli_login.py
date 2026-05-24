@@ -88,8 +88,8 @@ def sync_detailed(
     """ Poll CLI browser login
 
      Polls a CLI login session until the browser approval either succeeds,
-    is denied, expires, or is polled too quickly. The API key is generated
-    only after approval and is returned exactly once.
+    is denied, expires, or is polled too quickly. The OAuth token set is
+    created only after approval and is returned exactly once.
 
     Args:
         body (PollCliLoginInput):
@@ -123,8 +123,8 @@ def sync(
     """ Poll CLI browser login
 
      Polls a CLI login session until the browser approval either succeeds,
-    is denied, expires, or is polled too quickly. The API key is generated
-    only after approval and is returned exactly once.
+    is denied, expires, or is polled too quickly. The OAuth token set is
+    created only after approval and is returned exactly once.
 
     Args:
         body (PollCliLoginInput):
@@ -153,8 +153,8 @@ async def asyncio_detailed(
     """ Poll CLI browser login
 
      Polls a CLI login session until the browser approval either succeeds,
-    is denied, expires, or is polled too quickly. The API key is generated
-    only after approval and is returned exactly once.
+    is denied, expires, or is polled too quickly. The OAuth token set is
+    created only after approval and is returned exactly once.
 
     Args:
         body (PollCliLoginInput):
@@ -188,8 +188,8 @@ async def asyncio(
     """ Poll CLI browser login
 
      Polls a CLI login session until the browser approval either succeeds,
-    is denied, expires, or is polled too quickly. The API key is generated
-    only after approval and is returned exactly once.
+    is denied, expires, or is polled too quickly. The OAuth token set is
+    created only after approval and is returned exactly once.
 
     Args:
         body (PollCliLoginInput):
