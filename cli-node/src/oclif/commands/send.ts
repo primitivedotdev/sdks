@@ -13,8 +13,8 @@ import {
   extractErrorCode,
   extractErrorPayload,
   formatErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
+  surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
@@ -97,7 +97,7 @@ async function pickDefaultFromAddress(
     // wrapping.
     if (extractErrorCode(errorPayload) === API_ERROR_CODES.unauthorized) {
       writeErrorWithHints(errorPayload);
-      removeStaleSavedCredentialOnUnauthorized({
+      surfaceUnauthorizedHint({
         ...authFailureContext,
         payload: errorPayload,
       });
@@ -285,7 +285,7 @@ class SendCommand extends Command {
       if (result.error) {
         const errorPayload = extractErrorPayload(result.error);
         writeErrorWithHints(errorPayload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           ...authFailureContext,
           payload: errorPayload,
         });

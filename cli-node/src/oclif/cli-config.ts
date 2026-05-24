@@ -12,7 +12,7 @@ import { normalizeApiBaseUrl1, normalizeApiBaseUrl2 } from "./auth.js";
 
 const CONFIG_FILE = "config.json";
 const CONFIG_VERSION = 1;
-const DEFAULT_ENVIRONMENT = "default";
+export const DEFAULT_ENVIRONMENT = "default";
 
 export type CliEnvironmentConfig = {
   api_base_url_1?: string;
