@@ -86,9 +86,9 @@ def sync_detailed(
     never returned.** Secret writes are write-only.
 
     Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
-    `PRIMITIVE_API_KEY`) carry a `description` instead of
-    `created_at` / `updated_at`. They cannot be created, updated,
-    or deleted via this API.
+    `PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a
+    `description` instead of `created_at` / `updated_at`. They
+    cannot be created, updated, or deleted via this API.
 
     Args:
         id (UUID):
@@ -127,9 +127,9 @@ def sync(
     never returned.** Secret writes are write-only.
 
     Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
-    `PRIMITIVE_API_KEY`) carry a `description` instead of
-    `created_at` / `updated_at`. They cannot be created, updated,
-    or deleted via this API.
+    `PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a
+    `description` instead of `created_at` / `updated_at`. They
+    cannot be created, updated, or deleted via this API.
 
     Args:
         id (UUID):
@@ -163,9 +163,9 @@ async def asyncio_detailed(
     never returned.** Secret writes are write-only.
 
     Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
-    `PRIMITIVE_API_KEY`) carry a `description` instead of
-    `created_at` / `updated_at`. They cannot be created, updated,
-    or deleted via this API.
+    `PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a
+    `description` instead of `created_at` / `updated_at`. They
+    cannot be created, updated, or deleted via this API.
 
     Args:
         id (UUID):
@@ -204,9 +204,9 @@ async def asyncio(
     never returned.** Secret writes are write-only.
 
     Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
-    `PRIMITIVE_API_KEY`) carry a `description` instead of
-    `created_at` / `updated_at`. They cannot be created, updated,
-    or deleted via this API.
+    `PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a
+    `description` instead of `created_at` / `updated_at`. They
+    cannot be created, updated, or deleted via this API.
 
     Args:
         id (UUID):

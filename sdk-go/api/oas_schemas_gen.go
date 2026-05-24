@@ -987,7 +987,6 @@ type CreateFunctionResult struct {
 	ID           uuid.UUID            `json:"id"`
 	Name         string               `json:"name"`
 	DeployStatus FunctionDeployStatus `json:"deploy_status"`
-	GatewayURL   url.URL              `json:"gateway_url"`
 }
 
 // GetID returns the value of ID.
@@ -1005,11 +1004,6 @@ func (s *CreateFunctionResult) GetDeployStatus() FunctionDeployStatus {
 	return s.DeployStatus
 }
 
-// GetGatewayURL returns the value of GatewayURL.
-func (s *CreateFunctionResult) GetGatewayURL() url.URL {
-	return s.GatewayURL
-}
-
 // SetID sets the value of ID.
 func (s *CreateFunctionResult) SetID(val uuid.UUID) {
 	s.ID = val
@@ -1023,11 +1017,6 @@ func (s *CreateFunctionResult) SetName(val string) {
 // SetDeployStatus sets the value of DeployStatus.
 func (s *CreateFunctionResult) SetDeployStatus(val FunctionDeployStatus) {
 	s.DeployStatus = val
-}
-
-// SetGatewayURL sets the value of GatewayURL.
-func (s *CreateFunctionResult) SetGatewayURL(val url.URL) {
-	s.GatewayURL = val
 }
 
 type CreateFunctionSecretBadRequest ErrorResponse
@@ -1067,7 +1056,8 @@ func (*CreateFunctionSecretCreated) createFunctionSecretRes() {}
 type CreateFunctionSecretInput struct {
 	// Uppercase letters, digits, and underscores. Must start with
 	// a letter or underscore. System-managed keys (e.g.
-	// PRIMITIVE_WEBHOOK_SECRET) are reserved.
+	// PRIMITIVE_WEBHOOK_SECRET, PRIMITIVE_API_KEY, and
+	// PRIMITIVE_API_BASE_URL) are reserved.
 	Key string `json:"key"`
 	// Secret value, up to 4096 UTF-8 bytes. Encrypted at rest.
 	// Never returned by any read endpoint.
@@ -4152,7 +4142,6 @@ type FunctionDetail struct {
 	// a `failed` status without polling.
 	DeployError OptNilString   `json:"deploy_error"`
 	DeployedAt  OptNilDateTime `json:"deployed_at"`
-	GatewayURL  url.URL        `json:"gateway_url"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 }
@@ -4185,11 +4174,6 @@ func (s *FunctionDetail) GetDeployError() OptNilString {
 // GetDeployedAt returns the value of DeployedAt.
 func (s *FunctionDetail) GetDeployedAt() OptNilDateTime {
 	return s.DeployedAt
-}
-
-// GetGatewayURL returns the value of GatewayURL.
-func (s *FunctionDetail) GetGatewayURL() url.URL {
-	return s.GatewayURL
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -4232,11 +4216,6 @@ func (s *FunctionDetail) SetDeployedAt(val OptNilDateTime) {
 	s.DeployedAt = val
 }
 
-// SetGatewayURL sets the value of GatewayURL.
-func (s *FunctionDetail) SetGatewayURL(val url.URL) {
-	s.GatewayURL = val
-}
-
 // SetCreatedAt sets the value of CreatedAt.
 func (s *FunctionDetail) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
@@ -4257,12 +4236,8 @@ type FunctionListItem struct {
 	DeployStatus FunctionDeployStatus `json:"deploy_status"`
 	// Timestamp of the most recent successful deploy. Null until the first deploy succeeds.
 	DeployedAt OptNilDateTime `json:"deployed_at"`
-	// URL the platform's webhook delivery loop posts to in order
-	// to invoke the function. Reference only; not directly
-	// callable from outside.
-	GatewayURL url.URL   `json:"gateway_url"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
 }
 
 // GetID returns the value of ID.
@@ -4283,11 +4258,6 @@ func (s *FunctionListItem) GetDeployStatus() FunctionDeployStatus {
 // GetDeployedAt returns the value of DeployedAt.
 func (s *FunctionListItem) GetDeployedAt() OptNilDateTime {
 	return s.DeployedAt
-}
-
-// GetGatewayURL returns the value of GatewayURL.
-func (s *FunctionListItem) GetGatewayURL() url.URL {
-	return s.GatewayURL
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -4318,11 +4288,6 @@ func (s *FunctionListItem) SetDeployStatus(val FunctionDeployStatus) {
 // SetDeployedAt sets the value of DeployedAt.
 func (s *FunctionListItem) SetDeployedAt(val OptNilDateTime) {
 	s.DeployedAt = val
-}
-
-// SetGatewayURL sets the value of GatewayURL.
-func (s *FunctionListItem) SetGatewayURL(val url.URL) {
-	s.GatewayURL = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.

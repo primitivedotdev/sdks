@@ -25,7 +25,8 @@ class CreateFunctionSecretInput:
         Attributes:
             key (str): Uppercase letters, digits, and underscores. Must start with
                 a letter or underscore. System-managed keys (e.g.
-                PRIMITIVE_WEBHOOK_SECRET) are reserved.
+                PRIMITIVE_WEBHOOK_SECRET, PRIMITIVE_API_KEY, and
+                PRIMITIVE_API_BASE_URL) are reserved.
             value (str): Secret value, up to 4096 UTF-8 bytes. Encrypted at rest.
                 Never returned by any read endpoint.
      """

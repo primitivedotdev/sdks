@@ -39,7 +39,6 @@ class FunctionDetail:
                   * `failed` — the most recent deploy attempt failed; the
                     previously-live code (if any) is still running. The
                     `deploy_error` field carries the error message.
-            gateway_url (str):
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
             deploy_error (None | str | Unset): Error message from the most recent failed deploy, or null
@@ -52,7 +51,6 @@ class FunctionDetail:
     name: str
     code: str
     deploy_status: FunctionDeployStatus
-    gateway_url: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
     deploy_error: None | str | Unset = UNSET
@@ -71,8 +69,6 @@ class FunctionDetail:
         code = self.code
 
         deploy_status = self.deploy_status.value
-
-        gateway_url = self.gateway_url
 
         created_at = self.created_at.isoformat()
 
@@ -100,7 +96,6 @@ class FunctionDetail:
             "name": name,
             "code": code,
             "deploy_status": deploy_status,
-            "gateway_url": gateway_url,
             "created_at": created_at,
             "updated_at": updated_at,
         })
@@ -129,8 +124,6 @@ class FunctionDetail:
 
 
 
-
-        gateway_url = d.pop("gateway_url")
 
         created_at = isoparse(d.pop("created_at"))
 
@@ -177,7 +170,6 @@ class FunctionDetail:
             name=name,
             code=code,
             deploy_status=deploy_status,
-            gateway_url=gateway_url,
             created_at=created_at,
             updated_at=updated_at,
             deploy_error=deploy_error,
