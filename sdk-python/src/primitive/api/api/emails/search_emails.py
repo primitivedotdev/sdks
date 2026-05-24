@@ -31,6 +31,7 @@ def _get_kwargs(
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
     domain_id: UUID | Unset = UNSET,
+    reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -64,6 +65,11 @@ def _get_kwargs(
     if not isinstance(domain_id, Unset):
         json_domain_id = str(domain_id)
     params["domain_id"] = json_domain_id
+
+    json_reply_to_sent_email_id: str | Unset = UNSET
+    if not isinstance(reply_to_sent_email_id, Unset):
+        json_reply_to_sent_email_id = str(reply_to_sent_email_id)
+    params["reply_to_sent_email_id"] = json_reply_to_sent_email_id
 
     json_status: str | Unset = UNSET
     if not isinstance(status, Unset):
@@ -181,6 +187,7 @@ def sync_detailed(
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
     domain_id: UUID | Unset = UNSET,
+    reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -215,6 +222,7 @@ def sync_detailed(
         subject (str | Unset):
         body (str | Unset):
         domain_id (UUID | Unset):
+        reply_to_sent_email_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
             the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -270,6 +278,7 @@ to=to,
 subject=subject,
 body=body,
 domain_id=domain_id,
+reply_to_sent_email_id=reply_to_sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
@@ -299,6 +308,7 @@ def sync(
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
     domain_id: UUID | Unset = UNSET,
+    reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -333,6 +343,7 @@ def sync(
         subject (str | Unset):
         body (str | Unset):
         domain_id (UUID | Unset):
+        reply_to_sent_email_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
             the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -389,6 +400,7 @@ to=to,
 subject=subject,
 body=body,
 domain_id=domain_id,
+reply_to_sent_email_id=reply_to_sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
@@ -412,6 +424,7 @@ async def asyncio_detailed(
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
     domain_id: UUID | Unset = UNSET,
+    reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -446,6 +459,7 @@ async def asyncio_detailed(
         subject (str | Unset):
         body (str | Unset):
         domain_id (UUID | Unset):
+        reply_to_sent_email_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
             the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -501,6 +515,7 @@ to=to,
 subject=subject,
 body=body,
 domain_id=domain_id,
+reply_to_sent_email_id=reply_to_sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
@@ -530,6 +545,7 @@ async def asyncio(
     subject: str | Unset = UNSET,
     body: str | Unset = UNSET,
     domain_id: UUID | Unset = UNSET,
+    reply_to_sent_email_id: UUID | Unset = UNSET,
     status: EmailStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -564,6 +580,7 @@ async def asyncio(
         subject (str | Unset):
         body (str | Unset):
         domain_id (UUID | Unset):
+        reply_to_sent_email_id (UUID | Unset):
         status (EmailStatus | Unset): Lifecycle status of an INBOUND email (a row in the `emails`
             table). Distinct from `SentEmailStatus`, which describes
             the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -620,6 +637,7 @@ to=to,
 subject=subject,
 body=body,
 domain_id=domain_id,
+reply_to_sent_email_id=reply_to_sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,

@@ -5907,6 +5907,23 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 		}
 	}
 	{
+		// Encode "reply_to_sent_email_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "reply_to_sent_email_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ReplyToSentEmailID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
 		// Encode "status" parameter.
 		cfg := uri.QueryParameterEncodingConfig{
 			Name:    "status",

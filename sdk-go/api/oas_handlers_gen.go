@@ -7461,6 +7461,10 @@ func (s *Server) handleSearchEmailsRequest(args [0]string, argsEscaped bool, w h
 					In:   "query",
 				}: params.DomainID,
 				{
+					Name: "reply_to_sent_email_id",
+					In:   "query",
+				}: params.ReplyToSentEmailID,
+				{
 					Name: "status",
 					In:   "query",
 				}: params.Status,
