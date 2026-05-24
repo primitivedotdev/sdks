@@ -77,6 +77,7 @@ export async function checkExistingLogin(params: {
   apiBaseUrl1?: string;
   configDir: string;
   credentials: StoredCliCredentials;
+  credentialsLockHeld?: boolean;
   checkAccount?: (
     apiClient: PrimitiveApiClient,
   ) => Promise<{ error?: unknown }>;
@@ -93,6 +94,7 @@ export async function checkExistingLogin(params: {
       apiBaseUrl1: probeApiBaseUrl1,
       configDir: params.configDir,
       credentials,
+      credentialsLockHeld: params.credentialsLockHeld,
       headers: requestConfig.headers,
     });
   } catch (error) {
@@ -244,6 +246,7 @@ class LoginCommand extends Command {
         apiBaseUrl1: flags["api-base-url-1"],
         configDir: this.config.configDir,
         credentials: existing,
+        credentialsLockHeld: true,
       });
       if (existingStatus.status === "removed_stale") {
         process.stderr.write("Continuing with a new Primitive CLI login...\n");

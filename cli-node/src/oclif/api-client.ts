@@ -1,8 +1,10 @@
 import { Errors } from "@oclif/core";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import {
+  acquireCliCredentialsLock,
   cliAccessTokenExpiresAt,
   deleteCliCredentials,
+  loadCliCredentials,
   normalizeApiBaseUrl1,
   normalizeApiBaseUrl2,
   resolveCliAuth,
@@ -220,6 +222,7 @@ export async function refreshStoredCliCredentials(params: {
   apiBaseUrl1: string;
   configDir: string;
   credentials: StoredCliCredentials;
+  credentialsLockHeld?: boolean;
   headers?: Record<string, string>;
   fetch?: FetchFn;
   now?: () => number;
@@ -227,64 +230,87 @@ export async function refreshStoredCliCredentials(params: {
   const now = params.now ?? Date.now;
   if (!shouldRefresh(params.credentials, now)) return params.credentials;
 
-  const fetchImpl = params.fetch ?? fetch;
-  const body = new URLSearchParams({
-    client_id: params.credentials.oauth_client_id,
-    grant_type: "refresh_token",
-    refresh_token: params.credentials.refresh_token,
-  });
-
-  let response: Response;
+  let releaseLock: (() => void) | undefined;
   try {
-    response = await fetchImpl(oauthTokenEndpoint(params.apiBaseUrl1), {
-      body,
-      headers: {
-        ...(params.headers ?? {}),
-        "content-type": "application/x-www-form-urlencoded",
-      },
-      method: "POST",
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Errors.CLIError(
-      `Could not refresh saved Primitive CLI OAuth credentials: ${detail}`,
-      { exit: 1 },
-    );
-  }
+    if (!params.credentialsLockHeld) {
+      try {
+        releaseLock = acquireCliCredentialsLock(params.configDir);
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Errors.CLIError(detail, { exit: 1 });
+      }
+    }
 
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) {
-    const code = oauthErrorCode(payload);
-    const description = oauthErrorDescription(payload);
-    if (code === "invalid_grant") {
-      deleteCliCredentials(params.configDir);
+    const current = loadCliCredentials(params.configDir);
+    if (!current) {
       throw new Errors.CLIError(
-        "Saved Primitive CLI OAuth session expired or was revoked. Run `primitive login` to authenticate again.",
+        "Saved Primitive CLI OAuth session is no longer available. Run `primitive login` to authenticate again.",
         { exit: 1 },
       );
     }
-    throw new Errors.CLIError(
-      `Could not refresh saved Primitive CLI OAuth credentials${description ? `: ${description}` : "."}`,
-      { exit: 1 },
-    );
-  }
+    if (!shouldRefresh(current, now)) return current;
 
-  if (!isOAuthRefreshSuccess(payload)) {
-    throw new Errors.CLIError(
-      "Primitive OAuth token endpoint returned an unexpected refresh response.",
-      { exit: 1 },
-    );
-  }
+    const fetchImpl = params.fetch ?? fetch;
+    const body = new URLSearchParams({
+      client_id: current.oauth_client_id,
+      grant_type: "refresh_token",
+      refresh_token: current.refresh_token,
+    });
 
-  const next: StoredCliCredentials = {
-    ...params.credentials,
-    access_token: payload.access_token,
-    expires_at: cliAccessTokenExpiresAt(payload.expires_in, now),
-    refresh_token: payload.refresh_token,
-    token_type: payload.token_type,
-  };
-  saveCliCredentials(params.configDir, next);
-  return next;
+    let response: Response;
+    try {
+      response = await fetchImpl(oauthTokenEndpoint(params.apiBaseUrl1), {
+        body,
+        headers: {
+          ...(params.headers ?? {}),
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        method: "POST",
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Errors.CLIError(
+        `Could not refresh saved Primitive CLI OAuth credentials: ${detail}`,
+        { exit: 1 },
+      );
+    }
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const code = oauthErrorCode(payload);
+      const description = oauthErrorDescription(payload);
+      if (code === "invalid_grant") {
+        deleteCliCredentials(params.configDir);
+        throw new Errors.CLIError(
+          "Saved Primitive CLI OAuth session expired or was revoked. Run `primitive login` to authenticate again.",
+          { exit: 1 },
+        );
+      }
+      throw new Errors.CLIError(
+        `Could not refresh saved Primitive CLI OAuth credentials${description ? `: ${description}` : "."}`,
+        { exit: 1 },
+      );
+    }
+
+    if (!isOAuthRefreshSuccess(payload)) {
+      throw new Errors.CLIError(
+        "Primitive OAuth token endpoint returned an unexpected refresh response.",
+        { exit: 1 },
+      );
+    }
+
+    const next: StoredCliCredentials = {
+      ...current,
+      access_token: payload.access_token,
+      expires_at: cliAccessTokenExpiresAt(payload.expires_in, now),
+      refresh_token: payload.refresh_token,
+      token_type: payload.token_type,
+    };
+    saveCliCredentials(params.configDir, next);
+    return next;
+  } finally {
+    releaseLock?.();
+  }
 }
 
 export async function createAuthenticatedCliApiClient(params: {
@@ -295,6 +321,7 @@ export async function createAuthenticatedCliApiClient(params: {
   env?: Env;
   fetch?: FetchFn;
   now?: () => number;
+  credentialsLockHeld?: boolean;
 }) {
   const requestConfig = resolveCliApiRequestConfig(params);
   let auth = resolveCliAuth({
@@ -308,6 +335,7 @@ export async function createAuthenticatedCliApiClient(params: {
       apiBaseUrl1: auth.apiBaseUrl1,
       configDir: params.configDir,
       credentials: auth.credentials,
+      credentialsLockHeld: params.credentialsLockHeld,
       fetch: params.fetch,
       headers: requestConfig.headers,
       now: params.now,

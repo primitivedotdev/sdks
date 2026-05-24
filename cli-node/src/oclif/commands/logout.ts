@@ -83,6 +83,7 @@ class LogoutCommand extends Command {
     const { apiClient, auth } = await createAuthenticatedCliApiClient({
       apiBaseUrl1: flags["api-base-url-1"],
       configDir: this.config.configDir,
+      credentialsLockHeld: true,
     });
     const freshCredentials = auth.credentials ?? credentials;
 

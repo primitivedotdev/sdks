@@ -10,6 +10,7 @@ import {
   resolveCliApiRequestConfig,
 } from "../../src/oclif/api-client.js";
 import {
+  acquireCliCredentialsLock,
   loadCliCredentials,
   type StoredCliCredentials,
   saveCliCredentials,
@@ -252,5 +253,33 @@ describe("CLI API request config", () => {
       }),
     ).rejects.toThrow(/expired or was revoked/);
     expect(loadCliCredentials(tempDir)).toBeNull();
+  });
+
+  it("does not refresh while another credential operation holds the lock", async () => {
+    const expired = {
+      ...CREDENTIALS,
+      expires_at: "2026-05-05T00:00:00.000Z",
+    };
+    saveCliCredentials(tempDir, expired);
+    const release = acquireCliCredentialsLock(tempDir);
+    let fetchCalled = false;
+
+    try {
+      await expect(
+        createAuthenticatedCliApiClient({
+          configDir: tempDir,
+          fetch: (async () => {
+            fetchCalled = true;
+            return new Response("{}") as Response;
+          }) as typeof fetch,
+          now: () => new Date("2026-05-05T00:00:00.000Z").getTime(),
+        }),
+      ).rejects.toThrow(/credential operation is already in progress/);
+    } finally {
+      release();
+    }
+
+    expect(fetchCalled).toBe(false);
+    expect(loadCliCredentials(tempDir)).toEqual(expired);
   });
 });
