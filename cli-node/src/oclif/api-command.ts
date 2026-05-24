@@ -7,11 +7,7 @@ import type {
 } from "@primitivedotdev/api-core";
 import { operations } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
-import {
-  deleteCliCredentials,
-  type ResolvedCliAuth,
-  resolveCliAuth,
-} from "./auth.js";
+import { type ResolvedCliAuth, resolveCliAuth } from "./auth.js";
 import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
@@ -512,17 +508,31 @@ export function writeErrorWithHints(payload: unknown): void {
   }
 }
 
-export function removeStaleSavedCredentialOnUnauthorized(params: {
+/**
+ * Surface a user-facing hint when a request comes back unauthorized.
+ *
+ * Deliberately does NOT mutate the saved credentials.json. Auto-
+ * deleting on any 401 made transient rejections look like permanent
+ * credential failures and forced unnecessary re-login cycles; we
+ * surface a hint and let the user decide whether to re-authenticate.
+ *
+ * The one legitimate auto-delete case lives in `primitive login`'s
+ * `checkExistingLogin`: the user has explicitly asked to log in,
+ * existing credentials are probed, and if they fail we clean up
+ * before minting a new key. That path calls `deleteCliCredentials`
+ * directly rather than going through this function.
+ */
+export function surfaceUnauthorizedHint(params: {
   auth: ResolvedCliAuth;
   baseUrlOverridden: boolean;
   configDir: string;
   payload: unknown;
-}): boolean {
+}): void {
   if (
     extractErrorCode(params.payload) !== API_ERROR_CODES.unauthorized ||
     params.auth.source !== "stored"
   ) {
-    return false;
+    return;
   }
 
   const baseUrlDiffersFromSaved =
@@ -535,16 +545,14 @@ export function removeStaleSavedCredentialOnUnauthorized(params: {
     // they are for internal staging/local testing. Keep this hint as
     // the visible recovery path when an override rejects saved creds.
     process.stderr.write(
-      "Saved Primitive CLI credentials were rejected by the overridden API base URL. The local credential was not removed; unset PRIMITIVE_API_BASE_URL_1, run `primitive config reset` to clear configured URL overrides, or run `primitive logout` to remove the stored credential.\n",
+      "Saved Primitive CLI credentials were rejected by the overridden API base URL. The saved credential is preserved; unset PRIMITIVE_API_BASE_URL_1, run `primitive config reset` to clear configured URL overrides, or run `primitive logout` to remove the stored credential.\n",
     );
-    return false;
+    return;
   }
 
-  deleteCliCredentials(params.configDir);
   process.stderr.write(
-    "Removed saved Primitive CLI OAuth credentials because the backing token is no longer valid. Run `primitive login` to create a new session.\n",
+    "Your saved Primitive CLI OAuth session was rejected. If the command was working a moment ago, please retry; brief retries often clear transient rejections. If it keeps failing, run `primitive logout && primitive login` to mint a fresh session.\n",
   );
-  return true;
 }
 
 // Format milliseconds as a short human-readable wall-clock duration.
@@ -599,7 +607,7 @@ export const API_BASE_URL_2_FLAG_DESCRIPTION =
   "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.";
 
 // Helper: was either api-base-url override set by the caller? Used by
-// removeStaleSavedCredentialOnUnauthorized to decide whether to
+// surfaceUnauthorizedHint to decide whether to
 // preserve the saved credential when a 401 comes back.
 export function baseUrlOverriddenFromFlags(
   flags: Record<string, unknown>,
@@ -999,7 +1007,7 @@ export function createOperationCommand(
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
           writeErrorWithHints(errorPayload);
-          removeStaleSavedCredentialOnUnauthorized({
+          surfaceUnauthorizedHint({
             auth,
             baseUrlOverridden,
             configDir: this.config.configDir,

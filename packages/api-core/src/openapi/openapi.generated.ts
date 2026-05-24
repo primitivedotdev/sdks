@@ -70,7 +70,7 @@ export const openapiDocument: Record<string, unknown> = {
     },
     {
       "name": "Functions",
-      "description": "Deploy JavaScript handlers that run on inbound mail. Each function\nis a single ESM module whose default export is an object with an\nasync `fetch(request, env)` method, in the shape of a Workers-style\nhandler. The gateway HMAC-verifies the inbound POST against the\norg's webhook secret before invoking `fetch`; the request body\nparses to an `email.received` event (see `EmailReceivedEvent` and\nthe Webhook payload section for the full schema). Code runs on\nPrimitive's edge runtime; there is no infrastructure to manage.\nSecrets land in `env` as encrypted bindings and are refreshed on\nevery redeploy.\n"
+      "description": "Deploy JavaScript handlers that run on inbound mail. Each function\nis a single ESM module whose default export is an object with an\nasync `fetch(request, env)` method, in the shape of a Workers-style\nhandler. Primitive signs each delivery and forwards the\n`Primitive-Signature` header to the handler; verify the raw request\nbody with `PRIMITIVE_WEBHOOK_SECRET` before trusting the parsed\n`email.received` event (see `EmailReceivedEvent` and the Webhook\npayload section for the full schema). Code runs on\nPrimitive's edge runtime; there is no infrastructure to manage.\nSecrets land in `env` as encrypted bindings and are refreshed on\nevery redeploy.\n"
     }
   ],
   "paths": {
@@ -1150,6 +1150,15 @@ export const openapiDocument: Record<string, unknown> = {
               "format": "uuid"
             },
             "description": "Filter by domain ID."
+          },
+          {
+            "name": "reply_to_sent_email_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter to inbound emails that are replies to a specific\noutbound send. The value is a `sent_emails.id` (UUID). At\ninbound ingest, Primitive matches the parsed In-Reply-To\nheader (or References as a fallback) against\n`sent_emails.message_id` in the same org and records the\nresolved id on `emails.reply_to_sent_email_id`. This filter\nis the strict-threading lookup behind `primitive chat` and\nany UI that wants to show the inbound reply to a given\nsend. NULL on inbound that isn't a threaded reply to one\nof your sends, so existing emails received before this\ningestion landed will not match.\n"
           },
           {
             "name": "status",
@@ -2549,7 +2558,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listFunctions",
         "summary": "List functions",
-        "description": "Returns every active (non-deleted) function in the org, newest\nfirst. Each entry carries the deploy status and the gateway URL\nthat the platform's webhook delivery loop posts to. To inspect\nthe source code or deploy errors, use `GET /functions/{id}`.\n",
+        "description": "Returns every active (non-deleted) function in the org, newest\nfirst. Each entry carries deploy status and timestamps. To\ninspect the source code or deploy errors, use `GET /functions/{id}`.\n",
         "tags": [
           "Functions"
         ],
@@ -2587,7 +2596,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "createFunction",
         "summary": "Deploy a function",
-        "description": "Creates and deploys a new function. The handler must be a single\nESM module whose default export is an object with an async\n`fetch(request, env)` method (Workers-style). The gateway\nHMAC-verifies the POST against the org's webhook secret before\ninvoking the handler; the request body parses to an\n`email.received` event (see `EmailReceivedEvent` and the\nWebhook payload section for the full schema). Code is bundled\nbefore being uploaded; ship a single self-contained file rather\nthan relying on external imports.\n\n**Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`\n(optional) is capped at 5 MiB UTF-8, stored with each deployment\nattempt, and sent to the runtime so stack traces can resolve to\noriginal source files.\n\n**Auto-wiring.** On successful deploy, Primitive automatically\ncreates a webhook endpoint that delivers inbound mail to the\nfunction. There is nothing to configure on the Endpoints API\nfor this to work; the gateway URL returned here is for\nreference only and is not directly callable from outside.\n\n**Secrets.** New functions ship with the managed secrets\n(`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already\nbound. Add user-set secrets via\n`POST /functions/{id}/secrets`; secret writes only land in the\nrunning handler on the next redeploy.\n",
+        "description": "Creates and deploys a new function. The handler must be a single\nESM module whose default export is an object with an async\n`fetch(request, env)` method (Workers-style). Primitive signs\neach delivery and forwards the `Primitive-Signature` header to\nthe handler. Verify the raw request body with\n`PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification\nthe request body parses to an `email.received` event (see\n`EmailReceivedEvent` and the Webhook payload section for the full\nschema). Code is bundled before being uploaded; ship a single\nself-contained file rather than relying on external imports.\n\n**Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`\n(optional) is capped at 5 MiB UTF-8, stored with each deployment\nattempt, and sent to the runtime so stack traces can resolve to\noriginal source files.\n\n**Auto-wiring.** On successful deploy, Primitive automatically\ncreates a webhook endpoint that delivers inbound mail to the\nfunction. There is nothing to configure on the Endpoints API\nfor this to work; the internal runtime URL is not returned by\nthe API and is not a customer-facing integration surface.\n\n**Secrets.** New functions ship with the managed secrets\n(`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,\n`PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via\n`POST /functions/{id}/secrets`; secret writes only land in the\nrunning handler on the next redeploy.\n",
         "tags": [
           "Functions"
         ],
@@ -2954,7 +2963,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listFunctionSecrets",
         "summary": "List a function's secrets",
-        "description": "Returns metadata for every secret bound to the function, with\nmanaged entries (provisioned by Primitive) listed first and\nuser-set entries listed alphabetically after. **Values are\nnever returned.** Secret writes are write-only.\n\nManaged entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,\n`PRIMITIVE_API_KEY`) carry a `description` instead of\n`created_at` / `updated_at`. They cannot be created, updated,\nor deleted via this API.\n",
+        "description": "Returns metadata for every secret bound to the function, with\nmanaged entries (provisioned by Primitive) listed first and\nuser-set entries listed alphabetically after. **Values are\nnever returned.** Secret writes are write-only.\n\nManaged entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,\n`PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a\n`description` instead of `created_at` / `updated_at`. They\ncannot be created, updated, or deleted via this API.\n",
         "tags": [
           "Functions"
         ],
@@ -4901,6 +4910,14 @@ export const openapiDocument: Record<string, unknown> = {
             "items": {
               "$ref": "#/components/schemas/EmailDetailReply"
             }
+          },
+          "reply_to_sent_email_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The `sent_emails.id` of the outbound this inbound was a\nreply to, when resolvable. Set at inbound ingest by\nmatching the parsed In-Reply-To (or References, as a\nfallback) against `sent_emails.message_id` in the same\norg. The mirror of `sent_emails.in_reply_to_email_id` for\nthe inbound side of a thread. NULL when the inbound is\nnot a threaded reply to one of your sends, when neither\nheader survived the path through intermediate MTAs, or on\ninbound received before this auto-link landed.\n"
           }
         },
         "required": [
@@ -5960,11 +5977,6 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "date-time",
             "description": "Timestamp of the most recent successful deploy. Null until the first deploy succeeds."
           },
-          "gateway_url": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL the platform's webhook delivery loop posts to in order\nto invoke the function. Reference only; not directly\ncallable from outside.\n"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -5978,7 +5990,6 @@ export const openapiDocument: Record<string, unknown> = {
           "id",
           "name",
           "deploy_status",
-          "gateway_url",
           "created_at",
           "updated_at"
         ]
@@ -6015,10 +6026,6 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "format": "date-time"
           },
-          "gateway_url": {
-            "type": "string",
-            "format": "uri"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -6033,7 +6040,6 @@ export const openapiDocument: Record<string, unknown> = {
           "name",
           "code",
           "deploy_status",
-          "gateway_url",
           "created_at",
           "updated_at"
         ]
@@ -6078,17 +6084,12 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "deploy_status": {
             "$ref": "#/components/schemas/FunctionDeployStatus"
-          },
-          "gateway_url": {
-            "type": "string",
-            "format": "uri"
           }
         },
         "required": [
           "id",
           "name",
-          "deploy_status",
-          "gateway_url"
+          "deploy_status"
         ]
       },
       "UpdateFunctionInput": {
@@ -6738,7 +6739,7 @@ export const openapiDocument: Record<string, unknown> = {
           "key": {
             "type": "string",
             "pattern": "^[A-Z_][A-Z0-9_]*$",
-            "description": "Uppercase letters, digits, and underscores. Must start with\na letter or underscore. System-managed keys (e.g.\nPRIMITIVE_WEBHOOK_SECRET) are reserved.\n"
+            "description": "Uppercase letters, digits, and underscores. Must start with\na letter or underscore. System-managed keys (e.g.\nPRIMITIVE_WEBHOOK_SECRET, PRIMITIVE_API_KEY, and\nPRIMITIVE_API_BASE_URL) are reserved.\n"
           },
           "value": {
             "type": "string",

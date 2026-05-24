@@ -14,7 +14,6 @@ function makeFunction(overrides: Partial<FunctionDetail> = {}): FunctionDetail {
     created_at: "2026-05-18T00:00:00.000Z",
     deploy_error: null,
     deploy_status: "pending",
-    gateway_url: `https://functions-gateway.primitive.dev/${FN_ID}`,
     id: FN_ID,
     name: "wait-test",
     updated_at: "2026-05-18T00:00:00.000Z",

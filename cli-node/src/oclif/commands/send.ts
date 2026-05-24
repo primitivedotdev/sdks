@@ -1,26 +1,17 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import type {
-  Domain,
-  ListDomainsResponse,
-  PrimitiveApiClient,
-  SendMailResult,
-  VerifiedDomain,
-} from "@primitivedotdev/api-core";
-import { listDomains, sendEmail } from "@primitivedotdev/api-core";
+import type { SendMailResult } from "@primitivedotdev/api-core";
+import { sendEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
-  API_ERROR_CODES,
-  extractErrorCode,
   extractErrorPayload,
-  formatErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
+  surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
-import type { ResolvedCliAuth } from "../auth.js";
 import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
+import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 
 // `primitive send` is the agent-grade shortcut for the most common
 // case: send a fresh outbound email. It wraps `sending:send-email`
@@ -50,86 +41,6 @@ import { resolveMessageBodies } from "../message-body-sources.js";
 // pattern-matching from there lands in the happy path. We just
 // don't need swaks's `--server` / `--auth-*` flags because the
 // HTTPS bearer auth is implicit: saved OAuth login or an explicit API key.
-
-// 200 chars is a generous cap that almost never trips on natural
-// first-line subjects (a sentence is typically <120 chars). The
-// previous 70-char limit was tight enough that legitimate one-line
-// bodies routinely produced ellipsis-truncated subjects in inbox
-// listings, e.g. `"this is the simplest possible send: agent typed
-// two flags and hit\\n e..."` from the AGX walkthrough. Real spam
-// scoring engines don't penalize subjects under ~200 chars, so 200
-// is both more useful and still well under the practical wire limit.
-const SUBJECT_MAX_LENGTH = 200;
-
-function deriveSubject(body: string): string {
-  for (const line of body.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    return trimmed.length > SUBJECT_MAX_LENGTH
-      ? `${trimmed.slice(0, SUBJECT_MAX_LENGTH - 3)}...`
-      : trimmed;
-  }
-  return "Message";
-}
-
-function isVerifiedDomain(domain: Domain): domain is VerifiedDomain {
-  return (domain as VerifiedDomain).is_active === true;
-}
-
-async function pickDefaultFromAddress(
-  apiClient: PrimitiveApiClient,
-  authFailureContext: {
-    auth: ResolvedCliAuth;
-    baseUrlOverridden: boolean;
-    configDir: string;
-  },
-): Promise<string> {
-  const result = await listDomains({
-    client: apiClient.client,
-    responseStyle: "fields",
-  });
-  if (result.error) {
-    const errorPayload = extractErrorPayload(result.error);
-    // If the underlying failure is an auth problem, don't pretend
-    // --from will fix it: the actual sendEmail call would 401 too.
-    // Surface the auth hint via writeErrorWithHints and bail with
-    // a focused message instead of the verbose "underlying error"
-    // wrapping.
-    if (extractErrorCode(errorPayload) === API_ERROR_CODES.unauthorized) {
-      writeErrorWithHints(errorPayload);
-      removeStaleSavedCredentialOnUnauthorized({
-        ...authFailureContext,
-        payload: errorPayload,
-      });
-      // exit: 1 to match the run() unauthorized path (which uses
-      // `process.exitCode = 1`). oclif's CLIError defaults to 2,
-      // so without this override the same "unauthorized" condition
-      // exits 2 when surfaced from listDomains and 1 when surfaced
-      // from sendEmail, breaking callers that branch on exit code.
-      throw new Errors.CLIError(
-        "Cannot send: CLI auth is missing or invalid (see hint above).",
-        { exit: 1 },
-      );
-    }
-    throw new Errors.CLIError(
-      `Could not look up your verified domains to default --from. Pass --from explicitly. Underlying error: ${formatErrorPayload(errorPayload)}`,
-    );
-  }
-  const envelope = result.data as ListDomainsResponse | undefined;
-  const first = envelope?.data?.find(isVerifiedDomain);
-  if (!first) {
-    throw new Errors.CLIError(
-      "No active verified outbound domain found on this account; pass --from explicitly. To set up outbound, claim a domain via `primitive domains add` and verify it.",
-    );
-  }
-  // Local-part: "agent". Any local-part is accepted on managed
-  // *.primitive.email subdomains, so this works out of the box for
-  // the auto-issued domain pool. For customers with BYO domains
-  // and their own MX, "agent@" may or may not be a routable
-  // mailbox; if you have a specific address you want to use, pass
-  // --from explicitly.
-  return `agent@${first.domain}`;
-}
 
 class SendCommand extends Command {
   static description =
@@ -285,7 +196,7 @@ class SendCommand extends Command {
       if (result.error) {
         const errorPayload = extractErrorPayload(result.error);
         writeErrorWithHints(errorPayload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           ...authFailureContext,
           payload: errorPayload,
         });

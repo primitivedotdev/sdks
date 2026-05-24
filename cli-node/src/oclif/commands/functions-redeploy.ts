@@ -12,8 +12,8 @@ import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
   readTextFileFlag,
-  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
+  surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
@@ -397,7 +397,7 @@ class FunctionsRedeployCommand extends Command {
           );
         }
         writeErrorWithHints(outcome.payload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           ...authFailureContext,
           payload: outcome.payload,
         });
@@ -422,7 +422,7 @@ class FunctionsRedeployCommand extends Command {
 
         if (waitResult.kind === "error") {
           writeErrorWithHints(waitResult.payload);
-          removeStaleSavedCredentialOnUnauthorized({
+          surfaceUnauthorizedHint({
             ...authFailureContext,
             payload: waitResult.payload,
           });

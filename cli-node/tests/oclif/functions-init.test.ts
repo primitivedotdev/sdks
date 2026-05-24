@@ -61,11 +61,15 @@ describe("renderHandler", () => {
     // teach the /api subpath specifically. The import block must
     // include createPrimitiveClient (for outbound), normalizeReceivedEmail
     // (so client.reply gets threading metadata so --show-sends works),
-    // and the EmailReceivedEvent type.
+    // the Workers-safe signature verification helpers, and the
+    // EmailReceivedEvent type.
     const handler = renderHandler();
     expect(handler).toMatch(/from\s+"@primitivedotdev\/sdk\/api"/);
     expect(handler).toContain("createPrimitiveClient");
     expect(handler).toContain("normalizeReceivedEmail");
+    expect(handler).toContain("PRIMITIVE_SIGNATURE_HEADER");
+    expect(handler).toContain("verifyWebhookSignature");
+    expect(handler).toContain("WebhookVerificationError");
     expect(handler).toContain("EmailReceivedEvent");
     expect(handler).not.toMatch(/from\s+"@primitivedotdev\/sdk"\s*;/);
     expect(handler).not.toMatch(/from\s+"@primitivedotdev\/sdk\/webhook"/);
@@ -75,6 +79,24 @@ describe("renderHandler", () => {
     const handler = renderHandler();
     expect(handler).toContain("export default {");
     expect(handler).toContain("async fetch(");
+  });
+
+  it("verifies Primitive-Signature against the raw body before parsing JSON", () => {
+    const handler = renderHandler();
+
+    const rawBodyIndex = handler.indexOf("const rawBody = await req.text();");
+    const verifyIndex = handler.indexOf("await verifyWebhookSignature({");
+    const parseIndex = handler.indexOf("JSON.parse(rawBody)");
+
+    expect(rawBodyIndex).toBeGreaterThanOrEqual(0);
+    expect(verifyIndex).toBeGreaterThan(rawBodyIndex);
+    expect(parseIndex).toBeGreaterThan(verifyIndex);
+    expect(handler).toContain("PRIMITIVE_WEBHOOK_SECRET");
+    expect(handler).toContain(
+      'new Response("invalid signature", { status: 401 })',
+    );
+    expect(handler).not.toContain("await req.json()");
+    expect(handler).not.toMatch(/gateway has already HMAC-verified/i);
   });
 
   it("calls client.reply (not client.send) so the inbound's replies array gets populated", () => {
@@ -94,7 +116,14 @@ describe("renderHandler", () => {
   it("documents that PRIMITIVE_API_KEY is auto-injected by the runtime", () => {
     const handler = renderHandler();
     expect(handler).toContain("PRIMITIVE_API_KEY");
+    expect(handler).toContain("PRIMITIVE_API_BASE_URL");
+    expect(handler).toContain("PRIMITIVE_WEBHOOK_SECRET");
     expect(handler).toContain("auto-injected");
+  });
+
+  it("passes the injected Primitive API base URL to the SDK client", () => {
+    const handler = renderHandler();
+    expect(handler).toContain("apiBaseUrl1: env.PRIMITIVE_API_BASE_URL");
   });
 
   it("branches on event.event so future event types do not retry-loop", () => {

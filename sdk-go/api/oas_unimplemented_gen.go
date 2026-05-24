@@ -71,13 +71,14 @@ func (UnimplementedHandler) CreateFilter(ctx context.Context, req *CreateFilterI
 //
 // Creates and deploys a new function. The handler must be a single
 // ESM module whose default export is an object with an async
-// `fetch(request, env)` method (Workers-style). The gateway
-// HMAC-verifies the POST against the org's webhook secret before
-// invoking the handler; the request body parses to an
-// `email.received` event (see `EmailReceivedEvent` and the
-// Webhook payload section for the full schema). Code is bundled
-// before being uploaded; ship a single self-contained file rather
-// than relying on external imports.
+// `fetch(request, env)` method (Workers-style). Primitive signs
+// each delivery and forwards the `Primitive-Signature` header to
+// the handler. Verify the raw request body with
+// `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
+// the request body parses to an `email.received` event (see
+// `EmailReceivedEvent` and the Webhook payload section for the full
+// schema). Code is bundled before being uploaded; ship a single
+// self-contained file rather than relying on external imports.
 // **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
 // (optional) is capped at 5 MiB UTF-8, stored with each deployment
 // attempt, and sent to the runtime so stack traces can resolve to
@@ -85,11 +86,11 @@ func (UnimplementedHandler) CreateFilter(ctx context.Context, req *CreateFilterI
 // **Auto-wiring.** On successful deploy, Primitive automatically
 // creates a webhook endpoint that delivers inbound mail to the
 // function. There is nothing to configure on the Endpoints API
-// for this to work; the gateway URL returned here is for
-// reference only and is not directly callable from outside.
+// for this to work; the internal runtime URL is not returned by
+// the API and is not a customer-facing integration surface.
 // **Secrets.** New functions ship with the managed secrets
-// (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
-// bound. Add user-set secrets via
+// (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,
+// `PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via
 // `POST /functions/{id}/secrets`; secret writes only land in the
 // running handler on the next redeploy.
 //
@@ -446,9 +447,9 @@ func (UnimplementedHandler) ListFunctionLogs(ctx context.Context, params ListFun
 // user-set entries listed alphabetically after. **Values are
 // never returned.** Secret writes are write-only.
 // Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
-// `PRIMITIVE_API_KEY`) carry a `description` instead of
-// `created_at` / `updated_at`. They cannot be created, updated,
-// or deleted via this API.
+// `PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a
+// `description` instead of `created_at` / `updated_at`. They
+// cannot be created, updated, or deleted via this API.
 //
 // GET /functions/{id}/secrets
 func (UnimplementedHandler) ListFunctionSecrets(ctx context.Context, params ListFunctionSecretsParams) (r ListFunctionSecretsRes, _ error) {
@@ -458,9 +459,8 @@ func (UnimplementedHandler) ListFunctionSecrets(ctx context.Context, params List
 // ListFunctions implements listFunctions operation.
 //
 // Returns every active (non-deleted) function in the org, newest
-// first. Each entry carries the deploy status and the gateway URL
-// that the platform's webhook delivery loop posts to. To inspect
-// the source code or deploy errors, use `GET /functions/{id}`.
+// first. Each entry carries deploy status and timestamps. To
+// inspect the source code or deploy errors, use `GET /functions/{id}`.
 //
 // GET /functions
 func (UnimplementedHandler) ListFunctions(ctx context.Context) (r ListFunctionsRes, _ error) {

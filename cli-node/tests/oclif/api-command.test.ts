@@ -14,8 +14,8 @@ import {
   OPERATION_HINTS,
   operationOutputPayload,
   readJsonBody,
-  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
+  surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../../src/oclif/api-command.js";
 import {
@@ -365,7 +365,7 @@ describe("writeErrorWithHints", () => {
   });
 });
 
-describe("removeStaleSavedCredentialOnUnauthorized", () => {
+describe("surfaceUnauthorizedHint", () => {
   const credentials: StoredCliCredentials = {
     access_token: "prim_oat_stale",
     api_base_url_1: "https://www.primitive.dev/api/v1",
@@ -400,10 +400,10 @@ describe("removeStaleSavedCredentialOnUnauthorized", () => {
     rmSync(tempDir, { force: true, recursive: true });
   });
 
-  it("removes stale saved credentials when the saved key is unauthorized", () => {
+  it("does NOT delete saved credentials on a 401, just prints a hint", () => {
     saveCliCredentials(tempDir, credentials);
 
-    const removed = removeStaleSavedCredentialOnUnauthorized({
+    surfaceUnauthorizedHint({
       auth: {
         apiKey: credentials.access_token,
         apiBaseUrl1: credentials.api_base_url_1,
@@ -416,17 +416,17 @@ describe("removeStaleSavedCredentialOnUnauthorized", () => {
       payload: { code: "unauthorized", message: "Invalid API key" },
     });
 
-    expect(removed).toBe(true);
-    expect(loadCliCredentials(tempDir)).toBeNull();
+    expect(loadCliCredentials(tempDir)).toEqual(credentials);
     expect(writes.join("")).toContain(
-      "Removed saved Primitive CLI OAuth credentials",
+      "Your saved Primitive CLI OAuth session was rejected",
     );
+    expect(writes.join("")).toContain("primitive logout && primitive login");
   });
 
-  it("keeps saved credentials when an overridden base URL rejects them", () => {
+  it("warns about overridden base URL when saved URL differs and preserves credentials", () => {
     saveCliCredentials(tempDir, credentials);
 
-    const removed = removeStaleSavedCredentialOnUnauthorized({
+    surfaceUnauthorizedHint({
       auth: {
         apiKey: credentials.access_token,
         apiBaseUrl1: "http://localhost:3000/api/v1",
@@ -439,16 +439,15 @@ describe("removeStaleSavedCredentialOnUnauthorized", () => {
       payload: { code: "unauthorized", message: "Invalid API key" },
     });
 
-    expect(removed).toBe(false);
     expect(loadCliCredentials(tempDir)).toEqual(credentials);
-    expect(writes.join("")).toContain("local credential was not removed");
+    expect(writes.join("")).toContain("saved credential is preserved");
     expect(writes.join("")).toContain("primitive config reset");
   });
 
   it("ignores non-auth errors", () => {
     saveCliCredentials(tempDir, credentials);
 
-    const removed = removeStaleSavedCredentialOnUnauthorized({
+    surfaceUnauthorizedHint({
       auth: {
         apiKey: credentials.access_token,
         apiBaseUrl1: credentials.api_base_url_1,
@@ -461,7 +460,26 @@ describe("removeStaleSavedCredentialOnUnauthorized", () => {
       payload: { code: "validation_error", message: "Bad request" },
     });
 
-    expect(removed).toBe(false);
+    expect(loadCliCredentials(tempDir)).toEqual(credentials);
+    expect(writes).toEqual([]);
+  });
+
+  it("ignores 401s when auth came from --api-key or env (not the saved file)", () => {
+    saveCliCredentials(tempDir, credentials);
+
+    surfaceUnauthorizedHint({
+      auth: {
+        apiKey: "prim_from_env",
+        apiBaseUrl1: credentials.api_base_url_1,
+        apiBaseUrl2: "https://api.primitive.dev/v1",
+        credentials: null,
+        source: "flag-or-env",
+      },
+      baseUrlOverridden: false,
+      configDir: tempDir,
+      payload: { code: "unauthorized", message: "Invalid API key" },
+    });
+
     expect(loadCliCredentials(tempDir)).toEqual(credentials);
     expect(writes).toEqual([]);
   });

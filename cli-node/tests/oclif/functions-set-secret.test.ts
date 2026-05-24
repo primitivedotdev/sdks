@@ -31,7 +31,6 @@ function makeFunctionDetail(
     code: "export default { async fetch(req, env, ctx) { return new Response('ok'); } };",
     created_at: "2026-05-09T00:00:00.000Z",
     deploy_status: "deployed",
-    gateway_url: `https://${FN_ID}.fn.primitive.dev`,
     id: FN_ID,
     name: "test-fn",
     updated_at: "2026-05-09T00:00:00.000Z",

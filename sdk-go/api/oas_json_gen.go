@@ -3589,17 +3589,12 @@ func (s *CreateFunctionResult) encodeFields(e *jx.Encoder) {
 		e.FieldStart("deploy_status")
 		s.DeployStatus.Encode(e)
 	}
-	{
-		e.FieldStart("gateway_url")
-		json.EncodeURI(e, s.GatewayURL)
-	}
 }
 
-var jsonFieldsNameOfCreateFunctionResult = [4]string{
+var jsonFieldsNameOfCreateFunctionResult = [3]string{
 	0: "id",
 	1: "name",
 	2: "deploy_status",
-	3: "gateway_url",
 }
 
 // Decode decodes CreateFunctionResult from json.
@@ -3645,18 +3640,6 @@ func (s *CreateFunctionResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"deploy_status\"")
 			}
-		case "gateway_url":
-			requiredBitSet[0] |= 1 << 3
-			if err := func() error {
-				v, err := json.DecodeURI(d)
-				s.GatewayURL = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"gateway_url\"")
-			}
 		default:
 			return d.Skip()
 		}
@@ -3667,7 +3650,7 @@ func (s *CreateFunctionResult) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00001111,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -6947,9 +6930,15 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 		}
 		e.ArrEnd()
 	}
+	{
+		if s.ReplyToSentEmailID.Set {
+			e.FieldStart("reply_to_sent_email_id")
+			s.ReplyToSentEmailID.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailDetail = [33]string{
+var jsonFieldsNameOfEmailDetail = [34]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -6983,6 +6972,7 @@ var jsonFieldsNameOfEmailDetail = [33]string{
 	30: "to_email",
 	31: "from_known_address",
 	32: "replies",
+	33: "reply_to_sent_email_id",
 }
 
 // Decode decodes EmailDetail from json.
@@ -7349,6 +7339,16 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"replies\"")
+			}
+		case "reply_to_sent_email_id":
+			if err := func() error {
+				s.ReplyToSentEmailID.Reset()
+				if err := s.ReplyToSentEmailID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reply_to_sent_email_id\"")
 			}
 		default:
 			return d.Skip()
@@ -10566,10 +10566,6 @@ func (s *FunctionDetail) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		e.FieldStart("gateway_url")
-		json.EncodeURI(e, s.GatewayURL)
-	}
-	{
 		e.FieldStart("created_at")
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
@@ -10579,16 +10575,15 @@ func (s *FunctionDetail) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfFunctionDetail = [9]string{
+var jsonFieldsNameOfFunctionDetail = [8]string{
 	0: "id",
 	1: "name",
 	2: "code",
 	3: "deploy_status",
 	4: "deploy_error",
 	5: "deployed_at",
-	6: "gateway_url",
-	7: "created_at",
-	8: "updated_at",
+	6: "created_at",
+	7: "updated_at",
 }
 
 // Decode decodes FunctionDetail from json.
@@ -10596,7 +10591,7 @@ func (s *FunctionDetail) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode FunctionDetail to nil")
 	}
-	var requiredBitSet [2]uint8
+	var requiredBitSet [1]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -10666,20 +10661,8 @@ func (s *FunctionDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"deployed_at\"")
 			}
-		case "gateway_url":
-			requiredBitSet[0] |= 1 << 6
-			if err := func() error {
-				v, err := json.DecodeURI(d)
-				s.GatewayURL = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"gateway_url\"")
-			}
 		case "created_at":
-			requiredBitSet[0] |= 1 << 7
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -10691,7 +10674,7 @@ func (s *FunctionDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "updated_at":
-			requiredBitSet[1] |= 1 << 0
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -10711,9 +10694,8 @@ func (s *FunctionDetail) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [2]uint8{
+	for i, mask := range [1]uint8{
 		0b11001111,
-		0b00000001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -10787,10 +10769,6 @@ func (s *FunctionListItem) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		e.FieldStart("gateway_url")
-		json.EncodeURI(e, s.GatewayURL)
-	}
-	{
 		e.FieldStart("created_at")
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
@@ -10800,14 +10778,13 @@ func (s *FunctionListItem) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfFunctionListItem = [7]string{
+var jsonFieldsNameOfFunctionListItem = [6]string{
 	0: "id",
 	1: "name",
 	2: "deploy_status",
 	3: "deployed_at",
-	4: "gateway_url",
-	5: "created_at",
-	6: "updated_at",
+	4: "created_at",
+	5: "updated_at",
 }
 
 // Decode decodes FunctionListItem from json.
@@ -10863,20 +10840,8 @@ func (s *FunctionListItem) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"deployed_at\"")
 			}
-		case "gateway_url":
-			requiredBitSet[0] |= 1 << 4
-			if err := func() error {
-				v, err := json.DecodeURI(d)
-				s.GatewayURL = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"gateway_url\"")
-			}
 		case "created_at":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -10888,7 +10853,7 @@ func (s *FunctionListItem) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "updated_at":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -10909,7 +10874,7 @@ func (s *FunctionListItem) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b01110111,
+		0b00110111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

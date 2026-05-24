@@ -4,8 +4,8 @@ import { getAccount } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
+  surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
@@ -75,7 +75,7 @@ class WhoamiCommand extends Command {
       if (result.error) {
         const errorPayload = extractErrorPayload(result.error);
         writeErrorWithHints(errorPayload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           auth,
           baseUrlOverridden,
           configDir: this.config.configDir,

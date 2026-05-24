@@ -160,10 +160,11 @@ tags:
       Deploy JavaScript handlers that run on inbound mail. Each function
       is a single ESM module whose default export is an object with an
       async `fetch(request, env)` method, in the shape of a Workers-style
-      handler. The gateway HMAC-verifies the inbound POST against the
-      org's webhook secret before invoking `fetch`; the request body
-      parses to an `email.received` event (see `EmailReceivedEvent` and
-      the Webhook payload section for the full schema). Code runs on
+      handler. Primitive signs each delivery and forwards the
+      `Primitive-Signature` header to the handler; verify the raw request
+      body with `PRIMITIVE_WEBHOOK_SECRET` before trusting the parsed
+      `email.received` event (see `EmailReceivedEvent` and the Webhook
+      payload section for the full schema). Code runs on
       Primitive's edge runtime; there is no infrastructure to manage.
       Secrets land in `env` as encrypted bindings and are refreshed on
       every redeploy.
@@ -919,6 +920,23 @@ paths:
             type: string
             format: uuid
           description: Filter by domain ID.
+        - name: reply_to_sent_email_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: |
+            Filter to inbound emails that are replies to a specific
+            outbound send. The value is a `sent_emails.id` (UUID). At
+            inbound ingest, Primitive matches the parsed In-Reply-To
+            header (or References as a fallback) against
+            `sent_emails.message_id` in the same org and records the
+            resolved id on `emails.reply_to_sent_email_id`. This filter
+            is the strict-threading lookup behind `primitive chat` and
+            any UI that wants to show the inbound reply to a given
+            send. NULL on inbound that isn't a threaded reply to one
+            of your sends, so existing emails received before this
+            ingestion landed will not match.
         - name: status
           in: query
           schema:
@@ -1944,9 +1962,8 @@ paths:
       summary: List functions
       description: |
         Returns every active (non-deleted) function in the org, newest
-        first. Each entry carries the deploy status and the gateway URL
-        that the platform's webhook delivery loop posts to. To inspect
-        the source code or deploy errors, use `GET /functions/{id}`.
+        first. Each entry carries deploy status and timestamps. To
+        inspect the source code or deploy errors, use `GET /functions/{id}`.
       tags: [Functions]
       responses:
         '200':
@@ -1971,13 +1988,14 @@ paths:
       description: |
         Creates and deploys a new function. The handler must be a single
         ESM module whose default export is an object with an async
-        `fetch(request, env)` method (Workers-style). The gateway
-        HMAC-verifies the POST against the org's webhook secret before
-        invoking the handler; the request body parses to an
-        `email.received` event (see `EmailReceivedEvent` and the
-        Webhook payload section for the full schema). Code is bundled
-        before being uploaded; ship a single self-contained file rather
-        than relying on external imports.
+        `fetch(request, env)` method (Workers-style). Primitive signs
+        each delivery and forwards the `Primitive-Signature` header to
+        the handler. Verify the raw request body with
+        `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
+        the request body parses to an `email.received` event (see
+        `EmailReceivedEvent` and the Webhook payload section for the full
+        schema). Code is bundled before being uploaded; ship a single
+        self-contained file rather than relying on external imports.
 
         **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
         (optional) is capped at 5 MiB UTF-8, stored with each deployment
@@ -1987,12 +2005,12 @@ paths:
         **Auto-wiring.** On successful deploy, Primitive automatically
         creates a webhook endpoint that delivers inbound mail to the
         function. There is nothing to configure on the Endpoints API
-        for this to work; the gateway URL returned here is for
-        reference only and is not directly callable from outside.
+        for this to work; the internal runtime URL is not returned by
+        the API and is not a customer-facing integration surface.
 
         **Secrets.** New functions ship with the managed secrets
-        (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
-        bound. Add user-set secrets via
+        (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,
+        `PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via
         `POST /functions/{id}/secrets`; secret writes only land in the
         running handler on the next redeploy.
       tags: [Functions]
@@ -2277,9 +2295,9 @@ paths:
         never returned.** Secret writes are write-only.
 
         Managed entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,
-        `PRIMITIVE_API_KEY`) carry a `description` instead of
-        `created_at` / `updated_at`. They cannot be created, updated,
-        or deleted via this API.
+        `PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a
+        `description` instead of `created_at` / `updated_at`. They
+        cannot be created, updated, or deleted via this API.
       tags: [Functions]
       responses:
         '200':
@@ -3585,6 +3603,19 @@ components:
             recorded reply attempt regardless of outcome.
           items:
             $ref: '#/components/schemas/EmailDetailReply'
+        reply_to_sent_email_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The `sent_emails.id` of the outbound this inbound was a
+            reply to, when resolvable. Set at inbound ingest by
+            matching the parsed In-Reply-To (or References, as a
+            fallback) against `sent_emails.message_id` in the same
+            org. The mirror of `sent_emails.in_reply_to_email_id` for
+            the inbound side of a thread. NULL when the inbound is
+            not a threaded reply to one of your sends, when neither
+            header survived the path through intermediate MTAs, or on
+            inbound received before this auto-link landed.
       required:
         - id
         - sender
@@ -4523,13 +4554,6 @@ components:
           type: [string, 'null']
           format: date-time
           description: Timestamp of the most recent successful deploy. Null until the first deploy succeeds.
-        gateway_url:
-          type: string
-          format: uri
-          description: |
-            URL the platform's webhook delivery loop posts to in order
-            to invoke the function. Reference only; not directly
-            callable from outside.
         created_at:
           type: string
           format: date-time
@@ -4540,7 +4564,6 @@ components:
         - id
         - name
         - deploy_status
-        - gateway_url
         - created_at
         - updated_at
 
@@ -4569,9 +4592,6 @@ components:
         deployed_at:
           type: [string, 'null']
           format: date-time
-        gateway_url:
-          type: string
-          format: uri
         created_at:
           type: string
           format: date-time
@@ -4583,7 +4603,6 @@ components:
         - name
         - code
         - deploy_status
-        - gateway_url
         - created_at
         - updated_at
 
@@ -4627,10 +4646,7 @@ components:
           type: string
         deploy_status:
           $ref: '#/components/schemas/FunctionDeployStatus'
-        gateway_url:
-          type: string
-          format: uri
-      required: [id, name, deploy_status, gateway_url]
+      required: [id, name, deploy_status]
 
     UpdateFunctionInput:
       type: object
@@ -5018,7 +5034,8 @@ components:
           description: |
             Uppercase letters, digits, and underscores. Must start with
             a letter or underscore. System-managed keys (e.g.
-            PRIMITIVE_WEBHOOK_SECRET) are reserved.
+            PRIMITIVE_WEBHOOK_SECRET, PRIMITIVE_API_KEY, and
+            PRIMITIVE_API_BASE_URL) are reserved.
         value:
           type: string
           minLength: 1

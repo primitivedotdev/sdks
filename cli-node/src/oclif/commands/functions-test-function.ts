@@ -13,8 +13,8 @@ import {
   API_BASE_URL_1_FLAG_DESCRIPTION,
   API_BASE_URL_2_FLAG_DESCRIPTION,
   extractErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
+  surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
@@ -353,7 +353,7 @@ class FunctionsTestFunctionCommand extends Command {
       if (triggerResult.error) {
         const payload = extractErrorPayload(triggerResult.error);
         writeErrorWithHints(payload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           auth,
           baseUrlOverridden,
           configDir: this.config.configDir,
@@ -406,7 +406,7 @@ class FunctionsTestFunctionCommand extends Command {
         if (!page.ok) {
           const payload = extractErrorPayload(page.error);
           writeErrorWithHints(payload);
-          removeStaleSavedCredentialOnUnauthorized({
+          surfaceUnauthorizedHint({
             auth,
             baseUrlOverridden,
             configDir: this.config.configDir,
@@ -447,7 +447,7 @@ class FunctionsTestFunctionCommand extends Command {
         if (result.error) {
           const payload = extractErrorPayload(result.error);
           writeErrorWithHints(payload);
-          removeStaleSavedCredentialOnUnauthorized({
+          surfaceUnauthorizedHint({
             auth,
             baseUrlOverridden,
             configDir: this.config.configDir,

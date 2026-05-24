@@ -37,9 +37,6 @@ class FunctionListItem:
                   * `failed` — the most recent deploy attempt failed; the
                     previously-live code (if any) is still running. The
                     `deploy_error` field carries the error message.
-            gateway_url (str): URL the platform's webhook delivery loop posts to in order
-                to invoke the function. Reference only; not directly
-                callable from outside.
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
             deployed_at (datetime.datetime | None | Unset): Timestamp of the most recent successful deploy. Null until the
@@ -49,7 +46,6 @@ class FunctionListItem:
     id: UUID
     name: str
     deploy_status: FunctionDeployStatus
-    gateway_url: str
     created_at: datetime.datetime
     updated_at: datetime.datetime
     deployed_at: datetime.datetime | None | Unset = UNSET
@@ -65,8 +61,6 @@ class FunctionListItem:
         name = self.name
 
         deploy_status = self.deploy_status.value
-
-        gateway_url = self.gateway_url
 
         created_at = self.created_at.isoformat()
 
@@ -87,7 +81,6 @@ class FunctionListItem:
             "id": id,
             "name": name,
             "deploy_status": deploy_status,
-            "gateway_url": gateway_url,
             "created_at": created_at,
             "updated_at": updated_at,
         })
@@ -112,8 +105,6 @@ class FunctionListItem:
 
 
 
-
-        gateway_url = d.pop("gateway_url")
 
         created_at = isoparse(d.pop("created_at"))
 
@@ -149,7 +140,6 @@ class FunctionListItem:
             id=id,
             name=name,
             deploy_status=deploy_status,
-            gateway_url=gateway_url,
             created_at=created_at,
             updated_at=updated_at,
             deployed_at=deployed_at,

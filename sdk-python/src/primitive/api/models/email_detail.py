@@ -155,6 +155,15 @@ class EmailDetail:
                 value does not by itself guarantee that a reply will be
                 accepted by send-mail's gates; the per-send check at send
                 time remains authoritative.
+            reply_to_sent_email_id (None | Unset | UUID): The `sent_emails.id` of the outbound this inbound was a
+                reply to, when resolvable. Set at inbound ingest by
+                matching the parsed In-Reply-To (or References, as a
+                fallback) against `sent_emails.message_id` in the same
+                org. The mirror of `sent_emails.in_reply_to_email_id` for
+                the inbound side of a thread. NULL when the inbound is
+                not a threaded reply to one of your sends, when neither
+                header survived the path through intermediate MTAs, or on
+                inbound received before this auto-link landed.
      """
 
     id: UUID
@@ -190,6 +199,7 @@ class EmailDetail:
     content_discarded_at: datetime.datetime | None | Unset = UNSET
     content_discarded_by_delivery_id: None | str | Unset = UNSET
     from_known_address: bool | Unset = UNSET
+    reply_to_sent_email_id: None | Unset | UUID = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -373,6 +383,14 @@ class EmailDetail:
 
         from_known_address = self.from_known_address
 
+        reply_to_sent_email_id: None | str | Unset
+        if isinstance(self.reply_to_sent_email_id, Unset):
+            reply_to_sent_email_id = UNSET
+        elif isinstance(self.reply_to_sent_email_id, UUID):
+            reply_to_sent_email_id = str(self.reply_to_sent_email_id)
+        else:
+            reply_to_sent_email_id = self.reply_to_sent_email_id
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -433,6 +451,8 @@ class EmailDetail:
             field_dict["content_discarded_by_delivery_id"] = content_discarded_by_delivery_id
         if from_known_address is not UNSET:
             field_dict["from_known_address"] = from_known_address
+        if reply_to_sent_email_id is not UNSET:
+            field_dict["reply_to_sent_email_id"] = reply_to_sent_email_id
 
         return field_dict
 
@@ -784,6 +804,26 @@ class EmailDetail:
 
         from_known_address = d.pop("from_known_address", UNSET)
 
+        def _parse_reply_to_sent_email_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                reply_to_sent_email_id_type_0 = UUID(data)
+
+
+
+                return reply_to_sent_email_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        reply_to_sent_email_id = _parse_reply_to_sent_email_id(d.pop("reply_to_sent_email_id", UNSET))
+
+
         email_detail = cls(
             id=id,
             sender=sender,
@@ -818,6 +858,7 @@ class EmailDetail:
             content_discarded_at=content_discarded_at,
             content_discarded_by_delivery_id=content_discarded_by_delivery_id,
             from_known_address=from_known_address,
+            reply_to_sent_email_id=reply_to_sent_email_id,
         )
 
 

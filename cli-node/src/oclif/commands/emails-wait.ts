@@ -2,7 +2,7 @@ import { Command, Errors, Flags } from "@oclif/core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
+  surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
@@ -92,6 +92,10 @@ class EmailsWaitCommand extends Command {
     q: Flags.string({
       description: "Full-text search DSL query",
     }),
+    "reply-to-sent-email-id": Flags.string({
+      description:
+        "Filter to inbound emails that are threaded replies to a specific outbound send (UUID from a /v1/send-mail response). Combine with --to and --since for the strictest version of the wait-for-reply pattern.",
+    }),
     since: Flags.string({
       description: "Only match emails received on or after this date/time",
     }),
@@ -156,7 +160,7 @@ class EmailsWaitCommand extends Command {
       if (!page.ok) {
         const payload = extractErrorPayload(page.error);
         writeErrorWithHints(payload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           auth,
           baseUrlOverridden,
           configDir: this.config.configDir,

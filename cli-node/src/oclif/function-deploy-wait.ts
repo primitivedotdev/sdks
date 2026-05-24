@@ -10,7 +10,6 @@ export type FunctionDeployWaitSnapshot = {
   deploy_status: FunctionDetail["deploy_status"];
   deploy_error?: string | null;
   deployed_at?: string | null;
-  gateway_url: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -68,7 +67,6 @@ function toDeployWaitSnapshot(
     ...(value.deployed_at !== undefined
       ? { deployed_at: value.deployed_at }
       : {}),
-    gateway_url: value.gateway_url,
     id: value.id,
     name: value.name,
     ...(value.updated_at !== undefined ? { updated_at: value.updated_at } : {}),

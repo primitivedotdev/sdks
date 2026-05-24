@@ -71,9 +71,8 @@ def sync_detailed(
     """ List functions
 
      Returns every active (non-deleted) function in the org, newest
-    first. Each entry carries the deploy status and the gateway URL
-    that the platform's webhook delivery loop posts to. To inspect
-    the source code or deploy errors, use `GET /functions/{id}`.
+    first. Each entry carries deploy status and timestamps. To
+    inspect the source code or deploy errors, use `GET /functions/{id}`.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -102,9 +101,8 @@ def sync(
     """ List functions
 
      Returns every active (non-deleted) function in the org, newest
-    first. Each entry carries the deploy status and the gateway URL
-    that the platform's webhook delivery loop posts to. To inspect
-    the source code or deploy errors, use `GET /functions/{id}`.
+    first. Each entry carries deploy status and timestamps. To
+    inspect the source code or deploy errors, use `GET /functions/{id}`.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -128,9 +126,8 @@ async def asyncio_detailed(
     """ List functions
 
      Returns every active (non-deleted) function in the org, newest
-    first. Each entry carries the deploy status and the gateway URL
-    that the platform's webhook delivery loop posts to. To inspect
-    the source code or deploy errors, use `GET /functions/{id}`.
+    first. Each entry carries deploy status and timestamps. To
+    inspect the source code or deploy errors, use `GET /functions/{id}`.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -159,9 +156,8 @@ async def asyncio(
     """ List functions
 
      Returns every active (non-deleted) function in the org, newest
-    first. Each entry carries the deploy status and the gateway URL
-    that the platform's webhook delivery loop posts to. To inspect
-    the source code or deploy errors, use `GET /functions/{id}`.
+    first. Each entry carries deploy status and timestamps. To
+    inspect the source code or deploy errors, use `GET /functions/{id}`.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

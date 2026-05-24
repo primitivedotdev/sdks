@@ -11,8 +11,8 @@ import {
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
+  surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
@@ -347,7 +347,7 @@ class FunctionsSetSecretCommand extends Command {
           );
         }
         writeErrorWithHints(outcome.payload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           ...authFailureContext,
           payload: outcome.payload,
         });
