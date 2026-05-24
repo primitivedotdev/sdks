@@ -17,7 +17,7 @@ import {
   extractErrorCode,
   extractErrorPayload,
   formatErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
+  surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "./api-command.js";
 import type { ResolvedCliAuth } from "./auth.js";
@@ -74,7 +74,7 @@ export async function pickDefaultFromAddress(
     const errorPayload = extractErrorPayload(result.error);
     if (extractErrorCode(errorPayload) === API_ERROR_CODES.unauthorized) {
       writeErrorWithHints(errorPayload);
-      removeStaleSavedCredentialOnUnauthorized({
+      surfaceUnauthorizedHint({
         ...authFailureContext,
         payload: errorPayload,
       });

@@ -8,8 +8,8 @@ import { getEmail, sendEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
   runWithTiming,
+  surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
@@ -238,7 +238,7 @@ class ChatCommand extends Command {
       if (sendResult.error) {
         const errorPayload = extractErrorPayload(sendResult.error);
         writeErrorWithHints(errorPayload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           ...authFailureContext,
           payload: errorPayload,
         });
@@ -376,7 +376,7 @@ async function waitForReply(
       if (!page.ok) {
         const payload = extractErrorPayload(page.error);
         writeErrorWithHints(payload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           ...params.authFailureContext,
           payload,
         });
@@ -397,7 +397,7 @@ async function waitForReply(
         if (full.error) {
           const payload = extractErrorPayload(full.error);
           writeErrorWithHints(payload);
-          removeStaleSavedCredentialOnUnauthorized({
+          surfaceUnauthorizedHint({
             ...params.authFailureContext,
             payload,
           });

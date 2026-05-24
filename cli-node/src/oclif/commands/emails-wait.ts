@@ -2,7 +2,7 @@ import { Command, Errors, Flags } from "@oclif/core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
-  removeStaleSavedCredentialOnUnauthorized,
+  surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
@@ -160,7 +160,7 @@ class EmailsWaitCommand extends Command {
       if (!page.ok) {
         const payload = extractErrorPayload(page.error);
         writeErrorWithHints(payload);
-        removeStaleSavedCredentialOnUnauthorized({
+        surfaceUnauthorizedHint({
           auth,
           baseUrlOverridden,
           configDir: this.config.configDir,
