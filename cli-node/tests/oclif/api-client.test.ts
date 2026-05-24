@@ -6,10 +6,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   cliApiHeadersFromEnv,
   createAuthenticatedCliApiClient,
+  refreshStoredCliCredentials,
   resolveCliApiRequestConfig,
 } from "../../src/oclif/api-client.js";
-import type { StoredCliCredentials } from "../../src/oclif/auth.js";
-import { saveCliCredentials } from "../../src/oclif/auth.js";
+import {
+  acquireCliCredentialsLock,
+  loadCliCredentials,
+  type StoredCliCredentials,
+  saveCliCredentials,
+} from "../../src/oclif/auth.js";
 import {
   emptyCliConfig,
   parseHeaderAssignment,
@@ -19,13 +24,17 @@ import {
 } from "../../src/oclif/cli-config.js";
 
 const CREDENTIALS: StoredCliCredentials = {
-  api_key: "prim_existing",
+  access_token: "prim_oat_existing",
   api_base_url_1: "https://saved.example/api/v1",
+  auth_method: "oauth",
   created_at: "2026-05-05T00:00:00.000Z",
-  key_id: "11111111-1111-4111-8111-111111111111",
-  key_prefix: "prim_exi...",
+  expires_at: "2099-05-05T00:00:00.000Z",
+  oauth_client_id: "primitive-cli",
+  oauth_grant_id: "11111111-1111-4111-8111-111111111111",
   org_id: "22222222-2222-4222-8222-222222222222",
   org_name: "Acme",
+  refresh_token: "prim_ort_existing",
+  token_type: "Bearer",
 };
 
 describe("CLI API request config", () => {
@@ -158,7 +167,7 @@ describe("CLI API request config", () => {
     });
   });
 
-  it("uses configured API URLs when resolving saved credentials", () => {
+  it("uses configured API URLs when resolving saved credentials", async () => {
     saveCliCredentials(tempDir, CREDENTIALS);
     const config = upsertCliEnvironment({
       apiBaseUrl1: "https://staging.example/api/v1",
@@ -169,15 +178,108 @@ describe("CLI API request config", () => {
     saveCliConfig(tempDir, config);
 
     const { apiClient, auth, baseUrlOverridden, requestConfig } =
-      createAuthenticatedCliApiClient({
+      await createAuthenticatedCliApiClient({
         configDir: tempDir,
       });
 
-    expect(auth.apiKey).toBe(CREDENTIALS.api_key);
+    expect(auth.apiKey).toBe(CREDENTIALS.access_token);
     expect(auth.apiBaseUrl1).toBe("https://staging.example/api/v1");
     expect(baseUrlOverridden).toBe(true);
     expect(requestConfig.headers).toEqual({ "x-staging-secret": "secret" });
     const clientHeaders = apiClient.getConfig().headers as Headers;
     expect(clientHeaders.get("x-staging-secret")).toBe("secret");
+  });
+
+  it("refreshes expired saved OAuth credentials and persists the new token set", async () => {
+    const expired = {
+      ...CREDENTIALS,
+      expires_at: "2026-05-05T00:00:00.000Z",
+    };
+    saveCliCredentials(tempDir, expired);
+    const fetchMock = async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      expect(String(url)).toBe("https://saved.example/oauth/token");
+      expect(init?.method).toBe("POST");
+      expect(init?.body?.toString()).toContain("grant_type=refresh_token");
+      return new Response(
+        JSON.stringify({
+          access_token: "prim_oat_refreshed",
+          expires_in: 120,
+          refresh_token: "prim_ort_refreshed",
+          token_type: "Bearer",
+        }),
+      );
+    };
+
+    const refreshed = await refreshStoredCliCredentials({
+      apiBaseUrl1: expired.api_base_url_1,
+      configDir: tempDir,
+      credentials: expired,
+      fetch: fetchMock as typeof fetch,
+      now: () => new Date("2026-05-05T00:00:00.000Z").getTime(),
+    });
+
+    expect(refreshed).toMatchObject({
+      access_token: "prim_oat_refreshed",
+      refresh_token: "prim_ort_refreshed",
+    });
+    expect(loadCliCredentials(tempDir)).toEqual(refreshed);
+  });
+
+  it("removes saved OAuth credentials when refresh returns invalid_grant", async () => {
+    const expired = {
+      ...CREDENTIALS,
+      expires_at: "2026-05-05T00:00:00.000Z",
+    };
+    saveCliCredentials(tempDir, expired);
+    const fetchMock = async () =>
+      new Response(
+        JSON.stringify({
+          error: "invalid_grant",
+          error_description: "Refresh token is no longer active",
+        }),
+        { status: 400 },
+      );
+
+    await expect(
+      refreshStoredCliCredentials({
+        apiBaseUrl1: expired.api_base_url_1,
+        configDir: tempDir,
+        credentials: expired,
+        fetch: fetchMock as typeof fetch,
+        now: () => new Date("2026-05-05T00:00:00.000Z").getTime(),
+      }),
+    ).rejects.toThrow(/expired or was revoked/);
+    expect(loadCliCredentials(tempDir)).toBeNull();
+  });
+
+  it("does not refresh while another credential operation holds the lock", async () => {
+    const expired = {
+      ...CREDENTIALS,
+      expires_at: "2026-05-05T00:00:00.000Z",
+    };
+    saveCliCredentials(tempDir, expired);
+    const release = acquireCliCredentialsLock(tempDir);
+    let fetchCalled = false;
+
+    try {
+      await expect(
+        createAuthenticatedCliApiClient({
+          configDir: tempDir,
+          fetch: (async () => {
+            fetchCalled = true;
+            return new Response("{}") as Response;
+          }) as typeof fetch,
+          now: () => new Date("2026-05-05T00:00:00.000Z").getTime(),
+        }),
+      ).rejects.toThrow(/credential operation is already in progress/);
+    } finally {
+      release();
+    }
+
+    expect(fetchCalled).toBe(false);
+    expect(loadCliCredentials(tempDir)).toEqual(expired);
   });
 });

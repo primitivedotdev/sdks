@@ -805,6 +805,34 @@ func (s *CliLoginPollResult) encodeFields(e *jx.Encoder) {
 		e.Str(s.KeyPrefix)
 	}
 	{
+		e.FieldStart("access_token")
+		e.Str(s.AccessToken)
+	}
+	{
+		e.FieldStart("refresh_token")
+		e.Str(s.RefreshToken)
+	}
+	{
+		e.FieldStart("token_type")
+		s.TokenType.Encode(e)
+	}
+	{
+		e.FieldStart("expires_in")
+		e.Int(s.ExpiresIn)
+	}
+	{
+		e.FieldStart("auth_method")
+		s.AuthMethod.Encode(e)
+	}
+	{
+		e.FieldStart("oauth_grant_id")
+		json.EncodeUUID(e, s.OAuthGrantID)
+	}
+	{
+		e.FieldStart("oauth_client_id")
+		e.Str(s.OAuthClientID)
+	}
+	{
 		e.FieldStart("org_id")
 		json.EncodeUUID(e, s.OrgID)
 	}
@@ -814,12 +842,19 @@ func (s *CliLoginPollResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCliLoginPollResult = [5]string{
-	0: "api_key",
-	1: "key_id",
-	2: "key_prefix",
-	3: "org_id",
-	4: "org_name",
+var jsonFieldsNameOfCliLoginPollResult = [12]string{
+	0:  "api_key",
+	1:  "key_id",
+	2:  "key_prefix",
+	3:  "access_token",
+	4:  "refresh_token",
+	5:  "token_type",
+	6:  "expires_in",
+	7:  "auth_method",
+	8:  "oauth_grant_id",
+	9:  "oauth_client_id",
+	10: "org_id",
+	11: "org_name",
 }
 
 // Decode decodes CliLoginPollResult from json.
@@ -827,7 +862,7 @@ func (s *CliLoginPollResult) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode CliLoginPollResult to nil")
 	}
-	var requiredBitSet [1]uint8
+	var requiredBitSet [2]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -867,8 +902,88 @@ func (s *CliLoginPollResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"key_prefix\"")
 			}
-		case "org_id":
+		case "access_token":
 			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Str()
+				s.AccessToken = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"access_token\"")
+			}
+		case "refresh_token":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Str()
+				s.RefreshToken = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"refresh_token\"")
+			}
+		case "token_type":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				if err := s.TokenType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"token_type\"")
+			}
+		case "expires_in":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				v, err := d.Int()
+				s.ExpiresIn = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"expires_in\"")
+			}
+		case "auth_method":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				if err := s.AuthMethod.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"auth_method\"")
+			}
+		case "oauth_grant_id":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.OAuthGrantID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"oauth_grant_id\"")
+			}
+		case "oauth_client_id":
+			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.OAuthClientID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"oauth_client_id\"")
+			}
+		case "org_id":
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.OrgID = v
@@ -880,7 +995,7 @@ func (s *CliLoginPollResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"org_id\"")
 			}
 		case "org_name":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
 				if err := s.OrgName.Decode(d); err != nil {
 					return err
@@ -898,8 +1013,9 @@ func (s *CliLoginPollResult) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00011111,
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -941,6 +1057,82 @@ func (s *CliLoginPollResult) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CliLoginPollResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CliLoginPollResultAuthMethod as json.
+func (s CliLoginPollResultAuthMethod) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes CliLoginPollResultAuthMethod from json.
+func (s *CliLoginPollResultAuthMethod) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CliLoginPollResultAuthMethod to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch CliLoginPollResultAuthMethod(v) {
+	case CliLoginPollResultAuthMethodOAuth:
+		*s = CliLoginPollResultAuthMethodOAuth
+	default:
+		*s = CliLoginPollResultAuthMethod(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CliLoginPollResultAuthMethod) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CliLoginPollResultAuthMethod) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CliLoginPollResultTokenType as json.
+func (s CliLoginPollResultTokenType) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes CliLoginPollResultTokenType from json.
+func (s *CliLoginPollResultTokenType) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CliLoginPollResultTokenType to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch CliLoginPollResultTokenType(v) {
+	case CliLoginPollResultTokenTypeBearer:
+		*s = CliLoginPollResultTokenTypeBearer
+	default:
+		*s = CliLoginPollResultTokenType(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CliLoginPollResultTokenType) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CliLoginPollResultTokenType) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -1425,17 +1617,26 @@ func (s *CliLogoutResult) Encode(e *jx.Encoder) {
 func (s *CliLogoutResult) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("revoked")
-		e.Bool(true)
+		e.Bool(s.Revoked)
 	}
 	{
-		e.FieldStart("key_id")
-		json.EncodeUUID(e, s.KeyID)
+		if s.KeyID.Set {
+			e.FieldStart("key_id")
+			s.KeyID.Encode(e)
+		}
+	}
+	{
+		if s.OAuthGrantID.Set {
+			e.FieldStart("oauth_grant_id")
+			s.OAuthGrantID.Encode(e)
+		}
 	}
 }
 
-var jsonFieldsNameOfCliLogoutResult = [2]string{
+var jsonFieldsNameOfCliLogoutResult = [3]string{
 	0: "revoked",
 	1: "key_id",
+	2: "oauth_grant_id",
 }
 
 // Decode decodes CliLogoutResult from json.
@@ -1460,16 +1661,24 @@ func (s *CliLogoutResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"revoked\"")
 			}
 		case "key_id":
-			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.KeyID = v
-				if err != nil {
+				s.KeyID.Reset()
+				if err := s.KeyID.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"key_id\"")
+			}
+		case "oauth_grant_id":
+			if err := func() error {
+				s.OAuthGrantID.Reset()
+				if err := s.OAuthGrantID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"oauth_grant_id\"")
 			}
 		default:
 			return d.Skip()
@@ -1481,7 +1690,7 @@ func (s *CliLogoutResult) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -1898,6 +2107,34 @@ func (s *CliSignupVerifyResult) encodeFields(e *jx.Encoder) {
 		e.Str(s.KeyPrefix)
 	}
 	{
+		e.FieldStart("access_token")
+		e.Str(s.AccessToken)
+	}
+	{
+		e.FieldStart("refresh_token")
+		e.Str(s.RefreshToken)
+	}
+	{
+		e.FieldStart("token_type")
+		s.TokenType.Encode(e)
+	}
+	{
+		e.FieldStart("expires_in")
+		e.Int(s.ExpiresIn)
+	}
+	{
+		e.FieldStart("auth_method")
+		s.AuthMethod.Encode(e)
+	}
+	{
+		e.FieldStart("oauth_grant_id")
+		json.EncodeUUID(e, s.OAuthGrantID)
+	}
+	{
+		e.FieldStart("oauth_client_id")
+		e.Str(s.OAuthClientID)
+	}
+	{
 		e.FieldStart("org_id")
 		json.EncodeUUID(e, s.OrgID)
 	}
@@ -1907,12 +2144,19 @@ func (s *CliSignupVerifyResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfCliSignupVerifyResult = [5]string{
-	0: "api_key",
-	1: "key_id",
-	2: "key_prefix",
-	3: "org_id",
-	4: "org_name",
+var jsonFieldsNameOfCliSignupVerifyResult = [12]string{
+	0:  "api_key",
+	1:  "key_id",
+	2:  "key_prefix",
+	3:  "access_token",
+	4:  "refresh_token",
+	5:  "token_type",
+	6:  "expires_in",
+	7:  "auth_method",
+	8:  "oauth_grant_id",
+	9:  "oauth_client_id",
+	10: "org_id",
+	11: "org_name",
 }
 
 // Decode decodes CliSignupVerifyResult from json.
@@ -1920,7 +2164,7 @@ func (s *CliSignupVerifyResult) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode CliSignupVerifyResult to nil")
 	}
-	var requiredBitSet [1]uint8
+	var requiredBitSet [2]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -1960,8 +2204,88 @@ func (s *CliSignupVerifyResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"key_prefix\"")
 			}
-		case "org_id":
+		case "access_token":
 			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Str()
+				s.AccessToken = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"access_token\"")
+			}
+		case "refresh_token":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Str()
+				s.RefreshToken = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"refresh_token\"")
+			}
+		case "token_type":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				if err := s.TokenType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"token_type\"")
+			}
+		case "expires_in":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				v, err := d.Int()
+				s.ExpiresIn = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"expires_in\"")
+			}
+		case "auth_method":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				if err := s.AuthMethod.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"auth_method\"")
+			}
+		case "oauth_grant_id":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.OAuthGrantID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"oauth_grant_id\"")
+			}
+		case "oauth_client_id":
+			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.OAuthClientID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"oauth_client_id\"")
+			}
+		case "org_id":
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.OrgID = v
@@ -1973,7 +2297,7 @@ func (s *CliSignupVerifyResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"org_id\"")
 			}
 		case "org_name":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
 				if err := s.OrgName.Decode(d); err != nil {
 					return err
@@ -1991,8 +2315,9 @@ func (s *CliSignupVerifyResult) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00011111,
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00001111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -2034,6 +2359,82 @@ func (s *CliSignupVerifyResult) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CliSignupVerifyResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CliSignupVerifyResultAuthMethod as json.
+func (s CliSignupVerifyResultAuthMethod) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes CliSignupVerifyResultAuthMethod from json.
+func (s *CliSignupVerifyResultAuthMethod) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CliSignupVerifyResultAuthMethod to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch CliSignupVerifyResultAuthMethod(v) {
+	case CliSignupVerifyResultAuthMethodOAuth:
+		*s = CliSignupVerifyResultAuthMethodOAuth
+	default:
+		*s = CliSignupVerifyResultAuthMethod(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CliSignupVerifyResultAuthMethod) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CliSignupVerifyResultAuthMethod) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CliSignupVerifyResultTokenType as json.
+func (s CliSignupVerifyResultTokenType) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes CliSignupVerifyResultTokenType from json.
+func (s *CliSignupVerifyResultTokenType) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CliSignupVerifyResultTokenType to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch CliSignupVerifyResultTokenType(v) {
+	case CliSignupVerifyResultTokenTypeBearer:
+		*s = CliSignupVerifyResultTokenTypeBearer
+	default:
+		*s = CliSignupVerifyResultTokenType(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CliSignupVerifyResultTokenType) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CliSignupVerifyResultTokenType) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -28041,8 +28442,10 @@ func (s *VerifyCliSignupInput) encodeFields(e *jx.Encoder) {
 		e.Str(s.VerificationCode)
 	}
 	{
-		e.FieldStart("password")
-		e.Str(s.Password)
+		if s.Password.Set {
+			e.FieldStart("password")
+			s.Password.Encode(e)
+		}
 	}
 }
 
@@ -28086,11 +28489,9 @@ func (s *VerifyCliSignupInput) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"verification_code\"")
 			}
 		case "password":
-			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				v, err := d.Str()
-				s.Password = string(v)
-				if err != nil {
+				s.Password.Reset()
+				if err := s.Password.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -28107,7 +28508,7 @@ func (s *VerifyCliSignupInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

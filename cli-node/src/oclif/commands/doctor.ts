@@ -146,26 +146,41 @@ function checkApiKey(opts: {
   }
   const credsPath = join(opts.configDir, "credentials.json");
   if (existsSync(credsPath)) {
-    let parsed: { api_key?: string } | null = null;
+    let parsed: Record<string, unknown> | null = null;
     let parseError: string | null = null;
     try {
-      parsed = JSON.parse(readFileSync(credsPath, "utf8")) as {
-        api_key?: string;
-      };
+      parsed = JSON.parse(readFileSync(credsPath, "utf8")) as Record<
+        string,
+        unknown
+      >;
     } catch (error) {
       parseError = error instanceof Error ? error.message : String(error);
     }
 
-    if (parsed?.api_key) {
-      return { status: "ok", message: `loaded from ${credsPath}` };
+    if (
+      parsed?.auth_method === "oauth" &&
+      typeof parsed.access_token === "string" &&
+      parsed.access_token.length > 0
+    ) {
+      return {
+        status: "ok",
+        message: `loaded OAuth session from ${credsPath}`,
+      };
+    }
+    if (typeof parsed?.api_key === "string" && parsed.api_key.length > 0) {
+      return {
+        status: "fail",
+        message: `${credsPath} contains legacy API-key login state`,
+        hint: "Run `primitive login` to create saved OAuth credentials. Existing API keys still work with --api-key or PRIMITIVE_API_KEY.",
+      };
     }
     if (parsed) {
-      // File parsed but had no usable api_key. Different cause than a
+      // File parsed but had no usable OAuth token. Different cause than a
       // malformed file; surface the distinction so the user knows
       // whether to re-run login or to inspect the file by hand.
       return {
         status: "fail",
-        message: `${credsPath} exists but contains no api_key`,
+        message: `${credsPath} exists but contains no OAuth access_token`,
         hint: "Run `primitive logout` to clear it, then `primitive login` to recreate.",
       };
     }
@@ -177,7 +192,7 @@ function checkApiKey(opts: {
   }
   return {
     status: "fail",
-    message: "no API key found",
+    message: "no CLI OAuth session or explicit API key found",
     hint: "Run `primitive login`, pass --api-key explicitly, or export PRIMITIVE_API_KEY=prim_...",
   };
 }
@@ -299,7 +314,7 @@ async function checkDomains(client: PrimitiveApiClient): Promise<CheckOutcome> {
 
 class DoctorCommand extends Command {
   static description =
-    `Run a one-shot environment health check: Node version, proxy env, API key resolution, /account reachability, and verified-domain status. Fails fast on anything that would block other commands and prints actionable hints for each warning or failure.`;
+    `Run a one-shot environment health check: Node version, proxy env, CLI auth resolution, /account reachability, and verified-domain status. Fails fast on anything that would block other commands and prints actionable hints for each warning or failure.`;
 
   static summary =
     "Check the local environment and live API for common problems";
@@ -312,7 +327,7 @@ class DoctorCommand extends Command {
   static flags = {
     "api-key": Flags.string({
       description:
-        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
+        "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "api-base-url-1": Flags.string({
@@ -341,13 +356,13 @@ class DoctorCommand extends Command {
       apiKey: flags["api-key"],
       configDir: this.config.configDir,
     });
-    rows.push({ label: "API key", outcome: apiKeyCheck });
+    rows.push({ label: "Auth", outcome: apiKeyCheck });
 
     // Only run the live checks if we have a key to authenticate with.
     // Reporting the network-failure case without a key would just
     // confuse the user; the missing-key row above already covers it.
     if (apiKeyCheck.status !== "fail") {
-      const { apiClient, auth } = createAuthenticatedCliApiClient({
+      const { apiClient, auth } = await createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
         apiBaseUrl1: flags["api-base-url-1"],
         apiBaseUrl2: flags["api-base-url-2"],

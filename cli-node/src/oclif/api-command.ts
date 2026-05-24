@@ -467,7 +467,7 @@ export function extractErrorCode(payload: unknown): string | undefined {
 // special-case every command.
 const ERROR_CODE_HINTS = {
   [API_ERROR_CODES.unauthorized]:
-    "Hint: run `primitive login`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify a key is live.",
+    "Hint: run `primitive login`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify auth is live.",
 } as const satisfies Partial<Record<ApiErrorCode, string>>;
 
 // Network-layer hints keyed by Node's `cause.code` on a fetch failure.
@@ -551,7 +551,7 @@ export function surfaceUnauthorizedHint(params: {
   }
 
   process.stderr.write(
-    "Your saved Primitive CLI credential was rejected. If the command was working a moment ago, please retry; brief retries often clear transient rejections. If it keeps failing, run `primitive logout && primitive login` to mint a fresh credential.\n",
+    "Your saved Primitive CLI OAuth session was rejected. If the command was working a moment ago, please retry; brief retries often clear transient rejections. If it keeps failing, run `primitive logout && primitive login` to mint a fresh session.\n",
   );
 }
 
@@ -719,7 +719,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   const flags: Record<string, unknown> = {
     "api-key": Flags.string({
       description:
-        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
+        "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     // Two override knobs for the dual-host setup. Hidden because they
@@ -917,7 +917,7 @@ export function createOperationCommand(
       const parsedFlags = flags as Record<string, unknown>;
       await runWithTiming(parsedFlags.time === true, async () => {
         const { apiClient, auth, baseUrlOverridden } =
-          createAuthenticatedCliApiClient({
+          await createAuthenticatedCliApiClient({
             apiKey:
               typeof parsedFlags["api-key"] === "string"
                 ? (parsedFlags["api-key"] as string)

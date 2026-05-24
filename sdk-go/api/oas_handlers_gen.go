@@ -224,8 +224,9 @@ func (s *Server) handleAddDomainRequest(args [0]string, argsEscaped bool, w http
 
 // handleCliLogoutRequest handles cliLogout operation.
 //
-// Revokes the API key used to authenticate the request. CLI clients use
-// this endpoint during `primitive logout` before removing local credentials.
+// Revokes the OAuth grant used to authenticate the request. API-key
+// authenticated legacy logout requests succeed without deleting server API
+// keys so old local CLI state can be cleared safely.
 //
 // POST /cli/logout
 func (s *Server) handleCliLogoutRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -366,7 +367,7 @@ func (s *Server) handleCliLogoutRequest(args [0]string, argsEscaped bool, w http
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    CliLogoutOperation,
-			OperationSummary: "Revoke the current CLI API key",
+			OperationSummary: "Revoke the current CLI OAuth session",
 			OperationID:      "cliLogout",
 			Body:             request,
 			RawBody:          rawBody,
@@ -6231,8 +6232,8 @@ func (s *Server) handleListSentEmailsRequest(args [0]string, argsEscaped bool, w
 // handlePollCliLoginRequest handles pollCliLogin operation.
 //
 // Polls a CLI login session until the browser approval either succeeds,
-// is denied, expires, or is polled too quickly. The API key is generated
-// only after approval and is returned exactly once.
+// is denied, expires, or is polled too quickly. The OAuth token set is
+// created only after approval and is returned exactly once.
 //
 // POST /cli/login/poll
 func (s *Server) handlePollCliLoginRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9682,8 +9683,9 @@ func (s *Server) handleUpdateFunctionRequest(args [1]string, argsEscaped bool, w
 // handleVerifyCliSignupRequest handles verifyCliSignup operation.
 //
 // Verifies the email code for a CLI signup session, creates the account,
-// redeems the reserved signup code, mints an org-scoped CLI API key, and
-// returns the raw key exactly once. This endpoint does not require an API key.
+// redeems the reserved signup code, creates an org-scoped OAuth CLI
+// session, and returns the token set exactly once. This endpoint does not
+// require an API key.
 //
 // POST /cli/signup/verify
 func (s *Server) handleVerifyCliSignupRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9780,7 +9782,7 @@ func (s *Server) handleVerifyCliSignupRequest(args [0]string, argsEscaped bool, 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    VerifyCliSignupOperation,
-			OperationSummary: "Verify CLI signup and create API key",
+			OperationSummary: "Verify CLI signup and create OAuth session",
 			OperationID:      "verifyCliSignup",
 			Body:             request,
 			RawBody:          rawBody,

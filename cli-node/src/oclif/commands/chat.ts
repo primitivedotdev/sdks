@@ -198,7 +198,7 @@ class ChatCommand extends Command {
 
     await runWithTiming(flags.time, async () => {
       const { apiClient, auth, baseUrlOverridden } =
-        createAuthenticatedCliApiClient({
+        await createAuthenticatedCliApiClient({
           apiKey: flags["api-key"],
           apiBaseUrl1: flags["api-base-url-1"],
           apiBaseUrl2: flags["api-base-url-2"],
@@ -295,9 +295,11 @@ class ChatCommand extends Command {
 }
 
 type WaitForReplyParams = {
-  apiClient: ReturnType<typeof createAuthenticatedCliApiClient>["apiClient"];
+  apiClient: Awaited<
+    ReturnType<typeof createAuthenticatedCliApiClient>
+  >["apiClient"];
   authFailureContext: {
-    auth: ReturnType<typeof createAuthenticatedCliApiClient>["auth"];
+    auth: Awaited<ReturnType<typeof createAuthenticatedCliApiClient>>["auth"];
     baseUrlOverridden: boolean;
     configDir: string;
   };

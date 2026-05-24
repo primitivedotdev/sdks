@@ -28,7 +28,7 @@ class StartCliSignupInput:
             email (str):
             signup_code (str):
             terms_accepted (bool): Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy
-            device_name (str | Unset): Human-readable device name used for the created CLI API key
+            device_name (str | Unset): Human-readable device name used for the created CLI OAuth grant
             metadata (StartCliSignupInputMetadata | Unset): Optional client metadata stored with the signup session;
                 serialized JSON must be 2048 bytes or fewer
      """

@@ -82,7 +82,7 @@ export async function pickDefaultFromAddress(
       // CLIError defaults to 2 otherwise, which breaks callers that
       // branch on exit code.
       throw new Errors.CLIError(
-        "Cannot send: API key is missing or invalid (see hint above).",
+        "Cannot send: CLI auth is missing or invalid (see hint above).",
         { exit: 1 },
       );
     }

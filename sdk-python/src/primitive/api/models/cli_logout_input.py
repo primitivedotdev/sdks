@@ -23,7 +23,8 @@ T = TypeVar("T", bound="CliLogoutInput")
 class CliLogoutInput:
     """ 
         Attributes:
-            key_id (UUID | Unset): Optional key id guard; when provided it must match the authenticated API key
+            key_id (UUID | Unset): Optional id guard; when provided it must match the authenticated OAuth grant id or API
+                key id
      """
 
     key_id: UUID | Unset = UNSET

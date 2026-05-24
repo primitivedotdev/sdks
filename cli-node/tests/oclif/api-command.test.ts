@@ -367,13 +367,17 @@ describe("writeErrorWithHints", () => {
 
 describe("surfaceUnauthorizedHint", () => {
   const credentials: StoredCliCredentials = {
-    api_key: "prim_stale",
+    access_token: "prim_oat_stale",
     api_base_url_1: "https://www.primitive.dev/api/v1",
+    auth_method: "oauth",
     created_at: "2026-05-05T00:00:00.000Z",
-    key_id: "11111111-1111-4111-8111-111111111111",
-    key_prefix: "prim_sta...",
+    expires_at: "2099-05-05T00:00:00.000Z",
+    oauth_client_id: "primitive-cli",
+    oauth_grant_id: "11111111-1111-4111-8111-111111111111",
     org_id: "22222222-2222-4222-8222-222222222222",
     org_name: "Acme",
+    refresh_token: "prim_ort_stale",
+    token_type: "Bearer",
   };
 
   let tempDir: string;
@@ -401,7 +405,7 @@ describe("surfaceUnauthorizedHint", () => {
 
     surfaceUnauthorizedHint({
       auth: {
-        apiKey: credentials.api_key,
+        apiKey: credentials.access_token,
         apiBaseUrl1: credentials.api_base_url_1,
         apiBaseUrl2: "https://api.primitive.dev/v1",
         credentials,
@@ -414,7 +418,7 @@ describe("surfaceUnauthorizedHint", () => {
 
     expect(loadCliCredentials(tempDir)).toEqual(credentials);
     expect(writes.join("")).toContain(
-      "Your saved Primitive CLI credential was rejected",
+      "Your saved Primitive CLI OAuth session was rejected",
     );
     expect(writes.join("")).toContain("primitive logout && primitive login");
   });
@@ -424,7 +428,7 @@ describe("surfaceUnauthorizedHint", () => {
 
     surfaceUnauthorizedHint({
       auth: {
-        apiKey: credentials.api_key,
+        apiKey: credentials.access_token,
         apiBaseUrl1: "http://localhost:3000/api/v1",
         apiBaseUrl2: "https://api.primitive.dev/v1",
         credentials,
@@ -445,7 +449,7 @@ describe("surfaceUnauthorizedHint", () => {
 
     surfaceUnauthorizedHint({
       auth: {
-        apiKey: credentials.api_key,
+        apiKey: credentials.access_token,
         apiBaseUrl1: credentials.api_base_url_1,
         apiBaseUrl2: "https://api.primitive.dev/v1",
         credentials,

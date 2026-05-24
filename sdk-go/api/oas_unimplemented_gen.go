@@ -26,8 +26,9 @@ func (UnimplementedHandler) AddDomain(ctx context.Context, req *AddDomainInput) 
 
 // CliLogout implements cliLogout operation.
 //
-// Revokes the API key used to authenticate the request. CLI clients use
-// this endpoint during `primitive logout` before removing local credentials.
+// Revokes the OAuth grant used to authenticate the request. API-key
+// authenticated legacy logout requests succeed without deleting server API
+// keys so old local CLI state can be cleared safely.
 //
 // POST /cli/logout
 func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput) (r CliLogoutRes, _ error) {
@@ -492,8 +493,8 @@ func (UnimplementedHandler) ListSentEmails(ctx context.Context, params ListSentE
 // PollCliLogin implements pollCliLogin operation.
 //
 // Polls a CLI login session until the browser approval either succeeds,
-// is denied, expires, or is polled too quickly. The API key is generated
-// only after approval and is returned exactly once.
+// is denied, expires, or is polled too quickly. The OAuth token set is
+// created only after approval and is returned exactly once.
 //
 // POST /cli/login/poll
 func (UnimplementedHandler) PollCliLogin(ctx context.Context, req *PollCliLoginInput) (r PollCliLoginRes, _ error) {
@@ -738,8 +739,9 @@ func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunct
 // VerifyCliSignup implements verifyCliSignup operation.
 //
 // Verifies the email code for a CLI signup session, creates the account,
-// redeems the reserved signup code, mints an org-scoped CLI API key, and
-// returns the raw key exactly once. This endpoint does not require an API key.
+// redeems the reserved signup code, creates an org-scoped OAuth CLI
+// session, and returns the token set exactly once. This endpoint does not
+// require an API key.
 //
 // POST /cli/signup/verify
 func (UnimplementedHandler) VerifyCliSignup(ctx context.Context, req *VerifyCliSignupInput) (r VerifyCliSignupRes, _ error) {

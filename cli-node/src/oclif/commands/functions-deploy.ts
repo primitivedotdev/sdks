@@ -289,7 +289,7 @@ class FunctionsDeployCommand extends Command {
   static flags = {
     "api-key": Flags.string({
       description:
-        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
+        "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "api-base-url-1": Flags.string({
@@ -407,7 +407,7 @@ class FunctionsDeployCommand extends Command {
       emitRawSendMailFetchWarning(code, (chunk) => process.stderr.write(chunk));
 
       const { apiClient, auth, baseUrlOverridden } =
-        createAuthenticatedCliApiClient({
+        await createAuthenticatedCliApiClient({
           apiKey: flags["api-key"],
           apiBaseUrl1: flags["api-base-url-1"],
           apiBaseUrl2: flags["api-base-url-2"],

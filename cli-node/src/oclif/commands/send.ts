@@ -40,7 +40,7 @@ import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 // data): this is `swaks`-shaped on purpose so an agent
 // pattern-matching from there lands in the happy path. We just
 // don't need swaks's `--server` / `--auth-*` flags because the
-// HTTPS API key is the auth and the server is implicit.
+// HTTPS bearer auth is implicit: saved OAuth login or an explicit API key.
 
 class SendCommand extends Command {
   static description =
@@ -66,7 +66,7 @@ class SendCommand extends Command {
   static flags = {
     "api-key": Flags.string({
       description:
-        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
+        "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "api-base-url-1": Flags.string({
@@ -151,7 +151,7 @@ class SendCommand extends Command {
 
     await runWithTiming(flags.time, async () => {
       const { apiClient, auth, baseUrlOverridden } =
-        createAuthenticatedCliApiClient({
+        await createAuthenticatedCliApiClient({
           apiKey: flags["api-key"],
           apiBaseUrl1: flags["api-base-url-1"],
           apiBaseUrl2: flags["api-base-url-2"],

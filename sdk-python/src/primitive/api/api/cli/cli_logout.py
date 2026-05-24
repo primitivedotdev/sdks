@@ -100,10 +100,11 @@ def sync_detailed(
     body: CliLogoutInput | Unset = UNSET,
 
 ) -> Response[CliLogoutResponse200 | ErrorResponse]:
-    """ Revoke the current CLI API key
+    """ Revoke the current CLI OAuth session
 
-     Revokes the API key used to authenticate the request. CLI clients use
-    this endpoint during `primitive logout` before removing local credentials.
+     Revokes the OAuth grant used to authenticate the request. API-key
+    authenticated legacy logout requests succeed without deleting server API
+    keys so old local CLI state can be cleared safely.
 
     Args:
         body (CliLogoutInput | Unset):
@@ -134,10 +135,11 @@ def sync(
     body: CliLogoutInput | Unset = UNSET,
 
 ) -> CliLogoutResponse200 | ErrorResponse | None:
-    """ Revoke the current CLI API key
+    """ Revoke the current CLI OAuth session
 
-     Revokes the API key used to authenticate the request. CLI clients use
-    this endpoint during `primitive logout` before removing local credentials.
+     Revokes the OAuth grant used to authenticate the request. API-key
+    authenticated legacy logout requests succeed without deleting server API
+    keys so old local CLI state can be cleared safely.
 
     Args:
         body (CliLogoutInput | Unset):
@@ -163,10 +165,11 @@ async def asyncio_detailed(
     body: CliLogoutInput | Unset = UNSET,
 
 ) -> Response[CliLogoutResponse200 | ErrorResponse]:
-    """ Revoke the current CLI API key
+    """ Revoke the current CLI OAuth session
 
-     Revokes the API key used to authenticate the request. CLI clients use
-    this endpoint during `primitive logout` before removing local credentials.
+     Revokes the OAuth grant used to authenticate the request. API-key
+    authenticated legacy logout requests succeed without deleting server API
+    keys so old local CLI state can be cleared safely.
 
     Args:
         body (CliLogoutInput | Unset):
@@ -197,10 +200,11 @@ async def asyncio(
     body: CliLogoutInput | Unset = UNSET,
 
 ) -> CliLogoutResponse200 | ErrorResponse | None:
-    """ Revoke the current CLI API key
+    """ Revoke the current CLI OAuth session
 
-     Revokes the API key used to authenticate the request. CLI clients use
-    this endpoint during `primitive logout` before removing local credentials.
+     Revokes the OAuth grant used to authenticate the request. API-key
+    authenticated legacy logout requests succeed without deleting server API
+    keys so old local CLI state can be cleared safely.
 
     Args:
         body (CliLogoutInput | Unset):

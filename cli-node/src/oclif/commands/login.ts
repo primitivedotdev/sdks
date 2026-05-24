@@ -13,6 +13,7 @@ import {
 } from "@primitivedotdev/api-core";
 import {
   createCliApiClient,
+  refreshStoredCliCredentials,
   resolveCliApiRequestConfig,
 } from "../api-client.js";
 import {
@@ -23,6 +24,7 @@ import {
 } from "../api-command.js";
 import {
   acquireCliCredentialsLock,
+  cliAccessTokenExpiresAt,
   credentialsPath,
   deleteCliCredentials,
   loadCliCredentials,
@@ -75,6 +77,7 @@ export async function checkExistingLogin(params: {
   apiBaseUrl1?: string;
   configDir: string;
   credentials: StoredCliCredentials;
+  credentialsLockHeld?: boolean;
   checkAccount?: (
     apiClient: PrimitiveApiClient,
   ) => Promise<{ error?: unknown }>;
@@ -85,8 +88,29 @@ export async function checkExistingLogin(params: {
   });
   const probeApiBaseUrl1 =
     requestConfig.apiBaseUrl1 ?? params.credentials.api_base_url_1;
+  let credentials = params.credentials;
+  try {
+    credentials = await refreshStoredCliCredentials({
+      apiBaseUrl1: probeApiBaseUrl1,
+      configDir: params.configDir,
+      credentials,
+      credentialsLockHeld: params.credentialsLockHeld,
+      headers: requestConfig.headers,
+    });
+  } catch (error) {
+    if (loadCliCredentials(params.configDir) === null) {
+      return { status: "removed_stale" };
+    }
+    return {
+      status: "blocked",
+      payload: error,
+      message:
+        "A saved Primitive CLI OAuth session exists, but the CLI could not refresh it. Run `primitive logout` before logging in again.",
+    };
+  }
+
   const apiClient = new PrimitiveApiClient({
-    apiKey: params.credentials.api_key,
+    apiKey: credentials.access_token,
     apiBaseUrl1: probeApiBaseUrl1,
     apiBaseUrl2: requestConfig.resolvedApiBaseUrl2,
     headers: requestConfig.headers,
@@ -108,7 +132,7 @@ export async function checkExistingLogin(params: {
   // checkExistingLogin is the one place auto-deleting saved
   // credentials on 401 is the right move: the user explicitly ran
   // `primitive login`, we probed the existing credential, and it was
-  // rejected. Mint a new key on top. Other 401 paths surface a hint
+  // rejected. Mint a new OAuth session on top. Other 401 paths surface a hint
   // and leave the saved credential alone (see surfaceUnauthorizedHint
   // in api-command.ts for the reasoning).
   //
@@ -123,7 +147,7 @@ export async function checkExistingLogin(params: {
   if (code === API_ERROR_CODES.unauthorized && !baseUrlDiffersFromSaved) {
     deleteCliCredentials(params.configDir);
     process.stderr.write(
-      "Removed saved Primitive CLI credentials because the existing key was rejected during login. Continuing with a fresh login.\n",
+      "Removed saved Primitive CLI OAuth credentials because the existing session was rejected during login. Continuing with a fresh login.\n",
     );
     return { status: "removed_stale" };
   }
@@ -133,8 +157,8 @@ export async function checkExistingLogin(params: {
     payload,
     message:
       code === API_ERROR_CODES.unauthorized
-        ? "Saved Primitive CLI credentials were rejected by an API URL different from the one they were saved with. Run `primitive logout` to remove them, or switch back to the original environment before logging in again."
-        : "A saved Primitive CLI login exists, but the CLI could not verify whether it is still valid. Run `primitive logout` before logging in again.",
+        ? "Saved Primitive CLI OAuth credentials were rejected by an API URL different from the one they were saved with. Run `primitive logout` to remove them, or switch back to the original environment before logging in again."
+        : "A saved Primitive CLI OAuth session exists, but the CLI could not verify whether it is still valid. Run `primitive logout` before logging in again.",
   };
 }
 
@@ -147,7 +171,7 @@ type LoginFlags = {
 
 class LoginCommand extends Command {
   static description =
-    "Log in by opening Primitive in your browser and saving an org-scoped CLI API key locally.";
+    "Log in by opening Primitive in your browser and saving an org-scoped OAuth session locally.";
 
   static summary = "Log in with browser approval";
 
@@ -222,6 +246,7 @@ class LoginCommand extends Command {
         apiBaseUrl1: flags["api-base-url-1"],
         configDir: this.config.configDir,
         credentials: existing,
+        credentialsLockHeld: true,
       });
       if (existingStatus.status === "removed_stale") {
         process.stderr.write("Continuing with a new Primitive CLI login...\n");
@@ -289,13 +314,17 @@ class LoginCommand extends Command {
         }
 
         saveCliCredentials(this.config.configDir, {
-          api_key: login.api_key,
+          access_token: login.access_token,
           api_base_url_1: apiBaseUrl1,
+          auth_method: "oauth",
           created_at: new Date().toISOString(),
-          key_id: login.key_id,
-          key_prefix: login.key_prefix,
+          expires_at: cliAccessTokenExpiresAt(login.expires_in),
+          oauth_client_id: login.oauth_client_id,
+          oauth_grant_id: login.oauth_grant_id,
           org_id: login.org_id,
           org_name: login.org_name,
+          refresh_token: login.refresh_token,
+          token_type: login.token_type,
         });
 
         const org = login.org_name ? ` (${login.org_name})` : "";

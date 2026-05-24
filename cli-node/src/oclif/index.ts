@@ -272,19 +272,19 @@ export const COMMANDS: Record<string, typeof Command> = {
   // body). Positioned as the canonical verb for the
   // agents-behind-email-addresses paradigm.
   chat: ChatCommand,
-  // `login` creates and stores an org-scoped CLI API key via browser approval.
+  // `login` creates and stores an org-scoped OAuth session via browser approval.
   login: LoginCommand,
-  // `signup` creates an account, verifies email, and stores a CLI API key.
+  // `signup` creates an account, verifies email, and stores an OAuth session.
   signup: SignupCommand,
-  // `logout` revokes the saved CLI API key and removes local credentials.
+  // `logout` revokes the saved OAuth grant and removes local credentials.
   logout: LogoutCommand,
   // `whoami` is the credentials smoke test. Prints the account the
-  // current API key authenticates as. AGX walkthroughs kept
-  // wanting this before risking a real call against a possibly-
-  // bad key.
+  // current OAuth session or explicit API key authenticates as. AGX
+  // walkthroughs kept wanting this before risking a real call against
+  // possibly-bad auth.
   whoami: WhoamiCommand,
   // `doctor` is the environment health check. Node version, proxy
-  // env, API key resolution, /account reachability, verified-domain
+  // env, auth resolution, /account reachability, verified-domain
   // status — every check that whoami implicitly assumes is fine.
   // AGX walkthroughs that hit ENETUNREACH from inside containers
   // had no single command to bisect "is the CLI / network / key /

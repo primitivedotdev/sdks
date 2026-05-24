@@ -26,9 +26,13 @@ const MALFORMED_CREDENTIALS_HINT =
 // and isn't part of the login flow, so it never gets stored. At call
 // time api_base_url_2 falls back to env / production default.
 export type StoredCliCredentials = {
-  api_key: string;
-  key_id: string;
-  key_prefix: string;
+  auth_method: "oauth";
+  access_token: string;
+  refresh_token: string;
+  token_type: "Bearer";
+  expires_at: string;
+  oauth_grant_id: string;
+  oauth_client_id: string;
   org_id: string;
   org_name: string | null;
   api_base_url_1: string;
@@ -61,17 +65,15 @@ function requireString(
 }
 
 /**
- * Sentinel returned by parseCredentials when the on-disk credentials
- * were written by a pre-dual-host CLI version (i.e. they have
- * `base_url` instead of `api_base_url_1`). The caller treats this as
- * "no saved credentials" after auto-cleaning the stale file. Defined
- * as a class-tagged error so loadCliCredentials can distinguish it
- * from a genuine malformed-credentials error.
+ * Sentinel returned by parseCredentials when the on-disk credentials were
+ * written by an API-key-based CLI. The caller treats this as "not logged in"
+ * after clearing the local file. The backing API key is intentionally not
+ * revoked; API keys still work when passed explicitly via --api-key/env.
  */
-class StaleCredentialFormatError extends Error {
+class LegacyApiKeyCredentialFormatError extends Error {
   constructor() {
-    super("stale_credential_format");
-    this.name = "StaleCredentialFormatError";
+    super("legacy_api_key_credential_format");
+    this.name = "LegacyApiKeyCredentialFormatError";
   }
 }
 
@@ -82,17 +84,17 @@ function parseCredentials(raw: unknown): StoredCliCredentials {
     );
   }
 
-  // Stored credentials from an older CLI version used the field name
-  // `base_url`; the dual-host rename moved this to `api_base_url_1`.
-  // Detect the old shape specifically so loadCliCredentials can wipe
-  // the stale file and emit a clear "you've been logged out" notice
-  // instead of every command hard-failing with a generic "malformed"
-  // error that doesn't surface the actual fix (re-login).
-  if (
-    typeof raw.api_base_url_1 !== "string" &&
-    typeof (raw as { base_url?: unknown }).base_url === "string"
-  ) {
-    throw new StaleCredentialFormatError();
+  if (raw.auth_method !== "oauth") {
+    if (
+      typeof raw.api_key === "string" ||
+      typeof raw.key_id === "string" ||
+      typeof (raw as { base_url?: unknown }).base_url === "string"
+    ) {
+      throw new LegacyApiKeyCredentialFormatError();
+    }
+    throw new Error(
+      `Stored Primitive CLI credentials are malformed: auth_method must be oauth. ${MALFORMED_CREDENTIALS_HINT}`,
+    );
   }
 
   const orgName = raw.org_name;
@@ -102,10 +104,21 @@ function parseCredentials(raw: unknown): StoredCliCredentials {
     );
   }
 
+  const tokenType = requireString(raw, "token_type");
+  if (tokenType !== "Bearer") {
+    throw new Error(
+      `Stored Primitive CLI credentials are malformed: token_type must be Bearer. ${MALFORMED_CREDENTIALS_HINT}`,
+    );
+  }
+
   return {
-    api_key: requireString(raw, "api_key"),
-    key_id: requireString(raw, "key_id"),
-    key_prefix: requireString(raw, "key_prefix"),
+    auth_method: "oauth",
+    access_token: requireString(raw, "access_token"),
+    refresh_token: requireString(raw, "refresh_token"),
+    token_type: "Bearer",
+    expires_at: requireString(raw, "expires_at"),
+    oauth_grant_id: requireString(raw, "oauth_grant_id"),
+    oauth_client_id: requireString(raw, "oauth_client_id"),
     org_id: requireString(raw, "org_id"),
     org_name: orgName,
     api_base_url_1: requireString(raw, "api_base_url_1"),
@@ -131,6 +144,13 @@ export function normalizeApiBaseUrl2(url: string | undefined): string {
   return normalize(url, DEFAULT_API_BASE_URL_2);
 }
 
+export function cliAccessTokenExpiresAt(
+  expiresInSeconds: number,
+  now: () => number = Date.now,
+): string {
+  return new Date(now() + expiresInSeconds * 1000).toISOString();
+}
+
 export function loadCliCredentials(
   configDir: string,
 ): StoredCliCredentials | null {
@@ -153,22 +173,15 @@ export function loadCliCredentials(
   try {
     return parseCredentials(JSON.parse(contents));
   } catch (error) {
-    if (error instanceof StaleCredentialFormatError) {
-      // Saved credentials were written by a pre-dual-host CLI version.
-      // The format is incompatible (base_url vs api_base_url_1) and
-      // cannot be recovered. Clear the file so the caller sees "no
-      // saved credentials" and emit a one-shot notice telling the
-      // user they need to log back in. Idempotent: once the file is
-      // gone, this branch never fires again.
+    if (error instanceof LegacyApiKeyCredentialFormatError) {
       try {
         rmSync(path, { force: true });
       } catch {
-        // Best-effort cleanup; if the unlink fails (permissions,
-        // racing process), the next CLI invocation will hit this
-        // path again and try once more.
+        // Best-effort cleanup; if unlink fails, the next CLI invocation
+        // will hit this path again and try once more.
       }
       process.stderr.write(
-        "You've been logged out: your saved Primitive CLI credentials were created by an older CLI version and are no longer compatible. Run `primitive login` to re-authenticate.\n",
+        "Removed local Primitive CLI API-key login state. API keys are still valid when passed explicitly, but `primitive login` now uses OAuth. Run `primitive login` to create an OAuth session. No API key was revoked.\n",
       );
       return null;
     }
@@ -293,7 +306,7 @@ export function resolveCliAuth(params: {
   const credentials = loadCliCredentials(params.configDir);
   if (credentials) {
     return {
-      apiKey: credentials.api_key,
+      apiKey: credentials.access_token,
       apiBaseUrl1: params.apiBaseUrl1
         ? normalizeApiBaseUrl1(params.apiBaseUrl1)
         : credentials.api_base_url_1,

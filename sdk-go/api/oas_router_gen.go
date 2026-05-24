@@ -1890,7 +1890,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							switch method {
 							case "POST":
 								r.name = CliLogoutOperation
-								r.summary = "Revoke the current CLI API key"
+								r.summary = "Revoke the current CLI OAuth session"
 								r.operationID = "cliLogout"
 								r.operationGroup = ""
 								r.pathPattern = "/cli/logout"
@@ -1979,7 +1979,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							switch method {
 							case "POST":
 								r.name = VerifyCliSignupOperation
-								r.summary = "Verify CLI signup and create API key"
+								r.summary = "Verify CLI signup and create OAuth session"
 								r.operationID = "verifyCliSignup"
 								r.operationGroup = ""
 								r.pathPattern = "/cli/signup/verify"
