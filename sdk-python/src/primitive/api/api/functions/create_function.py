@@ -117,13 +117,14 @@ def sync_detailed(
 
      Creates and deploys a new function. The handler must be a single
     ESM module whose default export is an object with an async
-    `fetch(request, env)` method (Workers-style). The gateway
-    HMAC-verifies the POST against the org's webhook secret before
-    invoking the handler; the request body parses to an
-    `email.received` event (see `EmailReceivedEvent` and the
-    Webhook payload section for the full schema). Code is bundled
-    before being uploaded; ship a single self-contained file rather
-    than relying on external imports.
+    `fetch(request, env)` method (Workers-style). Primitive signs
+    each delivery and forwards the `Primitive-Signature` header to
+    the handler. Verify the raw request body with
+    `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
+    the request body parses to an `email.received` event (see
+    `EmailReceivedEvent` and the Webhook payload section for the full
+    schema). Code is bundled before being uploaded; ship a single
+    self-contained file rather than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
     (optional) is capped at 5 MiB UTF-8, stored with each deployment
@@ -133,12 +134,12 @@ def sync_detailed(
     **Auto-wiring.** On successful deploy, Primitive automatically
     creates a webhook endpoint that delivers inbound mail to the
     function. There is nothing to configure on the Endpoints API
-    for this to work; the gateway URL returned here is for
-    reference only and is not directly callable from outside.
+    for this to work; the internal runtime URL is not returned by
+    the API and is not a customer-facing integration surface.
 
     **Secrets.** New functions ship with the managed secrets
-    (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
-    bound. Add user-set secrets via
+    (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,
+    `PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via
     `POST /functions/{id}/secrets`; secret writes only land in the
     running handler on the next redeploy.
 
@@ -175,13 +176,14 @@ def sync(
 
      Creates and deploys a new function. The handler must be a single
     ESM module whose default export is an object with an async
-    `fetch(request, env)` method (Workers-style). The gateway
-    HMAC-verifies the POST against the org's webhook secret before
-    invoking the handler; the request body parses to an
-    `email.received` event (see `EmailReceivedEvent` and the
-    Webhook payload section for the full schema). Code is bundled
-    before being uploaded; ship a single self-contained file rather
-    than relying on external imports.
+    `fetch(request, env)` method (Workers-style). Primitive signs
+    each delivery and forwards the `Primitive-Signature` header to
+    the handler. Verify the raw request body with
+    `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
+    the request body parses to an `email.received` event (see
+    `EmailReceivedEvent` and the Webhook payload section for the full
+    schema). Code is bundled before being uploaded; ship a single
+    self-contained file rather than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
     (optional) is capped at 5 MiB UTF-8, stored with each deployment
@@ -191,12 +193,12 @@ def sync(
     **Auto-wiring.** On successful deploy, Primitive automatically
     creates a webhook endpoint that delivers inbound mail to the
     function. There is nothing to configure on the Endpoints API
-    for this to work; the gateway URL returned here is for
-    reference only and is not directly callable from outside.
+    for this to work; the internal runtime URL is not returned by
+    the API and is not a customer-facing integration surface.
 
     **Secrets.** New functions ship with the managed secrets
-    (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
-    bound. Add user-set secrets via
+    (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,
+    `PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via
     `POST /functions/{id}/secrets`; secret writes only land in the
     running handler on the next redeploy.
 
@@ -228,13 +230,14 @@ async def asyncio_detailed(
 
      Creates and deploys a new function. The handler must be a single
     ESM module whose default export is an object with an async
-    `fetch(request, env)` method (Workers-style). The gateway
-    HMAC-verifies the POST against the org's webhook secret before
-    invoking the handler; the request body parses to an
-    `email.received` event (see `EmailReceivedEvent` and the
-    Webhook payload section for the full schema). Code is bundled
-    before being uploaded; ship a single self-contained file rather
-    than relying on external imports.
+    `fetch(request, env)` method (Workers-style). Primitive signs
+    each delivery and forwards the `Primitive-Signature` header to
+    the handler. Verify the raw request body with
+    `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
+    the request body parses to an `email.received` event (see
+    `EmailReceivedEvent` and the Webhook payload section for the full
+    schema). Code is bundled before being uploaded; ship a single
+    self-contained file rather than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
     (optional) is capped at 5 MiB UTF-8, stored with each deployment
@@ -244,12 +247,12 @@ async def asyncio_detailed(
     **Auto-wiring.** On successful deploy, Primitive automatically
     creates a webhook endpoint that delivers inbound mail to the
     function. There is nothing to configure on the Endpoints API
-    for this to work; the gateway URL returned here is for
-    reference only and is not directly callable from outside.
+    for this to work; the internal runtime URL is not returned by
+    the API and is not a customer-facing integration surface.
 
     **Secrets.** New functions ship with the managed secrets
-    (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
-    bound. Add user-set secrets via
+    (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,
+    `PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via
     `POST /functions/{id}/secrets`; secret writes only land in the
     running handler on the next redeploy.
 
@@ -286,13 +289,14 @@ async def asyncio(
 
      Creates and deploys a new function. The handler must be a single
     ESM module whose default export is an object with an async
-    `fetch(request, env)` method (Workers-style). The gateway
-    HMAC-verifies the POST against the org's webhook secret before
-    invoking the handler; the request body parses to an
-    `email.received` event (see `EmailReceivedEvent` and the
-    Webhook payload section for the full schema). Code is bundled
-    before being uploaded; ship a single self-contained file rather
-    than relying on external imports.
+    `fetch(request, env)` method (Workers-style). Primitive signs
+    each delivery and forwards the `Primitive-Signature` header to
+    the handler. Verify the raw request body with
+    `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
+    the request body parses to an `email.received` event (see
+    `EmailReceivedEvent` and the Webhook payload section for the full
+    schema). Code is bundled before being uploaded; ship a single
+    self-contained file rather than relying on external imports.
 
     **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
     (optional) is capped at 5 MiB UTF-8, stored with each deployment
@@ -302,12 +306,12 @@ async def asyncio(
     **Auto-wiring.** On successful deploy, Primitive automatically
     creates a webhook endpoint that delivers inbound mail to the
     function. There is nothing to configure on the Endpoints API
-    for this to work; the gateway URL returned here is for
-    reference only and is not directly callable from outside.
+    for this to work; the internal runtime URL is not returned by
+    the API and is not a customer-facing integration surface.
 
     **Secrets.** New functions ship with the managed secrets
-    (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`) already
-    bound. Add user-set secrets via
+    (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,
+    `PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via
     `POST /functions/{id}/secrets`; secret writes only land in the
     running handler on the next redeploy.
 

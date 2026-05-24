@@ -34,13 +34,11 @@ class CreateFunctionResult:
                   * `failed` — the most recent deploy attempt failed; the
                     previously-live code (if any) is still running. The
                     `deploy_error` field carries the error message.
-            gateway_url (str):
      """
 
     id: UUID
     name: str
     deploy_status: FunctionDeployStatus
-    gateway_url: str
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -54,8 +52,6 @@ class CreateFunctionResult:
 
         deploy_status = self.deploy_status.value
 
-        gateway_url = self.gateway_url
-
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -63,7 +59,6 @@ class CreateFunctionResult:
             "id": id,
             "name": name,
             "deploy_status": deploy_status,
-            "gateway_url": gateway_url,
         })
 
         return field_dict
@@ -85,13 +80,10 @@ class CreateFunctionResult:
 
 
 
-        gateway_url = d.pop("gateway_url")
-
         create_function_result = cls(
             id=id,
             name=name,
             deploy_status=deploy_status,
-            gateway_url=gateway_url,
         )
 
 
