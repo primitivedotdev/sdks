@@ -37,16 +37,31 @@ import {
 //     email; future transports (Primitive-native fast-path, etc.)
 //     can ride under the same verb without breaking callers.
 //
-// MVP scope and known limitation: today the reply is matched by
-// (sender = recipient) and (received_at > send time). Subject is not
-// used for matching to stay robust to recipients that rewrite it.
-// This is racy if a second unrelated inbound from the same sender
-// lands during the wait window; in practice that is rare for
-// agent-style endpoints and the wait window is short. The proper
-// fix is server-side filtering on `in_reply_to_email_id` in the
-// emails search; tracked as a follow-up.
+// Reply-matching strategy. Two-phase, hybrid:
+//
+//   1. STRICT phase. Filter by reply_to_sent_email_id = <sent.id>.
+//      The server resolves this FK at inbound ingest by matching the
+//      parsed In-Reply-To header (or References as a fallback)
+//      against sent_emails.message_id in the same org. Strict
+//      threading: only an inbound that's a real reply to the
+//      specific send we just made matches. Cheap and unambiguous.
+//
+//   2. FALLBACK phase. After STRICT_PHASE_SECONDS, if no strict
+//      match landed, switch to a broader (from = recipient,
+//      since = sent time) filter and take the first match. This
+//      catches legitimate replies from mailing-list / forwarder
+//      paths that strip In-Reply-To AND References, where the FK
+//      never gets populated. There's a narrow correctness risk
+//      (any second unrelated inbound from the same sender during
+//      the fallback window would also match), but in practice the
+//      window starts after most well-behaved replies would already
+//      have hit the strict path.
+//
+// --strict-only opts out of the fallback for callers that need
+// strict guarantees over success-rate.
 
 const DEFAULT_CHAT_TIMEOUT_SECONDS = 120;
+const DEFAULT_STRICT_PHASE_SECONDS = 60;
 
 function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
@@ -140,6 +155,16 @@ class ChatCommand extends Command {
       description:
         "Seconds to wait for a reply before exiting non-zero; 0 waits forever.",
       min: 0,
+    }),
+    "strict-phase-seconds": Flags.integer({
+      default: DEFAULT_STRICT_PHASE_SECONDS,
+      description:
+        "Seconds to wait in strict-threading mode (filter by reply_to_sent_email_id) before falling back to time-window matching. Set to the full --timeout to disable the fallback; --strict-only is the explicit way to do that.",
+      min: 1,
+    }),
+    "strict-only": Flags.boolean({
+      description:
+        "Disable the time-window fallback. Only accept inbounds whose threading headers (In-Reply-To / References) resolve to this send. Recommended when correctness matters more than success rate (e.g. agents talking to agents).",
     }),
     interval: Flags.integer({
       default: DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
@@ -237,6 +262,9 @@ class ChatCommand extends Command {
         pageSize: flags["page-size"],
         recipient: args.recipient,
         sentAtIso,
+        sentId: sent.id,
+        strictOnly: flags["strict-only"],
+        strictPhaseSeconds: flags["strict-phase-seconds"],
         timeoutSeconds: flags.timeout,
       });
       if (reply === null) {
@@ -273,83 +301,125 @@ type WaitForReplyParams = {
   pageSize: number;
   recipient: string;
   sentAtIso: string;
+  sentId: string;
+  strictOnly: boolean;
+  strictPhaseSeconds: number;
   timeoutSeconds: number;
 };
 
 async function waitForReply(
   params: WaitForReplyParams,
 ): Promise<EmailDetail | null> {
-  const deadline =
+  const totalDeadline =
     params.timeoutSeconds === 0
       ? null
       : Date.now() + params.timeoutSeconds * 1000;
+  // Strict phase ends at min(strictPhaseSeconds, total timeout). If
+  // --strict-only is set, the strict phase covers the entire wait
+  // window and the fallback never runs.
+  const strictDeadlineFromBudget =
+    Date.now() + params.strictPhaseSeconds * 1000;
+  const strictDeadline = params.strictOnly
+    ? totalDeadline
+    : totalDeadline === null
+      ? strictDeadlineFromBudget
+      : Math.min(strictDeadlineFromBudget, totalDeadline);
   const seenIds = new Set<string>();
-  let cursor: string | null = null;
+  // Strict and fallback phases scroll independent cursors against the
+  // search endpoint because they pass different filters; sharing a
+  // cursor across filter changes would skip valid matches.
+  let strictCursor: string | null = null;
+  let fallbackCursor: string | null = null;
 
-  while (deadline === null || Date.now() < deadline) {
-    const page = await fetchEmailSearchPage({
-      apiClient: params.apiClient,
-      cursor,
-      filters: {
-        from: params.recipient,
-        to: params.from,
-      },
-      pageSize: params.pageSize,
-      since: params.sentAtIso,
+  type Phase = {
+    label: "strict" | "fallback";
+    filters: { from?: string; to?: string; replyToSentEmailId?: string };
+    deadline: number | null;
+  };
+  const phases: Phase[] = [
+    {
+      label: "strict",
+      filters: { replyToSentEmailId: params.sentId },
+      deadline: strictDeadline,
+    },
+  ];
+  if (!params.strictOnly) {
+    phases.push({
+      label: "fallback",
+      filters: { from: params.recipient, to: params.from },
+      deadline: totalDeadline,
     });
+  }
 
-    if (!page.ok) {
-      const payload = extractErrorPayload(page.error);
-      writeErrorWithHints(payload);
-      removeStaleSavedCredentialOnUnauthorized({
-        ...params.authFailureContext,
-        payload,
+  for (const phase of phases) {
+    let cursor: string | null =
+      phase.label === "strict" ? strictCursor : fallbackCursor;
+    while (true) {
+      if (phase.deadline !== null && Date.now() >= phase.deadline) break;
+      const page = await fetchEmailSearchPage({
+        apiClient: params.apiClient,
+        cursor,
+        filters: phase.filters,
+        pageSize: params.pageSize,
+        since: params.sentAtIso,
       });
-      throw new Errors.CLIError("Failed to poll for reply.", { exit: 1 });
-    }
 
-    cursor = page.cursor ?? cursor;
-
-    const matches = collectNewAcceptedEmails(page.rows, seenIds);
-    if (matches.length > 0) {
-      const firstId = matches[0].id;
-      const full = await getEmail({
-        client: params.apiClient.client,
-        path: { id: firstId },
-        responseStyle: "fields",
-      });
-      if (full.error) {
-        const payload = extractErrorPayload(full.error);
+      if (!page.ok) {
+        const payload = extractErrorPayload(page.error);
         writeErrorWithHints(payload);
         removeStaleSavedCredentialOnUnauthorized({
           ...params.authFailureContext,
           payload,
         });
-        throw new Errors.CLIError(
-          `Reply landed but fetching the full body failed (id=${firstId}).`,
-          { exit: 1 },
-        );
+        throw new Errors.CLIError("Failed to poll for reply.", { exit: 1 });
       }
-      const envelope = full.data as
-        | { data?: EmailDetail }
-        | GetEmailResponse
-        | undefined;
-      const detail =
-        (envelope as { data?: EmailDetail } | undefined)?.data ??
-        (envelope as EmailDetail | undefined) ??
-        null;
-      if (!detail) {
-        throw new Errors.CLIError(
-          `Reply landed but the email body could not be loaded (id=${firstId}).`,
-          { exit: 1 },
-        );
-      }
-      return detail;
-    }
 
-    if (page.rows.length > 0) continue;
-    if (deadline !== null && Date.now() >= deadline) break;
-    await sleep(params.interval * 1000);
+      cursor = page.cursor ?? cursor;
+      if (phase.label === "strict") strictCursor = cursor;
+      else fallbackCursor = cursor;
+
+      const matches = collectNewAcceptedEmails(page.rows, seenIds);
+      if (matches.length > 0) {
+        const firstId = matches[0].id;
+        const full = await getEmail({
+          client: params.apiClient.client,
+          path: { id: firstId },
+          responseStyle: "fields",
+        });
+        if (full.error) {
+          const payload = extractErrorPayload(full.error);
+          writeErrorWithHints(payload);
+          removeStaleSavedCredentialOnUnauthorized({
+            ...params.authFailureContext,
+            payload,
+          });
+          throw new Errors.CLIError(
+            `Reply landed but fetching the full body failed (id=${firstId}).`,
+            { exit: 1 },
+          );
+        }
+        const envelope = full.data as
+          | { data?: EmailDetail }
+          | GetEmailResponse
+          | undefined;
+        const detail =
+          (envelope as { data?: EmailDetail } | undefined)?.data ??
+          (envelope as EmailDetail | undefined) ??
+          null;
+        if (!detail) {
+          throw new Errors.CLIError(
+            `Reply landed but the email body could not be loaded (id=${firstId}).`,
+            { exit: 1 },
+          );
+        }
+        return detail;
+      }
+
+      if (page.rows.length > 0) continue;
+      if (phase.deadline !== null && Date.now() >= phase.deadline) break;
+      if (totalDeadline !== null && Date.now() >= totalDeadline) return null;
+      await sleep(params.interval * 1000);
+    }
   }
 
   return null;
