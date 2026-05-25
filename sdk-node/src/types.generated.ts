@@ -141,6 +141,10 @@ email: {
  */
 id: string
 /**
+ * Conversation thread this email belongs to. Inbound and outbound messages in the same conversation share a thread_id; fetch GET /v1/threads/{thread_id} for the full thread. Null on messages received before threading was enabled.
+ */
+thread_id?: (string | null)
+/**
  * ISO 8601 timestamp (UTC) when Primitive received the email.
  */
 received_at: string
@@ -821,6 +825,10 @@ email: {
  * Unique email ID in Primitive. Use this ID when calling Primitive APIs to reference this email.
  */
 id: string
+/**
+ * Conversation thread this email belongs to. Inbound and outbound messages in the same conversation share a thread_id; fetch GET /v1/threads/{thread_id} for the full thread. Null on messages received before threading was enabled.
+ */
+thread_id?: (string | null)
 /**
  * ISO 8601 timestamp (UTC) when Primitive received the email.
  */

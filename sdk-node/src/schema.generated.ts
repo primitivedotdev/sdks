@@ -63,6 +63,13 @@ export const emailReceivedEventJsonSchema = {
               "type": "string",
               "description": "Unique email ID in Primitive. Use this ID when calling Primitive APIs to reference this email."
             },
+            "thread_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Conversation thread this email belongs to. Inbound and outbound messages in the same conversation share a thread_id; fetch GET /v1/threads/{thread_id} for the full thread. Null on messages received before threading was enabled."
+            },
             "received_at": {
               "type": "string",
               "format": "date-time",
