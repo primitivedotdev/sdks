@@ -3,7 +3,7 @@
 Official Primitive CLI. Deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal.
 
 ```bash
-brew install primitivedotdev/cli/primitive
+brew install primitivedotdev/tap/primitive
 primitive whoami
 ```
 
