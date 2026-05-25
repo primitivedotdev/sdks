@@ -80,6 +80,19 @@ describe("COMMANDS / manifest coverage", () => {
     expect(sendCommand.flags.attachment?.multiple).toBe(true);
   });
 
+  it("registers domain zone-file commands", () => {
+    expect(COMMANDS["domains:zone-file"]).toBeDefined();
+    expect(COMMANDS["domains:download-domain-zone-file"]).toBe(
+      COMMANDS["domains:zone-file"],
+    );
+    const zoneFileCommand = COMMANDS["domains:zone-file"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(zoneFileCommand.flags.id).toBeDefined();
+    expect(zoneFileCommand.flags.output).toBeDefined();
+    expect(zoneFileCommand.flags["outbound-only"]).toBeDefined();
+  });
+
   it("registers signup commands", () => {
     expect(COMMANDS.signup).toBeDefined();
     expect(COMMANDS["signup:confirm"]).toBeDefined();

@@ -2972,6 +2972,60 @@ type DownloadAttachmentsUnauthorized ErrorResponse
 
 func (*DownloadAttachmentsUnauthorized) downloadAttachmentsRes() {}
 
+type DownloadDomainZoneFileBadRequest ErrorResponse
+
+func (*DownloadDomainZoneFileBadRequest) downloadDomainZoneFileRes() {}
+
+type DownloadDomainZoneFileNotFound ErrorResponse
+
+func (*DownloadDomainZoneFileNotFound) downloadDomainZoneFileRes() {}
+
+type DownloadDomainZoneFileOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s DownloadDomainZoneFileOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+// DownloadDomainZoneFileOKHeaders wraps DownloadDomainZoneFileOK with response headers.
+type DownloadDomainZoneFileOKHeaders struct {
+	ContentDisposition OptString
+	Response           DownloadDomainZoneFileOK
+}
+
+// GetContentDisposition returns the value of ContentDisposition.
+func (s *DownloadDomainZoneFileOKHeaders) GetContentDisposition() OptString {
+	return s.ContentDisposition
+}
+
+// GetResponse returns the value of Response.
+func (s *DownloadDomainZoneFileOKHeaders) GetResponse() DownloadDomainZoneFileOK {
+	return s.Response
+}
+
+// SetContentDisposition sets the value of ContentDisposition.
+func (s *DownloadDomainZoneFileOKHeaders) SetContentDisposition(val OptString) {
+	s.ContentDisposition = val
+}
+
+// SetResponse sets the value of Response.
+func (s *DownloadDomainZoneFileOKHeaders) SetResponse(val DownloadDomainZoneFileOK) {
+	s.Response = val
+}
+
+func (*DownloadDomainZoneFileOKHeaders) downloadDomainZoneFileRes() {}
+
+type DownloadDomainZoneFileUnauthorized ErrorResponse
+
+func (*DownloadDomainZoneFileUnauthorized) downloadDomainZoneFileRes() {}
+
 type DownloadRawEmailBadRequest ErrorResponse
 
 func (*DownloadRawEmailBadRequest) downloadRawEmailRes() {}
@@ -10028,18 +10082,19 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
-func (*RateLimitedHeaders) discardEmailContentRes() {}
-func (*RateLimitedHeaders) replayDeliveryRes()      {}
-func (*RateLimitedHeaders) replayEmailWebhooksRes() {}
-func (*RateLimitedHeaders) replyToEmailRes()        {}
-func (*RateLimitedHeaders) rotateWebhookSecretRes() {}
-func (*RateLimitedHeaders) sendEmailRes()           {}
-func (*RateLimitedHeaders) startAgentSignupRes()    {}
-func (*RateLimitedHeaders) startCliLoginRes()       {}
-func (*RateLimitedHeaders) startCliSignupRes()      {}
-func (*RateLimitedHeaders) testEndpointRes()        {}
-func (*RateLimitedHeaders) verifyAgentSignupRes()   {}
-func (*RateLimitedHeaders) verifyCliSignupRes()     {}
+func (*RateLimitedHeaders) discardEmailContentRes()    {}
+func (*RateLimitedHeaders) downloadDomainZoneFileRes() {}
+func (*RateLimitedHeaders) replayDeliveryRes()         {}
+func (*RateLimitedHeaders) replayEmailWebhooksRes()    {}
+func (*RateLimitedHeaders) replyToEmailRes()           {}
+func (*RateLimitedHeaders) rotateWebhookSecretRes()    {}
+func (*RateLimitedHeaders) sendEmailRes()              {}
+func (*RateLimitedHeaders) startAgentSignupRes()       {}
+func (*RateLimitedHeaders) startCliLoginRes()          {}
+func (*RateLimitedHeaders) startCliSignupRes()         {}
+func (*RateLimitedHeaders) testEndpointRes()           {}
+func (*RateLimitedHeaders) verifyAgentSignupRes()      {}
+func (*RateLimitedHeaders) verifyCliSignupRes()        {}
 
 type ReplayDeliveryBadRequest ErrorResponse
 

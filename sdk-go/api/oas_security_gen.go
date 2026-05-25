@@ -52,6 +52,7 @@ var operationRolesBearerAuth = map[string][]string{
 	DeleteFunctionSecretOperation:    []string{},
 	DiscardEmailContentOperation:     []string{},
 	DownloadAttachmentsOperation:     []string{},
+	DownloadDomainZoneFileOperation:  []string{},
 	DownloadRawEmailOperation:        []string{},
 	GetAccountOperation:              []string{},
 	GetEmailOperation:                []string{},

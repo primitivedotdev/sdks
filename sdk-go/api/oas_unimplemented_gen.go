@@ -17,7 +17,9 @@ var _ Handler = UnimplementedHandler{}
 //
 // Creates an unverified domain claim and returns the exact
 // DNS records to publish in `dns_records`. Publish those
-// records before calling the verify endpoint.
+// records before calling the verify endpoint. To give users
+// an importable DNS file, call `downloadDomainZoneFile` or run
+// `primitive domains zone-file --id <domain-id>`.
 //
 // POST /domains
 func (UnimplementedHandler) AddDomain(ctx context.Context, req *AddDomainInput) (r AddDomainRes, _ error) {
@@ -209,6 +211,18 @@ func (UnimplementedHandler) DiscardEmailContent(ctx context.Context, params Disc
 //
 // GET /emails/{id}/attachments.tar.gz
 func (UnimplementedHandler) DownloadAttachments(ctx context.Context, params DownloadAttachmentsParams) (r DownloadAttachmentsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DownloadDomainZoneFile implements downloadDomainZoneFile operation.
+//
+// Downloads a BIND-format DNS zone file containing the DNS records
+// required for a domain claim. Agents should offer this after
+// `addDomain` when users want to import DNS records instead of
+// copying each record manually.
+//
+// GET /domains/{id}/zone-file
+func (UnimplementedHandler) DownloadDomainZoneFile(ctx context.Context, params DownloadDomainZoneFileParams) (r DownloadDomainZoneFileRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -790,7 +804,10 @@ func (UnimplementedHandler) VerifyCliSignup(ctx context.Context, req *VerifyCliS
 // DMARC, and TLS-RPT.
 // On success, the domain is promoted from unverified to verified.
 // On failure, returns which checks passed and which failed,
-// plus the exact DNS records still expected.
+// plus the exact DNS records still expected. To give users
+// an importable DNS file for missing records, call
+// `downloadDomainZoneFile` or run
+// `primitive domains zone-file --id <domain-id>`.
 //
 // POST /domains/{id}/verify
 func (UnimplementedHandler) VerifyDomain(ctx context.Context, params VerifyDomainParams) (r VerifyDomainRes, _ error) {

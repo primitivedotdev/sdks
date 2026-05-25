@@ -60,6 +60,13 @@ describe("lookupOperation", () => {
     expect(candidates).toEqual([]);
   });
 
+  it("resolves the zone-file shortcut to the download operation", () => {
+    const { match, candidates } = lookupOperation("domains:zone-file");
+    expect(match?.command).toBe("download-domain-zone-file");
+    expect(match?.operationId).toBe("downloadDomainZoneFile");
+    expect(candidates).toEqual([]);
+  });
+
   it("resolves the top-level reply shortcut to the reply operation", () => {
     const { match } = lookupOperation("reply");
     expect(match?.command).toBe("reply-to-email");

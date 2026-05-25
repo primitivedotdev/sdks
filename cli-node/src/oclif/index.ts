@@ -13,6 +13,7 @@ import {
   ConfigUseCommand,
 } from "./commands/config.js";
 import DoctorCommand from "./commands/doctor.js";
+import DomainsZoneFileCommand from "./commands/domains-zone-file.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
 import EmailsWatchCommand from "./commands/emails-watch.js";
@@ -301,6 +302,7 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
 
 const DESCRIBE_OPERATION_ALIASES: Record<string, string> = {
   ...CANONICAL_OPERATION_ALIASES,
+  "domains:zone-file": "domains:download-domain-zone-file",
   "functions:logs": "functions:list-function-logs",
   reply: "sending:reply-to-email",
 };
@@ -313,6 +315,9 @@ function resolveOperationAlias(id: string): string {
 // COMMANDS below. The auto-generated wrapper is filtered out so the
 // hand-rolled command owns the id without a name collision.
 const OVERRIDDEN_OPERATION_IDS = new Set<string>([
+  // `domains:download-domain-zone-file` is hand-rolled so the CLI writes
+  // text to stdout or --output instead of dumping a generated binary object.
+  "domains:download-domain-zone-file",
   // `functions:test-function` is hand-rolled to add --wait, --show-sends,
   // and --timeout flags on top of the auto-generated POST /functions/{id}/test.
   "functions:test-function",
@@ -405,6 +410,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
   "emails:wait": EmailsWaitCommand,
+  // `domains:zone-file` downloads the server-generated DNS import file.
+  // The API owns serialization so dashboard and CLI output stay aligned.
+  "domains:zone-file": DomainsZoneFileCommand,
+  "domains:download-domain-zone-file": DomainsZoneFileCommand,
   // `functions:init` scaffolds a deployable Function project so a
   // new author can go zero-to-deployed without writing the handler,
   // package.json, build script, and tsconfig from scratch. The

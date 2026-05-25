@@ -690,6 +690,11 @@ describe("OPERATION_HINTS", () => {
   // introduced; the matching keys in the index.ts COMMANDS map are
   // the authoritative shortcut surface.
   it("points each generated op at its hand-rolled shortcut command", () => {
+    expect(OPERATION_HINTS.addDomain).toContain("domains zone-file");
+    expect(OPERATION_HINTS.verifyDomain).toContain("domains zone-file");
+    expect(OPERATION_HINTS.downloadDomainZoneFile).toContain(
+      "domains zone-file",
+    );
     expect(OPERATION_HINTS.sendEmail).toContain("primitive send");
     expect(OPERATION_HINTS.sendEmail).toContain("--attachment");
     expect(OPERATION_HINTS.createFunction).toContain("functions deploy");

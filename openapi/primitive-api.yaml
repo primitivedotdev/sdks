@@ -789,7 +789,9 @@ paths:
       description: |
         Creates an unverified domain claim and returns the exact
         DNS records to publish in `dns_records`. Publish those
-        records before calling the verify endpoint.
+        records before calling the verify endpoint. To give users
+        an importable DNS file, call `downloadDomainZoneFile` or run
+        `primitive domains zone-file --id <domain-id>`.
       tags: [Domains]
       requestBody:
         required: true
@@ -911,7 +913,10 @@ paths:
         DMARC, and TLS-RPT.
         On success, the domain is promoted from unverified to verified.
         On failure, returns which checks passed and which failed,
-        plus the exact DNS records still expected.
+        plus the exact DNS records still expected. To give users
+        an importable DNS file for missing records, call
+        `downloadDomainZoneFile` or run
+        `primitive domains zone-file --id <domain-id>`.
       tags: [Domains]
       responses:
         '200':
@@ -931,6 +936,50 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /domains/{id}/zone-file:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    get:
+      operationId: downloadDomainZoneFile
+      summary: Download domain DNS zone file
+      description: |
+        Downloads a BIND-format DNS zone file containing the DNS records
+        required for a domain claim. Agents should offer this after
+        `addDomain` when users want to import DNS records instead of
+        copying each record manually.
+      tags: [Domains]
+      parameters:
+        - name: outbound_only
+          in: query
+          schema:
+            type: boolean
+          description: |
+            When true, include only outbound DNS records. Verified domains
+            default to outbound-only; pending claims default to all required
+            records.
+      responses:
+        '200':
+          description: BIND-format zone file
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="example.com.zone"'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   # ---------------------------------------------------------------------------
   # Emails

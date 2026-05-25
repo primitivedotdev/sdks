@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -268,7 +268,9 @@ export const listDomains = <ThrowOnError extends boolean = false>(options?: Opti
  *
  * Creates an unverified domain claim and returns the exact
  * DNS records to publish in `dns_records`. Publish those
- * records before calling the verify endpoint.
+ * records before calling the verify endpoint. To give users
+ * an importable DNS file, call `downloadDomainZoneFile` or run
+ * `primitive domains zone-file --id <domain-id>`.
  *
  */
 export const addDomain = <ThrowOnError extends boolean = false>(options: Options<AddDomainData, ThrowOnError>) => (options.client ?? client).post<AddDomainResponses, AddDomainErrors, ThrowOnError>({
@@ -317,12 +319,30 @@ export const updateDomain = <ThrowOnError extends boolean = false>(options: Opti
  * DMARC, and TLS-RPT.
  * On success, the domain is promoted from unverified to verified.
  * On failure, returns which checks passed and which failed,
- * plus the exact DNS records still expected.
+ * plus the exact DNS records still expected. To give users
+ * an importable DNS file for missing records, call
+ * `downloadDomainZoneFile` or run
+ * `primitive domains zone-file --id <domain-id>`.
  *
  */
 export const verifyDomain = <ThrowOnError extends boolean = false>(options: Options<VerifyDomainData, ThrowOnError>) => (options.client ?? client).post<VerifyDomainResponses, VerifyDomainErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domains/{id}/verify',
+    ...options
+});
+
+/**
+ * Download domain DNS zone file
+ *
+ * Downloads a BIND-format DNS zone file containing the DNS records
+ * required for a domain claim. Agents should offer this after
+ * `addDomain` when users want to import DNS records instead of
+ * copying each record manually.
+ *
+ */
+export const downloadDomainZoneFile = <ThrowOnError extends boolean = false>(options: Options<DownloadDomainZoneFileData, ThrowOnError>) => (options.client ?? client).get<DownloadDomainZoneFileResponses, DownloadDomainZoneFileErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/domains/{id}/zone-file',
     ...options
 });
 

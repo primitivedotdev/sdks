@@ -96,7 +96,9 @@ def sync_detailed(
 
      Creates an unverified domain claim and returns the exact
     DNS records to publish in `dns_records`. Publish those
-    records before calling the verify endpoint.
+    records before calling the verify endpoint. To give users
+    an importable DNS file, call `downloadDomainZoneFile` or run
+    `primitive domains zone-file --id <domain-id>`.
 
     Args:
         body (AddDomainInput):
@@ -131,7 +133,9 @@ def sync(
 
      Creates an unverified domain claim and returns the exact
     DNS records to publish in `dns_records`. Publish those
-    records before calling the verify endpoint.
+    records before calling the verify endpoint. To give users
+    an importable DNS file, call `downloadDomainZoneFile` or run
+    `primitive domains zone-file --id <domain-id>`.
 
     Args:
         body (AddDomainInput):
@@ -161,7 +165,9 @@ async def asyncio_detailed(
 
      Creates an unverified domain claim and returns the exact
     DNS records to publish in `dns_records`. Publish those
-    records before calling the verify endpoint.
+    records before calling the verify endpoint. To give users
+    an importable DNS file, call `downloadDomainZoneFile` or run
+    `primitive domains zone-file --id <domain-id>`.
 
     Args:
         body (AddDomainInput):
@@ -196,7 +202,9 @@ async def asyncio(
 
      Creates an unverified domain claim and returns the exact
     DNS records to publish in `dns_records`. Publish those
-    records before calling the verify endpoint.
+    records before calling the verify endpoint. To give users
+    an importable DNS file, call `downloadDomainZoneFile` or run
+    `primitive domains zone-file --id <domain-id>`.
 
     Args:
         body (AddDomainInput):

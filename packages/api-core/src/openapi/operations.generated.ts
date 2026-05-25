@@ -1072,7 +1072,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "add-domain",
-    "description": "Creates an unverified domain claim and returns the exact\nDNS records to publish in `dns_records`. Publish those\nrecords before calling the verify endpoint.\n",
+    "description": "Creates an unverified domain claim and returns the exact\nDNS records to publish in `dns_records`. Publish those\nrecords before calling the verify endpoint. To give users\nan importable DNS file, call `downloadDomainZoneFile` or run\n`primitive domains zone-file --id <domain-id>`.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "addDomain",
@@ -1242,6 +1242,40 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "responseSchema": null,
     "sdkName": "deleteDomain",
     "summary": "Delete a domain",
+    "tag": "Domains",
+    "tagCommand": "domains"
+  },
+  {
+    "binaryResponse": true,
+    "bodyRequired": false,
+    "command": "download-domain-zone-file",
+    "description": "Downloads a BIND-format DNS zone file containing the DNS records\nrequired for a domain claim. Agents should offer this after\n`addDomain` when users want to import DNS records instead of\ncopying each record manually.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "downloadDomainZoneFile",
+    "path": "/domains/{id}/zone-file",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "When true, include only outbound DNS records. Verified domains\ndefault to outbound-only; pending claims default to all required\nrecords.\n",
+        "enum": null,
+        "name": "outbound_only",
+        "required": false,
+        "type": "boolean"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "downloadDomainZoneFile",
+    "summary": "Download domain DNS zone file",
     "tag": "Domains",
     "tagCommand": "domains"
   },
@@ -1527,7 +1561,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "verify-domain",
-    "description": "Checks DNS records required for inbound routing, ownership,\nand outbound authentication: MX, ownership TXT, SPF, DKIM,\nDMARC, and TLS-RPT.\nOn success, the domain is promoted from unverified to verified.\nOn failure, returns which checks passed and which failed,\nplus the exact DNS records still expected.\n",
+    "description": "Checks DNS records required for inbound routing, ownership,\nand outbound authentication: MX, ownership TXT, SPF, DKIM,\nDMARC, and TLS-RPT.\nOn success, the domain is promoted from unverified to verified.\nOn failure, returns which checks passed and which failed,\nplus the exact DNS records still expected. To give users\nan importable DNS file for missing records, call\n`downloadDomainZoneFile` or run\n`primitive domains zone-file --id <domain-id>`.\n",
     "hasJsonBody": false,
     "method": "POST",
     "operationId": "verifyDomain",

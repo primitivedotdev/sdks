@@ -2704,6 +2704,56 @@ export type VerifyDomainResponses = {
 
 export type VerifyDomainResponse = VerifyDomainResponses[keyof VerifyDomainResponses];
 
+export type DownloadDomainZoneFileData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * When true, include only outbound DNS records. Verified domains
+         * default to outbound-only; pending claims default to all required
+         * records.
+         *
+         */
+        outbound_only?: boolean;
+    };
+    url: '/domains/{id}/zone-file';
+};
+
+export type DownloadDomainZoneFileErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type DownloadDomainZoneFileError = DownloadDomainZoneFileErrors[keyof DownloadDomainZoneFileErrors];
+
+export type DownloadDomainZoneFileResponses = {
+    /**
+     * BIND-format zone file
+     */
+    200: Blob | File;
+};
+
+export type DownloadDomainZoneFileResponse = DownloadDomainZoneFileResponses[keyof DownloadDomainZoneFileResponses];
+
 export type ListEmailsData = {
     body?: never;
     path?: never;
