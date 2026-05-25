@@ -1,4 +1,10 @@
+import { existsSync } from "node:fs";
 import { Args, Command, Errors, Flags } from "@oclif/core";
+import {
+  acquireCliCredentialsLock,
+  credentialsPath,
+  deleteCliCredentials,
+} from "../auth.js";
 import {
   deleteCliConfig,
   emptyCliConfig,
@@ -25,6 +31,47 @@ function redactConfig(config: ReturnType<typeof emptyCliConfig>) {
       ]),
     ),
   };
+}
+
+export function switchCliEnvironment(
+  configDir: string,
+  environmentName: string,
+): {
+  environment: string;
+  previousEnvironment: string | null;
+  removedCredentials: boolean;
+} {
+  const environment = normalizeCliEnvironmentName(environmentName);
+  const config = loadOrCreateConfig(configDir);
+  if (!config.environments[environment]) {
+    throw new Errors.CLIError(
+      `Primitive CLI environment ${environment} is not configured.`,
+      { exit: 1 },
+    );
+  }
+
+  const previousEnvironment = resolveConfigEnvironment(config)?.name ?? null;
+  const nextConfig = {
+    ...config,
+    current_environment: environment,
+  };
+
+  const shouldClearCredentials = previousEnvironment !== environment;
+  let removedCredentials = false;
+  if (shouldClearCredentials) {
+    const releaseLock = acquireCliCredentialsLock(configDir);
+    try {
+      saveCliConfig(configDir, nextConfig);
+      removedCredentials = existsSync(credentialsPath(configDir));
+      deleteCliCredentials(configDir);
+    } finally {
+      releaseLock();
+    }
+  } else {
+    saveCliConfig(configDir, nextConfig);
+  }
+
+  return { environment, previousEnvironment, removedCredentials };
 }
 
 export class ConfigSetCommand extends Command {
@@ -84,6 +131,8 @@ export class ConfigSetCommand extends Command {
 
 export class ConfigUseCommand extends Command {
   static summary = "Switch the active Primitive CLI request environment";
+  static description =
+    "Switch the active Primitive CLI request environment. When this switches to a different environment, the CLI removes saved OAuth credentials so the next authenticated command signs in against the newly active API host.";
 
   static args = {
     environment: Args.string({
@@ -94,21 +143,18 @@ export class ConfigUseCommand extends Command {
 
   async run(): Promise<void> {
     const { args } = await this.parse(ConfigUseCommand);
-    const environment = normalizeCliEnvironmentName(args.environment);
-    const config = loadOrCreateConfig(this.config.configDir);
-    if (!config.environments[environment]) {
-      throw new Errors.CLIError(
-        `Primitive CLI environment ${environment} is not configured.`,
-        { exit: 1 },
-      );
-    }
-    saveCliConfig(this.config.configDir, {
-      ...config,
-      current_environment: environment,
-    });
+    const { environment, removedCredentials } = switchCliEnvironment(
+      this.config.configDir,
+      args.environment,
+    );
     process.stderr.write(
       `Primitive CLI environment ${environment} is active.\n`,
     );
+    if (removedCredentials) {
+      process.stderr.write(
+        "Removed saved Primitive CLI credentials. Run `primitive signin` to authenticate in the active environment.\n",
+      );
+    }
   }
 }
 
