@@ -212,6 +212,9 @@ describe("chat command", () => {
     expect(output).toContain(
       "primitive reply --id email-1 --from agent@sender.example --body '<message>'",
     );
+    expect(output).toContain(
+      "primitive emails wait --reply-to-sent-email-id sent-1 --to agent@sender.example --since 2026-05-25T00:00:02.000Z --timeout 120",
+    );
     expect(output).toContain("Response body (text; use --json for parsing)");
     expect(output).toContain("----- BEGIN RESPONSE -----\nRotate your API key");
     expect(output).toContain("----- END RESPONSE -----");
@@ -250,6 +253,18 @@ describe("chat command", () => {
         token: "<message>",
       },
     ]);
+    expect(
+      envelope.follow_up_commands.find(
+        (entry) => entry.kind === "wait_for_more",
+      )?.argv,
+    ).toEqual(
+      expect.arrayContaining([
+        "--since",
+        "2026-05-25T00:00:02.000Z",
+        "--timeout",
+        "120",
+      ]),
+    );
   });
 
   it("quotes shell-sensitive follow-up command values", () => {

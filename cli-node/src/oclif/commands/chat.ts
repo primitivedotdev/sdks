@@ -402,6 +402,8 @@ export function buildChatFollowUpCommands(
       context.sent.id,
       "--to",
       context.from,
+      "--since",
+      context.reply.received_at,
       "--timeout",
       String(context.timeoutSeconds),
     ]),
