@@ -59,6 +59,9 @@ cli-smoke: cli-build cli-tarball-isolation
 	cd "$$smoke_dir" && \
 	npm init -y && \
 	npm install "$$pack_dir/$$tarball" && \
+	tar -tf "$$pack_dir/$$tarball" | grep -q -- '^package/man/primitive.1$$' && \
+	test -f "$$smoke_dir/node_modules/@primitivedotdev/cli/man/primitive.1" && \
+	grep -q -- 'TH PRIMITIVE 1' "$$smoke_dir/node_modules/@primitivedotdev/cli/man/primitive.1" && \
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
 	"$$bin" list-operations >/dev/null && \
 	"$$bin" completion fish >/dev/null && \
