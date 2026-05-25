@@ -80,8 +80,16 @@ describe("inbox status formatting", () => {
   it("renders status labels and booleans compactly", () => {
     expect(statusText("stored_only")).toBe("stored-only");
     expect(statusText("pending_dns")).toBe("pending-dns");
+    expect(statusText("paused" as never)).toBe("paused");
     expect(yesNo(true)).toBe("yes");
     expect(yesNo(false)).toBe("no");
+  });
+
+  it("keeps unknown domain statuses printable", () => {
+    const domain = makeDomain({ status: "paused" });
+
+    expect(domainSummary(domain)).toBe("example.com has status paused.");
+    expect(formatDomainRow(domain)).toContain("paused");
   });
 
   it("formats valid dates in UTC and missing dates as never", () => {
@@ -127,8 +135,21 @@ describe("inbox status formatting", () => {
 
 describe("focusInboxStatus", () => {
   it("focuses aggregate status on a single domain", () => {
+    const nextActions = [
+      {
+        kind: "configure_processing",
+        message: "Configure a webhook endpoint or function.",
+      },
+    ];
     const focused = focusInboxStatus(
       makeStatus({
+        next_actions: nextActions,
+        functions: {
+          total: 2,
+          deployed: 1,
+          pending: 1,
+          failed: 0,
+        },
         domains: [
           makeDomain({ domain: "ready.example.com" }),
           makeDomain({
@@ -156,6 +177,22 @@ describe("focusInboxStatus", () => {
     expect(focused.recent_emails).toEqual({
       total: 0,
       latest_received_at: null,
+    });
+    expect(focused.next_actions).toBe(nextActions);
+    expect(focused.endpoints).toEqual({
+      total: 1,
+      enabled: 1,
+      disabled: 0,
+      fallback_enabled: 1,
+      domain_scoped_enabled: 0,
+      http_enabled: 1,
+      function_enabled: 0,
+    });
+    expect(focused.functions).toEqual({
+      total: 2,
+      deployed: 1,
+      pending: 1,
+      failed: 0,
     });
   });
 

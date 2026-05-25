@@ -540,7 +540,13 @@ export type InboxStatusDomain = {
     endpoint_count: number;
     enabled_endpoint_count: number;
     function_endpoint_count: number;
+    /**
+     * Number of inbound emails received for this domain in the last 30 days.
+     */
     email_count: number;
+    /**
+     * Most recent inbound email received for this domain in the last 30 days.
+     */
     latest_email_received_at: string | null;
     status: 'ready' | 'stored_only' | 'pending_dns' | 'inactive';
 };
@@ -562,8 +568,17 @@ export type InboxStatusFunctionSummary = {
     failed: number;
 };
 
+/**
+ * Inbound email activity from the last 30 days.
+ */
 export type InboxStatusRecentEmailSummary = {
+    /**
+     * Number of inbound emails received in the last 30 days.
+     */
     total: number;
+    /**
+     * Most recent inbound email received in the last 30 days.
+     */
     latest_received_at: string | null;
 };
 

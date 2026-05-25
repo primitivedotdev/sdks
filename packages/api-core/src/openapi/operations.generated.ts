@@ -4993,14 +4993,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "type": "integer"
               },
               "email_count": {
-                "type": "integer"
+                "type": "integer",
+                "description": "Number of inbound emails received for this domain in the last 30 days."
               },
               "latest_email_received_at": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "format": "date-time"
+                "format": "date-time",
+                "description": "Most recent inbound email received for this domain in the last 30 days."
               },
               "status": {
                 "type": "string",
@@ -5092,17 +5094,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "recent_emails": {
           "type": "object",
+          "description": "Inbound email activity from the last 30 days.",
           "additionalProperties": false,
           "properties": {
             "total": {
-              "type": "integer"
+              "type": "integer",
+              "description": "Number of inbound emails received in the last 30 days."
             },
             "latest_received_at": {
               "type": [
                 "string",
                 "null"
               ],
-              "format": "date-time"
+              "format": "date-time",
+              "description": "Most recent inbound email received in the last 30 days."
             }
           },
           "required": [

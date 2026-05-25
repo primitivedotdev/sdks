@@ -37,8 +37,9 @@ class InboxStatusDomain:
             endpoint_count (int):
             enabled_endpoint_count (int):
             function_endpoint_count (int):
-            email_count (int):
-            latest_email_received_at (datetime.datetime | None):
+            email_count (int): Number of inbound emails received for this domain in the last 30 days.
+            latest_email_received_at (datetime.datetime | None): Most recent inbound email received for this domain in the
+                last 30 days.
             status (InboxStatusDomainStatus):
      """
 

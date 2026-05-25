@@ -41,6 +41,8 @@ export function statusText(status: InboxStatusDomain["status"]): string {
       return "pending-dns";
     case "inactive":
       return "inactive";
+    default:
+      return String(status);
   }
 }
 
@@ -71,6 +73,8 @@ export function domainSummary(domain: InboxStatusDomain): string {
       return `${domain.domain} is waiting on DNS verification before it can receive mail.`;
     case "inactive":
       return `${domain.domain} is verified but inactive.`;
+    default:
+      return `${domain.domain} has status ${String(domain.status)}.`;
   }
 }
 
@@ -90,6 +94,9 @@ export function focusInboxStatus(
 
   return {
     ...status,
+    // The API only exposes account-level endpoint, function, and next-action
+    // summaries today, so domain focus narrows domain readiness and email stats
+    // while leaving those aggregate fields intact.
     domains: [domain],
     ready: domain.receiving_ready && domain.processing_ready,
     receiving_ready: domain.receiving_ready,
@@ -190,11 +197,11 @@ class InboxStatusCommand extends Command {
     }),
     domain: Flags.string({
       description:
-        "Focus the status output on one domain returned by the inbox status API.",
+        "Focus domain readiness and recent email fields on one domain returned by the inbox status API.",
     }),
     json: Flags.boolean({
       description:
-        "Print the raw response envelope as JSON. With --domain, the envelope data is focused on the matched domain.",
+        "Print the raw response envelope as JSON. With --domain, domain readiness and recent email fields are focused while endpoint, function, and next-action summaries remain account-level.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,

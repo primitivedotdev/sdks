@@ -23,10 +23,11 @@ T = TypeVar("T", bound="InboxStatusRecentEmailSummary")
 
 @_attrs_define
 class InboxStatusRecentEmailSummary:
-    """ 
+    """ Inbound email activity from the last 30 days.
+
         Attributes:
-            total (int):
-            latest_received_at (datetime.datetime | None):
+            total (int): Number of inbound emails received in the last 30 days.
+            latest_received_at (datetime.datetime | None): Most recent inbound email received in the last 30 days.
      """
 
     total: int

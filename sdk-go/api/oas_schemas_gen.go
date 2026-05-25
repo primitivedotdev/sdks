@@ -7408,18 +7408,20 @@ func (s *InboxStatus) SetRecentEmails(val InboxStatusRecentEmailSummary) {
 
 // Ref: #/components/schemas/InboxStatusDomain
 type InboxStatusDomain struct {
-	ID                    string                  `json:"id"`
-	Domain                string                  `json:"domain"`
-	Verified              bool                    `json:"verified"`
-	Active                bool                    `json:"active"`
-	Managed               bool                    `json:"managed"`
-	ReceivingReady        bool                    `json:"receiving_ready"`
-	ProcessingReady       bool                    `json:"processing_ready"`
-	ProcessingRouteCount  int                     `json:"processing_route_count"`
-	EndpointCount         int                     `json:"endpoint_count"`
-	EnabledEndpointCount  int                     `json:"enabled_endpoint_count"`
-	FunctionEndpointCount int                     `json:"function_endpoint_count"`
-	EmailCount            int                     `json:"email_count"`
+	ID                    string `json:"id"`
+	Domain                string `json:"domain"`
+	Verified              bool   `json:"verified"`
+	Active                bool   `json:"active"`
+	Managed               bool   `json:"managed"`
+	ReceivingReady        bool   `json:"receiving_ready"`
+	ProcessingReady       bool   `json:"processing_ready"`
+	ProcessingRouteCount  int    `json:"processing_route_count"`
+	EndpointCount         int    `json:"endpoint_count"`
+	EnabledEndpointCount  int    `json:"enabled_endpoint_count"`
+	FunctionEndpointCount int    `json:"function_endpoint_count"`
+	// Number of inbound emails received for this domain in the last 30 days.
+	EmailCount int `json:"email_count"`
+	// Most recent inbound email received for this domain in the last 30 days.
 	LatestEmailReceivedAt NilDateTime             `json:"latest_email_received_at"`
 	Status                InboxStatusDomainStatus `json:"status"`
 }
@@ -7849,9 +7851,12 @@ func (s *InboxStatusNextActionKind) UnmarshalText(data []byte) error {
 	}
 }
 
+// Inbound email activity from the last 30 days.
 // Ref: #/components/schemas/InboxStatusRecentEmailSummary
 type InboxStatusRecentEmailSummary struct {
-	Total            int         `json:"total"`
+	// Number of inbound emails received in the last 30 days.
+	Total int `json:"total"`
+	// Most recent inbound email received in the last 30 days.
 	LatestReceivedAt NilDateTime `json:"latest_received_at"`
 }
 

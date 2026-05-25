@@ -37,7 +37,7 @@ class InboxStatus:
             domains (list[InboxStatusDomain]):
             endpoints (InboxStatusEndpointSummary):
             functions (InboxStatusFunctionSummary):
-            recent_emails (InboxStatusRecentEmailSummary):
+            recent_emails (InboxStatusRecentEmailSummary): Inbound email activity from the last 30 days.
      """
 
     ready: bool
