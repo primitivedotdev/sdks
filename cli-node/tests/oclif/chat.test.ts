@@ -104,7 +104,9 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
 function outputContext() {
   return {
     from: "agent@sender.example",
+    json: false,
     matchStrategy: "strict" as const,
+    quiet: false,
     recipient: "help@agent.example",
     reply: replyEmail(),
     sent: sentEmail(),
@@ -178,6 +180,7 @@ describe("chat command", () => {
 
   afterEach(() => {
     process.exitCode = undefined;
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -201,20 +204,25 @@ describe("chat command", () => {
       "Match: strict, matched by reply_to_sent_email_id",
     );
     expect(output).toContain("Helpful follow-up commands");
+    expect(output).toContain("Replace <message> before running");
+    expect(output).toContain("use --json for parse-safe output");
     expect(output).toContain(
       "primitive chat help@agent.example '<message>' --from agent@sender.example --subject 'API key help' --timeout 120",
     );
     expect(output).toContain(
       "primitive reply --id email-1 --from agent@sender.example --body '<message>'",
     );
-    expect(output).toContain("Response body (text)");
+    expect(output).toContain("Response body (text; use --json for parsing)");
     expect(output).toContain("----- BEGIN RESPONSE -----\nRotate your API key");
     expect(output).toContain("----- END RESPONSE -----");
     expect(output).not.toBe("Rotate your API key from the dashboard.\n");
   });
 
   it("includes follow-up commands in JSON mode without changing stdout shape to prose", () => {
-    const envelope = buildChatJsonEnvelope(outputContext());
+    const envelope = buildChatJsonEnvelope({
+      ...outputContext(),
+      json: true,
+    });
 
     expect(envelope.sent.id).toBe("sent-1");
     expect(envelope.reply.id).toBe("email-1");
@@ -229,7 +237,19 @@ describe("chat command", () => {
     expect(envelope.follow_up_commands.map((entry) => entry.command)).toContain(
       "primitive emails get --id email-1",
     );
-    expect(envelope.follow_up_commands[0]?.argv).toContain("--from");
+    expect(envelope.follow_up_commands[0]).toMatchObject({
+      kind: "continue_chat",
+      requires_message: true,
+    });
+    expect(envelope.follow_up_commands[0]?.argv).toEqual(
+      expect.arrayContaining(["--from", "--json"]),
+    );
+    expect(envelope.follow_up_commands[0]?.placeholders).toEqual([
+      {
+        description: "Replace with the message body before running.",
+        token: "<message>",
+      },
+    ]);
   });
 
   it("quotes shell-sensitive follow-up command values", () => {
@@ -262,11 +282,18 @@ describe("chat command", () => {
     expect(output).toContain("Sent email id: sent-1");
     expect(output).toContain("Helpful recovery commands");
     expect(commands.map((entry) => entry.command)).toContain(
-      "primitive emails wait --reply-to-sent-email-id sent-1 --timeout 120 --table",
+      "primitive emails wait --reply-to-sent-email-id sent-1 --to agent@sender.example --since 2026-05-25T00:00:00.000Z --timeout 120",
     );
     expect(commands.map((entry) => entry.command)).toContain(
-      "primitive emails wait --from help@agent.example --to agent@sender.example --since 2026-05-25T00:00:00.000Z --timeout 120 --table",
+      "primitive emails wait --from help@agent.example --to agent@sender.example --since 2026-05-25T00:00:00.000Z --timeout 120",
     );
+    expect(commands.map((entry) => entry.command).join("\n")).not.toContain(
+      "--table",
+    );
+    expect(commands[0]).toMatchObject({
+      kind: "wait_threaded_reply",
+      requires_message: false,
+    });
   });
 
   it("writes non-TTY progress lines while waiting", () => {
@@ -290,6 +317,37 @@ describe("chat command", () => {
     expect(writes.join("")).toContain("Reply received");
   });
 
+  it("writes non-TTY heartbeat lines while waiting", () => {
+    vi.useFakeTimers();
+    let now = 0;
+    const writes: string[] = [];
+    const progress = new ChatProgressIndicator(
+      {
+        isTTY: false,
+        write(chunk: string) {
+          writes.push(chunk);
+        },
+      },
+      () => now,
+    );
+
+    try {
+      progress.update("Message sent; waiting for reply", {
+        heartbeatMs: 1000,
+        timeoutSeconds: 3,
+      });
+      now = 1000;
+      vi.advanceTimersByTime(1000);
+      progress.succeed("Reply received");
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(writes.join("")).toContain(
+      "Message sent; waiting for reply (1s elapsed, timeout 3s)",
+    );
+  });
+
   it("invokes the command with human stdout and stderr progress on success", async () => {
     const result = await runChatCommand([
       "help@agent.example",
@@ -311,7 +369,9 @@ describe("chat command", () => {
       "Reply received from help@agent.example after",
     );
     expect(result.stdout).toContain("Reply received");
-    expect(result.stdout).toContain("Response body (text)");
+    expect(result.stdout).toContain(
+      "Response body (text; use --json for parsing)",
+    );
     expect(result.stdout).toContain(
       "primitive chat help@agent.example '<message>' --from agent@sender.example --subject 'API key help' --timeout 17 --in-reply-to '<reply-1@agent.example>'",
     );
@@ -331,8 +391,12 @@ describe("chat command", () => {
       "Rotate your API key from the dashboard.",
     );
     expect(parsed.response_body_format).toBe("text");
+    expect(parsed.follow_up_commands[0]).toMatchObject({
+      kind: "continue_chat",
+      requires_message: true,
+    });
     expect(parsed.follow_up_commands[0].argv).toEqual(
-      expect.arrayContaining(["primitive", "chat", "--from"]),
+      expect.arrayContaining(["primitive", "chat", "--from", "--json"]),
     );
   });
 
@@ -367,8 +431,9 @@ describe("chat command", () => {
     );
     expect(result.stderr).toContain("Sent message context");
     expect(result.stderr).toContain("Sent email id: sent-1");
-    expect(result.stderr).toContain(
-      "primitive emails wait --reply-to-sent-email-id sent-1 --timeout 1 --table",
+    expect(result.stderr).toMatch(
+      /primitive emails wait --reply-to-sent-email-id sent-1 --to agent@sender\.example --since \S+ --timeout 1/,
     );
+    expect(result.stderr).not.toContain("--table");
   });
 });
