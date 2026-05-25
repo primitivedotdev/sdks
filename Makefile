@@ -78,6 +78,16 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" domains zone-file --help | grep -q -- "--outbound-only" && \
 	"$$bin" inbox status --help | grep -q -- "readiness" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
+	config_home="$$smoke_dir/config-home" && \
+	config_dir="$$config_home/.config/primitive" && \
+	HOME="$$config_home" "$$bin" config set --environment default --api-base-url-1 "https://api.default.example/v1" >/dev/null 2>&1 && \
+	HOME="$$config_home" "$$bin" config set --environment staging --api-base-url-1 "https://api.staging.example/v1" >/dev/null 2>&1 && \
+	mkdir -p "$$config_dir" && \
+	node -e 'const fs = require("node:fs"); const path = process.argv[1]; fs.writeFileSync(path, JSON.stringify({ auth_method: "oauth", access_token: "prim_oat_smoke", refresh_token: "prim_ort_smoke", token_type: "Bearer", expires_at: "2099-05-25T00:00:00.000Z", oauth_grant_id: "11111111-1111-4111-8111-111111111111", oauth_client_id: "primitive-cli", org_id: "22222222-2222-4222-8222-222222222222", org_name: "Smoke", api_base_url_1: "https://api.staging.example/v1", created_at: "2026-05-25T00:00:00.000Z" }, null, 2) + "\n");' "$$config_dir/credentials.json" && \
+	HOME="$$config_home" "$$bin" config use default >"$$smoke_dir/config-use.out" 2>"$$smoke_dir/config-use.err" && \
+	grep -q -- 'Primitive CLI environment default is active.' "$$smoke_dir/config-use.err" && \
+	grep -q -- 'Removed saved Primitive CLI credentials' "$$smoke_dir/config-use.err" && \
+	test ! -e "$$config_dir/credentials.json" && \
 	zone_id="33333333-3333-4333-8333-333333333333" && \
 	port_file="$$smoke_dir/zone-server-port" && \
 	server_log="$$smoke_dir/zone-server.log"; \
