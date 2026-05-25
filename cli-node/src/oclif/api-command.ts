@@ -875,6 +875,8 @@ export const OPERATION_HINTS: Record<string, string> = {
     "Tip: if DNS is still missing, run `primitive domains zone-file --id <domain-id> --output <domain>.zone` to give the user an importable DNS zone file.",
   downloadDomainZoneFile:
     "Tip: prefer `primitive domains zone-file --id <domain-id> --output <domain>.zone` for CLI-friendly file output.",
+  getInboxStatus:
+    "Tip: prefer `primitive inbox status` for a compact readiness summary and next-step commands.",
   sendEmail:
     "Tip: prefer `primitive send --to <address> --body <text> --attachment <file>` for file attachments. This raw command exists for callers passing JSON.",
   createFunction:

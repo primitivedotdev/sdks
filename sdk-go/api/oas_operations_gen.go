@@ -26,6 +26,7 @@ const (
 	GetEmailOperation                      OperationName = "GetEmail"
 	GetFunctionOperation                   OperationName = "GetFunction"
 	GetFunctionTestRunTraceOperation       OperationName = "GetFunctionTestRunTrace"
+	GetInboxStatusOperation                OperationName = "GetInboxStatus"
 	GetSendPermissionsOperation            OperationName = "GetSendPermissions"
 	GetSentEmailOperation                  OperationName = "GetSentEmail"
 	GetStorageStatsOperation               OperationName = "GetStorageStats"

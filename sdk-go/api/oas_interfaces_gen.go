@@ -81,6 +81,10 @@ type GetFunctionTestRunTraceRes interface {
 	getFunctionTestRunTraceRes()
 }
 
+type GetInboxStatusRes interface {
+	getInboxStatusRes()
+}
+
 type GetSendPermissionsRes interface {
 	getSendPermissionsRes()
 }

@@ -252,6 +252,19 @@ type Invoker interface {
 	//
 	// GET /functions/{id}/test-runs/{run_id}/trace
 	GetFunctionTestRunTrace(ctx context.Context, params GetFunctionTestRunTraceParams) (GetFunctionTestRunTraceRes, error)
+	// GetInboxStatus invokes getInboxStatus operation.
+	//
+	// Returns one consolidated view of inbound domain readiness,
+	// webhook/function processing routes, deployed Functions, and
+	// recent inbound email activity.
+	// Agents should call this before guiding a user through inbound
+	// setup. It answers the practical questions "can I receive mail",
+	// "will anything process that mail", and "what should I do next"
+	// without forcing clients to stitch together domains, endpoints,
+	// functions, and emails manually.
+	//
+	// GET /inbox/status
+	GetInboxStatus(ctx context.Context) (GetInboxStatusRes, error)
 	// GetSendPermissions invokes getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -3342,6 +3355,120 @@ func (c *Client) sendGetFunctionTestRunTrace(ctx context.Context, params GetFunc
 
 	stage = "DecodeResponse"
 	result, err := decodeGetFunctionTestRunTraceResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetInboxStatus invokes getInboxStatus operation.
+//
+// Returns one consolidated view of inbound domain readiness,
+// webhook/function processing routes, deployed Functions, and
+// recent inbound email activity.
+// Agents should call this before guiding a user through inbound
+// setup. It answers the practical questions "can I receive mail",
+// "will anything process that mail", and "what should I do next"
+// without forcing clients to stitch together domains, endpoints,
+// functions, and emails manually.
+//
+// GET /inbox/status
+func (c *Client) GetInboxStatus(ctx context.Context) (GetInboxStatusRes, error) {
+	res, err := c.sendGetInboxStatus(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetInboxStatus(ctx context.Context) (res GetInboxStatusRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getInboxStatus"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/inbox/status"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetInboxStatusOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/inbox/status"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetInboxStatusOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetInboxStatusResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

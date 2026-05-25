@@ -24,6 +24,7 @@ import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
 import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
 import FunctionsTemplatesCommand from "./commands/functions-templates.js";
 import FunctionsTestFunctionCommand from "./commands/functions-test-function.js";
+import InboxStatusCommand from "./commands/inbox-status.js";
 import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
 import ReplyCommand from "./commands/reply.js";
@@ -321,6 +322,9 @@ const OVERRIDDEN_OPERATION_IDS = new Set<string>([
   // `functions:test-function` is hand-rolled to add --wait, --show-sends,
   // and --timeout flags on top of the auto-generated POST /functions/{id}/test.
   "functions:test-function",
+  // `inbox:get-inbox-status` is hand-rolled so the CLI defaults to a
+  // compact readiness summary instead of dumping a large JSON object.
+  "inbox:get-inbox-status",
 ]);
 
 const generatedCommands = Object.fromEntries(
@@ -414,6 +418,11 @@ export const COMMANDS: Record<string, typeof Command> = {
   // The API owns serialization so dashboard and CLI output stay aligned.
   "domains:zone-file": DomainsZoneFileCommand,
   "domains:download-domain-zone-file": DomainsZoneFileCommand,
+  // `inbox:status` is the guided readiness view for inbound setup. It folds
+  // domain verification, endpoint/function processing, and recent mail into
+  // the server-owned status API instead of making agents compose those lists.
+  "inbox:status": InboxStatusCommand,
+  "inbox:get-inbox-status": InboxStatusCommand,
   // `functions:init` scaffolds a deployable Function project so a
   // new author can go zero-to-deployed without writing the handler,
   // package.json, build script, and tsconfig from scratch. The
