@@ -3,6 +3,13 @@
 Official Primitive CLI. Deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal.
 
 ```bash
+brew install primitivedotdev/cli/primitive
+primitive whoami
+```
+
+Or with npm:
+
+```bash
 npm install -g @primitivedotdev/cli
 primitive whoami
 ```
