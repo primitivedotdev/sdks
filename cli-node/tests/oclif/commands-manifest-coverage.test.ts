@@ -93,6 +93,16 @@ describe("COMMANDS / manifest coverage", () => {
     expect(zoneFileCommand.flags["outbound-only"]).toBeDefined();
   });
 
+  it("registers inbox status commands", () => {
+    expect(COMMANDS["inbox:status"]).toBeDefined();
+    expect(COMMANDS["inbox:get-inbox-status"]).toBe(COMMANDS["inbox:status"]);
+    const inboxStatusCommand = COMMANDS["inbox:status"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(inboxStatusCommand.flags.domain).toBeDefined();
+    expect(inboxStatusCommand.flags.json).toBeDefined();
+  });
+
   it("registers signup commands", () => {
     expect(COMMANDS.signup).toBeDefined();
     expect(COMMANDS["signup:confirm"]).toBeDefined();

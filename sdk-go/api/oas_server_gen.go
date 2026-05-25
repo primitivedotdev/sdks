@@ -232,6 +232,19 @@ type Handler interface {
 	//
 	// GET /functions/{id}/test-runs/{run_id}/trace
 	GetFunctionTestRunTrace(ctx context.Context, params GetFunctionTestRunTraceParams) (GetFunctionTestRunTraceRes, error)
+	// GetInboxStatus implements getInboxStatus operation.
+	//
+	// Returns one consolidated view of inbound domain readiness,
+	// webhook/function processing routes, deployed Functions, and
+	// recent inbound email activity.
+	// Agents should call this before guiding a user through inbound
+	// setup. It answers the practical questions "can I receive mail",
+	// "will anything process that mail", and "what should I do next"
+	// without forcing clients to stitch together domains, endpoints,
+	// functions, and emails manually.
+	//
+	// GET /inbox/status
+	GetInboxStatus(ctx context.Context) (GetInboxStatusRes, error)
 	// GetSendPermissions implements getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the

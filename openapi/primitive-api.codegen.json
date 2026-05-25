@@ -46,6 +46,10 @@
       "description": "Claim, verify, and manage email domains"
     },
     {
+      "name": "Inbox",
+      "description": "Check inbound email setup and processing readiness"
+    },
+    {
       "name": "Emails",
       "description": "List, inspect, and manage received emails"
     },
@@ -1260,6 +1264,46 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/inbox/status": {
+      "get": {
+        "operationId": "getInboxStatus",
+        "summary": "Get inbound inbox readiness",
+        "description": "Returns one consolidated view of inbound domain readiness,\nwebhook/function processing routes, deployed Functions, and\nrecent inbound email activity.\n\nAgents should call this before guiding a user through inbound\nsetup. It answers the practical questions \"can I receive mail\",\n\"will anything process that mail\", and \"what should I do next\"\nwithout forcing clients to stitch together domains, endpoints,\nfunctions, and emails manually.\n",
+        "tags": [
+          "Inbox"
+        ],
+        "responses": {
+          "200": {
+            "description": "Consolidated inbox readiness status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/InboxStatus"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
@@ -4796,6 +4840,238 @@
         },
         "required": [
           "secret"
+        ]
+      },
+      "InboxStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "description": "True when at least one active inbound domain has an enabled processing route."
+          },
+          "receiving_ready": {
+            "type": "boolean",
+            "description": "True when at least one active verified or managed domain can receive mail."
+          },
+          "processing_ready": {
+            "type": "boolean",
+            "description": "True when at least one receiving-ready domain has an enabled webhook or function route."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Short human-readable status summary."
+          },
+          "next_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InboxStatusNextAction"
+            }
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InboxStatusDomain"
+            }
+          },
+          "endpoints": {
+            "$ref": "#/components/schemas/InboxStatusEndpointSummary"
+          },
+          "functions": {
+            "$ref": "#/components/schemas/InboxStatusFunctionSummary"
+          },
+          "recent_emails": {
+            "$ref": "#/components/schemas/InboxStatusRecentEmailSummary"
+          }
+        },
+        "required": [
+          "ready",
+          "receiving_ready",
+          "processing_ready",
+          "summary",
+          "next_actions",
+          "domains",
+          "endpoints",
+          "functions",
+          "recent_emails"
+        ]
+      },
+      "InboxStatusNextAction": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "add_domain",
+              "verify_domain",
+              "configure_processing",
+              "send_test_email",
+              "fix_failed_functions"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable next step."
+          },
+          "command": {
+            "type": "string",
+            "description": "Suggested Primitive CLI command when there is an obvious next step."
+          }
+        },
+        "required": [
+          "kind",
+          "message"
+        ]
+      },
+      "InboxStatusDomain": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "managed": {
+            "type": "boolean"
+          },
+          "receiving_ready": {
+            "type": "boolean"
+          },
+          "processing_ready": {
+            "type": "boolean"
+          },
+          "processing_route_count": {
+            "type": "integer"
+          },
+          "endpoint_count": {
+            "type": "integer"
+          },
+          "enabled_endpoint_count": {
+            "type": "integer"
+          },
+          "function_endpoint_count": {
+            "type": "integer"
+          },
+          "email_count": {
+            "type": "integer"
+          },
+          "latest_email_received_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "stored_only",
+              "pending_dns",
+              "inactive"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "domain",
+          "verified",
+          "active",
+          "managed",
+          "receiving_ready",
+          "processing_ready",
+          "processing_route_count",
+          "endpoint_count",
+          "enabled_endpoint_count",
+          "function_endpoint_count",
+          "email_count",
+          "latest_email_received_at",
+          "status"
+        ]
+      },
+      "InboxStatusEndpointSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "enabled": {
+            "type": "integer"
+          },
+          "disabled": {
+            "type": "integer"
+          },
+          "fallback_enabled": {
+            "type": "integer"
+          },
+          "domain_scoped_enabled": {
+            "type": "integer"
+          },
+          "http_enabled": {
+            "type": "integer"
+          },
+          "function_enabled": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "enabled",
+          "disabled",
+          "fallback_enabled",
+          "domain_scoped_enabled",
+          "http_enabled",
+          "function_enabled"
+        ]
+      },
+      "InboxStatusFunctionSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "deployed": {
+            "type": "integer"
+          },
+          "pending": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "deployed",
+          "pending",
+          "failed"
+        ]
+      },
+      "InboxStatusRecentEmailSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "latest_received_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "total",
+          "latest_received_at"
         ]
       },
       "Domain": {

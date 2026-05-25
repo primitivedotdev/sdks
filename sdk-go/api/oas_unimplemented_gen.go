@@ -297,6 +297,22 @@ func (UnimplementedHandler) GetFunctionTestRunTrace(ctx context.Context, params 
 	return r, ht.ErrNotImplemented
 }
 
+// GetInboxStatus implements getInboxStatus operation.
+//
+// Returns one consolidated view of inbound domain readiness,
+// webhook/function processing routes, deployed Functions, and
+// recent inbound email activity.
+// Agents should call this before guiding a user through inbound
+// setup. It answers the practical questions "can I receive mail",
+// "will anything process that mail", and "what should I do next"
+// without forcing clients to stitch together domains, endpoints,
+// functions, and emails manually.
+//
+// GET /inbox/status
+func (UnimplementedHandler) GetInboxStatus(ctx context.Context) (r GetInboxStatusRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetSendPermissions implements getSendPermissions operation.
 //
 // Returns a flat list of rules describing every recipient the

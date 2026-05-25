@@ -40,6 +40,9 @@
       "domains": {
         "description": "Claim, verify, manage email domains, and download DNS zone files"
       },
+      "inbox": {
+        "description": "Check inbound email setup and processing readiness"
+      },
       "emails": {
         "description": "List, inspect, and wait for received emails. Prefer task aliases like `primitive emails list`, `primitive emails get`, `primitive emails latest`, `primitive emails wait`, and `primitive emails watch`; generated API names remain available for compatibility."
       },

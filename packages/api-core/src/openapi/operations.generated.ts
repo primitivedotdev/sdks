@@ -4893,6 +4893,244 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-inbox-status",
+    "description": "Returns one consolidated view of inbound domain readiness,\nwebhook/function processing routes, deployed Functions, and\nrecent inbound email activity.\n\nAgents should call this before guiding a user through inbound\nsetup. It answers the practical questions \"can I receive mail\",\n\"will anything process that mail\", and \"what should I do next\"\nwithout forcing clients to stitch together domains, endpoints,\nfunctions, and emails manually.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getInboxStatus",
+    "path": "/inbox/status",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ready": {
+          "type": "boolean",
+          "description": "True when at least one active inbound domain has an enabled processing route."
+        },
+        "receiving_ready": {
+          "type": "boolean",
+          "description": "True when at least one active verified or managed domain can receive mail."
+        },
+        "processing_ready": {
+          "type": "boolean",
+          "description": "True when at least one receiving-ready domain has an enabled webhook or function route."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short human-readable status summary."
+        },
+        "next_actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "add_domain",
+                  "verify_domain",
+                  "configure_processing",
+                  "send_test_email",
+                  "fix_failed_functions"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable next step."
+              },
+              "command": {
+                "type": "string",
+                "description": "Suggested Primitive CLI command when there is an obvious next step."
+              }
+            },
+            "required": [
+              "kind",
+              "message"
+            ]
+          }
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "verified": {
+                "type": "boolean"
+              },
+              "active": {
+                "type": "boolean"
+              },
+              "managed": {
+                "type": "boolean"
+              },
+              "receiving_ready": {
+                "type": "boolean"
+              },
+              "processing_ready": {
+                "type": "boolean"
+              },
+              "processing_route_count": {
+                "type": "integer"
+              },
+              "endpoint_count": {
+                "type": "integer"
+              },
+              "enabled_endpoint_count": {
+                "type": "integer"
+              },
+              "function_endpoint_count": {
+                "type": "integer"
+              },
+              "email_count": {
+                "type": "integer"
+              },
+              "latest_email_received_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ready",
+                  "stored_only",
+                  "pending_dns",
+                  "inactive"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "domain",
+              "verified",
+              "active",
+              "managed",
+              "receiving_ready",
+              "processing_ready",
+              "processing_route_count",
+              "endpoint_count",
+              "enabled_endpoint_count",
+              "function_endpoint_count",
+              "email_count",
+              "latest_email_received_at",
+              "status"
+            ]
+          }
+        },
+        "endpoints": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "type": "integer"
+            },
+            "enabled": {
+              "type": "integer"
+            },
+            "disabled": {
+              "type": "integer"
+            },
+            "fallback_enabled": {
+              "type": "integer"
+            },
+            "domain_scoped_enabled": {
+              "type": "integer"
+            },
+            "http_enabled": {
+              "type": "integer"
+            },
+            "function_enabled": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "total",
+            "enabled",
+            "disabled",
+            "fallback_enabled",
+            "domain_scoped_enabled",
+            "http_enabled",
+            "function_enabled"
+          ]
+        },
+        "functions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "type": "integer"
+            },
+            "deployed": {
+              "type": "integer"
+            },
+            "pending": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "total",
+            "deployed",
+            "pending",
+            "failed"
+          ]
+        },
+        "recent_emails": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "type": "integer"
+            },
+            "latest_received_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "total",
+            "latest_received_at"
+          ]
+        }
+      },
+      "required": [
+        "ready",
+        "receiving_ready",
+        "processing_ready",
+        "summary",
+        "next_actions",
+        "domains",
+        "endpoints",
+        "functions",
+        "recent_emails"
+      ]
+    },
+    "sdkName": "getInboxStatus",
+    "summary": "Get inbound inbox readiness",
+    "tag": "Inbox",
+    "tagCommand": "inbox"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "get-send-permissions",
     "description": "Returns a flat list of rules describing every recipient the\ncaller may send to. Each rule has a `type`, a kind-specific\npayload, and a human-readable `description`. If any rule\nmatches the recipient, /send-mail will accept the send under\nthe recipient-scope check.\n\nThe endpoint is the answer to \"where can I send\" without\nexposing internal entitlement names. Agents that don't\nrecognize a `type` can still read the `description` prose\nand act on it.\n\nRule kinds, ordered broadest-first so an agent can stop\nscanning at the first match:\n\n  1. `any_recipient` (one entry, only when the org can send\n     anywhere): every other rule below it is redundant.\n  2. `managed_zone` (always emitted, one per Primitive-managed\n     zone): sends to any address at *.primitive.email or\n     *.email.works always succeed; no entitlement required.\n  3. `your_domain` (one per active verified outbound domain\n     owned by the org): sends to that domain are approved.\n  4. `address` (one per address that has authenticated\n     inbound mail to the org, capped at `meta.address_cap`):\n     sends to that exact address are approved.\n\nThe list is informational, not an authorization check.\n/send-mail remains the source of truth on whether an\nindividual send will succeed (it also enforces the\nfrom-address and the `send_mail` entitlement, which are\nnot recipient-scope concerns and are not represented here).\n",
     "hasJsonBody": false,

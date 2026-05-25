@@ -492,6 +492,81 @@ export type WebhookSecret = {
     secret: string;
 };
 
+export type InboxStatus = {
+    /**
+     * True when at least one active inbound domain has an enabled processing route.
+     */
+    ready: boolean;
+    /**
+     * True when at least one active verified or managed domain can receive mail.
+     */
+    receiving_ready: boolean;
+    /**
+     * True when at least one receiving-ready domain has an enabled webhook or function route.
+     */
+    processing_ready: boolean;
+    /**
+     * Short human-readable status summary.
+     */
+    summary: string;
+    next_actions: Array<InboxStatusNextAction>;
+    domains: Array<InboxStatusDomain>;
+    endpoints: InboxStatusEndpointSummary;
+    functions: InboxStatusFunctionSummary;
+    recent_emails: InboxStatusRecentEmailSummary;
+};
+
+export type InboxStatusNextAction = {
+    kind: 'add_domain' | 'verify_domain' | 'configure_processing' | 'send_test_email' | 'fix_failed_functions';
+    /**
+     * Human-readable next step.
+     */
+    message: string;
+    /**
+     * Suggested Primitive CLI command when there is an obvious next step.
+     */
+    command?: string;
+};
+
+export type InboxStatusDomain = {
+    id: string;
+    domain: string;
+    verified: boolean;
+    active: boolean;
+    managed: boolean;
+    receiving_ready: boolean;
+    processing_ready: boolean;
+    processing_route_count: number;
+    endpoint_count: number;
+    enabled_endpoint_count: number;
+    function_endpoint_count: number;
+    email_count: number;
+    latest_email_received_at: string | null;
+    status: 'ready' | 'stored_only' | 'pending_dns' | 'inactive';
+};
+
+export type InboxStatusEndpointSummary = {
+    total: number;
+    enabled: number;
+    disabled: number;
+    fallback_enabled: number;
+    domain_scoped_enabled: number;
+    http_enabled: number;
+    function_enabled: number;
+};
+
+export type InboxStatusFunctionSummary = {
+    total: number;
+    deployed: number;
+    pending: number;
+    failed: number;
+};
+
+export type InboxStatusRecentEmailSummary = {
+    total: number;
+    latest_received_at: string | null;
+};
+
 /**
  * A domain can be either verified or unverified. Verified domains have
  * `is_active` and `spam_threshold` fields. Unverified domains have a
@@ -2753,6 +2828,37 @@ export type DownloadDomainZoneFileResponses = {
 };
 
 export type DownloadDomainZoneFileResponse = DownloadDomainZoneFileResponses[keyof DownloadDomainZoneFileResponses];
+
+export type GetInboxStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/inbox/status';
+};
+
+export type GetInboxStatusErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetInboxStatusError = GetInboxStatusErrors[keyof GetInboxStatusErrors];
+
+export type GetInboxStatusResponses = {
+    /**
+     * Consolidated inbox readiness status
+     */
+    200: SuccessEnvelope & {
+        data?: InboxStatus;
+    };
+};
+
+export type GetInboxStatusResponse = GetInboxStatusResponses[keyof GetInboxStatusResponses];
 
 export type ListEmailsData = {
     body?: never;

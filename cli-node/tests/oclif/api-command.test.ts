@@ -695,6 +695,7 @@ describe("OPERATION_HINTS", () => {
     expect(OPERATION_HINTS.downloadDomainZoneFile).toContain(
       "domains zone-file",
     );
+    expect(OPERATION_HINTS.getInboxStatus).toContain("inbox status");
     expect(OPERATION_HINTS.sendEmail).toContain("primitive send");
     expect(OPERATION_HINTS.sendEmail).toContain("--attachment");
     expect(OPERATION_HINTS.createFunction).toContain("functions deploy");

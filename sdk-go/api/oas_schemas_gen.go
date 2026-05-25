@@ -4643,6 +4643,7 @@ func (s *ErrorResponse) SetError(val ErrorResponseError) {
 	s.Error = val
 }
 
+func (*ErrorResponse) getInboxStatusRes()                {}
 func (*ErrorResponse) getSendPermissionsRes()            {}
 func (*ErrorResponse) listDomainsRes()                   {}
 func (*ErrorResponse) listEndpointsRes()                 {}
@@ -7120,6 +7121,34 @@ type GetFunctionUnauthorized ErrorResponse
 func (*GetFunctionUnauthorized) getFunctionRes() {}
 
 // Merged schema.
+type GetInboxStatusOK struct {
+	Success bool        `json:"success"`
+	Data    InboxStatus `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetInboxStatusOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetInboxStatusOK) GetData() InboxStatus {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetInboxStatusOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetInboxStatusOK) SetData(val InboxStatus) {
+	s.Data = val
+}
+
+func (*GetInboxStatusOK) getInboxStatusRes() {}
+
+// Merged schema.
 type GetSendPermissionsOK struct {
 	Success bool                 `json:"success"`
 	Data    []SendPermissionRule `json:"data"`
@@ -7269,6 +7298,582 @@ func (*GetWebhookSecretOK) getWebhookSecretRes() {}
 type GetWebhookSecretUnauthorized ErrorResponse
 
 func (*GetWebhookSecretUnauthorized) getWebhookSecretRes() {}
+
+// Ref: #/components/schemas/InboxStatus
+type InboxStatus struct {
+	// True when at least one active inbound domain has an enabled processing route.
+	Ready bool `json:"ready"`
+	// True when at least one active verified or managed domain can receive mail.
+	ReceivingReady bool `json:"receiving_ready"`
+	// True when at least one receiving-ready domain has an enabled webhook or function route.
+	ProcessingReady bool `json:"processing_ready"`
+	// Short human-readable status summary.
+	Summary      string                        `json:"summary"`
+	NextActions  []InboxStatusNextAction       `json:"next_actions"`
+	Domains      []InboxStatusDomain           `json:"domains"`
+	Endpoints    InboxStatusEndpointSummary    `json:"endpoints"`
+	Functions    InboxStatusFunctionSummary    `json:"functions"`
+	RecentEmails InboxStatusRecentEmailSummary `json:"recent_emails"`
+}
+
+// GetReady returns the value of Ready.
+func (s *InboxStatus) GetReady() bool {
+	return s.Ready
+}
+
+// GetReceivingReady returns the value of ReceivingReady.
+func (s *InboxStatus) GetReceivingReady() bool {
+	return s.ReceivingReady
+}
+
+// GetProcessingReady returns the value of ProcessingReady.
+func (s *InboxStatus) GetProcessingReady() bool {
+	return s.ProcessingReady
+}
+
+// GetSummary returns the value of Summary.
+func (s *InboxStatus) GetSummary() string {
+	return s.Summary
+}
+
+// GetNextActions returns the value of NextActions.
+func (s *InboxStatus) GetNextActions() []InboxStatusNextAction {
+	return s.NextActions
+}
+
+// GetDomains returns the value of Domains.
+func (s *InboxStatus) GetDomains() []InboxStatusDomain {
+	return s.Domains
+}
+
+// GetEndpoints returns the value of Endpoints.
+func (s *InboxStatus) GetEndpoints() InboxStatusEndpointSummary {
+	return s.Endpoints
+}
+
+// GetFunctions returns the value of Functions.
+func (s *InboxStatus) GetFunctions() InboxStatusFunctionSummary {
+	return s.Functions
+}
+
+// GetRecentEmails returns the value of RecentEmails.
+func (s *InboxStatus) GetRecentEmails() InboxStatusRecentEmailSummary {
+	return s.RecentEmails
+}
+
+// SetReady sets the value of Ready.
+func (s *InboxStatus) SetReady(val bool) {
+	s.Ready = val
+}
+
+// SetReceivingReady sets the value of ReceivingReady.
+func (s *InboxStatus) SetReceivingReady(val bool) {
+	s.ReceivingReady = val
+}
+
+// SetProcessingReady sets the value of ProcessingReady.
+func (s *InboxStatus) SetProcessingReady(val bool) {
+	s.ProcessingReady = val
+}
+
+// SetSummary sets the value of Summary.
+func (s *InboxStatus) SetSummary(val string) {
+	s.Summary = val
+}
+
+// SetNextActions sets the value of NextActions.
+func (s *InboxStatus) SetNextActions(val []InboxStatusNextAction) {
+	s.NextActions = val
+}
+
+// SetDomains sets the value of Domains.
+func (s *InboxStatus) SetDomains(val []InboxStatusDomain) {
+	s.Domains = val
+}
+
+// SetEndpoints sets the value of Endpoints.
+func (s *InboxStatus) SetEndpoints(val InboxStatusEndpointSummary) {
+	s.Endpoints = val
+}
+
+// SetFunctions sets the value of Functions.
+func (s *InboxStatus) SetFunctions(val InboxStatusFunctionSummary) {
+	s.Functions = val
+}
+
+// SetRecentEmails sets the value of RecentEmails.
+func (s *InboxStatus) SetRecentEmails(val InboxStatusRecentEmailSummary) {
+	s.RecentEmails = val
+}
+
+// Ref: #/components/schemas/InboxStatusDomain
+type InboxStatusDomain struct {
+	ID                    string                  `json:"id"`
+	Domain                string                  `json:"domain"`
+	Verified              bool                    `json:"verified"`
+	Active                bool                    `json:"active"`
+	Managed               bool                    `json:"managed"`
+	ReceivingReady        bool                    `json:"receiving_ready"`
+	ProcessingReady       bool                    `json:"processing_ready"`
+	ProcessingRouteCount  int                     `json:"processing_route_count"`
+	EndpointCount         int                     `json:"endpoint_count"`
+	EnabledEndpointCount  int                     `json:"enabled_endpoint_count"`
+	FunctionEndpointCount int                     `json:"function_endpoint_count"`
+	EmailCount            int                     `json:"email_count"`
+	LatestEmailReceivedAt NilDateTime             `json:"latest_email_received_at"`
+	Status                InboxStatusDomainStatus `json:"status"`
+}
+
+// GetID returns the value of ID.
+func (s *InboxStatusDomain) GetID() string {
+	return s.ID
+}
+
+// GetDomain returns the value of Domain.
+func (s *InboxStatusDomain) GetDomain() string {
+	return s.Domain
+}
+
+// GetVerified returns the value of Verified.
+func (s *InboxStatusDomain) GetVerified() bool {
+	return s.Verified
+}
+
+// GetActive returns the value of Active.
+func (s *InboxStatusDomain) GetActive() bool {
+	return s.Active
+}
+
+// GetManaged returns the value of Managed.
+func (s *InboxStatusDomain) GetManaged() bool {
+	return s.Managed
+}
+
+// GetReceivingReady returns the value of ReceivingReady.
+func (s *InboxStatusDomain) GetReceivingReady() bool {
+	return s.ReceivingReady
+}
+
+// GetProcessingReady returns the value of ProcessingReady.
+func (s *InboxStatusDomain) GetProcessingReady() bool {
+	return s.ProcessingReady
+}
+
+// GetProcessingRouteCount returns the value of ProcessingRouteCount.
+func (s *InboxStatusDomain) GetProcessingRouteCount() int {
+	return s.ProcessingRouteCount
+}
+
+// GetEndpointCount returns the value of EndpointCount.
+func (s *InboxStatusDomain) GetEndpointCount() int {
+	return s.EndpointCount
+}
+
+// GetEnabledEndpointCount returns the value of EnabledEndpointCount.
+func (s *InboxStatusDomain) GetEnabledEndpointCount() int {
+	return s.EnabledEndpointCount
+}
+
+// GetFunctionEndpointCount returns the value of FunctionEndpointCount.
+func (s *InboxStatusDomain) GetFunctionEndpointCount() int {
+	return s.FunctionEndpointCount
+}
+
+// GetEmailCount returns the value of EmailCount.
+func (s *InboxStatusDomain) GetEmailCount() int {
+	return s.EmailCount
+}
+
+// GetLatestEmailReceivedAt returns the value of LatestEmailReceivedAt.
+func (s *InboxStatusDomain) GetLatestEmailReceivedAt() NilDateTime {
+	return s.LatestEmailReceivedAt
+}
+
+// GetStatus returns the value of Status.
+func (s *InboxStatusDomain) GetStatus() InboxStatusDomainStatus {
+	return s.Status
+}
+
+// SetID sets the value of ID.
+func (s *InboxStatusDomain) SetID(val string) {
+	s.ID = val
+}
+
+// SetDomain sets the value of Domain.
+func (s *InboxStatusDomain) SetDomain(val string) {
+	s.Domain = val
+}
+
+// SetVerified sets the value of Verified.
+func (s *InboxStatusDomain) SetVerified(val bool) {
+	s.Verified = val
+}
+
+// SetActive sets the value of Active.
+func (s *InboxStatusDomain) SetActive(val bool) {
+	s.Active = val
+}
+
+// SetManaged sets the value of Managed.
+func (s *InboxStatusDomain) SetManaged(val bool) {
+	s.Managed = val
+}
+
+// SetReceivingReady sets the value of ReceivingReady.
+func (s *InboxStatusDomain) SetReceivingReady(val bool) {
+	s.ReceivingReady = val
+}
+
+// SetProcessingReady sets the value of ProcessingReady.
+func (s *InboxStatusDomain) SetProcessingReady(val bool) {
+	s.ProcessingReady = val
+}
+
+// SetProcessingRouteCount sets the value of ProcessingRouteCount.
+func (s *InboxStatusDomain) SetProcessingRouteCount(val int) {
+	s.ProcessingRouteCount = val
+}
+
+// SetEndpointCount sets the value of EndpointCount.
+func (s *InboxStatusDomain) SetEndpointCount(val int) {
+	s.EndpointCount = val
+}
+
+// SetEnabledEndpointCount sets the value of EnabledEndpointCount.
+func (s *InboxStatusDomain) SetEnabledEndpointCount(val int) {
+	s.EnabledEndpointCount = val
+}
+
+// SetFunctionEndpointCount sets the value of FunctionEndpointCount.
+func (s *InboxStatusDomain) SetFunctionEndpointCount(val int) {
+	s.FunctionEndpointCount = val
+}
+
+// SetEmailCount sets the value of EmailCount.
+func (s *InboxStatusDomain) SetEmailCount(val int) {
+	s.EmailCount = val
+}
+
+// SetLatestEmailReceivedAt sets the value of LatestEmailReceivedAt.
+func (s *InboxStatusDomain) SetLatestEmailReceivedAt(val NilDateTime) {
+	s.LatestEmailReceivedAt = val
+}
+
+// SetStatus sets the value of Status.
+func (s *InboxStatusDomain) SetStatus(val InboxStatusDomainStatus) {
+	s.Status = val
+}
+
+type InboxStatusDomainStatus string
+
+const (
+	InboxStatusDomainStatusReady      InboxStatusDomainStatus = "ready"
+	InboxStatusDomainStatusStoredOnly InboxStatusDomainStatus = "stored_only"
+	InboxStatusDomainStatusPendingDNS InboxStatusDomainStatus = "pending_dns"
+	InboxStatusDomainStatusInactive   InboxStatusDomainStatus = "inactive"
+)
+
+// AllValues returns all InboxStatusDomainStatus values.
+func (InboxStatusDomainStatus) AllValues() []InboxStatusDomainStatus {
+	return []InboxStatusDomainStatus{
+		InboxStatusDomainStatusReady,
+		InboxStatusDomainStatusStoredOnly,
+		InboxStatusDomainStatusPendingDNS,
+		InboxStatusDomainStatusInactive,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s InboxStatusDomainStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case InboxStatusDomainStatusReady:
+		return []byte(s), nil
+	case InboxStatusDomainStatusStoredOnly:
+		return []byte(s), nil
+	case InboxStatusDomainStatusPendingDNS:
+		return []byte(s), nil
+	case InboxStatusDomainStatusInactive:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *InboxStatusDomainStatus) UnmarshalText(data []byte) error {
+	switch InboxStatusDomainStatus(data) {
+	case InboxStatusDomainStatusReady:
+		*s = InboxStatusDomainStatusReady
+		return nil
+	case InboxStatusDomainStatusStoredOnly:
+		*s = InboxStatusDomainStatusStoredOnly
+		return nil
+	case InboxStatusDomainStatusPendingDNS:
+		*s = InboxStatusDomainStatusPendingDNS
+		return nil
+	case InboxStatusDomainStatusInactive:
+		*s = InboxStatusDomainStatusInactive
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/InboxStatusEndpointSummary
+type InboxStatusEndpointSummary struct {
+	Total               int `json:"total"`
+	Enabled             int `json:"enabled"`
+	Disabled            int `json:"disabled"`
+	FallbackEnabled     int `json:"fallback_enabled"`
+	DomainScopedEnabled int `json:"domain_scoped_enabled"`
+	HTTPEnabled         int `json:"http_enabled"`
+	FunctionEnabled     int `json:"function_enabled"`
+}
+
+// GetTotal returns the value of Total.
+func (s *InboxStatusEndpointSummary) GetTotal() int {
+	return s.Total
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *InboxStatusEndpointSummary) GetEnabled() int {
+	return s.Enabled
+}
+
+// GetDisabled returns the value of Disabled.
+func (s *InboxStatusEndpointSummary) GetDisabled() int {
+	return s.Disabled
+}
+
+// GetFallbackEnabled returns the value of FallbackEnabled.
+func (s *InboxStatusEndpointSummary) GetFallbackEnabled() int {
+	return s.FallbackEnabled
+}
+
+// GetDomainScopedEnabled returns the value of DomainScopedEnabled.
+func (s *InboxStatusEndpointSummary) GetDomainScopedEnabled() int {
+	return s.DomainScopedEnabled
+}
+
+// GetHTTPEnabled returns the value of HTTPEnabled.
+func (s *InboxStatusEndpointSummary) GetHTTPEnabled() int {
+	return s.HTTPEnabled
+}
+
+// GetFunctionEnabled returns the value of FunctionEnabled.
+func (s *InboxStatusEndpointSummary) GetFunctionEnabled() int {
+	return s.FunctionEnabled
+}
+
+// SetTotal sets the value of Total.
+func (s *InboxStatusEndpointSummary) SetTotal(val int) {
+	s.Total = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *InboxStatusEndpointSummary) SetEnabled(val int) {
+	s.Enabled = val
+}
+
+// SetDisabled sets the value of Disabled.
+func (s *InboxStatusEndpointSummary) SetDisabled(val int) {
+	s.Disabled = val
+}
+
+// SetFallbackEnabled sets the value of FallbackEnabled.
+func (s *InboxStatusEndpointSummary) SetFallbackEnabled(val int) {
+	s.FallbackEnabled = val
+}
+
+// SetDomainScopedEnabled sets the value of DomainScopedEnabled.
+func (s *InboxStatusEndpointSummary) SetDomainScopedEnabled(val int) {
+	s.DomainScopedEnabled = val
+}
+
+// SetHTTPEnabled sets the value of HTTPEnabled.
+func (s *InboxStatusEndpointSummary) SetHTTPEnabled(val int) {
+	s.HTTPEnabled = val
+}
+
+// SetFunctionEnabled sets the value of FunctionEnabled.
+func (s *InboxStatusEndpointSummary) SetFunctionEnabled(val int) {
+	s.FunctionEnabled = val
+}
+
+// Ref: #/components/schemas/InboxStatusFunctionSummary
+type InboxStatusFunctionSummary struct {
+	Total    int `json:"total"`
+	Deployed int `json:"deployed"`
+	Pending  int `json:"pending"`
+	Failed   int `json:"failed"`
+}
+
+// GetTotal returns the value of Total.
+func (s *InboxStatusFunctionSummary) GetTotal() int {
+	return s.Total
+}
+
+// GetDeployed returns the value of Deployed.
+func (s *InboxStatusFunctionSummary) GetDeployed() int {
+	return s.Deployed
+}
+
+// GetPending returns the value of Pending.
+func (s *InboxStatusFunctionSummary) GetPending() int {
+	return s.Pending
+}
+
+// GetFailed returns the value of Failed.
+func (s *InboxStatusFunctionSummary) GetFailed() int {
+	return s.Failed
+}
+
+// SetTotal sets the value of Total.
+func (s *InboxStatusFunctionSummary) SetTotal(val int) {
+	s.Total = val
+}
+
+// SetDeployed sets the value of Deployed.
+func (s *InboxStatusFunctionSummary) SetDeployed(val int) {
+	s.Deployed = val
+}
+
+// SetPending sets the value of Pending.
+func (s *InboxStatusFunctionSummary) SetPending(val int) {
+	s.Pending = val
+}
+
+// SetFailed sets the value of Failed.
+func (s *InboxStatusFunctionSummary) SetFailed(val int) {
+	s.Failed = val
+}
+
+// Ref: #/components/schemas/InboxStatusNextAction
+type InboxStatusNextAction struct {
+	Kind InboxStatusNextActionKind `json:"kind"`
+	// Human-readable next step.
+	Message string `json:"message"`
+	// Suggested Primitive CLI command when there is an obvious next step.
+	Command OptString `json:"command"`
+}
+
+// GetKind returns the value of Kind.
+func (s *InboxStatusNextAction) GetKind() InboxStatusNextActionKind {
+	return s.Kind
+}
+
+// GetMessage returns the value of Message.
+func (s *InboxStatusNextAction) GetMessage() string {
+	return s.Message
+}
+
+// GetCommand returns the value of Command.
+func (s *InboxStatusNextAction) GetCommand() OptString {
+	return s.Command
+}
+
+// SetKind sets the value of Kind.
+func (s *InboxStatusNextAction) SetKind(val InboxStatusNextActionKind) {
+	s.Kind = val
+}
+
+// SetMessage sets the value of Message.
+func (s *InboxStatusNextAction) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetCommand sets the value of Command.
+func (s *InboxStatusNextAction) SetCommand(val OptString) {
+	s.Command = val
+}
+
+type InboxStatusNextActionKind string
+
+const (
+	InboxStatusNextActionKindAddDomain           InboxStatusNextActionKind = "add_domain"
+	InboxStatusNextActionKindVerifyDomain        InboxStatusNextActionKind = "verify_domain"
+	InboxStatusNextActionKindConfigureProcessing InboxStatusNextActionKind = "configure_processing"
+	InboxStatusNextActionKindSendTestEmail       InboxStatusNextActionKind = "send_test_email"
+	InboxStatusNextActionKindFixFailedFunctions  InboxStatusNextActionKind = "fix_failed_functions"
+)
+
+// AllValues returns all InboxStatusNextActionKind values.
+func (InboxStatusNextActionKind) AllValues() []InboxStatusNextActionKind {
+	return []InboxStatusNextActionKind{
+		InboxStatusNextActionKindAddDomain,
+		InboxStatusNextActionKindVerifyDomain,
+		InboxStatusNextActionKindConfigureProcessing,
+		InboxStatusNextActionKindSendTestEmail,
+		InboxStatusNextActionKindFixFailedFunctions,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s InboxStatusNextActionKind) MarshalText() ([]byte, error) {
+	switch s {
+	case InboxStatusNextActionKindAddDomain:
+		return []byte(s), nil
+	case InboxStatusNextActionKindVerifyDomain:
+		return []byte(s), nil
+	case InboxStatusNextActionKindConfigureProcessing:
+		return []byte(s), nil
+	case InboxStatusNextActionKindSendTestEmail:
+		return []byte(s), nil
+	case InboxStatusNextActionKindFixFailedFunctions:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *InboxStatusNextActionKind) UnmarshalText(data []byte) error {
+	switch InboxStatusNextActionKind(data) {
+	case InboxStatusNextActionKindAddDomain:
+		*s = InboxStatusNextActionKindAddDomain
+		return nil
+	case InboxStatusNextActionKindVerifyDomain:
+		*s = InboxStatusNextActionKindVerifyDomain
+		return nil
+	case InboxStatusNextActionKindConfigureProcessing:
+		*s = InboxStatusNextActionKindConfigureProcessing
+		return nil
+	case InboxStatusNextActionKindSendTestEmail:
+		*s = InboxStatusNextActionKindSendTestEmail
+		return nil
+	case InboxStatusNextActionKindFixFailedFunctions:
+		*s = InboxStatusNextActionKindFixFailedFunctions
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/InboxStatusRecentEmailSummary
+type InboxStatusRecentEmailSummary struct {
+	Total            int         `json:"total"`
+	LatestReceivedAt NilDateTime `json:"latest_received_at"`
+}
+
+// GetTotal returns the value of Total.
+func (s *InboxStatusRecentEmailSummary) GetTotal() int {
+	return s.Total
+}
+
+// GetLatestReceivedAt returns the value of LatestReceivedAt.
+func (s *InboxStatusRecentEmailSummary) GetLatestReceivedAt() NilDateTime {
+	return s.LatestReceivedAt
+}
+
+// SetTotal sets the value of Total.
+func (s *InboxStatusRecentEmailSummary) SetTotal(val int) {
+	s.Total = val
+}
+
+// SetLatestReceivedAt sets the value of LatestReceivedAt.
+func (s *InboxStatusRecentEmailSummary) SetLatestReceivedAt(val NilDateTime) {
+	s.LatestReceivedAt = val
+}
 
 type ListDeliveriesBadRequest ErrorResponse
 
@@ -10084,6 +10689,7 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 
 func (*RateLimitedHeaders) discardEmailContentRes()    {}
 func (*RateLimitedHeaders) downloadDomainZoneFileRes() {}
+func (*RateLimitedHeaders) getInboxStatusRes()         {}
 func (*RateLimitedHeaders) replayDeliveryRes()         {}
 func (*RateLimitedHeaders) replayEmailWebhooksRes()    {}
 func (*RateLimitedHeaders) replyToEmailRes()           {}
