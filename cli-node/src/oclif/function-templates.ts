@@ -335,7 +335,7 @@ The deploy step calls \`primitive functions deploy\` (provided by the
 \`npm install -g @primitivedotdev/cli\` or run via
 \`npx @primitivedotdev/cli@latest <command>\`). It requires
 \`PRIMITIVE_API_KEY\` to be set in your shell (or pass \`--api-key\`).
-Run \`primitive login\` once to save a key in your CLI config if you
+Run \`primitive signin\` once to save a key in your CLI config if you
 prefer that to an env var.
 `;
 }

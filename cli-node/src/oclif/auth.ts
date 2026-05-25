@@ -18,7 +18,7 @@ const CREDENTIALS_FILE = "credentials.json";
 const CREDENTIALS_LOCK_DIR = "credentials.lock";
 const CREDENTIALS_LOCK_STALE_MS = 30 * 60 * 1000;
 const MALFORMED_CREDENTIALS_HINT =
-  "Run `primitive logout` and then `primitive login`.";
+  "Run `primitive logout` and then `primitive signin`.";
 
 // Disk shape for saved CLI credentials. Only persists the primary
 // API host (api_base_url_1) because login is itself an operation on
@@ -181,13 +181,13 @@ export function loadCliCredentials(
         // will hit this path again and try once more.
       }
       process.stderr.write(
-        "Removed local Primitive CLI API-key login state. API keys are still valid when passed explicitly, but `primitive login` now uses OAuth. Run `primitive login` to create an OAuth session. No API key was revoked.\n",
+        "Removed local Primitive CLI API-key login state. API keys are still valid when passed explicitly, but saved CLI auth now uses OAuth. Run `primitive signin` to create an OAuth session. No API key was revoked.\n",
       );
       return null;
     }
     if (error instanceof SyntaxError) {
       throw new Error(
-        "Stored Primitive CLI credentials are not valid JSON. Run `primitive logout` and then `primitive login`.",
+        "Stored Primitive CLI credentials are not valid JSON. Run `primitive logout` and then `primitive signin`.",
       );
     }
     throw error;

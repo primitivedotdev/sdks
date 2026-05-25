@@ -63,6 +63,22 @@ type SignupResendFlags = {
   "api-base-url-1"?: string;
 };
 
+export type SignupCommandCopy = {
+  actionNoun: string;
+  actionGerund: string;
+  confirmCommand: (email: string) => string;
+  resendCommand: (email: string) => string;
+  startCommand: (email: string) => string;
+};
+
+export const DEFAULT_SIGNUP_COMMAND_COPY: SignupCommandCopy = {
+  actionNoun: "signup",
+  actionGerund: "creating a new account",
+  confirmCommand: (email) => `signup confirm ${email} <code>`,
+  resendCommand: (email) => `signup resend ${email}`,
+  startCommand: (email) => `signup ${email}`,
+};
+
 export type PendingAgentSignup = AgentSignupStartResult & {
   api_base_url_1: string;
   created_at: string;
@@ -231,18 +247,20 @@ export const loadPendingCliSignup = loadPendingAgentSignup;
 
 function requirePendingSignupForEmail(params: {
   apiBaseUrl1: string;
+  copy?: SignupCommandCopy;
   configDir: string;
   email: string;
 }): PendingAgentSignup {
+  const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
   const pending = loadPendingAgentSignup(params.configDir, params.apiBaseUrl1);
   if (!pending) {
     throw cliError(
-      `No pending signup for ${params.email}. Run \`primitive signup ${params.email}\` first.`,
+      `No pending ${copy.actionNoun} for ${params.email}. Run \`primitive ${copy.startCommand(params.email)}\` first.`,
     );
   }
   if (normalizeEmail(pending.email) !== normalizeEmail(params.email)) {
     throw cliError(
-      `Pending signup is for ${pending.email}, not ${params.email}. Run \`primitive signup ${params.email} --force\` to replace it.`,
+      `Pending ${copy.actionNoun} is for ${pending.email}, not ${params.email}. Run \`primitive ${copy.startCommand(params.email)} --force\` to replace it.`,
     );
   }
   return pending;
@@ -294,7 +312,7 @@ async function promptRequired(question: string): Promise<string> {
 
 async function confirmTerms(): Promise<void> {
   process.stderr.write(
-    "By creating an account, you agree to Primitive's Terms of Service and Privacy Policy:\n",
+    "By continuing, you agree to Primitive's Terms of Service and Privacy Policy:\n",
   );
   process.stderr.write("  https://primitive.dev/terms\n");
   process.stderr.write("  https://primitive.dev/privacy\n");
@@ -308,10 +326,12 @@ async function confirmTerms(): Promise<void> {
 
 async function checkExistingCredentials(params: {
   apiBaseUrl1?: string;
+  copy?: SignupCommandCopy;
   configDir: string;
   flags: { force?: boolean };
   deps: SignupFlowDeps;
 }): Promise<void> {
+  const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
   const checkExistingLoginFn =
     params.deps.checkExistingLogin ?? checkExistingLogin;
   let existing: StoredCliCredentials | null;
@@ -328,7 +348,7 @@ async function checkExistingCredentials(params: {
 
   if (existing && params.flags.force) {
     process.stderr.write(
-      "Replacing saved Primitive CLI credentials after signup because --force was set.\n",
+      `Replacing saved Primitive CLI credentials after ${copy.actionNoun} because --force was set.\n`,
     );
     return;
   }
@@ -351,7 +371,7 @@ async function checkExistingCredentials(params: {
 
   const org = existing.org_name ? ` for ${existing.org_name}` : "";
   throw cliError(
-    `Already logged in${org}. Run \`primitive logout\` before creating a new account.`,
+    `Already logged in${org}. Run \`primitive logout\` before ${copy.actionGerund}.`,
   );
 }
 
@@ -375,7 +395,10 @@ function saveSignupCredentials(params: {
   });
 }
 
-function writeStartInstructions(start: PendingAgentSignup): void {
+function writeStartInstructions(
+  start: PendingAgentSignup,
+  copy = DEFAULT_SIGNUP_COMMAND_COPY,
+): void {
   process.stderr.write(
     `Sent a ${start.verification_code_length}-digit verification code to ${start.email}.\n`,
   );
@@ -383,18 +406,20 @@ function writeStartInstructions(start: PendingAgentSignup): void {
     `The code expires in ${formatSignupSeconds(start.expires_in)}.\n`,
   );
   process.stderr.write(
-    `Run \`primitive signup confirm ${start.email} <code>\` to finish.\n`,
+    `Run \`primitive ${copy.confirmCommand(start.email)}\` to finish.\n`,
   );
 }
 
 async function startSignup(params: {
   apiBaseUrl1: string;
   apiClient: PrimitiveApiClient;
+  copy?: SignupCommandCopy;
   configDir: string;
   deps: SignupFlowDeps;
   email: string;
   flags: SignupFlags;
 }): Promise<StartSignupResult> {
+  const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
   const existingPending = loadPendingAgentSignup(
     params.configDir,
     params.apiBaseUrl1,
@@ -404,15 +429,15 @@ async function startSignup(params: {
       normalizeEmail(existingPending.email) === normalizeEmail(params.email)
     ) {
       process.stderr.write(
-        `Continuing pending Primitive signup for ${existingPending.email}.\n`,
+        `Continuing pending Primitive ${copy.actionNoun} for ${existingPending.email}.\n`,
       );
       process.stderr.write(
-        `Run \`primitive signup confirm ${existingPending.email} <code>\` to finish, or \`primitive signup resend ${existingPending.email}\` to send a new code.\n`,
+        `Run \`primitive ${copy.confirmCommand(existingPending.email)}\` to finish, or \`primitive ${copy.resendCommand(existingPending.email)}\` to send a new code.\n`,
       );
       return { pending: existingPending, started: false };
     }
     throw cliError(
-      `Pending signup is for ${existingPending.email}. Run \`primitive signup ${params.email} --force\` to replace it.`,
+      `Pending ${copy.actionNoun} is for ${existingPending.email}. Run \`primitive ${copy.startCommand(params.email)} --force\` to replace it.`,
     );
   }
   if (params.flags.force) deletePendingAgentSignup(params.configDir);
@@ -509,6 +534,7 @@ async function resendVerificationCode(params: {
 
 export async function runSignupStartWithCredentialLock(params: {
   configDir: string;
+  copy?: SignupCommandCopy;
   deps?: SignupFlowDeps;
   email?: string;
   flags: SignupFlags;
@@ -520,6 +546,7 @@ export async function runSignupStartWithCredentialLock(params: {
   await checkExistingCredentials({
     apiBaseUrl1: flags["api-base-url-1"],
     configDir,
+    copy: params.copy,
     deps,
     flags,
   });
@@ -532,16 +559,18 @@ export async function runSignupStartWithCredentialLock(params: {
     apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
     apiClient,
     configDir,
+    copy: params.copy,
     deps,
     email,
     flags,
   });
-  if (start.started) writeStartInstructions(start.pending);
+  if (start.started) writeStartInstructions(start.pending, params.copy);
 }
 
 export async function runSignupConfirmWithCredentialLock(params: {
   code: string;
   configDir: string;
+  copy?: SignupCommandCopy;
   deps?: SignupFlowDeps;
   email: string;
   flags: SignupConfirmFlags;
@@ -553,6 +582,7 @@ export async function runSignupConfirmWithCredentialLock(params: {
     await checkExistingCredentials({
       apiBaseUrl1: flags["api-base-url-1"],
       configDir,
+      copy: params.copy,
       deps,
       flags,
     });
@@ -565,6 +595,7 @@ export async function runSignupConfirmWithCredentialLock(params: {
   const apiBaseUrl1 = requestConfig.resolvedApiBaseUrl1;
   const pending = requirePendingSignupForEmail({
     apiBaseUrl1,
+    copy: params.copy,
     configDir,
     email: params.email,
   });
@@ -601,8 +632,9 @@ export async function runSignupConfirmWithCredentialLock(params: {
   const payload = extractErrorPayload(verified.error);
   const code = extractErrorCode(payload);
   if (code === INVALID_VERIFICATION_CODE) {
+    const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
     throw cliError(
-      "Invalid verification code. Try again or run signup resend.",
+      `Invalid verification code. Try again or run ${copy.resendCommand(params.email)}.`,
     );
   }
   if (code === EXPIRED_TOKEN || code === INVALID_SIGNUP_TOKEN) {
@@ -614,6 +646,7 @@ export async function runSignupConfirmWithCredentialLock(params: {
 
 export async function runSignupResendWithCredentialLock(params: {
   configDir: string;
+  copy?: SignupCommandCopy;
   deps?: SignupFlowDeps;
   email: string;
   flags: SignupResendFlags;
@@ -625,6 +658,7 @@ export async function runSignupResendWithCredentialLock(params: {
   });
   const pending = requirePendingSignupForEmail({
     apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
+    copy: params.copy,
     configDir: params.configDir,
     email: params.email,
   });

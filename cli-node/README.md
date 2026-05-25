@@ -18,8 +18,7 @@ This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@pri
 ## Quickstart
 
 ```bash
-export PRIMITIVE_API_KEY=prim_...
-
+primitive signin
 primitive whoami
 primitive functions templates
 primitive functions init my-fn
@@ -31,6 +30,14 @@ primitive emails latest --limit 5
 ```
 
 Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
+
+## Authentication
+
+Use `primitive signin` for existing accounts. It defaults to browser approval; `primitive signin browser` is the explicit form and `primitive login` remains available for compatibility.
+
+Use `primitive signin otp <email> --signup-code <code> --accept-terms`, then `primitive signin otp confirm <email> <code>` for email-code sign-in.
+
+Use `primitive signup <email>` for new account creation, then `primitive signup confirm <email> <code>` with the emailed verification code. Non-interactive signup is available with `--signup-code` and `--accept-terms`.
 
 ## Command style
 

@@ -120,7 +120,7 @@ class ChatCommand extends Command {
   static flags = {
     "api-key": Flags.string({
       description:
-        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
+        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive signin` credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "api-base-url-1": Flags.string({

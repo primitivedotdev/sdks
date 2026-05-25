@@ -8,6 +8,8 @@ function normalize(value: string): string {
   return value.toLowerCase().replace(/\s+/g, "-");
 }
 
+const HAND_ROLLED_VISIBLE_TOPICS = new Set(["signin"]);
+
 describe("oclif topics", () => {
   it("has a topic entry for every spec tag", () => {
     const packageJsonPath = fileURLToPath(
@@ -48,7 +50,10 @@ describe("oclif topics", () => {
     );
 
     const orphans = visibleTopicKeys.filter(
-      (topic) => !normalizedSpecTags.includes(topic) && !aliasTopics.has(topic),
+      (topic) =>
+        !normalizedSpecTags.includes(topic) &&
+        !aliasTopics.has(topic) &&
+        !HAND_ROLLED_VISIBLE_TOPICS.has(topic),
     );
 
     expect(orphans).toEqual([]);

@@ -467,12 +467,12 @@ export function extractErrorCode(payload: unknown): string | undefined {
 // special-case every command.
 const ERROR_CODE_HINTS = {
   [API_ERROR_CODES.unauthorized]:
-    "Hint: run `primitive login`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify auth is live.",
+    "Hint: run `primitive signin`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify auth is live.",
 } as const satisfies Partial<Record<ApiErrorCode, string>>;
 
 // Network-layer hints keyed by Node's `cause.code` on a fetch failure.
 // Separate from ERROR_CODE_HINTS because these aren't API-server error
-// codes — they're the values Node sets on the underlying system call
+// codes; they are the values Node sets on the underlying system call
 // that failed before the request ever hit a server. The fix is almost
 // always proxy / DNS / firewall on the caller's side, and the bare
 // envelope (which just says `ENETUNREACH`) tells the user nothing they
@@ -551,7 +551,7 @@ export function surfaceUnauthorizedHint(params: {
   }
 
   process.stderr.write(
-    "Your saved Primitive CLI OAuth session was rejected. If the command was working a moment ago, please retry; brief retries often clear transient rejections. If it keeps failing, run `primitive logout && primitive login` to mint a fresh session.\n",
+    "Your saved Primitive CLI OAuth session was rejected. If the command was working a moment ago, please retry; brief retries often clear transient rejections. If it keeps failing, run `primitive logout && primitive signin` to mint a fresh session.\n",
   );
 }
 
