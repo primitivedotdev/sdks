@@ -9,6 +9,7 @@
   },
   "email": {
     "id": "em_def456",
+    "thread_id": "44444444-4444-4444-4444-444444444444",
     "received_at": "2025-12-14T11:59:50Z",
     "smtp": {
       "helo": "mail.example.com",
