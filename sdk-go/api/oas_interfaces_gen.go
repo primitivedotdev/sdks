@@ -97,6 +97,10 @@ type GetStorageStatsRes interface {
 	getStorageStatsRes()
 }
 
+type GetThreadRes interface {
+	getThreadRes()
+}
+
 type GetWebhookSecretRes interface {
 	getWebhookSecretRes()
 }

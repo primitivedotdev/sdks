@@ -6901,6 +6901,187 @@ func (s *DiscardEmailContentUnauthorized) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode implements json.Marshaler.
+func (s *DkimSignature) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *DkimSignature) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("domain")
+		e.Str(s.Domain)
+	}
+	{
+		e.FieldStart("selector")
+		e.Str(s.Selector)
+	}
+	{
+		e.FieldStart("result")
+		e.Str(s.Result)
+	}
+	{
+		e.FieldStart("aligned")
+		e.Bool(s.Aligned)
+	}
+	{
+		if s.KeyBits.Set {
+			e.FieldStart("keyBits")
+			s.KeyBits.Encode(e)
+		}
+	}
+	{
+		if s.Algo.Set {
+			e.FieldStart("algo")
+			s.Algo.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfDkimSignature = [6]string{
+	0: "domain",
+	1: "selector",
+	2: "result",
+	3: "aligned",
+	4: "keyBits",
+	5: "algo",
+}
+
+// Decode decodes DkimSignature from json.
+func (s *DkimSignature) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DkimSignature to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "domain":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Domain = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain\"")
+			}
+		case "selector":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Selector = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"selector\"")
+			}
+		case "result":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Result = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"result\"")
+			}
+		case "aligned":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Bool()
+				s.Aligned = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"aligned\"")
+			}
+		case "keyBits":
+			if err := func() error {
+				s.KeyBits.Reset()
+				if err := s.KeyBits.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"keyBits\"")
+			}
+		case "algo":
+			if err := func() error {
+				s.Algo.Reset()
+				if err := s.Algo.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"algo\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode DkimSignature")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfDkimSignature) {
+					name = jsonFieldsNameOfDkimSignature[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DkimSignature) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DkimSignature) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes Domain as json.
 func (s Domain) Encode(e *jx.Encoder) {
 	switch s.Type {
@@ -8259,6 +8440,526 @@ func (s *DownloadRawEmailUnauthorized) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *EmailAddress) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailAddress) encodeFields(e *jx.Encoder) {
+	{
+		if s.Name.Set {
+			e.FieldStart("name")
+			s.Name.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("address")
+		e.Str(s.Address)
+	}
+}
+
+var jsonFieldsNameOfEmailAddress = [2]string{
+	0: "name",
+	1: "address",
+}
+
+// Decode decodes EmailAddress from json.
+func (s *EmailAddress) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailAddress to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "name":
+			if err := func() error {
+				s.Name.Reset()
+				if err := s.Name.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		case "address":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Address = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"address\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailAddress")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000010,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailAddress) {
+					name = jsonFieldsNameOfEmailAddress[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailAddress) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailAddress) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailAttachment) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailAttachment) encodeFields(e *jx.Encoder) {
+	{
+		if s.Filename.Set {
+			e.FieldStart("filename")
+			s.Filename.Encode(e)
+		}
+	}
+	{
+		if s.ContentType.Set {
+			e.FieldStart("content_type")
+			s.ContentType.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("size_bytes")
+		e.Int(s.SizeBytes)
+	}
+	{
+		if s.SHA256.Set {
+			e.FieldStart("sha256")
+			s.SHA256.Encode(e)
+		}
+	}
+	{
+		if s.PartIndex.Set {
+			e.FieldStart("part_index")
+			s.PartIndex.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfEmailAttachment = [5]string{
+	0: "filename",
+	1: "content_type",
+	2: "size_bytes",
+	3: "sha256",
+	4: "part_index",
+}
+
+// Decode decodes EmailAttachment from json.
+func (s *EmailAttachment) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailAttachment to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "filename":
+			if err := func() error {
+				s.Filename.Reset()
+				if err := s.Filename.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"filename\"")
+			}
+		case "content_type":
+			if err := func() error {
+				s.ContentType.Reset()
+				if err := s.ContentType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"content_type\"")
+			}
+		case "size_bytes":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int()
+				s.SizeBytes = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"size_bytes\"")
+			}
+		case "sha256":
+			if err := func() error {
+				s.SHA256.Reset()
+				if err := s.SHA256.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sha256\"")
+			}
+		case "part_index":
+			if err := func() error {
+				s.PartIndex.Reset()
+				if err := s.PartIndex.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"part_index\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailAttachment")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000100,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailAttachment) {
+					name = jsonFieldsNameOfEmailAttachment[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailAttachment) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailAttachment) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailAuth) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailAuth) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("spf")
+		e.Str(s.Spf)
+	}
+	{
+		e.FieldStart("dmarc")
+		e.Str(s.Dmarc)
+	}
+	{
+		if s.DmarcPolicy.Set {
+			e.FieldStart("dmarcPolicy")
+			s.DmarcPolicy.Encode(e)
+		}
+	}
+	{
+		if s.DmarcFromDomain.Set {
+			e.FieldStart("dmarcFromDomain")
+			s.DmarcFromDomain.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("dmarcSpfAligned")
+		e.Bool(s.DmarcSpfAligned)
+	}
+	{
+		e.FieldStart("dmarcDkimAligned")
+		e.Bool(s.DmarcDkimAligned)
+	}
+	{
+		if s.DmarcSpfStrict.Set {
+			e.FieldStart("dmarcSpfStrict")
+			s.DmarcSpfStrict.Encode(e)
+		}
+	}
+	{
+		if s.DmarcDkimStrict.Set {
+			e.FieldStart("dmarcDkimStrict")
+			s.DmarcDkimStrict.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("dkimSignatures")
+		e.ArrStart()
+		for _, elem := range s.DkimSignatures {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfEmailAuth = [9]string{
+	0: "spf",
+	1: "dmarc",
+	2: "dmarcPolicy",
+	3: "dmarcFromDomain",
+	4: "dmarcSpfAligned",
+	5: "dmarcDkimAligned",
+	6: "dmarcSpfStrict",
+	7: "dmarcDkimStrict",
+	8: "dkimSignatures",
+}
+
+// Decode decodes EmailAuth from json.
+func (s *EmailAuth) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailAuth to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "spf":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Spf = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"spf\"")
+			}
+		case "dmarc":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Dmarc = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dmarc\"")
+			}
+		case "dmarcPolicy":
+			if err := func() error {
+				s.DmarcPolicy.Reset()
+				if err := s.DmarcPolicy.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dmarcPolicy\"")
+			}
+		case "dmarcFromDomain":
+			if err := func() error {
+				s.DmarcFromDomain.Reset()
+				if err := s.DmarcFromDomain.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dmarcFromDomain\"")
+			}
+		case "dmarcSpfAligned":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.DmarcSpfAligned = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dmarcSpfAligned\"")
+			}
+		case "dmarcDkimAligned":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.DmarcDkimAligned = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dmarcDkimAligned\"")
+			}
+		case "dmarcSpfStrict":
+			if err := func() error {
+				s.DmarcSpfStrict.Reset()
+				if err := s.DmarcSpfStrict.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dmarcSpfStrict\"")
+			}
+		case "dmarcDkimStrict":
+			if err := func() error {
+				s.DmarcDkimStrict.Reset()
+				if err := s.DmarcDkimStrict.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dmarcDkimStrict\"")
+			}
+		case "dkimSignatures":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				s.DkimSignatures = make([]DkimSignature, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem DkimSignature
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.DkimSignatures = append(s.DkimSignatures, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dkimSignatures\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailAuth")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b00110011,
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailAuth) {
+					name = jsonFieldsNameOfEmailAuth[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailAuth) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailAuth) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *EmailDetail) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -8453,9 +9154,23 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 			s.ReplyToSentEmailID.Encode(e)
 		}
 	}
+	{
+		if s.ThreadID.Set {
+			e.FieldStart("thread_id")
+			s.ThreadID.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("parsed")
+		s.Parsed.Encode(e)
+	}
+	{
+		e.FieldStart("auth")
+		s.Auth.Encode(e)
+	}
 }
 
-var jsonFieldsNameOfEmailDetail = [34]string{
+var jsonFieldsNameOfEmailDetail = [37]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -8490,6 +9205,9 @@ var jsonFieldsNameOfEmailDetail = [34]string{
 	31: "from_known_address",
 	32: "replies",
 	33: "reply_to_sent_email_id",
+	34: "thread_id",
+	35: "parsed",
+	36: "auth",
 }
 
 // Decode decodes EmailDetail from json.
@@ -8867,6 +9585,36 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"reply_to_sent_email_id\"")
 			}
+		case "thread_id":
+			if err := func() error {
+				s.ThreadID.Reset()
+				if err := s.ThreadID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"thread_id\"")
+			}
+		case "parsed":
+			requiredBitSet[4] |= 1 << 3
+			if err := func() error {
+				if err := s.Parsed.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"parsed\"")
+			}
+		case "auth":
+			requiredBitSet[4] |= 1 << 4
+			if err := func() error {
+				if err := s.Auth.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"auth\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -8881,7 +9629,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 		0b11000110,
 		0b00000100,
 		0b01100000,
-		0b00000001,
+		0b00011001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -9928,6 +10676,12 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 		e.Int(s.WebhookAttemptCount)
 	}
 	{
+		if s.ThreadID.Set {
+			e.FieldStart("thread_id")
+			s.ThreadID.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("attachment_count")
 		e.Int(s.AttachmentCount)
 	}
@@ -9949,7 +10703,7 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailSearchResult = [19]string{
+var jsonFieldsNameOfEmailSearchResult = [20]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -9965,10 +10719,11 @@ var jsonFieldsNameOfEmailSearchResult = [19]string{
 	12: "raw_size_bytes",
 	13: "webhook_status",
 	14: "webhook_attempt_count",
-	15: "attachment_count",
-	16: "from_known_address",
-	17: "score",
-	18: "highlights",
+	15: "thread_id",
+	16: "attachment_count",
+	17: "from_known_address",
+	18: "score",
+	19: "highlights",
 }
 
 // Decode decodes EmailSearchResult from json.
@@ -10144,8 +10899,18 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"webhook_attempt_count\"")
 			}
+		case "thread_id":
+			if err := func() error {
+				s.ThreadID.Reset()
+				if err := s.ThreadID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"thread_id\"")
+			}
 		case "attachment_count":
-			requiredBitSet[1] |= 1 << 7
+			requiredBitSet[2] |= 1 << 0
 			if err := func() error {
 				v, err := d.Int()
 				s.AttachmentCount = int(v)
@@ -10157,7 +10922,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"attachment_count\"")
 			}
 		case "from_known_address":
-			requiredBitSet[2] |= 1 << 0
+			requiredBitSet[2] |= 1 << 1
 			if err := func() error {
 				v, err := d.Bool()
 				s.FromKnownAddress = bool(v)
@@ -10199,8 +10964,8 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [3]uint8{
 		0b01110001,
-		0b11001101,
-		0b00000001,
+		0b01001101,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -10373,9 +11138,15 @@ func (s *EmailSummary) encodeFields(e *jx.Encoder) {
 		e.FieldStart("webhook_attempt_count")
 		e.Int(s.WebhookAttemptCount)
 	}
+	{
+		if s.ThreadID.Set {
+			e.FieldStart("thread_id")
+			s.ThreadID.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailSummary = [15]string{
+var jsonFieldsNameOfEmailSummary = [16]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -10391,6 +11162,7 @@ var jsonFieldsNameOfEmailSummary = [15]string{
 	12: "raw_size_bytes",
 	13: "webhook_status",
 	14: "webhook_attempt_count",
+	15: "thread_id",
 }
 
 // Decode decodes EmailSummary from json.
@@ -10565,6 +11337,16 @@ func (s *EmailSummary) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"webhook_attempt_count\"")
+			}
+		case "thread_id":
+			if err := func() error {
+				s.ThreadID.Reset()
+				if err := s.ThreadID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"thread_id\"")
 			}
 		default:
 			return d.Skip()
@@ -16912,6 +17694,231 @@ func (s *GetStorageStatsUnauthorized) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes GetThreadBadRequest as json.
+func (s *GetThreadBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetThreadBadRequest from json.
+func (s *GetThreadBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetThreadBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetThreadBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetThreadBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetThreadBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetThreadNotFound as json.
+func (s *GetThreadNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetThreadNotFound from json.
+func (s *GetThreadNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetThreadNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetThreadNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetThreadNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetThreadNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *GetThreadOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetThreadOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfGetThreadOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes GetThreadOK from json.
+func (s *GetThreadOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetThreadOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetThreadOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetThreadOK) {
+					name = jsonFieldsNameOfGetThreadOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetThreadOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetThreadOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetThreadUnauthorized as json.
+func (s *GetThreadUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetThreadUnauthorized from json.
+func (s *GetThreadUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetThreadUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetThreadUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetThreadUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetThreadUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes GetWebhookSecretNotFound as json.
 func (s *GetWebhookSecretNotFound) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -21071,6 +22078,67 @@ func (s *OptNilDeliverySummaryEmail) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes []EmailAddress as json.
+func (o OptNilEmailAddressArray) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.ArrStart()
+	for _, elem := range o.Value {
+		elem.Encode(e)
+	}
+	e.ArrEnd()
+}
+
+// Decode decodes []EmailAddress from json.
+func (o *OptNilEmailAddressArray) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilEmailAddressArray to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v []EmailAddress
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	o.Value = make([]EmailAddress, 0)
+	if err := d.Arr(func(d *jx.Decoder) error {
+		var elem EmailAddress
+		if err := elem.Decode(d); err != nil {
+			return err
+		}
+		o.Value = append(o.Value, elem)
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilEmailAddressArray) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilEmailAddressArray) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes EmailWebhookStatus as json.
 func (o OptNilEmailWebhookStatus) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -21329,6 +22397,55 @@ func (s OptNilInt) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptNilInt) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ParsedEmailDataError as json.
+func (o OptNilParsedEmailDataError) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ParsedEmailDataError from json.
+func (o *OptNilParsedEmailDataError) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilParsedEmailDataError to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v ParsedEmailDataError
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilParsedEmailDataError) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilParsedEmailDataError) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -21893,6 +23010,419 @@ func (s *PaginationMeta) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *PaginationMeta) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ParsedEmailData) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ParsedEmailData) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("status")
+		s.Status.Encode(e)
+	}
+	{
+		if s.BodyText.Set {
+			e.FieldStart("body_text")
+			s.BodyText.Encode(e)
+		}
+	}
+	{
+		if s.BodyHTML.Set {
+			e.FieldStart("body_html")
+			s.BodyHTML.Encode(e)
+		}
+	}
+	{
+		if s.ReplyTo.Set {
+			e.FieldStart("reply_to")
+			s.ReplyTo.Encode(e)
+		}
+	}
+	{
+		if s.Cc.Set {
+			e.FieldStart("cc")
+			s.Cc.Encode(e)
+		}
+	}
+	{
+		if s.Bcc.Set {
+			e.FieldStart("bcc")
+			s.Bcc.Encode(e)
+		}
+	}
+	{
+		if s.ToAddresses.Set {
+			e.FieldStart("to_addresses")
+			s.ToAddresses.Encode(e)
+		}
+	}
+	{
+		if s.InReplyTo.Set {
+			e.FieldStart("in_reply_to")
+			s.InReplyTo.Encode(e)
+		}
+	}
+	{
+		if s.References.Set {
+			e.FieldStart("references")
+			s.References.Encode(e)
+		}
+	}
+	{
+		if s.Attachments != nil {
+			e.FieldStart("attachments")
+			e.ArrStart()
+			for _, elem := range s.Attachments {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.Error.Set {
+			e.FieldStart("error")
+			s.Error.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfParsedEmailData = [11]string{
+	0:  "status",
+	1:  "body_text",
+	2:  "body_html",
+	3:  "reply_to",
+	4:  "cc",
+	5:  "bcc",
+	6:  "to_addresses",
+	7:  "in_reply_to",
+	8:  "references",
+	9:  "attachments",
+	10: "error",
+}
+
+// Decode decodes ParsedEmailData from json.
+func (s *ParsedEmailData) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ParsedEmailData to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "status":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Status.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"status\"")
+			}
+		case "body_text":
+			if err := func() error {
+				s.BodyText.Reset()
+				if err := s.BodyText.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"body_text\"")
+			}
+		case "body_html":
+			if err := func() error {
+				s.BodyHTML.Reset()
+				if err := s.BodyHTML.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"body_html\"")
+			}
+		case "reply_to":
+			if err := func() error {
+				s.ReplyTo.Reset()
+				if err := s.ReplyTo.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reply_to\"")
+			}
+		case "cc":
+			if err := func() error {
+				s.Cc.Reset()
+				if err := s.Cc.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"cc\"")
+			}
+		case "bcc":
+			if err := func() error {
+				s.Bcc.Reset()
+				if err := s.Bcc.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"bcc\"")
+			}
+		case "to_addresses":
+			if err := func() error {
+				s.ToAddresses.Reset()
+				if err := s.ToAddresses.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"to_addresses\"")
+			}
+		case "in_reply_to":
+			if err := func() error {
+				s.InReplyTo.Reset()
+				if err := s.InReplyTo.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"in_reply_to\"")
+			}
+		case "references":
+			if err := func() error {
+				s.References.Reset()
+				if err := s.References.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"references\"")
+			}
+		case "attachments":
+			if err := func() error {
+				s.Attachments = make([]EmailAttachment, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EmailAttachment
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Attachments = append(s.Attachments, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"attachments\"")
+			}
+		case "error":
+			if err := func() error {
+				s.Error.Reset()
+				if err := s.Error.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"error\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ParsedEmailData")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b00000001,
+		0b00000000,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfParsedEmailData) {
+					name = jsonFieldsNameOfParsedEmailData[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ParsedEmailData) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ParsedEmailData) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ParsedEmailDataError) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ParsedEmailDataError) encodeFields(e *jx.Encoder) {
+	{
+		if s.Code.Set {
+			e.FieldStart("code")
+			s.Code.Encode(e)
+		}
+	}
+	{
+		if s.Message.Set {
+			e.FieldStart("message")
+			s.Message.Encode(e)
+		}
+	}
+	{
+		if s.Retryable.Set {
+			e.FieldStart("retryable")
+			s.Retryable.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfParsedEmailDataError = [3]string{
+	0: "code",
+	1: "message",
+	2: "retryable",
+}
+
+// Decode decodes ParsedEmailDataError from json.
+func (s *ParsedEmailDataError) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ParsedEmailDataError to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "code":
+			if err := func() error {
+				s.Code.Reset()
+				if err := s.Code.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"code\"")
+			}
+		case "message":
+			if err := func() error {
+				s.Message.Reset()
+				if err := s.Message.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"message\"")
+			}
+		case "retryable":
+			if err := func() error {
+				s.Retryable.Reset()
+				if err := s.Retryable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"retryable\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ParsedEmailDataError")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ParsedEmailDataError) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ParsedEmailDataError) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ParsedEmailDataStatus as json.
+func (s ParsedEmailDataStatus) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ParsedEmailDataStatus from json.
+func (s *ParsedEmailDataStatus) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ParsedEmailDataStatus to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ParsedEmailDataStatus(v) {
+	case ParsedEmailDataStatusComplete:
+		*s = ParsedEmailDataStatusComplete
+	case ParsedEmailDataStatusFailed:
+		*s = ParsedEmailDataStatusFailed
+	default:
+		*s = ParsedEmailDataStatus(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ParsedEmailDataStatus) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ParsedEmailDataStatus) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -26212,6 +27742,12 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.ThreadID.Set {
+			e.FieldStart("thread_id")
+			s.ThreadID.Encode(e)
+		}
+	}
+	{
 		if s.QueueID.Set {
 			e.FieldStart("queue_id")
 			s.QueueID.Encode(e)
@@ -26285,7 +27821,7 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSentEmailDetail = [30]string{
+var jsonFieldsNameOfSentEmailDetail = [31]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -26304,18 +27840,19 @@ var jsonFieldsNameOfSentEmailDetail = [30]string{
 	15: "in_reply_to",
 	16: "email_references",
 	17: "in_reply_to_email_id",
-	18: "queue_id",
-	19: "smtp_response_code",
-	20: "smtp_response_text",
-	21: "smtp_enhanced_status_code",
-	22: "dkim_selector",
-	23: "dkim_domain",
-	24: "error_code",
-	25: "error_message",
-	26: "gates",
-	27: "request_id",
-	28: "body_text",
-	29: "body_html",
+	18: "thread_id",
+	19: "queue_id",
+	20: "smtp_response_code",
+	21: "smtp_response_text",
+	22: "smtp_enhanced_status_code",
+	23: "dkim_selector",
+	24: "dkim_domain",
+	25: "error_code",
+	26: "error_message",
+	27: "gates",
+	28: "request_id",
+	29: "body_text",
+	30: "body_html",
 }
 
 // Decode decodes SentEmailDetail from json.
@@ -26528,6 +28065,16 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"in_reply_to_email_id\"")
+			}
+		case "thread_id":
+			if err := func() error {
+				s.ThreadID.Reset()
+				if err := s.ThreadID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"thread_id\"")
 			}
 		case "queue_id":
 			if err := func() error {
@@ -26856,6 +28403,12 @@ func (s *SentEmailSummary) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.ThreadID.Set {
+			e.FieldStart("thread_id")
+			s.ThreadID.Encode(e)
+		}
+	}
+	{
 		if s.QueueID.Set {
 			e.FieldStart("queue_id")
 			s.QueueID.Encode(e)
@@ -26917,7 +28470,7 @@ func (s *SentEmailSummary) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSentEmailSummary = [28]string{
+var jsonFieldsNameOfSentEmailSummary = [29]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -26936,16 +28489,17 @@ var jsonFieldsNameOfSentEmailSummary = [28]string{
 	15: "in_reply_to",
 	16: "email_references",
 	17: "in_reply_to_email_id",
-	18: "queue_id",
-	19: "smtp_response_code",
-	20: "smtp_response_text",
-	21: "smtp_enhanced_status_code",
-	22: "dkim_selector",
-	23: "dkim_domain",
-	24: "error_code",
-	25: "error_message",
-	26: "gates",
-	27: "request_id",
+	18: "thread_id",
+	19: "queue_id",
+	20: "smtp_response_code",
+	21: "smtp_response_text",
+	22: "smtp_enhanced_status_code",
+	23: "dkim_selector",
+	24: "dkim_domain",
+	25: "error_code",
+	26: "error_message",
+	27: "gates",
+	28: "request_id",
 }
 
 // Decode decodes SentEmailSummary from json.
@@ -27158,6 +28712,16 @@ func (s *SentEmailSummary) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"in_reply_to_email_id\"")
+			}
+		case "thread_id":
+			if err := func() error {
+				s.ThreadID.Reset()
+				if err := s.ThreadID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"thread_id\"")
 			}
 		case "queue_id":
 			if err := func() error {
@@ -29832,6 +31396,484 @@ func (s *TestResult) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *TestResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *Thread) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *Thread) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		if s.Subject.Set {
+			e.FieldStart("subject")
+			s.Subject.Encode(e)
+		}
+	}
+	{
+		if s.RootMessageID.Set {
+			e.FieldStart("root_message_id")
+			s.RootMessageID.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("message_count")
+		e.Int(s.MessageCount)
+	}
+	{
+		if s.FirstMessageAt.Set {
+			e.FieldStart("first_message_at")
+			s.FirstMessageAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		if s.LastMessageAt.Set {
+			e.FieldStart("last_message_at")
+			s.LastMessageAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		e.FieldStart("created_at")
+		json.EncodeDateTime(e, s.CreatedAt)
+	}
+	{
+		e.FieldStart("messages")
+		e.ArrStart()
+		for _, elem := range s.Messages {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfThread = [8]string{
+	0: "id",
+	1: "subject",
+	2: "root_message_id",
+	3: "message_count",
+	4: "first_message_at",
+	5: "last_message_at",
+	6: "created_at",
+	7: "messages",
+}
+
+// Decode decodes Thread from json.
+func (s *Thread) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode Thread to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "subject":
+			if err := func() error {
+				s.Subject.Reset()
+				if err := s.Subject.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"subject\"")
+			}
+		case "root_message_id":
+			if err := func() error {
+				s.RootMessageID.Reset()
+				if err := s.RootMessageID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"root_message_id\"")
+			}
+		case "message_count":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Int()
+				s.MessageCount = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"message_count\"")
+			}
+		case "first_message_at":
+			if err := func() error {
+				s.FirstMessageAt.Reset()
+				if err := s.FirstMessageAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"first_message_at\"")
+			}
+		case "last_message_at":
+			if err := func() error {
+				s.LastMessageAt.Reset()
+				if err := s.LastMessageAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"last_message_at\"")
+			}
+		case "created_at":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.CreatedAt = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"created_at\"")
+			}
+		case "messages":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				s.Messages = make([]ThreadMessage, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem ThreadMessage
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Messages = append(s.Messages, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"messages\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode Thread")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b11001001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfThread) {
+					name = jsonFieldsNameOfThread[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *Thread) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *Thread) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ThreadMessage) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ThreadMessage) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("direction")
+		s.Direction.Encode(e)
+	}
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		if s.MessageID.Set {
+			e.FieldStart("message_id")
+			s.MessageID.Encode(e)
+		}
+	}
+	{
+		if s.From.Set {
+			e.FieldStart("from")
+			s.From.Encode(e)
+		}
+	}
+	{
+		if s.To.Set {
+			e.FieldStart("to")
+			s.To.Encode(e)
+		}
+	}
+	{
+		if s.Subject.Set {
+			e.FieldStart("subject")
+			s.Subject.Encode(e)
+		}
+	}
+	{
+		if s.Status.Set {
+			e.FieldStart("status")
+			s.Status.Encode(e)
+		}
+	}
+	{
+		if s.Timestamp.Set {
+			e.FieldStart("timestamp")
+			s.Timestamp.Encode(e, json.EncodeDateTime)
+		}
+	}
+}
+
+var jsonFieldsNameOfThreadMessage = [8]string{
+	0: "direction",
+	1: "id",
+	2: "message_id",
+	3: "from",
+	4: "to",
+	5: "subject",
+	6: "status",
+	7: "timestamp",
+}
+
+// Decode decodes ThreadMessage from json.
+func (s *ThreadMessage) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ThreadMessage to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "direction":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Direction.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"direction\"")
+			}
+		case "id":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "message_id":
+			if err := func() error {
+				s.MessageID.Reset()
+				if err := s.MessageID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"message_id\"")
+			}
+		case "from":
+			if err := func() error {
+				s.From.Reset()
+				if err := s.From.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from\"")
+			}
+		case "to":
+			if err := func() error {
+				s.To.Reset()
+				if err := s.To.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"to\"")
+			}
+		case "subject":
+			if err := func() error {
+				s.Subject.Reset()
+				if err := s.Subject.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"subject\"")
+			}
+		case "status":
+			if err := func() error {
+				s.Status.Reset()
+				if err := s.Status.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"status\"")
+			}
+		case "timestamp":
+			if err := func() error {
+				s.Timestamp.Reset()
+				if err := s.Timestamp.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"timestamp\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ThreadMessage")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfThreadMessage) {
+					name = jsonFieldsNameOfThreadMessage[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ThreadMessage) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ThreadMessage) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ThreadMessageDirection as json.
+func (s ThreadMessageDirection) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes ThreadMessageDirection from json.
+func (s *ThreadMessageDirection) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ThreadMessageDirection to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch ThreadMessageDirection(v) {
+	case ThreadMessageDirectionInbound:
+		*s = ThreadMessageDirectionInbound
+	case ThreadMessageDirectionOutbound:
+		*s = ThreadMessageDirectionOutbound
+	default:
+		*s = ThreadMessageDirection(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s ThreadMessageDirection) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ThreadMessageDirection) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

@@ -313,6 +313,23 @@ type Invoker interface {
 	//
 	// GET /account/storage
 	GetStorageStats(ctx context.Context) (GetStorageStatsRes, error)
+	// GetThread invokes getThread operation.
+	//
+	// Returns a conversation thread: its metadata plus the inbound
+	// and outbound messages that belong to it, interleaved in time
+	// order (oldest first). A thread spans both received emails and
+	// your sends, so an agent can reconstruct an entire back-and-forth
+	// from one call instead of walking reply headers.
+	// Each message carries a `direction` (`inbound` | `outbound`) and
+	// an `id`; fetch the full message via `/emails/{id}` or
+	// `/sent-emails/{id}` accordingly. Bodies are omitted here to keep
+	// the thread view lightweight.
+	// Discover a thread id from the `thread_id` field on any email or
+	// sent-email (list or detail). The message list is capped; compare
+	// `message_count` against `messages.length` to detect truncation.
+	//
+	// GET /threads/{id}
+	GetThread(ctx context.Context, params GetThreadParams) (GetThreadRes, error)
 	// GetWebhookSecret invokes getWebhookSecret operation.
 	//
 	// Returns the webhook signing secret for your account. If no
@@ -3838,6 +3855,142 @@ func (c *Client) sendGetStorageStats(ctx context.Context) (res GetStorageStatsRe
 
 	stage = "DecodeResponse"
 	result, err := decodeGetStorageStatsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetThread invokes getThread operation.
+//
+// Returns a conversation thread: its metadata plus the inbound
+// and outbound messages that belong to it, interleaved in time
+// order (oldest first). A thread spans both received emails and
+// your sends, so an agent can reconstruct an entire back-and-forth
+// from one call instead of walking reply headers.
+// Each message carries a `direction` (`inbound` | `outbound`) and
+// an `id`; fetch the full message via `/emails/{id}` or
+// `/sent-emails/{id}` accordingly. Bodies are omitted here to keep
+// the thread view lightweight.
+// Discover a thread id from the `thread_id` field on any email or
+// sent-email (list or detail). The message list is capped; compare
+// `message_count` against `messages.length` to detect truncation.
+//
+// GET /threads/{id}
+func (c *Client) GetThread(ctx context.Context, params GetThreadParams) (GetThreadRes, error) {
+	res, err := c.sendGetThread(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetThread(ctx context.Context, params GetThreadParams) (res GetThreadRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getThread"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/threads/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetThreadOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/threads/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetThreadOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetThreadResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
