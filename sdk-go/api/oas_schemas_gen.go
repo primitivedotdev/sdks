@@ -11143,7 +11143,9 @@ type ParsedEmailData struct {
 	References OptNilStringArray `json:"references"`
 	// Attachment metadata. Empty array when none.
 	Attachments []EmailAttachment `json:"attachments"`
-	// Present only when `status` is `failed`.
+	// Present (non-null) only when `status` is `failed`. When
+	// present, all three fields are populated, so a consumer can
+	// branch on `code` without defensive null checks.
 	Error OptNilParsedEmailDataError `json:"error"`
 }
 
@@ -11257,40 +11259,43 @@ func (s *ParsedEmailData) SetError(val OptNilParsedEmailDataError) {
 	s.Error = val
 }
 
-// Present only when `status` is `failed`.
+// Present (non-null) only when `status` is `failed`. When
+// present, all three fields are populated, so a consumer can
+// branch on `code` without defensive null checks.
 type ParsedEmailDataError struct {
-	Code      OptString `json:"code"`
-	Message   OptString `json:"message"`
-	Retryable OptBool   `json:"retryable"`
+	// Stable failure code (e.g. `PARSE_FAILED`).
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	Retryable bool   `json:"retryable"`
 }
 
 // GetCode returns the value of Code.
-func (s *ParsedEmailDataError) GetCode() OptString {
+func (s *ParsedEmailDataError) GetCode() string {
 	return s.Code
 }
 
 // GetMessage returns the value of Message.
-func (s *ParsedEmailDataError) GetMessage() OptString {
+func (s *ParsedEmailDataError) GetMessage() string {
 	return s.Message
 }
 
 // GetRetryable returns the value of Retryable.
-func (s *ParsedEmailDataError) GetRetryable() OptBool {
+func (s *ParsedEmailDataError) GetRetryable() bool {
 	return s.Retryable
 }
 
 // SetCode sets the value of Code.
-func (s *ParsedEmailDataError) SetCode(val OptString) {
+func (s *ParsedEmailDataError) SetCode(val string) {
 	s.Code = val
 }
 
 // SetMessage sets the value of Message.
-func (s *ParsedEmailDataError) SetMessage(val OptString) {
+func (s *ParsedEmailDataError) SetMessage(val string) {
 	s.Message = val
 }
 
 // SetRetryable sets the value of Retryable.
-func (s *ParsedEmailDataError) SetRetryable(val OptBool) {
+func (s *ParsedEmailDataError) SetRetryable(val bool) {
 	s.Retryable = val
 }
 

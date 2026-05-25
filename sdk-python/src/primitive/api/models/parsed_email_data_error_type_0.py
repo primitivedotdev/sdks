@@ -20,17 +20,19 @@ T = TypeVar("T", bound="ParsedEmailDataErrorType0")
 
 @_attrs_define
 class ParsedEmailDataErrorType0:
-    """ Present only when `status` is `failed`.
+    """ Present (non-null) only when `status` is `failed`. When
+    present, all three fields are populated, so a consumer can
+    branch on `code` without defensive null checks.
 
         Attributes:
-            code (str | Unset):
-            message (str | Unset):
-            retryable (bool | Unset):
+            code (str): Stable failure code (e.g. `PARSE_FAILED`).
+            message (str):
+            retryable (bool):
      """
 
-    code: str | Unset = UNSET
-    message: str | Unset = UNSET
-    retryable: bool | Unset = UNSET
+    code: str
+    message: str
+    retryable: bool
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -48,13 +50,10 @@ class ParsedEmailDataErrorType0:
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "code": code,
+            "message": message,
+            "retryable": retryable,
         })
-        if code is not UNSET:
-            field_dict["code"] = code
-        if message is not UNSET:
-            field_dict["message"] = message
-        if retryable is not UNSET:
-            field_dict["retryable"] = retryable
 
         return field_dict
 
@@ -63,11 +62,11 @@ class ParsedEmailDataErrorType0:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        code = d.pop("code", UNSET)
+        code = d.pop("code")
 
-        message = d.pop("message", UNSET)
+        message = d.pop("message")
 
-        retryable = d.pop("retryable", UNSET)
+        retryable = d.pop("retryable")
 
         parsed_email_data_error_type_0 = cls(
             code=code,

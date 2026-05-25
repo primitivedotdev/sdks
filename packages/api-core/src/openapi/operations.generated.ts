@@ -2414,10 +2414,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "object",
                     "null"
                   ],
-                  "description": "Present only when `status` is `failed`.",
+                  "description": "Present (non-null) only when `status` is `failed`. When\npresent, all three fields are populated, so a consumer can\nbranch on `code` without defensive null checks.\n",
                   "properties": {
                     "code": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "Stable failure code (e.g. `PARSE_FAILED`)."
                     },
                     "message": {
                       "type": "string"
@@ -2425,7 +2426,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "retryable": {
                       "type": "boolean"
                     }
-                  }
+                  },
+                  "required": [
+                    "code",
+                    "message",
+                    "retryable"
+                  ]
                 }
               },
               "required": [

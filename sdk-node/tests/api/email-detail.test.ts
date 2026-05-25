@@ -104,10 +104,14 @@ describe("EmailDetail type contract", () => {
   });
 
   it("surfaces thread_id, parsed, and auth (webhook-parity shape)", () => {
+    // parsed and auth are required (non-optional) on EmailDetail, so
+    // they're accessed without `?.`; the chaining below is only on
+    // genuinely nullable/empty-able nested fields (cc, the signatures
+    // array element).
     expect(SAMPLE.thread_id).toBe("44444444-4444-4444-4444-444444444444");
-    expect(SAMPLE.parsed?.status).toBe("complete");
-    expect(SAMPLE.parsed?.cc?.[0]?.address).toBe("cc@example.com");
-    expect(SAMPLE.auth?.spf).toBe("pass");
-    expect(SAMPLE.auth?.dkimSignatures[0]?.result).toBe("pass");
+    expect(SAMPLE.parsed.status).toBe("complete");
+    expect(SAMPLE.parsed.cc?.[0]?.address).toBe("cc@example.com");
+    expect(SAMPLE.auth.spf).toBe("pass");
+    expect(SAMPLE.auth.dkimSignatures[0]?.result).toBe("pass");
   });
 });

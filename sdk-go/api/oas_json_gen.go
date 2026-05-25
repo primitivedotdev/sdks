@@ -23300,22 +23300,16 @@ func (s *ParsedEmailDataError) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ParsedEmailDataError) encodeFields(e *jx.Encoder) {
 	{
-		if s.Code.Set {
-			e.FieldStart("code")
-			s.Code.Encode(e)
-		}
+		e.FieldStart("code")
+		e.Str(s.Code)
 	}
 	{
-		if s.Message.Set {
-			e.FieldStart("message")
-			s.Message.Encode(e)
-		}
+		e.FieldStart("message")
+		e.Str(s.Message)
 	}
 	{
-		if s.Retryable.Set {
-			e.FieldStart("retryable")
-			s.Retryable.Encode(e)
-		}
+		e.FieldStart("retryable")
+		e.Bool(s.Retryable)
 	}
 }
 
@@ -23330,13 +23324,16 @@ func (s *ParsedEmailDataError) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ParsedEmailDataError to nil")
 	}
+	var requiredBitSet [1]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
 		case "code":
+			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				s.Code.Reset()
-				if err := s.Code.Decode(d); err != nil {
+				v, err := d.Str()
+				s.Code = string(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -23344,9 +23341,11 @@ func (s *ParsedEmailDataError) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"code\"")
 			}
 		case "message":
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				s.Message.Reset()
-				if err := s.Message.Decode(d); err != nil {
+				v, err := d.Str()
+				s.Message = string(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -23354,9 +23353,11 @@ func (s *ParsedEmailDataError) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"message\"")
 			}
 		case "retryable":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				s.Retryable.Reset()
-				if err := s.Retryable.Decode(d); err != nil {
+				v, err := d.Bool()
+				s.Retryable = bool(v)
+				if err != nil {
 					return err
 				}
 				return nil
@@ -23369,6 +23370,38 @@ func (s *ParsedEmailDataError) Decode(d *jx.Decoder) error {
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode ParsedEmailDataError")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfParsedEmailDataError) {
+					name = jsonFieldsNameOfParsedEmailDataError[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
 	}
 
 	return nil

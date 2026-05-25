@@ -43,7 +43,9 @@ class ParsedEmailData:
             in_reply_to (list[str] | None | Unset): Message-IDs from the `In-Reply-To` header.
             references (list[str] | None | Unset): Message-IDs from the `References` header.
             attachments (list[EmailAttachment] | Unset): Attachment metadata. Empty array when none.
-            error (None | ParsedEmailDataErrorType0 | Unset): Present only when `status` is `failed`.
+            error (None | ParsedEmailDataErrorType0 | Unset): Present (non-null) only when `status` is `failed`. When
+                present, all three fields are populated, so a consumer can
+                branch on `code` without defensive null checks.
      """
 
     status: ParsedEmailDataStatus

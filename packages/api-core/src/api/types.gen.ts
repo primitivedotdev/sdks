@@ -1070,12 +1070,18 @@ export type ParsedEmailData = {
      */
     attachments?: Array<EmailAttachment>;
     /**
-     * Present only when `status` is `failed`.
+     * Present (non-null) only when `status` is `failed`. When
+     * present, all three fields are populated, so a consumer can
+     * branch on `code` without defensive null checks.
+     *
      */
     error?: {
-        code?: string;
-        message?: string;
-        retryable?: boolean;
+        /**
+         * Stable failure code (e.g. `PARSE_FAILED`).
+         */
+        code: string;
+        message: string;
+        retryable: boolean;
     } | null;
 };
 

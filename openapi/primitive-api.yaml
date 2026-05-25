@@ -4448,14 +4448,19 @@ components:
           description: Attachment metadata. Empty array when none.
         error:
           type: [object, 'null']
-          description: Present only when `status` is `failed`.
+          description: |
+            Present (non-null) only when `status` is `failed`. When
+            present, all three fields are populated, so a consumer can
+            branch on `code` without defensive null checks.
           properties:
             code:
               type: string
+              description: Stable failure code (e.g. `PARSE_FAILED`).
             message:
               type: string
             retryable:
               type: boolean
+          required: [code, message, retryable]
       required: [status]
 
     DkimSignature:
