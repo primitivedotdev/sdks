@@ -82,6 +82,10 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" whoami --help | grep -q -- "--json" && \
 	"$$bin" chat --help | grep -q -- "follow-up commands" && \
 	"$$bin" chat --help | grep -q -- "--reply-to-email-id" && \
+	"$$bin" chat --help | grep -q -- "--strict-only" && \
+	"$$bin" threads --help | grep -q -- "primitive threads get --id <thread-id>" && \
+	"$$bin" threads get --help | grep -q -- "Get a conversation thread by id" && \
+	"$$bin" threads get-thread --help | grep -q -- "Get a conversation thread by id" && \
 	root_help_config="$$smoke_dir/root-help-config" && \
 	HOME="$$root_help_config" XDG_CONFIG_HOME="$$root_help_config/.config" PRIMITIVE_CONFIG_DIR= PRIMITIVE_API_KEY= PRIMITIVE_HIDE_SIGNUP_HINT= "$$bin" >"$$smoke_dir/root-help.txt" && \
 	grep -q -- 'primitive signup <email> --signup-code <invite-code> --accept-terms' "$$smoke_dir/root-help.txt" && \
