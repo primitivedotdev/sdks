@@ -53,6 +53,9 @@ describe("readAttachmentFiles", () => {
     expect(() =>
       readAttachmentFiles(["bad\nname.txt"], () => Buffer.from("x")),
     ).toThrow(/control characters/);
+    expect(() =>
+      readAttachmentFiles(["bad\u0085name.txt"], () => Buffer.from("x")),
+    ).toThrow(/control characters/);
   });
 });
 

@@ -90,6 +90,15 @@ def guard_optional_body_content_type(directory: Path) -> None:
             py_file.write_text(new_text)
 
 
+def use_bytes_for_file_responses(directory: Path) -> None:
+    """File payloads wrap BytesIO, which requires bytes."""
+    for py_file in directory.rglob("*.py"):
+        text = py_file.read_text()
+        new_text = text.replace("BytesIO(response.text)", "BytesIO(response.content)")
+        if new_text != text:
+            py_file.write_text(new_text)
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="primitive-python-api-") as temp_dir:
         output_path = Path(temp_dir) / "generated"
@@ -114,6 +123,7 @@ def main() -> None:
         copy_generated_items(output_path)
         dedupe_imports(TARGET_PATH)
         guard_optional_body_content_type(TARGET_PATH)
+        use_bytes_for_file_responses(TARGET_PATH)
 
 
 if __name__ == "__main__":
