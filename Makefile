@@ -53,7 +53,38 @@ cli-tarball-isolation:
 	node scripts/assert-tarball-isolation.mjs cli-node "@primitivedotdev/sdk"
 
 cli-smoke: cli-build cli-tarball-isolation
-	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && "$$smoke_dir/node_modules/.bin/primitive" list-operations >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion fish >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion bash >/dev/null && if [ -d "$$smoke_dir/node_modules/@primitivedotdev/sdk" ] || [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "CLI tarball pulled @primitivedotdev/sdk or @primitivedotdev/api-core into node_modules; both should be bundled inline."; exit 1; fi
+	pack_dir=$$(mktemp -d) && \
+	smoke_dir=$$(mktemp -d) && \
+	tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && \
+	cd "$$smoke_dir" && \
+	npm init -y && \
+	npm install "$$pack_dir/$$tarball" && \
+	bin="$$smoke_dir/node_modules/.bin/primitive" && \
+	"$$bin" list-operations >/dev/null && \
+	"$$bin" completion fish >/dev/null && \
+	"$$bin" completion bash >/dev/null && \
+	"$$bin" send --help | grep -q -- "--attachment" && \
+	"$$bin" sending send-email --help | grep -q -- "attachments" && \
+	"$$bin" domains add --help | grep -q -- "--confirmed" && \
+	"$$bin" describe addDomain >/dev/null && \
+	"$$bin" describe verifyDomain >/dev/null && \
+	"$$bin" describe downloadDomainZoneFile >/dev/null && \
+	"$$bin" describe domains:addDomain >/dev/null && \
+	"$$bin" describe domains:verifyDomain >/dev/null && \
+	"$$bin" describe domains:zone-file >/dev/null && \
+	"$$bin" domains zone-file --help | grep -q -- "--outbound-only" && \
+	zone_id="33333333-3333-4333-8333-333333333333" && \
+	port_file="$$smoke_dir/zone-server-port" && \
+	server_log="$$smoke_dir/zone-server.log"; \
+	( node -e 'const http = require("node:http"); const fs = require("node:fs"); const zoneId = "33333333-3333-4333-8333-333333333333"; const server = http.createServer((req, res) => { const expected = "/v1/domains/" + zoneId + "/zone-file?outbound_only=true"; if (req.method !== "GET" || req.url !== expected || req.headers.authorization !== "Bearer prim_test") { res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected " + req.method + " " + req.url + " " + req.headers.authorization); return; } res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "content-disposition": "attachment; filename=\"example.com.zone\"" }); res.end("; Zone file for example.com\n$$ORIGIN example.com.\n"); }); server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.argv[1], String(server.address().port)));' "$$port_file" >"$$server_log" 2>&1 ) & \
+	server_pid=$$! && \
+	trap 'kill "$$server_pid" 2>/dev/null || true' EXIT && \
+	for i in 1 2 3 4 5 6 7 8 9 10; do test -s "$$port_file" && break; sleep 0.1; done && \
+	test -s "$$port_file" || { cat "$$server_log"; exit 1; } && \
+	port=$$(cat "$$port_file") && \
+	"$$bin" domains zone-file --id "$$zone_id" --outbound-only --api-key prim_test --api-base-url-1 "http://127.0.0.1:$$port/v1" > "$$smoke_dir/example.zone" && \
+	grep -q -- '$$ORIGIN example.com.' "$$smoke_dir/example.zone" && \
+	if [ -d "$$smoke_dir/node_modules/@primitivedotdev/sdk" ] || [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "CLI tarball pulled @primitivedotdev/sdk or @primitivedotdev/api-core into node_modules; both should be bundled inline."; exit 1; fi
 
 cli-coverage:
 	pnpm --dir cli-node test:coverage

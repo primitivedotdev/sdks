@@ -57,6 +57,10 @@ type DownloadAttachmentsRes interface {
 	downloadAttachmentsRes()
 }
 
+type DownloadDomainZoneFileRes interface {
+	downloadDomainZoneFileRes()
+}
+
 type DownloadRawEmailRes interface {
 	downloadRawEmailRes()
 }

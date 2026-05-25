@@ -6,6 +6,7 @@ import type { PrimitiveOperationManifest } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createOperationCommand,
+  EMPTY_RESULT_HINTS,
   extractErrorCode,
   extractErrorPayload,
   flagForParameter,
@@ -689,12 +690,27 @@ describe("OPERATION_HINTS", () => {
   // introduced; the matching keys in the index.ts COMMANDS map are
   // the authoritative shortcut surface.
   it("points each generated op at its hand-rolled shortcut command", () => {
+    expect(OPERATION_HINTS.addDomain).toContain("domains zone-file");
+    expect(OPERATION_HINTS.verifyDomain).toContain("domains zone-file");
+    expect(OPERATION_HINTS.downloadDomainZoneFile).toContain(
+      "domains zone-file",
+    );
+    expect(OPERATION_HINTS.sendEmail).toContain("primitive send");
+    expect(OPERATION_HINTS.sendEmail).toContain("--attachment");
     expect(OPERATION_HINTS.createFunction).toContain("functions deploy");
     expect(OPERATION_HINTS.updateFunction).toContain("functions redeploy");
     expect(OPERATION_HINTS.createFunctionSecret).toContain(
       "functions set-secret",
     );
     expect(OPERATION_HINTS.setFunctionSecret).toContain("functions set-secret");
+  });
+});
+
+describe("EMPTY_RESULT_HINTS", () => {
+  it("guides an empty functions list toward setup commands", () => {
+    expect(EMPTY_RESULT_HINTS.listFunctions).toContain("functions templates");
+    expect(EMPTY_RESULT_HINTS.listFunctions).toContain("functions init");
+    expect(EMPTY_RESULT_HINTS.listFunctions).toContain("functions deploy");
   });
 });
 

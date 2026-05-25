@@ -9,7 +9,9 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
-from ...models.verify_domain_response_200 import VerifyDomainResponse200
+from ...types import File, FileTypes
+from ...types import UNSET, Unset
+from io import BytesIO
 from typing import cast
 from uuid import UUID
 
@@ -17,17 +19,26 @@ from uuid import UUID
 
 def _get_kwargs(
     id: UUID,
+    *,
+    outbound_only: bool | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
 
     
 
-    
+    params: dict[str, Any] = {}
+
+    params["outbound_only"] = outbound_only
+
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
 
     _kwargs: dict[str, Any] = {
-        "method": "post",
-        "url": "/domains/{id}/verify".format(id=quote(str(id), safe=""),),
+        "method": "get",
+        "url": "/domains/{id}/zone-file".format(id=quote(str(id), safe=""),),
+        "params": params,
     }
 
 
@@ -35,9 +46,11 @@ def _get_kwargs(
 
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | VerifyDomainResponse200 | None:
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | File | None:
     if response.status_code == 200:
-        response_200 = VerifyDomainResponse200.from_dict(response.json())
+        response_200 = File(
+             payload = BytesIO(response.content)
+        )
 
 
 
@@ -64,13 +77,20 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_404
 
+    if response.status_code == 429:
+        response_429 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_429
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | VerifyDomainResponse200]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | File]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -83,34 +103,32 @@ def sync_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    outbound_only: bool | Unset = UNSET,
 
-) -> Response[ErrorResponse | VerifyDomainResponse200]:
-    """ Verify domain ownership
+) -> Response[ErrorResponse | File]:
+    """ Download domain DNS zone file
 
-     Checks DNS records required for inbound routing, ownership,
-    and outbound authentication: MX, ownership TXT, SPF, DKIM,
-    DMARC, and TLS-RPT.
-    On success, the domain is promoted from unverified to verified.
-    On failure, returns which checks passed and which failed,
-    plus the exact DNS records still expected. To give users
-    an importable DNS file for missing records, call
-    `downloadDomainZoneFile` or run
-    `primitive domains zone-file --id <domain-id>`.
+     Downloads a BIND-format DNS zone file containing the DNS records
+    required for a domain claim. Agents should offer this after
+    `addDomain` when users want to import DNS records instead of
+    copying each record manually.
 
     Args:
         id (UUID):
+        outbound_only (bool | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ErrorResponse | VerifyDomainResponse200]
+        Response[ErrorResponse | File]
      """
 
 
     kwargs = _get_kwargs(
         id=id,
+outbound_only=outbound_only,
 
     )
 
@@ -124,35 +142,33 @@ def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    outbound_only: bool | Unset = UNSET,
 
-) -> ErrorResponse | VerifyDomainResponse200 | None:
-    """ Verify domain ownership
+) -> ErrorResponse | File | None:
+    """ Download domain DNS zone file
 
-     Checks DNS records required for inbound routing, ownership,
-    and outbound authentication: MX, ownership TXT, SPF, DKIM,
-    DMARC, and TLS-RPT.
-    On success, the domain is promoted from unverified to verified.
-    On failure, returns which checks passed and which failed,
-    plus the exact DNS records still expected. To give users
-    an importable DNS file for missing records, call
-    `downloadDomainZoneFile` or run
-    `primitive domains zone-file --id <domain-id>`.
+     Downloads a BIND-format DNS zone file containing the DNS records
+    required for a domain claim. Agents should offer this after
+    `addDomain` when users want to import DNS records instead of
+    copying each record manually.
 
     Args:
         id (UUID):
+        outbound_only (bool | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ErrorResponse | VerifyDomainResponse200
+        ErrorResponse | File
      """
 
 
     return sync_detailed(
         id=id,
 client=client,
+outbound_only=outbound_only,
 
     ).parsed
 
@@ -160,34 +176,32 @@ async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    outbound_only: bool | Unset = UNSET,
 
-) -> Response[ErrorResponse | VerifyDomainResponse200]:
-    """ Verify domain ownership
+) -> Response[ErrorResponse | File]:
+    """ Download domain DNS zone file
 
-     Checks DNS records required for inbound routing, ownership,
-    and outbound authentication: MX, ownership TXT, SPF, DKIM,
-    DMARC, and TLS-RPT.
-    On success, the domain is promoted from unverified to verified.
-    On failure, returns which checks passed and which failed,
-    plus the exact DNS records still expected. To give users
-    an importable DNS file for missing records, call
-    `downloadDomainZoneFile` or run
-    `primitive domains zone-file --id <domain-id>`.
+     Downloads a BIND-format DNS zone file containing the DNS records
+    required for a domain claim. Agents should offer this after
+    `addDomain` when users want to import DNS records instead of
+    copying each record manually.
 
     Args:
         id (UUID):
+        outbound_only (bool | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ErrorResponse | VerifyDomainResponse200]
+        Response[ErrorResponse | File]
      """
 
 
     kwargs = _get_kwargs(
         id=id,
+outbound_only=outbound_only,
 
     )
 
@@ -201,34 +215,32 @@ async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    outbound_only: bool | Unset = UNSET,
 
-) -> ErrorResponse | VerifyDomainResponse200 | None:
-    """ Verify domain ownership
+) -> ErrorResponse | File | None:
+    """ Download domain DNS zone file
 
-     Checks DNS records required for inbound routing, ownership,
-    and outbound authentication: MX, ownership TXT, SPF, DKIM,
-    DMARC, and TLS-RPT.
-    On success, the domain is promoted from unverified to verified.
-    On failure, returns which checks passed and which failed,
-    plus the exact DNS records still expected. To give users
-    an importable DNS file for missing records, call
-    `downloadDomainZoneFile` or run
-    `primitive domains zone-file --id <domain-id>`.
+     Downloads a BIND-format DNS zone file containing the DNS records
+    required for a domain claim. Agents should offer this after
+    `addDomain` when users want to import DNS records instead of
+    copying each record manually.
 
     Args:
         id (UUID):
+        outbound_only (bool | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ErrorResponse | VerifyDomainResponse200
+        ErrorResponse | File
      """
 
 
     return (await asyncio_detailed(
         id=id,
 client=client,
+outbound_only=outbound_only,
 
     )).parsed

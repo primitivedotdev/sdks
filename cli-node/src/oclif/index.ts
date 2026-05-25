@@ -13,6 +13,7 @@ import {
   ConfigUseCommand,
 } from "./commands/config.js";
 import DoctorCommand from "./commands/doctor.js";
+import DomainsZoneFileCommand from "./commands/domains-zone-file.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
 import EmailsWatchCommand from "./commands/emails-watch.js";
@@ -44,7 +45,7 @@ import { renderFishCompletion } from "./fish-completion.js";
 
 class ListOperationsCommand extends Command {
   static description =
-    "List all generated API operations as JSON. Useful for piping to `jq` to discover available commands, their request/response schemas, and per-field descriptions. For inspecting a single operation in detail, prefer `primitive describe <command>`.";
+    "List all generated API operations as JSON. Useful for piping to `jq` to discover available commands, their request/response schemas, and per-field descriptions. For inspecting a single operation in detail, prefer `primitive describe <command-or-operation-name>`.";
 
   static summary = "List all generated API operations (JSON)";
 
@@ -53,33 +54,112 @@ class ListOperationsCommand extends Command {
   }
 }
 
-// Looks up an operation manifest entry by its `<topic>:<command>` id
-// (e.g. `emails:get-email`). On miss, returns up to 5 closest
-// candidates by substring match so the caller can render a
-// "did you mean" hint. Pure function: no oclif config dependency,
-// so it's also unit-testable in isolation.
+function operationId(operation: PrimitiveOperationManifest): string {
+  return `${operation.tagCommand}:${operation.command}`;
+}
+
+function normalizeLookupToken(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+function operationLookupTokens(
+  operation: PrimitiveOperationManifest,
+): string[] {
+  return unique([
+    operationId(operation),
+    operation.command,
+    operation.operationId,
+    operation.sdkName,
+    `${operation.tagCommand}:${operation.operationId}`,
+    `${operation.tagCommand}:${operation.sdkName}`,
+  ]);
+}
+
+function levenshteinDistance(left: string, right: string): number {
+  if (left === right) return 0;
+  if (left.length === 0) return right.length;
+  if (right.length === 0) return left.length;
+
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 0; leftIndex < left.length; leftIndex += 1) {
+    const current = [leftIndex + 1];
+    for (let rightIndex = 0; rightIndex < right.length; rightIndex += 1) {
+      const substitutionCost = left[leftIndex] === right[rightIndex] ? 0 : 1;
+      current[rightIndex + 1] = Math.min(
+        current[rightIndex] + 1,
+        previous[rightIndex + 1] + 1,
+        previous[rightIndex] + substitutionCost,
+      );
+    }
+    previous = current;
+  }
+  return previous[right.length] ?? Number.POSITIVE_INFINITY;
+}
+
+function scoreLookupToken(query: string, token: string): number {
+  const normalizedQuery = normalizeLookupToken(query);
+  const normalizedToken = normalizeLookupToken(token);
+  if (!normalizedQuery || !normalizedToken) return 0;
+  if (normalizedQuery === normalizedToken) return 100;
+  if (normalizedToken.includes(normalizedQuery)) {
+    return Math.max(50, 90 - (normalizedToken.length - normalizedQuery.length));
+  }
+  if (normalizedQuery.includes(normalizedToken)) {
+    return Math.max(45, 80 - (normalizedQuery.length - normalizedToken.length));
+  }
+
+  const distance = levenshteinDistance(normalizedQuery, normalizedToken);
+  const maxLength = Math.max(normalizedQuery.length, normalizedToken.length);
+  return Math.round((1 - distance / maxLength) * 75);
+}
+
+function scoreOperation(
+  query: string,
+  operation: PrimitiveOperationManifest,
+): number {
+  return Math.max(
+    ...operationLookupTokens(operation).map((token) =>
+      scoreLookupToken(query, token),
+    ),
+  );
+}
+
+// Looks up an operation manifest entry by CLI command id
+// (`emails:get-email`), canonical alias (`emails:get`), generated
+// SDK operation name (`getEmail`), or tagged operation name
+// (`emails:getEmail`). On miss, returns up to 5 closest command ids
+// so the caller can render a useful "did you mean" hint. Pure
+// function: no oclif config dependency, so it's also unit-testable.
 export function lookupOperation(id: string): {
   match: PrimitiveOperationManifest | null;
   candidates: string[];
 } {
   const trimmed = resolveOperationAlias(id.trim());
-  const sep = trimmed.indexOf(":");
-  const tag = sep === -1 ? "" : trimmed.slice(0, sep);
-  const cmd = sep === -1 ? trimmed : trimmed.slice(sep + 1);
 
   const match =
-    operationManifest.find(
-      (op) => op.command === cmd && op.tagCommand === tag,
+    operationManifest.find((op) =>
+      operationLookupTokens(op).some(
+        (token) =>
+          token === trimmed ||
+          normalizeLookupToken(token) === normalizeLookupToken(trimmed),
+      ),
     ) ?? null;
 
   if (match) return { match, candidates: [] };
 
   const candidates = operationManifest
-    .filter((op) => op.command.includes(cmd) || op.tagCommand.includes(tag))
+    .map((op) => ({ id: operationId(op), score: scoreOperation(trimmed, op) }))
+    .filter(({ score }) => score >= 45)
+    .sort(
+      (left, right) =>
+        right.score - left.score || left.id.localeCompare(right.id),
+    )
     .slice(0, 5)
-    .map((op) =>
-      op.tagCommand ? `${op.tagCommand}:${op.command}` : op.command,
-    );
+    .map(({ id }) => id);
 
   return { match: null, candidates };
 }
@@ -91,14 +171,15 @@ export function lookupOperation(id: string): {
 // when they want to know "what does the from_email field on this
 // response actually mean." A direct command is more discoverable.
 //
-// Lookup is by command id. Canonical aliases such as `emails:list`
-// resolve to their generated operation entries; raw generated ids
-// like `emails:get-email` continue to work.
+// Lookup is by command id or generated operation name. Canonical
+// aliases such as `emails:list` resolve to their generated operation
+// entries; raw generated ids like `emails:get-email` and API-shaped
+// names like `getEmail` continue to work.
 class DescribeCommand extends Command {
   static args = {
     command: Args.string({
       description:
-        "Command id to describe, e.g. `emails:list` or `emails:get-email`. Run `primitive list-operations | jq -r '.[] | \"\\(.tagCommand):\\(.command)\"'` to enumerate generated operation ids.",
+        "Command id, alias, or SDK operation name to describe, e.g. `emails:list`, `emails:get-email`, or `getEmail`. Run `primitive list-operations | jq -r '.[] | \"\\(.tagCommand):\\(.command) \\(.operationId)\"'` to enumerate generated operation ids.",
       required: true,
     }),
   };
@@ -107,6 +188,10 @@ class DescribeCommand extends Command {
     `Print the full operation manifest entry for a single API command, including the path, request schema, response schema, and per-field descriptions sourced from the OpenAPI spec.
 
   The manifest entry's \`responseSchema\` carries the inlined JSON Schema for the operation's 200/201 \`data\` envelope contents (\`$ref\`s resolved). Use it to look up what specific response fields mean. Examples:
+
+      # Domain setup records returned by add/verify
+      primitive describe domains:add
+      primitive describe addDomain
 
       # Which of EmailDetail's sender-shaped fields is canonical?
       primitive describe emails:get | jq '.responseSchema.properties | keys'
@@ -120,6 +205,8 @@ class DescribeCommand extends Command {
   static summary = "Describe a single API operation in detail";
 
   static examples = [
+    "<%= config.bin %> describe addDomain",
+    "<%= config.bin %> describe domains:add",
     "<%= config.bin %> describe emails:get",
     "<%= config.bin %> describe sent:get",
   ];
@@ -170,10 +257,6 @@ class CompletionCommand extends Command {
   }
 }
 
-function commandId(operation: PrimitiveOperationManifest): string {
-  return `${operation.tagCommand}:${operation.command}`;
-}
-
 export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "account:show": "account:get-account",
   "account:storage": "account:get-storage-stats",
@@ -219,6 +302,7 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
 
 const DESCRIBE_OPERATION_ALIASES: Record<string, string> = {
   ...CANONICAL_OPERATION_ALIASES,
+  "domains:zone-file": "domains:download-domain-zone-file",
   "functions:logs": "functions:list-function-logs",
   reply: "sending:reply-to-email",
 };
@@ -231,6 +315,9 @@ function resolveOperationAlias(id: string): string {
 // COMMANDS below. The auto-generated wrapper is filtered out so the
 // hand-rolled command owns the id without a name collision.
 const OVERRIDDEN_OPERATION_IDS = new Set<string>([
+  // `domains:download-domain-zone-file` is hand-rolled so the CLI writes
+  // text to stdout or --output instead of dumping a generated binary object.
+  "domains:download-domain-zone-file",
   // `functions:test-function` is hand-rolled to add --wait, --show-sends,
   // and --timeout flags on top of the auto-generated POST /functions/{id}/test.
   "functions:test-function",
@@ -238,9 +325,11 @@ const OVERRIDDEN_OPERATION_IDS = new Set<string>([
 
 const generatedCommands = Object.fromEntries(
   operationManifest
-    .filter((operation) => !OVERRIDDEN_OPERATION_IDS.has(commandId(operation)))
+    .filter(
+      (operation) => !OVERRIDDEN_OPERATION_IDS.has(operationId(operation)),
+    )
     .map((operation) => [
-      commandId(operation),
+      operationId(operation),
       createOperationCommand(operation),
     ]),
 );
@@ -321,6 +410,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
   "emails:wait": EmailsWaitCommand,
+  // `domains:zone-file` downloads the server-generated DNS import file.
+  // The API owns serialization so dashboard and CLI output stay aligned.
+  "domains:zone-file": DomainsZoneFileCommand,
+  "domains:download-domain-zone-file": DomainsZoneFileCommand,
   // `functions:init` scaffolds a deployable Function project so a
   // new author can go zero-to-deployed without writing the handler,
   // package.json, build script, and tsconfig from scratch. The

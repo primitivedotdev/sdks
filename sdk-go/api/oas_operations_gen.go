@@ -20,6 +20,7 @@ const (
 	DeleteFunctionSecretOperation          OperationName = "DeleteFunctionSecret"
 	DiscardEmailContentOperation           OperationName = "DiscardEmailContent"
 	DownloadAttachmentsOperation           OperationName = "DownloadAttachments"
+	DownloadDomainZoneFileOperation        OperationName = "DownloadDomainZoneFile"
 	DownloadRawEmailOperation              OperationName = "DownloadRawEmail"
 	GetAccountOperation                    OperationName = "GetAccount"
 	GetEmailOperation                      OperationName = "GetEmail"

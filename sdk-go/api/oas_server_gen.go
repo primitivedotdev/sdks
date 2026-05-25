@@ -10,9 +10,11 @@ import (
 type Handler interface {
 	// AddDomain implements addDomain operation.
 	//
-	// Creates an unverified domain claim. You will receive a
-	// `verification_token` to add as a DNS TXT record before
-	// calling the verify endpoint.
+	// Creates an unverified domain claim and returns the exact
+	// DNS records to publish in `dns_records`. Publish those
+	// records before calling the verify endpoint. To give users
+	// an importable DNS file, call `downloadDomainZoneFile` or run
+	// `primitive domains zone-file --id <domain-id>`.
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, req *AddDomainInput) (AddDomainRes, error)
@@ -165,6 +167,15 @@ type Handler interface {
 	//
 	// GET /emails/{id}/attachments.tar.gz
 	DownloadAttachments(ctx context.Context, params DownloadAttachmentsParams) (DownloadAttachmentsRes, error)
+	// DownloadDomainZoneFile implements downloadDomainZoneFile operation.
+	//
+	// Downloads a BIND-format DNS zone file containing the DNS records
+	// required for a domain claim. Agents should offer this after
+	// `addDomain` when users want to import DNS records instead of
+	// copying each record manually.
+	//
+	// GET /domains/{id}/zone-file
+	DownloadDomainZoneFile(ctx context.Context, params DownloadDomainZoneFileParams) (DownloadDomainZoneFileRes, error)
 	// DownloadRawEmail implements downloadRawEmail operation.
 	//
 	// Downloads the raw RFC 822 email file (.eml). Authenticates via
@@ -618,9 +629,15 @@ type Handler interface {
 	VerifyCliSignup(ctx context.Context, req *VerifyCliSignupInput) (VerifyCliSignupRes, error)
 	// VerifyDomain implements verifyDomain operation.
 	//
-	// Checks DNS records (MX and TXT) to verify domain ownership.
+	// Checks DNS records required for inbound routing, ownership,
+	// and outbound authentication: MX, ownership TXT, SPF, DKIM,
+	// DMARC, and TLS-RPT.
 	// On success, the domain is promoted from unverified to verified.
-	// On failure, returns which checks passed and which failed.
+	// On failure, returns which checks passed and which failed,
+	// plus the exact DNS records still expected. To give users
+	// an importable DNS file for missing records, call
+	// `downloadDomainZoneFile` or run
+	// `primitive domains zone-file --id <domain-id>`.
 	//
 	// POST /domains/{id}/verify
 	VerifyDomain(ctx context.Context, params VerifyDomainParams) (VerifyDomainRes, error)

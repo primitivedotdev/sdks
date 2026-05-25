@@ -495,7 +495,7 @@ export type WebhookSecret = {
 /**
  * A domain can be either verified or unverified. Verified domains have
  * `is_active` and `spam_threshold` fields. Unverified domains have a
- * `verification_token` for DNS verification.
+ * `verification_token` and `dns_records` for DNS setup.
  *
  */
 export type Domain = VerifiedDomain | UnverifiedDomain;
@@ -511,6 +511,40 @@ export type VerifiedDomain = {
     created_at: string;
 };
 
+export type DomainDnsRecord = {
+    /**
+     * DNS record type.
+     */
+    type: 'MX' | 'TXT';
+    /**
+     * DNS-provider host/name value relative to the managed root zone.
+     */
+    name: string;
+    /**
+     * Fully-qualified DNS record name.
+     */
+    fqdn: string;
+    /**
+     * Exact value to publish.
+     */
+    value: string;
+    /**
+     * MX priority. Present only for MX records.
+     */
+    priority?: number;
+    /**
+     * Suggested TTL in seconds when the API can provide one.
+     */
+    ttl?: number;
+    required: boolean;
+    purpose: 'inbound_mx' | 'ownership_verification' | 'spf' | 'dkim' | 'dmarc' | 'tls_reporting';
+    status: 'pending' | 'found' | 'missing' | 'incorrect';
+    /**
+     * Short explanation of why this record is needed.
+     */
+    message?: string;
+};
+
 export type UnverifiedDomain = {
     id: string;
     org_id: string;
@@ -520,6 +554,10 @@ export type UnverifiedDomain = {
      * Add this value as a TXT record to verify ownership
      */
     verification_token: string;
+    /**
+     * Exact DNS records to publish for this pending domain claim.
+     */
+    dns_records?: Array<DomainDnsRecord>;
     created_at: string;
 };
 
@@ -528,6 +566,16 @@ export type AddDomainInput = {
      * The domain name to claim (e.g. "example.com")
      */
     domain: string;
+    /**
+     * Set to true to confirm replacing an existing mailbox provider after an mx_conflict response.
+     */
+    confirmed?: boolean;
+    /**
+     * Deprecated and ignored. Outbound DNS is provisioned for every new domain claim.
+     *
+     * @deprecated
+     */
+    outbound?: boolean;
 };
 
 export type UpdateDomainInput = {
@@ -543,6 +591,10 @@ export type UpdateDomainInput = {
 
 export type DomainVerifyResult = {
     verified: boolean;
+    /**
+     * Exact DNS records checked for this verification attempt.
+     */
+    dns_records?: Array<DomainDnsRecord>;
 } | {
     verified: boolean;
     /**
@@ -553,6 +605,26 @@ export type DomainVerifyResult = {
      * Whether the TXT verification record was found
      */
     txtFound: boolean;
+    /**
+     * Whether the SPF record includes Primitive.
+     */
+    spfFound?: boolean;
+    /**
+     * Whether the DKIM public key record was found.
+     */
+    dkimFound?: boolean;
+    /**
+     * Whether the DMARC record was found.
+     */
+    dmarcFound?: boolean;
+    /**
+     * Whether the TLS-RPT record was found.
+     */
+    tlsRptFound?: boolean;
+    /**
+     * Exact DNS records checked for this verification attempt.
+     */
+    dns_records?: Array<DomainDnsRecord>;
     /**
      * Human-readable verification failure reason
      */
@@ -794,6 +866,21 @@ export type EmailDetailReply = {
     queue_id?: string | null;
 };
 
+export type SendMailAttachment = {
+    /**
+     * Attachment filename. Control characters are rejected.
+     */
+    filename: string;
+    /**
+     * Optional MIME content type. Control characters are rejected.
+     */
+    content_type?: string;
+    /**
+     * Base64-encoded attachment bytes.
+     */
+    content_base64: string;
+};
+
 export type SendMailInput = {
     /**
      * RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
@@ -823,6 +910,10 @@ export type SendMailInput = {
      * Full ordered message-id chain for the thread.
      */
     references?: Array<string>;
+    /**
+     * Inline attachments. Send requests with attachments to https://api.primitive.dev/v1/send-mail. Combined raw decoded attachment bytes must be at most 31457280.
+     */
+    attachments?: Array<SendMailAttachment>;
     /**
      * When true, wait for the first downstream SMTP delivery outcome before returning.
      */
@@ -2612,6 +2703,56 @@ export type VerifyDomainResponses = {
 };
 
 export type VerifyDomainResponse = VerifyDomainResponses[keyof VerifyDomainResponses];
+
+export type DownloadDomainZoneFileData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * When true, include only outbound DNS records. Verified domains
+         * default to outbound-only; pending claims default to all required
+         * records.
+         *
+         */
+        outbound_only?: boolean;
+    };
+    url: '/domains/{id}/zone-file';
+};
+
+export type DownloadDomainZoneFileErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type DownloadDomainZoneFileError = DownloadDomainZoneFileErrors[keyof DownloadDomainZoneFileErrors];
+
+export type DownloadDomainZoneFileResponses = {
+    /**
+     * BIND-format zone file
+     */
+    200: Blob | File;
+};
+
+export type DownloadDomainZoneFileResponse = DownloadDomainZoneFileResponses[keyof DownloadDomainZoneFileResponses];
 
 export type ListEmailsData = {
     body?: never;

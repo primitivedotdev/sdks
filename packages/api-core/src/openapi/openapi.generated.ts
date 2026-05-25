@@ -1004,7 +1004,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "addDomain",
         "summary": "Claim a new domain",
-        "description": "Creates an unverified domain claim. You will receive a\n`verification_token` to add as a DNS TXT record before\ncalling the verify endpoint.\n",
+        "description": "Creates an unverified domain claim and returns the exact\nDNS records to publish in `dns_records`. Publish those\nrecords before calling the verify endpoint. To give users\nan importable DNS file, call `downloadDomainZoneFile` or run\n`primitive domains zone-file --id <domain-id>`.\n",
         "tags": [
           "Domains"
         ],
@@ -1177,7 +1177,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "verifyDomain",
         "summary": "Verify domain ownership",
-        "description": "Checks DNS records (MX and TXT) to verify domain ownership.\nOn success, the domain is promoted from unverified to verified.\nOn failure, returns which checks passed and which failed.\n",
+        "description": "Checks DNS records required for inbound routing, ownership,\nand outbound authentication: MX, ownership TXT, SPF, DKIM,\nDMARC, and TLS-RPT.\nOn success, the domain is promoted from unverified to verified.\nOn failure, returns which checks passed and which failed,\nplus the exact DNS records still expected. To give users\nan importable DNS file for missing records, call\n`downloadDomainZoneFile` or run\n`primitive domains zone-file --id <domain-id>`.\n",
         "tags": [
           "Domains"
         ],
@@ -1212,6 +1212,64 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/domains/{id}/zone-file": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "operationId": "downloadDomainZoneFile",
+        "summary": "Download domain DNS zone file",
+        "description": "Downloads a BIND-format DNS zone file containing the DNS records\nrequired for a domain claim. Agents should offer this after\n`addDomain` when users want to import DNS records instead of\ncopying each record manually.\n",
+        "tags": [
+          "Domains"
+        ],
+        "parameters": [
+          {
+            "name": "outbound_only",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "When true, include only outbound DNS records. Verified domains\ndefault to outbound-only; pending claims default to all required\nrecords.\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "BIND-format zone file",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string",
+                  "example": "attachment; filename=\"example.com.zone\""
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -4776,7 +4834,7 @@ export const openapiDocument: Record<string, unknown> = {
         ]
       },
       "Domain": {
-        "description": "A domain can be either verified or unverified. Verified domains have\n`is_active` and `spam_threshold` fields. Unverified domains have a\n`verification_token` for DNS verification.\n",
+        "description": "A domain can be either verified or unverified. Verified domains have\n`is_active` and `spam_threshold` fields. Unverified domains have a\n`verification_token` and `dns_records` for DNS setup.\n",
         "oneOf": [
           {
             "$ref": "#/components/schemas/VerifiedDomain"
@@ -4835,6 +4893,77 @@ export const openapiDocument: Record<string, unknown> = {
           "created_at"
         ]
       },
+      "DomainDnsRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "MX",
+              "TXT"
+            ],
+            "description": "DNS record type."
+          },
+          "name": {
+            "type": "string",
+            "description": "DNS-provider host/name value relative to the managed root zone."
+          },
+          "fqdn": {
+            "type": "string",
+            "description": "Fully-qualified DNS record name."
+          },
+          "value": {
+            "type": "string",
+            "description": "Exact value to publish."
+          },
+          "priority": {
+            "type": "integer",
+            "description": "MX priority. Present only for MX records."
+          },
+          "ttl": {
+            "type": "integer",
+            "description": "Suggested TTL in seconds when the API can provide one."
+          },
+          "required": {
+            "type": "boolean",
+            "const": true
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "inbound_mx",
+              "ownership_verification",
+              "spf",
+              "dkim",
+              "dmarc",
+              "tls_reporting"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "found",
+              "missing",
+              "incorrect"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Short explanation of why this record is needed."
+          }
+        },
+        "required": [
+          "type",
+          "name",
+          "fqdn",
+          "value",
+          "required",
+          "purpose",
+          "status"
+        ]
+      },
       "UnverifiedDomain": {
         "type": "object",
         "properties": {
@@ -4856,6 +4985,13 @@ export const openapiDocument: Record<string, unknown> = {
           "verification_token": {
             "type": "string",
             "description": "Add this value as a TXT record to verify ownership"
+          },
+          "dns_records": {
+            "type": "array",
+            "description": "Exact DNS records to publish for this pending domain claim.",
+            "items": {
+              "$ref": "#/components/schemas/DomainDnsRecord"
+            }
           },
           "created_at": {
             "type": "string",
@@ -4880,6 +5016,15 @@ export const openapiDocument: Record<string, unknown> = {
             "minLength": 1,
             "maxLength": 253,
             "description": "The domain name to claim (e.g. \"example.com\")"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "description": "Set to true to confirm replacing an existing mailbox provider after an mx_conflict response."
+          },
+          "outbound": {
+            "type": "boolean",
+            "deprecated": true,
+            "description": "Deprecated and ignored. Outbound DNS is provisioned for every new domain claim."
           }
         },
         "required": [
@@ -4914,6 +5059,13 @@ export const openapiDocument: Record<string, unknown> = {
               "verified": {
                 "type": "boolean",
                 "const": true
+              },
+              "dns_records": {
+                "type": "array",
+                "description": "Exact DNS records checked for this verification attempt.",
+                "items": {
+                  "$ref": "#/components/schemas/DomainDnsRecord"
+                }
               }
             },
             "required": [
@@ -4934,6 +5086,29 @@ export const openapiDocument: Record<string, unknown> = {
               "txtFound": {
                 "type": "boolean",
                 "description": "Whether the TXT verification record was found"
+              },
+              "spfFound": {
+                "type": "boolean",
+                "description": "Whether the SPF record includes Primitive."
+              },
+              "dkimFound": {
+                "type": "boolean",
+                "description": "Whether the DKIM public key record was found."
+              },
+              "dmarcFound": {
+                "type": "boolean",
+                "description": "Whether the DMARC record was found."
+              },
+              "tlsRptFound": {
+                "type": "boolean",
+                "description": "Whether the TLS-RPT record was found."
+              },
+              "dns_records": {
+                "type": "array",
+                "description": "Exact DNS records checked for this verification attempt.",
+                "items": {
+                  "$ref": "#/components/schemas/DomainDnsRecord"
+                }
               },
               "error": {
                 "type": "string",
@@ -5437,6 +5612,34 @@ export const openapiDocument: Record<string, unknown> = {
           "created_at"
         ]
       },
+      "SendMailAttachment": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Attachment filename. Control characters are rejected."
+          },
+          "content_type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional MIME content type. Control characters are rejected."
+          },
+          "content_base64": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 44040192,
+            "description": "Base64-encoded attachment bytes."
+          }
+        },
+        "required": [
+          "filename",
+          "content_base64"
+        ]
+      },
       "SendMailInput": {
         "type": "object",
         "additionalProperties": false,
@@ -5483,6 +5686,14 @@ export const openapiDocument: Record<string, unknown> = {
               "minLength": 1,
               "maxLength": 998,
               "pattern": "^[^\\x00-\\x1F\\x7F]+$"
+            }
+          },
+          "attachments": {
+            "type": "array",
+            "maxItems": 100,
+            "description": "Inline attachments. Send requests with attachments to https://api.primitive.dev/v1/send-mail. Combined raw decoded attachment bytes must be at most 31457280.",
+            "items": {
+              "$ref": "#/components/schemas/SendMailAttachment"
             }
           },
           "wait": {

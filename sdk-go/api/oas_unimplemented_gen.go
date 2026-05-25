@@ -15,9 +15,11 @@ var _ Handler = UnimplementedHandler{}
 
 // AddDomain implements addDomain operation.
 //
-// Creates an unverified domain claim. You will receive a
-// `verification_token` to add as a DNS TXT record before
-// calling the verify endpoint.
+// Creates an unverified domain claim and returns the exact
+// DNS records to publish in `dns_records`. Publish those
+// records before calling the verify endpoint. To give users
+// an importable DNS file, call `downloadDomainZoneFile` or run
+// `primitive domains zone-file --id <domain-id>`.
 //
 // POST /domains
 func (UnimplementedHandler) AddDomain(ctx context.Context, req *AddDomainInput) (r AddDomainRes, _ error) {
@@ -209,6 +211,18 @@ func (UnimplementedHandler) DiscardEmailContent(ctx context.Context, params Disc
 //
 // GET /emails/{id}/attachments.tar.gz
 func (UnimplementedHandler) DownloadAttachments(ctx context.Context, params DownloadAttachmentsParams) (r DownloadAttachmentsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DownloadDomainZoneFile implements downloadDomainZoneFile operation.
+//
+// Downloads a BIND-format DNS zone file containing the DNS records
+// required for a domain claim. Agents should offer this after
+// `addDomain` when users want to import DNS records instead of
+// copying each record manually.
+//
+// GET /domains/{id}/zone-file
+func (UnimplementedHandler) DownloadDomainZoneFile(ctx context.Context, params DownloadDomainZoneFileParams) (r DownloadDomainZoneFileRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -785,9 +799,15 @@ func (UnimplementedHandler) VerifyCliSignup(ctx context.Context, req *VerifyCliS
 
 // VerifyDomain implements verifyDomain operation.
 //
-// Checks DNS records (MX and TXT) to verify domain ownership.
+// Checks DNS records required for inbound routing, ownership,
+// and outbound authentication: MX, ownership TXT, SPF, DKIM,
+// DMARC, and TLS-RPT.
 // On success, the domain is promoted from unverified to verified.
-// On failure, returns which checks passed and which failed.
+// On failure, returns which checks passed and which failed,
+// plus the exact DNS records still expected. To give users
+// an importable DNS file for missing records, call
+// `downloadDomainZoneFile` or run
+// `primitive domains zone-file --id <domain-id>`.
 //
 // POST /domains/{id}/verify
 func (UnimplementedHandler) VerifyDomain(ctx context.Context, params VerifyDomainParams) (r VerifyDomainRes, _ error) {

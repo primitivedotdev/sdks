@@ -787,9 +787,11 @@ paths:
       operationId: addDomain
       summary: Claim a new domain
       description: |
-        Creates an unverified domain claim. You will receive a
-        `verification_token` to add as a DNS TXT record before
-        calling the verify endpoint.
+        Creates an unverified domain claim and returns the exact
+        DNS records to publish in `dns_records`. Publish those
+        records before calling the verify endpoint. To give users
+        an importable DNS file, call `downloadDomainZoneFile` or run
+        `primitive domains zone-file --id <domain-id>`.
       tags: [Domains]
       requestBody:
         required: true
@@ -906,9 +908,15 @@ paths:
       operationId: verifyDomain
       summary: Verify domain ownership
       description: |
-        Checks DNS records (MX and TXT) to verify domain ownership.
+        Checks DNS records required for inbound routing, ownership,
+        and outbound authentication: MX, ownership TXT, SPF, DKIM,
+        DMARC, and TLS-RPT.
         On success, the domain is promoted from unverified to verified.
-        On failure, returns which checks passed and which failed.
+        On failure, returns which checks passed and which failed,
+        plus the exact DNS records still expected. To give users
+        an importable DNS file for missing records, call
+        `downloadDomainZoneFile` or run
+        `primitive domains zone-file --id <domain-id>`.
       tags: [Domains]
       responses:
         '200':
@@ -928,6 +936,50 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /domains/{id}/zone-file:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    get:
+      operationId: downloadDomainZoneFile
+      summary: Download domain DNS zone file
+      description: |
+        Downloads a BIND-format DNS zone file containing the DNS records
+        required for a domain claim. Agents should offer this after
+        `addDomain` when users want to import DNS records instead of
+        copying each record manually.
+      tags: [Domains]
+      parameters:
+        - name: outbound_only
+          in: query
+          schema:
+            type: boolean
+          description: |
+            When true, include only outbound DNS records. Verified domains
+            default to outbound-only; pending claims default to all required
+            records.
+      responses:
+        '200':
+          description: BIND-format zone file
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="example.com.zone"'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 
   # ---------------------------------------------------------------------------
   # Emails
@@ -3510,7 +3562,7 @@ components:
       description: |
         A domain can be either verified or unverified. Verified domains have
         `is_active` and `spam_threshold` fields. Unverified domains have a
-        `verification_token` for DNS verification.
+        `verification_token` and `dns_records` for DNS setup.
       oneOf:
         - $ref: '#/components/schemas/VerifiedDomain'
         - $ref: '#/components/schemas/UnverifiedDomain'
@@ -3542,6 +3594,43 @@ components:
           format: date-time
       required: [id, org_id, domain, verified, is_active, created_at]
 
+    DomainDnsRecord:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum: [MX, TXT]
+          description: DNS record type.
+        name:
+          type: string
+          description: DNS-provider host/name value relative to the managed root zone.
+        fqdn:
+          type: string
+          description: Fully-qualified DNS record name.
+        value:
+          type: string
+          description: Exact value to publish.
+        priority:
+          type: integer
+          description: MX priority. Present only for MX records.
+        ttl:
+          type: integer
+          description: Suggested TTL in seconds when the API can provide one.
+        required:
+          type: boolean
+          const: true
+        purpose:
+          type: string
+          enum: [inbound_mx, ownership_verification, spf, dkim, dmarc, tls_reporting]
+        status:
+          type: string
+          enum: [pending, found, missing, incorrect]
+        message:
+          type: string
+          description: Short explanation of why this record is needed.
+      required: [type, name, fqdn, value, required, purpose, status]
+
     UnverifiedDomain:
       type: object
       properties:
@@ -3559,6 +3648,11 @@ components:
         verification_token:
           type: string
           description: Add this value as a TXT record to verify ownership
+        dns_records:
+          type: array
+          description: Exact DNS records to publish for this pending domain claim.
+          items:
+            $ref: '#/components/schemas/DomainDnsRecord'
         created_at:
           type: string
           format: date-time
@@ -3573,6 +3667,13 @@ components:
           minLength: 1
           maxLength: 253
           description: The domain name to claim (e.g. "example.com")
+        confirmed:
+          type: boolean
+          description: Set to true to confirm replacing an existing mailbox provider after an mx_conflict response.
+        outbound:
+          type: boolean
+          deprecated: true
+          description: Deprecated and ignored. Outbound DNS is provisioned for every new domain claim.
       required: [domain]
 
     UpdateDomainInput:
@@ -3596,6 +3697,11 @@ components:
             verified:
               type: boolean
               const: true
+            dns_records:
+              type: array
+              description: Exact DNS records checked for this verification attempt.
+              items:
+                $ref: '#/components/schemas/DomainDnsRecord'
           required: [verified]
         - type: object
           properties:
@@ -3608,6 +3714,23 @@ components:
             txtFound:
               type: boolean
               description: Whether the TXT verification record was found
+            spfFound:
+              type: boolean
+              description: Whether the SPF record includes Primitive.
+            dkimFound:
+              type: boolean
+              description: Whether the DKIM public key record was found.
+            dmarcFound:
+              type: boolean
+              description: Whether the DMARC record was found.
+            tlsRptFound:
+              type: boolean
+              description: Whether the TLS-RPT record was found.
+            dns_records:
+              type: array
+              description: Exact DNS records checked for this verification attempt.
+              items:
+                $ref: '#/components/schemas/DomainDnsRecord'
             error:
               type: string
               description: Human-readable verification failure reason
@@ -3949,6 +4072,27 @@ components:
     # -------------------------------------------------------------------------
     # Sending
     # -------------------------------------------------------------------------
+    SendMailAttachment:
+      type: object
+      additionalProperties: false
+      properties:
+        filename:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Attachment filename. Control characters are rejected.
+        content_type:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Optional MIME content type. Control characters are rejected.
+        content_base64:
+          type: string
+          minLength: 1
+          maxLength: 44040192
+          description: Base64-encoded attachment bytes.
+      required: [filename, content_base64]
+
     SendMailInput:
       type: object
       additionalProperties: false
@@ -3989,6 +4133,12 @@ components:
             minLength: 1
             maxLength: 998
             pattern: '^[^\x00-\x1F\x7F]+$'
+        attachments:
+          type: array
+          maxItems: 100
+          description: Inline attachments. Send requests with attachments to https://api.primitive.dev/v1/send-mail. Combined raw decoded attachment bytes must be at most 31457280.
+          items:
+            $ref: '#/components/schemas/SendMailAttachment'
         wait:
           type: boolean
           description: When true, wait for the first downstream SMTP delivery outcome before returning.

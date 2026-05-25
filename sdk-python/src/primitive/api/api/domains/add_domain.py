@@ -94,9 +94,11 @@ def sync_detailed(
 ) -> Response[AddDomainResponse201 | ErrorResponse]:
     """ Claim a new domain
 
-     Creates an unverified domain claim. You will receive a
-    `verification_token` to add as a DNS TXT record before
-    calling the verify endpoint.
+     Creates an unverified domain claim and returns the exact
+    DNS records to publish in `dns_records`. Publish those
+    records before calling the verify endpoint. To give users
+    an importable DNS file, call `downloadDomainZoneFile` or run
+    `primitive domains zone-file --id <domain-id>`.
 
     Args:
         body (AddDomainInput):
@@ -129,9 +131,11 @@ def sync(
 ) -> AddDomainResponse201 | ErrorResponse | None:
     """ Claim a new domain
 
-     Creates an unverified domain claim. You will receive a
-    `verification_token` to add as a DNS TXT record before
-    calling the verify endpoint.
+     Creates an unverified domain claim and returns the exact
+    DNS records to publish in `dns_records`. Publish those
+    records before calling the verify endpoint. To give users
+    an importable DNS file, call `downloadDomainZoneFile` or run
+    `primitive domains zone-file --id <domain-id>`.
 
     Args:
         body (AddDomainInput):
@@ -159,9 +163,11 @@ async def asyncio_detailed(
 ) -> Response[AddDomainResponse201 | ErrorResponse]:
     """ Claim a new domain
 
-     Creates an unverified domain claim. You will receive a
-    `verification_token` to add as a DNS TXT record before
-    calling the verify endpoint.
+     Creates an unverified domain claim and returns the exact
+    DNS records to publish in `dns_records`. Publish those
+    records before calling the verify endpoint. To give users
+    an importable DNS file, call `downloadDomainZoneFile` or run
+    `primitive domains zone-file --id <domain-id>`.
 
     Args:
         body (AddDomainInput):
@@ -194,9 +200,11 @@ async def asyncio(
 ) -> AddDomainResponse201 | ErrorResponse | None:
     """ Claim a new domain
 
-     Creates an unverified domain claim. You will receive a
-    `verification_token` to add as a DNS TXT record before
-    calling the verify endpoint.
+     Creates an unverified domain claim and returns the exact
+    DNS records to publish in `dns_records`. Publish those
+    records before calling the verify endpoint. To give users
+    an importable DNS file, call `downloadDomainZoneFile` or run
+    `primitive domains zone-file --id <domain-id>`.
 
     Args:
         body (AddDomainInput):

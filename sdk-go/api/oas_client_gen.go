@@ -30,9 +30,11 @@ func trimTrailingSlashes(u *url.URL) {
 type Invoker interface {
 	// AddDomain invokes addDomain operation.
 	//
-	// Creates an unverified domain claim. You will receive a
-	// `verification_token` to add as a DNS TXT record before
-	// calling the verify endpoint.
+	// Creates an unverified domain claim and returns the exact
+	// DNS records to publish in `dns_records`. Publish those
+	// records before calling the verify endpoint. To give users
+	// an importable DNS file, call `downloadDomainZoneFile` or run
+	// `primitive domains zone-file --id <domain-id>`.
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, request *AddDomainInput) (AddDomainRes, error)
@@ -185,6 +187,15 @@ type Invoker interface {
 	//
 	// GET /emails/{id}/attachments.tar.gz
 	DownloadAttachments(ctx context.Context, params DownloadAttachmentsParams) (DownloadAttachmentsRes, error)
+	// DownloadDomainZoneFile invokes downloadDomainZoneFile operation.
+	//
+	// Downloads a BIND-format DNS zone file containing the DNS records
+	// required for a domain claim. Agents should offer this after
+	// `addDomain` when users want to import DNS records instead of
+	// copying each record manually.
+	//
+	// GET /domains/{id}/zone-file
+	DownloadDomainZoneFile(ctx context.Context, params DownloadDomainZoneFileParams) (DownloadDomainZoneFileRes, error)
 	// DownloadRawEmail invokes downloadRawEmail operation.
 	//
 	// Downloads the raw RFC 822 email file (.eml). Authenticates via
@@ -638,9 +649,15 @@ type Invoker interface {
 	VerifyCliSignup(ctx context.Context, request *VerifyCliSignupInput) (VerifyCliSignupRes, error)
 	// VerifyDomain invokes verifyDomain operation.
 	//
-	// Checks DNS records (MX and TXT) to verify domain ownership.
+	// Checks DNS records required for inbound routing, ownership,
+	// and outbound authentication: MX, ownership TXT, SPF, DKIM,
+	// DMARC, and TLS-RPT.
 	// On success, the domain is promoted from unverified to verified.
-	// On failure, returns which checks passed and which failed.
+	// On failure, returns which checks passed and which failed,
+	// plus the exact DNS records still expected. To give users
+	// an importable DNS file for missing records, call
+	// `downloadDomainZoneFile` or run
+	// `primitive domains zone-file --id <domain-id>`.
 	//
 	// POST /domains/{id}/verify
 	VerifyDomain(ctx context.Context, params VerifyDomainParams) (VerifyDomainRes, error)
@@ -689,9 +706,11 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 
 // AddDomain invokes addDomain operation.
 //
-// Creates an unverified domain claim. You will receive a
-// `verification_token` to add as a DNS TXT record before
-// calling the verify endpoint.
+// Creates an unverified domain claim and returns the exact
+// DNS records to publish in `dns_records`. Publish those
+// records before calling the verify endpoint. To give users
+// an importable DNS file, call `downloadDomainZoneFile` or run
+// `primitive domains zone-file --id <domain-id>`.
 //
 // POST /domains
 func (c *Client) AddDomain(ctx context.Context, request *AddDomainInput) (AddDomainRes, error) {
@@ -2486,6 +2505,156 @@ func (c *Client) sendDownloadAttachments(ctx context.Context, params DownloadAtt
 
 	stage = "DecodeResponse"
 	result, err := decodeDownloadAttachmentsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DownloadDomainZoneFile invokes downloadDomainZoneFile operation.
+//
+// Downloads a BIND-format DNS zone file containing the DNS records
+// required for a domain claim. Agents should offer this after
+// `addDomain` when users want to import DNS records instead of
+// copying each record manually.
+//
+// GET /domains/{id}/zone-file
+func (c *Client) DownloadDomainZoneFile(ctx context.Context, params DownloadDomainZoneFileParams) (DownloadDomainZoneFileRes, error) {
+	res, err := c.sendDownloadDomainZoneFile(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDownloadDomainZoneFile(ctx context.Context, params DownloadDomainZoneFileParams) (res DownloadDomainZoneFileRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("downloadDomainZoneFile"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/domains/{id}/zone-file"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DownloadDomainZoneFileOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/domains/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/zone-file"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "outbound_only" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "outbound_only",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.OutboundOnly.Get(); ok {
+				return e.EncodeValue(conv.BoolToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DownloadDomainZoneFileOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDownloadDomainZoneFileResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -7876,9 +8045,15 @@ func (c *Client) sendVerifyCliSignup(ctx context.Context, request *VerifyCliSign
 
 // VerifyDomain invokes verifyDomain operation.
 //
-// Checks DNS records (MX and TXT) to verify domain ownership.
+// Checks DNS records required for inbound routing, ownership,
+// and outbound authentication: MX, ownership TXT, SPF, DKIM,
+// DMARC, and TLS-RPT.
 // On success, the domain is promoted from unverified to verified.
-// On failure, returns which checks passed and which failed.
+// On failure, returns which checks passed and which failed,
+// plus the exact DNS records still expected. To give users
+// an importable DNS file for missing records, call
+// `downloadDomainZoneFile` or run
+// `primitive domains zone-file --id <domain-id>`.
 //
 // POST /domains/{id}/verify
 func (c *Client) VerifyDomain(ctx context.Context, params VerifyDomainParams) (VerifyDomainRes, error) {
