@@ -79,6 +79,9 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" inbox status --help | grep -q -- "readiness" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
 	"$$bin" chat --help | grep -q -- "follow-up commands" && \
+	root_help_config="$$smoke_dir/root-help-config" && \
+	HOME="$$root_help_config" XDG_CONFIG_HOME="$$root_help_config/.config" "$$bin" >"$$smoke_dir/root-help.txt" && \
+	grep -q -- 'primitive signup <email> --signup-code <invite-code> --accept-terms' "$$smoke_dir/root-help.txt" && \
 	config_home="$$smoke_dir/config-home" && \
 	config_root="$$config_home/.config" && \
 	config_dir="$$config_root/primitive" && \
