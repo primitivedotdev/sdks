@@ -59,6 +59,9 @@
       "sent": {
         "description": "Short aliases for outbound sent-email history: `primitive sent list` and `primitive sent get`."
       },
+      "threads": {
+        "description": "Inspect conversation threads spanning received and sent emails: `primitive threads get --id <thread-id>`."
+      },
       "endpoints": {
         "description": "Manage webhook endpoints that receive email events"
       },
