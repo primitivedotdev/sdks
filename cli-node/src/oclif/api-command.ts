@@ -745,6 +745,10 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   };
 
   if (!operation.binaryResponse) {
+    flags.json = Flags.boolean({
+      description:
+        "Accepted for consistency with task-focused commands. Generated API commands already print JSON by default.",
+    });
     flags.envelope = Flags.boolean({
       description:
         "Print the full response envelope, including pagination metadata such as meta.cursor. Defaults to printing only the data payload for backward compatibility.",
@@ -877,6 +881,8 @@ export const OPERATION_HINTS: Record<string, string> = {
     "Tip: prefer `primitive domains zone-file --id <domain-id> --output <domain>.zone` for CLI-friendly file output.",
   getInboxStatus:
     "Tip: prefer `primitive inbox status` for a compact readiness summary and next-step commands.",
+  getSendPermissions:
+    "Tip: this command answers where you may send mail to. To find usable sender domains for --from, run `primitive domains list` or `primitive inbox status` and use an address at an active verified domain.",
   sendEmail:
     "Tip: prefer `primitive send --to <address> --body <text> --attachment <file>` for file attachments. This raw command exists for callers passing JSON.",
   createFunction:
