@@ -1,0 +1,94 @@
+.TH PRIMITIVE 1
+.SH NAME
+primitive \- command line interface for Primitive email and Functions
+.SH SYNOPSIS
+.B primitive
+.I command
+[\fIoptions\fR]
+.br
+.B primitive
+.B --help
+.br
+.B primitive
+.I command
+.B --help
+.SH DESCRIPTION
+.B primitive
+is the command line interface for Primitive. It sends mail, inspects inbound and outbound email, manages domains and webhook endpoints, deploys Primitive Functions, and exposes generated API operations for scripting.
+.PP
+Most commands print human-readable output by default. Commands that expose JSON usually provide a
+.B --json
+flag or use generated operation output that can be piped into tools such as
+.BR jq (1).
+.SH AUTHENTICATION
+Commands use saved OAuth credentials from
+.B primitive signin
+or an API key from
+.B --api-key
+or
+.BR PRIMITIVE_API_KEY .
+.PP
+Run
+.B primitive whoami
+to verify which account the CLI is authenticated as.
+.SH COMMON COMMANDS
+.TP
+.B primitive send --to ADDRESS --subject SUBJECT --body TEXT
+Send an outbound email.
+.TP
+.B primitive send --to ADDRESS --body TEXT --attachment PATH
+Send an outbound email with a file attachment.
+.TP
+.B primitive domains add DOMAIN
+Start a custom-domain claim.
+.TP
+.B primitive domains verify --id DOMAIN_ID
+Verify DNS records for a pending domain claim.
+.TP
+.B primitive domains zone-file --id DOMAIN_ID
+Download DNS records as a BIND-format zone file.
+.TP
+.B primitive emails latest
+Show recent inbound emails.
+.TP
+.B primitive functions init NAME
+Scaffold a Primitive Function.
+.TP
+.B primitive functions deploy --name NAME --file PATH
+Deploy a Primitive Function bundle.
+.TP
+.B primitive list-operations
+Print the generated API operation manifest.
+.TP
+.B primitive describe COMMAND_OR_OPERATION
+Describe a generated API operation, including request and response schemas.
+.SH GLOBAL OPTIONS
+.TP
+.B --api-key KEY
+Use an explicit Primitive API key for this command.
+.TP
+.B --time
+Print command duration to standard error after completion.
+.TP
+.B --help
+Show command help.
+.SH ENVIRONMENT
+.TP
+.B PRIMITIVE_API_KEY
+API key used when
+.B --api-key
+is not supplied and no saved OAuth credential should be used.
+.TP
+.B PRIMITIVE_API_BASE_URL_1
+Override the primary API base URL. Intended for development and testing.
+.TP
+.B PRIMITIVE_API_BASE_URL_2
+Override the secondary API base URL used for selected send flows. Intended for development and testing.
+.SH FILES
+.TP
+.I ~/.config/primitive
+Default CLI configuration directory used by oclif on most systems.
+.SH SEE ALSO
+.B primitive --help
+.br
+Primitive documentation: https://primitive.dev

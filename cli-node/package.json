@@ -6,11 +6,15 @@
   "sideEffects": false,
   "files": [
     "bin",
-    "dist"
+    "dist",
+    "man"
   ],
   "bin": {
     "primitive": "./bin/run.js"
   },
+  "man": [
+    "./man/primitive.1"
+  ],
   "oclif": {
     "bin": "primitive",
     "commands": {
