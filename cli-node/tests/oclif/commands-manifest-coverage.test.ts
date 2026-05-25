@@ -7,6 +7,26 @@ import {
   COMMANDS,
 } from "../../src/oclif/index.js";
 
+function readCliPackageJson(): {
+  files?: string[];
+  oclif?: {
+    plugins?: string[];
+    topics?: Record<string, { hidden?: boolean }>;
+    "warn-if-update-available"?: {
+      frequency?: number;
+      frequencyUnit?: string;
+      message?: string;
+      timeoutInDays?: number;
+    };
+  };
+  scripts?: Record<string, string>;
+} {
+  const packageJsonPath = fileURLToPath(
+    new URL("../../package.json", import.meta.url),
+  );
+  return JSON.parse(readFileSync(packageJsonPath, "utf8"));
+}
+
 // Regression guard for the discovery / execution surface staying in
 // sync. `primitive list-operations` enumerates the operation
 // manifest, and the CLI's COMMANDS map auto-registers a wrapper
@@ -38,13 +58,7 @@ describe("COMMANDS / manifest coverage", () => {
     // or, conversely, hide commands the runtime exposes. The CLI
     // resolves commands via the dynamic COMMANDS map at runtime; the
     // static manifest must not ship with the package.
-    const packageJsonPath = fileURLToPath(
-      new URL("../../package.json", import.meta.url),
-    );
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
-      files?: string[];
-      scripts?: Record<string, string>;
-    };
+    const packageJson = readCliPackageJson();
 
     expect(packageJson.files ?? []).not.toContain("oclif.manifest.json");
     const prepack = packageJson.scripts?.prepack ?? "";
@@ -173,15 +187,23 @@ describe("COMMANDS / manifest coverage", () => {
   });
 
   it("keeps the config topic out of root help", () => {
-    const packageJsonPath = fileURLToPath(
-      new URL("../../package.json", import.meta.url),
-    );
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
-      oclif?: {
-        topics?: Record<string, { hidden?: boolean }>;
-      };
-    };
+    const packageJson = readCliPackageJson();
 
     expect(packageJson.oclif?.topics?.config?.hidden).toBe(true);
+  });
+
+  it("configures daily update warnings", () => {
+    const packageJson = readCliPackageJson();
+    const updateWarning = packageJson.oclif?.["warn-if-update-available"];
+
+    expect(packageJson.oclif?.plugins ?? []).toContain(
+      "@oclif/plugin-warn-if-update-available",
+    );
+    expect(updateWarning?.timeoutInDays).toBe(1);
+    expect(updateWarning?.frequency).toBe(1);
+    expect(updateWarning?.frequencyUnit).toBe("days");
+    expect(updateWarning?.message).toContain(
+      "npm install -g @primitivedotdev/cli@latest",
+    );
   });
 });
