@@ -106,6 +106,9 @@ class EmailSearchResult:
                 is `pending`; it means the email is past ingestion but
                 webhook delivery has not yet begun. Two overlapping uses
                 of the word `pending` for distinct lifecycle phases.
+            thread_id (None | Unset | UUID): Conversation thread this message belongs to. Fetch
+                `/threads/{thread_id}` for the full ordered thread. NULL on
+                messages received before threading was enabled.
             score (float | Unset): Relevance score. Present only when sorting by relevance.
             highlights (EmailSearchHighlights | Unset):
      """
@@ -127,6 +130,7 @@ class EmailSearchResult:
     spam_score: float | None | Unset = UNSET
     raw_size_bytes: int | None | Unset = UNSET
     webhook_status: EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset = UNSET
+    thread_id: None | Unset | UUID = UNSET
     score: float | Unset = UNSET
     highlights: EmailSearchHighlights | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -209,6 +213,14 @@ class EmailSearchResult:
         else:
             webhook_status = self.webhook_status
 
+        thread_id: None | str | Unset
+        if isinstance(self.thread_id, Unset):
+            thread_id = UNSET
+        elif isinstance(self.thread_id, UUID):
+            thread_id = str(self.thread_id)
+        else:
+            thread_id = self.thread_id
+
         score = self.score
 
         highlights: dict[str, Any] | Unset = UNSET
@@ -244,6 +256,8 @@ class EmailSearchResult:
             field_dict["raw_size_bytes"] = raw_size_bytes
         if webhook_status is not UNSET:
             field_dict["webhook_status"] = webhook_status
+        if thread_id is not UNSET:
+            field_dict["thread_id"] = thread_id
         if score is not UNSET:
             field_dict["score"] = score
         if highlights is not UNSET:
@@ -409,6 +423,26 @@ class EmailSearchResult:
         webhook_status = _parse_webhook_status(d.pop("webhook_status", UNSET))
 
 
+        def _parse_thread_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                thread_id_type_0 = UUID(data)
+
+
+
+                return thread_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
+
+
         score = d.pop("score", UNSET)
 
         _highlights = d.pop("highlights", UNSET)
@@ -439,6 +473,7 @@ class EmailSearchResult:
             spam_score=spam_score,
             raw_size_bytes=raw_size_bytes,
             webhook_status=webhook_status,
+            thread_id=thread_id,
             score=score,
             highlights=highlights,
         )

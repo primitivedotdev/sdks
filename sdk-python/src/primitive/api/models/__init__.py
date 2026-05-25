@@ -50,12 +50,16 @@ from .delivery_summary_email_type_0 import DeliverySummaryEmailType0
 from .delivery_summary_status import DeliverySummaryStatus
 from .discard_content_result import DiscardContentResult
 from .discard_email_content_response_200 import DiscardEmailContentResponse200
+from .dkim_signature import DkimSignature
 from .domain_dns_record import DomainDnsRecord
 from .domain_dns_record_purpose import DomainDnsRecordPurpose
 from .domain_dns_record_status import DomainDnsRecordStatus
 from .domain_dns_record_type import DomainDnsRecordType
 from .domain_verify_result_type_0 import DomainVerifyResultType0
 from .domain_verify_result_type_1 import DomainVerifyResultType1
+from .email_address import EmailAddress
+from .email_attachment import EmailAttachment
+from .email_auth import EmailAuth
 from .email_detail import EmailDetail
 from .email_detail_reply import EmailDetailReply
 from .email_search_facet_bucket import EmailSearchFacetBucket
@@ -110,6 +114,7 @@ from .get_inbox_status_response_200 import GetInboxStatusResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
 from .get_storage_stats_response_200 import GetStorageStatsResponse200
+from .get_thread_response_200 import GetThreadResponse200
 from .get_webhook_secret_response_200 import GetWebhookSecretResponse200
 from .inbox_status import InboxStatus
 from .inbox_status_domain import InboxStatusDomain
@@ -133,6 +138,9 @@ from .list_function_secrets_response_200_data import ListFunctionSecretsResponse
 from .list_functions_response_200 import ListFunctionsResponse200
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
 from .pagination_meta import PaginationMeta
+from .parsed_email_data import ParsedEmailData
+from .parsed_email_data_error_type_0 import ParsedEmailDataErrorType0
+from .parsed_email_data_status import ParsedEmailDataStatus
 from .poll_cli_login_input import PollCliLoginInput
 from .poll_cli_login_response_200 import PollCliLoginResponse200
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
@@ -185,6 +193,9 @@ from .test_function_body import TestFunctionBody
 from .test_function_response_200 import TestFunctionResponse200
 from .test_invocation_result import TestInvocationResult
 from .test_result import TestResult
+from .thread import Thread
+from .thread_message import ThreadMessage
+from .thread_message_direction import ThreadMessageDirection
 from .unverified_domain import UnverifiedDomain
 from .update_account_input import UpdateAccountInput
 from .update_account_response_200 import UpdateAccountResponse200
@@ -256,12 +267,16 @@ __all__ = (
     "DeliverySummaryStatus",
     "DiscardContentResult",
     "DiscardEmailContentResponse200",
+    "DkimSignature",
     "DomainDnsRecord",
     "DomainDnsRecordPurpose",
     "DomainDnsRecordStatus",
     "DomainDnsRecordType",
     "DomainVerifyResultType0",
     "DomainVerifyResultType1",
+    "EmailAddress",
+    "EmailAttachment",
+    "EmailAuth",
     "EmailDetail",
     "EmailDetailReply",
     "EmailSearchFacetBucket",
@@ -316,6 +331,7 @@ __all__ = (
     "GetSendPermissionsResponse200",
     "GetSentEmailResponse200",
     "GetStorageStatsResponse200",
+    "GetThreadResponse200",
     "GetWebhookSecretResponse200",
     "InboxStatus",
     "InboxStatusDomain",
@@ -339,6 +355,9 @@ __all__ = (
     "ListFunctionsResponse200",
     "ListSentEmailsResponse200",
     "PaginationMeta",
+    "ParsedEmailData",
+    "ParsedEmailDataErrorType0",
+    "ParsedEmailDataStatus",
     "PollCliLoginInput",
     "PollCliLoginResponse200",
     "ReplayDeliveryResponse200",
@@ -391,6 +410,9 @@ __all__ = (
     "TestFunctionResponse200",
     "TestInvocationResult",
     "TestResult",
+    "Thread",
+    "ThreadMessage",
+    "ThreadMessageDirection",
     "UnverifiedDomain",
     "UpdateAccountInput",
     "UpdateAccountResponse200",

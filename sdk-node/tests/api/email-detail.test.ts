@@ -41,6 +41,7 @@ const SAMPLE: EmailDetail = {
   from_email: "alice@example.com",
   to_email: "support@example.com",
   from_known_address: true,
+  thread_id: "44444444-4444-4444-4444-444444444444",
   replies: [
     {
       id: "33333333-3333-3333-3333-333333333333",
@@ -51,6 +52,38 @@ const SAMPLE: EmailDetail = {
       queue_id: null,
     },
   ],
+  parsed: {
+    status: "complete",
+    body_text: "Hi there",
+    body_html: "<p>Hi there</p>",
+    reply_to: null,
+    cc: [{ name: null, address: "cc@example.com" }],
+    bcc: null,
+    to_addresses: [{ name: "Support", address: "support@example.com" }],
+    in_reply_to: null,
+    references: null,
+    attachments: [],
+  },
+  auth: {
+    spf: "pass",
+    dmarc: "pass",
+    dmarcPolicy: "reject",
+    dmarcFromDomain: "example.com",
+    dmarcSpfAligned: true,
+    dmarcDkimAligned: true,
+    dmarcSpfStrict: false,
+    dmarcDkimStrict: false,
+    dkimSignatures: [
+      {
+        domain: "example.com",
+        selector: "default",
+        result: "pass",
+        aligned: true,
+        keyBits: 2048,
+        algo: "rsa-sha256",
+      },
+    ],
+  },
 };
 
 describe("EmailDetail type contract", () => {
@@ -68,5 +101,17 @@ describe("EmailDetail type contract", () => {
     const reply = SAMPLE.replies[0];
     expect(reply.id).toBe("33333333-3333-3333-3333-333333333333");
     expect(reply.subject).toBe("Re: Hello");
+  });
+
+  it("surfaces thread_id, parsed, and auth (webhook-parity shape)", () => {
+    // parsed and auth are required (non-optional) on EmailDetail, so
+    // they're accessed without `?.`; the chaining below is only on
+    // genuinely nullable/empty-able nested fields (cc, the signatures
+    // array element).
+    expect(SAMPLE.thread_id).toBe("44444444-4444-4444-4444-444444444444");
+    expect(SAMPLE.parsed.status).toBe("complete");
+    expect(SAMPLE.parsed.cc?.[0]?.address).toBe("cc@example.com");
+    expect(SAMPLE.auth.spf).toBe("pass");
+    expect(SAMPLE.auth.dkimSignatures[0]?.result).toBe("pass");
   });
 });

@@ -45,6 +45,7 @@ const emailDetailSampleJSON = `{
   "from_email": "alice@example.com",
   "to_email": "support@example.com",
   "from_known_address": true,
+  "thread_id": "44444444-4444-4444-4444-444444444444",
   "replies": [
     {
       "id": "33333333-3333-3333-3333-333333333333",
@@ -54,7 +55,39 @@ const emailDetailSampleJSON = `{
       "created_at": "2026-05-03T00:00:01Z",
       "queue_id": null
     }
-  ]
+  ],
+  "parsed": {
+    "status": "complete",
+    "body_text": "Hi there",
+    "body_html": "<p>Hi there</p>",
+    "reply_to": null,
+    "cc": [{"name": null, "address": "cc@example.com"}],
+    "bcc": null,
+    "to_addresses": [{"name": "Support", "address": "support@example.com"}],
+    "in_reply_to": null,
+    "references": null,
+    "attachments": []
+  },
+  "auth": {
+    "spf": "pass",
+    "dmarc": "pass",
+    "dmarcPolicy": "reject",
+    "dmarcFromDomain": "example.com",
+    "dmarcSpfAligned": true,
+    "dmarcDkimAligned": true,
+    "dmarcSpfStrict": false,
+    "dmarcDkimStrict": false,
+    "dkimSignatures": [
+      {
+        "domain": "example.com",
+        "selector": "default",
+        "result": "pass",
+        "aligned": true,
+        "keyBits": 2048,
+        "algo": "rsa-sha256"
+      }
+    ]
+  }
 }`
 
 func TestEmailDetailUnmarshalsBodyTextAndBodyHTML(t *testing.T) {

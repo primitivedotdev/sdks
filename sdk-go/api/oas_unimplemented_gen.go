@@ -370,6 +370,26 @@ func (UnimplementedHandler) GetStorageStats(ctx context.Context) (r GetStorageSt
 	return r, ht.ErrNotImplemented
 }
 
+// GetThread implements getThread operation.
+//
+// Returns a conversation thread: its metadata plus the inbound
+// and outbound messages that belong to it, interleaved in time
+// order (oldest first). A thread spans both received emails and
+// your sends, so an agent can reconstruct an entire back-and-forth
+// from one call instead of walking reply headers.
+// Each message carries a `direction` (`inbound` | `outbound`) and
+// an `id`; fetch the full message via `/emails/{id}` or
+// `/sent-emails/{id}` accordingly. Bodies are omitted here to keep
+// the thread view lightweight.
+// Discover a thread id from the `thread_id` field on any email or
+// sent-email (list or detail). The message list is capped; compare
+// `message_count` against `messages.length` to detect truncation.
+//
+// GET /threads/{id}
+func (UnimplementedHandler) GetThread(ctx context.Context, params GetThreadParams) (r GetThreadRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetWebhookSecret implements getWebhookSecret operation.
 //
 // Returns the webhook signing secret for your account. If no

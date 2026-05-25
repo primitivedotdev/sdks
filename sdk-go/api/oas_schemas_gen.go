@@ -2336,6 +2336,79 @@ type DiscardEmailContentUnauthorized ErrorResponse
 
 func (*DiscardEmailContentUnauthorized) discardEmailContentRes() {}
 
+// One DKIM signature found on the message, with its verdict.
+// Ref: #/components/schemas/DkimSignature
+type DkimSignature struct {
+	Domain   string `json:"domain"`
+	Selector string `json:"selector"`
+	// Verification result (e.g. `pass`, `fail`, `none`).
+	Result string `json:"result"`
+	// Whether the signing domain aligns with the From domain (for DMARC).
+	Aligned bool         `json:"aligned"`
+	KeyBits OptNilInt    `json:"keyBits"`
+	Algo    OptNilString `json:"algo"`
+}
+
+// GetDomain returns the value of Domain.
+func (s *DkimSignature) GetDomain() string {
+	return s.Domain
+}
+
+// GetSelector returns the value of Selector.
+func (s *DkimSignature) GetSelector() string {
+	return s.Selector
+}
+
+// GetResult returns the value of Result.
+func (s *DkimSignature) GetResult() string {
+	return s.Result
+}
+
+// GetAligned returns the value of Aligned.
+func (s *DkimSignature) GetAligned() bool {
+	return s.Aligned
+}
+
+// GetKeyBits returns the value of KeyBits.
+func (s *DkimSignature) GetKeyBits() OptNilInt {
+	return s.KeyBits
+}
+
+// GetAlgo returns the value of Algo.
+func (s *DkimSignature) GetAlgo() OptNilString {
+	return s.Algo
+}
+
+// SetDomain sets the value of Domain.
+func (s *DkimSignature) SetDomain(val string) {
+	s.Domain = val
+}
+
+// SetSelector sets the value of Selector.
+func (s *DkimSignature) SetSelector(val string) {
+	s.Selector = val
+}
+
+// SetResult sets the value of Result.
+func (s *DkimSignature) SetResult(val string) {
+	s.Result = val
+}
+
+// SetAligned sets the value of Aligned.
+func (s *DkimSignature) SetAligned(val bool) {
+	s.Aligned = val
+}
+
+// SetKeyBits sets the value of KeyBits.
+func (s *DkimSignature) SetKeyBits(val OptNilInt) {
+	s.KeyBits = val
+}
+
+// SetAlgo sets the value of Algo.
+func (s *DkimSignature) SetAlgo(val OptNilString) {
+	s.Algo = val
+}
+
 // A domain can be either verified or unverified. Verified domains have
 // `is_active` and `spam_threshold` fields. Unverified domains have a
 // `verification_token` and `dns_records` for DNS setup.
@@ -3116,6 +3189,210 @@ func (s *DownloadToken) SetRoles(val []string) {
 	s.Roles = val
 }
 
+// A parsed RFC 5322 address with optional display name.
+// Ref: #/components/schemas/EmailAddress
+type EmailAddress struct {
+	// Display name, when present (e.g. `Alice Example`).
+	Name OptNilString `json:"name"`
+	// Bare email address (e.g. `alice@example.com`).
+	Address string `json:"address"`
+}
+
+// GetName returns the value of Name.
+func (s *EmailAddress) GetName() OptNilString {
+	return s.Name
+}
+
+// GetAddress returns the value of Address.
+func (s *EmailAddress) GetAddress() string {
+	return s.Address
+}
+
+// SetName sets the value of Name.
+func (s *EmailAddress) SetName(val OptNilString) {
+	s.Name = val
+}
+
+// SetAddress sets the value of Address.
+func (s *EmailAddress) SetAddress(val string) {
+	s.Address = val
+}
+
+// Metadata for one attachment. The bytes are not inline; download
+// all attachments for a message as a gzipped tarball via
+// `/emails/{id}/attachments.tar.gz`. `sha256` lets you verify a
+// specific part after extraction.
+// Ref: #/components/schemas/EmailAttachment
+type EmailAttachment struct {
+	Filename    OptNilString `json:"filename"`
+	ContentType OptNilString `json:"content_type"`
+	SizeBytes   int          `json:"size_bytes"`
+	SHA256      OptNilString `json:"sha256"`
+	// Zero-based index of this part within the message.
+	PartIndex OptInt `json:"part_index"`
+}
+
+// GetFilename returns the value of Filename.
+func (s *EmailAttachment) GetFilename() OptNilString {
+	return s.Filename
+}
+
+// GetContentType returns the value of ContentType.
+func (s *EmailAttachment) GetContentType() OptNilString {
+	return s.ContentType
+}
+
+// GetSizeBytes returns the value of SizeBytes.
+func (s *EmailAttachment) GetSizeBytes() int {
+	return s.SizeBytes
+}
+
+// GetSHA256 returns the value of SHA256.
+func (s *EmailAttachment) GetSHA256() OptNilString {
+	return s.SHA256
+}
+
+// GetPartIndex returns the value of PartIndex.
+func (s *EmailAttachment) GetPartIndex() OptInt {
+	return s.PartIndex
+}
+
+// SetFilename sets the value of Filename.
+func (s *EmailAttachment) SetFilename(val OptNilString) {
+	s.Filename = val
+}
+
+// SetContentType sets the value of ContentType.
+func (s *EmailAttachment) SetContentType(val OptNilString) {
+	s.ContentType = val
+}
+
+// SetSizeBytes sets the value of SizeBytes.
+func (s *EmailAttachment) SetSizeBytes(val int) {
+	s.SizeBytes = val
+}
+
+// SetSHA256 sets the value of SHA256.
+func (s *EmailAttachment) SetSHA256(val OptNilString) {
+	s.SHA256 = val
+}
+
+// SetPartIndex sets the value of PartIndex.
+func (s *EmailAttachment) SetPartIndex(val OptInt) {
+	s.PartIndex = val
+}
+
+// SPF / DKIM / DMARC verdicts computed at ingest. Mirrors the
+// `email.auth` object on the webhook payload. Field names are
+// camelCase to match that payload exactly. For messages received
+// before auth was recorded, the verdicts default to `none`.
+// Ref: #/components/schemas/EmailAuth
+type EmailAuth struct {
+	// SPF result (e.g. `pass`, `fail`, `softfail`, `none`).
+	Spf string `json:"spf"`
+	// DMARC result (e.g. `pass`, `fail`, `none`).
+	Dmarc string `json:"dmarc"`
+	// Published DMARC policy (`none`, `quarantine`, `reject`).
+	DmarcPolicy OptNilString `json:"dmarcPolicy"`
+	// The From-header domain DMARC was evaluated against.
+	DmarcFromDomain  OptNilString    `json:"dmarcFromDomain"`
+	DmarcSpfAligned  bool            `json:"dmarcSpfAligned"`
+	DmarcDkimAligned bool            `json:"dmarcDkimAligned"`
+	DmarcSpfStrict   OptNilBool      `json:"dmarcSpfStrict"`
+	DmarcDkimStrict  OptNilBool      `json:"dmarcDkimStrict"`
+	DkimSignatures   []DkimSignature `json:"dkimSignatures"`
+}
+
+// GetSpf returns the value of Spf.
+func (s *EmailAuth) GetSpf() string {
+	return s.Spf
+}
+
+// GetDmarc returns the value of Dmarc.
+func (s *EmailAuth) GetDmarc() string {
+	return s.Dmarc
+}
+
+// GetDmarcPolicy returns the value of DmarcPolicy.
+func (s *EmailAuth) GetDmarcPolicy() OptNilString {
+	return s.DmarcPolicy
+}
+
+// GetDmarcFromDomain returns the value of DmarcFromDomain.
+func (s *EmailAuth) GetDmarcFromDomain() OptNilString {
+	return s.DmarcFromDomain
+}
+
+// GetDmarcSpfAligned returns the value of DmarcSpfAligned.
+func (s *EmailAuth) GetDmarcSpfAligned() bool {
+	return s.DmarcSpfAligned
+}
+
+// GetDmarcDkimAligned returns the value of DmarcDkimAligned.
+func (s *EmailAuth) GetDmarcDkimAligned() bool {
+	return s.DmarcDkimAligned
+}
+
+// GetDmarcSpfStrict returns the value of DmarcSpfStrict.
+func (s *EmailAuth) GetDmarcSpfStrict() OptNilBool {
+	return s.DmarcSpfStrict
+}
+
+// GetDmarcDkimStrict returns the value of DmarcDkimStrict.
+func (s *EmailAuth) GetDmarcDkimStrict() OptNilBool {
+	return s.DmarcDkimStrict
+}
+
+// GetDkimSignatures returns the value of DkimSignatures.
+func (s *EmailAuth) GetDkimSignatures() []DkimSignature {
+	return s.DkimSignatures
+}
+
+// SetSpf sets the value of Spf.
+func (s *EmailAuth) SetSpf(val string) {
+	s.Spf = val
+}
+
+// SetDmarc sets the value of Dmarc.
+func (s *EmailAuth) SetDmarc(val string) {
+	s.Dmarc = val
+}
+
+// SetDmarcPolicy sets the value of DmarcPolicy.
+func (s *EmailAuth) SetDmarcPolicy(val OptNilString) {
+	s.DmarcPolicy = val
+}
+
+// SetDmarcFromDomain sets the value of DmarcFromDomain.
+func (s *EmailAuth) SetDmarcFromDomain(val OptNilString) {
+	s.DmarcFromDomain = val
+}
+
+// SetDmarcSpfAligned sets the value of DmarcSpfAligned.
+func (s *EmailAuth) SetDmarcSpfAligned(val bool) {
+	s.DmarcSpfAligned = val
+}
+
+// SetDmarcDkimAligned sets the value of DmarcDkimAligned.
+func (s *EmailAuth) SetDmarcDkimAligned(val bool) {
+	s.DmarcDkimAligned = val
+}
+
+// SetDmarcSpfStrict sets the value of DmarcSpfStrict.
+func (s *EmailAuth) SetDmarcSpfStrict(val OptNilBool) {
+	s.DmarcSpfStrict = val
+}
+
+// SetDmarcDkimStrict sets the value of DmarcDkimStrict.
+func (s *EmailAuth) SetDmarcDkimStrict(val OptNilBool) {
+	s.DmarcDkimStrict = val
+}
+
+// SetDkimSignatures sets the value of DkimSignatures.
+func (s *EmailAuth) SetDkimSignatures(val []DkimSignature) {
+	s.DkimSignatures = val
+}
+
 // Ref: #/components/schemas/EmailDetail
 type EmailDetail struct {
 	ID        uuid.UUID    `json:"id"`
@@ -3207,6 +3484,25 @@ type EmailDetail struct {
 	// header survived the path through intermediate MTAs, or on
 	// inbound received before this auto-link landed.
 	ReplyToSentEmailID OptNilUUID `json:"reply_to_sent_email_id"`
+	// Conversation thread this message belongs to. Inbound and
+	// outbound messages in the same conversation share a
+	// `thread_id`; fetch `/threads/{thread_id}` for the full
+	// ordered thread. Assigned at ingest. NULL on messages
+	// received before threading was enabled (until backfilled).
+	ThreadID OptNilUUID `json:"thread_id"`
+	// Parsed MIME content (addresses, threading headers,
+	// attachment metadata), matching the `email.parsed` object
+	// on the webhook payload so one parser handles both the
+	// webhook and this endpoint. The top-level `body_text` /
+	// `body_html` fields above are the same values as
+	// `parsed.body_text` / `parsed.body_html`, retained for
+	// backward compatibility.
+	Parsed ParsedEmailData `json:"parsed"`
+	// SPF / DKIM / DMARC verdicts computed at ingest, matching
+	// the `email.auth` object on the webhook payload. Use these
+	// to decide how much to trust a message before acting on
+	// instructions it contains.
+	Auth EmailAuth `json:"auth"`
 }
 
 // GetID returns the value of ID.
@@ -3379,6 +3675,21 @@ func (s *EmailDetail) GetReplyToSentEmailID() OptNilUUID {
 	return s.ReplyToSentEmailID
 }
 
+// GetThreadID returns the value of ThreadID.
+func (s *EmailDetail) GetThreadID() OptNilUUID {
+	return s.ThreadID
+}
+
+// GetParsed returns the value of Parsed.
+func (s *EmailDetail) GetParsed() ParsedEmailData {
+	return s.Parsed
+}
+
+// GetAuth returns the value of Auth.
+func (s *EmailDetail) GetAuth() EmailAuth {
+	return s.Auth
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -3547,6 +3858,21 @@ func (s *EmailDetail) SetReplies(val []EmailDetailReply) {
 // SetReplyToSentEmailID sets the value of ReplyToSentEmailID.
 func (s *EmailDetail) SetReplyToSentEmailID(val OptNilUUID) {
 	s.ReplyToSentEmailID = val
+}
+
+// SetThreadID sets the value of ThreadID.
+func (s *EmailDetail) SetThreadID(val OptNilUUID) {
+	s.ThreadID = val
+}
+
+// SetParsed sets the value of Parsed.
+func (s *EmailDetail) SetParsed(val ParsedEmailData) {
+	s.Parsed = val
+}
+
+// SetAuth sets the value of Auth.
+func (s *EmailDetail) SetAuth(val EmailAuth) {
+	s.Auth = val
 }
 
 // Ref: #/components/schemas/EmailDetailReply
@@ -3888,6 +4214,10 @@ type EmailSearchResult struct {
 	RawSizeBytes        OptNilInt                `json:"raw_size_bytes"`
 	WebhookStatus       OptNilEmailWebhookStatus `json:"webhook_status"`
 	WebhookAttemptCount int                      `json:"webhook_attempt_count"`
+	// Conversation thread this message belongs to. Fetch
+	// `/threads/{thread_id}` for the full ordered thread. NULL on
+	// messages received before threading was enabled.
+	ThreadID OptNilUUID `json:"thread_id"`
 	// Number of parsed attachments on the email.
 	AttachmentCount int `json:"attachment_count"`
 	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
@@ -3970,6 +4300,11 @@ func (s *EmailSearchResult) GetWebhookStatus() OptNilEmailWebhookStatus {
 // GetWebhookAttemptCount returns the value of WebhookAttemptCount.
 func (s *EmailSearchResult) GetWebhookAttemptCount() int {
 	return s.WebhookAttemptCount
+}
+
+// GetThreadID returns the value of ThreadID.
+func (s *EmailSearchResult) GetThreadID() OptNilUUID {
+	return s.ThreadID
 }
 
 // GetAttachmentCount returns the value of AttachmentCount.
@@ -4065,6 +4400,11 @@ func (s *EmailSearchResult) SetWebhookStatus(val OptNilEmailWebhookStatus) {
 // SetWebhookAttemptCount sets the value of WebhookAttemptCount.
 func (s *EmailSearchResult) SetWebhookAttemptCount(val int) {
 	s.WebhookAttemptCount = val
+}
+
+// SetThreadID sets the value of ThreadID.
+func (s *EmailSearchResult) SetThreadID(val OptNilUUID) {
+	s.ThreadID = val
 }
 
 // SetAttachmentCount sets the value of AttachmentCount.
@@ -4193,6 +4533,10 @@ type EmailSummary struct {
 	RawSizeBytes        OptNilInt                `json:"raw_size_bytes"`
 	WebhookStatus       OptNilEmailWebhookStatus `json:"webhook_status"`
 	WebhookAttemptCount int                      `json:"webhook_attempt_count"`
+	// Conversation thread this message belongs to. Fetch
+	// `/threads/{thread_id}` for the full ordered thread. NULL on
+	// messages received before threading was enabled.
+	ThreadID OptNilUUID `json:"thread_id"`
 }
 
 // GetID returns the value of ID.
@@ -4270,6 +4614,11 @@ func (s *EmailSummary) GetWebhookAttemptCount() int {
 	return s.WebhookAttemptCount
 }
 
+// GetThreadID returns the value of ThreadID.
+func (s *EmailSummary) GetThreadID() OptNilUUID {
+	return s.ThreadID
+}
+
 // SetID sets the value of ID.
 func (s *EmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -4343,6 +4692,11 @@ func (s *EmailSummary) SetWebhookStatus(val OptNilEmailWebhookStatus) {
 // SetWebhookAttemptCount sets the value of WebhookAttemptCount.
 func (s *EmailSummary) SetWebhookAttemptCount(val int) {
 	s.WebhookAttemptCount = val
+}
+
+// SetThreadID sets the value of ThreadID.
+func (s *EmailSummary) SetThreadID(val OptNilUUID) {
+	s.ThreadID = val
 }
 
 // Webhook-delivery state for an inbound email. Tracks a
@@ -7263,6 +7617,46 @@ type GetStorageStatsUnauthorized ErrorResponse
 
 func (*GetStorageStatsUnauthorized) getStorageStatsRes() {}
 
+type GetThreadBadRequest ErrorResponse
+
+func (*GetThreadBadRequest) getThreadRes() {}
+
+type GetThreadNotFound ErrorResponse
+
+func (*GetThreadNotFound) getThreadRes() {}
+
+// Merged schema.
+type GetThreadOK struct {
+	Success bool   `json:"success"`
+	Data    Thread `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetThreadOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetThreadOK) GetData() Thread {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetThreadOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetThreadOK) SetData(val Thread) {
+	s.Data = val
+}
+
+func (*GetThreadOK) getThreadRes() {}
+
+type GetThreadUnauthorized ErrorResponse
+
+func (*GetThreadUnauthorized) getThreadRes() {}
+
 type GetWebhookSecretNotFound ErrorResponse
 
 func (*GetWebhookSecretNotFound) getWebhookSecretRes() {}
@@ -9501,6 +9895,69 @@ func (o OptNilDeliverySummaryEmail) Or(d DeliverySummaryEmail) DeliverySummaryEm
 	return d
 }
 
+// NewOptNilEmailAddressArray returns new OptNilEmailAddressArray with value set to v.
+func NewOptNilEmailAddressArray(v []EmailAddress) OptNilEmailAddressArray {
+	return OptNilEmailAddressArray{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailAddressArray is optional nullable []EmailAddress.
+type OptNilEmailAddressArray struct {
+	Value []EmailAddress
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailAddressArray was set.
+func (o OptNilEmailAddressArray) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailAddressArray) Reset() {
+	var v []EmailAddress
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailAddressArray) SetTo(v []EmailAddress) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailAddressArray) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailAddressArray) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v []EmailAddress
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailAddressArray) Get() (v []EmailAddress, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailAddressArray) Or(d []EmailAddress) []EmailAddress {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilEmailWebhookStatus returns new OptNilEmailWebhookStatus with value set to v.
 func NewOptNilEmailWebhookStatus(v EmailWebhookStatus) OptNilEmailWebhookStatus {
 	return OptNilEmailWebhookStatus{
@@ -9810,6 +10267,69 @@ func (o OptNilInt) Get() (v int, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilParsedEmailDataError returns new OptNilParsedEmailDataError with value set to v.
+func NewOptNilParsedEmailDataError(v ParsedEmailDataError) OptNilParsedEmailDataError {
+	return OptNilParsedEmailDataError{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilParsedEmailDataError is optional nullable ParsedEmailDataError.
+type OptNilParsedEmailDataError struct {
+	Value ParsedEmailDataError
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilParsedEmailDataError was set.
+func (o OptNilParsedEmailDataError) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilParsedEmailDataError) Reset() {
+	var v ParsedEmailDataError
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilParsedEmailDataError) SetTo(v ParsedEmailDataError) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilParsedEmailDataError) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilParsedEmailDataError) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v ParsedEmailDataError
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilParsedEmailDataError) Get() (v ParsedEmailDataError, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilParsedEmailDataError) Or(d ParsedEmailDataError) ParsedEmailDataError {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -10595,6 +11115,229 @@ func (s *PaginationMeta) SetLimit(val int) {
 // SetCursor sets the value of Cursor.
 func (s *PaginationMeta) SetCursor(val NilString) {
 	s.Cursor = val
+}
+
+// Parsed MIME content for an inbound email. Mirrors the
+// `email.parsed` object on the webhook payload so a single parser
+// handles both surfaces. `status` is `complete` when parsing
+// succeeded; on `failed` the body/address/attachment fields are
+// absent and `error` describes why.
+// Ref: #/components/schemas/ParsedEmailData
+type ParsedEmailData struct {
+	Status ParsedEmailDataStatus `json:"status"`
+	// Plain-text body. Present when `status` is `complete`.
+	BodyText OptNilString `json:"body_text"`
+	// HTML body. Present when `status` is `complete`.
+	BodyHTML OptNilString `json:"body_html"`
+	// Parsed `Reply-To` header addresses.
+	ReplyTo OptNilEmailAddressArray `json:"reply_to"`
+	// Parsed `Cc` header addresses.
+	Cc OptNilEmailAddressArray `json:"cc"`
+	// Parsed `Bcc` header addresses (rarely present on inbound).
+	Bcc OptNilEmailAddressArray `json:"bcc"`
+	// Parsed `To` header addresses.
+	ToAddresses OptNilEmailAddressArray `json:"to_addresses"`
+	// Message-IDs from the `In-Reply-To` header.
+	InReplyTo OptNilStringArray `json:"in_reply_to"`
+	// Message-IDs from the `References` header.
+	References OptNilStringArray `json:"references"`
+	// Attachment metadata. Empty array when none.
+	Attachments []EmailAttachment `json:"attachments"`
+	// Present (non-null) only when `status` is `failed`. When
+	// present, all three fields are populated, so a consumer can
+	// branch on `code` without defensive null checks.
+	Error OptNilParsedEmailDataError `json:"error"`
+}
+
+// GetStatus returns the value of Status.
+func (s *ParsedEmailData) GetStatus() ParsedEmailDataStatus {
+	return s.Status
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *ParsedEmailData) GetBodyText() OptNilString {
+	return s.BodyText
+}
+
+// GetBodyHTML returns the value of BodyHTML.
+func (s *ParsedEmailData) GetBodyHTML() OptNilString {
+	return s.BodyHTML
+}
+
+// GetReplyTo returns the value of ReplyTo.
+func (s *ParsedEmailData) GetReplyTo() OptNilEmailAddressArray {
+	return s.ReplyTo
+}
+
+// GetCc returns the value of Cc.
+func (s *ParsedEmailData) GetCc() OptNilEmailAddressArray {
+	return s.Cc
+}
+
+// GetBcc returns the value of Bcc.
+func (s *ParsedEmailData) GetBcc() OptNilEmailAddressArray {
+	return s.Bcc
+}
+
+// GetToAddresses returns the value of ToAddresses.
+func (s *ParsedEmailData) GetToAddresses() OptNilEmailAddressArray {
+	return s.ToAddresses
+}
+
+// GetInReplyTo returns the value of InReplyTo.
+func (s *ParsedEmailData) GetInReplyTo() OptNilStringArray {
+	return s.InReplyTo
+}
+
+// GetReferences returns the value of References.
+func (s *ParsedEmailData) GetReferences() OptNilStringArray {
+	return s.References
+}
+
+// GetAttachments returns the value of Attachments.
+func (s *ParsedEmailData) GetAttachments() []EmailAttachment {
+	return s.Attachments
+}
+
+// GetError returns the value of Error.
+func (s *ParsedEmailData) GetError() OptNilParsedEmailDataError {
+	return s.Error
+}
+
+// SetStatus sets the value of Status.
+func (s *ParsedEmailData) SetStatus(val ParsedEmailDataStatus) {
+	s.Status = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *ParsedEmailData) SetBodyText(val OptNilString) {
+	s.BodyText = val
+}
+
+// SetBodyHTML sets the value of BodyHTML.
+func (s *ParsedEmailData) SetBodyHTML(val OptNilString) {
+	s.BodyHTML = val
+}
+
+// SetReplyTo sets the value of ReplyTo.
+func (s *ParsedEmailData) SetReplyTo(val OptNilEmailAddressArray) {
+	s.ReplyTo = val
+}
+
+// SetCc sets the value of Cc.
+func (s *ParsedEmailData) SetCc(val OptNilEmailAddressArray) {
+	s.Cc = val
+}
+
+// SetBcc sets the value of Bcc.
+func (s *ParsedEmailData) SetBcc(val OptNilEmailAddressArray) {
+	s.Bcc = val
+}
+
+// SetToAddresses sets the value of ToAddresses.
+func (s *ParsedEmailData) SetToAddresses(val OptNilEmailAddressArray) {
+	s.ToAddresses = val
+}
+
+// SetInReplyTo sets the value of InReplyTo.
+func (s *ParsedEmailData) SetInReplyTo(val OptNilStringArray) {
+	s.InReplyTo = val
+}
+
+// SetReferences sets the value of References.
+func (s *ParsedEmailData) SetReferences(val OptNilStringArray) {
+	s.References = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *ParsedEmailData) SetAttachments(val []EmailAttachment) {
+	s.Attachments = val
+}
+
+// SetError sets the value of Error.
+func (s *ParsedEmailData) SetError(val OptNilParsedEmailDataError) {
+	s.Error = val
+}
+
+// Present (non-null) only when `status` is `failed`. When
+// present, all three fields are populated, so a consumer can
+// branch on `code` without defensive null checks.
+type ParsedEmailDataError struct {
+	// Stable failure code (e.g. `PARSE_FAILED`).
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	Retryable bool   `json:"retryable"`
+}
+
+// GetCode returns the value of Code.
+func (s *ParsedEmailDataError) GetCode() string {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *ParsedEmailDataError) GetMessage() string {
+	return s.Message
+}
+
+// GetRetryable returns the value of Retryable.
+func (s *ParsedEmailDataError) GetRetryable() bool {
+	return s.Retryable
+}
+
+// SetCode sets the value of Code.
+func (s *ParsedEmailDataError) SetCode(val string) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *ParsedEmailDataError) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetRetryable sets the value of Retryable.
+func (s *ParsedEmailDataError) SetRetryable(val bool) {
+	s.Retryable = val
+}
+
+type ParsedEmailDataStatus string
+
+const (
+	ParsedEmailDataStatusComplete ParsedEmailDataStatus = "complete"
+	ParsedEmailDataStatusFailed   ParsedEmailDataStatus = "failed"
+)
+
+// AllValues returns all ParsedEmailDataStatus values.
+func (ParsedEmailDataStatus) AllValues() []ParsedEmailDataStatus {
+	return []ParsedEmailDataStatus{
+		ParsedEmailDataStatusComplete,
+		ParsedEmailDataStatusFailed,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ParsedEmailDataStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case ParsedEmailDataStatusComplete:
+		return []byte(s), nil
+	case ParsedEmailDataStatusFailed:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ParsedEmailDataStatus) UnmarshalText(data []byte) error {
+	switch ParsedEmailDataStatus(data) {
+	case ParsedEmailDataStatusComplete:
+		*s = ParsedEmailDataStatusComplete
+		return nil
+	case ParsedEmailDataStatusFailed:
+		*s = ParsedEmailDataStatusFailed
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/PollCliLoginInput
@@ -12307,6 +13050,13 @@ type SentEmailDetail struct {
 	// /emails/{id}/reply or when /send-mail's `in_reply_to`
 	// matched a stored inbound message_id in the same org.
 	InReplyToEmailID OptNilUUID `json:"in_reply_to_email_id"`
+	// Conversation thread this send belongs to. A reply inherits
+	// the thread of the inbound it answers; a fresh send starts a
+	// new thread. Fetch `/threads/{thread_id}` for the full
+	// ordered thread (inbound + outbound interleaved). NULL on
+	// gate-denied sends and on sends created before threading was
+	// enabled.
+	ThreadID OptNilUUID `json:"thread_id"`
 	// Message identifier assigned by Primitive's outbound
 	// relay once the agent accepts the message. Null on
 	// queued, gate_denied, and agent_failed rows.
@@ -12450,6 +13200,11 @@ func (s *SentEmailDetail) GetEmailReferences() OptNilString {
 // GetInReplyToEmailID returns the value of InReplyToEmailID.
 func (s *SentEmailDetail) GetInReplyToEmailID() OptNilUUID {
 	return s.InReplyToEmailID
+}
+
+// GetThreadID returns the value of ThreadID.
+func (s *SentEmailDetail) GetThreadID() OptNilUUID {
+	return s.ThreadID
 }
 
 // GetQueueID returns the value of QueueID.
@@ -12600,6 +13355,11 @@ func (s *SentEmailDetail) SetEmailReferences(val OptNilString) {
 // SetInReplyToEmailID sets the value of InReplyToEmailID.
 func (s *SentEmailDetail) SetInReplyToEmailID(val OptNilUUID) {
 	s.InReplyToEmailID = val
+}
+
+// SetThreadID sets the value of ThreadID.
+func (s *SentEmailDetail) SetThreadID(val OptNilUUID) {
+	s.ThreadID = val
 }
 
 // SetQueueID sets the value of QueueID.
@@ -12828,6 +13588,13 @@ type SentEmailSummary struct {
 	// /emails/{id}/reply or when /send-mail's `in_reply_to`
 	// matched a stored inbound message_id in the same org.
 	InReplyToEmailID OptNilUUID `json:"in_reply_to_email_id"`
+	// Conversation thread this send belongs to. A reply inherits
+	// the thread of the inbound it answers; a fresh send starts a
+	// new thread. Fetch `/threads/{thread_id}` for the full
+	// ordered thread (inbound + outbound interleaved). NULL on
+	// gate-denied sends and on sends created before threading was
+	// enabled.
+	ThreadID OptNilUUID `json:"thread_id"`
 	// Message identifier assigned by Primitive's outbound
 	// relay once the agent accepts the message. Null on
 	// queued, gate_denied, and agent_failed rows.
@@ -12962,6 +13729,11 @@ func (s *SentEmailSummary) GetEmailReferences() OptNilString {
 // GetInReplyToEmailID returns the value of InReplyToEmailID.
 func (s *SentEmailSummary) GetInReplyToEmailID() OptNilUUID {
 	return s.InReplyToEmailID
+}
+
+// GetThreadID returns the value of ThreadID.
+func (s *SentEmailSummary) GetThreadID() OptNilUUID {
+	return s.ThreadID
 }
 
 // GetQueueID returns the value of QueueID.
@@ -13102,6 +13874,11 @@ func (s *SentEmailSummary) SetEmailReferences(val OptNilString) {
 // SetInReplyToEmailID sets the value of InReplyToEmailID.
 func (s *SentEmailSummary) SetInReplyToEmailID(val OptNilUUID) {
 	s.InReplyToEmailID = val
+}
+
+// SetThreadID sets the value of ThreadID.
+func (s *SentEmailSummary) SetThreadID(val OptNilUUID) {
+	s.ThreadID = val
 }
 
 // SetQueueID sets the value of QueueID.
@@ -13940,6 +14717,251 @@ func (s *TestResult) SetBody(val string) {
 // SetSignature sets the value of Signature.
 func (s *TestResult) SetSignature(val OptString) {
 	s.Signature = val
+}
+
+// A conversation thread: its metadata plus the inbound and
+// outbound messages that belong to it, interleaved oldest-first.
+// Membership is the stored `thread_id` on each message. Bodies are
+// omitted here to keep the thread view lightweight; fetch
+// `/emails/{id}` or `/sent-emails/{id}` for a single message's
+// full content.
+// Ref: #/components/schemas/Thread
+type Thread struct {
+	ID uuid.UUID `json:"id"`
+	// Normalized subject of the thread (Re/Fwd prefixes stripped).
+	Subject OptNilString `json:"subject"`
+	// Message-ID of the conversation root, when known.
+	RootMessageID OptNilString `json:"root_message_id"`
+	// Total messages in the thread. `messages` is capped (most
+	// recent first, then re-sorted oldest-first), so
+	// `message_count > messages.length` signals truncation.
+	MessageCount   int             `json:"message_count"`
+	FirstMessageAt OptNilDateTime  `json:"first_message_at"`
+	LastMessageAt  OptNilDateTime  `json:"last_message_at"`
+	CreatedAt      time.Time       `json:"created_at"`
+	Messages       []ThreadMessage `json:"messages"`
+}
+
+// GetID returns the value of ID.
+func (s *Thread) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetSubject returns the value of Subject.
+func (s *Thread) GetSubject() OptNilString {
+	return s.Subject
+}
+
+// GetRootMessageID returns the value of RootMessageID.
+func (s *Thread) GetRootMessageID() OptNilString {
+	return s.RootMessageID
+}
+
+// GetMessageCount returns the value of MessageCount.
+func (s *Thread) GetMessageCount() int {
+	return s.MessageCount
+}
+
+// GetFirstMessageAt returns the value of FirstMessageAt.
+func (s *Thread) GetFirstMessageAt() OptNilDateTime {
+	return s.FirstMessageAt
+}
+
+// GetLastMessageAt returns the value of LastMessageAt.
+func (s *Thread) GetLastMessageAt() OptNilDateTime {
+	return s.LastMessageAt
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *Thread) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetMessages returns the value of Messages.
+func (s *Thread) GetMessages() []ThreadMessage {
+	return s.Messages
+}
+
+// SetID sets the value of ID.
+func (s *Thread) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *Thread) SetSubject(val OptNilString) {
+	s.Subject = val
+}
+
+// SetRootMessageID sets the value of RootMessageID.
+func (s *Thread) SetRootMessageID(val OptNilString) {
+	s.RootMessageID = val
+}
+
+// SetMessageCount sets the value of MessageCount.
+func (s *Thread) SetMessageCount(val int) {
+	s.MessageCount = val
+}
+
+// SetFirstMessageAt sets the value of FirstMessageAt.
+func (s *Thread) SetFirstMessageAt(val OptNilDateTime) {
+	s.FirstMessageAt = val
+}
+
+// SetLastMessageAt sets the value of LastMessageAt.
+func (s *Thread) SetLastMessageAt(val OptNilDateTime) {
+	s.LastMessageAt = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *Thread) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetMessages sets the value of Messages.
+func (s *Thread) SetMessages(val []ThreadMessage) {
+	s.Messages = val
+}
+
+// One message in a thread (inbound or outbound).
+// Ref: #/components/schemas/ThreadMessage
+type ThreadMessage struct {
+	// `inbound` for a received email (`/emails/{id}`), `outbound`
+	// for a send (`/sent-emails/{id}`). Use it with `id` to fetch
+	// full content from the right endpoint.
+	Direction ThreadMessageDirection `json:"direction"`
+	ID        uuid.UUID              `json:"id"`
+	MessageID OptNilString           `json:"message_id"`
+	From      OptNilString           `json:"from"`
+	To        OptNilString           `json:"to"`
+	Subject   OptNilString           `json:"subject"`
+	// Lifecycle status (an EmailStatus or SentEmailStatus value, per `direction`).
+	Status OptNilString `json:"status"`
+	// Received_at for inbound, created_at for outbound.
+	Timestamp OptNilDateTime `json:"timestamp"`
+}
+
+// GetDirection returns the value of Direction.
+func (s *ThreadMessage) GetDirection() ThreadMessageDirection {
+	return s.Direction
+}
+
+// GetID returns the value of ID.
+func (s *ThreadMessage) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetMessageID returns the value of MessageID.
+func (s *ThreadMessage) GetMessageID() OptNilString {
+	return s.MessageID
+}
+
+// GetFrom returns the value of From.
+func (s *ThreadMessage) GetFrom() OptNilString {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *ThreadMessage) GetTo() OptNilString {
+	return s.To
+}
+
+// GetSubject returns the value of Subject.
+func (s *ThreadMessage) GetSubject() OptNilString {
+	return s.Subject
+}
+
+// GetStatus returns the value of Status.
+func (s *ThreadMessage) GetStatus() OptNilString {
+	return s.Status
+}
+
+// GetTimestamp returns the value of Timestamp.
+func (s *ThreadMessage) GetTimestamp() OptNilDateTime {
+	return s.Timestamp
+}
+
+// SetDirection sets the value of Direction.
+func (s *ThreadMessage) SetDirection(val ThreadMessageDirection) {
+	s.Direction = val
+}
+
+// SetID sets the value of ID.
+func (s *ThreadMessage) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetMessageID sets the value of MessageID.
+func (s *ThreadMessage) SetMessageID(val OptNilString) {
+	s.MessageID = val
+}
+
+// SetFrom sets the value of From.
+func (s *ThreadMessage) SetFrom(val OptNilString) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *ThreadMessage) SetTo(val OptNilString) {
+	s.To = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *ThreadMessage) SetSubject(val OptNilString) {
+	s.Subject = val
+}
+
+// SetStatus sets the value of Status.
+func (s *ThreadMessage) SetStatus(val OptNilString) {
+	s.Status = val
+}
+
+// SetTimestamp sets the value of Timestamp.
+func (s *ThreadMessage) SetTimestamp(val OptNilDateTime) {
+	s.Timestamp = val
+}
+
+// `inbound` for a received email (`/emails/{id}`), `outbound`
+// for a send (`/sent-emails/{id}`). Use it with `id` to fetch
+// full content from the right endpoint.
+type ThreadMessageDirection string
+
+const (
+	ThreadMessageDirectionInbound  ThreadMessageDirection = "inbound"
+	ThreadMessageDirectionOutbound ThreadMessageDirection = "outbound"
+)
+
+// AllValues returns all ThreadMessageDirection values.
+func (ThreadMessageDirection) AllValues() []ThreadMessageDirection {
+	return []ThreadMessageDirection{
+		ThreadMessageDirectionInbound,
+		ThreadMessageDirectionOutbound,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ThreadMessageDirection) MarshalText() ([]byte, error) {
+	switch s {
+	case ThreadMessageDirectionInbound:
+		return []byte(s), nil
+	case ThreadMessageDirectionOutbound:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ThreadMessageDirection) UnmarshalText(data []byte) error {
+	switch ThreadMessageDirection(data) {
+	case ThreadMessageDirectionInbound:
+		*s = ThreadMessageDirectionInbound
+		return nil
+	case ThreadMessageDirectionOutbound:
+		*s = ThreadMessageDirectionOutbound
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/UnverifiedDomain

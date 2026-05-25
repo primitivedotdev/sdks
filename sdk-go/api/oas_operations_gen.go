@@ -30,6 +30,7 @@ const (
 	GetSendPermissionsOperation            OperationName = "GetSendPermissions"
 	GetSentEmailOperation                  OperationName = "GetSentEmail"
 	GetStorageStatsOperation               OperationName = "GetStorageStats"
+	GetThreadOperation                     OperationName = "GetThread"
 	GetWebhookSecretOperation              OperationName = "GetWebhookSecret"
 	ListDeliveriesOperation                OperationName = "ListDeliveries"
 	ListDomainsOperation                   OperationName = "ListDomains"

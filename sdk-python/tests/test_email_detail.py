@@ -40,6 +40,7 @@ SAMPLE = {
     "from_email": "alice@example.com",
     "to_email": "support@example.com",
     "from_known_address": True,
+    "thread_id": "44444444-4444-4444-4444-444444444444",
     "replies": [
         {
             "id": "33333333-3333-3333-3333-333333333333",
@@ -50,6 +51,38 @@ SAMPLE = {
             "queue_id": None,
         }
     ],
+    "parsed": {
+        "status": "complete",
+        "body_text": "Hi there",
+        "body_html": "<p>Hi there</p>",
+        "reply_to": None,
+        "cc": [{"name": None, "address": "cc@example.com"}],
+        "bcc": None,
+        "to_addresses": [{"name": "Support", "address": "support@example.com"}],
+        "in_reply_to": None,
+        "references": None,
+        "attachments": [],
+    },
+    "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": True,
+        "dmarcDkimAligned": True,
+        "dmarcSpfStrict": False,
+        "dmarcDkimStrict": False,
+        "dkimSignatures": [
+            {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": True,
+                "keyBits": 2048,
+                "algo": "rsa-sha256",
+            }
+        ],
+    },
 }
 
 
@@ -73,6 +106,13 @@ def test_email_detail_surfaces_replies_array() -> None:
     assert reply.subject == "Re: Hello"
 
 
+def test_email_detail_surfaces_thread_parsed_auth() -> None:
+    detail = EmailDetail.from_dict(SAMPLE)
+    assert str(detail.thread_id) == "44444444-4444-4444-4444-444444444444"
+    assert detail.parsed.status == "complete"
+    assert detail.auth.spf == "pass"
+
+
 def test_email_detail_round_trips_to_dict() -> None:
     # to_dict / from_dict round-trip preserves the new fields. Catches
     # a regen that adds a field to from_dict but forgets to_dict
@@ -83,3 +123,5 @@ def test_email_detail_round_trips_to_dict() -> None:
     assert serialized["body_html"] == "<p>Hi there</p>"
     assert serialized["from_known_address"] is True
     assert len(serialized["replies"]) == 1
+    assert serialized["parsed"]["status"] == "complete"
+    assert serialized["auth"]["spf"] == "pass"

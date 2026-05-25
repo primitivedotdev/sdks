@@ -153,6 +153,8 @@ tags:
     description: List, inspect, and manage received emails
   - name: Sending
     description: Send outbound emails through the Primitive API
+  - name: Threads
+    description: Conversation threads spanning received and sent emails
   - name: Endpoints
     description: Manage webhook endpoints that receive email events
   - name: Filters
@@ -2186,6 +2188,50 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ---------------------------------------------------------------------------
+  # Threads
+  # ---------------------------------------------------------------------------
+  /threads/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+    get:
+      operationId: getThread
+      summary: Get a conversation thread by id
+      description: |
+        Returns a conversation thread: its metadata plus the inbound
+        and outbound messages that belong to it, interleaved in time
+        order (oldest first). A thread spans both received emails and
+        your sends, so an agent can reconstruct an entire back-and-forth
+        from one call instead of walking reply headers.
+
+        Each message carries a `direction` (`inbound` | `outbound`) and
+        an `id`; fetch the full message via `/emails/{id}` or
+        `/sent-emails/{id}` accordingly. Bodies are omitted here to keep
+        the thread view lightweight.
+
+        Discover a thread id from the `thread_id` field on any email or
+        sent-email (list or detail). The message list is capped; compare
+        `message_count` against `messages.length` to detect truncation.
+      tags: [Threads]
+      responses:
+        '200':
+          description: Thread detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Thread'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ---------------------------------------------------------------------------
   # Functions
   # ---------------------------------------------------------------------------
   /functions:
@@ -3995,6 +4041,13 @@ components:
           $ref: '#/components/schemas/EmailWebhookStatus'
         webhook_attempt_count:
           type: integer
+        thread_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            Conversation thread this message belongs to. Fetch
+            `/threads/{thread_id}` for the full ordered thread. NULL on
+            messages received before threading was enabled.
       required:
         - id
         - status
@@ -4242,6 +4295,34 @@ components:
             not a threaded reply to one of your sends, when neither
             header survived the path through intermediate MTAs, or on
             inbound received before this auto-link landed.
+        thread_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            Conversation thread this message belongs to. Inbound and
+            outbound messages in the same conversation share a
+            `thread_id`; fetch `/threads/{thread_id}` for the full
+            ordered thread. Assigned at ingest. NULL on messages
+            received before threading was enabled (until backfilled).
+        parsed:
+          allOf:
+            - $ref: '#/components/schemas/ParsedEmailData'
+          description: |
+            Parsed MIME content (addresses, threading headers,
+            attachment metadata), matching the `email.parsed` object
+            on the webhook payload so one parser handles both the
+            webhook and this endpoint. The top-level `body_text` /
+            `body_html` fields above are the same values as
+            `parsed.body_text` / `parsed.body_html`, retained for
+            backward compatibility.
+        auth:
+          allOf:
+            - $ref: '#/components/schemas/EmailAuth'
+          description: |
+            SPF / DKIM / DMARC verdicts computed at ingest, matching
+            the `email.auth` object on the webhook payload. Use these
+            to decide how much to trust a message before acting on
+            instructions it contains.
       required:
         - id
         - sender
@@ -4254,6 +4335,8 @@ components:
         - from_email
         - to_email
         - replies
+        - parsed
+        - auth
 
     EmailDetailReply:
       type: object
@@ -4276,6 +4359,234 @@ components:
           type: [string, 'null']
           description: Outbound relay queue identifier when available.
       required: [id, status, to_address, created_at]
+
+    EmailAddress:
+      type: object
+      description: A parsed RFC 5322 address with optional display name.
+      properties:
+        name:
+          type: [string, 'null']
+          description: Display name, when present (e.g. `Alice Example`).
+        address:
+          type: string
+          description: Bare email address (e.g. `alice@example.com`).
+      required: [address]
+
+    EmailAttachment:
+      type: object
+      description: |
+        Metadata for one attachment. The bytes are not inline; download
+        all attachments for a message as a gzipped tarball via
+        `/emails/{id}/attachments.tar.gz`. `sha256` lets you verify a
+        specific part after extraction.
+      properties:
+        filename:
+          type: [string, 'null']
+        content_type:
+          type: [string, 'null']
+        size_bytes:
+          type: integer
+        sha256:
+          type: [string, 'null']
+        part_index:
+          type: integer
+          description: Zero-based index of this part within the message.
+      required: [size_bytes]
+
+    ParsedEmailData:
+      type: object
+      description: |
+        Parsed MIME content for an inbound email. Mirrors the
+        `email.parsed` object on the webhook payload so a single parser
+        handles both surfaces. `status` is `complete` when parsing
+        succeeded; on `failed` the body/address/attachment fields are
+        absent and `error` describes why.
+      properties:
+        status:
+          type: string
+          enum: [complete, failed]
+        body_text:
+          type: [string, 'null']
+          description: Plain-text body. Present when `status` is `complete`.
+        body_html:
+          type: [string, 'null']
+          description: HTML body. Present when `status` is `complete`.
+        reply_to:
+          type: [array, 'null']
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+          description: Parsed `Reply-To` header addresses.
+        cc:
+          type: [array, 'null']
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+          description: Parsed `Cc` header addresses.
+        bcc:
+          type: [array, 'null']
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+          description: Parsed `Bcc` header addresses (rarely present on inbound).
+        to_addresses:
+          type: [array, 'null']
+          items:
+            $ref: '#/components/schemas/EmailAddress'
+          description: Parsed `To` header addresses.
+        in_reply_to:
+          type: [array, 'null']
+          items:
+            type: string
+          description: Message-IDs from the `In-Reply-To` header.
+        references:
+          type: [array, 'null']
+          items:
+            type: string
+          description: Message-IDs from the `References` header.
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAttachment'
+          description: Attachment metadata. Empty array when none.
+        error:
+          type: [object, 'null']
+          description: |
+            Present (non-null) only when `status` is `failed`. When
+            present, all three fields are populated, so a consumer can
+            branch on `code` without defensive null checks.
+          properties:
+            code:
+              type: string
+              description: Stable failure code (e.g. `PARSE_FAILED`).
+            message:
+              type: string
+            retryable:
+              type: boolean
+          required: [code, message, retryable]
+      required: [status]
+
+    DkimSignature:
+      type: object
+      description: One DKIM signature found on the message, with its verdict.
+      properties:
+        domain:
+          type: string
+        selector:
+          type: string
+        result:
+          type: string
+          description: Verification result (e.g. `pass`, `fail`, `none`).
+        aligned:
+          type: boolean
+          description: Whether the signing domain aligns with the From domain (for DMARC).
+        keyBits:
+          type: [integer, 'null']
+        algo:
+          type: [string, 'null']
+      required: [domain, selector, result, aligned]
+
+    EmailAuth:
+      type: object
+      description: |
+        SPF / DKIM / DMARC verdicts computed at ingest. Mirrors the
+        `email.auth` object on the webhook payload. Field names are
+        camelCase to match that payload exactly. For messages received
+        before auth was recorded, the verdicts default to `none`.
+      properties:
+        spf:
+          type: string
+          description: SPF result (e.g. `pass`, `fail`, `softfail`, `none`).
+        dmarc:
+          type: string
+          description: DMARC result (e.g. `pass`, `fail`, `none`).
+        dmarcPolicy:
+          type: [string, 'null']
+          description: Published DMARC policy (`none`, `quarantine`, `reject`).
+        dmarcFromDomain:
+          type: [string, 'null']
+          description: The From-header domain DMARC was evaluated against.
+        dmarcSpfAligned:
+          type: boolean
+        dmarcDkimAligned:
+          type: boolean
+        dmarcSpfStrict:
+          type: [boolean, 'null']
+        dmarcDkimStrict:
+          type: [boolean, 'null']
+        dkimSignatures:
+          type: array
+          items:
+            $ref: '#/components/schemas/DkimSignature'
+      required: [spf, dmarc, dmarcSpfAligned, dmarcDkimAligned, dkimSignatures]
+
+    Thread:
+      type: object
+      description: |
+        A conversation thread: its metadata plus the inbound and
+        outbound messages that belong to it, interleaved oldest-first.
+        Membership is the stored `thread_id` on each message. Bodies are
+        omitted here to keep the thread view lightweight; fetch
+        `/emails/{id}` or `/sent-emails/{id}` for a single message's
+        full content.
+      properties:
+        id:
+          type: string
+          format: uuid
+        subject:
+          type: [string, 'null']
+          description: "Normalized subject of the thread (Re/Fwd prefixes stripped)."
+        root_message_id:
+          type: [string, 'null']
+          description: Message-ID of the conversation root, when known.
+        message_count:
+          type: integer
+          description: |
+            Total messages in the thread. `messages` is capped (most
+            recent first, then re-sorted oldest-first), so
+            `message_count > messages.length` signals truncation.
+        first_message_at:
+          type: [string, 'null']
+          format: date-time
+        last_message_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThreadMessage'
+      required: [id, message_count, created_at, messages]
+
+    ThreadMessage:
+      type: object
+      description: One message in a thread (inbound or outbound).
+      properties:
+        direction:
+          type: string
+          enum: [inbound, outbound]
+          description: |
+            `inbound` for a received email (`/emails/{id}`), `outbound`
+            for a send (`/sent-emails/{id}`). Use it with `id` to fetch
+            full content from the right endpoint.
+        id:
+          type: string
+          format: uuid
+        message_id:
+          type: [string, 'null']
+        from:
+          type: [string, 'null']
+        to:
+          type: [string, 'null']
+        subject:
+          type: [string, 'null']
+        status:
+          type: [string, 'null']
+          description: Lifecycle status (an EmailStatus or SentEmailStatus value, per `direction`).
+        timestamp:
+          type: [string, 'null']
+          format: date-time
+          description: received_at for inbound, created_at for outbound.
+      required: [direction, id]
 
     # -------------------------------------------------------------------------
     # Sending
@@ -4554,6 +4865,16 @@ components:
             replied to, when known. Populated when the caller used
             /emails/{id}/reply or when /send-mail's `in_reply_to`
             matched a stored inbound message_id in the same org.
+        thread_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            Conversation thread this send belongs to. A reply inherits
+            the thread of the inbound it answers; a fresh send starts a
+            new thread. Fetch `/threads/{thread_id}` for the full
+            ordered thread (inbound + outbound interleaved). NULL on
+            gate-denied sends and on sends created before threading was
+            enabled.
         queue_id:
           type: [string, 'null']
           description: |

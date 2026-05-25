@@ -62,6 +62,7 @@ var operationRolesBearerAuth = map[string][]string{
 	GetSendPermissionsOperation:      []string{},
 	GetSentEmailOperation:            []string{},
 	GetStorageStatsOperation:         []string{},
+	GetThreadOperation:               []string{},
 	GetWebhookSecretOperation:        []string{},
 	ListDeliveriesOperation:          []string{},
 	ListDomainsOperation:             []string{},

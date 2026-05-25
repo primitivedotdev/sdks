@@ -749,6 +749,13 @@ export type EmailSummary = {
     raw_size_bytes?: number | null;
     webhook_status?: EmailWebhookStatus;
     webhook_attempt_count: number;
+    /**
+     * Conversation thread this message belongs to. Fetch
+     * `/threads/{thread_id}` for the full ordered thread. NULL on
+     * messages received before threading was enabled.
+     *
+     */
+    thread_id?: string | null;
 };
 
 export type EmailSearchHighlights = {
@@ -936,6 +943,34 @@ export type EmailDetail = {
      *
      */
     reply_to_sent_email_id?: string | null;
+    /**
+     * Conversation thread this message belongs to. Inbound and
+     * outbound messages in the same conversation share a
+     * `thread_id`; fetch `/threads/{thread_id}` for the full
+     * ordered thread. Assigned at ingest. NULL on messages
+     * received before threading was enabled (until backfilled).
+     *
+     */
+    thread_id?: string | null;
+    /**
+     * Parsed MIME content (addresses, threading headers,
+     * attachment metadata), matching the `email.parsed` object
+     * on the webhook payload so one parser handles both the
+     * webhook and this endpoint. The top-level `body_text` /
+     * `body_html` fields above are the same values as
+     * `parsed.body_text` / `parsed.body_html`, retained for
+     * backward compatibility.
+     *
+     */
+    parsed: ParsedEmailData;
+    /**
+     * SPF / DKIM / DMARC verdicts computed at ingest, matching
+     * the `email.auth` object on the webhook payload. Use these
+     * to decide how much to trust a message before acting on
+     * instructions it contains.
+     *
+     */
+    auth: EmailAuth;
 };
 
 export type EmailDetailReply = {
@@ -954,6 +989,207 @@ export type EmailDetailReply = {
      * Outbound relay queue identifier when available.
      */
     queue_id?: string | null;
+};
+
+/**
+ * A parsed RFC 5322 address with optional display name.
+ */
+export type EmailAddress = {
+    /**
+     * Display name, when present (e.g. `Alice Example`).
+     */
+    name?: string | null;
+    /**
+     * Bare email address (e.g. `alice@example.com`).
+     */
+    address: string;
+};
+
+/**
+ * Metadata for one attachment. The bytes are not inline; download
+ * all attachments for a message as a gzipped tarball via
+ * `/emails/{id}/attachments.tar.gz`. `sha256` lets you verify a
+ * specific part after extraction.
+ *
+ */
+export type EmailAttachment = {
+    filename?: string | null;
+    content_type?: string | null;
+    size_bytes: number;
+    sha256?: string | null;
+    /**
+     * Zero-based index of this part within the message.
+     */
+    part_index?: number;
+};
+
+/**
+ * Parsed MIME content for an inbound email. Mirrors the
+ * `email.parsed` object on the webhook payload so a single parser
+ * handles both surfaces. `status` is `complete` when parsing
+ * succeeded; on `failed` the body/address/attachment fields are
+ * absent and `error` describes why.
+ *
+ */
+export type ParsedEmailData = {
+    status: 'complete' | 'failed';
+    /**
+     * Plain-text body. Present when `status` is `complete`.
+     */
+    body_text?: string | null;
+    /**
+     * HTML body. Present when `status` is `complete`.
+     */
+    body_html?: string | null;
+    /**
+     * Parsed `Reply-To` header addresses.
+     */
+    reply_to?: Array<EmailAddress> | null;
+    /**
+     * Parsed `Cc` header addresses.
+     */
+    cc?: Array<EmailAddress> | null;
+    /**
+     * Parsed `Bcc` header addresses (rarely present on inbound).
+     */
+    bcc?: Array<EmailAddress> | null;
+    /**
+     * Parsed `To` header addresses.
+     */
+    to_addresses?: Array<EmailAddress> | null;
+    /**
+     * Message-IDs from the `In-Reply-To` header.
+     */
+    in_reply_to?: Array<string> | null;
+    /**
+     * Message-IDs from the `References` header.
+     */
+    references?: Array<string> | null;
+    /**
+     * Attachment metadata. Empty array when none.
+     */
+    attachments?: Array<EmailAttachment>;
+    /**
+     * Present (non-null) only when `status` is `failed`. When
+     * present, all three fields are populated, so a consumer can
+     * branch on `code` without defensive null checks.
+     *
+     */
+    error?: {
+        /**
+         * Stable failure code (e.g. `PARSE_FAILED`).
+         */
+        code: string;
+        message: string;
+        retryable: boolean;
+    } | null;
+};
+
+/**
+ * One DKIM signature found on the message, with its verdict.
+ */
+export type DkimSignature = {
+    domain: string;
+    selector: string;
+    /**
+     * Verification result (e.g. `pass`, `fail`, `none`).
+     */
+    result: string;
+    /**
+     * Whether the signing domain aligns with the From domain (for DMARC).
+     */
+    aligned: boolean;
+    keyBits?: number | null;
+    algo?: string | null;
+};
+
+/**
+ * SPF / DKIM / DMARC verdicts computed at ingest. Mirrors the
+ * `email.auth` object on the webhook payload. Field names are
+ * camelCase to match that payload exactly. For messages received
+ * before auth was recorded, the verdicts default to `none`.
+ *
+ */
+export type EmailAuth = {
+    /**
+     * SPF result (e.g. `pass`, `fail`, `softfail`, `none`).
+     */
+    spf: string;
+    /**
+     * DMARC result (e.g. `pass`, `fail`, `none`).
+     */
+    dmarc: string;
+    /**
+     * Published DMARC policy (`none`, `quarantine`, `reject`).
+     */
+    dmarcPolicy?: string | null;
+    /**
+     * The From-header domain DMARC was evaluated against.
+     */
+    dmarcFromDomain?: string | null;
+    dmarcSpfAligned: boolean;
+    dmarcDkimAligned: boolean;
+    dmarcSpfStrict?: boolean | null;
+    dmarcDkimStrict?: boolean | null;
+    dkimSignatures: Array<DkimSignature>;
+};
+
+/**
+ * A conversation thread: its metadata plus the inbound and
+ * outbound messages that belong to it, interleaved oldest-first.
+ * Membership is the stored `thread_id` on each message. Bodies are
+ * omitted here to keep the thread view lightweight; fetch
+ * `/emails/{id}` or `/sent-emails/{id}` for a single message's
+ * full content.
+ *
+ */
+export type Thread = {
+    id: string;
+    /**
+     * Normalized subject of the thread (Re/Fwd prefixes stripped).
+     */
+    subject?: string | null;
+    /**
+     * Message-ID of the conversation root, when known.
+     */
+    root_message_id?: string | null;
+    /**
+     * Total messages in the thread. `messages` is capped (most
+     * recent first, then re-sorted oldest-first), so
+     * `message_count > messages.length` signals truncation.
+     *
+     */
+    message_count: number;
+    first_message_at?: string | null;
+    last_message_at?: string | null;
+    created_at: string;
+    messages: Array<ThreadMessage>;
+};
+
+/**
+ * One message in a thread (inbound or outbound).
+ */
+export type ThreadMessage = {
+    /**
+     * `inbound` for a received email (`/emails/{id}`), `outbound`
+     * for a send (`/sent-emails/{id}`). Use it with `id` to fetch
+     * full content from the right endpoint.
+     *
+     */
+    direction: 'inbound' | 'outbound';
+    id: string;
+    message_id?: string | null;
+    from?: string | null;
+    to?: string | null;
+    subject?: string | null;
+    /**
+     * Lifecycle status (an EmailStatus or SentEmailStatus value, per `direction`).
+     */
+    status?: string | null;
+    /**
+     * received_at for inbound, created_at for outbound.
+     */
+    timestamp?: string | null;
 };
 
 export type SendMailAttachment = {
@@ -1213,6 +1449,16 @@ export type SentEmailSummary = {
      *
      */
     in_reply_to_email_id?: string | null;
+    /**
+     * Conversation thread this send belongs to. A reply inherits
+     * the thread of the inbound it answers; a fresh send starts a
+     * new thread. Fetch `/threads/{thread_id}` for the full
+     * ordered thread (inbound + outbound interleaved). NULL on
+     * gate-denied sends and on sends created before threading was
+     * enabled.
+     *
+     */
+    thread_id?: string | null;
     /**
      * Message identifier assigned by Primitive's outbound
      * relay once the agent accepts the message. Null on
@@ -4030,6 +4276,46 @@ export type GetSentEmailResponses = {
 };
 
 export type GetSentEmailResponse = GetSentEmailResponses[keyof GetSentEmailResponses];
+
+export type GetThreadData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/threads/{id}';
+};
+
+export type GetThreadErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetThreadError = GetThreadErrors[keyof GetThreadErrors];
+
+export type GetThreadResponses = {
+    /**
+     * Thread detail
+     */
+    200: SuccessEnvelope & {
+        data?: Thread;
+    };
+};
+
+export type GetThreadResponse = GetThreadResponses[keyof GetThreadResponses];
 
 export type ListFunctionsData = {
     body?: never;
