@@ -72,6 +72,15 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS.reply).toBeDefined();
   });
 
+  it("keeps top-level chat registered with reply continuation support", () => {
+    expect(COMMANDS.chat).toBeDefined();
+    const chatCommand = COMMANDS.chat as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(chatCommand.flags.reply).toBeDefined();
+    expect(chatCommand.flags["reply-to-email-id"]).toBeDefined();
+  });
+
   it("keeps top-level send registered with attachment support", () => {
     const sendCommand = COMMANDS.send as unknown as {
       flags: Record<string, { multiple?: boolean }>;

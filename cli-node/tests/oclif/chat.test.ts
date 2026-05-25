@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   fetchEmailSearchPage: vi.fn(),
   getEmail: vi.fn(),
   pickDefaultFromAddress: vi.fn(),
+  replyToEmail: vi.fn(),
+  searchEmails: vi.fn(),
   sendEmail: vi.fn(),
   sleep: vi.fn(),
 }));
@@ -17,6 +19,8 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
   return {
     ...actual,
     getEmail: mocks.getEmail,
+    replyToEmail: mocks.replyToEmail,
+    searchEmails: mocks.searchEmails,
     sendEmail: mocks.sendEmail,
   };
 });
@@ -118,11 +122,12 @@ function outputContext() {
   };
 }
 
-function searchRow() {
+function searchRow(overrides: Record<string, unknown> = {}) {
   return {
     id: "email-1",
     received_at: "2026-05-25T00:00:02.000Z",
     status: "accepted",
+    ...overrides,
   };
 }
 
@@ -168,6 +173,21 @@ describe("chat command", () => {
       baseUrlOverridden: false,
     });
     mocks.pickDefaultFromAddress.mockResolvedValue("agent@sender.example");
+    mocks.replyToEmail.mockResolvedValue({
+      data: { data: sentEmail({ id: "sent-reply-1" }) },
+    });
+    mocks.searchEmails.mockResolvedValue({
+      data: {
+        data: [searchRow()],
+        meta: {
+          cursor: null,
+          limit: 50,
+          sort: "received_at_desc",
+          total: 1,
+          total_capped: false,
+        },
+      },
+    });
     mocks.sendEmail.mockResolvedValue({ data: { data: sentEmail() } });
     mocks.fetchEmailSearchPage.mockResolvedValue({
       cursor: null,
@@ -194,6 +214,13 @@ describe("chat command", () => {
     expect(flags.json).toBeDefined();
   });
 
+  it("exposes first-party reply continuation flags", () => {
+    const flags = ChatCommand.flags as Record<string, unknown>;
+
+    expect(flags.reply).toBeDefined();
+    expect(flags["reply-to-email-id"]).toBeDefined();
+  });
+
   it("formats a reply with context and follow-up commands by default", () => {
     const output = formatChatResponse(outputContext());
 
@@ -207,8 +234,10 @@ describe("chat command", () => {
     expect(output).toContain("Replace <message> before running");
     expect(output).toContain("use --json for parse-safe output");
     expect(output).toContain(
-      "primitive chat help@agent.example '<message>' --from agent@sender.example --subject 'API key help' --timeout 120",
+      "primitive chat help@agent.example --reply '<message>' --from agent@sender.example --reply-to-email-id email-1 --timeout 120",
     );
+    expect(output).not.toContain("--in-reply-to");
+    expect(output).not.toContain("--subject 'API key help'");
     expect(output).toContain(
       "primitive reply --id email-1 --from agent@sender.example --body '<message>'",
     );
@@ -271,11 +300,13 @@ describe("chat command", () => {
     const commands = buildChatFollowUpCommands({
       ...outputContext(),
       recipient: "agent support@example.com",
-      subject: "quoted ' subject",
+      from: "Agent's Support <agent support@example.com>",
     }).map((entry) => entry.command);
 
     expect(commands[0]).toContain("'agent support@example.com'");
-    expect(commands[0]).toContain("'quoted '\\'' subject'");
+    expect(commands[0]).toContain(
+      "--from 'Agent'\\''s Support <agent support@example.com>'",
+    );
   });
 
   it("falls back to HTML response body when text is empty", () => {
@@ -388,7 +419,137 @@ describe("chat command", () => {
       "Response body (text; use --json for parsing)",
     );
     expect(result.stdout).toContain(
-      "primitive chat help@agent.example '<message>' --from agent@sender.example --subject 'API key help' --timeout 17 --in-reply-to '<reply-1@agent.example>'",
+      "primitive chat help@agent.example --reply '<message>' --from agent@sender.example --reply-to-email-id email-1 --timeout 17",
+    );
+  });
+
+  it("continues an exact chat thread with --reply-to-email-id", async () => {
+    mocks.getEmail.mockImplementation(async ({ path }) => {
+      if (path.id === "email-2") {
+        return {
+          data: {
+            data: replyEmail({
+              body_text: "Follow-up answer.",
+              id: "email-2",
+              received_at: "2026-05-25T00:00:04.000Z",
+              reply_to_sent_email_id: "sent-reply-1",
+            }),
+          },
+        };
+      }
+      return { data: { data: replyEmail() } };
+    });
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      cursor: null,
+      ok: true,
+      rows: [
+        searchRow({
+          id: "email-2",
+          received_at: "2026-05-25T00:00:04.000Z",
+        }),
+      ],
+    });
+
+    const result = await runChatCommand([
+      "help@agent.example",
+      "--reply",
+      "Can you explain?",
+      "--reply-to-email-id",
+      "email-1",
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain("Loading reply context for email-1");
+    expect(result.stderr).toContain("Sending reply to help@agent.example");
+    expect(mocks.pickDefaultFromAddress).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(mocks.replyToEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: {
+          body_text: "Can you explain?",
+          from: "agent@sender.example",
+        },
+        path: { id: "email-1" },
+        responseStyle: "fields",
+      }),
+    );
+    expect(result.stdout).toContain("Follow-up answer.");
+  });
+
+  it("continues the latest inbound from the recipient with --reply", async () => {
+    mocks.getEmail.mockImplementation(async ({ path }) => {
+      if (path.id === "email-2") {
+        return {
+          data: {
+            data: replyEmail({
+              body_text: "Latest follow-up.",
+              id: "email-2",
+              received_at: "2026-05-25T00:00:04.000Z",
+              reply_to_sent_email_id: "sent-reply-1",
+            }),
+          },
+        };
+      }
+      return { data: { data: replyEmail() } };
+    });
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      cursor: null,
+      ok: true,
+      rows: [
+        searchRow({
+          id: "email-2",
+          received_at: "2026-05-25T00:00:04.000Z",
+        }),
+      ],
+    });
+
+    const result = await runChatCommand([
+      "help@agent.example",
+      "--reply",
+      "Can you explain?",
+      "--from",
+      "agent@sender.example",
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain(
+      "Finding latest inbound email from help@agent.example",
+    );
+    expect(mocks.searchEmails).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: expect.objectContaining({
+          from: "help@agent.example",
+          sort: "received_at_desc",
+          to: "agent@sender.example",
+        }),
+      }),
+    );
+    expect(mocks.replyToEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: {
+          body_text: "Can you explain?",
+          from: "agent@sender.example",
+        },
+        path: { id: "email-1" },
+      }),
+    );
+    expect(result.stdout).toContain("Latest follow-up.");
+  });
+
+  it("rejects subject overrides in reply mode", async () => {
+    await expect(
+      ChatCommand.run(
+        [
+          "help@agent.example",
+          "--reply",
+          "Can you explain?",
+          "--subject",
+          "No",
+        ],
+        { root: CLI_ROOT },
+      ),
+    ).rejects.toThrow(
+      "--subject is not used with --reply. Primitive derives the reply subject from the inbound email.",
     );
   });
 
@@ -411,7 +572,16 @@ describe("chat command", () => {
       requires_message: true,
     });
     expect(parsed.follow_up_commands[0].argv).toEqual(
-      expect.arrayContaining(["primitive", "chat", "--from", "--json"]),
+      expect.arrayContaining([
+        "primitive",
+        "chat",
+        "--reply",
+        "<message>",
+        "--reply-to-email-id",
+        "email-1",
+        "--from",
+        "--json",
+      ]),
     );
   });
 
