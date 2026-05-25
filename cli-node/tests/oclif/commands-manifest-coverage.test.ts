@@ -80,6 +80,14 @@ describe("COMMANDS / manifest coverage", () => {
     expect(sendCommand.flags.attachment?.multiple).toBe(true);
   });
 
+  it("keeps whoami registered with explicit JSON output", () => {
+    expect(COMMANDS.whoami).toBeDefined();
+    const whoamiCommand = COMMANDS.whoami as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(whoamiCommand.flags.json).toBeDefined();
+  });
+
   it("registers domain zone-file commands", () => {
     expect(COMMANDS["domains:zone-file"]).toBeDefined();
     expect(COMMANDS["domains:download-domain-zone-file"]).toBe(

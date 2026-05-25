@@ -3,6 +3,8 @@ import type { Account } from "@primitivedotdev/api-core";
 import { getAccount } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
+  API_BASE_URL_1_FLAG_DESCRIPTION,
+  API_BASE_URL_2_FLAG_DESCRIPTION,
   extractErrorPayload,
   runWithTiming,
   surfaceUnauthorizedHint,
@@ -10,26 +12,30 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 
-// `primitive whoami` is the credentials smoke-test the AGX
-// walkthrough kept asking for. Before this command, a user with a
-// suspect CLI auth had no fast way to verify "is this token live and
-// pointed at the org I expect" short of trying any other call and
-// reading a 401. That ambiguity bit two consecutive walkthroughs.
-//
-// Implementation: thin wrapper over /api/v1/account that prints
-// the account email, plan, id, and onboarding status. Any auth
-// problem surfaces as the standard error envelope, same as the
-// generated commands.
+// `primitive whoami` is the credentials smoke test. Default output stays
+// intentionally sparse so routine auth checks do not expose account internals;
+// --json keeps the full account payload available for explicit scripting.
+
+export function formatWhoamiSummary(account: Account): string {
+  return [
+    `Authenticated as ${account.email}`,
+    `Account id: ${account.id}`,
+    `Plan: ${account.plan}`,
+  ].join("\n");
+}
 
 class WhoamiCommand extends Command {
   static description =
-    `Print the account currently authenticated by saved OAuth credentials or an explicit API key. Useful as a credentials smoke test: confirms auth is live and shows which account it belongs to.`;
+    `Print the account currently authenticated by saved OAuth credentials or an explicit API key. Useful as a credentials smoke test: confirms auth is live and shows which account it belongs to.
+
+  The default output is a concise human summary. Pass --json only when a script intentionally needs the full /account response.`;
 
   static summary = "Print the authenticated account (credentials smoke test)";
 
   static examples = [
     "<%= config.bin %> whoami",
     "<%= config.bin %> whoami --api-key prim_...",
+    "<%= config.bin %> whoami --json | jq .id",
   ];
 
   static flags = {
@@ -39,16 +45,18 @@ class WhoamiCommand extends Command {
       env: "PRIMITIVE_API_KEY",
     }),
     "api-base-url-1": Flags.string({
-      description:
-        "Override the primary API base URL. Internal testing only; not documented to customers.",
+      description: API_BASE_URL_1_FLAG_DESCRIPTION,
       env: "PRIMITIVE_API_BASE_URL_1",
       hidden: true,
     }),
     "api-base-url-2": Flags.string({
-      description:
-        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
+      description: API_BASE_URL_2_FLAG_DESCRIPTION,
       env: "PRIMITIVE_API_BASE_URL_2",
       hidden: true,
+    }),
+    json: Flags.boolean({
+      description:
+        "Print the full account JSON response. Default output hides setup and billing internals.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
@@ -94,20 +102,12 @@ class WhoamiCommand extends Command {
         throw new Errors.CLIError("unexpected empty response");
       }
 
-      // Concise human-readable summary on stderr; the full account
-      // JSON goes to stdout so a script can pipe it.
-      const onboarding =
-        account.onboarding_completed === true
-          ? "complete"
-          : account.onboarding_step
-            ? `in progress (step: ${account.onboarding_step})`
-            : "incomplete";
-      process.stderr.write(`Authenticated as ${account.email}\n`);
-      process.stderr.write(`  Account id: ${account.id}\n`);
-      process.stderr.write(`  Plan:       ${account.plan}\n`);
-      process.stderr.write(`  Onboarding: ${onboarding}\n`);
+      if (flags.json) {
+        this.log(JSON.stringify(account, null, 2));
+        return;
+      }
 
-      this.log(JSON.stringify(account, null, 2));
+      this.log(formatWhoamiSummary(account));
     });
   }
 }
