@@ -27,6 +27,13 @@ import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
 import ReplyCommand from "./commands/reply.js";
 import SendCommand from "./commands/send.js";
+import {
+  SigninBrowserCommand,
+  SigninCommand,
+  SigninOtpCommand,
+  SigninOtpConfirmCommand,
+  SigninOtpResendCommand,
+} from "./commands/signin.js";
 import SignupCommand, {
   SignupConfirmCommand,
   SignupInteractiveCommand,
@@ -278,6 +285,14 @@ export const COMMANDS: Record<string, typeof Command> = {
   chat: ChatCommand,
   // `login` creates and stores an org-scoped OAuth session via browser approval.
   login: LoginCommand,
+  // `signin` is the canonical existing-account auth surface. The
+  // browser subcommand is explicit; the OTP subcommand documents the
+  // missing API contract instead of pretending signup is sign-in.
+  signin: SigninCommand,
+  "signin:browser": SigninBrowserCommand,
+  "signin:otp": SigninOtpCommand,
+  "signin:otp:confirm": SigninOtpConfirmCommand,
+  "signin:otp:resend": SigninOtpResendCommand,
   // `signup` starts account signup. Subcommands confirm, resend, or run the
   // whole flow in one interactive session.
   signup: SignupCommand,
@@ -293,7 +308,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   whoami: WhoamiCommand,
   // `doctor` is the environment health check. Node version, proxy
   // env, auth resolution, /account reachability, verified-domain
-  // status — every check that whoami implicitly assumes is fine.
+  // status; every check that whoami implicitly assumes is fine.
   // AGX walkthroughs that hit ENETUNREACH from inside containers
   // had no single command to bisect "is the CLI / network / key /
   // server broken"; doctor is that command.

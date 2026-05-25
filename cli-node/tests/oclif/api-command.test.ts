@@ -420,7 +420,7 @@ describe("surfaceUnauthorizedHint", () => {
     expect(writes.join("")).toContain(
       "Your saved Primitive CLI OAuth session was rejected",
     );
-    expect(writes.join("")).toContain("primitive logout && primitive login");
+    expect(writes.join("")).toContain("primitive logout && primitive signin");
   });
 
   it("warns about overridden base URL when saved URL differs and preserves credentials", () => {

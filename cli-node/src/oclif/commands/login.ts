@@ -139,7 +139,7 @@ export async function checkExistingLogin(params: {
   // Skip the auto-delete when an API URL override is in play and the
   // override URL differs from the URL the credentials were saved
   // with. The most likely cause there is "saved against env A,
-  // probing against env B" — the credential may still be valid
+  // probing against env B"; the credential may still be valid
   // against its original host.
   const baseUrlDiffersFromSaved =
     requestConfig.baseUrlOverridden &&
@@ -197,12 +197,13 @@ class LoginCommand extends Command {
     force: Flags.boolean({
       char: "f",
       description:
-        "Replace saved credentials without first verifying the existing login",
+        "Replace saved credentials without first verifying the existing session",
     }),
   };
 
   async run(): Promise<void> {
-    const { flags } = await this.parse(LoginCommand);
+    const commandClass = this.constructor as typeof LoginCommand;
+    const { flags } = await this.parse(commandClass);
 
     let releaseCredentialsLock: () => void;
     try {
@@ -213,13 +214,20 @@ class LoginCommand extends Command {
     }
 
     try {
-      await this.runWithCredentialLock(flags);
+      await this.runWithCredentialLock(flags, this.retryCommand());
     } finally {
       releaseCredentialsLock();
     }
   }
 
-  private async runWithCredentialLock(flags: LoginFlags): Promise<void> {
+  protected retryCommand(): string {
+    return "login";
+  }
+
+  private async runWithCredentialLock(
+    flags: LoginFlags,
+    retryCommand: string,
+  ): Promise<void> {
     const { apiClient, requestConfig } = createCliApiClient({
       apiBaseUrl1: flags["api-base-url-1"],
       configDir: this.config.configDir,
@@ -280,7 +288,7 @@ class LoginCommand extends Command {
       throw cliError("Primitive API returned an empty CLI login response.");
     }
 
-    process.stderr.write(`Your login code is: ${start.user_code}\n`);
+    process.stderr.write(`Your sign-in code is: ${start.user_code}\n`);
     if (!flags["no-browser"]) {
       openBrowser(start.verification_uri_complete);
       process.stderr.write("Opening Primitive in your browser...\n");
@@ -354,12 +362,12 @@ class LoginCommand extends Command {
       }
       if (code === API_ERROR_CODES.expiredToken) {
         throw cliError(
-          "Primitive CLI login expired. Run `primitive login` again.",
+          `Primitive CLI login expired. Run \`primitive ${retryCommand}\` again.`,
         );
       }
       if (code === API_ERROR_CODES.invalidDeviceCode) {
         throw cliError(
-          "Primitive CLI login device code is invalid. Run `primitive login` again.",
+          `Primitive CLI login device code is invalid. Run \`primitive ${retryCommand}\` again.`,
         );
       }
 
@@ -367,7 +375,9 @@ class LoginCommand extends Command {
       throw cliError("Primitive CLI login failed while polling for approval.");
     }
 
-    throw cliError("Primitive CLI login expired. Run `primitive login` again.");
+    throw cliError(
+      `Primitive CLI login expired. Run \`primitive ${retryCommand}\` again.`,
+    );
   }
 }
 

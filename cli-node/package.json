@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/cli",
-  "version": "0.31.2",
+  "version": "0.31.3",
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
   "sideEffects": false,
@@ -45,6 +45,9 @@
       },
       "sending": {
         "description": "Send outbound emails. Prefer `primitive send` for fresh sends and `primitive reply --id <inbound-id>` for replies; use `primitive sending list`, `primitive sending get`, and `primitive sending permissions` for outbound history and permissions."
+      },
+      "signin": {
+        "description": "Sign in to an existing Primitive account"
       },
       "sent": {
         "description": "Short aliases for outbound sent-email history: `primitive sent list` and `primitive sent get`."

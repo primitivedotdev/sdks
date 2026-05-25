@@ -10,6 +10,14 @@ describe("describe command", () => {
     expect(COMMANDS.login).toBeDefined();
     expect(COMMANDS.logout).toBeDefined();
   });
+
+  it("registers existing-account sign-in commands in the COMMANDS map", () => {
+    expect(COMMANDS.signin).toBeDefined();
+    expect(COMMANDS["signin:browser"]).toBeDefined();
+    expect(COMMANDS["signin:otp"]).toBeDefined();
+    expect(COMMANDS["signin:otp:confirm"]).toBeDefined();
+    expect(COMMANDS["signin:otp:resend"]).toBeDefined();
+  });
 });
 
 describe("lookupOperation", () => {

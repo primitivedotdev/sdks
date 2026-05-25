@@ -22,7 +22,7 @@ import {
 const API_HEADERS_ENV = "PRIMITIVE_API_HEADERS";
 const OAUTH_REFRESH_SKEW_MS = 60 * 1000;
 export const SAVED_CLI_OAUTH_SESSION_EXPIRED_MESSAGE =
-  "Saved Primitive CLI OAuth session expired or was revoked. Run `primitive login` to authenticate again.";
+  "Saved Primitive CLI OAuth session expired or was revoked. Run `primitive signin` to authenticate again.";
 
 type Env = Record<string, string | undefined>;
 
@@ -246,7 +246,7 @@ export async function refreshStoredCliCredentials(params: {
     const current = loadCliCredentials(params.configDir);
     if (!current) {
       throw new Errors.CLIError(
-        "Saved Primitive CLI OAuth session is no longer available. Run `primitive login` to authenticate again.",
+        "Saved Primitive CLI OAuth session is no longer available. Run `primitive signin` to authenticate again.",
         { exit: 1 },
       );
     }
