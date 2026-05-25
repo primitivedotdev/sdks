@@ -381,6 +381,11 @@ export function buildChatFollowUpCommands(
   context: ChatOutputContext,
 ): ChatFollowUpCommand[] {
   const commands: ChatFollowUpCommand[] = [];
+  const hasCustomStrictPhase =
+    context.strictPhaseSeconds !== DEFAULT_STRICT_PHASE_SECONDS;
+  const shouldPreferStrictContinuation =
+    context.strictOnly ||
+    (context.matchStrategy === "strict" && !hasCustomStrictPhase);
   const continueParts = [
     "primitive",
     "chat",
@@ -400,9 +405,9 @@ export function buildChatFollowUpCommands(
   if (context.quiet) {
     continueParts.push("--quiet");
   }
-  if (context.strictOnly) {
+  if (shouldPreferStrictContinuation) {
     continueParts.push("--strict-only");
-  } else if (context.strictPhaseSeconds !== DEFAULT_STRICT_PHASE_SECONDS) {
+  } else if (hasCustomStrictPhase) {
     continueParts.push(
       "--strict-phase-seconds",
       String(context.strictPhaseSeconds),
@@ -558,6 +563,7 @@ export function formatChatResponse(context: ChatOutputContext): string {
     "Helpful follow-up commands",
     "  Replace <message> before running commands that include it.",
     "  Commands are templates; use --json for parse-safe output.",
+    "  When shown, --strict-only prefers timing out over matching the wrong reply.",
   );
   for (const { description, command } of buildChatFollowUpCommands(context)) {
     lines.push(`  ${description}:`, `    ${command}`);
@@ -702,9 +708,10 @@ class ChatCommand extends Command {
   --strict-only is not set, it falls back to a weaker sender/time
   window match: from=<recipient>, to=<sender>, and since=<send time>.
   The fallback can catch clients that strip threading headers, but it
-  is less exact than strict matching. Progress is written to stderr
-  while the CLI waits. Exits non-zero on timeout and prints recovery
-  commands when the send succeeded but no reply was returned.`;
+  is less exact than strict matching. Use --strict-only when matching
+  the wrong reply is worse than timing out. Progress is written to
+  stderr while the CLI waits. Exits non-zero on timeout and prints
+  recovery commands when the send succeeded but no reply was returned.`;
 
   static summary =
     "Chat with an agent over email (send and wait for the reply)";
@@ -788,7 +795,7 @@ class ChatCommand extends Command {
     }),
     "strict-only": Flags.boolean({
       description:
-        "Disable the time-window fallback. Only accept inbounds whose threading headers (In-Reply-To / References) resolve to this send. Recommended when correctness matters more than success rate (e.g. agents talking to agents).",
+        "Disable the time-window fallback. Only accept inbounds whose threading headers (In-Reply-To / References) resolve to this send. Use when matching the wrong reply is worse than timing out.",
     }),
     interval: Flags.integer({
       default: DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,

@@ -11,7 +11,7 @@ function readCliPackageJson(): {
   files?: string[];
   oclif?: {
     plugins?: string[];
-    topics?: Record<string, { hidden?: boolean }>;
+    topics?: Record<string, { description?: string; hidden?: boolean }>;
     "warn-if-update-available"?: {
       frequency?: number;
       frequencyUnit?: string;
@@ -93,6 +93,11 @@ describe("COMMANDS / manifest coverage", () => {
     };
     expect(chatCommand.flags.reply).toBeDefined();
     expect(chatCommand.flags["reply-to-email-id"]).toBeDefined();
+  });
+
+  it("registers friendly thread command aliases", () => {
+    expect(COMMANDS["threads:get-thread"]).toBeDefined();
+    expect(COMMANDS["threads:get"]).toBe(COMMANDS["threads:get-thread"]);
   });
 
   it("keeps top-level send registered with attachment support", () => {
@@ -190,6 +195,14 @@ describe("COMMANDS / manifest coverage", () => {
     const packageJson = readCliPackageJson();
 
     expect(packageJson.oclif?.topics?.config?.hidden).toBe(true);
+  });
+
+  it("documents the friendly thread command in root help", () => {
+    const packageJson = readCliPackageJson();
+
+    expect(packageJson.oclif?.topics?.threads?.description).toContain(
+      "primitive threads get --id <thread-id>",
+    );
   });
 
   it("configures daily update warnings", () => {

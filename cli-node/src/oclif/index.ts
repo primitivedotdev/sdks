@@ -297,6 +297,7 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "sending:send": "sending:send-email",
   "sent:get": "sending:get-sent-email",
   "sent:list": "sending:list-sent-emails",
+  "threads:get": "threads:get-thread",
   "webhook-deliveries:list": "webhook-deliveries:list-deliveries",
   "webhook-deliveries:replay": "webhook-deliveries:replay-delivery",
 };

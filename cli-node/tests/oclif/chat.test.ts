@@ -257,7 +257,10 @@ describe("chat command", () => {
     expect(output).toContain("Replace <message> before running");
     expect(output).toContain("use --json for parse-safe output");
     expect(output).toContain(
-      "primitive chat help@agent.example --reply '<message>' --from agent@sender.example --reply-to-email-id email-1 --timeout 120",
+      "--strict-only prefers timing out over matching the wrong reply",
+    );
+    expect(output).toContain(
+      "primitive chat help@agent.example --reply '<message>' --from agent@sender.example --reply-to-email-id email-1 --timeout 120 --strict-only",
     );
     expect(output).not.toContain("--in-reply-to");
     expect(output).not.toContain("--subject 'API key help'");
@@ -297,7 +300,7 @@ describe("chat command", () => {
       requires_message: true,
     });
     expect(envelope.follow_up_commands[0]?.argv).toEqual(
-      expect.arrayContaining(["--from", "--json"]),
+      expect.arrayContaining(["--from", "--json", "--strict-only"]),
     );
     expect(envelope.follow_up_commands[0]?.placeholders).toEqual([
       {
@@ -330,6 +333,25 @@ describe("chat command", () => {
     expect(commands[0]).toContain(
       "--from 'Agent'\\''s Support <agent support@example.com>'",
     );
+  });
+
+  it("does not force strict-only into fallback-match continuation commands", () => {
+    const commands = buildChatFollowUpCommands({
+      ...outputContext(),
+      matchStrategy: "fallback",
+    }).map((entry) => entry.command);
+
+    expect(commands[0]).not.toContain("--strict-only");
+  });
+
+  it("preserves custom strict phase settings in continuation commands", () => {
+    const commands = buildChatFollowUpCommands({
+      ...outputContext(),
+      strictPhaseSeconds: 30,
+    }).map((entry) => entry.command);
+
+    expect(commands[0]).toContain("--strict-phase-seconds 30");
+    expect(commands[0]).not.toContain("--strict-only");
   });
 
   it("falls back to HTML response body when text is empty", () => {
@@ -442,7 +464,7 @@ describe("chat command", () => {
       "Response body (text; use --json for parsing)",
     );
     expect(result.stdout).toContain(
-      "primitive chat help@agent.example --reply '<message>' --from agent@sender.example --reply-to-email-id email-1 --timeout 17",
+      "primitive chat help@agent.example --reply '<message>' --from agent@sender.example --reply-to-email-id email-1 --timeout 17 --strict-only",
     );
   });
 
