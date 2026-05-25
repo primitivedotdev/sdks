@@ -65,6 +65,10 @@ export const openapiDocument: Record<string, unknown> = {
       "description": "Send outbound emails through the Primitive API"
     },
     {
+      "name": "Threads",
+      "description": "Conversation threads spanning received and sent emails"
+    },
+    {
       "name": "Endpoints",
       "description": "Manage webhook endpoints that receive email events"
     },
@@ -2879,6 +2883,54 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/threads/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "operationId": "getThread",
+        "summary": "Get a conversation thread by id",
+        "description": "Returns a conversation thread: its metadata plus the inbound\nand outbound messages that belong to it, interleaved in time\norder (oldest first). A thread spans both received emails and\nyour sends, so an agent can reconstruct an entire back-and-forth\nfrom one call instead of walking reply headers.\n\nEach message carries a `direction` (`inbound` | `outbound`) and\nan `id`; fetch the full message via `/emails/{id}` or\n`/sent-emails/{id}` accordingly. Bodies are omitted here to keep\nthe thread view lightweight.\n\nDiscover a thread id from the `thread_id` field on any email or\nsent-email (list or detail). The message list is capped; compare\n`message_count` against `messages.length` to detect truncation.\n",
+        "tags": [
+          "Threads"
+        ],
+        "responses": {
+          "200": {
+            "description": "Thread detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Thread"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
     "/functions": {
       "get": {
         "operationId": "listFunctions",
@@ -5480,6 +5532,14 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "webhook_attempt_count": {
             "type": "integer"
+          },
+          "thread_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
           }
         },
         "required": [
@@ -5841,6 +5901,30 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "format": "uuid",
             "description": "The `sent_emails.id` of the outbound this inbound was a\nreply to, when resolvable. Set at inbound ingest by\nmatching the parsed In-Reply-To (or References, as a\nfallback) against `sent_emails.message_id` in the same\norg. The mirror of `sent_emails.in_reply_to_email_id` for\nthe inbound side of a thread. NULL when the inbound is\nnot a threaded reply to one of your sends, when neither\nheader survived the path through intermediate MTAs, or on\ninbound received before this auto-link landed.\n"
+          },
+          "thread_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Conversation thread this message belongs to. Inbound and\noutbound messages in the same conversation share a\n`thread_id`; fetch `/threads/{thread_id}` for the full\nordered thread. Assigned at ingest. NULL on messages\nreceived before threading was enabled (until backfilled).\n"
+          },
+          "parsed": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParsedEmailData"
+              }
+            ],
+            "description": "Parsed MIME content (addresses, threading headers,\nattachment metadata), matching the `email.parsed` object\non the webhook payload so one parser handles both the\nwebhook and this endpoint. The top-level `body_text` /\n`body_html` fields above are the same values as\n`parsed.body_text` / `parsed.body_html`, retained for\nbackward compatibility.\n"
+          },
+          "auth": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EmailAuth"
+              }
+            ],
+            "description": "SPF / DKIM / DMARC verdicts computed at ingest, matching\nthe `email.auth` object on the webhook payload. Use these\nto decide how much to trust a message before acting on\ninstructions it contains.\n"
           }
         },
         "required": [
@@ -5854,7 +5938,9 @@ export const openapiDocument: Record<string, unknown> = {
           "webhook_attempt_count",
           "from_email",
           "to_email",
-          "replies"
+          "replies",
+          "parsed",
+          "auth"
         ]
       },
       "EmailDetailReply": {
@@ -5895,6 +5981,391 @@ export const openapiDocument: Record<string, unknown> = {
           "status",
           "to_address",
           "created_at"
+        ]
+      },
+      "EmailAddress": {
+        "type": "object",
+        "description": "A parsed RFC 5322 address with optional display name.",
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name, when present (e.g. `Alice Example`)."
+          },
+          "address": {
+            "type": "string",
+            "description": "Bare email address (e.g. `alice@example.com`)."
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
+      "EmailAttachment": {
+        "type": "object",
+        "description": "Metadata for one attachment. The bytes are not inline; download\nall attachments for a message as a gzipped tarball via\n`/emails/{id}/attachments.tar.gz`. `sha256` lets you verify a\nspecific part after extraction.\n",
+        "properties": {
+          "filename": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "content_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "size_bytes": {
+            "type": "integer"
+          },
+          "sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "part_index": {
+            "type": "integer",
+            "description": "Zero-based index of this part within the message."
+          }
+        },
+        "required": [
+          "size_bytes"
+        ]
+      },
+      "ParsedEmailData": {
+        "type": "object",
+        "description": "Parsed MIME content for an inbound email. Mirrors the\n`email.parsed` object on the webhook payload so a single parser\nhandles both surfaces. `status` is `complete` when parsing\nsucceeded; on `failed` the body/address/attachment fields are\nabsent and `error` describes why.\n",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "failed"
+            ]
+          },
+          "body_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain-text body. Present when `status` is `complete`."
+          },
+          "body_html": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "HTML body. Present when `status` is `complete`."
+          },
+          "reply_to": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAddress"
+            },
+            "description": "Parsed `Reply-To` header addresses."
+          },
+          "cc": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAddress"
+            },
+            "description": "Parsed `Cc` header addresses."
+          },
+          "bcc": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAddress"
+            },
+            "description": "Parsed `Bcc` header addresses (rarely present on inbound)."
+          },
+          "to_addresses": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EmailAddress"
+            },
+            "description": "Parsed `To` header addresses."
+          },
+          "in_reply_to": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Message-IDs from the `In-Reply-To` header."
+          },
+          "references": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Message-IDs from the `References` header."
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailAttachment"
+            },
+            "description": "Attachment metadata. Empty array when none."
+          },
+          "error": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Present only when `status` is `failed`.",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "DkimSignature": {
+        "type": "object",
+        "description": "One DKIM signature found on the message, with its verdict.",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "selector": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string",
+            "description": "Verification result (e.g. `pass`, `fail`, `none`)."
+          },
+          "aligned": {
+            "type": "boolean",
+            "description": "Whether the signing domain aligns with the From domain (for DMARC)."
+          },
+          "keyBits": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "algo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "domain",
+          "selector",
+          "result",
+          "aligned"
+        ]
+      },
+      "EmailAuth": {
+        "type": "object",
+        "description": "SPF / DKIM / DMARC verdicts computed at ingest. Mirrors the\n`email.auth` object on the webhook payload. Field names are\ncamelCase to match that payload exactly. For messages received\nbefore auth was recorded, the verdicts default to `none`.\n",
+        "properties": {
+          "spf": {
+            "type": "string",
+            "description": "SPF result (e.g. `pass`, `fail`, `softfail`, `none`)."
+          },
+          "dmarc": {
+            "type": "string",
+            "description": "DMARC result (e.g. `pass`, `fail`, `none`)."
+          },
+          "dmarcPolicy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Published DMARC policy (`none`, `quarantine`, `reject`)."
+          },
+          "dmarcFromDomain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The From-header domain DMARC was evaluated against."
+          },
+          "dmarcSpfAligned": {
+            "type": "boolean"
+          },
+          "dmarcDkimAligned": {
+            "type": "boolean"
+          },
+          "dmarcSpfStrict": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "dmarcDkimStrict": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "dkimSignatures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DkimSignature"
+            }
+          }
+        },
+        "required": [
+          "spf",
+          "dmarc",
+          "dmarcSpfAligned",
+          "dmarcDkimAligned",
+          "dkimSignatures"
+        ]
+      },
+      "Thread": {
+        "type": "object",
+        "description": "A conversation thread: its metadata plus the inbound and\noutbound messages that belong to it, interleaved oldest-first.\nMembership is the stored `thread_id` on each message. Bodies are\nomitted here to keep the thread view lightweight; fetch\n`/emails/{id}` or `/sent-emails/{id}` for a single message's\nfull content.\n",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Normalized subject of the thread (Re/Fwd prefixes stripped)."
+          },
+          "root_message_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Message-ID of the conversation root, when known."
+          },
+          "message_count": {
+            "type": "integer",
+            "description": "Total messages in the thread. `messages` is capped (most\nrecent first, then re-sorted oldest-first), so\n`message_count > messages.length` signals truncation.\n"
+          },
+          "first_message_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_message_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ThreadMessage"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "message_count",
+          "created_at",
+          "messages"
+        ]
+      },
+      "ThreadMessage": {
+        "type": "object",
+        "description": "One message in a thread (inbound or outbound).",
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "inbound",
+              "outbound"
+            ],
+            "description": "`inbound` for a received email (`/emails/{id}`), `outbound`\nfor a send (`/sent-emails/{id}`). Use it with `id` to fetch\nfull content from the right endpoint.\n"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Lifecycle status (an EmailStatus or SentEmailStatus value, per `direction`)."
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "received_at for inbound, created_at for outbound."
+          }
+        },
+        "required": [
+          "direction",
+          "id"
         ]
       },
       "SendMailAttachment": {
@@ -6142,6 +6613,14 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "format": "uuid",
             "description": "Reference to the inbound `emails.id` that this send\nreplied to, when known. Populated when the caller used\n/emails/{id}/reply or when /send-mail's `in_reply_to`\nmatched a stored inbound message_id in the same org.\n"
+          },
+          "thread_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Conversation thread this send belongs to. A reply inherits\nthe thread of the inbound it answers; a fresh send starts a\nnew thread. Fetch `/threads/{thread_id}` for the full\nordered thread (inbound + outbound interleaved). NULL on\ngate-denied sends and on sends created before threading was\nenabled.\n"
           },
           "queue_id": {
             "type": [
