@@ -78,6 +78,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" domains zone-file --help | grep -q -- "--outbound-only" && \
 	"$$bin" inbox status --help | grep -q -- "readiness" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
+	"$$bin" chat --help | grep -q -- "follow-up commands" && \
 	zone_id="33333333-3333-4333-8333-333333333333" && \
 	port_file="$$smoke_dir/zone-server-port" && \
 	server_log="$$smoke_dir/zone-server.log"; \
