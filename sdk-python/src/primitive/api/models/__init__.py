@@ -50,6 +50,10 @@ from .delivery_summary_email_type_0 import DeliverySummaryEmailType0
 from .delivery_summary_status import DeliverySummaryStatus
 from .discard_content_result import DiscardContentResult
 from .discard_email_content_response_200 import DiscardEmailContentResponse200
+from .domain_dns_record import DomainDnsRecord
+from .domain_dns_record_purpose import DomainDnsRecordPurpose
+from .domain_dns_record_status import DomainDnsRecordStatus
+from .domain_dns_record_type import DomainDnsRecordType
 from .domain_verify_result_type_0 import DomainVerifyResultType0
 from .domain_verify_result_type_1 import DomainVerifyResultType1
 from .email_detail import EmailDetail
@@ -138,6 +142,7 @@ from .search_emails_response_200 import SearchEmailsResponse200
 from .search_emails_snippet import SearchEmailsSnippet
 from .search_emails_sort import SearchEmailsSort
 from .send_email_response_200 import SendEmailResponse200
+from .send_mail_attachment import SendMailAttachment
 from .send_mail_input import SendMailInput
 from .send_mail_result import SendMailResult
 from .send_permission_address import SendPermissionAddress
@@ -242,6 +247,10 @@ __all__ = (
     "DeliverySummaryStatus",
     "DiscardContentResult",
     "DiscardEmailContentResponse200",
+    "DomainDnsRecord",
+    "DomainDnsRecordPurpose",
+    "DomainDnsRecordStatus",
+    "DomainDnsRecordType",
     "DomainVerifyResultType0",
     "DomainVerifyResultType1",
     "EmailDetail",
@@ -330,6 +339,7 @@ __all__ = (
     "SearchEmailsSnippet",
     "SearchEmailsSort",
     "SendEmailResponse200",
+    "SendMailAttachment",
     "SendMailInput",
     "SendMailResult",
     "SendPermissionAddress",

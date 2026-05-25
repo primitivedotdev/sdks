@@ -105,6 +105,29 @@ func (s *AddDomainConflict) Validate() error {
 	return nil
 }
 
+func (s *AddDomainCreated) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *AddDomainInput) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -1186,10 +1209,194 @@ func (s Domain) Validate() error {
 		}
 		return nil
 	case UnverifiedDomainDomain:
-		return nil // no validation needed
+		if err := s.UnverifiedDomain.Validate(); err != nil {
+			return err
+		}
+		return nil
 	default:
 		return errors.Errorf("invalid type %q", s.Type)
 	}
+}
+
+func (s *DomainDnsRecord) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Type.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "type",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Purpose.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "purpose",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Status.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "status",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s DomainDnsRecordPurpose) Validate() error {
+	switch s {
+	case "inbound_mx":
+		return nil
+	case "ownership_verification":
+		return nil
+	case "spf":
+		return nil
+	case "dkim":
+		return nil
+	case "dmarc":
+		return nil
+	case "tls_reporting":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s DomainDnsRecordStatus) Validate() error {
+	switch s {
+	case "pending":
+		return nil
+	case "found":
+		return nil
+	case "missing":
+		return nil
+	case "incorrect":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s DomainDnsRecordType) Validate() error {
+	switch s {
+	case "MX":
+		return nil
+	case "TXT":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s DomainVerifyResult) Validate() error {
+	switch s.Type {
+	case DomainVerifyResult0DomainVerifyResult:
+		if err := s.DomainVerifyResult0.Validate(); err != nil {
+			return err
+		}
+		return nil
+	case DomainVerifyResult1DomainVerifyResult:
+		if err := s.DomainVerifyResult1.Validate(); err != nil {
+			return err
+		}
+		return nil
+	default:
+		return errors.Errorf("invalid type %q", s.Type)
+	}
+}
+
+func (s *DomainVerifyResult0) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		var failures []validate.FieldError
+		for i, elem := range s.DNSRecords {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "dns_records",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *DomainVerifyResult1) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		var failures []validate.FieldError
+		for i, elem := range s.DNSRecords {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "dns_records",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s *DownloadAttachmentsBadRequest) Validate() error {
@@ -3859,6 +4066,94 @@ func (s *SendEmailUnauthorized) Validate() error {
 	return nil
 }
 
+func (s *SendMailAttachment) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.String{
+			MinLength:     1,
+			MinLengthSet:  true,
+			MaxLength:     255,
+			MaxLengthSet:  true,
+			Email:         false,
+			Hostname:      false,
+			Regex:         nil,
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.Filename)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "filename",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.ContentType.Get(); ok {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     255,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(value)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "content_type",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := (validate.String{
+			MinLength:     1,
+			MinLengthSet:  true,
+			MaxLength:     44040192,
+			MaxLengthSet:  true,
+			Email:         false,
+			Hostname:      false,
+			Regex:         nil,
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.ContentBase64)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "content_base64",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *SendMailInput) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -4009,6 +4304,42 @@ func (s *SendMailInput) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "references",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Attachments == nil {
+			return nil // optional
+		}
+		if err := (validate.Array{
+			MinLength:    0,
+			MinLengthSet: false,
+			MaxLength:    100,
+			MaxLengthSet: true,
+		}).ValidateLength(len(s.Attachments)); err != nil {
+			return errors.Wrap(err, "array")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Attachments {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "attachments",
 			Error: err,
 		})
 	}
@@ -4990,6 +5321,43 @@ func (s *TestFunctionUnprocessableEntity) Validate() error {
 	return nil
 }
 
+func (s *UnverifiedDomain) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		var failures []validate.FieldError
+		for i, elem := range s.DNSRecords {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "dns_records",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *UpdateAccountBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -5727,6 +6095,29 @@ func (s *VerifyDomainNotFound) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (s *VerifyDomainOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
 	}
 	return nil
 }

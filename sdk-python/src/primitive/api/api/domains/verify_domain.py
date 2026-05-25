@@ -87,9 +87,12 @@ def sync_detailed(
 ) -> Response[ErrorResponse | VerifyDomainResponse200]:
     """ Verify domain ownership
 
-     Checks DNS records (MX and TXT) to verify domain ownership.
+     Checks DNS records required for inbound routing, ownership,
+    and outbound authentication: MX, ownership TXT, SPF, DKIM,
+    DMARC, and TLS-RPT.
     On success, the domain is promoted from unverified to verified.
-    On failure, returns which checks passed and which failed.
+    On failure, returns which checks passed and which failed,
+    plus the exact DNS records still expected.
 
     Args:
         id (UUID):
@@ -122,9 +125,12 @@ def sync(
 ) -> ErrorResponse | VerifyDomainResponse200 | None:
     """ Verify domain ownership
 
-     Checks DNS records (MX and TXT) to verify domain ownership.
+     Checks DNS records required for inbound routing, ownership,
+    and outbound authentication: MX, ownership TXT, SPF, DKIM,
+    DMARC, and TLS-RPT.
     On success, the domain is promoted from unverified to verified.
-    On failure, returns which checks passed and which failed.
+    On failure, returns which checks passed and which failed,
+    plus the exact DNS records still expected.
 
     Args:
         id (UUID):
@@ -152,9 +158,12 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | VerifyDomainResponse200]:
     """ Verify domain ownership
 
-     Checks DNS records (MX and TXT) to verify domain ownership.
+     Checks DNS records required for inbound routing, ownership,
+    and outbound authentication: MX, ownership TXT, SPF, DKIM,
+    DMARC, and TLS-RPT.
     On success, the domain is promoted from unverified to verified.
-    On failure, returns which checks passed and which failed.
+    On failure, returns which checks passed and which failed,
+    plus the exact DNS records still expected.
 
     Args:
         id (UUID):
@@ -187,9 +196,12 @@ async def asyncio(
 ) -> ErrorResponse | VerifyDomainResponse200 | None:
     """ Verify domain ownership
 
-     Checks DNS records (MX and TXT) to verify domain ownership.
+     Checks DNS records required for inbound routing, ownership,
+    and outbound authentication: MX, ownership TXT, SPF, DKIM,
+    DMARC, and TLS-RPT.
     On success, the domain is promoted from unverified to verified.
-    On failure, returns which checks passed and which failed.
+    On failure, returns which checks passed and which failed,
+    plus the exact DNS records still expected.
 
     Args:
         id (UUID):

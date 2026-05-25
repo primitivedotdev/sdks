@@ -8,7 +8,10 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from typing import cast
 
+if TYPE_CHECKING:
+  from ..models.domain_dns_record import DomainDnsRecord
 
 
 
@@ -23,9 +26,11 @@ class DomainVerifyResultType0:
     """ 
         Attributes:
             verified (bool):
+            dns_records (list[DomainDnsRecord] | Unset): Exact DNS records checked for this verification attempt.
      """
 
     verified: bool
+    dns_records: list[DomainDnsRecord] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -33,7 +38,17 @@ class DomainVerifyResultType0:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.domain_dns_record import DomainDnsRecord
         verified = self.verified
+
+        dns_records: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.dns_records, Unset):
+            dns_records = []
+            for dns_records_item_data in self.dns_records:
+                dns_records_item = dns_records_item_data.to_dict()
+                dns_records.append(dns_records_item)
+
+
 
 
         field_dict: dict[str, Any] = {}
@@ -41,6 +56,8 @@ class DomainVerifyResultType0:
         field_dict.update({
             "verified": verified,
         })
+        if dns_records is not UNSET:
+            field_dict["dns_records"] = dns_records
 
         return field_dict
 
@@ -48,11 +65,25 @@ class DomainVerifyResultType0:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.domain_dns_record import DomainDnsRecord
         d = dict(src_dict)
         verified = d.pop("verified")
 
+        _dns_records = d.pop("dns_records", UNSET)
+        dns_records: list[DomainDnsRecord] | Unset = UNSET
+        if _dns_records is not UNSET:
+            dns_records = []
+            for dns_records_item_data in _dns_records:
+                dns_records_item = DomainDnsRecord.from_dict(dns_records_item_data)
+
+
+
+                dns_records.append(dns_records_item)
+
+
         domain_verify_result_type_0 = cls(
             verified=verified,
+            dns_records=dns_records,
         )
 
 

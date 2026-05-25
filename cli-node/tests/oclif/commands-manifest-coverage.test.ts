@@ -72,6 +72,14 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS.reply).toBeDefined();
   });
 
+  it("keeps top-level send registered with attachment support", () => {
+    const sendCommand = COMMANDS.send as unknown as {
+      flags: Record<string, { multiple?: boolean }>;
+    };
+    expect(sendCommand).toBeDefined();
+    expect(sendCommand.flags.attachment?.multiple).toBe(true);
+  });
+
   it("registers signup commands", () => {
     expect(COMMANDS.signup).toBeDefined();
     expect(COMMANDS["signup:confirm"]).toBeDefined();

@@ -10,9 +10,9 @@ import (
 type Handler interface {
 	// AddDomain implements addDomain operation.
 	//
-	// Creates an unverified domain claim. You will receive a
-	// `verification_token` to add as a DNS TXT record before
-	// calling the verify endpoint.
+	// Creates an unverified domain claim and returns the exact
+	// DNS records to publish in `dns_records`. Publish those
+	// records before calling the verify endpoint.
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, req *AddDomainInput) (AddDomainRes, error)
@@ -618,9 +618,12 @@ type Handler interface {
 	VerifyCliSignup(ctx context.Context, req *VerifyCliSignupInput) (VerifyCliSignupRes, error)
 	// VerifyDomain implements verifyDomain operation.
 	//
-	// Checks DNS records (MX and TXT) to verify domain ownership.
+	// Checks DNS records required for inbound routing, ownership,
+	// and outbound authentication: MX, ownership TXT, SPF, DKIM,
+	// DMARC, and TLS-RPT.
 	// On success, the domain is promoted from unverified to verified.
-	// On failure, returns which checks passed and which failed.
+	// On failure, returns which checks passed and which failed,
+	// plus the exact DNS records still expected.
 	//
 	// POST /domains/{id}/verify
 	VerifyDomain(ctx context.Context, params VerifyDomainParams) (VerifyDomainRes, error)

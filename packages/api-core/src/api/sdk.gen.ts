@@ -266,9 +266,9 @@ export const listDomains = <ThrowOnError extends boolean = false>(options?: Opti
 /**
  * Claim a new domain
  *
- * Creates an unverified domain claim. You will receive a
- * `verification_token` to add as a DNS TXT record before
- * calling the verify endpoint.
+ * Creates an unverified domain claim and returns the exact
+ * DNS records to publish in `dns_records`. Publish those
+ * records before calling the verify endpoint.
  *
  */
 export const addDomain = <ThrowOnError extends boolean = false>(options: Options<AddDomainData, ThrowOnError>) => (options.client ?? client).post<AddDomainResponses, AddDomainErrors, ThrowOnError>({
@@ -312,9 +312,12 @@ export const updateDomain = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Verify domain ownership
  *
- * Checks DNS records (MX and TXT) to verify domain ownership.
+ * Checks DNS records required for inbound routing, ownership,
+ * and outbound authentication: MX, ownership TXT, SPF, DKIM,
+ * DMARC, and TLS-RPT.
  * On success, the domain is promoted from unverified to verified.
- * On failure, returns which checks passed and which failed.
+ * On failure, returns which checks passed and which failed,
+ * plus the exact DNS records still expected.
  *
  */
 export const verifyDomain = <ThrowOnError extends boolean = false>(options: Options<VerifyDomainData, ThrowOnError>) => (options.client ?? client).post<VerifyDomainResponses, VerifyDomainErrors, ThrowOnError>({

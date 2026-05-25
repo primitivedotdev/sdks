@@ -10,6 +10,8 @@ from ..types import UNSET, Unset
 
 from typing import cast
 
+if TYPE_CHECKING:
+  from ..models.send_mail_attachment import SendMailAttachment
 
 
 
@@ -32,6 +34,8 @@ class SendMailInput:
                 UTF-8 byte length of body_text and body_html must be at most 262144 bytes.
             in_reply_to (str | Unset): Message-ID of the direct parent email when sending a threaded reply.
             references (list[str] | Unset): Full ordered message-id chain for the thread.
+            attachments (list[SendMailAttachment] | Unset): Inline attachments. Send requests with attachments to
+                https://api.primitive.dev/v1/send-mail. Combined raw decoded attachment bytes must be at most 31457280.
             wait (bool | Unset): When true, wait for the first downstream SMTP delivery outcome before returning.
             wait_timeout_ms (int | Unset): Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
      """
@@ -43,6 +47,7 @@ class SendMailInput:
     body_html: str | Unset = UNSET
     in_reply_to: str | Unset = UNSET
     references: list[str] | Unset = UNSET
+    attachments: list[SendMailAttachment] | Unset = UNSET
     wait: bool | Unset = UNSET
     wait_timeout_ms: int | Unset = UNSET
 
@@ -51,6 +56,7 @@ class SendMailInput:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.send_mail_attachment import SendMailAttachment
         from_ = self.from_
 
         to = self.to
@@ -66,6 +72,15 @@ class SendMailInput:
         references: list[str] | Unset = UNSET
         if not isinstance(self.references, Unset):
             references = self.references
+
+
+
+        attachments: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.attachments, Unset):
+            attachments = []
+            for attachments_item_data in self.attachments:
+                attachments_item = attachments_item_data.to_dict()
+                attachments.append(attachments_item)
 
 
 
@@ -89,6 +104,8 @@ class SendMailInput:
             field_dict["in_reply_to"] = in_reply_to
         if references is not UNSET:
             field_dict["references"] = references
+        if attachments is not UNSET:
+            field_dict["attachments"] = attachments
         if wait is not UNSET:
             field_dict["wait"] = wait
         if wait_timeout_ms is not UNSET:
@@ -100,6 +117,7 @@ class SendMailInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.send_mail_attachment import SendMailAttachment
         d = dict(src_dict)
         from_ = d.pop("from")
 
@@ -116,6 +134,18 @@ class SendMailInput:
         references = cast(list[str], d.pop("references", UNSET))
 
 
+        _attachments = d.pop("attachments", UNSET)
+        attachments: list[SendMailAttachment] | Unset = UNSET
+        if _attachments is not UNSET:
+            attachments = []
+            for attachments_item_data in _attachments:
+                attachments_item = SendMailAttachment.from_dict(attachments_item_data)
+
+
+
+                attachments.append(attachments_item)
+
+
         wait = d.pop("wait", UNSET)
 
         wait_timeout_ms = d.pop("wait_timeout_ms", UNSET)
@@ -128,6 +158,7 @@ class SendMailInput:
             body_html=body_html,
             in_reply_to=in_reply_to,
             references=references,
+            attachments=attachments,
             wait=wait,
             wait_timeout_ms=wait_timeout_ms,
         )

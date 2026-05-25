@@ -247,6 +247,12 @@ func (*AddDomainCreated) addDomainRes() {}
 type AddDomainInput struct {
 	// The domain name to claim (e.g. "example.com").
 	Domain string `json:"domain"`
+	// Set to true to confirm replacing an existing mailbox provider after an mx_conflict response.
+	Confirmed OptBool `json:"confirmed"`
+	// Deprecated and ignored. Outbound DNS is provisioned for every new domain claim.
+	//
+	// Deprecated: schema marks this property as deprecated.
+	Outbound OptBool `json:"outbound"`
 }
 
 // GetDomain returns the value of Domain.
@@ -254,9 +260,29 @@ func (s *AddDomainInput) GetDomain() string {
 	return s.Domain
 }
 
+// GetConfirmed returns the value of Confirmed.
+func (s *AddDomainInput) GetConfirmed() OptBool {
+	return s.Confirmed
+}
+
+// GetOutbound returns the value of Outbound.
+func (s *AddDomainInput) GetOutbound() OptBool {
+	return s.Outbound
+}
+
 // SetDomain sets the value of Domain.
 func (s *AddDomainInput) SetDomain(val string) {
 	s.Domain = val
+}
+
+// SetConfirmed sets the value of Confirmed.
+func (s *AddDomainInput) SetConfirmed(val OptBool) {
+	s.Confirmed = val
+}
+
+// SetOutbound sets the value of Outbound.
+func (s *AddDomainInput) SetOutbound(val OptBool) {
+	s.Outbound = val
 }
 
 type AddDomainUnauthorized ErrorResponse
@@ -2312,7 +2338,7 @@ func (*DiscardEmailContentUnauthorized) discardEmailContentRes() {}
 
 // A domain can be either verified or unverified. Verified domains have
 // `is_active` and `spam_threshold` fields. Unverified domains have a
-// `verification_token` for DNS verification.
+// `verification_token` and `dns_records` for DNS setup.
 // Ref: #/components/schemas/Domain
 // Domain represents sum type.
 type Domain struct {
@@ -2376,6 +2402,293 @@ func NewUnverifiedDomainDomain(v UnverifiedDomain) Domain {
 	var s Domain
 	s.SetUnverifiedDomain(v)
 	return s
+}
+
+// Ref: #/components/schemas/DomainDnsRecord
+type DomainDnsRecord struct {
+	// DNS record type.
+	Type DomainDnsRecordType `json:"type"`
+	// DNS-provider host/name value relative to the managed root zone.
+	Name string `json:"name"`
+	// Fully-qualified DNS record name.
+	Fqdn string `json:"fqdn"`
+	// Exact value to publish.
+	Value string `json:"value"`
+	// MX priority. Present only for MX records.
+	Priority OptInt `json:"priority"`
+	// Suggested TTL in seconds when the API can provide one.
+	TTL      OptInt                 `json:"ttl"`
+	Required bool                   `json:"required"`
+	Purpose  DomainDnsRecordPurpose `json:"purpose"`
+	Status   DomainDnsRecordStatus  `json:"status"`
+	// Short explanation of why this record is needed.
+	Message OptString `json:"message"`
+}
+
+// GetType returns the value of Type.
+func (s *DomainDnsRecord) GetType() DomainDnsRecordType {
+	return s.Type
+}
+
+// GetName returns the value of Name.
+func (s *DomainDnsRecord) GetName() string {
+	return s.Name
+}
+
+// GetFqdn returns the value of Fqdn.
+func (s *DomainDnsRecord) GetFqdn() string {
+	return s.Fqdn
+}
+
+// GetValue returns the value of Value.
+func (s *DomainDnsRecord) GetValue() string {
+	return s.Value
+}
+
+// GetPriority returns the value of Priority.
+func (s *DomainDnsRecord) GetPriority() OptInt {
+	return s.Priority
+}
+
+// GetTTL returns the value of TTL.
+func (s *DomainDnsRecord) GetTTL() OptInt {
+	return s.TTL
+}
+
+// GetRequired returns the value of Required.
+func (s *DomainDnsRecord) GetRequired() bool {
+	return s.Required
+}
+
+// GetPurpose returns the value of Purpose.
+func (s *DomainDnsRecord) GetPurpose() DomainDnsRecordPurpose {
+	return s.Purpose
+}
+
+// GetStatus returns the value of Status.
+func (s *DomainDnsRecord) GetStatus() DomainDnsRecordStatus {
+	return s.Status
+}
+
+// GetMessage returns the value of Message.
+func (s *DomainDnsRecord) GetMessage() OptString {
+	return s.Message
+}
+
+// SetType sets the value of Type.
+func (s *DomainDnsRecord) SetType(val DomainDnsRecordType) {
+	s.Type = val
+}
+
+// SetName sets the value of Name.
+func (s *DomainDnsRecord) SetName(val string) {
+	s.Name = val
+}
+
+// SetFqdn sets the value of Fqdn.
+func (s *DomainDnsRecord) SetFqdn(val string) {
+	s.Fqdn = val
+}
+
+// SetValue sets the value of Value.
+func (s *DomainDnsRecord) SetValue(val string) {
+	s.Value = val
+}
+
+// SetPriority sets the value of Priority.
+func (s *DomainDnsRecord) SetPriority(val OptInt) {
+	s.Priority = val
+}
+
+// SetTTL sets the value of TTL.
+func (s *DomainDnsRecord) SetTTL(val OptInt) {
+	s.TTL = val
+}
+
+// SetRequired sets the value of Required.
+func (s *DomainDnsRecord) SetRequired(val bool) {
+	s.Required = val
+}
+
+// SetPurpose sets the value of Purpose.
+func (s *DomainDnsRecord) SetPurpose(val DomainDnsRecordPurpose) {
+	s.Purpose = val
+}
+
+// SetStatus sets the value of Status.
+func (s *DomainDnsRecord) SetStatus(val DomainDnsRecordStatus) {
+	s.Status = val
+}
+
+// SetMessage sets the value of Message.
+func (s *DomainDnsRecord) SetMessage(val OptString) {
+	s.Message = val
+}
+
+type DomainDnsRecordPurpose string
+
+const (
+	DomainDnsRecordPurposeInboundMx             DomainDnsRecordPurpose = "inbound_mx"
+	DomainDnsRecordPurposeOwnershipVerification DomainDnsRecordPurpose = "ownership_verification"
+	DomainDnsRecordPurposeSpf                   DomainDnsRecordPurpose = "spf"
+	DomainDnsRecordPurposeDkim                  DomainDnsRecordPurpose = "dkim"
+	DomainDnsRecordPurposeDmarc                 DomainDnsRecordPurpose = "dmarc"
+	DomainDnsRecordPurposeTLSReporting          DomainDnsRecordPurpose = "tls_reporting"
+)
+
+// AllValues returns all DomainDnsRecordPurpose values.
+func (DomainDnsRecordPurpose) AllValues() []DomainDnsRecordPurpose {
+	return []DomainDnsRecordPurpose{
+		DomainDnsRecordPurposeInboundMx,
+		DomainDnsRecordPurposeOwnershipVerification,
+		DomainDnsRecordPurposeSpf,
+		DomainDnsRecordPurposeDkim,
+		DomainDnsRecordPurposeDmarc,
+		DomainDnsRecordPurposeTLSReporting,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s DomainDnsRecordPurpose) MarshalText() ([]byte, error) {
+	switch s {
+	case DomainDnsRecordPurposeInboundMx:
+		return []byte(s), nil
+	case DomainDnsRecordPurposeOwnershipVerification:
+		return []byte(s), nil
+	case DomainDnsRecordPurposeSpf:
+		return []byte(s), nil
+	case DomainDnsRecordPurposeDkim:
+		return []byte(s), nil
+	case DomainDnsRecordPurposeDmarc:
+		return []byte(s), nil
+	case DomainDnsRecordPurposeTLSReporting:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *DomainDnsRecordPurpose) UnmarshalText(data []byte) error {
+	switch DomainDnsRecordPurpose(data) {
+	case DomainDnsRecordPurposeInboundMx:
+		*s = DomainDnsRecordPurposeInboundMx
+		return nil
+	case DomainDnsRecordPurposeOwnershipVerification:
+		*s = DomainDnsRecordPurposeOwnershipVerification
+		return nil
+	case DomainDnsRecordPurposeSpf:
+		*s = DomainDnsRecordPurposeSpf
+		return nil
+	case DomainDnsRecordPurposeDkim:
+		*s = DomainDnsRecordPurposeDkim
+		return nil
+	case DomainDnsRecordPurposeDmarc:
+		*s = DomainDnsRecordPurposeDmarc
+		return nil
+	case DomainDnsRecordPurposeTLSReporting:
+		*s = DomainDnsRecordPurposeTLSReporting
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type DomainDnsRecordStatus string
+
+const (
+	DomainDnsRecordStatusPending   DomainDnsRecordStatus = "pending"
+	DomainDnsRecordStatusFound     DomainDnsRecordStatus = "found"
+	DomainDnsRecordStatusMissing   DomainDnsRecordStatus = "missing"
+	DomainDnsRecordStatusIncorrect DomainDnsRecordStatus = "incorrect"
+)
+
+// AllValues returns all DomainDnsRecordStatus values.
+func (DomainDnsRecordStatus) AllValues() []DomainDnsRecordStatus {
+	return []DomainDnsRecordStatus{
+		DomainDnsRecordStatusPending,
+		DomainDnsRecordStatusFound,
+		DomainDnsRecordStatusMissing,
+		DomainDnsRecordStatusIncorrect,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s DomainDnsRecordStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case DomainDnsRecordStatusPending:
+		return []byte(s), nil
+	case DomainDnsRecordStatusFound:
+		return []byte(s), nil
+	case DomainDnsRecordStatusMissing:
+		return []byte(s), nil
+	case DomainDnsRecordStatusIncorrect:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *DomainDnsRecordStatus) UnmarshalText(data []byte) error {
+	switch DomainDnsRecordStatus(data) {
+	case DomainDnsRecordStatusPending:
+		*s = DomainDnsRecordStatusPending
+		return nil
+	case DomainDnsRecordStatusFound:
+		*s = DomainDnsRecordStatusFound
+		return nil
+	case DomainDnsRecordStatusMissing:
+		*s = DomainDnsRecordStatusMissing
+		return nil
+	case DomainDnsRecordStatusIncorrect:
+		*s = DomainDnsRecordStatusIncorrect
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// DNS record type.
+type DomainDnsRecordType string
+
+const (
+	DomainDnsRecordTypeMX  DomainDnsRecordType = "MX"
+	DomainDnsRecordTypeTXT DomainDnsRecordType = "TXT"
+)
+
+// AllValues returns all DomainDnsRecordType values.
+func (DomainDnsRecordType) AllValues() []DomainDnsRecordType {
+	return []DomainDnsRecordType{
+		DomainDnsRecordTypeMX,
+		DomainDnsRecordTypeTXT,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s DomainDnsRecordType) MarshalText() ([]byte, error) {
+	switch s {
+	case DomainDnsRecordTypeMX:
+		return []byte(s), nil
+	case DomainDnsRecordTypeTXT:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *DomainDnsRecordType) UnmarshalText(data []byte) error {
+	switch DomainDnsRecordType(data) {
+	case DomainDnsRecordTypeMX:
+		*s = DomainDnsRecordTypeMX
+		return nil
+	case DomainDnsRecordTypeTXT:
+		*s = DomainDnsRecordTypeTXT
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/DomainVerifyResult
@@ -2449,6 +2762,8 @@ func NewDomainVerifyResult1DomainVerifyResult(v DomainVerifyResult1) DomainVerif
 
 type DomainVerifyResult0 struct {
 	Verified bool `json:"verified"`
+	// Exact DNS records checked for this verification attempt.
+	DNSRecords []DomainDnsRecord `json:"dns_records"`
 }
 
 // GetVerified returns the value of Verified.
@@ -2456,9 +2771,19 @@ func (s *DomainVerifyResult0) GetVerified() bool {
 	return s.Verified
 }
 
+// GetDNSRecords returns the value of DNSRecords.
+func (s *DomainVerifyResult0) GetDNSRecords() []DomainDnsRecord {
+	return s.DNSRecords
+}
+
 // SetVerified sets the value of Verified.
 func (s *DomainVerifyResult0) SetVerified(val bool) {
 	s.Verified = val
+}
+
+// SetDNSRecords sets the value of DNSRecords.
+func (s *DomainVerifyResult0) SetDNSRecords(val []DomainDnsRecord) {
+	s.DNSRecords = val
 }
 
 type DomainVerifyResult1 struct {
@@ -2467,6 +2792,16 @@ type DomainVerifyResult1 struct {
 	MxFound bool `json:"mxFound"`
 	// Whether the TXT verification record was found.
 	TxtFound bool `json:"txtFound"`
+	// Whether the SPF record includes Primitive.
+	SpfFound OptBool `json:"spfFound"`
+	// Whether the DKIM public key record was found.
+	DkimFound OptBool `json:"dkimFound"`
+	// Whether the DMARC record was found.
+	DmarcFound OptBool `json:"dmarcFound"`
+	// Whether the TLS-RPT record was found.
+	TlsRptFound OptBool `json:"tlsRptFound"`
+	// Exact DNS records checked for this verification attempt.
+	DNSRecords []DomainDnsRecord `json:"dns_records"`
 	// Human-readable verification failure reason.
 	Error string `json:"error"`
 }
@@ -2484,6 +2819,31 @@ func (s *DomainVerifyResult1) GetMxFound() bool {
 // GetTxtFound returns the value of TxtFound.
 func (s *DomainVerifyResult1) GetTxtFound() bool {
 	return s.TxtFound
+}
+
+// GetSpfFound returns the value of SpfFound.
+func (s *DomainVerifyResult1) GetSpfFound() OptBool {
+	return s.SpfFound
+}
+
+// GetDkimFound returns the value of DkimFound.
+func (s *DomainVerifyResult1) GetDkimFound() OptBool {
+	return s.DkimFound
+}
+
+// GetDmarcFound returns the value of DmarcFound.
+func (s *DomainVerifyResult1) GetDmarcFound() OptBool {
+	return s.DmarcFound
+}
+
+// GetTlsRptFound returns the value of TlsRptFound.
+func (s *DomainVerifyResult1) GetTlsRptFound() OptBool {
+	return s.TlsRptFound
+}
+
+// GetDNSRecords returns the value of DNSRecords.
+func (s *DomainVerifyResult1) GetDNSRecords() []DomainDnsRecord {
+	return s.DNSRecords
 }
 
 // GetError returns the value of Error.
@@ -2504,6 +2864,31 @@ func (s *DomainVerifyResult1) SetMxFound(val bool) {
 // SetTxtFound sets the value of TxtFound.
 func (s *DomainVerifyResult1) SetTxtFound(val bool) {
 	s.TxtFound = val
+}
+
+// SetSpfFound sets the value of SpfFound.
+func (s *DomainVerifyResult1) SetSpfFound(val OptBool) {
+	s.SpfFound = val
+}
+
+// SetDkimFound sets the value of DkimFound.
+func (s *DomainVerifyResult1) SetDkimFound(val OptBool) {
+	s.DkimFound = val
+}
+
+// SetDmarcFound sets the value of DmarcFound.
+func (s *DomainVerifyResult1) SetDmarcFound(val OptBool) {
+	s.DmarcFound = val
+}
+
+// SetTlsRptFound sets the value of TlsRptFound.
+func (s *DomainVerifyResult1) SetTlsRptFound(val OptBool) {
+	s.TlsRptFound = val
+}
+
+// SetDNSRecords sets the value of DNSRecords.
+func (s *DomainVerifyResult1) SetDNSRecords(val []DomainDnsRecord) {
+	s.DNSRecords = val
 }
 
 // SetError sets the value of Error.
@@ -10356,6 +10741,46 @@ type SendEmailUnauthorized ErrorResponse
 
 func (*SendEmailUnauthorized) sendEmailRes() {}
 
+// Ref: #/components/schemas/SendMailAttachment
+type SendMailAttachment struct {
+	// Attachment filename. Control characters are rejected.
+	Filename string `json:"filename"`
+	// Optional MIME content type. Control characters are rejected.
+	ContentType OptString `json:"content_type"`
+	// Base64-encoded attachment bytes.
+	ContentBase64 string `json:"content_base64"`
+}
+
+// GetFilename returns the value of Filename.
+func (s *SendMailAttachment) GetFilename() string {
+	return s.Filename
+}
+
+// GetContentType returns the value of ContentType.
+func (s *SendMailAttachment) GetContentType() OptString {
+	return s.ContentType
+}
+
+// GetContentBase64 returns the value of ContentBase64.
+func (s *SendMailAttachment) GetContentBase64() string {
+	return s.ContentBase64
+}
+
+// SetFilename sets the value of Filename.
+func (s *SendMailAttachment) SetFilename(val string) {
+	s.Filename = val
+}
+
+// SetContentType sets the value of ContentType.
+func (s *SendMailAttachment) SetContentType(val OptString) {
+	s.ContentType = val
+}
+
+// SetContentBase64 sets the value of ContentBase64.
+func (s *SendMailAttachment) SetContentBase64(val string) {
+	s.ContentBase64 = val
+}
+
 // Ref: #/components/schemas/SendMailInput
 type SendMailInput struct {
 	// RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
@@ -10374,6 +10799,9 @@ type SendMailInput struct {
 	InReplyTo OptString `json:"in_reply_to"`
 	// Full ordered message-id chain for the thread.
 	References []string `json:"references"`
+	// Inline attachments. Send requests with attachments to https://api.primitive.dev/v1/send-mail.
+	// Combined raw decoded attachment bytes must be at most 31457280.
+	Attachments []SendMailAttachment `json:"attachments"`
 	// When true, wait for the first downstream SMTP delivery outcome before returning.
 	Wait OptBool `json:"wait"`
 	// Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
@@ -10413,6 +10841,11 @@ func (s *SendMailInput) GetInReplyTo() OptString {
 // GetReferences returns the value of References.
 func (s *SendMailInput) GetReferences() []string {
 	return s.References
+}
+
+// GetAttachments returns the value of Attachments.
+func (s *SendMailInput) GetAttachments() []SendMailAttachment {
+	return s.Attachments
 }
 
 // GetWait returns the value of Wait.
@@ -10458,6 +10891,11 @@ func (s *SendMailInput) SetInReplyTo(val OptString) {
 // SetReferences sets the value of References.
 func (s *SendMailInput) SetReferences(val []string) {
 	s.References = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *SendMailInput) SetAttachments(val []SendMailAttachment) {
+	s.Attachments = val
 }
 
 // SetWait sets the value of Wait.
@@ -12845,8 +13283,10 @@ type UnverifiedDomain struct {
 	Domain   string    `json:"domain"`
 	Verified bool      `json:"verified"`
 	// Add this value as a TXT record to verify ownership.
-	VerificationToken string    `json:"verification_token"`
-	CreatedAt         time.Time `json:"created_at"`
+	VerificationToken string `json:"verification_token"`
+	// Exact DNS records to publish for this pending domain claim.
+	DNSRecords []DomainDnsRecord `json:"dns_records"`
+	CreatedAt  time.Time         `json:"created_at"`
 }
 
 // GetID returns the value of ID.
@@ -12872,6 +13312,11 @@ func (s *UnverifiedDomain) GetVerified() bool {
 // GetVerificationToken returns the value of VerificationToken.
 func (s *UnverifiedDomain) GetVerificationToken() string {
 	return s.VerificationToken
+}
+
+// GetDNSRecords returns the value of DNSRecords.
+func (s *UnverifiedDomain) GetDNSRecords() []DomainDnsRecord {
+	return s.DNSRecords
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -12902,6 +13347,11 @@ func (s *UnverifiedDomain) SetVerified(val bool) {
 // SetVerificationToken sets the value of VerificationToken.
 func (s *UnverifiedDomain) SetVerificationToken(val string) {
 	s.VerificationToken = val
+}
+
+// SetDNSRecords sets the value of DNSRecords.
+func (s *UnverifiedDomain) SetDNSRecords(val []DomainDnsRecord) {
+	s.DNSRecords = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.

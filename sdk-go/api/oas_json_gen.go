@@ -662,10 +662,24 @@ func (s *AddDomainInput) encodeFields(e *jx.Encoder) {
 		e.FieldStart("domain")
 		e.Str(s.Domain)
 	}
+	{
+		if s.Confirmed.Set {
+			e.FieldStart("confirmed")
+			s.Confirmed.Encode(e)
+		}
+	}
+	{
+		if s.Outbound.Set {
+			e.FieldStart("outbound")
+			s.Outbound.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfAddDomainInput = [1]string{
+var jsonFieldsNameOfAddDomainInput = [3]string{
 	0: "domain",
+	1: "confirmed",
+	2: "outbound",
 }
 
 // Decode decodes AddDomainInput from json.
@@ -688,6 +702,26 @@ func (s *AddDomainInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"domain\"")
+			}
+		case "confirmed":
+			if err := func() error {
+				s.Confirmed.Reset()
+				if err := s.Confirmed.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"confirmed\"")
+			}
+		case "outbound":
+			if err := func() error {
+				s.Outbound.Reset()
+				if err := s.Outbound.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"outbound\"")
 			}
 		default:
 			return errors.Errorf("unexpected field %q", k)
@@ -6900,6 +6934,19 @@ func (s *Domain) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "dns_records":
+				// Type-based discrimination: check if field has expected JSON type
+				if typ := d.Next(); typ != jx.Array {
+					// Field exists but has wrong type, not a match for this variant
+					return d.Skip()
+				}
+				match := UnverifiedDomainDomain
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "is_active":
 				// Type-based discrimination: check if field has expected JSON type
 				if typ := d.Next(); typ != jx.Bool {
@@ -6934,7 +6981,7 @@ func (s *Domain) Decode(d *jx.Decoder) error {
 		return errors.Wrap(err, "capture")
 	}
 	if !found {
-		s.Type = UnverifiedDomainDomain
+		return errors.New("unable to detect sum type variant")
 	}
 	switch s.Type {
 	case VerifiedDomainDomain:
@@ -6960,6 +7007,382 @@ func (s Domain) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *Domain) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *DomainDnsRecord) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *DomainDnsRecord) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("type")
+		s.Type.Encode(e)
+	}
+	{
+		e.FieldStart("name")
+		e.Str(s.Name)
+	}
+	{
+		e.FieldStart("fqdn")
+		e.Str(s.Fqdn)
+	}
+	{
+		e.FieldStart("value")
+		e.Str(s.Value)
+	}
+	{
+		if s.Priority.Set {
+			e.FieldStart("priority")
+			s.Priority.Encode(e)
+		}
+	}
+	{
+		if s.TTL.Set {
+			e.FieldStart("ttl")
+			s.TTL.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("required")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("purpose")
+		s.Purpose.Encode(e)
+	}
+	{
+		e.FieldStart("status")
+		s.Status.Encode(e)
+	}
+	{
+		if s.Message.Set {
+			e.FieldStart("message")
+			s.Message.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfDomainDnsRecord = [10]string{
+	0: "type",
+	1: "name",
+	2: "fqdn",
+	3: "value",
+	4: "priority",
+	5: "ttl",
+	6: "required",
+	7: "purpose",
+	8: "status",
+	9: "message",
+}
+
+// Decode decodes DomainDnsRecord from json.
+func (s *DomainDnsRecord) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DomainDnsRecord to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "type":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Type.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"type\"")
+			}
+		case "name":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Name = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		case "fqdn":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Fqdn = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"fqdn\"")
+			}
+		case "value":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Str()
+				s.Value = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"value\"")
+			}
+		case "priority":
+			if err := func() error {
+				s.Priority.Reset()
+				if err := s.Priority.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"priority\"")
+			}
+		case "ttl":
+			if err := func() error {
+				s.TTL.Reset()
+				if err := s.TTL.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"ttl\"")
+			}
+		case "required":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				v, err := d.Bool()
+				s.Required = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"required\"")
+			}
+		case "purpose":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				if err := s.Purpose.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"purpose\"")
+			}
+		case "status":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				if err := s.Status.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"status\"")
+			}
+		case "message":
+			if err := func() error {
+				s.Message.Reset()
+				if err := s.Message.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"message\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode DomainDnsRecord")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b11001111,
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfDomainDnsRecord) {
+					name = jsonFieldsNameOfDomainDnsRecord[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DomainDnsRecord) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DomainDnsRecord) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DomainDnsRecordPurpose as json.
+func (s DomainDnsRecordPurpose) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes DomainDnsRecordPurpose from json.
+func (s *DomainDnsRecordPurpose) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DomainDnsRecordPurpose to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch DomainDnsRecordPurpose(v) {
+	case DomainDnsRecordPurposeInboundMx:
+		*s = DomainDnsRecordPurposeInboundMx
+	case DomainDnsRecordPurposeOwnershipVerification:
+		*s = DomainDnsRecordPurposeOwnershipVerification
+	case DomainDnsRecordPurposeSpf:
+		*s = DomainDnsRecordPurposeSpf
+	case DomainDnsRecordPurposeDkim:
+		*s = DomainDnsRecordPurposeDkim
+	case DomainDnsRecordPurposeDmarc:
+		*s = DomainDnsRecordPurposeDmarc
+	case DomainDnsRecordPurposeTLSReporting:
+		*s = DomainDnsRecordPurposeTLSReporting
+	default:
+		*s = DomainDnsRecordPurpose(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s DomainDnsRecordPurpose) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DomainDnsRecordPurpose) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DomainDnsRecordStatus as json.
+func (s DomainDnsRecordStatus) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes DomainDnsRecordStatus from json.
+func (s *DomainDnsRecordStatus) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DomainDnsRecordStatus to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch DomainDnsRecordStatus(v) {
+	case DomainDnsRecordStatusPending:
+		*s = DomainDnsRecordStatusPending
+	case DomainDnsRecordStatusFound:
+		*s = DomainDnsRecordStatusFound
+	case DomainDnsRecordStatusMissing:
+		*s = DomainDnsRecordStatusMissing
+	case DomainDnsRecordStatusIncorrect:
+		*s = DomainDnsRecordStatusIncorrect
+	default:
+		*s = DomainDnsRecordStatus(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s DomainDnsRecordStatus) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DomainDnsRecordStatus) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DomainDnsRecordType as json.
+func (s DomainDnsRecordType) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes DomainDnsRecordType from json.
+func (s *DomainDnsRecordType) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DomainDnsRecordType to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch DomainDnsRecordType(v) {
+	case DomainDnsRecordTypeMX:
+		*s = DomainDnsRecordTypeMX
+	case DomainDnsRecordTypeTXT:
+		*s = DomainDnsRecordTypeTXT
+	default:
+		*s = DomainDnsRecordType(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s DomainDnsRecordType) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DomainDnsRecordType) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -6997,6 +7420,32 @@ func (s *DomainVerifyResult) Decode(d *jx.Decoder) error {
 	if err := d.Capture(func(d *jx.Decoder) error {
 		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
 			switch string(key) {
+			case "dkimFound":
+				// Type-based discrimination: check if field has expected JSON type
+				if typ := d.Next(); typ != jx.Bool {
+					// Field exists but has wrong type, not a match for this variant
+					return d.Skip()
+				}
+				match := DomainVerifyResult1DomainVerifyResult
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "dmarcFound":
+				// Type-based discrimination: check if field has expected JSON type
+				if typ := d.Next(); typ != jx.Bool {
+					// Field exists but has wrong type, not a match for this variant
+					return d.Skip()
+				}
+				match := DomainVerifyResult1DomainVerifyResult
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
 			case "error":
 				// Type-based discrimination: check if field has expected JSON type
 				if typ := d.Next(); typ != jx.String {
@@ -7011,6 +7460,32 @@ func (s *DomainVerifyResult) Decode(d *jx.Decoder) error {
 				found = true
 				s.Type = match
 			case "mxFound":
+				// Type-based discrimination: check if field has expected JSON type
+				if typ := d.Next(); typ != jx.Bool {
+					// Field exists but has wrong type, not a match for this variant
+					return d.Skip()
+				}
+				match := DomainVerifyResult1DomainVerifyResult
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "spfFound":
+				// Type-based discrimination: check if field has expected JSON type
+				if typ := d.Next(); typ != jx.Bool {
+					// Field exists but has wrong type, not a match for this variant
+					return d.Skip()
+				}
+				match := DomainVerifyResult1DomainVerifyResult
+				if found && s.Type != match {
+					s.Type = ""
+					return errors.Errorf("multiple oneOf matches: (%v, %v)", s.Type, match)
+				}
+				found = true
+				s.Type = match
+			case "tlsRptFound":
 				// Type-based discrimination: check if field has expected JSON type
 				if typ := d.Next(); typ != jx.Bool {
 					// Field exists but has wrong type, not a match for this variant
@@ -7086,10 +7561,21 @@ func (s *DomainVerifyResult0) encodeFields(e *jx.Encoder) {
 		e.FieldStart("verified")
 		e.Bool(true)
 	}
+	{
+		if s.DNSRecords != nil {
+			e.FieldStart("dns_records")
+			e.ArrStart()
+			for _, elem := range s.DNSRecords {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfDomainVerifyResult0 = [1]string{
+var jsonFieldsNameOfDomainVerifyResult0 = [2]string{
 	0: "verified",
+	1: "dns_records",
 }
 
 // Decode decodes DomainVerifyResult0 from json.
@@ -7112,6 +7598,23 @@ func (s *DomainVerifyResult0) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"verified\"")
+			}
+		case "dns_records":
+			if err := func() error {
+				s.DNSRecords = make([]DomainDnsRecord, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem DomainDnsRecord
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.DNSRecords = append(s.DNSRecords, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dns_records\"")
 			}
 		default:
 			return d.Skip()
@@ -7191,16 +7694,55 @@ func (s *DomainVerifyResult1) encodeFields(e *jx.Encoder) {
 		e.Bool(s.TxtFound)
 	}
 	{
+		if s.SpfFound.Set {
+			e.FieldStart("spfFound")
+			s.SpfFound.Encode(e)
+		}
+	}
+	{
+		if s.DkimFound.Set {
+			e.FieldStart("dkimFound")
+			s.DkimFound.Encode(e)
+		}
+	}
+	{
+		if s.DmarcFound.Set {
+			e.FieldStart("dmarcFound")
+			s.DmarcFound.Encode(e)
+		}
+	}
+	{
+		if s.TlsRptFound.Set {
+			e.FieldStart("tlsRptFound")
+			s.TlsRptFound.Encode(e)
+		}
+	}
+	{
+		if s.DNSRecords != nil {
+			e.FieldStart("dns_records")
+			e.ArrStart()
+			for _, elem := range s.DNSRecords {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
 		e.FieldStart("error")
 		e.Str(s.Error)
 	}
 }
 
-var jsonFieldsNameOfDomainVerifyResult1 = [4]string{
+var jsonFieldsNameOfDomainVerifyResult1 = [9]string{
 	0: "verified",
 	1: "mxFound",
 	2: "txtFound",
-	3: "error",
+	3: "spfFound",
+	4: "dkimFound",
+	5: "dmarcFound",
+	6: "tlsRptFound",
+	7: "dns_records",
+	8: "error",
 }
 
 // Decode decodes DomainVerifyResult1 from json.
@@ -7208,7 +7750,7 @@ func (s *DomainVerifyResult1) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode DomainVerifyResult1 to nil")
 	}
-	var requiredBitSet [1]uint8
+	var requiredBitSet [2]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -7248,8 +7790,65 @@ func (s *DomainVerifyResult1) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"txtFound\"")
 			}
+		case "spfFound":
+			if err := func() error {
+				s.SpfFound.Reset()
+				if err := s.SpfFound.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"spfFound\"")
+			}
+		case "dkimFound":
+			if err := func() error {
+				s.DkimFound.Reset()
+				if err := s.DkimFound.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dkimFound\"")
+			}
+		case "dmarcFound":
+			if err := func() error {
+				s.DmarcFound.Reset()
+				if err := s.DmarcFound.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dmarcFound\"")
+			}
+		case "tlsRptFound":
+			if err := func() error {
+				s.TlsRptFound.Reset()
+				if err := s.TlsRptFound.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"tlsRptFound\"")
+			}
+		case "dns_records":
+			if err := func() error {
+				s.DNSRecords = make([]DomainDnsRecord, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem DomainDnsRecord
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.DNSRecords = append(s.DNSRecords, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dns_records\"")
+			}
 		case "error":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				v, err := d.Str()
 				s.Error = string(v)
@@ -7269,8 +7868,9 @@ func (s *DomainVerifyResult1) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00001111,
+	for i, mask := range [2]uint8{
+		0b00000111,
+		0b00000001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -22384,6 +22984,136 @@ func (s *SendEmailUnauthorized) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *SendMailAttachment) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SendMailAttachment) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("filename")
+		e.Str(s.Filename)
+	}
+	{
+		if s.ContentType.Set {
+			e.FieldStart("content_type")
+			s.ContentType.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("content_base64")
+		e.Str(s.ContentBase64)
+	}
+}
+
+var jsonFieldsNameOfSendMailAttachment = [3]string{
+	0: "filename",
+	1: "content_type",
+	2: "content_base64",
+}
+
+// Decode decodes SendMailAttachment from json.
+func (s *SendMailAttachment) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SendMailAttachment to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "filename":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Filename = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"filename\"")
+			}
+		case "content_type":
+			if err := func() error {
+				s.ContentType.Reset()
+				if err := s.ContentType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"content_type\"")
+			}
+		case "content_base64":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.ContentBase64 = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"content_base64\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SendMailAttachment")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000101,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSendMailAttachment) {
+					name = jsonFieldsNameOfSendMailAttachment[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SendMailAttachment) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SendMailAttachment) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *SendMailInput) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -22433,6 +23163,16 @@ func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Attachments != nil {
+			e.FieldStart("attachments")
+			e.ArrStart()
+			for _, elem := range s.Attachments {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
 		if s.Wait.Set {
 			e.FieldStart("wait")
 			s.Wait.Encode(e)
@@ -22446,7 +23186,7 @@ func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSendMailInput = [9]string{
+var jsonFieldsNameOfSendMailInput = [10]string{
 	0: "from",
 	1: "to",
 	2: "subject",
@@ -22454,8 +23194,9 @@ var jsonFieldsNameOfSendMailInput = [9]string{
 	4: "body_html",
 	5: "in_reply_to",
 	6: "references",
-	7: "wait",
-	8: "wait_timeout_ms",
+	7: "attachments",
+	8: "wait",
+	9: "wait_timeout_ms",
 }
 
 // Decode decodes SendMailInput from json.
@@ -22551,6 +23292,23 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"references\"")
+			}
+		case "attachments":
+			if err := func() error {
+				s.Attachments = make([]SendMailAttachment, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem SendMailAttachment
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Attachments = append(s.Attachments, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"attachments\"")
 			}
 		case "wait":
 			if err := func() error {
@@ -27648,18 +28406,29 @@ func (s *UnverifiedDomain) encodeFields(e *jx.Encoder) {
 		e.Str(s.VerificationToken)
 	}
 	{
+		if s.DNSRecords != nil {
+			e.FieldStart("dns_records")
+			e.ArrStart()
+			for _, elem := range s.DNSRecords {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
 		e.FieldStart("created_at")
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
 }
 
-var jsonFieldsNameOfUnverifiedDomain = [6]string{
+var jsonFieldsNameOfUnverifiedDomain = [7]string{
 	0: "id",
 	1: "org_id",
 	2: "domain",
 	3: "verified",
 	4: "verification_token",
-	5: "created_at",
+	5: "dns_records",
+	6: "created_at",
 }
 
 // Decode decodes UnverifiedDomain from json.
@@ -27731,8 +28500,25 @@ func (s *UnverifiedDomain) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"verification_token\"")
 			}
+		case "dns_records":
+			if err := func() error {
+				s.DNSRecords = make([]DomainDnsRecord, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem DomainDnsRecord
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.DNSRecords = append(s.DNSRecords, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dns_records\"")
+			}
 		case "created_at":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -27753,7 +28539,7 @@ func (s *UnverifiedDomain) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00111111,
+		0b01011111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

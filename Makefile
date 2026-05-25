@@ -53,7 +53,24 @@ cli-tarball-isolation:
 	node scripts/assert-tarball-isolation.mjs cli-node "@primitivedotdev/sdk"
 
 cli-smoke: cli-build cli-tarball-isolation
-	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && "$$smoke_dir/node_modules/.bin/primitive" list-operations >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion fish >/dev/null && "$$smoke_dir/node_modules/.bin/primitive" completion bash >/dev/null && if [ -d "$$smoke_dir/node_modules/@primitivedotdev/sdk" ] || [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "CLI tarball pulled @primitivedotdev/sdk or @primitivedotdev/api-core into node_modules; both should be bundled inline."; exit 1; fi
+	pack_dir=$$(mktemp -d) && \
+	smoke_dir=$$(mktemp -d) && \
+	tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && \
+	cd "$$smoke_dir" && \
+	npm init -y && \
+	npm install "$$pack_dir/$$tarball" && \
+	bin="$$smoke_dir/node_modules/.bin/primitive" && \
+	"$$bin" list-operations >/dev/null && \
+	"$$bin" completion fish >/dev/null && \
+	"$$bin" completion bash >/dev/null && \
+	"$$bin" send --help | grep -q -- "--attachment" && \
+	"$$bin" sending send-email --help | grep -q -- "attachments" && \
+	"$$bin" domains add --help | grep -q -- "--confirmed" && \
+	"$$bin" describe addDomain >/dev/null && \
+	"$$bin" describe verifyDomain >/dev/null && \
+	"$$bin" describe domains:addDomain >/dev/null && \
+	"$$bin" describe domains:verifyDomain >/dev/null && \
+	if [ -d "$$smoke_dir/node_modules/@primitivedotdev/sdk" ] || [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "CLI tarball pulled @primitivedotdev/sdk or @primitivedotdev/api-core into node_modules; both should be bundled inline."; exit 1; fi
 
 cli-coverage:
 	pnpm --dir cli-node test:coverage

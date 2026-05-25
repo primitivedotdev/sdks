@@ -35,9 +35,9 @@ func (c *codeRecorder) Unwrap() http.ResponseWriter {
 
 // handleAddDomainRequest handles addDomain operation.
 //
-// Creates an unverified domain claim. You will receive a
-// `verification_token` to add as a DNS TXT record before
-// calling the verify endpoint.
+// Creates an unverified domain claim and returns the exact
+// DNS records to publish in `dns_records`. Publish those
+// records before calling the verify endpoint.
 //
 // POST /domains
 func (s *Server) handleAddDomainRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -10265,9 +10265,12 @@ func (s *Server) handleVerifyCliSignupRequest(args [0]string, argsEscaped bool, 
 
 // handleVerifyDomainRequest handles verifyDomain operation.
 //
-// Checks DNS records (MX and TXT) to verify domain ownership.
+// Checks DNS records required for inbound routing, ownership,
+// and outbound authentication: MX, ownership TXT, SPF, DKIM,
+// DMARC, and TLS-RPT.
 // On success, the domain is promoted from unverified to verified.
-// On failure, returns which checks passed and which failed.
+// On failure, returns which checks passed and which failed,
+// plus the exact DNS records still expected.
 //
 // POST /domains/{id}/verify
 func (s *Server) handleVerifyDomainRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

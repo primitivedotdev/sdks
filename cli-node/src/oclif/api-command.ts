@@ -869,6 +869,8 @@ export function operationOutputPayload(
 // generated operation; the COMMANDS map in `index.ts` is the
 // authoritative list of shortcuts.
 export const OPERATION_HINTS: Record<string, string> = {
+  sendEmail:
+    "Tip: prefer `primitive send --to <address> --body <text> --attachment <file>` for file attachments. This raw command exists for callers passing JSON.",
   createFunction:
     "Tip: prefer `primitive functions deploy --name <name> --file <bundle>` for file-input ergonomics. This raw command exists for callers passing JSON.",
   updateFunction:
@@ -1107,7 +1109,7 @@ export function createOperationCommand(
 // in the setup chain isn't done?" Keys are the manifest's
 // `sdkName` for the operation. Operations without an entry fall
 // back to no hint (silent empty array, same as before).
-const EMPTY_RESULT_HINTS: Record<string, string> = {
+export const EMPTY_RESULT_HINTS: Record<string, string> = {
   listDeliveries:
     "(no results) No webhook deliveries logged yet. If you have an endpoint configured but expected to see test fires here: test deliveries from `primitive endpoints test` are NOT logged in this list, they're synchronous and visible only in the test-endpoint command's response. Real deliveries are logged when an inbound `email.received` event fans out to your endpoints. If you have no endpoints, run `primitive endpoints list` to check.",
   listEndpoints:
@@ -1117,6 +1119,8 @@ const EMPTY_RESULT_HINTS: Record<string, string> = {
   listDomains:
     "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",
+  listFunctions:
+    "(no results) No Functions configured yet. Start with `primitive functions templates`, then `primitive functions init --template <template>` and `primitive functions deploy --name <name> --file <bundle>`.",
 };
 
 function canonicalizeCliReferences(description: string): string {

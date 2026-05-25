@@ -30,9 +30,9 @@ func trimTrailingSlashes(u *url.URL) {
 type Invoker interface {
 	// AddDomain invokes addDomain operation.
 	//
-	// Creates an unverified domain claim. You will receive a
-	// `verification_token` to add as a DNS TXT record before
-	// calling the verify endpoint.
+	// Creates an unverified domain claim and returns the exact
+	// DNS records to publish in `dns_records`. Publish those
+	// records before calling the verify endpoint.
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, request *AddDomainInput) (AddDomainRes, error)
@@ -638,9 +638,12 @@ type Invoker interface {
 	VerifyCliSignup(ctx context.Context, request *VerifyCliSignupInput) (VerifyCliSignupRes, error)
 	// VerifyDomain invokes verifyDomain operation.
 	//
-	// Checks DNS records (MX and TXT) to verify domain ownership.
+	// Checks DNS records required for inbound routing, ownership,
+	// and outbound authentication: MX, ownership TXT, SPF, DKIM,
+	// DMARC, and TLS-RPT.
 	// On success, the domain is promoted from unverified to verified.
-	// On failure, returns which checks passed and which failed.
+	// On failure, returns which checks passed and which failed,
+	// plus the exact DNS records still expected.
 	//
 	// POST /domains/{id}/verify
 	VerifyDomain(ctx context.Context, params VerifyDomainParams) (VerifyDomainRes, error)
@@ -689,9 +692,9 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 
 // AddDomain invokes addDomain operation.
 //
-// Creates an unverified domain claim. You will receive a
-// `verification_token` to add as a DNS TXT record before
-// calling the verify endpoint.
+// Creates an unverified domain claim and returns the exact
+// DNS records to publish in `dns_records`. Publish those
+// records before calling the verify endpoint.
 //
 // POST /domains
 func (c *Client) AddDomain(ctx context.Context, request *AddDomainInput) (AddDomainRes, error) {
@@ -7876,9 +7879,12 @@ func (c *Client) sendVerifyCliSignup(ctx context.Context, request *VerifyCliSign
 
 // VerifyDomain invokes verifyDomain operation.
 //
-// Checks DNS records (MX and TXT) to verify domain ownership.
+// Checks DNS records required for inbound routing, ownership,
+// and outbound authentication: MX, ownership TXT, SPF, DKIM,
+// DMARC, and TLS-RPT.
 // On success, the domain is promoted from unverified to verified.
-// On failure, returns which checks passed and which failed.
+// On failure, returns which checks passed and which failed,
+// plus the exact DNS records still expected.
 //
 // POST /domains/{id}/verify
 func (c *Client) VerifyDomain(ctx context.Context, params VerifyDomainParams) (VerifyDomainRes, error) {

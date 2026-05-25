@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { readAttachmentFiles } from "../attachments.js";
 import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
@@ -36,6 +37,10 @@ import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 // both flags or fall back to `sending:send-email` for the full
 // flag list.
 //
+// `--attachment` reads file bytes and sends them as MIME attachments.
+// `--body-file` reads a file as message text; it never attaches that
+// file.
+//
 // Compared to `swaks` (which agents likely have in their training
 // data): this is `swaks`-shaped on purpose so an agent
 // pattern-matching from there lands in the happy path. We just
@@ -48,6 +53,7 @@ class SendCommand extends Command {
 
   --from defaults to agent@<your-first-verified-outbound-domain> when omitted.
   --subject defaults to the first line of the body when omitted.
+  --attachment attaches a file; repeat it to attach multiple files.
 
   For the full flag set (custom message-id threading on the wire,
   references arrays, etc.), use \`primitive sending send\`.`;
@@ -57,6 +63,7 @@ class SendCommand extends Command {
   static examples = [
     "<%= config.bin %> send --to alice@example.com --body 'Hi Alice!'",
     "<%= config.bin %> send --to alice@example.com --body-file ./message.txt",
+    "<%= config.bin %> send --to alice@example.com --body 'See attached.' --attachment ./report.pdf",
     "<%= config.bin %> send --to alice@example.com --from support@yourcompany.com --subject 'Quick question' --body 'Are you free Thursday?'",
     "<%= config.bin %> send --to alice@example.com --html '<p>Hello!</p>'",
     "<%= config.bin %> send --to alice@example.com --body 'Confirmed' --wait",
@@ -99,7 +106,7 @@ class SendCommand extends Command {
     }),
     "body-file": Flags.string({
       description:
-        "Read the plain-text message body from a UTF-8 file. Mutually exclusive with --body and --body-stdin.",
+        "Read the plain-text message body from a UTF-8 file. This does not attach the file; use --attachment for file attachments. Mutually exclusive with --body and --body-stdin.",
     }),
     "body-stdin": Flags.boolean({
       description:
@@ -116,6 +123,11 @@ class SendCommand extends Command {
     "html-stdin": Flags.boolean({
       description:
         "Read the HTML message body from stdin. Mutually exclusive with --html and --html-file. Stdin can only be consumed once.",
+    }),
+    attachment: Flags.string({
+      description:
+        "Attach a file to the email. Repeatable. Sends file bytes as a MIME attachment; use --body-file only for message body text.",
+      multiple: true,
     }),
     "in-reply-to": Flags.string({
       description:
@@ -148,6 +160,7 @@ class SendCommand extends Command {
     if (bodies.kind === "error") {
       throw new Errors.CLIError(bodies.message);
     }
+    const attachments = readAttachmentFiles(flags.attachment);
 
     await runWithTiming(flags.time, async () => {
       const { apiClient, auth, baseUrlOverridden } =
@@ -176,6 +189,7 @@ class SendCommand extends Command {
           subject,
           ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
           ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
+          ...(attachments !== undefined ? { attachments } : {}),
           ...(flags["in-reply-to"] !== undefined
             ? { in_reply_to: flags["in-reply-to"] }
             : {}),

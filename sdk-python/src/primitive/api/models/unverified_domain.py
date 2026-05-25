@@ -13,6 +13,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.domain_dns_record import DomainDnsRecord
 
 
 
@@ -32,6 +34,7 @@ class UnverifiedDomain:
             verified (bool):
             verification_token (str): Add this value as a TXT record to verify ownership
             created_at (datetime.datetime):
+            dns_records (list[DomainDnsRecord] | Unset): Exact DNS records to publish for this pending domain claim.
      """
 
     id: UUID
@@ -40,6 +43,7 @@ class UnverifiedDomain:
     verified: bool
     verification_token: str
     created_at: datetime.datetime
+    dns_records: list[DomainDnsRecord] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -47,6 +51,7 @@ class UnverifiedDomain:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.domain_dns_record import DomainDnsRecord
         id = str(self.id)
 
         org_id = str(self.org_id)
@@ -59,6 +64,15 @@ class UnverifiedDomain:
 
         created_at = self.created_at.isoformat()
 
+        dns_records: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.dns_records, Unset):
+            dns_records = []
+            for dns_records_item_data in self.dns_records:
+                dns_records_item = dns_records_item_data.to_dict()
+                dns_records.append(dns_records_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -70,6 +84,8 @@ class UnverifiedDomain:
             "verification_token": verification_token,
             "created_at": created_at,
         })
+        if dns_records is not UNSET:
+            field_dict["dns_records"] = dns_records
 
         return field_dict
 
@@ -77,6 +93,7 @@ class UnverifiedDomain:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.domain_dns_record import DomainDnsRecord
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -99,6 +116,18 @@ class UnverifiedDomain:
 
 
 
+        _dns_records = d.pop("dns_records", UNSET)
+        dns_records: list[DomainDnsRecord] | Unset = UNSET
+        if _dns_records is not UNSET:
+            dns_records = []
+            for dns_records_item_data in _dns_records:
+                dns_records_item = DomainDnsRecord.from_dict(dns_records_item_data)
+
+
+
+                dns_records.append(dns_records_item)
+
+
         unverified_domain = cls(
             id=id,
             org_id=org_id,
@@ -106,6 +135,7 @@ class UnverifiedDomain:
             verified=verified,
             verification_token=verification_token,
             created_at=created_at,
+            dns_records=dns_records,
         )
 
 
