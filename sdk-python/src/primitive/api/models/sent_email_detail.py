@@ -87,6 +87,12 @@ class SentEmailDetail:
                 replied to, when known. Populated when the caller used
                 /emails/{id}/reply or when /send-mail's `in_reply_to`
                 matched a stored inbound message_id in the same org.
+            thread_id (None | Unset | UUID): Conversation thread this send belongs to. A reply inherits
+                the thread of the inbound it answers; a fresh send starts a
+                new thread. Fetch `/threads/{thread_id}` for the full
+                ordered thread (inbound + outbound interleaved). NULL on
+                gate-denied sends and on sends created before threading was
+                enabled.
             queue_id (None | str | Unset): Message identifier assigned by Primitive's outbound
                 relay once the agent accepts the message. Null on
                 queued, gate_denied, and agent_failed rows.
@@ -148,6 +154,7 @@ class SentEmailDetail:
     in_reply_to: None | str | Unset = UNSET
     email_references: None | str | Unset = UNSET
     in_reply_to_email_id: None | Unset | UUID = UNSET
+    thread_id: None | Unset | UUID = UNSET
     queue_id: None | str | Unset = UNSET
     smtp_response_code: int | None | Unset = UNSET
     smtp_response_text: None | str | Unset = UNSET
@@ -231,6 +238,14 @@ class SentEmailDetail:
             in_reply_to_email_id = str(self.in_reply_to_email_id)
         else:
             in_reply_to_email_id = self.in_reply_to_email_id
+
+        thread_id: None | str | Unset
+        if isinstance(self.thread_id, Unset):
+            thread_id = UNSET
+        elif isinstance(self.thread_id, UUID):
+            thread_id = str(self.thread_id)
+        else:
+            thread_id = self.thread_id
 
         queue_id: None | str | Unset
         if isinstance(self.queue_id, Unset):
@@ -340,6 +355,8 @@ class SentEmailDetail:
             field_dict["email_references"] = email_references
         if in_reply_to_email_id is not UNSET:
             field_dict["in_reply_to_email_id"] = in_reply_to_email_id
+        if thread_id is not UNSET:
+            field_dict["thread_id"] = thread_id
         if queue_id is not UNSET:
             field_dict["queue_id"] = queue_id
         if smtp_response_code is not UNSET:
@@ -490,6 +507,26 @@ class SentEmailDetail:
             return cast(None | Unset | UUID, data)
 
         in_reply_to_email_id = _parse_in_reply_to_email_id(d.pop("in_reply_to_email_id", UNSET))
+
+
+        def _parse_thread_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                thread_id_type_0 = UUID(data)
+
+
+
+                return thread_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
 
 
         def _parse_queue_id(data: object) -> None | str | Unset:
@@ -646,6 +683,7 @@ class SentEmailDetail:
             in_reply_to=in_reply_to,
             email_references=email_references,
             in_reply_to_email_id=in_reply_to_email_id,
+            thread_id=thread_id,
             queue_id=queue_id,
             smtp_response_code=smtp_response_code,
             smtp_response_text=smtp_response_text,

@@ -18,7 +18,9 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.email_auth import EmailAuth
   from ..models.email_detail_reply import EmailDetailReply
+  from ..models.parsed_email_data import ParsedEmailData
 
 
 
@@ -94,6 +96,15 @@ class EmailDetail:
                 this inbound's `message_id` in the same org. Includes
                 attempts that were gate-denied, so the array reflects every
                 recorded reply attempt regardless of outcome.
+            parsed (ParsedEmailData): Parsed MIME content for an inbound email. Mirrors the
+                `email.parsed` object on the webhook payload so a single parser
+                handles both surfaces. `status` is `complete` when parsing
+                succeeded; on `failed` the body/address/attachment fields are
+                absent and `error` describes why.
+            auth (EmailAuth): SPF / DKIM / DMARC verdicts computed at ingest. Mirrors the
+                `email.auth` object on the webhook payload. Field names are
+                camelCase to match that payload exactly. For messages received
+                before auth was recorded, the verdicts default to `none`.
             message_id (None | str | Unset):
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
@@ -164,6 +175,11 @@ class EmailDetail:
                 not a threaded reply to one of your sends, when neither
                 header survived the path through intermediate MTAs, or on
                 inbound received before this auto-link landed.
+            thread_id (None | Unset | UUID): Conversation thread this message belongs to. Inbound and
+                outbound messages in the same conversation share a
+                `thread_id`; fetch `/threads/{thread_id}` for the full
+                ordered thread. Assigned at ingest. NULL on messages
+                received before threading was enabled (until backfilled).
      """
 
     id: UUID
@@ -177,6 +193,8 @@ class EmailDetail:
     from_email: str
     to_email: str
     replies: list[EmailDetailReply]
+    parsed: ParsedEmailData
+    auth: EmailAuth
     message_id: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     org_id: None | Unset | UUID = UNSET
@@ -200,6 +218,7 @@ class EmailDetail:
     content_discarded_by_delivery_id: None | str | Unset = UNSET
     from_known_address: bool | Unset = UNSET
     reply_to_sent_email_id: None | Unset | UUID = UNSET
+    thread_id: None | Unset | UUID = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -207,7 +226,9 @@ class EmailDetail:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_auth import EmailAuth
         from ..models.email_detail_reply import EmailDetailReply
+        from ..models.parsed_email_data import ParsedEmailData
         id = str(self.id)
 
         sender = self.sender
@@ -234,6 +255,10 @@ class EmailDetail:
             replies.append(replies_item)
 
 
+
+        parsed = self.parsed.to_dict()
+
+        auth = self.auth.to_dict()
 
         message_id: None | str | Unset
         if isinstance(self.message_id, Unset):
@@ -391,6 +416,14 @@ class EmailDetail:
         else:
             reply_to_sent_email_id = self.reply_to_sent_email_id
 
+        thread_id: None | str | Unset
+        if isinstance(self.thread_id, Unset):
+            thread_id = UNSET
+        elif isinstance(self.thread_id, UUID):
+            thread_id = str(self.thread_id)
+        else:
+            thread_id = self.thread_id
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -406,6 +439,8 @@ class EmailDetail:
             "from_email": from_email,
             "to_email": to_email,
             "replies": replies,
+            "parsed": parsed,
+            "auth": auth,
         })
         if message_id is not UNSET:
             field_dict["message_id"] = message_id
@@ -453,6 +488,8 @@ class EmailDetail:
             field_dict["from_known_address"] = from_known_address
         if reply_to_sent_email_id is not UNSET:
             field_dict["reply_to_sent_email_id"] = reply_to_sent_email_id
+        if thread_id is not UNSET:
+            field_dict["thread_id"] = thread_id
 
         return field_dict
 
@@ -460,7 +497,9 @@ class EmailDetail:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_auth import EmailAuth
         from ..models.email_detail_reply import EmailDetailReply
+        from ..models.parsed_email_data import ParsedEmailData
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -502,6 +541,16 @@ class EmailDetail:
 
 
             replies.append(replies_item)
+
+
+        parsed = ParsedEmailData.from_dict(d.pop("parsed"))
+
+
+
+
+        auth = EmailAuth.from_dict(d.pop("auth"))
+
+
 
 
         def _parse_message_id(data: object) -> None | str | Unset:
@@ -824,6 +873,26 @@ class EmailDetail:
         reply_to_sent_email_id = _parse_reply_to_sent_email_id(d.pop("reply_to_sent_email_id", UNSET))
 
 
+        def _parse_thread_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                thread_id_type_0 = UUID(data)
+
+
+
+                return thread_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
+
+
         email_detail = cls(
             id=id,
             sender=sender,
@@ -836,6 +905,8 @@ class EmailDetail:
             from_email=from_email,
             to_email=to_email,
             replies=replies,
+            parsed=parsed,
+            auth=auth,
             message_id=message_id,
             domain_id=domain_id,
             org_id=org_id,
@@ -859,6 +930,7 @@ class EmailDetail:
             content_discarded_by_delivery_id=content_discarded_by_delivery_id,
             from_known_address=from_known_address,
             reply_to_sent_email_id=reply_to_sent_email_id,
+            thread_id=thread_id,
         )
 
 

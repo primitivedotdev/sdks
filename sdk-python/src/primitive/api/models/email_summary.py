@@ -101,6 +101,9 @@ class EmailSummary:
                 is `pending`; it means the email is past ingestion but
                 webhook delivery has not yet begun. Two overlapping uses
                 of the word `pending` for distinct lifecycle phases.
+            thread_id (None | Unset | UUID): Conversation thread this message belongs to. Fetch
+                `/threads/{thread_id}` for the full ordered thread. NULL on
+                messages received before threading was enabled.
      """
 
     id: UUID
@@ -118,6 +121,7 @@ class EmailSummary:
     spam_score: float | None | Unset = UNSET
     raw_size_bytes: int | None | Unset = UNSET
     webhook_status: EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset = UNSET
+    thread_id: None | Unset | UUID = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -193,6 +197,14 @@ class EmailSummary:
         else:
             webhook_status = self.webhook_status
 
+        thread_id: None | str | Unset
+        if isinstance(self.thread_id, Unset):
+            thread_id = UNSET
+        elif isinstance(self.thread_id, UUID):
+            thread_id = str(self.thread_id)
+        else:
+            thread_id = self.thread_id
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -220,6 +232,8 @@ class EmailSummary:
             field_dict["raw_size_bytes"] = raw_size_bytes
         if webhook_status is not UNSET:
             field_dict["webhook_status"] = webhook_status
+        if thread_id is not UNSET:
+            field_dict["thread_id"] = thread_id
 
         return field_dict
 
@@ -376,6 +390,26 @@ class EmailSummary:
         webhook_status = _parse_webhook_status(d.pop("webhook_status", UNSET))
 
 
+        def _parse_thread_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                thread_id_type_0 = UUID(data)
+
+
+
+                return thread_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
+
+
         email_summary = cls(
             id=id,
             status=status,
@@ -392,6 +426,7 @@ class EmailSummary:
             spam_score=spam_score,
             raw_size_bytes=raw_size_bytes,
             webhook_status=webhook_status,
+            thread_id=thread_id,
         )
 
 
