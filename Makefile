@@ -79,6 +79,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" inbox status --help | grep -q -- "readiness" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
 	"$$bin" chat --help | grep -q -- "follow-up commands" && \
+	"$$bin" chat --help | grep -q -- "--reply-to-email-id" && \
 	config_home="$$smoke_dir/config-home" && \
 	config_root="$$config_home/.config" && \
 	config_dir="$$config_root/primitive" && \

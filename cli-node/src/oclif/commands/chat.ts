@@ -2,9 +2,15 @@ import { Args, Command, Errors, Flags } from "@oclif/core";
 import type {
   EmailDetail,
   GetEmailResponse,
+  SearchEmailsResponse,
   SendMailResult,
 } from "@primitivedotdev/api-core";
-import { getEmail, sendEmail } from "@primitivedotdev/api-core";
+import {
+  getEmail,
+  replyToEmail,
+  searchEmails,
+  sendEmail,
+} from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
@@ -119,6 +125,7 @@ type ChatResponseBody = {
 type ChatBaseContext = {
   from: string;
   json: boolean;
+  parentReply?: EmailDetail;
   quiet: boolean;
   recipient: string;
   sent: SendMailResult;
@@ -142,6 +149,12 @@ type ChatProgressStream = {
 type ChatProgressUpdateOptions = {
   heartbeatMs?: number;
   timeoutSeconds?: number;
+};
+
+type ChatAuthFailureContext = {
+  auth: Awaited<ReturnType<typeof createAuthenticatedCliApiClient>>["auth"];
+  baseUrlOverridden: boolean;
+  configDir: string;
 };
 
 export class ChatProgressIndicator {
@@ -305,6 +318,41 @@ function matchDescription(strategy: ChatMatchStrategy): string {
     : "fallback, matched by sender/time window";
 }
 
+function normalizeEmailAddress(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function derivedReplySubject(parent: EmailDetail): string {
+  const subject = parent.subject?.trim();
+  if (!subject) return "Re: (no subject)";
+  return /^re:/i.test(subject) ? subject : `Re: ${subject}`;
+}
+
+function assertParentMatchesRecipient(
+  parent: EmailDetail,
+  recipient: string,
+): void {
+  if (
+    normalizeEmailAddress(parent.from_email) ===
+    normalizeEmailAddress(recipient)
+  ) {
+    return;
+  }
+  throw cliError(
+    `Inbound email ${parent.id} is from ${parent.from_email}, not ${recipient}. Use \`primitive chat ${parent.from_email} --reply <message> --reply-to-email-id ${parent.id}\` or omit --reply-to-email-id to continue the latest inbound from ${recipient}.`,
+  );
+}
+
+function emailDetailFromEnvelope(
+  envelope: { data?: EmailDetail } | GetEmailResponse | undefined,
+): EmailDetail | null {
+  return (
+    (envelope as { data?: EmailDetail } | undefined)?.data ??
+    (envelope as EmailDetail | undefined) ??
+    null
+  );
+}
+
 function buildCommand(
   kind: ChatFollowUpCommandKind,
   description: string,
@@ -337,17 +385,15 @@ export function buildChatFollowUpCommands(
     "primitive",
     "chat",
     context.recipient,
+    "--reply",
     "<message>",
     "--from",
     context.from,
-    "--subject",
-    context.subject,
+    "--reply-to-email-id",
+    context.reply.id,
     "--timeout",
     String(context.timeoutSeconds),
   ];
-  if (context.reply.message_id) {
-    continueParts.push("--in-reply-to", context.reply.message_id);
-  }
   if (context.json) {
     continueParts.push("--json");
   }
@@ -546,6 +592,86 @@ export function formatChatRecoveryContext(context: ChatBaseContext): string {
   return lines.join("\n");
 }
 
+async function loadInboundEmailDetail(params: {
+  apiClient: Awaited<
+    ReturnType<typeof createAuthenticatedCliApiClient>
+  >["apiClient"];
+  authFailureContext: ChatAuthFailureContext;
+  id: string;
+}): Promise<EmailDetail> {
+  const result = await getEmail({
+    client: params.apiClient.client,
+    path: { id: params.id },
+    responseStyle: "fields",
+  });
+  if (result.error) {
+    const payload = extractErrorPayload(result.error);
+    writeErrorWithHints(payload);
+    surfaceUnauthorizedHint({
+      ...params.authFailureContext,
+      payload,
+    });
+    throw new Errors.CLIError(`Could not load inbound email ${params.id}.`, {
+      exit: 1,
+    });
+  }
+  const detail = emailDetailFromEnvelope(
+    result.data as { data?: EmailDetail } | GetEmailResponse | undefined,
+  );
+  if (!detail) {
+    throw new Errors.CLIError(
+      `Could not load inbound email ${params.id}: the API returned no email body.`,
+      { exit: 1 },
+    );
+  }
+  return detail;
+}
+
+async function findLatestInboundFromRecipient(params: {
+  apiClient: Awaited<
+    ReturnType<typeof createAuthenticatedCliApiClient>
+  >["apiClient"];
+  authFailureContext: ChatAuthFailureContext;
+  from: string;
+  pageSize: number;
+  recipient: string;
+}): Promise<EmailDetail | null> {
+  const result = await searchEmails({
+    client: params.apiClient.client,
+    query: {
+      from: params.recipient,
+      to: params.from,
+      include_facets: "false",
+      limit: params.pageSize,
+      snippet: "false",
+      sort: "received_at_desc",
+    },
+    responseStyle: "fields",
+  });
+  if (result.error) {
+    const payload = extractErrorPayload(result.error);
+    writeErrorWithHints(payload);
+    surfaceUnauthorizedHint({
+      ...params.authFailureContext,
+      payload,
+    });
+    throw new Errors.CLIError("Could not find a prior chat reply.", {
+      exit: 1,
+    });
+  }
+
+  const envelope = result.data as SearchEmailsResponse | undefined;
+  const row = (envelope?.data ?? []).find(
+    (email) => email.status === "accepted" || email.status === "completed",
+  );
+  if (!row) return null;
+  return loadInboundEmailDetail({
+    apiClient: params.apiClient,
+    authFailureContext: params.authFailureContext,
+    id: row.id,
+  });
+}
+
 class ChatCommand extends Command {
   static description = `Send a message to an address and wait for the reply.
 
@@ -558,6 +684,13 @@ class ChatCommand extends Command {
   prints exchange metadata, shows the response body, and lists helpful
   follow-up commands as templates. The default transcript is for humans;
   agents and scripts should pass --json for parse-safe output.
+
+  To continue an existing chat, pass --reply '<message>'. By default,
+  the CLI replies to the latest inbound email from the recipient to
+  your sender address. For exact continuation, pass
+  --reply-to-email-id <inbound-email-id>. Reply mode uses Primitive's
+  reply endpoint, so the reply subject and threading headers are
+  derived from the inbound email instead of copied into CLI flags.
 
   --json emits a structured envelope with both sides of the exchange,
   a direct response_body field, match details, and follow-up command
@@ -579,6 +712,8 @@ class ChatCommand extends Command {
   static examples = [
     "<%= config.bin %> chat help@agent.acme.dev 'how do I rotate my API key?'",
     "cat error.log | <%= config.bin %> chat help@agent.acme.dev --subject 'webhook 401s'",
+    "<%= config.bin %> chat help@agent.acme.dev --reply 'one more thing'",
+    "<%= config.bin %> chat help@agent.acme.dev --reply 'one more thing' --reply-to-email-id <inbound-email-id>",
     "<%= config.bin %> chat help@agent.acme.dev 'follow up question' --json",
     "<%= config.bin %> chat help@agent.acme.dev 'one more thing' --timeout 300",
   ];
@@ -619,9 +754,17 @@ class ChatCommand extends Command {
       description:
         "Subject line. Defaults to the first line of the message when omitted.",
     }),
+    reply: Flags.string({
+      description:
+        "Reply body. Continues the latest inbound email from the recipient to your sender address; pass --reply-to-email-id for an exact thread.",
+    }),
+    "reply-to-email-id": Flags.string({
+      description:
+        "Inbound email id to continue exactly. Uses Primitive's reply endpoint, so recipient, subject, and threading headers are derived from the inbound email.",
+    }),
     "in-reply-to": Flags.string({
       description:
-        "Message-Id of the parent email to thread this against. Use when continuing a prior conversation from outside the CLI; for an inbound you received via Primitive, prefer `primitive reply --id <inbound-id>`.",
+        "Raw Message-Id of the parent email to thread a new send against. Prefer --reply-to-email-id with --reply when continuing an inbound email stored by Primitive.",
     }),
     json: Flags.boolean({
       description:
@@ -668,12 +811,38 @@ class ChatCommand extends Command {
   async run(): Promise<void> {
     const { args, flags } = await this.parse(ChatCommand);
 
+    const replyMode =
+      flags.reply !== undefined || flags["reply-to-email-id"] !== undefined;
+    if (
+      flags.reply !== undefined &&
+      args.message !== undefined &&
+      args.message !== ""
+    ) {
+      throw cliError(
+        "Pass the reply body either as --reply or as the positional message, not both.",
+      );
+    }
+    if (replyMode && flags.subject !== undefined) {
+      throw cliError(
+        "--subject is not used with --reply. Primitive derives the reply subject from the inbound email.",
+      );
+    }
+    if (replyMode && flags["in-reply-to"] !== undefined) {
+      throw cliError(
+        "Use --reply-to-email-id with --reply instead of raw --in-reply-to.",
+      );
+    }
+
     const message =
-      args.message !== undefined && args.message !== ""
-        ? args.message
-        : await readStdinToString();
+      flags.reply !== undefined
+        ? flags.reply
+        : args.message !== undefined && args.message !== ""
+          ? args.message
+          : await readStdinToString();
     if (!message.trim()) {
-      throw cliError("Message body is empty.");
+      throw cliError(
+        replyMode ? "Reply body is empty." : "Message body is empty.",
+      );
     }
 
     await runWithTiming(flags.time, async () => {
@@ -685,15 +854,70 @@ class ChatCommand extends Command {
           configDir: this.config.configDir,
         });
 
-      const authFailureContext = {
+      const authFailureContext: ChatAuthFailureContext = {
         auth,
         baseUrlOverridden,
         configDir: this.config.configDir,
       };
-      const from =
-        flags.from ??
-        (await pickDefaultFromAddress(apiClient, authFailureContext));
-      const subject = flags.subject ?? deriveSubject(message);
+      const progress = flags.quiet
+        ? null
+        : new ChatProgressIndicator(process.stderr);
+
+      let from: string;
+      let parentReply: EmailDetail | undefined;
+      let subject: string;
+
+      if (replyMode) {
+        let replyContextFailureMessage = "Could not load reply context.";
+        try {
+          if (flags["reply-to-email-id"] !== undefined) {
+            progress?.start(
+              `Loading reply context for ${flags["reply-to-email-id"]}`,
+            );
+            parentReply = await loadInboundEmailDetail({
+              apiClient,
+              authFailureContext,
+              id: flags["reply-to-email-id"],
+            });
+            assertParentMatchesRecipient(parentReply, args.recipient);
+            from = flags.from ?? parentReply.to_email;
+          } else {
+            from =
+              flags.from ??
+              (await pickDefaultFromAddress(apiClient, authFailureContext));
+            progress?.start(
+              `Finding latest inbound email from ${args.recipient}`,
+            );
+            parentReply =
+              (await findLatestInboundFromRecipient({
+                apiClient,
+                authFailureContext,
+                from,
+                pageSize: flags["page-size"],
+                recipient: args.recipient,
+              })) ?? undefined;
+            if (!parentReply) {
+              replyContextFailureMessage = "No prior inbound email found.";
+              throw cliError(
+                `No prior inbound email from ${args.recipient} to ${from}. Start a new chat with \`primitive chat ${args.recipient} <message>\`, pass --from, or pass --reply-to-email-id <inbound-email-id>.`,
+              );
+            }
+            assertParentMatchesRecipient(parentReply, args.recipient);
+          }
+        } catch (error) {
+          progress?.fail(replyContextFailureMessage);
+          throw error;
+        }
+        if (parentReply === undefined) {
+          throw cliError("Could not load reply context.");
+        }
+        subject = derivedReplySubject(parentReply);
+      } else {
+        from =
+          flags.from ??
+          (await pickDefaultFromAddress(apiClient, authFailureContext));
+        subject = flags.subject ?? deriveSubject(message);
+      }
 
       // Capture send time BEFORE issuing the send so the inbound
       // poll's `since` filter cannot miss a reply that races back
@@ -702,27 +926,41 @@ class ChatCommand extends Command {
       // inbound by endpoint (`/emails`), not outbound.
       const sentAtIso = new Date().toISOString();
 
-      const progress = flags.quiet
-        ? null
-        : new ChatProgressIndicator(process.stderr);
-      progress?.start(`Sending message to ${args.recipient}`);
+      if (replyMode) {
+        progress?.update(`Sending reply to ${args.recipient}`);
+      } else {
+        progress?.start(`Sending message to ${args.recipient}`);
+      }
 
-      const sendResult = await sendEmail({
-        body: {
-          from,
-          to: args.recipient,
-          subject,
-          body_text: message,
-          ...(flags["in-reply-to"] !== undefined
-            ? { in_reply_to: flags["in-reply-to"] }
-            : {}),
-        },
-        client: apiClient._sendClient,
-        responseStyle: "fields",
-      });
+      const sendResult =
+        parentReply !== undefined
+          ? await replyToEmail({
+              body: {
+                body_text: message,
+                from,
+              },
+              client: apiClient.client,
+              path: { id: parentReply.id },
+              responseStyle: "fields",
+            })
+          : await sendEmail({
+              body: {
+                from,
+                to: args.recipient,
+                subject,
+                body_text: message,
+                ...(flags["in-reply-to"] !== undefined
+                  ? { in_reply_to: flags["in-reply-to"] }
+                  : {}),
+              },
+              client: apiClient._sendClient,
+              responseStyle: "fields",
+            });
 
       if (sendResult.error) {
-        progress?.fail("Message send failed.");
+        progress?.fail(
+          replyMode ? "Reply send failed." : "Message send failed.",
+        );
         const errorPayload = extractErrorPayload(sendResult.error);
         writeErrorWithHints(errorPayload);
         surfaceUnauthorizedHint({
@@ -742,14 +980,18 @@ class ChatCommand extends Command {
         throw cliError("Send succeeded but the API returned no data.");
       }
 
+      const replyAddress = sent.from || from;
       progress?.update(
-        `Message sent; waiting for reply from ${args.recipient}`,
+        `${
+          replyMode ? "Reply" : "Message"
+        } sent; waiting for reply from ${args.recipient}`,
         { heartbeatMs: 15_000, timeoutSeconds: flags.timeout },
       );
 
       const baseContext: ChatBaseContext = {
-        from,
+        from: replyAddress,
         json: flags.json,
+        parentReply,
         quiet: flags.quiet,
         recipient: args.recipient,
         sent,
@@ -765,7 +1007,7 @@ class ChatCommand extends Command {
         replyResult = await waitForReply({
           apiClient,
           authFailureContext,
-          from,
+          from: replyAddress,
           interval: flags.interval,
           notice: (message) => {
             if (progress) {
