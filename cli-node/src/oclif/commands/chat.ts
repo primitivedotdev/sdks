@@ -25,7 +25,7 @@ import {
 
 // `primitive chat` is the first-party verb for talking to an agent
 // that lives behind an email address. It sends a message, waits for
-// the reply, and prints the reply body. That's it.
+// the reply, and prints a compact transcript with next commands.
 //
 // Why this is its own command and not a flag on `send`:
 //
@@ -81,6 +81,471 @@ async function readStdinToString(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+type ChatMatchStrategy = "strict" | "fallback";
+type ChatResponseBodyFormat = "empty" | "html" | "text";
+type ChatFollowUpCommandKind =
+  | "continue_chat"
+  | "inspect_reply"
+  | "inspect_sent_email"
+  | "reply_direct"
+  | "wait_fallback_reply"
+  | "wait_for_more"
+  | "wait_threaded_reply";
+
+type ChatReplyResult = {
+  matchStrategy: ChatMatchStrategy;
+  reply: EmailDetail;
+};
+
+type ChatCommandPlaceholder = {
+  description: string;
+  token: string;
+};
+
+type ChatFollowUpCommand = {
+  argv: string[];
+  description: string;
+  command: string;
+  kind: ChatFollowUpCommandKind;
+  placeholders: ChatCommandPlaceholder[];
+  requires_message: boolean;
+};
+
+type ChatResponseBody = {
+  body: string;
+  format: ChatResponseBodyFormat;
+};
+
+type ChatBaseContext = {
+  from: string;
+  json: boolean;
+  quiet: boolean;
+  recipient: string;
+  sent: SendMailResult;
+  sentAtIso: string;
+  strictOnly: boolean;
+  strictPhaseSeconds: number;
+  subject: string;
+  timeoutSeconds: number;
+};
+
+type ChatOutputContext = ChatBaseContext & {
+  matchStrategy: ChatMatchStrategy;
+  reply: EmailDetail;
+};
+
+type ChatProgressStream = {
+  isTTY?: boolean;
+  write(chunk: string): unknown;
+};
+
+type ChatProgressUpdateOptions = {
+  heartbeatMs?: number;
+  timeoutSeconds?: number;
+};
+
+export class ChatProgressIndicator {
+  private currentMessage: string | null = null;
+  private frameIndex = 0;
+  private lastLineLength = 0;
+  private readonly startedAt: number;
+  private timer: ReturnType<typeof setInterval> | null = null;
+
+  constructor(
+    private readonly stream: ChatProgressStream = process.stderr,
+    private readonly now: () => number = Date.now,
+  ) {
+    this.startedAt = this.now();
+  }
+
+  start(message: string): void {
+    this.stopTimer();
+    this.currentMessage = message;
+    if (this.stream.isTTY) {
+      this.render(message);
+      this.timer = setInterval(() => this.render(message), 120);
+      this.timer.unref?.();
+      return;
+    }
+    this.stream.write(`${message}\n`);
+  }
+
+  update(message: string, options: ChatProgressUpdateOptions = {}): void {
+    this.currentMessage = message;
+    if (this.stream.isTTY) {
+      this.stopTimer();
+      this.clearLine();
+      this.render(message);
+      this.timer = setInterval(() => this.render(message), 120);
+      this.timer.unref?.();
+      return;
+    }
+    this.stopTimer();
+    this.stream.write(`${message}\n`);
+    if (options.heartbeatMs !== undefined) {
+      this.timer = setInterval(() => {
+        this.stream.write(
+          `${formatWaitingHeartbeat(
+            message,
+            this.now() - this.startedAt,
+            options.timeoutSeconds,
+          )}\n`,
+        );
+      }, options.heartbeatMs);
+      this.timer.unref?.();
+    }
+  }
+
+  notice(message: string): void {
+    if (this.stream.isTTY) {
+      const currentMessage = this.currentMessage;
+      this.clearLine();
+      this.stream.write(`${message}\n`);
+      if (currentMessage !== null && this.timer !== null) {
+        this.render(currentMessage);
+      }
+      return;
+    }
+    this.stream.write(`${message}\n`);
+  }
+
+  succeed(message: string): void {
+    this.finish(
+      `${message} after ${formatElapsed(this.now() - this.startedAt)}.`,
+    );
+  }
+
+  fail(message: string): void {
+    this.finish(message);
+  }
+
+  private finish(message: string): void {
+    this.stopTimer();
+    this.currentMessage = null;
+    if (this.stream.isTTY) {
+      this.clearLine();
+    }
+    this.stream.write(`${message}\n`);
+  }
+
+  private render(message: string): void {
+    const frames = ["-", "\\", "|", "/"];
+    const frame = frames[this.frameIndex % frames.length];
+    this.frameIndex += 1;
+    const line = `${frame} ${message} (${formatElapsed(this.now() - this.startedAt)})`;
+    this.lastLineLength = Math.max(this.lastLineLength, line.length);
+    this.stream.write(`\r${line}`);
+  }
+
+  private clearLine(): void {
+    if (this.lastLineLength > 0) {
+      this.stream.write(`\r${" ".repeat(this.lastLineLength)}\r`);
+      this.lastLineLength = 0;
+    }
+  }
+
+  private stopTimer(): void {
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+}
+
+function formatElapsed(ms: number): string {
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return remainder === 0 ? `${minutes}m` : `${minutes}m ${remainder}s`;
+}
+
+function formatWaitingHeartbeat(
+  message: string,
+  elapsedMs: number,
+  timeoutSeconds: number | undefined,
+): string {
+  const timeout =
+    timeoutSeconds === undefined
+      ? ""
+      : timeoutSeconds === 0
+        ? ", no timeout"
+        : `, timeout ${formatElapsed(timeoutSeconds * 1000)}`;
+  return `${message} (${formatElapsed(elapsedMs)} elapsed${timeout})`;
+}
+
+function shellQuote(value: string): string {
+  if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(value)) return value;
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function commandFromArgv(argv: string[]): string {
+  return argv.map(shellQuote).join(" ");
+}
+
+export function resolveChatResponseBody(reply: EmailDetail): ChatResponseBody {
+  if (reply.body_text && reply.body_text.length > 0) {
+    return { body: reply.body_text, format: "text" };
+  }
+  if (reply.body_html && reply.body_html.length > 0) {
+    return { body: reply.body_html, format: "html" };
+  }
+  if (reply.body_text !== null && reply.body_text !== undefined) {
+    return { body: reply.body_text, format: "text" };
+  }
+  if (reply.body_html !== null && reply.body_html !== undefined) {
+    return { body: reply.body_html, format: "html" };
+  }
+  return { body: "", format: "empty" };
+}
+
+function matchDescription(strategy: ChatMatchStrategy): string {
+  return strategy === "strict"
+    ? "strict, matched by reply_to_sent_email_id"
+    : "fallback, matched by sender/time window";
+}
+
+function buildCommand(
+  kind: ChatFollowUpCommandKind,
+  description: string,
+  argv: string[],
+  options: { requiresMessage?: boolean } = {},
+): ChatFollowUpCommand {
+  const requiresMessage = options.requiresMessage ?? false;
+  return {
+    argv,
+    description,
+    command: commandFromArgv(argv),
+    kind,
+    placeholders: requiresMessage
+      ? [
+          {
+            description: "Replace with the message body before running.",
+            token: "<message>",
+          },
+        ]
+      : [],
+    requires_message: requiresMessage,
+  };
+}
+
+export function buildChatFollowUpCommands(
+  context: ChatOutputContext,
+): ChatFollowUpCommand[] {
+  const commands: ChatFollowUpCommand[] = [];
+  const continueParts = [
+    "primitive",
+    "chat",
+    context.recipient,
+    "<message>",
+    "--from",
+    context.from,
+    "--subject",
+    context.subject,
+    "--timeout",
+    String(context.timeoutSeconds),
+  ];
+  if (context.reply.message_id) {
+    continueParts.push("--in-reply-to", context.reply.message_id);
+  }
+  if (context.json) {
+    continueParts.push("--json");
+  }
+  if (context.quiet) {
+    continueParts.push("--quiet");
+  }
+  if (context.strictOnly) {
+    continueParts.push("--strict-only");
+  } else if (context.strictPhaseSeconds !== DEFAULT_STRICT_PHASE_SECONDS) {
+    continueParts.push(
+      "--strict-phase-seconds",
+      String(context.strictPhaseSeconds),
+    );
+  }
+  commands.push(
+    buildCommand("continue_chat", "Continue this chat", continueParts, {
+      requiresMessage: true,
+    }),
+  );
+  commands.push(
+    buildCommand(
+      "reply_direct",
+      "Reply directly to the inbound email",
+      [
+        "primitive",
+        "reply",
+        "--id",
+        context.reply.id,
+        "--from",
+        context.from,
+        "--body",
+        "<message>",
+      ],
+      { requiresMessage: true },
+    ),
+  );
+  commands.push(
+    buildCommand("inspect_reply", "Inspect the full inbound email", [
+      "primitive",
+      "emails",
+      "get",
+      "--id",
+      context.reply.id,
+    ]),
+  );
+  commands.push(
+    buildCommand("wait_for_more", "Wait for future replies to this send", [
+      "primitive",
+      "emails",
+      "wait",
+      "--reply-to-sent-email-id",
+      context.sent.id,
+      "--to",
+      context.from,
+      "--since",
+      context.reply.received_at,
+      "--timeout",
+      String(context.timeoutSeconds),
+    ]),
+  );
+  return commands;
+}
+
+export function buildChatRecoveryCommands(
+  context: ChatBaseContext,
+): ChatFollowUpCommand[] {
+  return [
+    buildCommand("wait_threaded_reply", "Wait for the threaded reply again", [
+      "primitive",
+      "emails",
+      "wait",
+      "--reply-to-sent-email-id",
+      context.sent.id,
+      "--to",
+      context.from,
+      "--since",
+      context.sentAtIso,
+      "--timeout",
+      String(context.timeoutSeconds),
+    ]),
+    buildCommand("wait_fallback_reply", "Fallback wait by sender/time window", [
+      "primitive",
+      "emails",
+      "wait",
+      "--from",
+      context.recipient,
+      "--to",
+      context.from,
+      "--since",
+      context.sentAtIso,
+      "--timeout",
+      String(context.timeoutSeconds),
+    ]),
+    buildCommand("inspect_sent_email", "Inspect the outbound send", [
+      "primitive",
+      "sent",
+      "get",
+      "--id",
+      context.sent.id,
+    ]),
+  ];
+}
+
+export function buildChatJsonEnvelope(context: ChatOutputContext): {
+  follow_up_commands: ChatFollowUpCommand[];
+  match: {
+    description: string;
+    reply_to_sent_email_id: string | null;
+    strategy: ChatMatchStrategy;
+  };
+  reply: EmailDetail;
+  response_body: string;
+  response_body_format: ChatResponseBodyFormat;
+  sent: SendMailResult;
+} {
+  const responseBody = resolveChatResponseBody(context.reply);
+  return {
+    sent: context.sent,
+    reply: context.reply,
+    response_body: responseBody.body,
+    response_body_format: responseBody.format,
+    match: {
+      description: matchDescription(context.matchStrategy),
+      reply_to_sent_email_id: context.reply.reply_to_sent_email_id ?? null,
+      strategy: context.matchStrategy,
+    },
+    follow_up_commands: buildChatFollowUpCommands(context),
+  };
+}
+
+export function formatChatResponse(context: ChatOutputContext): string {
+  const accepted = context.sent.accepted.join(", ") || context.recipient;
+  const responseBody = resolveChatResponseBody(context.reply);
+  const lines = [
+    "Reply received",
+    "",
+    "Sent",
+    `  To: ${accepted}`,
+    `  From: ${context.sent.from || context.from}`,
+    `  Subject: ${context.subject}`,
+    `  Sent email id: ${context.sent.id}`,
+    `  Delivery status: ${context.sent.delivery_status ?? context.sent.status}`,
+    "",
+    "Reply",
+    `  Email id: ${context.reply.id}`,
+    `  From: ${context.reply.from_email}`,
+    `  To: ${context.reply.to_email}`,
+    `  Subject: ${context.reply.subject ?? "(no subject)"}`,
+    `  Received: ${context.reply.received_at}`,
+    `  Match: ${matchDescription(context.matchStrategy)}`,
+  ];
+  if (context.reply.reply_to_sent_email_id) {
+    lines.push(
+      `  Reply to sent email id: ${context.reply.reply_to_sent_email_id}`,
+    );
+  }
+  if (context.reply.message_id) {
+    lines.push(`  Message-Id: ${context.reply.message_id}`);
+  }
+  lines.push(
+    "",
+    "Helpful follow-up commands",
+    "  Replace <message> before running commands that include it.",
+    "  Commands are templates; use --json for parse-safe output.",
+  );
+  for (const { description, command } of buildChatFollowUpCommands(context)) {
+    lines.push(`  ${description}:`, `    ${command}`);
+  }
+  lines.push(
+    "",
+    `Response body (${responseBody.format}; use --json for parsing)`,
+    "----- BEGIN RESPONSE -----",
+    responseBody.body || "(empty response)",
+    "----- END RESPONSE -----",
+  );
+  return lines.join("\n");
+}
+
+export function formatChatRecoveryContext(context: ChatBaseContext): string {
+  const accepted = context.sent.accepted.join(", ") || context.recipient;
+  const lines = [
+    "",
+    "Sent message context",
+    `  To: ${accepted}`,
+    `  From: ${context.sent.from || context.from}`,
+    `  Subject: ${context.subject}`,
+    `  Sent email id: ${context.sent.id}`,
+    `  Delivery status: ${context.sent.delivery_status ?? context.sent.status}`,
+    `  Poll since: ${context.sentAtIso}`,
+    "",
+    "Helpful recovery commands",
+  ];
+  for (const { description, command } of buildChatRecoveryCommands(context)) {
+    lines.push(`  ${description}:`, `    ${command}`);
+  }
+  return lines.join("\n");
+}
+
 class ChatCommand extends Command {
   static description = `Send a message to an address and wait for the reply.
 
@@ -89,13 +554,24 @@ class ChatCommand extends Command {
   \`primitive chat\` is semantic (send + wait for the threaded reply).
 
   The message body can be given as the second positional argument or
-  piped via stdin. The reply body is written to stdout; --json emits a
-  structured envelope with both sides of the exchange.
+  piped via stdin. The default output confirms the reply was received,
+  prints exchange metadata, shows the response body, and lists helpful
+  follow-up commands as templates. The default transcript is for humans;
+  agents and scripts should pass --json for parse-safe output.
 
-  Matching the reply: the wait phase polls inbound mail filtered by
-  the recipient as sender and the send time as a lower bound. The
-  first match is taken; the full inbound row is then fetched for the
-  body. Exits non-zero on timeout.`;
+  --json emits a structured envelope with both sides of the exchange,
+  a direct response_body field, match details, and follow-up command
+  metadata such as kind, argv, placeholders, and requires_message.
+
+  Matching the reply: chat first waits in strict threading mode by
+  filtering inbound mail with reply_to_sent_email_id=<sent id>. If
+  no strict match arrives before the strict phase ends, and
+  --strict-only is not set, it falls back to a weaker sender/time
+  window match: from=<recipient>, to=<sender>, and since=<send time>.
+  The fallback can catch clients that strip threading headers, but it
+  is less exact than strict matching. Progress is written to stderr
+  while the CLI waits. Exits non-zero on timeout and prints recovery
+  commands when the send succeeded but no reply was returned.`;
 
   static summary =
     "Chat with an agent over email (send and wait for the reply)";
@@ -149,7 +625,11 @@ class ChatCommand extends Command {
     }),
     json: Flags.boolean({
       description:
-        "Emit a structured JSON envelope { sent, reply } on stdout instead of just the reply body.",
+        "Emit a structured JSON envelope { sent, reply, response_body, response_body_format, match, follow_up_commands } on stdout instead of the human-readable transcript.",
+    }),
+    quiet: Flags.boolean({
+      description:
+        "Suppress stderr progress updates while sending and waiting. Errors and recovery commands are still written to stderr.",
     }),
     timeout: Flags.integer({
       default: DEFAULT_CHAT_TIMEOUT_SECONDS,
@@ -222,6 +702,11 @@ class ChatCommand extends Command {
       // inbound by endpoint (`/emails`), not outbound.
       const sentAtIso = new Date().toISOString();
 
+      const progress = flags.quiet
+        ? null
+        : new ChatProgressIndicator(process.stderr);
+      progress?.start(`Sending message to ${args.recipient}`);
+
       const sendResult = await sendEmail({
         body: {
           from,
@@ -237,6 +722,7 @@ class ChatCommand extends Command {
       });
 
       if (sendResult.error) {
+        progress?.fail("Message send failed.");
         const errorPayload = extractErrorPayload(sendResult.error);
         writeErrorWithHints(errorPayload);
         surfaceUnauthorizedHint({
@@ -252,43 +738,78 @@ class ChatCommand extends Command {
         | undefined;
       const sent = sentEnvelope?.data;
       if (!sent) {
+        progress?.fail("Send succeeded but the API returned no data.");
         throw cliError("Send succeeded but the API returned no data.");
       }
 
-      const reply = await waitForReply({
-        apiClient,
-        authFailureContext,
+      progress?.update(
+        `Message sent; waiting for reply from ${args.recipient}`,
+        { heartbeatMs: 15_000, timeoutSeconds: flags.timeout },
+      );
+
+      const baseContext: ChatBaseContext = {
         from,
-        interval: flags.interval,
-        pageSize: flags["page-size"],
+        json: flags.json,
+        quiet: flags.quiet,
         recipient: args.recipient,
+        sent,
         sentAtIso,
-        sentId: sent.id,
         strictOnly: flags["strict-only"],
         strictPhaseSeconds: flags["strict-phase-seconds"],
+        subject,
         timeoutSeconds: flags.timeout,
-      });
-      if (reply === null) {
-        process.stderr.write(
-          `Timed out after ${flags.timeout}s waiting for a reply from ${args.recipient}.\n`,
-        );
+      };
+
+      let replyResult: ChatReplyResult | null;
+      try {
+        replyResult = await waitForReply({
+          apiClient,
+          authFailureContext,
+          from,
+          interval: flags.interval,
+          notice: (message) => {
+            if (progress) {
+              progress.notice(message);
+              return;
+            }
+            process.stderr.write(`${message}\n`);
+          },
+          pageSize: flags["page-size"],
+          recipient: args.recipient,
+          sentAtIso,
+          sentId: sent.id,
+          strictOnly: flags["strict-only"],
+          strictPhaseSeconds: flags["strict-phase-seconds"],
+          timeoutSeconds: flags.timeout,
+        });
+      } catch (error) {
+        progress?.fail("Reply polling failed.");
+        process.stderr.write(`${formatChatRecoveryContext(baseContext)}\n`);
+        throw error;
+      }
+      if (replyResult === null) {
+        const timeoutMessage = `Timed out after ${flags.timeout}s waiting for a reply from ${args.recipient}.`;
+        progress?.fail(timeoutMessage);
+        if (progress === null) {
+          process.stderr.write(`${timeoutMessage}\n`);
+        }
+        process.stderr.write(`${formatChatRecoveryContext(baseContext)}\n`);
         process.exitCode = 1;
         return;
       }
 
+      progress?.succeed(`Reply received from ${replyResult.reply.from_email}`);
+
+      const outputContext: ChatOutputContext = {
+        ...baseContext,
+        matchStrategy: replyResult.matchStrategy,
+        reply: replyResult.reply,
+      };
+
       if (flags.json) {
-        const envelope = {
-          sent,
-          reply,
-        };
-        this.log(JSON.stringify(envelope, null, 2));
+        this.log(JSON.stringify(buildChatJsonEnvelope(outputContext), null, 2));
       } else {
-        // Fall back to body_html when the reply has no body_text. HTML-
-        // only replies are rare but real (some clients send multipart
-        // with the text part empty), and emitting an empty string with
-        // exit 0 would silently lose the message.
-        const body = reply.body_text ?? reply.body_html ?? "";
-        this.log(body);
+        this.log(formatChatResponse(outputContext));
       }
     });
   }
@@ -305,6 +826,7 @@ type WaitForReplyParams = {
   };
   from: string;
   interval: number;
+  notice?: (message: string) => void;
   pageSize: number;
   recipient: string;
   sentAtIso: string;
@@ -316,7 +838,12 @@ type WaitForReplyParams = {
 
 async function waitForReply(
   params: WaitForReplyParams,
-): Promise<EmailDetail | null> {
+): Promise<ChatReplyResult | null> {
+  const notice =
+    params.notice ??
+    ((message: string) => {
+      process.stderr.write(`${message}\n`);
+    });
   const totalDeadline =
     params.timeoutSeconds === 0
       ? null
@@ -449,16 +976,16 @@ async function waitForReply(
           // give up immediately when --strict-only is set, in which
           // case we say so plainly).
           if (!strictFilterUnsupported) {
-            process.stderr.write(
+            notice(
               params.strictOnly
-                ? "Strict-phase reply matching is not supported by this Primitive API host; --strict-only requires server support so the command will exit without a match.\n"
-                : "Strict-phase reply matching is not supported by this Primitive API host; falling back to time-window matching.\n",
+                ? "Strict-phase reply matching is not supported by this Primitive API host; --strict-only requires server support so the command will exit without a match."
+                : "Strict-phase reply matching is not supported by this Primitive API host; falling back to time-window matching.",
             );
           }
           strictFilterUnsupported = true;
           continue;
         }
-        return detail;
+        return { reply: detail, matchStrategy: phase.label };
       }
 
       if (strictFilterUnsupported && phase.label === "strict") break;

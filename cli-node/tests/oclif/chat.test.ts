@@ -1,0 +1,454 @@
+import { resolve } from "node:path";
+import type { EmailDetail, SendMailResult } from "@primitivedotdev/api-core";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({
+  createAuthenticatedCliApiClient: vi.fn(),
+  fetchEmailSearchPage: vi.fn(),
+  getEmail: vi.fn(),
+  pickDefaultFromAddress: vi.fn(),
+  sendEmail: vi.fn(),
+  sleep: vi.fn(),
+}));
+
+vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@primitivedotdev/api-core")>();
+  return {
+    ...actual,
+    getEmail: mocks.getEmail,
+    sendEmail: mocks.sendEmail,
+  };
+});
+
+vi.mock("../../src/oclif/api-client.js", () => ({
+  createAuthenticatedCliApiClient: mocks.createAuthenticatedCliApiClient,
+}));
+
+vi.mock("../../src/oclif/outbound-defaults.js", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("../../src/oclif/outbound-defaults.js")
+    >();
+  return {
+    ...actual,
+    pickDefaultFromAddress: mocks.pickDefaultFromAddress,
+  };
+});
+
+vi.mock("../../src/oclif/commands/emails-poll.js", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("../../src/oclif/commands/emails-poll.js")
+    >();
+  return {
+    ...actual,
+    fetchEmailSearchPage: mocks.fetchEmailSearchPage,
+    sleep: mocks.sleep,
+  };
+});
+
+import ChatCommand, {
+  buildChatFollowUpCommands,
+  buildChatJsonEnvelope,
+  buildChatRecoveryCommands,
+  ChatProgressIndicator,
+  formatChatRecoveryContext,
+  formatChatResponse,
+  resolveChatResponseBody,
+} from "../../src/oclif/commands/chat.js";
+import { COMMANDS } from "../../src/oclif/index.js";
+
+const CLI_ROOT = resolve(import.meta.dirname, "../..");
+
+function sentEmail(overrides: Partial<SendMailResult> = {}): SendMailResult {
+  return {
+    accepted: ["help@agent.example"],
+    client_idempotency_key: "chat-test",
+    content_hash: "sha256:test",
+    delivery_status: "delivered",
+    id: "sent-1",
+    idempotent_replay: false,
+    from: "agent@sender.example",
+    queue_id: "queue-1",
+    rejected: [],
+    request_id: "req-1",
+    status: "delivered",
+    ...overrides,
+  };
+}
+
+function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
+  return {
+    body_html: null,
+    body_text: "Rotate your API key from the dashboard.",
+    created_at: "2026-05-25T00:00:02.000Z",
+    domain: "agent.example",
+    from_email: "help@agent.example",
+    id: "email-1",
+    message_id: "<reply-1@agent.example>",
+    recipient: "agent@sender.example",
+    received_at: "2026-05-25T00:00:02.000Z",
+    reply_to_sent_email_id: "sent-1",
+    replies: [],
+    sender: "help@agent.example",
+    status: "accepted",
+    subject: "Re: API key help",
+    to_email: "agent@sender.example",
+    webhook_attempt_count: 1,
+    webhook_status: "fired",
+    ...overrides,
+  };
+}
+
+function outputContext() {
+  return {
+    from: "agent@sender.example",
+    json: false,
+    matchStrategy: "strict" as const,
+    quiet: false,
+    recipient: "help@agent.example",
+    reply: replyEmail(),
+    sent: sentEmail(),
+    sentAtIso: "2026-05-25T00:00:00.000Z",
+    strictOnly: false,
+    strictPhaseSeconds: 60,
+    subject: "API key help",
+    timeoutSeconds: 120,
+  };
+}
+
+function searchRow() {
+  return {
+    id: "email-1",
+    received_at: "2026-05-25T00:00:02.000Z",
+    status: "accepted",
+  };
+}
+
+async function runChatCommand(argv: string[]): Promise<{
+  exitCode: NodeJS.Process["exitCode"];
+  stderr: string;
+  stdout: string;
+}> {
+  const stdoutChunks: string[] = [];
+  const stderrChunks: string[] = [];
+  const previousExitCode = process.exitCode;
+  process.exitCode = undefined;
+  const logSpy = vi.spyOn(console, "log").mockImplementation((message = "") => {
+    stdoutChunks.push(`${String(message)}\n`);
+  });
+  const stderrSpy = vi
+    .spyOn(process.stderr, "write")
+    .mockImplementation((chunk: unknown) => {
+      stderrChunks.push(String(chunk));
+      return true;
+    });
+
+  try {
+    await ChatCommand.run(argv, { root: CLI_ROOT });
+    return {
+      exitCode: process.exitCode,
+      stderr: stderrChunks.join(""),
+      stdout: stdoutChunks.join(""),
+    };
+  } finally {
+    logSpy.mockRestore();
+    stderrSpy.mockRestore();
+    process.exitCode = previousExitCode;
+  }
+}
+
+describe("chat command", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { _sendClient: {}, client: {} },
+      auth: { kind: "api-key" },
+      baseUrlOverridden: false,
+    });
+    mocks.pickDefaultFromAddress.mockResolvedValue("agent@sender.example");
+    mocks.sendEmail.mockResolvedValue({ data: { data: sentEmail() } });
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      cursor: null,
+      ok: true,
+      rows: [searchRow()],
+    });
+    mocks.getEmail.mockResolvedValue({ data: { data: replyEmail() } });
+    mocks.sleep.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    process.exitCode = undefined;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("registers the first-party chat command", () => {
+    expect(COMMANDS.chat).toBe(ChatCommand);
+  });
+
+  it("keeps JSON mode explicit", () => {
+    const flags = ChatCommand.flags as Record<string, unknown>;
+
+    expect(flags.json).toBeDefined();
+  });
+
+  it("formats a reply with context and follow-up commands by default", () => {
+    const output = formatChatResponse(outputContext());
+
+    expect(output).toContain("Reply received");
+    expect(output).toContain("Sent email id: sent-1");
+    expect(output).toContain("Email id: email-1");
+    expect(output).toContain(
+      "Match: strict, matched by reply_to_sent_email_id",
+    );
+    expect(output).toContain("Helpful follow-up commands");
+    expect(output).toContain("Replace <message> before running");
+    expect(output).toContain("use --json for parse-safe output");
+    expect(output).toContain(
+      "primitive chat help@agent.example '<message>' --from agent@sender.example --subject 'API key help' --timeout 120",
+    );
+    expect(output).toContain(
+      "primitive reply --id email-1 --from agent@sender.example --body '<message>'",
+    );
+    expect(output).toContain(
+      "primitive emails wait --reply-to-sent-email-id sent-1 --to agent@sender.example --since 2026-05-25T00:00:02.000Z --timeout 120",
+    );
+    expect(output).toContain("Response body (text; use --json for parsing)");
+    expect(output).toContain("----- BEGIN RESPONSE -----\nRotate your API key");
+    expect(output).toContain("----- END RESPONSE -----");
+    expect(output).not.toBe("Rotate your API key from the dashboard.\n");
+  });
+
+  it("includes follow-up commands in JSON mode without changing stdout shape to prose", () => {
+    const envelope = buildChatJsonEnvelope({
+      ...outputContext(),
+      json: true,
+    });
+
+    expect(envelope.sent.id).toBe("sent-1");
+    expect(envelope.reply.id).toBe("email-1");
+    expect(envelope.response_body).toBe(
+      "Rotate your API key from the dashboard.",
+    );
+    expect(envelope.response_body_format).toBe("text");
+    expect(envelope.match.strategy).toBe("strict");
+    expect(envelope.match.description).toBe(
+      "strict, matched by reply_to_sent_email_id",
+    );
+    expect(envelope.follow_up_commands.map((entry) => entry.command)).toContain(
+      "primitive emails get --id email-1",
+    );
+    expect(envelope.follow_up_commands[0]).toMatchObject({
+      kind: "continue_chat",
+      requires_message: true,
+    });
+    expect(envelope.follow_up_commands[0]?.argv).toEqual(
+      expect.arrayContaining(["--from", "--json"]),
+    );
+    expect(envelope.follow_up_commands[0]?.placeholders).toEqual([
+      {
+        description: "Replace with the message body before running.",
+        token: "<message>",
+      },
+    ]);
+    expect(
+      envelope.follow_up_commands.find(
+        (entry) => entry.kind === "wait_for_more",
+      )?.argv,
+    ).toEqual(
+      expect.arrayContaining([
+        "--since",
+        "2026-05-25T00:00:02.000Z",
+        "--timeout",
+        "120",
+      ]),
+    );
+  });
+
+  it("quotes shell-sensitive follow-up command values", () => {
+    const commands = buildChatFollowUpCommands({
+      ...outputContext(),
+      recipient: "agent support@example.com",
+      subject: "quoted ' subject",
+    }).map((entry) => entry.command);
+
+    expect(commands[0]).toContain("'agent support@example.com'");
+    expect(commands[0]).toContain("'quoted '\\'' subject'");
+  });
+
+  it("falls back to HTML response body when text is empty", () => {
+    expect(
+      resolveChatResponseBody(
+        replyEmail({ body_html: "<p>Hello</p>", body_text: "" }),
+      ),
+    ).toEqual({
+      body: "<p>Hello</p>",
+      format: "html",
+    });
+  });
+
+  it("formats recovery commands after a send without a reply", () => {
+    const output = formatChatRecoveryContext(outputContext());
+    const commands = buildChatRecoveryCommands(outputContext());
+
+    expect(output).toContain("Sent message context");
+    expect(output).toContain("Sent email id: sent-1");
+    expect(output).toContain("Helpful recovery commands");
+    expect(commands.map((entry) => entry.command)).toContain(
+      "primitive emails wait --reply-to-sent-email-id sent-1 --to agent@sender.example --since 2026-05-25T00:00:00.000Z --timeout 120",
+    );
+    expect(commands.map((entry) => entry.command)).toContain(
+      "primitive emails wait --from help@agent.example --to agent@sender.example --since 2026-05-25T00:00:00.000Z --timeout 120",
+    );
+    expect(commands.map((entry) => entry.command).join("\n")).not.toContain(
+      "--table",
+    );
+    expect(commands[0]).toMatchObject({
+      kind: "wait_threaded_reply",
+      requires_message: false,
+    });
+  });
+
+  it("writes non-TTY progress lines while waiting", () => {
+    const writes: string[] = [];
+    const progress = new ChatProgressIndicator(
+      {
+        isTTY: false,
+        write(chunk: string) {
+          writes.push(chunk);
+        },
+      },
+      () => 0,
+    );
+
+    progress.start("Sending message to help@agent.example");
+    progress.update("Message sent; waiting for reply from help@agent.example");
+    progress.succeed("Reply received from help@agent.example");
+
+    expect(writes.join("")).toContain("Sending message");
+    expect(writes.join("")).toContain("waiting for reply");
+    expect(writes.join("")).toContain("Reply received");
+  });
+
+  it("writes non-TTY heartbeat lines while waiting", () => {
+    vi.useFakeTimers();
+    let now = 0;
+    const writes: string[] = [];
+    const progress = new ChatProgressIndicator(
+      {
+        isTTY: false,
+        write(chunk: string) {
+          writes.push(chunk);
+        },
+      },
+      () => now,
+    );
+
+    try {
+      progress.update("Message sent; waiting for reply", {
+        heartbeatMs: 1000,
+        timeoutSeconds: 3,
+      });
+      now = 1000;
+      vi.advanceTimersByTime(1000);
+      progress.succeed("Reply received");
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(writes.join("")).toContain(
+      "Message sent; waiting for reply (1s elapsed, timeout 3s)",
+    );
+  });
+
+  it("invokes the command with human stdout and stderr progress on success", async () => {
+    const result = await runChatCommand([
+      "help@agent.example",
+      "How do I rotate my API key?",
+      "--from",
+      "agent@sender.example",
+      "--subject",
+      "API key help",
+      "--timeout",
+      "17",
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain("Sending message to help@agent.example");
+    expect(result.stderr).toContain(
+      "Message sent; waiting for reply from help@agent.example",
+    );
+    expect(result.stderr).toContain(
+      "Reply received from help@agent.example after",
+    );
+    expect(result.stdout).toContain("Reply received");
+    expect(result.stdout).toContain(
+      "Response body (text; use --json for parsing)",
+    );
+    expect(result.stdout).toContain(
+      "primitive chat help@agent.example '<message>' --from agent@sender.example --subject 'API key help' --timeout 17 --in-reply-to '<reply-1@agent.example>'",
+    );
+  });
+
+  it("invokes the command with JSON stdout and stderr progress", async () => {
+    const result = await runChatCommand([
+      "help@agent.example",
+      "How do I rotate my API key?",
+      "--json",
+    ]);
+    const parsed = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain("Sending message to help@agent.example");
+    expect(parsed.response_body).toBe(
+      "Rotate your API key from the dashboard.",
+    );
+    expect(parsed.response_body_format).toBe("text");
+    expect(parsed.follow_up_commands[0]).toMatchObject({
+      kind: "continue_chat",
+      requires_message: true,
+    });
+    expect(parsed.follow_up_commands[0].argv).toEqual(
+      expect.arrayContaining(["primitive", "chat", "--from", "--json"]),
+    );
+  });
+
+  it("invokes the command with recovery context on timeout after send", async () => {
+    let now = 0;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => now);
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      cursor: null,
+      ok: true,
+      rows: [],
+    });
+    mocks.sleep.mockImplementation(async () => {
+      now += 2000;
+    });
+
+    const result = await runChatCommand([
+      "help@agent.example",
+      "Is anybody there?",
+      "--from",
+      "agent@sender.example",
+      "--subject",
+      "Timeout test",
+      "--timeout",
+      "1",
+    ]);
+
+    nowSpy.mockRestore();
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain(
+      "Timed out after 1s waiting for a reply from help@agent.example.",
+    );
+    expect(result.stderr).toContain("Sent message context");
+    expect(result.stderr).toContain("Sent email id: sent-1");
+    expect(result.stderr).toMatch(
+      /primitive emails wait --reply-to-sent-email-id sent-1 --to agent@sender\.example --since \S+ --timeout 1/,
+    );
+    expect(result.stderr).not.toContain("--table");
+  });
+});
