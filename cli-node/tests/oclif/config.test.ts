@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  acquireCliCredentialsLock,
   loadCliCredentials,
   type StoredCliCredentials,
   saveCliCredentials,
@@ -75,6 +76,23 @@ describe("config use", () => {
     });
     expect(loadCliConfig(tempDir)?.current_environment).toBe("staging");
     expect(loadCliCredentials(tempDir)).toBeNull();
+  });
+
+  it("does not switch environments when the credentials lock is held", () => {
+    saveCliConfig(tempDir, configWithDefaultAndStaging());
+    saveCliCredentials(tempDir, CREDENTIALS);
+    const releaseLock = acquireCliCredentialsLock(tempDir);
+
+    try {
+      expect(() => switchCliEnvironment(tempDir, "staging")).toThrow(
+        /credential operation is already in progress/,
+      );
+    } finally {
+      releaseLock();
+    }
+
+    expect(loadCliConfig(tempDir)?.current_environment).toBe("default");
+    expect(loadCliCredentials(tempDir)).toEqual(CREDENTIALS);
   });
 
   it("preserves saved credentials when selecting the active environment again", () => {

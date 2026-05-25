@@ -1,6 +1,10 @@
 import { existsSync } from "node:fs";
 import { Args, Command, Errors, Flags } from "@oclif/core";
-import { credentialsPath, deleteCliCredentials } from "../auth.js";
+import {
+  acquireCliCredentialsLock,
+  credentialsPath,
+  deleteCliCredentials,
+} from "../auth.js";
 import {
   deleteCliConfig,
   emptyCliConfig,
@@ -47,16 +51,24 @@ export function switchCliEnvironment(
   }
 
   const previousEnvironment = resolveConfigEnvironment(config)?.name ?? null;
-  saveCliConfig(configDir, {
+  const nextConfig = {
     ...config,
     current_environment: environment,
-  });
+  };
 
   const shouldClearCredentials = previousEnvironment !== environment;
-  const removedCredentials =
-    shouldClearCredentials && existsSync(credentialsPath(configDir));
+  let removedCredentials = false;
   if (shouldClearCredentials) {
-    deleteCliCredentials(configDir);
+    const releaseLock = acquireCliCredentialsLock(configDir);
+    try {
+      saveCliConfig(configDir, nextConfig);
+      removedCredentials = existsSync(credentialsPath(configDir));
+      deleteCliCredentials(configDir);
+    } finally {
+      releaseLock();
+    }
+  } else {
+    saveCliConfig(configDir, nextConfig);
   }
 
   return { environment, previousEnvironment, removedCredentials };
