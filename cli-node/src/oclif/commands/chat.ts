@@ -868,50 +868,59 @@ class ChatCommand extends Command {
       let subject: string;
 
       if (replyMode) {
-        let replyContextFailureMessage = "Could not load reply context.";
-        try {
-          if (flags["reply-to-email-id"] !== undefined) {
-            progress?.start(
-              `Loading reply context for ${flags["reply-to-email-id"]}`,
-            );
-            parentReply = await loadInboundEmailDetail({
-              apiClient,
-              authFailureContext,
-              id: flags["reply-to-email-id"],
-            });
-            assertParentMatchesRecipient(parentReply, args.recipient);
-            from = flags.from ?? parentReply.to_email;
-          } else {
-            from =
+        const replyContext = await (async (): Promise<{
+          from: string;
+          parentReply: EmailDetail;
+        }> => {
+          let replyContextFailureMessage = "Could not load reply context.";
+          try {
+            if (flags["reply-to-email-id"] !== undefined) {
+              progress?.start(
+                `Loading reply context for ${flags["reply-to-email-id"]}`,
+              );
+              const exactParentReply = await loadInboundEmailDetail({
+                apiClient,
+                authFailureContext,
+                id: flags["reply-to-email-id"],
+              });
+              replyContextFailureMessage = `Inbound email ${flags["reply-to-email-id"]} does not match recipient ${args.recipient}.`;
+              assertParentMatchesRecipient(exactParentReply, args.recipient);
+              return {
+                from: flags.from ?? exactParentReply.to_email,
+                parentReply: exactParentReply,
+              };
+            }
+
+            const replyFrom =
               flags.from ??
               (await pickDefaultFromAddress(apiClient, authFailureContext));
             progress?.start(
               `Finding latest inbound email from ${args.recipient}`,
             );
-            parentReply =
-              (await findLatestInboundFromRecipient({
-                apiClient,
-                authFailureContext,
-                from,
-                pageSize: flags["page-size"],
-                recipient: args.recipient,
-              })) ?? undefined;
-            if (!parentReply) {
+            const latestParentReply = await findLatestInboundFromRecipient({
+              apiClient,
+              authFailureContext,
+              from: replyFrom,
+              pageSize: flags["page-size"],
+              recipient: args.recipient,
+            });
+            if (!latestParentReply) {
               replyContextFailureMessage = "No prior inbound email found.";
               throw cliError(
-                `No prior inbound email from ${args.recipient} to ${from}. Start a new chat with \`primitive chat ${args.recipient} <message>\`, pass --from, or pass --reply-to-email-id <inbound-email-id>.`,
+                `No prior inbound email from ${args.recipient} to ${replyFrom}. Start a new chat with \`primitive chat ${args.recipient} <message>\`, pass --from, or pass --reply-to-email-id <inbound-email-id>.`,
               );
             }
-            assertParentMatchesRecipient(parentReply, args.recipient);
+            replyContextFailureMessage = `Inbound email ${latestParentReply.id} does not match recipient ${args.recipient}.`;
+            assertParentMatchesRecipient(latestParentReply, args.recipient);
+            return { from: replyFrom, parentReply: latestParentReply };
+          } catch (error) {
+            progress?.fail(replyContextFailureMessage);
+            throw error;
           }
-        } catch (error) {
-          progress?.fail(replyContextFailureMessage);
-          throw error;
-        }
-        if (parentReply === undefined) {
-          throw cliError("Could not load reply context.");
-        }
-        subject = derivedReplySubject(parentReply);
+        })();
+        from = replyContext.from;
+        parentReply = replyContext.parentReply;
+        subject = derivedReplySubject(replyContext.parentReply);
       } else {
         from =
           flags.from ??
