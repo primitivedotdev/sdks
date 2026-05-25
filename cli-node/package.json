@@ -25,8 +25,15 @@
     "dirname": "primitive",
     "plugins": [
       "@oclif/plugin-help",
-      "@oclif/plugin-autocomplete"
+      "@oclif/plugin-autocomplete",
+      "@oclif/plugin-warn-if-update-available"
     ],
+    "warn-if-update-available": {
+      "timeoutInDays": 1,
+      "frequency": 1,
+      "frequencyUnit": "days",
+      "message": "Primitive CLI update available from <%= chalk.greenBright(config.version) %> to <%= chalk.greenBright(latest) %>. Run `npm install -g @primitivedotdev/cli@latest` to update."
+    },
     "topics": {
       "cli": {
         "description": "CLI authentication"
@@ -112,7 +119,8 @@
   "dependencies": {
     "@oclif/core": "^4.10.5",
     "@oclif/plugin-autocomplete": "^3.2.45",
-    "@oclif/plugin-help": "^6.2.44"
+    "@oclif/plugin-help": "^6.2.44",
+    "@oclif/plugin-warn-if-update-available": "^3.1.65"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",

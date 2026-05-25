@@ -62,6 +62,8 @@ cli-smoke: cli-build cli-tarball-isolation
 	tar -tf "$$pack_dir/$$tarball" | grep -q -- '^package/man/primitive.1$$' && \
 	test -f "$$smoke_dir/node_modules/@primitivedotdev/cli/man/primitive.1" && \
 	grep -q -- 'TH PRIMITIVE 1' "$$smoke_dir/node_modules/@primitivedotdev/cli/man/primitive.1" && \
+	node -e 'const pkg = require(process.argv[1]); const oclif = pkg.oclif || {}; const warning = oclif["warn-if-update-available"] || {}; if (!Array.isArray(oclif.plugins) || !oclif.plugins.includes("@oclif/plugin-warn-if-update-available")) throw new Error("missing update warning plugin"); if (warning.timeoutInDays !== 1 || warning.frequency !== 1 || warning.frequencyUnit !== "days") throw new Error("update warning is not daily"); if (!String(warning.message || "").includes("npm install -g @primitivedotdev/cli@latest")) throw new Error("missing npm update command");' "$$smoke_dir/node_modules/@primitivedotdev/cli/package.json" && \
+	export PRIMITIVE_SKIP_NEW_VERSION_CHECK=1 && \
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
 	"$$bin" list-operations >/dev/null && \
 	"$$bin" completion fish >/dev/null && \
