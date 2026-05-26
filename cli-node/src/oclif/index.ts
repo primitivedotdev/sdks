@@ -25,16 +25,27 @@ import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
 import FunctionsTemplatesCommand from "./commands/functions-templates.js";
 import FunctionsTestFunctionCommand from "./commands/functions-test-function.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
-import LoginCommand from "./commands/login.js";
 import LogoutCommand from "./commands/logout.js";
 import ReplyCommand from "./commands/reply.js";
 import SendCommand from "./commands/send.js";
 import {
+  LoginBrowserCommand,
+  LoginCommand,
+  LoginConfirmCommand,
+  LoginOtpCommand,
+  LoginOtpConfirmCommand,
+  LoginOtpResendCommand,
+  LoginResendCommand,
+  OtpCommand,
+  OtpConfirmCommand,
+  OtpResendCommand,
   SigninBrowserCommand,
   SigninCommand,
+  SigninConfirmCommand,
   SigninOtpCommand,
   SigninOtpConfirmCommand,
   SigninOtpResendCommand,
+  SigninResendCommand,
 } from "./commands/signin.js";
 import SignupCommand, {
   SignupConfirmCommand,
@@ -377,16 +388,30 @@ export const COMMANDS: Record<string, typeof Command> = {
   // body). Positioned as the canonical verb for the
   // agents-behind-email-addresses paradigm.
   chat: ChatCommand,
-  // `login` creates and stores an org-scoped OAuth session via browser approval.
+  // `login` and `signin` are intentionally interchangeable public
+  // auth surfaces. With no args they use browser approval; with an
+  // email address they start the email-code flow. `otp` is the
+  // terse first-party email-code auth alias.
   login: LoginCommand,
-  // `signin` is the canonical existing-account auth surface. The
-  // browser subcommand is explicit; the OTP subcommand documents the
-  // missing API contract instead of pretending signup is sign-in.
+  "login:browser": LoginBrowserCommand,
+  "login:confirm": LoginConfirmCommand,
+  "login:otp": LoginOtpCommand,
+  "login:otp:confirm": LoginOtpConfirmCommand,
+  "login:otp:resend": LoginOtpResendCommand,
+  "login:resend": LoginResendCommand,
+  otp: OtpCommand,
+  "otp:confirm": OtpConfirmCommand,
+  "otp:resend": OtpResendCommand,
+  // `signin` mirrors `login` for users who think in sign-in terms.
+  // The OTP subcommands remain for compatibility with the earlier
+  // explicit naming.
   signin: SigninCommand,
   "signin:browser": SigninBrowserCommand,
+  "signin:confirm": SigninConfirmCommand,
   "signin:otp": SigninOtpCommand,
   "signin:otp:confirm": SigninOtpConfirmCommand,
   "signin:otp:resend": SigninOtpResendCommand,
+  "signin:resend": SigninResendCommand,
   // `signup` starts account signup. Subcommands confirm, resend, or run the
   // whole flow in one interactive session.
   signup: SignupCommand,

@@ -40,9 +40,11 @@ Run `primitive --help` for the full command list. Per-command help (`primitive f
 
 ## Authentication
 
-Use `primitive signin` for existing accounts. It defaults to browser approval; `primitive signin browser` is the explicit form and `primitive login` remains available for compatibility.
+Use `primitive signin` or `primitive login` for existing accounts. With no email, both use browser approval; `primitive signin browser` and `primitive login browser` are the explicit browser forms.
 
-Use `primitive signin otp <email> --signup-code <code> --accept-terms`, then `primitive signin otp confirm <email> <code>` for email-code sign-in.
+Use `primitive signin <email> --signup-code <code> --accept-terms`, then `primitive signin confirm <email> <code>` for email-code sign-in. `primitive login <email>` and `primitive otp <email>` support the same email-code flow with matching `confirm` and `resend` subcommands.
+
+Use `primitive logout --force` to remove local CLI credentials, pending email-code auth state, and stale credential locks without contacting Primitive. This is the recovery command when an interrupted auth command leaves the CLI saying another credential operation is already in progress.
 
 Use `primitive signup <email>` for new account creation, then `primitive signup confirm <email> <code>` with the emailed verification code. Non-interactive signup is available with `--signup-code` and `--accept-terms`.
 
