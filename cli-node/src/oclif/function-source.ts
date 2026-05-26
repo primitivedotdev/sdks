@@ -110,10 +110,11 @@ export type RunSourceDeployResult =
       payload: unknown;
     };
 
-// Idempotent deploy-from-source: find the function by name (paging the
-// list) and redeploy it, or create it if it does not exist. This is what
-// makes `deploy --source` safe to run on every push (e.g. from CI) without
-// tracking the function id.
+// Idempotent deploy-from-source: look the function up by name in the
+// functions list and redeploy it, or create it if it does not exist. This
+// is what makes `deploy --source` safe to run on every push (e.g. from CI)
+// without tracking the function id. The list endpoint returns every
+// function in one response, so no pagination is needed.
 export async function runSourceDeploy(
   api: SourceDeployApiSurface,
   params: { name: string; files: Record<string, string> },
