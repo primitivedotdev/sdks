@@ -90,6 +90,13 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" threads --help | grep -q -- "primitive threads get --id <thread-id>" && \
 	"$$bin" threads get --help | grep -q -- "Get a conversation thread by id" && \
 	"$$bin" threads get-thread --help | grep -q -- "Get a conversation thread by id" && \
+	function_dir="$$smoke_dir/template-check" && \
+	"$$bin" functions init template-check --out-dir "$$function_dir" >"$$smoke_dir/functions-init.txt" && \
+	grep -q -- 'npm run deploy' "$$smoke_dir/functions-init.txt" && \
+	grep -q -- 'npm run test:function' "$$smoke_dir/functions-init.txt" && \
+	grep -qF -- 'primitive functions set-secret --id "$$PRIMITIVE_FUNCTION_ID" --key OPENAI_KEY --value-from-env OPENAI_KEY --redeploy' "$$function_dir/README.md" && \
+	grep -qF -- 'primitive functions test --id $$PRIMITIVE_FUNCTION_ID --wait --show-sends' "$$function_dir/package.json" && \
+	if grep -qF -- '.primitive.email' "$$function_dir/handler.ts"; then echo "function template must not hardcode managed domain suffixes"; exit 1; fi && \
 	root_help_config="$$smoke_dir/root-help-config" && \
 	HOME="$$root_help_config" XDG_CONFIG_HOME="$$root_help_config/.config" PRIMITIVE_CONFIG_DIR= PRIMITIVE_API_KEY= PRIMITIVE_HIDE_SIGNUP_HINT= "$$bin" >"$$smoke_dir/root-help.txt" && \
 	grep -q -- 'primitive signup <email> --signup-code <invite-code> --accept-terms' "$$smoke_dir/root-help.txt" && \
