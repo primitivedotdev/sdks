@@ -244,6 +244,17 @@ describe("chat command", () => {
     expect(flags["reply-to-email-id"]).toBeDefined();
   });
 
+  it("keeps the subject override as a hidden compatibility escape hatch", () => {
+    const flags = ChatCommand.flags as Record<
+      string,
+      { hidden?: boolean } | undefined
+    >;
+
+    expect(flags.subject).toBeDefined();
+    expect(flags.subject?.hidden).toBe(true);
+    expect(ChatCommand.examples.join("\n")).not.toContain("--subject");
+  });
+
   it("formats a reply with context and follow-up commands by default", () => {
     const output = formatChatResponse(outputContext());
 

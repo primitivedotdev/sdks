@@ -84,6 +84,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" inbox status --help | grep -q -- "readiness" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
 	"$$bin" chat --help | grep -q -- "follow-up commands" && \
+	if "$$bin" chat --help | grep -q -- "--subject"; then echo "chat help must not advertise --subject"; exit 1; fi && \
 	"$$bin" chat --help | grep -q -- "--reply-to-email-id" && \
 	"$$bin" chat --help | grep -q -- "--strict-only" && \
 	"$$bin" threads --help | grep -q -- "primitive threads get --id <thread-id>" && \
