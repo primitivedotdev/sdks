@@ -859,6 +859,22 @@ export function operationOutputPayload(
   return includeEnvelope ? (envelope ?? null) : (envelope?.data ?? null);
 }
 
+export function isIncompleteDomainVerification(
+  operation: PrimitiveOperationManifest,
+  envelope: OperationResponseEnvelope,
+): boolean {
+  if (operation.sdkName !== "verifyDomain") return false;
+  const data = envelope?.data;
+  if (!data || typeof data !== "object") return false;
+  return (data as { verified?: unknown }).verified === false;
+}
+
+function writeIncompleteDomainVerificationHint(): void {
+  process.stderr.write(
+    "Domain verification is incomplete. Add or fix the DNS records shown above, or run `primitive domains zone-file --id <domain-id>` to download the complete zone file, then retry `primitive domains verify --id <domain-id>`.\n",
+  );
+}
+
 // Discoverability hints for generated commands that have a
 // hand-rolled ergonomic shortcut. Keyed by the manifest's
 // `sdkName` (camelCase, matches the generated SDK function). The
@@ -1110,6 +1126,10 @@ export function createOperationCommand(
             2,
           ),
         );
+        if (isIncompleteDomainVerification(operation, envelope)) {
+          writeIncompleteDomainVerificationHint();
+          process.exitCode = 1;
+        }
       });
     }
   }

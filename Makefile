@@ -69,6 +69,8 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" completion fish >/dev/null && \
 	"$$bin" completion bash >/dev/null && \
 	"$$bin" send --help | grep -q -- "--attachment" && \
+	"$$bin" reply --help | grep -q -- "--wait" && \
+	if "$$bin" reply --help | grep -q -- "--wait-timeout-ms"; then echo "reply help must not advertise unsupported --wait-timeout-ms"; exit 1; fi && \
 	"$$bin" sending send-email --help | grep -q -- "attachments" && \
 	"$$bin" domains list --json --help | grep -q -- "--json" && \
 	"$$bin" domains list --help | grep -q -- "--json" && \
@@ -119,6 +121,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" threads get --help | grep -q -- "Get a conversation thread by id" && \
 	"$$bin" threads get-thread --help | grep -q -- "Get a conversation thread by id" && \
 	function_dir="$$smoke_dir/template-check" && \
+	"$$bin" functions test --help | grep -q -- "completed" && \
 	"$$bin" functions init template-check --out-dir "$$function_dir" >"$$smoke_dir/functions-init.txt" && \
 	grep -q -- 'npm run deploy' "$$smoke_dir/functions-init.txt" && \
 	grep -q -- 'npm run test:function' "$$smoke_dir/functions-init.txt" && \
@@ -138,6 +141,11 @@ cli-smoke: cli-build cli-tarball-isolation
 	HOME="$$config_home" XDG_CONFIG_HOME="$$config_root" PRIMITIVE_CONFIG_DIR= "$$bin" config use default >"$$smoke_dir/config-use.out" 2>"$$smoke_dir/config-use.err" && \
 	grep -q -- 'Primitive CLI environment default is active.' "$$smoke_dir/config-use.err" && \
 	grep -q -- 'Removed saved Primitive CLI credentials' "$$smoke_dir/config-use.err" && \
+	test ! -e "$$config_dir/credentials.json" && \
+	node -e 'const fs = require("node:fs"); const path = process.argv[1]; fs.writeFileSync(path, JSON.stringify({ auth_method: "oauth", access_token: "prim_oat_smoke", refresh_token: "prim_ort_smoke", token_type: "Bearer", expires_at: "2099-05-25T00:00:00.000Z", oauth_grant_id: "11111111-1111-4111-8111-111111111111", oauth_client_id: "primitive-cli", org_id: "22222222-2222-4222-8222-222222222222", org_name: "Smoke", api_base_url_1: "https://api.default.example/v1", created_at: "2026-05-25T00:00:00.000Z" }, null, 2) + "\n");' "$$config_dir/credentials.json" && \
+	HOME="$$config_home" XDG_CONFIG_HOME="$$config_root" PRIMITIVE_CONFIG_DIR= "$$bin" config set --environment staging --api-base-url-1 "https://api.staging.example/v1" >"$$smoke_dir/config-set.out" 2>"$$smoke_dir/config-set.err" && \
+	grep -q -- 'Primitive CLI environment staging is active.' "$$smoke_dir/config-set.err" && \
+	grep -q -- 'Removed saved Primitive CLI credentials' "$$smoke_dir/config-set.err" && \
 	test ! -e "$$config_dir/credentials.json" && \
 	zone_id="33333333-3333-4333-8333-333333333333" && \
 	port_file="$$smoke_dir/zone-server-port" && \

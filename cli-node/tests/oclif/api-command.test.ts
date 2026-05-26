@@ -12,6 +12,7 @@ import {
   flagForParameter,
   formatElapsed,
   formatErrorPayload,
+  isIncompleteDomainVerification,
   OPERATION_HINTS,
   operationOutputPayload,
   readJsonBody,
@@ -679,6 +680,34 @@ describe("operationOutputPayload", () => {
     const envelope = { data: [{ id: "email-1" }], meta: { cursor: "next" } };
 
     expect(operationOutputPayload(envelope, true)).toEqual(envelope);
+  });
+});
+
+describe("isIncompleteDomainVerification", () => {
+  it("treats verified false from verifyDomain as an incomplete CLI result", () => {
+    expect(
+      isIncompleteDomainVerification(
+        {
+          binaryResponse: false,
+          bodyRequired: false,
+          command: "verify",
+          description: "Verify domain",
+          hasJsonBody: false,
+          method: "POST",
+          operationId: "verifyDomain",
+          path: "/domains/{id}/verify",
+          pathParams: [],
+          queryParams: [],
+          requestSchema: null,
+          responseSchema: null,
+          sdkName: "verifyDomain",
+          summary: "Verify domain",
+          tag: "Domains",
+          tagCommand: "domains",
+        },
+        { data: { verified: false } },
+      ),
+    ).toBe(true);
   });
 });
 

@@ -80,10 +80,6 @@ class ReplyCommand extends Command {
       description:
         "Block until the receiving MTA returns an outcome. Without --wait, the call returns once Primitive has accepted the reply for delivery.",
     }),
-    "wait-timeout-ms": Flags.integer({
-      description:
-        "Maximum time to wait when --wait is set. Defaults to 30000ms.",
-    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -119,9 +115,6 @@ class ReplyCommand extends Command {
           ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
           ...(flags.from !== undefined ? { from: flags.from } : {}),
           ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
-          ...(flags["wait-timeout-ms"] !== undefined
-            ? { wait_timeout_ms: flags["wait-timeout-ms"] }
-            : {}),
         },
         client: apiClient.client,
         path: { id: flags.id },

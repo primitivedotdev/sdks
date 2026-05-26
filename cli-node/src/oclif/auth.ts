@@ -443,9 +443,7 @@ export function resolveCliAuth(params: {
   if (credentials) {
     return {
       apiKey: credentials.access_token,
-      apiBaseUrl1: params.apiBaseUrl1
-        ? normalizeApiBaseUrl1(params.apiBaseUrl1)
-        : credentials.api_base_url_1,
+      apiBaseUrl1: credentials.api_base_url_1,
       apiBaseUrl2,
       credentials,
       source: "stored",
