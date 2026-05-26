@@ -288,25 +288,18 @@ function processIsRunning(pid: number): boolean {
   }
 }
 
-function removeDeadCliCredentialsLock(
-  lockPath: string,
-  isRunning: (pid: number) => boolean,
-): boolean {
-  const owner = readCliCredentialsLockOwner(lockPath);
-  if (!owner) return false;
-  if (isRunning(owner.pid)) return false;
-
-  rmSync(lockPath, { force: true, recursive: true });
-  return true;
-}
-
 function removeRecoverableCliCredentialsLock(params: {
   isRunning: (pid: number) => boolean;
   lockPath: string;
   now: () => number;
   staleMs: number;
 }): boolean {
-  if (removeDeadCliCredentialsLock(params.lockPath, params.isRunning)) {
+  const owner = readCliCredentialsLockOwner(params.lockPath);
+  if (owner && params.isRunning(owner.pid)) {
+    return false;
+  }
+  if (owner) {
+    rmSync(params.lockPath, { force: true, recursive: true });
     return true;
   }
   return removeStaleCliCredentialsLock(

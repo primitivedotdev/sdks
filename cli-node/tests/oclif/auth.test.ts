@@ -227,4 +227,26 @@ describe("CLI auth credentials", () => {
       }),
     ).toThrow(/primitive logout --force/);
   });
+
+  it("does not stale-delete credential locks owned by live processes", () => {
+    const lockPath = join(tempDir, "credentials.lock");
+    mkdirSync(lockPath, { mode: 0o700 });
+    writeFileSync(
+      join(lockPath, "owner.json"),
+      `${JSON.stringify({ pid: 123, created_at: "2026-05-05T00:00:00.000Z" })}\n`,
+    );
+    const now = new Date("2026-05-05T00:30:00.000Z").getTime();
+    const staleTime = new Date(now - 60 * 60 * 1000);
+    utimesSync(lockPath, staleTime, staleTime);
+
+    expect(() =>
+      acquireCliCredentialsLock(tempDir, {
+        installSignalHandlers: false,
+        isProcessRunning: () => true,
+        now: () => now,
+        staleMs: 1_000,
+      }),
+    ).toThrow(/primitive logout --force/);
+    expect(statSync(lockPath).isDirectory()).toBe(true);
+  });
 });

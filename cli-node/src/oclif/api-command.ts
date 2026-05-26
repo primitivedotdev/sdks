@@ -694,7 +694,8 @@ function bodyFieldFlag(field: BodyFieldDescriptor): unknown {
   const common = {
     description: field.description || field.name,
   };
-  if (field.kind === "boolean") return Flags.boolean(common);
+  if (field.kind === "boolean")
+    return Flags.boolean({ ...common, allowNo: true });
   if (field.kind === "integer") {
     return Flags.integer({ ...common, ...numericFlagOptions(field) });
   }
