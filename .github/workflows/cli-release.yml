@@ -135,3 +135,33 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "CLI v$VERSION" \
             --generate-notes
+
+      - name: Trigger Homebrew tap update
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_BOT_TOKEN }}
+          VERSION: ${{ steps.version.outputs.current }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::notice::HOMEBREW_TAP_BOT_TOKEN is not configured; skipping Homebrew tap dispatch."
+            exit 0
+          fi
+
+          node <<'NODE' > dispatch.json
+          const payload = {
+            event_type: 'cli-release',
+            client_payload: {
+              version: process.env.VERSION,
+              source_repository: process.env.GITHUB_REPOSITORY,
+              source_sha: process.env.GITHUB_SHA,
+            },
+          };
+
+          process.stdout.write(JSON.stringify(payload));
+          NODE
+
+          gh api repos/primitivedotdev/homebrew-tap/dispatches \
+            --method POST \
+            --input dispatch.json
