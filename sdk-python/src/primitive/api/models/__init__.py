@@ -29,6 +29,7 @@ from .create_filter_input import CreateFilterInput
 from .create_filter_input_type import CreateFilterInputType
 from .create_filter_response_201 import CreateFilterResponse201
 from .create_function_input import CreateFunctionInput
+from .create_function_input_files import CreateFunctionInputFiles
 from .create_function_response_201 import CreateFunctionResponse201
 from .create_function_result import CreateFunctionResult
 from .create_function_secret_input import CreateFunctionSecretInput
@@ -207,6 +208,7 @@ from .update_endpoint_response_200 import UpdateEndpointResponse200
 from .update_filter_input import UpdateFilterInput
 from .update_filter_response_200 import UpdateFilterResponse200
 from .update_function_input import UpdateFunctionInput
+from .update_function_input_files import UpdateFunctionInputFiles
 from .update_function_response_200 import UpdateFunctionResponse200
 from .verified_domain import VerifiedDomain
 from .verify_agent_signup_input import VerifyAgentSignupInput
@@ -246,6 +248,7 @@ __all__ = (
     "CreateFilterInputType",
     "CreateFilterResponse201",
     "CreateFunctionInput",
+    "CreateFunctionInputFiles",
     "CreateFunctionResponse201",
     "CreateFunctionResult",
     "CreateFunctionSecretInput",
@@ -424,6 +427,7 @@ __all__ = (
     "UpdateFilterInput",
     "UpdateFilterResponse200",
     "UpdateFunctionInput",
+    "UpdateFunctionInputFiles",
     "UpdateFunctionResponse200",
     "VerifiedDomain",
     "VerifyAgentSignupInput",

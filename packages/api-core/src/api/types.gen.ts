@@ -2044,19 +2044,33 @@ export type CreateFunctionInput = {
      */
     name: string;
     /**
-     * Bundled handler as a single ESM module. Up to 1 MiB UTF-8.
+     * Pre-built handler as a single ESM module. Up to 1 MiB UTF-8.
      * Must export a default `{ async fetch(req, env, ctx) { ... } }`
-     * object.
+     * object. Provide either `code` or `files`, not both.
      *
      */
-    code: string;
+    code?: string;
     /**
      * Optional source map for the bundle. Up to 5 MiB UTF-8.
      * Stored with the deployment attempt and sent to the runtime
-     * to symbolicate stack traces in the function's logs.
+     * to symbolicate stack traces in the function's logs. Only
+     * valid with `code`.
      *
      */
     sourceMap?: string;
+    /**
+     * Source files for a managed build, as a map of path to file
+     * contents (for example {"package.json": "...",
+     * "src/index.ts": "..."}). Provide this INSTEAD of `code` to
+     * have the server install dependencies and bundle the source
+     * for the Workers runtime before deploying. Include a
+     * package.json (its `dependencies` are installed). Provide
+     * either `code` or `files`, not both.
+     *
+     */
+    files?: {
+        [key: string]: string;
+    };
 };
 
 /**
@@ -2070,10 +2084,19 @@ export type CreateFunctionResult = {
 
 export type UpdateFunctionInput = {
     /**
-     * New bundled handler. Same rules as CreateFunctionInput.code.
+     * New pre-built handler. Same rules as CreateFunctionInput.code. Provide either `code` or `files`, not both.
      */
-    code: string;
+    code?: string;
     sourceMap?: string;
+    /**
+     * Source files for a managed build, as a map of path to file
+     * contents. Provide this INSTEAD of `code` to rebuild and
+     * redeploy from source. Same rules as CreateFunctionInput.files.
+     *
+     */
+    files?: {
+        [key: string]: string;
+    };
 };
 
 /**

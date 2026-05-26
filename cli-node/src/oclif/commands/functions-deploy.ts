@@ -7,6 +7,7 @@ import type {
 import {
   createFunction,
   getFunction,
+  listFunctions,
   setFunctionSecret,
   updateFunction,
 } from "@primitivedotdev/api-core";
@@ -25,6 +26,12 @@ import {
   validateDeployWaitFlags,
   waitForFunctionDeploy,
 } from "../function-deploy-wait.js";
+import {
+  collectSourceFiles,
+  renderBuildFailure,
+  runSourceDeploy,
+  type SourceDeployApiSurface,
+} from "../function-source.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
 import {
   resolveSecretFlags,
@@ -279,6 +286,8 @@ class FunctionsDeployCommand extends Command {
 
   static examples = [
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js",
+    "<%= config.bin %> functions deploy --name triage --source ./triage-agent",
+    "<%= config.bin %> functions deploy --name triage --source . --wait",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --wait",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
@@ -311,8 +320,11 @@ class FunctionsDeployCommand extends Command {
     }),
     file: Flags.string({
       description:
-        "Path to the bundled ESM handler file (single self-contained module). Loaded as the `code` body field.",
-      required: true,
+        "Path to the bundled ESM handler file (single self-contained module). Loaded as the `code` body field. Exactly one of --file or --source is required.",
+    }),
+    source: Flags.string({
+      description:
+        "Path to a project directory (containing package.json and src/) to deploy via managed build: the source is uploaded and the server installs dependencies, bundles for the Workers runtime, and deploys. Idempotent by name (creates the function, or redeploys it if --name already exists), so it is safe to run on every push. Exactly one of --file or --source is required.",
     }),
     "source-map-file": Flags.string({
       description:
@@ -373,6 +385,24 @@ class FunctionsDeployCommand extends Command {
         return;
       }
 
+      // Exactly one input mode: a pre-built bundle (--file) or a project
+      // directory built server-side (--source).
+      if ((flags.file === undefined) === (flags.source === undefined)) {
+        process.stderr.write(
+          "Provide exactly one of --file (a pre-built bundle) or --source (a project directory for managed build).\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      if (flags.source !== undefined) {
+        await this.runSourceMode(flags, flags.source);
+        return;
+      }
+
+      const file = flags.file;
+      if (file === undefined) return;
+
       // Validate --secret pairs BEFORE any disk read or API call so
       // a malformed input fails fast with a clear error and zero
       // side effects. The fast path (no --secret flags) skips this
@@ -394,7 +424,7 @@ class FunctionsDeployCommand extends Command {
       // alongside the API call. A pathological filesystem (NFS, slow
       // FUSE mount) showing up here is exactly the kind of latency
       // surprise --time is meant to surface.
-      const code = readTextFileFlag(flags.file, "--file");
+      const code = readTextFileFlag(file, "--file");
       const sourceMap = flags["source-map-file"]
         ? readTextFileFlag(flags["source-map-file"], "--source-map-file")
         : undefined;
@@ -555,6 +585,146 @@ class FunctionsDeployCommand extends Command {
 
       this.log(JSON.stringify(payload, null, 2));
     });
+  }
+
+  // Managed-build deploy from a project directory. Collects the source,
+  // then idempotently creates or redeploys the function by name. Secrets
+  // are not supported with --source yet: deploy first, then
+  // `functions set-secret` + `functions redeploy`.
+  private async runSourceMode(
+    flags: {
+      "api-key"?: string;
+      "api-base-url-1"?: string;
+      "api-base-url-2"?: string;
+      name: string;
+      secret?: string[];
+      "secret-from-env"?: string[];
+      "secret-from-file"?: string[];
+      "secret-from-env-file"?: string[];
+      "secret-from-stdin"?: string;
+      wait?: boolean;
+      timeout: number;
+      "poll-interval": number;
+    },
+    sourceDir: string,
+  ): Promise<void> {
+    const hasSecretFlags =
+      (flags.secret?.length ?? 0) > 0 ||
+      (flags["secret-from-env"]?.length ?? 0) > 0 ||
+      (flags["secret-from-file"]?.length ?? 0) > 0 ||
+      (flags["secret-from-env-file"]?.length ?? 0) > 0 ||
+      flags["secret-from-stdin"] !== undefined;
+    if (hasSecretFlags) {
+      process.stderr.write(
+        "Secret flags are not supported with --source yet. Deploy from source first, then set secrets with `primitive functions set-secret` and redeploy.\n",
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    const collected = collectSourceFiles(sourceDir);
+    if (collected.kind === "error") {
+      process.stderr.write(`${collected.message}\n`);
+      process.exitCode = 1;
+      return;
+    }
+
+    const { apiClient, auth, baseUrlOverridden } =
+      await createAuthenticatedCliApiClient({
+        apiKey: flags["api-key"],
+        apiBaseUrl1: flags["api-base-url-1"],
+        apiBaseUrl2: flags["api-base-url-2"],
+        configDir: this.config.configDir,
+      });
+    const authFailureContext = {
+      auth,
+      baseUrlOverridden,
+      configDir: this.config.configDir,
+    };
+
+    const apiSurface: SourceDeployApiSurface = {
+      createFunction: (p) =>
+        createFunction({
+          body: { files: p.files, name: p.name },
+          client: apiClient.client,
+          responseStyle: "fields",
+        }),
+      listFunctions: () =>
+        listFunctions({
+          client: apiClient.client,
+          responseStyle: "fields",
+        }),
+      updateFunction: (p) =>
+        updateFunction({
+          body: { files: p.files },
+          client: apiClient.client,
+          path: { id: p.id },
+          responseStyle: "fields",
+        }),
+    };
+
+    const outcome = await runSourceDeploy(apiSurface, {
+      files: collected.files,
+      name: flags.name,
+    });
+
+    if (outcome.kind === "error") {
+      renderBuildFailure(outcome.payload, (chunk) =>
+        process.stderr.write(chunk),
+      );
+      writeErrorWithHints(outcome.payload);
+      surfaceUnauthorizedHint({
+        ...authFailureContext,
+        payload: outcome.payload,
+      });
+      process.exitCode = 1;
+      return;
+    }
+
+    const payload = outcome.result;
+    if (flags.wait) {
+      const waitResult = await waitForFunctionDeploy({
+        getFunction: (p) =>
+          getFunction({
+            client: apiClient.client,
+            path: { id: p.id },
+            responseStyle: "fields",
+          }),
+        id: payload.id,
+        initial: payload,
+        pollIntervalSeconds: flags["poll-interval"],
+        timeoutSeconds: flags.timeout,
+        writeStderr: (chunk) => process.stderr.write(chunk),
+      });
+      if (waitResult.kind === "error") {
+        writeErrorWithHints(waitResult.payload);
+        surfaceUnauthorizedHint({
+          ...authFailureContext,
+          payload: waitResult.payload,
+        });
+        process.exitCode = 1;
+        return;
+      }
+      if (waitResult.kind === "timeout") {
+        const status = waitResult.lastFunction?.deploy_status ?? "unknown";
+        process.stderr.write(
+          `Timed out after ${flags.timeout}s waiting for function ${payload.id} deploy to finish (last status: ${status}).\n`,
+        );
+        process.exitCode = 2;
+        return;
+      }
+      this.log(JSON.stringify(waitResult.function, null, 2));
+      if (waitResult.kind === "failed") {
+        const detail = waitResult.function.deploy_error
+          ? `: ${waitResult.function.deploy_error}`
+          : ".";
+        process.stderr.write(`Function ${payload.id} deploy failed${detail}\n`);
+        process.exitCode = 1;
+      }
+      return;
+    }
+
+    this.log(JSON.stringify(payload, null, 2));
   }
 }
 

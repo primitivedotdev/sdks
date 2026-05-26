@@ -7501,18 +7501,24 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "minLength": 1,
             "maxLength": 1048576,
-            "description": "Bundled handler as a single ESM module. Up to 1 MiB UTF-8.\nMust export a default `{ async fetch(req, env, ctx) { ... } }`\nobject.\n"
+            "description": "Pre-built handler as a single ESM module. Up to 1 MiB UTF-8.\nMust export a default `{ async fetch(req, env, ctx) { ... } }`\nobject. Provide either `code` or `files`, not both.\n"
           },
           "sourceMap": {
             "type": "string",
             "minLength": 1,
             "maxLength": 5242880,
-            "description": "Optional source map for the bundle. Up to 5 MiB UTF-8.\nStored with the deployment attempt and sent to the runtime\nto symbolicate stack traces in the function's logs.\n"
+            "description": "Optional source map for the bundle. Up to 5 MiB UTF-8.\nStored with the deployment attempt and sent to the runtime\nto symbolicate stack traces in the function's logs. Only\nvalid with `code`.\n"
+          },
+          "files": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Source files for a managed build, as a map of path to file\ncontents (for example {\"package.json\": \"...\",\n\"src/index.ts\": \"...\"}). Provide this INSTEAD of `code` to\nhave the server install dependencies and bundle the source\nfor the Workers runtime before deploying. Include a\npackage.json (its `dependencies` are installed). Provide\neither `code` or `files`, not both.\n"
           }
         },
         "required": [
-          "name",
-          "code"
+          "name"
         ]
       },
       "CreateFunctionResult": {
@@ -7544,17 +7550,22 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "minLength": 1,
             "maxLength": 1048576,
-            "description": "New bundled handler. Same rules as CreateFunctionInput.code."
+            "description": "New pre-built handler. Same rules as CreateFunctionInput.code. Provide either `code` or `files`, not both."
           },
           "sourceMap": {
             "type": "string",
             "minLength": 1,
             "maxLength": 5242880
+          },
+          "files": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Source files for a managed build, as a map of path to file\ncontents. Provide this INSTEAD of `code` to rebuild and\nredeploy from source. Same rules as CreateFunctionInput.files.\n"
           }
         },
-        "required": [
-          "code"
-        ]
+        "required": []
       },
       "TestInvocationResult": {
         "type": "object",
