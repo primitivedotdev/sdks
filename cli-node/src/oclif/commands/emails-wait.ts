@@ -8,6 +8,7 @@ import {
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
   collectNewAcceptedEmails,
+  cursorFromAcceptedRows,
   DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
   DEFAULT_EMAIL_POLL_PAGE_SIZE,
   fetchEmailSearchPage,
@@ -170,7 +171,9 @@ class EmailsWaitCommand extends Command {
         return;
       }
 
-      cursor = page.cursor ?? cursor;
+      const nextCursor = cursorFromAcceptedRows(page.rows);
+      const cursorAdvanced = Boolean(nextCursor && nextCursor !== cursor);
+      if (nextCursor) cursor = nextCursor;
 
       for (const email of collectNewAcceptedEmails(page.rows, seenIds)) {
         if (flags.table) {
@@ -186,7 +189,7 @@ class EmailsWaitCommand extends Command {
         if (matched >= flags.number) return;
       }
 
-      if (page.rows.length > 0) continue;
+      if (cursorAdvanced) continue;
       if (deadline !== null && Date.now() >= deadline) break;
       await sleep(flags.interval * 1000);
     }

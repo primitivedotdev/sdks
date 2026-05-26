@@ -14,7 +14,10 @@ import {
   saveCliConfig,
   upsertCliEnvironment,
 } from "../../src/oclif/cli-config.js";
-import { switchCliEnvironment } from "../../src/oclif/commands/config.js";
+import {
+  switchCliEnvironment,
+  upsertCliEnvironmentAndClearCredentialsIfSwitched,
+} from "../../src/oclif/commands/config.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
 const CREDENTIALS: StoredCliCredentials = {
@@ -75,6 +78,44 @@ describe("config use", () => {
       removedCredentials: true,
     });
     expect(loadCliConfig(tempDir)?.current_environment).toBe("staging");
+    expect(loadCliCredentials(tempDir)).toBeNull();
+  });
+
+  it("clears saved credentials when config set activates a different environment", () => {
+    saveCliConfig(tempDir, configWithDefaultAndStaging());
+    saveCliCredentials(tempDir, CREDENTIALS);
+
+    const result = upsertCliEnvironmentAndClearCredentialsIfSwitched({
+      apiBaseUrl1: "https://api.preview.example/v1",
+      configDir: tempDir,
+      environmentName: "preview",
+    });
+
+    expect(result).toEqual({
+      environment: "preview",
+      previousEnvironment: "default",
+      removedCredentials: true,
+    });
+    expect(loadCliConfig(tempDir)?.current_environment).toBe("preview");
+    expect(loadCliCredentials(tempDir)).toBeNull();
+  });
+
+  it("clears saved credentials when config set changes the active API host", () => {
+    saveCliConfig(tempDir, configWithDefaultAndStaging());
+    saveCliCredentials(tempDir, CREDENTIALS);
+
+    const result = upsertCliEnvironmentAndClearCredentialsIfSwitched({
+      apiBaseUrl1: "https://api.changed.example/v1",
+      configDir: tempDir,
+      environmentName: "default",
+    });
+
+    expect(result).toEqual({
+      environment: "default",
+      previousEnvironment: "default",
+      removedCredentials: true,
+    });
+    expect(loadCliConfig(tempDir)?.current_environment).toBe("default");
     expect(loadCliCredentials(tempDir)).toBeNull();
   });
 

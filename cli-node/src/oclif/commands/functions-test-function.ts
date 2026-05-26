@@ -1,7 +1,10 @@
 import { Command, Flags } from "@oclif/core";
 import {
-  type EmailDetail,
-  getEmail,
+  type EmailWebhookStatus,
+  type FunctionTestRunReply,
+  type FunctionTestRunState,
+  type FunctionTestRunTrace,
+  getFunctionTestRunTrace,
   listDomains,
   listEndpoints,
   type PrimitiveApiClient,
@@ -18,11 +21,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
-import {
-  DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
-  fetchEmailSearchPage,
-  sleep,
-} from "./emails-poll.js";
+import { DEFAULT_EMAIL_POLL_INTERVAL_SECONDS, sleep } from "./emails-poll.js";
 
 // `primitive functions:test-function` is the agent-grade shortcut for
 // triggering a real round-trip and (optionally) waiting for the
@@ -39,9 +38,9 @@ import {
 //       auto-generated functions:test-function it replaces.
 //
 //   primitive functions:test-function --id <fn-id> --wait
-//       Blocks until the test inbound has arrived AND the function's
-//       webhook has fired (or --timeout elapses). Exits non-zero on
-//       timeout or on exhausted retries.
+//       Blocks until the server-owned test-run trace reaches completed,
+//       failed, or send_failed (or --timeout elapses). Exits non-zero on
+//       timeout or terminal failure.
 //
 //   primitive functions:test-function --id <fn-id> --wait --show-sends
 //       Same as --wait, plus prints the inbound's `replies` array
@@ -55,17 +54,17 @@ import {
 
 const DEFAULT_WAIT_TIMEOUT_SECONDS = 60;
 
-// Terminal states from the EmailWebhookStatus enum. `fired` means the
-// function returned 2xx; `exhausted` means all retries are spent and
-// the delivery is permanently failed. `pending` / `in_flight` /
-// `failed` are intermediate (`failed` is a temporary failure that may
-// retry into `fired` or eventually `exhausted`), so we keep polling.
-const TERMINAL_WEBHOOK_STATUSES = new Set<string>(["fired", "exhausted"]);
+const TERMINAL_TEST_TRACE_STATES = new Set<FunctionTestRunState>([
+  "completed",
+  "failed",
+  "send_failed",
+]);
 
 export type FunctionTestOutcome = {
+  state: FunctionTestRunState;
   function_id: string;
   inbound_domain: string;
-  inbound_id: string;
+  inbound_id: string | null;
   inbound_to: string;
   test_run_id: string;
   test_send_id: string;
@@ -73,41 +72,42 @@ export type FunctionTestOutcome = {
   poll_since: string;
   trace_url: string;
   watch_url: string;
-  webhook_status: EmailDetail["webhook_status"];
-  webhook_attempt_count: EmailDetail["webhook_attempt_count"];
-  webhook_last_status_code: EmailDetail["webhook_last_status_code"];
-  webhook_last_error: EmailDetail["webhook_last_error"];
+  webhook_status: EmailWebhookStatus;
+  webhook_attempt_count: number | null;
+  webhook_last_status_code: number | null;
+  webhook_last_error: string | null;
   elapsed_seconds: number;
-  sent_emails?: EmailDetail["replies"];
+  sent_emails?: FunctionTestRunReply[];
 };
 
 export function buildFunctionTestOutcome(params: {
   functionId: string;
-  inboundId: string;
   invocation: TestInvocationResult;
-  detail: EmailDetail;
+  trace: FunctionTestRunTrace;
   elapsedSeconds: number;
   showSends: boolean;
 }): FunctionTestOutcome {
+  const inbound = params.trace.inbound_email;
   const outcome: FunctionTestOutcome = {
     elapsed_seconds: params.elapsedSeconds,
     function_id: params.functionId,
     inbound_domain: params.invocation.inbound_domain,
-    inbound_id: params.inboundId,
+    inbound_id: inbound?.id ?? null,
     inbound_to: params.invocation.to,
     poll_since: params.invocation.poll_since,
+    state: params.trace.state,
     test_run_id: params.invocation.test_run_id,
     test_send_id: params.invocation.send_id,
     test_subject: params.invocation.subject,
     trace_url: params.invocation.trace_url,
     watch_url: params.invocation.watch_url,
-    webhook_attempt_count: params.detail.webhook_attempt_count,
-    webhook_last_error: params.detail.webhook_last_error,
-    webhook_last_status_code: params.detail.webhook_last_status_code,
-    webhook_status: params.detail.webhook_status,
+    webhook_attempt_count: inbound?.webhook_attempt_count ?? null,
+    webhook_last_error: inbound?.webhook_last_error ?? null,
+    webhook_last_status_code: inbound?.webhook_last_status_code ?? null,
+    webhook_status: inbound?.webhook_status ?? null,
   };
   if (params.showSends) {
-    outcome.sent_emails = params.detail.replies;
+    outcome.sent_emails = params.trace.replies;
   }
   return outcome;
 }
@@ -301,7 +301,7 @@ class FunctionsTestFunctionCommand extends Command {
     }),
     wait: Flags.boolean({
       description:
-        "Block until the function has processed the test inbound (webhook status is `fired` or `exhausted`) or --timeout elapses. Exits non-zero on timeout or on exhausted retries.",
+        "Block until the function test run reaches `completed`, `failed`, or `send_failed`, or --timeout elapses. Exits non-zero on timeout or terminal failure.",
     }),
     "show-sends": Flags.boolean({
       description:
@@ -388,60 +388,17 @@ class FunctionsTestFunctionCommand extends Command {
       const isExpired = () =>
         flags.timeout > 0 && Date.now() - startedAt > timeoutMs;
 
-      // 2. Wait for the test inbound to arrive. The synthetic
-      // recipient is unique per call (random suffix in the local-part
-      // unless --local-part overrides), so `to` + `since` uniquely
-      // identifies the test inbound row.
+      // 2. Wait for the server-owned test-run trace to reach a terminal
+      // state. Polling by test_run_id avoids false positives from unrelated
+      // inbound mail to the same local-part.
       writeFunctionTestProgress(
-        `Waiting for test inbound to arrive at ${invocation.to}...`,
+        `Waiting for test run ${invocation.test_run_id} to complete for ${invocation.to}...`,
       );
-      let inboundId: string | undefined;
+      let trace: FunctionTestRunTrace | undefined;
       while (!isExpired()) {
-        const page = await fetchEmailSearchPage({
-          apiClient,
-          filters: { to: invocation.to },
-          pageSize: 25,
-          since: invocation.poll_since,
-        });
-        if (!page.ok) {
-          const payload = extractErrorPayload(page.error);
-          writeErrorWithHints(payload);
-          surfaceUnauthorizedHint({
-            auth,
-            baseUrlOverridden,
-            configDir: this.config.configDir,
-            payload,
-          });
-          process.exitCode = 1;
-          return;
-        }
-        const found = page.rows[0];
-        if (found) {
-          inboundId = found.id;
-          break;
-        }
-        await sleep(pollIntervalMs);
-      }
-
-      if (!inboundId) {
-        this.error(
-          `Timed out after ${flags.timeout}s waiting for test inbound ${invocation.to} to land. Browse ${invocation.watch_url} for the live view.`,
-          { exit: 2 },
-        );
-      }
-
-      // 3. Wait for the function (webhook) to actually run. We poll
-      // the email-detail endpoint because it already carries both the
-      // webhook_status terminal state and the `replies` array we'll
-      // print under --show-sends. No second endpoint needed.
-      writeFunctionTestProgress(
-        `Inbound landed (${inboundId}). Waiting for function to run...`,
-      );
-      let detail: EmailDetail | undefined;
-      while (!isExpired()) {
-        const result = await getEmail({
+        const result = await getFunctionTestRunTrace({
           client: apiClient.client,
-          path: { id: inboundId },
+          path: { id: flags.id, run_id: invocation.test_run_id },
           responseStyle: "fields",
         });
         if (result.error) {
@@ -456,39 +413,35 @@ class FunctionsTestFunctionCommand extends Command {
           process.exitCode = 1;
           return;
         }
-        const fetched = (result.data as { data: EmailDetail }).data;
-        if (
-          fetched.webhook_status &&
-          TERMINAL_WEBHOOK_STATUSES.has(fetched.webhook_status)
-        ) {
-          detail = fetched;
+        const fetched = (result.data as { data: FunctionTestRunTrace }).data;
+        if (TERMINAL_TEST_TRACE_STATES.has(fetched.state)) {
+          trace = fetched;
           break;
         }
         await sleep(pollIntervalMs);
       }
 
-      if (!detail) {
+      if (!trace) {
         this.error(
-          `Timed out after ${flags.timeout}s waiting for function webhook to fire for inbound ${inboundId}. Browse ${invocation.watch_url} for the live view.`,
+          `Timed out after ${flags.timeout}s waiting for function test run ${invocation.test_run_id} to complete. Browse ${invocation.watch_url} for the live view, or inspect ${invocation.trace_url}.`,
           { exit: 2 },
         );
       }
 
-      // 4. Emit the outcome.
+      // 3. Emit the outcome.
       const elapsedSeconds = Math.round((Date.now() - startedAt) / 1000);
       const outcome = buildFunctionTestOutcome({
-        detail,
         elapsedSeconds,
         functionId: flags.id,
-        inboundId,
         invocation,
         showSends: shouldShowSends,
+        trace,
       });
       this.log(JSON.stringify(outcome, null, 2));
 
-      // Exit non-zero when the function failed permanently so CI
+      // Exit non-zero when the test run reached a terminal failure state so CI
       // scripts can gate on the exit code.
-      if (detail.webhook_status === "exhausted") {
+      if (trace.state === "failed" || trace.state === "send_failed") {
         process.exitCode = 1;
       }
     });

@@ -33,6 +33,54 @@ function redactConfig(config: ReturnType<typeof emptyCliConfig>) {
   };
 }
 
+export function upsertCliEnvironmentAndClearCredentialsIfSwitched(params: {
+  apiBaseUrl1?: string;
+  apiBaseUrl2?: string;
+  configDir: string;
+  environmentName?: string;
+  headers?: string[];
+  unsetHeaders?: string[];
+}): {
+  environment: string | null;
+  previousEnvironment: string | null;
+  removedCredentials: boolean;
+} {
+  const previousConfig = loadOrCreateConfig(params.configDir);
+  const previousActiveEnvironment = resolveConfigEnvironment(previousConfig);
+  const previousEnvironment = previousActiveEnvironment?.name ?? null;
+  const config = upsertCliEnvironment({
+    apiBaseUrl1: params.apiBaseUrl1,
+    apiBaseUrl2: params.apiBaseUrl2,
+    config: previousConfig,
+    environmentName: params.environmentName,
+    headers: params.headers,
+    unsetHeaders: params.unsetHeaders,
+  });
+  const activeEnvironment = resolveConfigEnvironment(config);
+  const environment = activeEnvironment?.name ?? null;
+  const shouldClearCredentials =
+    existsSync(credentialsPath(params.configDir)) &&
+    (previousEnvironment !== environment ||
+      previousActiveEnvironment?.config.api_base_url_1 !==
+        activeEnvironment?.config.api_base_url_1);
+  let removedCredentials = false;
+
+  if (shouldClearCredentials) {
+    const releaseLock = acquireCliCredentialsLock(params.configDir);
+    try {
+      saveCliConfig(params.configDir, config);
+      removedCredentials = existsSync(credentialsPath(params.configDir));
+      deleteCliCredentials(params.configDir);
+    } finally {
+      releaseLock();
+    }
+  } else {
+    saveCliConfig(params.configDir, config);
+  }
+
+  return { environment, previousEnvironment, removedCredentials };
+}
+
 export function switchCliEnvironment(
   configDir: string,
   environmentName: string,
@@ -113,19 +161,24 @@ export class ConfigSetCommand extends Command {
       );
     }
 
-    const config = upsertCliEnvironment({
-      apiBaseUrl1: flags["api-base-url-1"],
-      apiBaseUrl2: flags["api-base-url-2"],
-      config: loadOrCreateConfig(this.config.configDir),
-      environmentName: flags.environment,
-      headers,
-      unsetHeaders: flags["unset-header"],
-    });
-    saveCliConfig(this.config.configDir, config);
+    const { environment, removedCredentials } =
+      upsertCliEnvironmentAndClearCredentialsIfSwitched({
+        apiBaseUrl1: flags["api-base-url-1"],
+        apiBaseUrl2: flags["api-base-url-2"],
+        configDir: this.config.configDir,
+        environmentName: flags.environment,
+        headers,
+        unsetHeaders: flags["unset-header"],
+      });
 
     process.stderr.write(
-      `Primitive CLI environment ${config.current_environment} is active.\n`,
+      `Primitive CLI environment ${environment} is active.\n`,
     );
+    if (removedCredentials) {
+      process.stderr.write(
+        "Removed saved Primitive CLI credentials. Run `primitive signin` to authenticate in the active environment.\n",
+      );
+    }
   }
 }
 

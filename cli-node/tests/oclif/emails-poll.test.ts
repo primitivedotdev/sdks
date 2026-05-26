@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildEmailSearchQuery,
   collectNewAcceptedEmails,
+  cursorFromAcceptedRows,
   cursorFromRows,
   filtersFromFlags,
   normalizeIsoDate,
@@ -106,6 +107,38 @@ describe("cursorFromRows", () => {
     expect(Buffer.from(cursor ?? "", "base64url").toString("utf8")).toBe(
       "r|2026-05-08T00:00:01.000Z|22222222-2222-4222-8222-222222222222",
     );
+  });
+});
+
+describe("cursorFromAcceptedRows", () => {
+  it("advances only to the last accepted/completed row", () => {
+    const cursor = cursorFromAcceptedRows([
+      makeEmail({
+        id: "11111111-1111-4111-8111-111111111111",
+        received_at: "2026-05-08T00:00:00.000Z",
+        status: "accepted",
+      }),
+      makeEmail({
+        id: "22222222-2222-4222-8222-222222222222",
+        received_at: "2026-05-08T00:00:01.000Z",
+        status: "pending",
+      }),
+    ]);
+
+    expect(Buffer.from(cursor ?? "", "base64url").toString("utf8")).toBe(
+      "r|2026-05-08T00:00:00.000Z|11111111-1111-4111-8111-111111111111",
+    );
+  });
+
+  it("does not advance past rows still being ingested", () => {
+    expect(
+      cursorFromAcceptedRows([
+        makeEmail({
+          id: "22222222-2222-4222-8222-222222222222",
+          status: "pending",
+        }),
+      ]),
+    ).toBeNull();
   });
 });
 

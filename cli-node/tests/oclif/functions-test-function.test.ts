@@ -78,22 +78,61 @@ describe("buildFunctionTestOutcome", () => {
     watch_url: "/app/functions/fn-1?tab=invocations",
   } as Parameters<typeof buildFunctionTestOutcome>[0]["invocation"];
 
-  const BASE_DETAIL = {
-    replies: [{ id: "reply-1", status: "delivered" }],
-    webhook_attempt_count: 1,
-    webhook_last_error: null,
-    webhook_last_status_code: 200,
-    webhook_status: "fired",
-  } as Parameters<typeof buildFunctionTestOutcome>[0]["detail"];
+  const BASE_TRACE = {
+    deliveries: [],
+    inbound_email: {
+      from: "functions-test@primitive.email",
+      id: "inbound-1",
+      received_at: "2026-05-17T19:00:01.000Z",
+      status: "accepted",
+      subject: "Primitive Functions test invocation (summarize)",
+      to: "summarize@long-ape.primitive.email",
+      webhook_attempt_count: 1,
+      webhook_last_error: null,
+      webhook_last_status_code: 200,
+      webhook_status: "fired",
+    },
+    logs: [],
+    outbound_requests: [],
+    replies: [
+      {
+        created_at: "2026-05-17T19:00:02.000Z",
+        id: "reply-1",
+        queue_id: "queue-1",
+        status: "delivered",
+        subject: "Re: Primitive Functions test invocation (summarize)",
+        to: "functions-test@primitive.email",
+      },
+    ],
+    state: "completed",
+    test_run: {
+      created_at: "2026-05-17T19:00:00.000Z",
+      from: "test@primitive.email",
+      function_id: "fn-1",
+      id: "test-run-1",
+      inbound_domain: "long-ape.primitive.email",
+      poll_since: "2026-05-17T19:00:00.000Z",
+      send_error: null,
+      sent_at: "2026-05-17T19:00:00.500Z",
+      subject: "Primitive Functions test invocation (summarize)",
+      to: "summarize@long-ape.primitive.email",
+    },
+    test_send: {
+      created_at: "2026-05-17T19:00:00.000Z",
+      id: "send-1",
+      queue_id: "queue-send",
+      status: "delivered",
+      updated_at: "2026-05-17T19:00:01.000Z",
+    },
+  } as Parameters<typeof buildFunctionTestOutcome>[0]["trace"];
 
   it("includes run-correlation fields that are known before polling", () => {
     const outcome = buildFunctionTestOutcome({
-      detail: BASE_DETAIL,
       elapsedSeconds: 4,
       functionId: "fn-1",
-      inboundId: "inbound-1",
       invocation: BASE_INVOCATION,
       showSends: true,
+      trace: BASE_TRACE,
     });
 
     expect(outcome).toMatchObject({
@@ -103,6 +142,7 @@ describe("buildFunctionTestOutcome", () => {
       inbound_id: "inbound-1",
       inbound_to: "summarize@long-ape.primitive.email",
       poll_since: "2026-05-17T19:00:00.000Z",
+      state: "completed",
       test_run_id: "test-run-1",
       test_send_id: "send-1",
       test_subject: "Primitive Functions test invocation (summarize)",
@@ -113,19 +153,16 @@ describe("buildFunctionTestOutcome", () => {
       webhook_last_status_code: 200,
       webhook_status: "fired",
     });
-    expect(outcome.sent_emails).toEqual([
-      { id: "reply-1", status: "delivered" },
-    ]);
+    expect(outcome.sent_emails).toEqual(BASE_TRACE.replies);
   });
 
   it("omits sent_emails unless --show-sends was requested", () => {
     const outcome = buildFunctionTestOutcome({
-      detail: BASE_DETAIL,
       elapsedSeconds: 4,
       functionId: "fn-1",
-      inboundId: "inbound-1",
       invocation: BASE_INVOCATION,
       showSends: false,
+      trace: BASE_TRACE,
     });
 
     expect(outcome).not.toHaveProperty("sent_emails");

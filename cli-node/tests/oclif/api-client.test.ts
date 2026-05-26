@@ -167,7 +167,7 @@ describe("CLI API request config", () => {
     });
   });
 
-  it("uses configured API URLs when resolving saved credentials", async () => {
+  it("keeps stored OAuth credentials pinned to their saved API URL", async () => {
     saveCliCredentials(tempDir, CREDENTIALS);
     const config = upsertCliEnvironment({
       apiBaseUrl1: "https://staging.example/api/v1",
@@ -183,9 +183,10 @@ describe("CLI API request config", () => {
       });
 
     expect(auth.apiKey).toBe(CREDENTIALS.access_token);
-    expect(auth.apiBaseUrl1).toBe("https://staging.example/api/v1");
+    expect(auth.apiBaseUrl1).toBe("https://saved.example/api/v1");
     expect(baseUrlOverridden).toBe(true);
     expect(requestConfig.headers).toEqual({ "x-staging-secret": "secret" });
+    expect(apiClient.getConfig().baseUrl).toBe("https://saved.example/api/v1");
     const clientHeaders = apiClient.getConfig().headers as Headers;
     expect(clientHeaders.get("x-staging-secret")).toBe("secret");
   });
@@ -226,6 +227,42 @@ describe("CLI API request config", () => {
       refresh_token: "prim_ort_refreshed",
     });
     expect(loadCliCredentials(tempDir)).toEqual(refreshed);
+  });
+
+  it("refreshes stored credentials against the saved host when config points elsewhere", async () => {
+    const expired = {
+      ...CREDENTIALS,
+      expires_at: "2026-05-05T00:00:00.000Z",
+    };
+    saveCliCredentials(tempDir, expired);
+    saveCliConfig(
+      tempDir,
+      upsertCliEnvironment({
+        apiBaseUrl1: "https://staging.example/api/v1",
+        config: emptyCliConfig(),
+        environmentName: "staging",
+      }),
+    );
+    const fetchMock = async (url: string | URL | Request) => {
+      expect(String(url)).toBe("https://saved.example/oauth/token");
+      return new Response(
+        JSON.stringify({
+          access_token: "prim_oat_refreshed",
+          expires_in: 120,
+          refresh_token: "prim_ort_refreshed",
+          token_type: "Bearer",
+        }),
+      );
+    };
+
+    const { auth } = await createAuthenticatedCliApiClient({
+      configDir: tempDir,
+      fetch: fetchMock as typeof fetch,
+      now: () => new Date("2026-05-05T00:00:00.000Z").getTime(),
+    });
+
+    expect(auth.apiBaseUrl1).toBe("https://saved.example/api/v1");
+    expect(auth.apiKey).toBe("prim_oat_refreshed");
   });
 
   it("removes saved OAuth credentials when refresh returns invalid_grant", async () => {

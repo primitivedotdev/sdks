@@ -144,6 +144,18 @@ export function cursorFromRows(rows: EmailSearchResult[]): string | null {
   return last ? encodeReceivedAtSearchCursor(last) : null;
 }
 
+export function cursorFromAcceptedRows(
+  rows: EmailSearchResult[],
+): string | null {
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const row = rows[i];
+    if (row.status === "accepted" || row.status === "completed") {
+      return encodeReceivedAtSearchCursor(row);
+    }
+  }
+  return null;
+}
+
 export function collectNewAcceptedEmails(
   rows: EmailSearchResult[],
   seenIds: Set<string>,
