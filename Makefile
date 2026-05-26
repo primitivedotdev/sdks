@@ -131,6 +131,22 @@ cli-smoke: cli-build cli-tarball-isolation
 	root_help_config="$$smoke_dir/root-help-config" && \
 	HOME="$$root_help_config" XDG_CONFIG_HOME="$$root_help_config/.config" PRIMITIVE_CONFIG_DIR= PRIMITIVE_API_KEY= PRIMITIVE_HIDE_SIGNUP_HINT= "$$bin" >"$$smoke_dir/root-help.txt" && \
 	grep -q -- 'primitive signup <email> --signup-code <invite-code> --accept-terms' "$$smoke_dir/root-help.txt" && \
+	root_auth_home="$$smoke_dir/root-auth-home" && \
+	root_auth_config="$$root_auth_home/.config/primitive" && \
+	root_auth_port_file="$$smoke_dir/root-auth-port" && \
+	root_auth_log="$$smoke_dir/root-auth-server.log" && \
+	mkdir -p "$$root_auth_config" && \
+	( \
+	node -e 'const http = require("node:http"); const fs = require("node:fs"); const server = http.createServer((req, res) => { if (req.method !== "GET" || req.url !== "/v1/account" || req.headers.authorization !== "Bearer prim_oat_root") { res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected " + req.method + " " + req.url + " " + req.headers.authorization); return; } res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ success: true, data: { id: "acct-root", email: "root@example.com", plan: "pro", created_at: "2026-05-25T00:00:00.000Z", onboarding_completed: true, onboarding_step: null, stripe_subscription_status: null, subscription_current_period_end: null, subscription_cancel_at_period_end: false, spam_threshold: null, discard_content_on_webhook_confirmed: false, webhook_secret_rotated_at: null } })); }); server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.argv[1], String(server.address().port)));' "$$root_auth_port_file" >"$$root_auth_log" 2>&1 & \
+	root_auth_pid=$$! && \
+	trap 'kill "$$root_auth_pid" 2>/dev/null || true' EXIT && \
+	for i in 1 2 3 4 5 6 7 8 9 10; do test -s "$$root_auth_port_file" && break; sleep 0.1; done && \
+	test -s "$$root_auth_port_file" || { cat "$$root_auth_log"; exit 1; } && \
+	root_auth_port=$$(cat "$$root_auth_port_file") && \
+	node -e 'const fs = require("node:fs"); const [path, port] = process.argv.slice(1); fs.writeFileSync(path, JSON.stringify({ auth_method: "oauth", access_token: "prim_oat_root", refresh_token: "prim_ort_root", token_type: "Bearer", expires_at: "2099-05-25T00:00:00.000Z", oauth_grant_id: "11111111-1111-4111-8111-111111111111", oauth_client_id: "primitive-cli", org_id: "acct-root", org_name: "Root", api_base_url_1: "http://127.0.0.1:" + port + "/v1", created_at: "2026-05-25T00:00:00.000Z" }, null, 2) + "\n");' "$$root_auth_config/credentials.json" "$$root_auth_port" && \
+	HOME="$$root_auth_home" XDG_CONFIG_HOME="$$root_auth_home/.config" PRIMITIVE_CONFIG_DIR= PRIMITIVE_API_KEY= "$$bin" >"$$smoke_dir/root-auth-help.txt" && \
+	grep -q -- 'Signed in as root@example.com (org acct-root)' "$$smoke_dir/root-auth-help.txt" \
+	) && \
 	config_home="$$smoke_dir/config-home" && \
 	config_root="$$config_home/.config" && \
 	config_dir="$$config_root/primitive" && \
