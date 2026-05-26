@@ -1644,14 +1644,23 @@ type CreateFunctionInput struct {
 	// underscores. 1 to 64 characters. Must be unique within the
 	// org; a 409 is returned on collision.
 	Name string `json:"name"`
-	// Bundled handler as a single ESM module. Up to 1 MiB UTF-8.
+	// Pre-built handler as a single ESM module. Up to 1 MiB UTF-8.
 	// Must export a default `{ async fetch(req, env, ctx) { ... } }`
-	// object.
-	Code string `json:"code"`
+	// object. Provide either `code` or `files`, not both.
+	Code OptString `json:"code"`
 	// Optional source map for the bundle. Up to 5 MiB UTF-8.
 	// Stored with the deployment attempt and sent to the runtime
-	// to symbolicate stack traces in the function's logs.
+	// to symbolicate stack traces in the function's logs. Only
+	// valid with `code`.
 	SourceMap OptString `json:"sourceMap"`
+	// Source files for a managed build, as a map of path to file
+	// contents (for example {"package.json": "...",
+	// "src/index.ts": "..."}). Provide this INSTEAD of `code` to
+	// have the server install dependencies and bundle the source
+	// for the Workers runtime before deploying. Include a
+	// package.json (its `dependencies` are installed). Provide
+	// either `code` or `files`, not both.
+	Files OptCreateFunctionInputFiles `json:"files"`
 }
 
 // GetName returns the value of Name.
@@ -1660,7 +1669,7 @@ func (s *CreateFunctionInput) GetName() string {
 }
 
 // GetCode returns the value of Code.
-func (s *CreateFunctionInput) GetCode() string {
+func (s *CreateFunctionInput) GetCode() OptString {
 	return s.Code
 }
 
@@ -1669,19 +1678,47 @@ func (s *CreateFunctionInput) GetSourceMap() OptString {
 	return s.SourceMap
 }
 
+// GetFiles returns the value of Files.
+func (s *CreateFunctionInput) GetFiles() OptCreateFunctionInputFiles {
+	return s.Files
+}
+
 // SetName sets the value of Name.
 func (s *CreateFunctionInput) SetName(val string) {
 	s.Name = val
 }
 
 // SetCode sets the value of Code.
-func (s *CreateFunctionInput) SetCode(val string) {
+func (s *CreateFunctionInput) SetCode(val OptString) {
 	s.Code = val
 }
 
 // SetSourceMap sets the value of SourceMap.
 func (s *CreateFunctionInput) SetSourceMap(val OptString) {
 	s.SourceMap = val
+}
+
+// SetFiles sets the value of Files.
+func (s *CreateFunctionInput) SetFiles(val OptCreateFunctionInputFiles) {
+	s.Files = val
+}
+
+// Source files for a managed build, as a map of path to file
+// contents (for example {"package.json": "...",
+// "src/index.ts": "..."}). Provide this INSTEAD of `code` to
+// have the server install dependencies and bundle the source
+// for the Workers runtime before deploying. Include a
+// package.json (its `dependencies` are installed). Provide
+// either `code` or `files`, not both.
+type CreateFunctionInputFiles map[string]string
+
+func (s *CreateFunctionInputFiles) init() CreateFunctionInputFiles {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
 }
 
 // Returned by POST /functions on a successful deploy.
@@ -9200,6 +9237,52 @@ func (o OptCliLogoutInput) Or(d CliLogoutInput) CliLogoutInput {
 	return d
 }
 
+// NewOptCreateFunctionInputFiles returns new OptCreateFunctionInputFiles with value set to v.
+func NewOptCreateFunctionInputFiles(v CreateFunctionInputFiles) OptCreateFunctionInputFiles {
+	return OptCreateFunctionInputFiles{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateFunctionInputFiles is optional CreateFunctionInputFiles.
+type OptCreateFunctionInputFiles struct {
+	Value CreateFunctionInputFiles
+	Set   bool
+}
+
+// IsSet returns true if OptCreateFunctionInputFiles was set.
+func (o OptCreateFunctionInputFiles) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateFunctionInputFiles) Reset() {
+	var v CreateFunctionInputFiles
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateFunctionInputFiles) SetTo(v CreateFunctionInputFiles) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateFunctionInputFiles) Get() (v CreateFunctionInputFiles, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateFunctionInputFiles) Or(d CreateFunctionInputFiles) CreateFunctionInputFiles {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptDateTime returns new OptDateTime with value set to v.
 func NewOptDateTime(v time.Time) OptDateTime {
 	return OptDateTime{
@@ -11071,6 +11154,52 @@ func (o OptUUID) Get() (v uuid.UUID, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUUID) Or(d uuid.UUID) uuid.UUID {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdateFunctionInputFiles returns new OptUpdateFunctionInputFiles with value set to v.
+func NewOptUpdateFunctionInputFiles(v UpdateFunctionInputFiles) OptUpdateFunctionInputFiles {
+	return OptUpdateFunctionInputFiles{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdateFunctionInputFiles is optional UpdateFunctionInputFiles.
+type OptUpdateFunctionInputFiles struct {
+	Value UpdateFunctionInputFiles
+	Set   bool
+}
+
+// IsSet returns true if OptUpdateFunctionInputFiles was set.
+func (o OptUpdateFunctionInputFiles) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdateFunctionInputFiles) Reset() {
+	var v UpdateFunctionInputFiles
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdateFunctionInputFiles) SetTo(v UpdateFunctionInputFiles) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdateFunctionInputFiles) Get() (v UpdateFunctionInputFiles, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdateFunctionInputFiles) Or(d UpdateFunctionInputFiles) UpdateFunctionInputFiles {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -15339,13 +15468,18 @@ func (*UpdateFunctionFailedDependency) updateFunctionRes() {}
 
 // Ref: #/components/schemas/UpdateFunctionInput
 type UpdateFunctionInput struct {
-	// New bundled handler. Same rules as CreateFunctionInput.code.
-	Code      string    `json:"code"`
+	// New pre-built handler. Same rules as CreateFunctionInput.code. Provide either `code` or `files`,
+	// not both.
+	Code      OptString `json:"code"`
 	SourceMap OptString `json:"sourceMap"`
+	// Source files for a managed build, as a map of path to file
+	// contents. Provide this INSTEAD of `code` to rebuild and
+	// redeploy from source. Same rules as CreateFunctionInput.files.
+	Files OptUpdateFunctionInputFiles `json:"files"`
 }
 
 // GetCode returns the value of Code.
-func (s *UpdateFunctionInput) GetCode() string {
+func (s *UpdateFunctionInput) GetCode() OptString {
 	return s.Code
 }
 
@@ -15354,14 +15488,38 @@ func (s *UpdateFunctionInput) GetSourceMap() OptString {
 	return s.SourceMap
 }
 
+// GetFiles returns the value of Files.
+func (s *UpdateFunctionInput) GetFiles() OptUpdateFunctionInputFiles {
+	return s.Files
+}
+
 // SetCode sets the value of Code.
-func (s *UpdateFunctionInput) SetCode(val string) {
+func (s *UpdateFunctionInput) SetCode(val OptString) {
 	s.Code = val
 }
 
 // SetSourceMap sets the value of SourceMap.
 func (s *UpdateFunctionInput) SetSourceMap(val OptString) {
 	s.SourceMap = val
+}
+
+// SetFiles sets the value of Files.
+func (s *UpdateFunctionInput) SetFiles(val OptUpdateFunctionInputFiles) {
+	s.Files = val
+}
+
+// Source files for a managed build, as a map of path to file
+// contents. Provide this INSTEAD of `code` to rebuild and
+// redeploy from source. Same rules as CreateFunctionInput.files.
+type UpdateFunctionInputFiles map[string]string
+
+func (s *UpdateFunctionInputFiles) init() UpdateFunctionInputFiles {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
 }
 
 type UpdateFunctionNotFound ErrorResponse
