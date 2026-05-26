@@ -465,7 +465,7 @@ export function buildChatFollowUpCommands(
 export function buildChatRecoveryCommands(
   context: ChatBaseContext,
 ): ChatFollowUpCommand[] {
-  return [
+  const commands: ChatFollowUpCommand[] = [
     buildCommand("wait_threaded_reply", "Wait for the threaded reply again", [
       "primitive",
       "emails",
@@ -479,19 +479,29 @@ export function buildChatRecoveryCommands(
       "--timeout",
       String(context.timeoutSeconds),
     ]),
-    buildCommand("wait_fallback_reply", "Fallback wait by sender/time window", [
-      "primitive",
-      "emails",
-      "wait",
-      "--from",
-      context.recipient,
-      "--to",
-      context.from,
-      "--since",
-      context.sentAtIso,
-      "--timeout",
-      String(context.timeoutSeconds),
-    ]),
+  ];
+  if (!context.strictOnly) {
+    commands.push(
+      buildCommand(
+        "wait_fallback_reply",
+        "Fallback wait by sender/time window",
+        [
+          "primitive",
+          "emails",
+          "wait",
+          "--from",
+          context.recipient,
+          "--to",
+          context.from,
+          "--since",
+          context.sentAtIso,
+          "--timeout",
+          String(context.timeoutSeconds),
+        ],
+      ),
+    );
+  }
+  commands.push(
     buildCommand("inspect_sent_email", "Inspect the outbound send", [
       "primitive",
       "sent",
@@ -499,7 +509,8 @@ export function buildChatRecoveryCommands(
       "--id",
       context.sent.id,
     ]),
-  ];
+  );
+  return commands;
 }
 
 export function buildChatJsonEnvelope(context: ChatOutputContext): {

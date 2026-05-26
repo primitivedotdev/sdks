@@ -147,6 +147,19 @@ cli-smoke: cli-build cli-tarball-isolation
 	grep -q -- 'Primitive CLI environment staging is active.' "$$smoke_dir/config-set.err" && \
 	grep -q -- 'Removed saved Primitive CLI credentials' "$$smoke_dir/config-set.err" && \
 	test ! -e "$$config_dir/credentials.json" && \
+	filter_id="44444444-4444-4444-8444-444444444444" && \
+	filter_port_file="$$smoke_dir/filter-server-port" && \
+	filter_server_log="$$smoke_dir/filter-server.log" && \
+	( \
+	node -e 'const http = require("node:http"); const fs = require("node:fs"); const filterId = "44444444-4444-4444-8444-444444444444"; const server = http.createServer((req, res) => { if (req.method !== "PATCH" || req.url !== "/v1/filters/" + filterId || req.headers.authorization !== "Bearer prim_test") { res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected " + req.method + " " + req.url + " " + req.headers.authorization); return; } let body = ""; req.on("data", (chunk) => { body += chunk; }); req.on("end", () => { if (body !== "{\"enabled\":false}") { res.writeHead(500, { "content-type": "text/plain" }); res.end("unexpected body " + body); return; } res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify({ success: true, data: { id: filterId, org_id: "acct-1", domain_id: null, type: "blocklist", pattern: "spam@example.com", enabled: false, created_at: "2026-05-25T00:00:00.000Z" } })); }); }); server.listen(0, "127.0.0.1", () => fs.writeFileSync(process.argv[1], String(server.address().port)));' "$$filter_port_file" >"$$filter_server_log" 2>&1 & \
+	filter_server_pid=$$! && \
+	trap 'kill "$$filter_server_pid" 2>/dev/null || true' EXIT && \
+	for i in 1 2 3 4 5 6 7 8 9 10; do test -s "$$filter_port_file" && break; sleep 0.1; done && \
+	test -s "$$filter_port_file" || { cat "$$filter_server_log"; exit 1; } && \
+	filter_port=$$(cat "$$filter_port_file") && \
+	"$$bin" filters update-filter --id "$$filter_id" --no-enabled --api-key prim_test --api-base-url-1 "http://127.0.0.1:$$filter_port/v1" > "$$smoke_dir/filter.json" && \
+	node -e 'const fs = require("node:fs"); const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (data.enabled !== false) throw new Error("expected enabled=false");' "$$smoke_dir/filter.json" \
+	) && \
 	zone_id="33333333-3333-4333-8333-333333333333" && \
 	port_file="$$smoke_dir/zone-server-port" && \
 	server_log="$$smoke_dir/zone-server.log" && \

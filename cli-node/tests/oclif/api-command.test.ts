@@ -877,6 +877,31 @@ describe("createOperationCommand description", () => {
     expect(flag.max).toBe(30000);
   });
 
+  it("allows generated boolean body flags to be negated", () => {
+    const op = makeOperation({
+      hasJsonBody: true,
+      method: "PATCH",
+      requestSchema: {
+        properties: {
+          enabled: {
+            description: "Enable or disable the filter",
+            type: "boolean",
+          },
+        },
+        required: ["enabled"],
+        type: "object",
+      },
+    });
+    const Cmd = createOperationCommand(op) as unknown as {
+      flags: Record<string, unknown>;
+    };
+    const flag = Cmd.flags.enabled as {
+      allowNo?: boolean;
+    };
+
+    expect(flag.allowNo).toBe(true);
+  });
+
   it("adds --envelope to non-binary generated commands", () => {
     const Cmd = createOperationCommand(makeOperation()) as unknown as {
       flags: Record<string, unknown>;

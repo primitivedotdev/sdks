@@ -398,6 +398,21 @@ describe("chat command", () => {
     });
   });
 
+  it("does not suggest fallback recovery after a strict-only timeout", () => {
+    const commands = buildChatRecoveryCommands({
+      ...outputContext(),
+      strictOnly: true,
+    });
+
+    expect(commands.map((entry) => entry.kind)).toEqual([
+      "wait_threaded_reply",
+      "inspect_sent_email",
+    ]);
+    expect(commands.map((entry) => entry.command).join("\n")).not.toContain(
+      "--from help@agent.example --to agent@sender.example",
+    );
+  });
+
   it("writes non-TTY progress lines while waiting", () => {
     const writes: string[] = [];
     const progress = new ChatProgressIndicator(
