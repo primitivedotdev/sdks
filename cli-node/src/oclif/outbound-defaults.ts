@@ -1,8 +1,8 @@
 // Shared helpers for outbound-send commands. `primitive send` and
-// `primitive chat` both want sensible defaults for --from and
-// --subject so callers don't have to look up their own verified
-// domain or hand-pick a subject for one-line bodies. Centralized here
-// so the two commands stay bit-identical in defaulting behavior.
+// `primitive chat` both need sensible transport defaults so callers
+// don't have to look up their own verified domain. `chat` hides
+// subject override from normal help, but still derives a subject for
+// the underlying email.
 
 import { Errors } from "@oclif/core";
 import type {

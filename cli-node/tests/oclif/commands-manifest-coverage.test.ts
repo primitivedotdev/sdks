@@ -82,6 +82,20 @@ describe("COMMANDS / manifest coverage", () => {
     }
   });
 
+  it("accepts --json on generated API commands that already emit JSON", () => {
+    const domainsListCommand = COMMANDS["domains:list"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    const rawDomainsListCommand = COMMANDS[
+      "domains:list-domains"
+    ] as unknown as {
+      flags: Record<string, unknown>;
+    };
+
+    expect(domainsListCommand.flags.json).toBeDefined();
+    expect(rawDomainsListCommand.flags.json).toBeDefined();
+  });
+
   it("registers the top-level reply shortcut", () => {
     expect(COMMANDS.reply).toBeDefined();
   });
@@ -203,6 +217,15 @@ describe("COMMANDS / manifest coverage", () => {
     expect(packageJson.oclif?.topics?.threads?.description).toContain(
       "primitive threads get --id <thread-id>",
     );
+  });
+
+  it("distinguishes sender domains from recipient-scope send permissions", () => {
+    const packageJson = readCliPackageJson();
+    const description = packageJson.oclif?.topics?.sending?.description ?? "";
+
+    expect(description).toContain("primitive domains list");
+    expect(description).toContain("usable sender domains");
+    expect(description).toContain("recipient-scope");
   });
 
   it("configures daily update warnings", () => {

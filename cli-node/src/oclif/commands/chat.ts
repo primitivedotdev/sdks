@@ -718,7 +718,7 @@ class ChatCommand extends Command {
 
   static examples = [
     "<%= config.bin %> chat help@agent.acme.dev 'how do I rotate my API key?'",
-    "cat error.log | <%= config.bin %> chat help@agent.acme.dev --subject 'webhook 401s'",
+    "cat error.log | <%= config.bin %> chat help@agent.acme.dev",
     "<%= config.bin %> chat help@agent.acme.dev --reply 'one more thing'",
     "<%= config.bin %> chat help@agent.acme.dev --reply 'one more thing' --reply-to-email-id <inbound-email-id>",
     "<%= config.bin %> chat help@agent.acme.dev 'follow up question' --json",
@@ -759,7 +759,8 @@ class ChatCommand extends Command {
     }),
     subject: Flags.string({
       description:
-        "Subject line. Defaults to the first line of the message when omitted.",
+        "Advanced email transport override. Usually omit; chat threading does not depend on the subject.",
+      hidden: true,
     }),
     reply: Flags.string({
       description:
