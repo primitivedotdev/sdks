@@ -8,15 +8,23 @@ describe("describe command", () => {
 
   it("registers browser login commands in the COMMANDS map", () => {
     expect(COMMANDS.login).toBeDefined();
+    expect(COMMANDS["login:browser"]).toBeDefined();
+    expect(COMMANDS["login:confirm"]).toBeDefined();
+    expect(COMMANDS["login:resend"]).toBeDefined();
+    expect(COMMANDS.otp).toBeDefined();
+    expect(COMMANDS["otp:confirm"]).toBeDefined();
+    expect(COMMANDS["otp:resend"]).toBeDefined();
     expect(COMMANDS.logout).toBeDefined();
   });
 
   it("registers existing-account sign-in commands in the COMMANDS map", () => {
     expect(COMMANDS.signin).toBeDefined();
     expect(COMMANDS["signin:browser"]).toBeDefined();
+    expect(COMMANDS["signin:confirm"]).toBeDefined();
     expect(COMMANDS["signin:otp"]).toBeDefined();
     expect(COMMANDS["signin:otp:confirm"]).toBeDefined();
     expect(COMMANDS["signin:otp:resend"]).toBeDefined();
+    expect(COMMANDS["signin:resend"]).toBeDefined();
   });
 });
 

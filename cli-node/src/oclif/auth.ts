@@ -16,9 +16,15 @@ import {
 
 const CREDENTIALS_FILE = "credentials.json";
 const CREDENTIALS_LOCK_DIR = "credentials.lock";
+const CREDENTIALS_LOCK_OWNER_FILE = "owner.json";
 const CREDENTIALS_LOCK_STALE_MS = 30 * 60 * 1000;
 const MALFORMED_CREDENTIALS_HINT =
   "Run `primitive logout` and then `primitive signin`.";
+const CREDENTIALS_LOCK_CLEANUP_SIGNALS = [
+  "SIGINT",
+  "SIGTERM",
+  "SIGHUP",
+] as const;
 
 // Disk shape for saved CLI credentials. Only persists the primary
 // API host (api_base_url_1) because login is itself an operation on
@@ -130,6 +136,10 @@ export function credentialsPath(configDir: string): string {
   return join(configDir, CREDENTIALS_FILE);
 }
 
+export function credentialsLockPath(configDir: string): string {
+  return join(configDir, CREDENTIALS_LOCK_DIR);
+}
+
 function normalize(url: string | undefined, fallback: string): string {
   const trimmed = url?.trim();
   if (!trimmed) return fallback;
@@ -221,6 +231,10 @@ export function deleteCliCredentials(configDir: string): void {
   rmSync(credentialsPath(configDir), { force: true });
 }
 
+export function deleteCliCredentialsLock(configDir: string): void {
+  rmSync(credentialsLockPath(configDir), { force: true, recursive: true });
+}
+
 function errorCode(error: unknown): unknown {
   return error && typeof error === "object"
     ? (error as { code?: unknown }).code
@@ -244,12 +258,118 @@ function removeStaleCliCredentialsLock(
   return true;
 }
 
+function readCliCredentialsLockOwner(lockPath: string): { pid: number } | null {
+  let raw: string;
+  try {
+    raw = readFileSync(join(lockPath, CREDENTIALS_LOCK_OWNER_FILE), "utf8");
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return null;
+    throw error;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const pid = parsed?.pid;
+    return Number.isInteger(pid) && pid > 0 ? { pid } : null;
+  } catch {
+    return null;
+  }
+}
+
+function processIsRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    const code = errorCode(error);
+    if (code === "ESRCH") return false;
+    // EPERM means another live process exists but cannot be signaled.
+    return true;
+  }
+}
+
+function removeDeadCliCredentialsLock(
+  lockPath: string,
+  isRunning: (pid: number) => boolean,
+): boolean {
+  const owner = readCliCredentialsLockOwner(lockPath);
+  if (!owner) return false;
+  if (isRunning(owner.pid)) return false;
+
+  rmSync(lockPath, { force: true, recursive: true });
+  return true;
+}
+
+function removeRecoverableCliCredentialsLock(params: {
+  isRunning: (pid: number) => boolean;
+  lockPath: string;
+  now: () => number;
+  staleMs: number;
+}): boolean {
+  if (removeDeadCliCredentialsLock(params.lockPath, params.isRunning)) {
+    return true;
+  }
+  return removeStaleCliCredentialsLock(
+    params.lockPath,
+    params.staleMs,
+    params.now,
+  );
+}
+
+function writeCliCredentialsLockOwner(lockPath: string): void {
+  const ownerPath = join(lockPath, CREDENTIALS_LOCK_OWNER_FILE);
+  writeFileSync(
+    ownerPath,
+    `${JSON.stringify({
+      created_at: new Date().toISOString(),
+      pid: process.pid,
+    })}\n`,
+    { mode: 0o600 },
+  );
+  chmodSync(ownerPath, 0o600);
+}
+
+function installCredentialsLockSignalCleanup(lockPath: string): () => void {
+  let active = true;
+  const listeners = CREDENTIALS_LOCK_CLEANUP_SIGNALS.map((signal) => {
+    const listener = () => {
+      if (!active) return;
+      active = false;
+      rmSync(lockPath, { force: true, recursive: true });
+      process.exit(
+        signal === "SIGINT" ? 130 : signal === "SIGTERM" ? 143 : 129,
+      );
+    };
+    process.once(signal, listener);
+    return { listener, signal };
+  });
+
+  return () => {
+    if (!active) return;
+    active = false;
+    for (const { listener, signal } of listeners) {
+      process.removeListener(signal, listener);
+    }
+  };
+}
+
+function credentialsLockInProgressMessage(lockPath: string): string {
+  return `Another Primitive CLI credential operation is already in progress. Wait for it to finish, then retry. If no Primitive auth command is still running, run \`primitive logout --force\` to clear local CLI auth state and remove ${lockPath}.`;
+}
+
 export function acquireCliCredentialsLock(
   configDir: string,
-  options: { now?: () => number; staleMs?: number } = {},
+  options: {
+    installSignalHandlers?: boolean;
+    isProcessRunning?: (pid: number) => boolean;
+    now?: () => number;
+    staleMs?: number;
+  } = {},
 ): () => void {
   mkdirSync(configDir, { mode: 0o700, recursive: true });
-  const lockPath = join(configDir, CREDENTIALS_LOCK_DIR);
+  const lockPath = credentialsLockPath(configDir);
+  const installSignalHandlers = options.installSignalHandlers ?? true;
+  const isRunning = options.isProcessRunning ?? processIsRunning;
   const now = options.now ?? Date.now;
   const staleMs = options.staleMs ?? CREDENTIALS_LOCK_STALE_MS;
   let acquired = false;
@@ -261,22 +381,38 @@ export function acquireCliCredentialsLock(
       break;
     } catch (error) {
       if (errorCode(error) !== "EEXIST") throw error;
-      if (removeStaleCliCredentialsLock(lockPath, staleMs, now)) continue;
-      throw new Error(
-        "Another Primitive CLI credential operation is already in progress. Wait for it to finish, then retry.",
-      );
+      if (
+        removeRecoverableCliCredentialsLock({
+          isRunning,
+          lockPath,
+          now,
+          staleMs,
+        })
+      ) {
+        continue;
+      }
+      throw new Error(credentialsLockInProgressMessage(lockPath));
     }
   }
   if (!acquired) {
-    throw new Error(
-      "Another Primitive CLI credential operation is already in progress. Wait for it to finish, then retry.",
-    );
+    throw new Error(credentialsLockInProgressMessage(lockPath));
   }
 
+  try {
+    writeCliCredentialsLockOwner(lockPath);
+  } catch (error) {
+    rmSync(lockPath, { force: true, recursive: true });
+    throw error;
+  }
+
+  const removeSignalCleanup = installSignalHandlers
+    ? installCredentialsLockSignalCleanup(lockPath)
+    : () => undefined;
   let released = false;
   return () => {
     if (released) return;
     released = true;
+    removeSignalCleanup();
     rmSync(lockPath, { force: true, recursive: true });
   };
 }

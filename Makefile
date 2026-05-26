@@ -83,6 +83,34 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" domains zone-file --help | grep -q -- "--outbound-only" && \
 	"$$bin" inbox status --help | grep -q -- "readiness" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
+	"$$bin" signin --help | grep -q -- "signin <email>" && \
+	"$$bin" signin --help | grep -q -- "signin confirm" && \
+	"$$bin" login --help | grep -q -- "login <email>" && \
+	"$$bin" login --help | grep -q -- "login confirm" && \
+	"$$bin" login browser --help | grep -q -- "Log in with browser approval" && \
+	"$$bin" login confirm --help | grep -q -- "Confirm email-code login" && \
+	"$$bin" otp --help | grep -q -- "Start email-code auth" && \
+	"$$bin" otp confirm --help | grep -q -- "Confirm email-code auth" && \
+	"$$bin" signin confirm --help | grep -q -- "Confirm email-code sign-in" && \
+	"$$bin" signin resend --help | grep -q -- "Resend email-code sign-in code" && \
+	"$$bin" signin otp --help | grep -q -- "Start OTP sign-in" && \
+	"$$bin" logout --help | grep -q -- "--force" && \
+	force_home="$$smoke_dir/force-logout-home" && \
+	force_root="$$force_home/.config" && \
+	force_dir="$$force_root/primitive" && \
+	mkdir -p "$$force_dir/credentials.lock" && \
+	node -e 'const fs = require("node:fs"); const [credentialsPath, pendingPath] = process.argv.slice(1); fs.writeFileSync(credentialsPath, JSON.stringify({ auth_method: "oauth", access_token: "prim_oat_force", refresh_token: "prim_ort_force", token_type: "Bearer", expires_at: "2099-05-25T00:00:00.000Z", oauth_grant_id: "11111111-1111-4111-8111-111111111111", oauth_client_id: "primitive-cli", org_id: "22222222-2222-4222-8222-222222222222", org_name: "Force", api_base_url_1: "https://api.force.example/v1", created_at: "2026-05-25T00:00:00.000Z" }, null, 2) + "\n"); fs.writeFileSync(pendingPath, JSON.stringify({ api_base_url_1: "https://api.force.example/v1", created_at: "2026-05-25T00:00:00.000Z", email: "force@example.com", expires_at: "2099-05-25T00:00:00.000Z", expires_in: 1800, resend_after: 60, signup_token: "signup-token", verification_code_length: 6 }, null, 2) + "\n");' "$$force_dir/credentials.json" "$$force_dir/signup.json" && \
+	HOME="$$force_home" XDG_CONFIG_HOME="$$force_root" PRIMITIVE_CONFIG_DIR= "$$bin" logout --force >"$$smoke_dir/force-logout.out" 2>"$$smoke_dir/force-logout.err" && \
+	grep -q -- "pending email-code auth state" "$$smoke_dir/force-logout.err" && \
+	test ! -e "$$force_dir/credentials.json" && \
+	test ! -e "$$force_dir/signup.json" && \
+	test ! -e "$$force_dir/credentials.lock" && \
+	lock_home="$$smoke_dir/auth-lock-home" && \
+	lock_root="$$lock_home/.config" && \
+	lock_dir="$$lock_root/primitive" && \
+	mkdir -p "$$lock_dir/credentials.lock" && \
+	if HOME="$$lock_home" XDG_CONFIG_HOME="$$lock_root" PRIMITIVE_CONFIG_DIR= "$$bin" signin smoke@example.com --signup-code invite --accept-terms >"$$smoke_dir/auth-lock.out" 2>"$$smoke_dir/auth-lock.err"; then echo "signin should fail while credentials lock exists"; exit 1; fi && \
+	grep -q -- "primitive logout --force" "$$smoke_dir/auth-lock.err" && \
 	"$$bin" chat --help | grep -q -- "follow-up commands" && \
 	if "$$bin" chat --help | grep -q -- "--subject"; then echo "chat help must not advertise --subject"; exit 1; fi && \
 	"$$bin" chat --help | grep -q -- "--reply-to-email-id" && \

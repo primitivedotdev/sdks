@@ -161,11 +161,23 @@ describe("COMMANDS / manifest coverage", () => {
   });
 
   it("registers sign-in commands", () => {
+    expect(COMMANDS.login).toBeDefined();
+    expect(COMMANDS["login:browser"]).toBeDefined();
+    expect(COMMANDS["login:confirm"]).toBeDefined();
+    expect(COMMANDS["login:otp"]).toBeDefined();
+    expect(COMMANDS["login:otp:confirm"]).toBeDefined();
+    expect(COMMANDS["login:otp:resend"]).toBeDefined();
+    expect(COMMANDS["login:resend"]).toBeDefined();
+    expect(COMMANDS.otp).toBeDefined();
+    expect(COMMANDS["otp:confirm"]).toBeDefined();
+    expect(COMMANDS["otp:resend"]).toBeDefined();
     expect(COMMANDS.signin).toBeDefined();
     expect(COMMANDS["signin:browser"]).toBeDefined();
+    expect(COMMANDS["signin:confirm"]).toBeDefined();
     expect(COMMANDS["signin:otp"]).toBeDefined();
     expect(COMMANDS["signin:otp:confirm"]).toBeDefined();
     expect(COMMANDS["signin:otp:resend"]).toBeDefined();
+    expect(COMMANDS["signin:resend"]).toBeDefined();
   });
 
   it("keeps reply wait flags aligned with send", () => {

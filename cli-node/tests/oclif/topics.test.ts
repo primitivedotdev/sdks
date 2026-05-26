@@ -8,7 +8,7 @@ function normalize(value: string): string {
   return value.toLowerCase().replace(/\s+/g, "-");
 }
 
-const HAND_ROLLED_VISIBLE_TOPICS = new Set(["signin"]);
+const HAND_ROLLED_VISIBLE_TOPICS = new Set(["login", "otp", "signin"]);
 
 describe("oclif topics", () => {
   it("has a topic entry for every spec tag", () => {

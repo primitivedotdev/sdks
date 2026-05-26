@@ -162,7 +162,7 @@ export async function checkExistingLogin(params: {
   };
 }
 
-type LoginFlags = {
+export type LoginFlags = {
   "api-base-url-1"?: string;
   "device-name"?: string;
   "no-browser"?: boolean;
@@ -205,6 +205,13 @@ class LoginCommand extends Command {
     const commandClass = this.constructor as typeof LoginCommand;
     const { flags } = await this.parse(commandClass);
 
+    await this.runBrowserLogin(flags, this.retryCommand());
+  }
+
+  protected async runBrowserLogin(
+    flags: LoginFlags,
+    retryCommand = this.retryCommand(),
+  ): Promise<void> {
     let releaseCredentialsLock: () => void;
     try {
       releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);
@@ -214,7 +221,7 @@ class LoginCommand extends Command {
     }
 
     try {
-      await this.runWithCredentialLock(flags, this.retryCommand());
+      await this.runWithCredentialLock(flags, retryCommand);
     } finally {
       releaseCredentialsLock();
     }

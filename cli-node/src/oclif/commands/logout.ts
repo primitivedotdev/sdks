@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { Command, Errors, Flags } from "@oclif/core";
 import type { CliLogoutResult } from "@primitivedotdev/api-core";
 import { cliLogout } from "@primitivedotdev/api-core";
@@ -13,9 +14,13 @@ import {
 } from "../api-command.js";
 import {
   acquireCliCredentialsLock,
+  credentialsLockPath,
+  credentialsPath,
   deleteCliCredentials,
+  deleteCliCredentialsLock,
   loadCliCredentials,
 } from "../auth.js";
+import { deletePendingAgentSignup, pendingSignupPath } from "./signup.js";
 
 function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
@@ -28,6 +33,7 @@ function unwrapData<T>(value: unknown): T | null {
 
 type LogoutFlags = {
   "api-base-url-1"?: string;
+  force?: boolean;
 };
 
 type LogoutDeps = {
@@ -126,13 +132,48 @@ export async function runLogoutWithCredentialLock(params: {
   process.stderr.write(`Logged out and revoked OAuth grant ${grantId}.\n`);
 }
 
+export function runForceLogout(params: { configDir: string }): void {
+  const localCredentialsPath = credentialsPath(params.configDir);
+  const pendingPath = pendingSignupPath(params.configDir);
+  const lockPath = credentialsLockPath(params.configDir);
+  const removed = [
+    existsSync(localCredentialsPath) ? "local Primitive CLI credentials" : null,
+    existsSync(pendingPath) ? "pending email-code auth state" : null,
+    existsSync(lockPath) ? "credential lock" : null,
+  ].filter((value): value is string => value !== null);
+
+  deleteCliCredentials(params.configDir);
+  deletePendingAgentSignup(params.configDir);
+  deleteCliCredentialsLock(params.configDir);
+
+  if (removed.length === 0) {
+    process.stderr.write(
+      "No local Primitive CLI auth state was present. Backing OAuth grant was not revoked.\n",
+    );
+    return;
+  }
+
+  process.stderr.write(
+    `Removed ${formatList(removed)}. Backing OAuth grant was not revoked.\n`,
+  );
+}
+
+function formatList(values: string[]): string {
+  if (values.length <= 1) return values[0] ?? "";
+  if (values.length === 2) return `${values[0]} and ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
+}
+
 class LogoutCommand extends Command {
   static description =
-    "Log out by revoking the saved Primitive CLI OAuth grant and deleting local credentials.";
+    "Log out by revoking the saved Primitive CLI OAuth grant and deleting local credentials. Use --force to remove local credentials, pending email-code auth state, and stale credential locks without contacting Primitive.";
 
   static summary = "Log out and revoke the saved CLI OAuth grant";
 
-  static examples = ["<%= config.bin %> logout"];
+  static examples = [
+    "<%= config.bin %> logout",
+    "<%= config.bin %> logout --force",
+  ];
 
   static flags = {
     "api-base-url-1": Flags.string({
@@ -141,10 +182,20 @@ class LogoutCommand extends Command {
       env: "PRIMITIVE_API_BASE_URL_1",
       hidden: true,
     }),
+    force: Flags.boolean({
+      char: "f",
+      description:
+        "Remove local CLI credentials, pending email-code auth state, and any credential lock without revoking the server OAuth grant",
+    }),
   };
 
   async run(): Promise<void> {
     const { flags } = await this.parse(LogoutCommand);
+    if (flags.force) {
+      runForceLogout({ configDir: this.config.configDir });
+      return;
+    }
+
     let releaseCredentialsLock: () => void;
     try {
       releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);

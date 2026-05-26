@@ -23,10 +23,30 @@ flag or use generated operation output that can be piped into tools such as
 .SH AUTHENTICATION
 Commands use saved OAuth credentials from
 .B primitive signin
+or
+.B primitive login
 or an API key from
 .B --api-key
 or
 .BR PRIMITIVE_API_KEY .
+.PP
+Run
+.B primitive signin EMAIL --signup-code CODE --accept-terms
+to start email-code sign-in, then run
+.B primitive signin confirm EMAIL CODE
+with the emailed verification code.
+.B primitive login EMAIL
+and
+.B primitive otp EMAIL
+support the same email-code flow. Run
+.B primitive signin
+or
+.B primitive login
+with no email to use browser approval.
+.PP
+Run
+.B primitive logout --force
+to remove local credentials, pending email-code auth state, and stale credential locks without contacting Primitive.
 .PP
 Run
 .B primitive whoami

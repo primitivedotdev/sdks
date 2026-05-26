@@ -63,6 +63,12 @@
       "signin": {
         "description": "Sign in to an existing Primitive account"
       },
+      "login": {
+        "description": "Log in to an existing Primitive account"
+      },
+      "otp": {
+        "description": "Authenticate with an emailed one-time code"
+      },
       "sent": {
         "description": "Short aliases for outbound sent-email history: `primitive sent list` and `primitive sent get`."
       },

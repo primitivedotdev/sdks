@@ -2,6 +2,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   statSync,
   utimesSync,
@@ -148,14 +149,23 @@ describe("CLI auth credentials", () => {
   });
 
   it("serializes credential updates with a lock directory", () => {
-    const release = acquireCliCredentialsLock(tempDir);
+    const release = acquireCliCredentialsLock(tempDir, {
+      installSignalHandlers: false,
+    });
+
+    const owner = JSON.parse(
+      readFileSync(join(tempDir, "credentials.lock", "owner.json"), "utf8"),
+    );
+    expect(owner.pid).toBe(process.pid);
 
     expect(() => acquireCliCredentialsLock(tempDir)).toThrow(
       /already in progress/,
     );
 
     release();
-    const releaseAgain = acquireCliCredentialsLock(tempDir);
+    const releaseAgain = acquireCliCredentialsLock(tempDir, {
+      installSignalHandlers: false,
+    });
     releaseAgain();
   });
 
@@ -167,13 +177,54 @@ describe("CLI auth credentials", () => {
     utimesSync(lockPath, staleTime, staleTime);
 
     const release = acquireCliCredentialsLock(tempDir, {
+      installSignalHandlers: false,
       now: () => now,
       staleMs: 1_000,
     });
 
     expect(() =>
-      acquireCliCredentialsLock(tempDir, { now: () => now, staleMs: 1_000 }),
+      acquireCliCredentialsLock(tempDir, {
+        installSignalHandlers: false,
+        now: () => now,
+        staleMs: 1_000,
+      }),
     ).toThrow(/already in progress/);
     release();
+  });
+
+  it("recovers credential lock directories owned by dead processes", () => {
+    const lockPath = join(tempDir, "credentials.lock");
+    mkdirSync(lockPath, { mode: 0o700 });
+    writeFileSync(
+      join(lockPath, "owner.json"),
+      `${JSON.stringify({ pid: 999_999, created_at: "2026-05-05T00:00:00.000Z" })}\n`,
+    );
+
+    const release = acquireCliCredentialsLock(tempDir, {
+      installSignalHandlers: false,
+      isProcessRunning: () => false,
+      now: () => new Date("2026-05-05T00:00:00.000Z").getTime(),
+      staleMs: 30 * 60 * 1000,
+    });
+
+    release();
+  });
+
+  it("keeps credential lock directories owned by live processes", () => {
+    const lockPath = join(tempDir, "credentials.lock");
+    mkdirSync(lockPath, { mode: 0o700 });
+    writeFileSync(
+      join(lockPath, "owner.json"),
+      `${JSON.stringify({ pid: 123, created_at: "2026-05-05T00:00:00.000Z" })}\n`,
+    );
+
+    expect(() =>
+      acquireCliCredentialsLock(tempDir, {
+        installSignalHandlers: false,
+        isProcessRunning: () => true,
+        now: () => new Date("2026-05-05T00:00:00.000Z").getTime(),
+        staleMs: 30 * 60 * 1000,
+      }),
+    ).toThrow(/primitive logout --force/);
   });
 });
