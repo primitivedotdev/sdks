@@ -21,8 +21,7 @@ export {
 
 // `primitive functions:init <name>` stamps a deployable Function project
 // into ./<name>/ so a new author can go from zero to a deployed handler
-// in two commands: `npm install && npm run build` then
-// `primitive functions:deploy --name <name> --file ./dist/handler.js`.
+// in two commands: `npm install` then `npm run deploy`.
 //
 // The scaffolded handler imports `createPrimitiveClient` from
 // `@primitivedotdev/sdk/api`, NOT from the package root. The root export
@@ -191,10 +190,9 @@ class FunctionsInitCommand extends Command {
     this.log("Next:");
     this.log(`  cd ${outDir}`);
     this.log("  npm install");
-    this.log("  npm run build");
-    this.log(
-      `  primitive functions deploy --name ${args.name} --file ./dist/handler.js`,
-    );
+    this.log("  npm run deploy");
+    this.log("  export PRIMITIVE_FUNCTION_ID=<id-from-deploy-output>");
+    this.log("  npm run test:function");
   }
 }
 

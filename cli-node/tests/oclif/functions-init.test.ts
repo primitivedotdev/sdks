@@ -162,20 +162,28 @@ describe("renderHandler", () => {
     );
     expect(handler).toMatch(/recipient_not_allowed/i);
   });
+
+  it("shows the exact secret command shape for API keys", () => {
+    const handler = renderHandler();
+    expect(handler).toContain(
+      "primitive functions set-secret --id <fn-id> --key OPENAI_KEY --value-from-env OPENAI_KEY --redeploy",
+    );
+  });
 });
 
-describe("renderHandler loop protection + REPLY_FROM constant", () => {
-  it("declares a REPLY_FROM constant scoped to loop protection", () => {
-    // REPLY_FROM is the loop-protection knob: handlers that send
-    // outbound from a non-managed domain need to recognize replies
-    // returning to that address as self-traffic. The comment above
-    // the const must make it clear this is for the isLoop helper
-    // (not a literal "TODO replace before deploying" — the scaffolder
-    // no longer wires REPLY_FROM into the outbound from-address;
-    // client.reply lets the server default it).
+describe("renderHandler loop protection", () => {
+  it("declares optional extra self addresses scoped to loop protection", () => {
+    // EXTRA_SELF_ADDRESSES is the loop-protection knob for handlers
+    // that later switch to client.send() or some other explicit
+    // outbound from-address. client.reply still server-defaults the
+    // outbound from the inbound recipient, so the generated handler
+    // should not force users to edit this before first deploy.
     const handler = renderHandler();
-    expect(handler).toContain("const REPLY_FROM =");
-    const beforeConst = handler.slice(0, handler.indexOf("const REPLY_FROM"));
+    expect(handler).toContain("const EXTRA_SELF_ADDRESSES");
+    const beforeConst = handler.slice(
+      0,
+      handler.indexOf("const EXTRA_SELF_ADDRESSES"),
+    );
     expect(beforeConst).toMatch(/loop[- ]protection/i);
   });
 
@@ -198,39 +206,34 @@ describe("renderHandler loop protection + REPLY_FROM constant", () => {
     expect(handler).toMatch(/skipped:\s*["']loop["']/);
   });
 
-  it("isLoop covers the managed *.primitive.email suffix and the REPLY_FROM address", () => {
-    // The default predicate has two arms: any From on a managed
-    // *.primitive.email address (covers bounces from
-    // mailer-daemon@*.primitive.email as well as the simple self-reply
-    // case), and the configured
-    // REPLY_FROM. Comparisons are case-insensitive because RFC 2822
-    // email-address local parts are case-insensitive in practice.
+  it("derives loop checks from inbound recipients instead of managed-domain suffixes", () => {
+    // AGX regression: the previous template hardcoded ".primitive.email",
+    // which missed staging domains like ".primitive-staging.email" and
+    // would miss any future managed-domain suffix. The scaffold should
+    // derive self-domain/bounce checks from the actual SMTP recipients.
     const handler = renderHandler();
-    expect(handler).toContain(".primitive.email");
-    expect(handler).toContain("REPLY_FROM.toLowerCase()");
-    // Substring match (.includes), not strict equality: the From
-    // header can be a bare address or display-name form.
-    expect(handler).toMatch(/from\.includes\(["']\.primitive\.email["']\)/);
-    expect(handler).not.toMatch(
-      /event\.email\.headers\.from\s*===\s*REPLY_FROM/,
-    );
+    expect(handler).toContain("event.email.smtp.rcpt_to");
+    expect(handler).toContain("event.email.headers.to");
+    expect(handler).toContain("inboundRecipientDomains");
+    expect(handler).toContain('fromLocal === "mailer-daemon"');
+    expect(handler).toContain('fromLocal === "postmaster"');
+    expect(handler).not.toContain(".primitive.email");
+    expect(handler).not.toContain(".primitive-staging.email");
   });
 
-  it("documents that the default isLoop is intentionally small and where to extend", () => {
-    // The default helper covers managed-domain mail (anything on
-    // *.primitive.email). Auto-Submitted detection, Message-ID chain
-    // tracking, and signup-email matching are deliberately left to
-    // the user. The comment block above isLoop must list these as
-    // extension points so the next person knows where to add the
-    // sophistication.
+  it("documents that isLoop is suffix-agnostic and where to extend", () => {
+    // Auto-Submitted detection and Message-ID chain tracking are
+    // deliberately left to the user. The comment block above isLoop
+    // must list these as extension points so the next person knows
+    // where to add the sophistication.
     const handler = renderHandler();
     const beforeHelper = handler.slice(
       0,
       handler.indexOf("export function isLoop"),
     );
+    expect(beforeHelper).toContain("staging, production, and custom domains");
     expect(beforeHelper).toContain("auto-submitted");
     expect(beforeHelper).toContain("Message-ID");
-    expect(beforeHelper).toMatch(/signup/i);
   });
 
   it("includes a recipient-routing comment block pointing at event.email.headers.to", () => {
@@ -243,23 +246,20 @@ describe("renderHandler loop protection + REPLY_FROM constant", () => {
     expect(handler).toContain("event.email.headers.to");
   });
 
-  it("uses REPLY_FROM only inside isLoop, never as an outbound from-address", () => {
-    // Post-client.reply scaffolder: REPLY_FROM is loop-protection-only.
+  it("uses extra self addresses only inside isLoop, never as an outbound from-address", () => {
     // client.reply server-defaults the outbound from-address from the
-    // inbound recipient, so the scaffolded handler must NOT pass
-    // REPLY_FROM as `from` to any send/reply call. The placeholder
-    // address itself must still appear exactly once (in the const).
+    // inbound recipient, so the scaffolded handler must NOT pass the
+    // loop-protection address list as `from` to any send/reply call.
     const handler = renderHandler();
-    const occurrences = (
-      handler.match(/you@your-domain\.primitive\.email/g) ?? []
-    ).length;
+    const occurrences = (handler.match(/bot@your-domain\.example/g) ?? [])
+      .length;
     expect(occurrences).toBe(1);
-    expect(handler).not.toContain("from: REPLY_FROM");
+    expect(handler).not.toContain("from: EXTRA_SELF_ADDRESSES");
     expect(handler).not.toMatch(
-      /to:\s*event\.email\.headers\.from\s*\?\?\s*REPLY_FROM/,
+      /to:\s*event\.email\.headers\.from\s*\?\?\s*EXTRA_SELF_ADDRESSES/,
     );
-    // REPLY_FROM must still be referenced by isLoop (loop-protection use).
-    expect(handler).toMatch(/REPLY_FROM\.toLowerCase\(\)/);
+    // The list must still be referenced by isLoop (loop-protection use).
+    expect(handler).toMatch(/EXTRA_SELF_ADDRESSES\.map/);
   });
 });
 
@@ -360,12 +360,17 @@ describe("renderPackageJson", () => {
     const parsed = JSON.parse(raw) as { scripts: Record<string, string> };
     expect(parsed.scripts.deploy).toContain("--name forwarder");
     expect(parsed.scripts.deploy).toContain("./dist/handler.js");
+    expect(parsed.scripts.deploy).toContain("--wait");
   });
 
-  it("uses PRIMITIVE_FUNCTION_ID in the redeploy script for cross-shell portability", () => {
+  it("uses PRIMITIVE_FUNCTION_ID in follow-up scripts for cross-shell portability", () => {
     const raw = renderPackageJson("forwarder");
     const parsed = JSON.parse(raw) as { scripts: Record<string, string> };
     expect(parsed.scripts.redeploy).toContain("$PRIMITIVE_FUNCTION_ID");
+    expect(parsed.scripts.redeploy).toContain("--wait");
+    expect(parsed.scripts["test:function"]).toContain("$PRIMITIVE_FUNCTION_ID");
+    expect(parsed.scripts["test:function"]).toContain("--show-sends");
+    expect(parsed.scripts.logs).toContain("$PRIMITIVE_FUNCTION_ID");
   });
 });
 
@@ -489,6 +494,11 @@ describe("writeScaffold", () => {
     const readme = readFileSync(resolve(outDir, "README.md"), "utf8");
     expect(readme).toContain("# test-fn");
     expect(readme).toContain("npm run deploy");
+    expect(readme).toContain("export PRIMITIVE_FUNCTION_ID=<fn-id>");
+    expect(readme).toContain("npm run test:function");
+    expect(readme).toContain("npm run logs");
+    expect(readme).toContain("primitive functions set-secret --id");
+    expect(readme).toContain("--value-from-env OPENAI_KEY --redeploy");
   });
 
   it("refuses to overwrite an existing directory and leaves it untouched", () => {
