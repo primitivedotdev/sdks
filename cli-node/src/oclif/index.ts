@@ -51,6 +51,7 @@ import SignupCommand, {
   SignupConfirmCommand,
   SignupInteractiveCommand,
   SignupResendCommand,
+  SignupStatusCommand,
 } from "./commands/signup.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
@@ -420,6 +421,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   "signup:confirm": SignupConfirmCommand,
   "signup:interactive": SignupInteractiveCommand,
   "signup:resend": SignupResendCommand,
+  "signup:status": SignupStatusCommand,
   // `logout` revokes the saved OAuth grant and removes local credentials.
   logout: LogoutCommand,
   // `whoami` is the credentials smoke test. Prints the account the

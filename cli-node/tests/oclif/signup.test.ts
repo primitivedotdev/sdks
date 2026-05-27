@@ -17,8 +17,14 @@ import {
   runSignupInteractiveWithCredentialLock,
   runSignupResendWithCredentialLock,
   runSignupStartWithCredentialLock,
+  runSignupStatus,
+  SignupConfirmCommand,
+  SignupInteractiveCommand,
+  SignupResendCommand,
+  SignupStatusCommand,
   savePendingAgentSignup,
 } from "../../src/oclif/commands/signup.js";
+import { COMMANDS } from "../../src/oclif/index.js";
 
 const START_RESULT = {
   email: "test@example.com",
@@ -114,16 +120,30 @@ describe("signup command helpers", () => {
 
 describe("agent signup commands", () => {
   let tempDir: string;
+  let stdoutSpy: ReturnType<typeof vi.spyOn>;
   let writeSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), "primitive-cli-signup-test-"));
+    stdoutSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
     writeSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   });
 
   afterEach(() => {
+    stdoutSpy.mockRestore();
     writeSpy.mockRestore();
     rmSync(tempDir, { force: true, recursive: true });
+  });
+
+  it("routes exact signup command shapes", () => {
+    expect(COMMANDS["signup:confirm"]).toBe(SignupConfirmCommand);
+    expect(COMMANDS["signup:interactive"]).toBe(SignupInteractiveCommand);
+    expect(COMMANDS["signup:resend"]).toBe(SignupResendCommand);
+    expect(COMMANDS["signup:status"]).toBe(SignupStatusCommand);
+    expect(SignupResendCommand.args.email.required).toBe(false);
+    expect(SignupStatusCommand.flags.json).toBeDefined();
   });
 
   it("starts signup from email and saves the pending token", async () => {
@@ -203,9 +223,132 @@ describe("agent signup commands", () => {
       "Continuing pending Primitive signup for test@example.com.\n",
     );
     expect(stderr).toContain(
-      "Run `primitive signup confirm test@example.com <code>` to finish, or `primitive signup resend test@example.com` to send a new code.\n",
+      "Run `primitive signup confirm test@example.com <code>` to finish, `primitive signup resend test@example.com` to send a new code, or `primitive signup status` to inspect it.\n",
     );
     expect(stderr).not.toContain("Sent a 6-digit verification code");
+  });
+
+  it("prints useful status for a pending signup", () => {
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    runSignupStatus({
+      configDir: tempDir,
+      flags: {},
+    });
+
+    const stdout = stdoutSpy.mock.calls
+      .map((call: unknown[]) => String(call[0]))
+      .join("");
+    expect(stdout).toContain(
+      "Pending Primitive signup for test@example.com.\n",
+    );
+    expect(stdout).toContain("Verification code length: 6\n");
+    expect(stdout).toContain("Expires at: ");
+    expect(stdout).toContain("Expires in: 30 minutes\n");
+    expect(stdout).toContain("Resend after: 1 minute\n");
+    expect(stdout).toContain(
+      "Confirm: primitive signup confirm test@example.com <code>\n",
+    );
+    expect(stdout).toContain(
+      "Resend: primitive signup resend test@example.com\n",
+    );
+  });
+
+  it("prints pending signup status as JSON", () => {
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    runSignupStatus({
+      configDir: tempDir,
+      flags: { json: true },
+    });
+
+    const status = JSON.parse(
+      stdoutSpy.mock.calls.map((call: unknown[]) => String(call[0])).join(""),
+    );
+    expect(status).toMatchObject({
+      code_length: 6,
+      confirm_command: "primitive signup confirm test@example.com <code>",
+      email: "test@example.com",
+      expired: false,
+      pending: true,
+      resend_after: 60,
+      resend_command: "primitive signup resend test@example.com",
+    });
+    expect(status.expires_at).toEqual(expect.any(String));
+    expect(status.expires_in).toEqual(expect.any(Number));
+  });
+
+  it("reports no pending signup in text and JSON", () => {
+    runSignupStatus({
+      configDir: tempDir,
+      email: "new@example.com",
+      flags: {},
+    });
+    let stdout = stdoutSpy.mock.calls
+      .map((call: unknown[]) => String(call[0]))
+      .join("");
+    expect(stdout).toContain("No pending Primitive signup found.\n");
+    expect(stdout).toContain(
+      "Start one with `primitive signup new@example.com --signup-code <invite-code> --accept-terms`.\n",
+    );
+
+    stdoutSpy.mockClear();
+    runSignupStatus({
+      configDir: tempDir,
+      flags: { json: true },
+    });
+
+    stdout = stdoutSpy.mock.calls
+      .map((call: unknown[]) => String(call[0]))
+      .join("");
+    expect(JSON.parse(stdout)).toMatchObject({
+      email: null,
+      expired: false,
+      pending: false,
+      signup_command:
+        "primitive signup <email> --signup-code <invite-code> --accept-terms",
+    });
+  });
+
+  it("reports expired pending signup state without deleting it", () => {
+    writeFileSync(
+      join(tempDir, "signup.json"),
+      `${JSON.stringify({
+        ...START_RESULT,
+        api_base_url_1: DEFAULT_API_BASE_URL_1,
+        created_at: "2026-05-01T00:00:00.000Z",
+        expires_at: "2026-05-01T00:01:00.000Z",
+      })}\n`,
+    );
+
+    runSignupStatus({
+      configDir: tempDir,
+      flags: { json: true },
+    });
+
+    const status = JSON.parse(
+      stdoutSpy.mock.calls.map((call: unknown[]) => String(call[0])).join(""),
+    );
+    expect(status).toMatchObject({
+      email: "test@example.com",
+      expired: true,
+      expires_at: "2026-05-01T00:01:00.000Z",
+      expires_in: 0,
+      pending: true,
+    });
+    expect(existsSync(join(tempDir, "signup.json"))).toBe(true);
+  });
+
+  it("fails status clearly when the supplied email does not match", () => {
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    expect(() =>
+      runSignupStatus({
+        configDir: tempDir,
+        email: "other@example.com",
+        flags: {},
+      }),
+    ).toThrow(/Pending signup is for test@example.com, not other@example.com/);
   });
 
   it("checks existing credentials as an already-locked operation", async () => {
@@ -318,6 +461,23 @@ describe("agent signup commands", () => {
       expires_in: expect.any(Number),
       signup_token: START_RESULT.signup_token,
     });
+  });
+
+  it("infers the resend email from pending signup state", async () => {
+    const deps = flowDeps({});
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+
+    await runSignupResendWithCredentialLock({
+      configDir: tempDir,
+      deps,
+      flags: {},
+    });
+
+    expect(deps.resendAgentSignupVerification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: { signup_token: START_RESULT.signup_token },
+      }),
+    );
   });
 
   it("does not claim a resend occurred when the API says to slow down", async () => {
