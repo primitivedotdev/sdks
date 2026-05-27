@@ -1433,13 +1433,18 @@ paths:
         derivation (Reply-To, then From, then bare sender), and the
         `Re:` subject prefix are all derived server-side from the
         stored inbound row. The request body carries only the message
-        body and optional `wait` flag; passing any header or recipient
-        override is rejected by the schema (`additionalProperties:
-        false`).
+        body, optional From override, optional attachments, and optional
+        `wait` flag; passing any header or recipient override is
+        rejected by the schema (`additionalProperties: false`).
 
         Forwards through the same gates as `/send-mail`: the response
         status, error envelope, and `idempotent_replay` flag mirror
         the send-mail contract verbatim.
+      servers:
+        - url: https://api.primitive.dev/v1
+          description: Attachments-supporting send host (recommended)
+        - url: https://www.primitive.dev/api/v1
+          description: Primary host (attachment-free replies only)
       tags: [Sending]
       requestBody:
         required: true
@@ -5133,6 +5138,12 @@ components:
         wait:
           type: boolean
           description: When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics.
+        attachments:
+          type: array
+          maxItems: 100
+          description: Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most 31457280.
+          items:
+            $ref: '#/components/schemas/SendMailAttachment'
 
     SendMailResult:
       type: object

@@ -1,6 +1,10 @@
 import { Errors } from "@oclif/core";
 import { describe, expect, it } from "vitest";
 import { readAttachmentFiles } from "../../src/oclif/attachments.js";
+import ChatCommand, {
+  ChatReplyCommand,
+} from "../../src/oclif/commands/chat.js";
+import ReplyCommand from "../../src/oclif/commands/reply.js";
 import SendCommand from "../../src/oclif/commands/send.js";
 
 describe("readAttachmentFiles", () => {
@@ -78,5 +82,37 @@ describe("send attachment flag", () => {
 
     expect(flag.description).toContain("does not attach the file");
     expect(flag.description).toContain("--attachment");
+  });
+});
+
+describe("reply attachment flags", () => {
+  it("exposes repeatable --attachment on the top-level reply command", () => {
+    const flag = ReplyCommand.flags.attachment as {
+      description?: string;
+      multiple?: boolean;
+    };
+    const bodyFileFlag = ReplyCommand.flags["body-file"] as {
+      description?: string;
+    };
+
+    expect(flag).toBeDefined();
+    expect(flag.multiple).toBe(true);
+    expect(flag.description).toContain("Attach a file");
+    expect(bodyFileFlag.description).toContain("does not attach the file");
+    expect(bodyFileFlag.description).toContain("--attachment");
+  });
+
+  it("exposes repeatable --attachment on chat and chat reply", () => {
+    const chatFlag = ChatCommand.flags.attachment as {
+      multiple?: boolean;
+    };
+    const chatReplyFlag = ChatReplyCommand.flags.attachment as {
+      multiple?: boolean;
+    };
+
+    expect(chatFlag).toBeDefined();
+    expect(chatFlag.multiple).toBe(true);
+    expect(chatReplyFlag).toBeDefined();
+    expect(chatReplyFlag.multiple).toBe(true);
   });
 });

@@ -486,9 +486,9 @@ type Handler interface {
 	// derivation (Reply-To, then From, then bare sender), and the
 	// `Re:` subject prefix are all derived server-side from the
 	// stored inbound row. The request body carries only the message
-	// body and optional `wait` flag; passing any header or recipient
-	// override is rejected by the schema (`additionalProperties:
-	// false`).
+	// body, optional From override, optional attachments, and optional
+	// `wait` flag; passing any header or recipient override is
+	// rejected by the schema (`additionalProperties: false`).
 	// Forwards through the same gates as `/send-mail`: the response
 	// status, error envelope, and `idempotent_replay` flag mirror
 	// the send-mail contract verbatim.

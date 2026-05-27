@@ -19,6 +19,7 @@ import {
   type GateDenial,
   type ErrorResponse as GeneratedErrorResponse,
   type ReplyInput as GeneratedReplyInput,
+  type SendMailAttachment as GeneratedSendMailAttachment,
   type SendMailInput as GeneratedSendMailInput,
   type SendMailResult as GeneratedSendMailResult,
   operations as generatedOperations,
@@ -86,6 +87,8 @@ export interface SendThreadInput {
   references?: string[];
 }
 
+export type SendAttachment = GeneratedSendMailAttachment;
+
 export interface SendInput {
   from: string;
   to: string;
@@ -123,6 +126,8 @@ export interface RequestOptions {
  *   display name (`"Acme Support" <agent@company.com>`) or to reply
  *   from a different verified outbound address. The from-domain must
  *   be a verified outbound domain for your org.
+ * - `attachments`: optional inline MIME attachments, using base64
+ *   content. The SDK routes replies to the attachment-capable host.
  * - `wait`: when true, wait for the first downstream SMTP delivery
  *   outcome before resolving. Mirrors send-mail's `wait` semantics.
  *
@@ -137,6 +142,7 @@ export type ReplyInput =
       text?: string;
       html?: string;
       from?: string;
+      attachments?: SendAttachment[];
       wait?: boolean;
     };
 
@@ -413,6 +419,9 @@ export class PrimitiveClient extends PrimitiveApiClient {
       ...(resolved.text !== undefined ? { body_text: resolved.text } : {}),
       ...(resolved.html !== undefined ? { body_html: resolved.html } : {}),
       ...(resolved.from !== undefined ? { from: resolved.from } : {}),
+      ...(resolved.attachments !== undefined
+        ? { attachments: resolved.attachments }
+        : {}),
       ...(resolved.wait !== undefined ? { wait: resolved.wait } : {}),
     };
 
@@ -420,7 +429,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
       body,
       path: { id: email.id },
       ...resolveRequestOptions(options),
-      client: this.client,
+      client: this._sendClient,
       responseStyle: "fields",
     });
     return unwrapSendResult(result);

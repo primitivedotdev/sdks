@@ -8,7 +8,10 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from typing import cast
 
+if TYPE_CHECKING:
+  from ..models.send_mail_attachment import SendMailAttachment
 
 
 
@@ -44,18 +47,23 @@ class ReplyInput:
                 verified outbound domain for your org, same as send-mail.
             wait (bool | Unset): When true, wait for the first downstream SMTP delivery outcome before returning, mirroring
                 the send-mail `wait` semantics.
+            attachments (list[SendMailAttachment] | Unset): Inline attachments for this reply. Use
+                https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most
+                31457280.
      """
 
     body_text: str | Unset = UNSET
     body_html: str | Unset = UNSET
     from_: str | Unset = UNSET
     wait: bool | Unset = UNSET
+    attachments: list[SendMailAttachment] | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.send_mail_attachment import SendMailAttachment
         body_text = self.body_text
 
         body_html = self.body_html
@@ -63,6 +71,15 @@ class ReplyInput:
         from_ = self.from_
 
         wait = self.wait
+
+        attachments: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.attachments, Unset):
+            attachments = []
+            for attachments_item_data in self.attachments:
+                attachments_item = attachments_item_data.to_dict()
+                attachments.append(attachments_item)
+
+
 
 
         field_dict: dict[str, Any] = {}
@@ -77,6 +94,8 @@ class ReplyInput:
             field_dict["from"] = from_
         if wait is not UNSET:
             field_dict["wait"] = wait
+        if attachments is not UNSET:
+            field_dict["attachments"] = attachments
 
         return field_dict
 
@@ -84,6 +103,7 @@ class ReplyInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.send_mail_attachment import SendMailAttachment
         d = dict(src_dict)
         body_text = d.pop("body_text", UNSET)
 
@@ -93,11 +113,24 @@ class ReplyInput:
 
         wait = d.pop("wait", UNSET)
 
+        _attachments = d.pop("attachments", UNSET)
+        attachments: list[SendMailAttachment] | Unset = UNSET
+        if _attachments is not UNSET:
+            attachments = []
+            for attachments_item_data in _attachments:
+                attachments_item = SendMailAttachment.from_dict(attachments_item_data)
+
+
+
+                attachments.append(attachments_item)
+
+
         reply_input = cls(
             body_text=body_text,
             body_html=body_html,
             from_=from_,
             wait=wait,
+            attachments=attachments,
         )
 
         return reply_input

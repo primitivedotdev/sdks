@@ -340,6 +340,52 @@ describe("PrimitiveClient", () => {
     await client.reply(RECEIVED_EMAIL, "Thank you for your email.");
   });
 
+  it("posts reply attachments to the attachment-capable host", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl1: "https://primary.example.test/api/v1",
+      apiBaseUrl2: "https://send.example.test/api/v1",
+      fetch: vi.fn<typeof fetch>(async (input) => {
+        const request = input as Request;
+        expect(request.url).toBe(
+          "https://send.example.test/api/v1/emails/00000000-0000-0000-0000-000000000001/reply",
+        );
+        expect(await request.json()).toEqual({
+          attachments: [
+            {
+              content_base64: "aGVsbG8=",
+              filename: "report.txt",
+            },
+          ],
+          body_text: "See attached.",
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              ...SEND_RESULT,
+              queue_id: "reply-attachment-1",
+              accepted: ["alice@example.com"],
+              rejected: [],
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }) as typeof fetch,
+    });
+
+    await client.reply(RECEIVED_EMAIL, {
+      text: "See attached.",
+      attachments: [
+        {
+          content_base64: "aGVsbG8=",
+          filename: "report.txt",
+        },
+      ],
+    });
+  });
+
   it("builds forwarded content through send", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",

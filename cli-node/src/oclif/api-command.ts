@@ -645,8 +645,8 @@ export function resolveCliAuthFromFlags(
 // Operations that route to the attachments-supporting host
 // (apiBaseUrl2) instead of the primary API host. Internal to the CLI:
 // as more operations migrate to host 2 over time, add their generated
-// sdkName here. Today it is just /send-mail.
-const HOST_2_OPERATIONS = new Set<string>(["sendEmail"]);
+// sdkName here.
+const HOST_2_OPERATIONS = new Set<string>(["sendEmail", "replyToEmail"]);
 
 // Reserved flag names the body-field expander must never overwrite.
 // `--raw-body` and `--body-file` are the JSON escape hatches.
@@ -1023,8 +1023,7 @@ export function createOperationCommand(
           operation.sdkName as OperationName
         ] as unknown as OperationExecutor;
         // Operations in HOST_2_OPERATIONS route to the attachments-
-        // supporting send host (apiBaseUrl2). Today that's only
-        // sendEmail; the list grows as we migrate more endpoints.
+        // supporting send host (apiBaseUrl2).
         const targetClient = HOST_2_OPERATIONS.has(operation.sdkName)
           ? apiClient._sendClient
           : apiClient.client;

@@ -25110,13 +25110,24 @@ func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 			s.Wait.Encode(e)
 		}
 	}
+	{
+		if s.Attachments != nil {
+			e.FieldStart("attachments")
+			e.ArrStart()
+			for _, elem := range s.Attachments {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfReplyInput = [4]string{
+var jsonFieldsNameOfReplyInput = [5]string{
 	0: "body_text",
 	1: "body_html",
 	2: "from",
 	3: "wait",
+	4: "attachments",
 }
 
 // Decode decodes ReplyInput from json.
@@ -25166,6 +25177,23 @@ func (s *ReplyInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"wait\"")
+			}
+		case "attachments":
+			if err := func() error {
+				s.Attachments = make([]SendMailAttachment, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem SendMailAttachment
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Attachments = append(s.Attachments, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"attachments\"")
 			}
 		default:
 			return errors.Errorf("unexpected field %q", k)

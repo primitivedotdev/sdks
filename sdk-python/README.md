@@ -111,6 +111,12 @@ client.reply(
     {
         "text": "Thanks for your email.",
         "html": "<p>Thanks for your email.</p>",
+        "attachments": [
+            {
+                "filename": "report.txt",
+                "content_base64": "aGVsbG8=",
+            }
+        ],
         "wait": True,
     },
 )

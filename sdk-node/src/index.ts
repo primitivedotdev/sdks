@@ -21,6 +21,7 @@ export {
   PrimitiveClient,
   type PrimitiveClientOptions,
   type ReplyInput,
+  type SendAttachment,
   type SendInput,
   type SendResult,
   type SendThreadInput,

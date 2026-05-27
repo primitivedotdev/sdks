@@ -12027,6 +12027,9 @@ type ReplyInput struct {
 	// When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the
 	// send-mail `wait` semantics.
 	Wait OptBool `json:"wait"`
+	// Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments.
+	// Combined raw decoded attachment bytes must be at most 31457280.
+	Attachments []SendMailAttachment `json:"attachments"`
 }
 
 // GetBodyText returns the value of BodyText.
@@ -12049,6 +12052,11 @@ func (s *ReplyInput) GetWait() OptBool {
 	return s.Wait
 }
 
+// GetAttachments returns the value of Attachments.
+func (s *ReplyInput) GetAttachments() []SendMailAttachment {
+	return s.Attachments
+}
+
 // SetBodyText sets the value of BodyText.
 func (s *ReplyInput) SetBodyText(val OptString) {
 	s.BodyText = val
@@ -12067,6 +12075,11 @@ func (s *ReplyInput) SetFrom(val OptString) {
 // SetWait sets the value of Wait.
 func (s *ReplyInput) SetWait(val OptBool) {
 	s.Wait = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *ReplyInput) SetAttachments(val []SendMailAttachment) {
+	s.Attachments = val
 }
 
 type ReplyToEmailBadGateway ErrorResponse

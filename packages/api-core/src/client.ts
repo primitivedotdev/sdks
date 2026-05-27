@@ -19,11 +19,11 @@ import type {
   ErrorResponse as GeneratedErrorResponse,
 } from "./api/index.js";
 
-// Default production hosts. Two-host split exists because /send-mail
-// needs a larger body cap than Vercel allows; host 2 is a Cloudflare
-// Worker that accepts ~30 MiB raw. Host 1 carries everything else.
-// Customers don't see this split: PrimitiveClient.send() always routes
-// to host 2 internally, every other operation routes to host 1.
+// Default production hosts. Two-host split exists because message
+// endpoints with inline attachments need a larger body cap than Vercel
+// allows; host 2 is a Cloudflare Worker that accepts ~30 MiB raw. Host
+// 1 carries everything else. Customers don't see this split:
+// PrimitiveClient.send() and .reply() route to host 2 internally.
 //
 // Both base URLs are independently overridable via constructor options.
 // Override is for internal staging/local testing; not part of the
@@ -103,18 +103,19 @@ export class PrimitiveApiClient {
   /**
    * Generated client targeting the primary API host (apiBaseUrl1). Use
    * this when passing `client: ...` to a generated operation function
-   * for every endpoint EXCEPT /send-mail. The hand-written
-   * PrimitiveClient.send / .reply / .forward methods on the subclass
-   * route /send-mail to the host-2 client internally.
+   * for every endpoint EXCEPT attachment-capable message sends. The
+   * hand-written PrimitiveClient.send / .reply / .forward methods on
+   * the subclass route those sends to the host-2 client internally.
    */
   readonly client: GeneratedClient;
   /**
    * @internal Generated client targeting the attachments-supporting
-   * send host (apiBaseUrl2). Used by PrimitiveClient.send() under the
-   * hood. Exposed for the CLI's hand-rolled send command, which calls
-   * the generated sendEmail directly; not part of the publicly-
-   * documented SDK surface. Customer code should call .send() on the
-   * subclass instead.
+   * send host (apiBaseUrl2). Used by PrimitiveClient.send() and
+   * PrimitiveClient.reply() under the hood. Exposed for the CLI's
+   * hand-rolled send/reply commands, which call generated operations
+   * directly; not part of the publicly-documented SDK surface.
+   * Customer code should call .send() / .reply() on the subclass
+   * instead.
    */
   readonly _sendClient: GeneratedClient;
 

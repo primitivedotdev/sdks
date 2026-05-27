@@ -6417,7 +6417,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "reply-to-email",
-    "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody and optional `wait` flag; passing any header or recipient\noverride is rejected by the schema (`additionalProperties:\nfalse`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
+    "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody, optional From override, optional attachments, and optional\n`wait` flag; passing any header or recipient override is\nrejected by the schema (`additionalProperties: false`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "replyToEmail",
@@ -6454,6 +6454,39 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "wait": {
           "type": "boolean",
           "description": "When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics."
+        },
+        "attachments": {
+          "type": "array",
+          "maxItems": 100,
+          "description": "Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most 31457280.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "filename": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "description": "Attachment filename. Control characters are rejected."
+              },
+              "content_type": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "description": "Optional MIME content type. Control characters are rejected."
+              },
+              "content_base64": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 44040192,
+                "description": "Base64-encoded attachment bytes."
+              }
+            },
+            "required": [
+              "filename",
+              "content_base64"
+            ]
+          }
         }
       }
     },

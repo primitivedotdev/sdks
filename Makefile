@@ -70,7 +70,9 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" completion bash >/dev/null && \
 	"$$bin" send --help | grep -q -- "--attachment" && \
 	"$$bin" reply --help | grep -q -- "--wait" && \
+	"$$bin" reply --help | grep -q -- "--attachment" && \
 	if "$$bin" reply --help | grep -q -- "--wait-timeout-ms"; then echo "reply help must not advertise unsupported --wait-timeout-ms"; exit 1; fi && \
+	"$$bin" sending reply-to-email --help | grep -q -- "attachments" && \
 	"$$bin" sending send-email --help | grep -q -- "attachments" && \
 	"$$bin" domains list --json --help | grep -q -- "--json" && \
 	"$$bin" domains list --help | grep -q -- "--json" && \
@@ -117,8 +119,10 @@ cli-smoke: cli-build cli-tarball-isolation
 	if "$$bin" chat --help | grep -q -- "--subject"; then echo "chat help must not advertise --subject"; exit 1; fi && \
 	"$$bin" chat --help | grep -q -- "--reply-to-email-id" && \
 	"$$bin" chat --help | grep -q -- "--strict-only" && \
+	"$$bin" chat --help | grep -q -- "--attachment" && \
 	"$$bin" chat reply --help | grep -q -- "Reply in the active chat" && \
 	"$$bin" chat reply --help | grep -q -- "--id" && \
+	"$$bin" chat reply --help | grep -q -- "--attachment" && \
 	chat_reply_home="$$smoke_dir/chat-reply-home" && \
 	if HOME="$$chat_reply_home" XDG_CONFIG_HOME="$$chat_reply_home/.config" PRIMITIVE_CONFIG_DIR= "$$bin" chat reply "hello" >"$$smoke_dir/chat-reply.out" 2>"$$smoke_dir/chat-reply.err"; then echo "chat reply should require an active chat"; exit 1; fi && \
 	grep -q -- "No open chat" "$$smoke_dir/chat-reply.err" && \

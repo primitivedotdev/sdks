@@ -417,6 +417,62 @@ def test_reply_posts_to_reply_endpoint_with_minimal_body(monkeypatch: pytest.Mon
     assert captured["body"] == {"body_text": "Thank you for your email."}
 
 
+def test_reply_posts_attachments_to_send_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_reply_to_email_sync_detailed(*, id, client, body):
+        captured["id"] = str(id)
+        captured["base_url"] = cast(Any, client)._base_url
+        captured["body"] = body.to_dict()
+        return SimpleNamespace(
+            status_code=HTTPStatus.OK,
+            parsed=ReplyToEmailResponse200.from_dict(
+                {
+                    "success": True,
+                    "data": {
+                        **SEND_RESULT,
+                        "queue_id": "reply-attachment-1",
+                    },
+                }
+            ),
+            content=b"",
+        )
+
+    monkeypatch.setattr(
+        client_module,
+        "reply_to_email_sync_detailed",
+        fake_reply_to_email_sync_detailed,
+    )
+
+    client = PrimitiveClient(
+        "prim_test",
+        api_base_url_1="https://primary.example.test/api/v1",
+        api_base_url_2="https://send.example.test/api/v1",
+    )
+    client.reply(
+        RECEIVED_EMAIL,
+        "See attached.",
+        attachments=[
+            {
+                "content_base64": "aGVsbG8=",
+                "filename": "report.txt",
+            },
+        ],
+    )
+
+    assert captured["id"] == RECEIVED_EMAIL.id
+    assert captured["base_url"] == "https://send.example.test/api/v1"
+    assert captured["body"] == {
+        "attachments": [
+            {
+                "content_base64": "aGVsbG8=",
+                "filename": "report.txt",
+            },
+        ],
+        "body_text": "See attached.",
+    }
+
+
 def test_reply_rejects_subject_override() -> None:
     """Custom subject would silently break Gmail threading; rejected
     at the SDK layer rather than letting the request hit the server."""

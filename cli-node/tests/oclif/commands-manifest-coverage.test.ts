@@ -111,8 +111,10 @@ describe("COMMANDS / manifest coverage", () => {
     };
     expect(chatCommand.flags.reply).toBeDefined();
     expect(chatCommand.flags["reply-to-email-id"]).toBeDefined();
+    expect(chatCommand.flags.attachment).toBeDefined();
     expect(chatCommand.flags["chat-local-id"]).toBeDefined();
     expect(chatReplyCommand.flags.id).toBeDefined();
+    expect(chatReplyCommand.flags.attachment).toBeDefined();
     expect(chatReplyCommand.flags["strict-only"]).toBeDefined();
   });
 
@@ -192,6 +194,7 @@ describe("COMMANDS / manifest coverage", () => {
       flags: Record<string, unknown>;
     };
     expect(replyCommand.flags.wait).toBeDefined();
+    expect(replyCommand.flags.attachment).toBeDefined();
     expect(replyCommand.flags["wait-timeout-ms"]).toBeUndefined();
   });
 
