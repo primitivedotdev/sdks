@@ -24,6 +24,7 @@ import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
 import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
 import FunctionsTemplatesCommand from "./commands/functions-templates.js";
 import FunctionsTestFunctionCommand from "./commands/functions-test-function.js";
+import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
 import LogoutCommand from "./commands/logout.js";
 import ReplyCommand from "./commands/reply.js";
@@ -449,6 +450,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // `inbox:status` is the guided readiness view for inbound setup. It folds
   // domain verification, endpoint/function processing, and recent mail into
   // the server-owned status API instead of making agents compose those lists.
+  "inbox:setup": InboxSetupCommand,
   "inbox:status": InboxStatusCommand,
   "inbox:get-inbox-status": InboxStatusCommand,
   // `functions:init` scaffolds a deployable Function project so a

@@ -153,8 +153,13 @@ describe("COMMANDS / manifest coverage", () => {
   });
 
   it("registers inbox status commands", () => {
+    expect(COMMANDS["inbox:setup"]).toBeDefined();
     expect(COMMANDS["inbox:status"]).toBeDefined();
     expect(COMMANDS["inbox:get-inbox-status"]).toBe(COMMANDS["inbox:status"]);
+    const inboxSetupCommand = COMMANDS["inbox:setup"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(inboxSetupCommand.flags.json).toBeDefined();
     const inboxStatusCommand = COMMANDS["inbox:status"] as unknown as {
       flags: Record<string, unknown>;
     };
