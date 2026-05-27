@@ -1573,6 +1573,51 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /emails/{id}/conversation:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+    get:
+      operationId: getConversation
+      summary: Get the conversation an email belongs to
+      description: |
+        Returns the full conversation the given inbound email belongs
+        to, as ordered, ready-to-prompt turns WITH bodies. It resolves
+        the thread from the email and returns every message oldest-first,
+        so an agent that received an email can pass `messages` straight
+        to a chat model in one call instead of walking `/threads/{id}`
+        plus `/emails/{id}` and `/sent-emails/{id}` per message.
+
+        Each message carries a `direction` (`inbound` | `outbound`) and a
+        derived `role`: `inbound` -> `user`, `outbound` -> `assistant`
+        (your own prior replies). The role mapping assumes the caller
+        owns the outbound side, which is the agent-reply case this exists
+        for. If the email has no thread yet (a brand-new message), the
+        conversation is just that one message as a single user turn.
+
+        The message list is capped; check `truncated` to detect when
+        older messages were omitted. Consecutive same-role turns are not
+        merged here; that normalization is model-specific and left to the
+        caller.
+      tags: [Emails]
+      responses:
+        '200':
+          description: Conversation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Conversation'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ---------------------------------------------------------------------------
   # Endpoints
   # ---------------------------------------------------------------------------
@@ -4587,6 +4632,83 @@ components:
           format: date-time
           description: received_at for inbound, created_at for outbound.
       required: [direction, id]
+
+    Conversation:
+      type: object
+      description: |
+        The full conversation an inbound email belongs to, as ordered,
+        ready-to-prompt turns with bodies. Resolves the thread from the
+        email and returns every message oldest-first, so an agent that
+        received an email can pass `messages` straight to a chat model in
+        one call.
+      properties:
+        thread_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The thread this email belongs to, or null when the email
+            isn't threaded yet (the conversation is then just this one
+            message).
+        subject:
+          type: [string, 'null']
+          description: |
+            Normalized thread subject (Re/Fwd prefixes stripped), or the
+            email's own subject when it isn't threaded.
+        message_count:
+          type: integer
+          description: |
+            Total messages in the thread. `messages` is capped, so
+            `truncated` is true (and this can exceed `messages.length`)
+            when older messages were omitted.
+        truncated:
+          type: boolean
+          description: |
+            True when `messages` omits part of the conversation because
+            the thread exceeds the per-call cap.
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+      required: [thread_id, message_count, truncated, messages]
+
+    ConversationMessage:
+      type: object
+      description: One message in the conversation, with its body and a chat role.
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+          description: |
+            Chat role derived from `direction`: `user` for inbound
+            (received) messages, `assistant` for outbound (your own prior
+            replies). Lets `messages` be passed directly to a chat model.
+        direction:
+          type: string
+          enum: [inbound, outbound]
+          description: |
+            `inbound` for a received email (`/emails/{id}`), `outbound`
+            for a send (`/sent-emails/{id}`).
+        id:
+          type: string
+          format: uuid
+        message_id:
+          type: [string, 'null']
+        from:
+          type: [string, 'null']
+        to:
+          type: [string, 'null']
+        subject:
+          type: [string, 'null']
+        text:
+          type: string
+          description: |
+            Plain-text body. Empty string when the message has no text
+            part or its content was discarded by retention.
+        timestamp:
+          type: [string, 'null']
+          format: date-time
+          description: received_at for inbound, created_at for outbound.
+      required: [role, direction, id, text]
 
     # -------------------------------------------------------------------------
     # Sending

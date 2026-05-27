@@ -22,6 +22,10 @@ from .cli_signup_start_result import CliSignupStartResult
 from .cli_signup_verify_result import CliSignupVerifyResult
 from .cli_signup_verify_result_auth_method import CliSignupVerifyResultAuthMethod
 from .cli_signup_verify_result_token_type import CliSignupVerifyResultTokenType
+from .conversation import Conversation
+from .conversation_message import ConversationMessage
+from .conversation_message_direction import ConversationMessageDirection
+from .conversation_message_role import ConversationMessageRole
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_rules import CreateEndpointInputRules
 from .create_endpoint_response_201 import CreateEndpointResponse201
@@ -108,6 +112,7 @@ from .gate_denial_reason import GateDenialReason
 from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
+from .get_conversation_response_200 import GetConversationResponse200
 from .get_email_response_200 import GetEmailResponse200
 from .get_function_response_200 import GetFunctionResponse200
 from .get_function_test_run_trace_response_200 import GetFunctionTestRunTraceResponse200
@@ -241,6 +246,10 @@ __all__ = (
     "CliSignupVerifyResult",
     "CliSignupVerifyResultAuthMethod",
     "CliSignupVerifyResultTokenType",
+    "Conversation",
+    "ConversationMessage",
+    "ConversationMessageDirection",
+    "ConversationMessageRole",
     "CreateEndpointInput",
     "CreateEndpointInputRules",
     "CreateEndpointResponse201",
@@ -327,6 +336,7 @@ __all__ = (
     "GateFix",
     "GateFixAction",
     "GetAccountResponse200",
+    "GetConversationResponse200",
     "GetEmailResponse200",
     "GetFunctionResponse200",
     "GetFunctionTestRunTraceResponse200",

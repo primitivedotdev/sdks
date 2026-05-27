@@ -280,6 +280,7 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "domains:list": "domains:list-domains",
   "domains:update": "domains:update-domain",
   "domains:verify": "domains:verify-domain",
+  "emails:conversation": "emails:get-conversation",
   "emails:delete": "emails:delete-email",
   "emails:discard-content": "emails:discard-email-content",
   "emails:download-raw": "emails:download-raw-email",

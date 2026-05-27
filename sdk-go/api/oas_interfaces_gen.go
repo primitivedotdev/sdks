@@ -69,6 +69,10 @@ type GetAccountRes interface {
 	getAccountRes()
 }
 
+type GetConversationRes interface {
+	getConversationRes()
+}
+
 type GetEmailRes interface {
 	getEmailRes()
 }
