@@ -172,6 +172,11 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS["signup:confirm"]).toBeDefined();
     expect(COMMANDS["signup:interactive"]).toBeDefined();
     expect(COMMANDS["signup:resend"]).toBeDefined();
+    expect(COMMANDS["signup:status"]).toBeDefined();
+    const signupStatusCommand = COMMANDS["signup:status"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(signupStatusCommand.flags.json).toBeDefined();
   });
 
   it("registers sign-in commands", () => {

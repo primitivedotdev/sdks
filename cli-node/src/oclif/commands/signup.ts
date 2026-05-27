@@ -64,6 +64,11 @@ type SignupResendFlags = {
   "api-base-url-1"?: string;
 };
 
+type SignupStatusFlags = {
+  "api-base-url-1"?: string;
+  json?: boolean;
+};
+
 export type SignupCommandCopy = {
   actionNoun: string;
   actionGerund: string;
@@ -84,6 +89,19 @@ export type PendingAgentSignup = AgentSignupStartResult & {
   api_base_url_1: string;
   created_at: string;
   expires_at: string;
+};
+
+type SignupStatus = {
+  code_length: number | null;
+  confirm_command: string | null;
+  email: string | null;
+  expired: boolean;
+  expires_at: string | null;
+  expires_in: number | null;
+  pending: boolean;
+  resend_after: number | null;
+  resend_command: string | null;
+  signup_command?: string;
 };
 
 type SignupFlowDeps = {
@@ -246,6 +264,159 @@ export function loadPendingAgentSignup(
 
 export const loadPendingCliSignup = loadPendingAgentSignup;
 
+export function readPendingAgentSignupState(
+  configDir: string,
+  apiBaseUrl1: string,
+): PendingAgentSignup | null {
+  const path = pendingSignupPath(configDir);
+  let contents: string;
+  try {
+    contents = readFileSync(path, "utf8");
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      (error as { code?: unknown }).code === "ENOENT"
+    ) {
+      return null;
+    }
+    throw error;
+  }
+
+  let pending: PendingAgentSignup | null;
+  try {
+    pending = pendingSignupFromJson(JSON.parse(contents));
+  } catch {
+    pending = null;
+  }
+
+  if (!pending) {
+    deletePendingAgentSignup(configDir);
+    return null;
+  }
+  if (pending.api_base_url_1 !== apiBaseUrl1) return null;
+
+  return pending;
+}
+
+function pendingSignupStartCommand(email?: string): string {
+  return `primitive signup ${email ?? "<email>"} --signup-code <invite-code> --accept-terms`;
+}
+
+function buildSignupStatus(params: {
+  apiBaseUrl1: string;
+  copy?: SignupCommandCopy;
+  configDir: string;
+  email?: string;
+}): SignupStatus {
+  const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
+  const pending = readPendingAgentSignupState(
+    params.configDir,
+    params.apiBaseUrl1,
+  );
+
+  if (!pending) {
+    return {
+      code_length: null,
+      confirm_command: null,
+      email: null,
+      expired: false,
+      expires_at: null,
+      expires_in: null,
+      pending: false,
+      resend_after: null,
+      resend_command: null,
+      signup_command: pendingSignupStartCommand(params.email),
+    };
+  }
+
+  if (
+    params.email &&
+    normalizeEmail(pending.email) !== normalizeEmail(params.email)
+  ) {
+    throw cliError(
+      `Pending ${copy.actionNoun} is for ${pending.email}, not ${params.email}. Run \`primitive signup status\` without an email argument to inspect it.`,
+    );
+  }
+
+  const expiresAtMs = new Date(pending.expires_at).getTime();
+  const expiresIn = Number.isFinite(expiresAtMs)
+    ? Math.ceil((expiresAtMs - Date.now()) / 1000)
+    : null;
+
+  return {
+    code_length: pending.verification_code_length,
+    confirm_command: `primitive ${copy.confirmCommand(pending.email)}`,
+    email: pending.email,
+    expired: expiresIn !== null && expiresIn <= 0,
+    expires_at: pending.expires_at,
+    expires_in: expiresIn === null ? null : Math.max(0, expiresIn),
+    pending: true,
+    resend_after: pending.resend_after,
+    resend_command: `primitive ${copy.resendCommand(pending.email)}`,
+  };
+}
+
+function writeSignupStatus(status: SignupStatus): void {
+  if (!status.pending) {
+    process.stdout.write("No pending Primitive signup found.\n");
+    process.stdout.write(
+      `Start one with \`${status.signup_command ?? pendingSignupStartCommand()}\`.\n`,
+    );
+    return;
+  }
+
+  process.stdout.write(`Pending Primitive signup for ${status.email}.\n`);
+  if (status.code_length !== null) {
+    process.stdout.write(`Verification code length: ${status.code_length}\n`);
+  }
+  if (status.expires_at) {
+    if (status.expired) {
+      process.stdout.write(`Expired at: ${status.expires_at}\n`);
+    } else {
+      process.stdout.write(`Expires at: ${status.expires_at}\n`);
+      process.stdout.write(
+        `Expires in: ${formatSignupSeconds(status.expires_in)}\n`,
+      );
+    }
+  }
+  if (status.resend_after !== null) {
+    process.stdout.write(
+      `Resend after: ${formatSignupSeconds(status.resend_after)}\n`,
+    );
+  }
+  if (status.confirm_command) {
+    process.stdout.write(`Confirm: ${status.confirm_command}\n`);
+  }
+  if (status.resend_command) {
+    process.stdout.write(`Resend: ${status.resend_command}\n`);
+  }
+}
+
+export function runSignupStatus(params: {
+  configDir: string;
+  copy?: SignupCommandCopy;
+  email?: string;
+  flags: SignupStatusFlags;
+}): void {
+  const { requestConfig } = createCliApiClient({
+    apiBaseUrl1: params.flags["api-base-url-1"],
+    configDir: params.configDir,
+  });
+  const status = buildSignupStatus({
+    apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
+    configDir: params.configDir,
+    copy: params.copy,
+    email: params.email,
+  });
+
+  if (params.flags.json) {
+    process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
+    return;
+  }
+  writeSignupStatus(status);
+}
+
 function requirePendingSignupForEmail(params: {
   apiBaseUrl1: string;
   copy?: SignupCommandCopy;
@@ -256,12 +427,12 @@ function requirePendingSignupForEmail(params: {
   const pending = loadPendingAgentSignup(params.configDir, params.apiBaseUrl1);
   if (!pending) {
     throw cliError(
-      `No pending ${copy.actionNoun} for ${params.email}. Run \`primitive ${copy.startCommand(params.email)}\` first.`,
+      `No pending ${copy.actionNoun} for ${params.email}. Run \`primitive signup status ${params.email}\` to inspect pending state, or \`primitive ${copy.startCommand(params.email)}\` first.`,
     );
   }
   if (normalizeEmail(pending.email) !== normalizeEmail(params.email)) {
     throw cliError(
-      `Pending ${copy.actionNoun} is for ${pending.email}, not ${params.email}. Run \`primitive ${copy.startCommand(params.email)} --force\` to replace it.`,
+      `Pending ${copy.actionNoun} is for ${pending.email}, not ${params.email}. Run \`primitive signup status\` to inspect it, or \`primitive ${copy.startCommand(params.email)} --force\` to replace it.`,
     );
   }
   return pending;
@@ -434,12 +605,12 @@ async function startSignup(params: {
         `Continuing pending Primitive ${copy.actionNoun} for ${existingPending.email}.\n`,
       );
       process.stderr.write(
-        `Run \`primitive ${copy.confirmCommand(existingPending.email)}\` to finish, or \`primitive ${copy.resendCommand(existingPending.email)}\` to send a new code.\n`,
+        `Run \`primitive ${copy.confirmCommand(existingPending.email)}\` to finish, \`primitive ${copy.resendCommand(existingPending.email)}\` to send a new code, or \`primitive signup status\` to inspect it.\n`,
       );
       return { pending: existingPending, started: false };
     }
     throw cliError(
-      `Pending ${copy.actionNoun} is for ${existingPending.email}. Run \`primitive ${copy.startCommand(params.email)} --force\` to replace it.`,
+      `Pending ${copy.actionNoun} is for ${existingPending.email}. Run \`primitive signup status\` to inspect it, or \`primitive ${copy.startCommand(params.email)} --force\` to replace it.`,
     );
   }
   if (params.flags.force) deletePendingAgentSignup(params.configDir);
@@ -636,7 +807,7 @@ export async function runSignupConfirmWithCredentialLock(params: {
   if (code === INVALID_VERIFICATION_CODE) {
     const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
     throw cliError(
-      `Invalid verification code. Try again or run ${copy.resendCommand(params.email)}.`,
+      `Invalid verification code. Try again, run ${copy.resendCommand(params.email)}, or run primitive signup status.`,
     );
   }
   if (code === EXPIRED_TOKEN || code === INVALID_SIGNUP_TOKEN) {
@@ -650,20 +821,31 @@ export async function runSignupResendWithCredentialLock(params: {
   configDir: string;
   copy?: SignupCommandCopy;
   deps?: SignupFlowDeps;
-  email: string;
+  email?: string;
   flags: SignupResendFlags;
 }): Promise<void> {
   const deps = params.deps ?? {};
+  const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
   const { apiClient, requestConfig } = createCliApiClient({
     apiBaseUrl1: params.flags["api-base-url-1"],
     configDir: params.configDir,
   });
-  const pending = requirePendingSignupForEmail({
-    apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
-    copy: params.copy,
-    configDir: params.configDir,
-    email: params.email,
-  });
+  const pending = params.email
+    ? requirePendingSignupForEmail({
+        apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
+        copy,
+        configDir: params.configDir,
+        email: params.email,
+      })
+    : loadPendingAgentSignup(
+        params.configDir,
+        requestConfig.resolvedApiBaseUrl1,
+      );
+  if (!pending) {
+    throw cliError(
+      `No pending ${copy.actionNoun} found. Run \`primitive signup status\` to inspect pending state, or start one with \`${pendingSignupStartCommand()}\`.`,
+    );
+  }
   const resend = await resendVerificationCode({
     apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
     apiClient,
@@ -916,8 +1098,9 @@ export class SignupConfirmCommand extends Command {
 export class SignupResendCommand extends Command {
   static args = {
     email: Args.string({
-      description: "Email address used to start signup",
-      required: true,
+      description:
+        "Email address used to start signup. Defaults to the saved pending signup.",
+      required: false,
     }),
   };
 
@@ -925,7 +1108,10 @@ export class SignupResendCommand extends Command {
 
   static summary = "Resend signup verification code";
 
-  static examples = ["<%= config.bin %> signup resend user@example.com"];
+  static examples = [
+    "<%= config.bin %> signup resend",
+    "<%= config.bin %> signup resend user@example.com",
+  ];
 
   static flags = {
     "api-base-url-1": Flags.string({
@@ -955,6 +1141,47 @@ export class SignupResendCommand extends Command {
     } finally {
       releaseCredentialsLock();
     }
+  }
+}
+
+export class SignupStatusCommand extends Command {
+  static args = {
+    email: Args.string({
+      description: "Email address expected in the pending signup",
+      required: false,
+    }),
+  };
+
+  static description =
+    "Inspect the locally saved pending Primitive signup state.";
+
+  static summary = "Show pending signup status";
+
+  static examples = [
+    "<%= config.bin %> signup status",
+    "<%= config.bin %> signup status user@example.com",
+    "<%= config.bin %> signup status --json",
+  ];
+
+  static flags = {
+    "api-base-url-1": Flags.string({
+      description:
+        "Override the primary API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_1",
+      hidden: true,
+    }),
+    json: Flags.boolean({
+      description: "Print pending signup status as JSON",
+    }),
+  };
+
+  async run(): Promise<void> {
+    const { args, flags } = await this.parse(SignupStatusCommand);
+    runSignupStatus({
+      configDir: this.config.configDir,
+      email: args.email,
+      flags,
+    });
   }
 }
 
