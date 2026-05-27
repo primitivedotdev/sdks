@@ -9,12 +9,14 @@ from typing import Any, cast
 import httpx
 import pytest
 
+import primitive
 from primitive.api.models.error_response import ErrorResponse
 from primitive.api.models.reply_to_email_response_200 import ReplyToEmailResponse200
 from primitive.api.models.send_email_response_200 import SendEmailResponse200
 from primitive.client import (
     PrimitiveAPIError,
     PrimitiveClient,
+    SendAttachment,
     SendThread,
 )
 from primitive.received_email import (
@@ -419,6 +421,10 @@ def test_reply_posts_to_reply_endpoint_with_minimal_body(monkeypatch: pytest.Mon
 
 def test_reply_posts_attachments_to_send_host(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, object] = {}
+    attachment: SendAttachment = {
+        "content_base64": "aGVsbG8=",
+        "filename": "report.txt",
+    }
 
     def fake_reply_to_email_sync_detailed(*, id, client, body):
         captured["id"] = str(id)
@@ -452,12 +458,7 @@ def test_reply_posts_attachments_to_send_host(monkeypatch: pytest.MonkeyPatch) -
     client.reply(
         RECEIVED_EMAIL,
         "See attached.",
-        attachments=[
-            {
-                "content_base64": "aGVsbG8=",
-                "filename": "report.txt",
-            },
-        ],
+        attachments=[attachment],
     )
 
     assert captured["id"] == RECEIVED_EMAIL.id
@@ -471,6 +472,16 @@ def test_reply_posts_attachments_to_send_host(monkeypatch: pytest.MonkeyPatch) -
         ],
         "body_text": "See attached.",
     }
+
+
+def test_top_level_exports_send_attachment_type() -> None:
+    assert "SendAttachment" in primitive.__all__
+    attachment: primitive.SendAttachment = {
+        "content_base64": "aGVsbG8=",
+        "filename": "report.txt",
+    }
+
+    assert attachment["filename"] == "report.txt"
 
 
 def test_reply_rejects_subject_override() -> None:

@@ -6,7 +6,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from http import HTTPStatus
-from typing import Any, cast
+from typing import Any, TypedDict, cast
 from uuid import UUID
 
 import httpx
@@ -172,6 +172,15 @@ class SendThread:
     references: list[str] | None = None
 
 
+class _OptionalSendAttachment(TypedDict, total=False):
+    content_type: str
+
+
+class SendAttachment(_OptionalSendAttachment):
+    filename: str
+    content_base64: str
+
+
 @dataclass(frozen=True)
 class SendResult:
     id: str
@@ -235,7 +244,7 @@ def _build_reply_input(
     body_text: str | None,
     body_html: str | None,
     from_email: str | None,
-    attachments: list[dict[str, str]] | None,
+    attachments: list[SendAttachment] | None,
     wait: bool | None,
 ) -> ApiReplyInput:
     """Build the small ReplyInput body the server's reply endpoint expects.
@@ -482,7 +491,7 @@ def _resolve_reply_payload(
     str | None,
     str | None,
     str | None,
-    list[dict[str, str]] | None,
+    list[SendAttachment] | None,
     bool | None,
 ]:
     """Normalize a reply input into caller-controlled reply fields.
@@ -515,7 +524,7 @@ def _resolve_reply_payload(
         body_text if isinstance(body_text, str) else None,
         body_html if isinstance(body_html, str) else None,
         raw_from if isinstance(raw_from, str) else None,
-        cast(list[dict[str, str]], raw_attachments)
+        cast(list[SendAttachment], raw_attachments)
         if isinstance(raw_attachments, list)
         else None,
         raw_wait if isinstance(raw_wait, bool) else None,
@@ -748,7 +757,7 @@ class PrimitiveClient:
         text: str | dict[str, Any],
         *,
         from_email: str | None = None,
-        attachments: list[dict[str, str]] | None = None,
+        attachments: list[SendAttachment] | None = None,
         idempotency_key: str | None = None,
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
@@ -786,7 +795,7 @@ class PrimitiveClient:
         text: str | dict[str, Any],
         *,
         from_email: str | None = None,
-        attachments: list[dict[str, str]] | None = None,
+        attachments: list[SendAttachment] | None = None,
         idempotency_key: str | None = None,
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
@@ -814,7 +823,7 @@ class PrimitiveClient:
         body_text: str | None,
         body_html: str | None,
         from_email: str | None,
-        attachments: list[dict[str, str]] | None,
+        attachments: list[SendAttachment] | None,
         wait: bool | None,
         idempotency_key: str | None,
         timeout: float | None,
@@ -849,7 +858,7 @@ class PrimitiveClient:
         body_text: str | None,
         body_html: str | None,
         from_email: str | None,
-        attachments: list[dict[str, str]] | None,
+        attachments: list[SendAttachment] | None,
         wait: bool | None,
         idempotency_key: str | None,
         timeout: float | None,
@@ -959,6 +968,7 @@ def client(
 __all__ = [
     "PrimitiveAPIError",
     "PrimitiveClient",
+    "SendAttachment",
     "SendResult",
     "SendThread",
     "client",
