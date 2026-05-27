@@ -1,4 +1,4 @@
-import { Args, Command, Errors, Flags } from "@oclif/core";
+import { Args, Command, Errors, Flags, ux } from "@oclif/core";
 import type {
   EmailDetail,
   GetEmailResponse,
@@ -166,6 +166,41 @@ type ChatAuthFailureContext = {
   configDir: string;
 };
 
+function chatColor(
+  color: "bold" | "cyan" | "dim" | "green" | "greenBright" | "red" | "yellow",
+  text: string,
+): string {
+  return ux.colorize(color, text);
+}
+
+function chatCommandText(command: string): string {
+  return chatColor("cyan", command);
+}
+
+function chatDetailLine(line: string): string {
+  return chatColor("dim", line);
+}
+
+function chatFailureText(message: string): string {
+  return chatColor("red", message);
+}
+
+function chatHeading(text: string): string {
+  return chatColor("bold", text);
+}
+
+function chatNoticeText(message: string): string {
+  return chatColor("yellow", message);
+}
+
+function chatProgressText(message: string): string {
+  return chatColor("cyan", message);
+}
+
+function chatSuccessText(message: string): string {
+  return chatColor("greenBright", message);
+}
+
 export class ChatProgressIndicator {
   private currentMessage: string | null = null;
   private frameIndex = 0;
@@ -189,7 +224,7 @@ export class ChatProgressIndicator {
       this.timer.unref?.();
       return;
     }
-    this.stream.write(`${message}\n`);
+    this.stream.write(`${chatProgressText(message)}\n`);
   }
 
   update(message: string, options: ChatProgressUpdateOptions = {}): void {
@@ -203,14 +238,16 @@ export class ChatProgressIndicator {
       return;
     }
     this.stopTimer();
-    this.stream.write(`${message}\n`);
+    this.stream.write(`${chatProgressText(message)}\n`);
     if (options.heartbeatMs !== undefined) {
       this.timer = setInterval(() => {
         this.stream.write(
-          `${formatWaitingHeartbeat(
-            message,
-            this.now() - this.startedAt,
-            options.timeoutSeconds,
+          `${chatProgressText(
+            formatWaitingHeartbeat(
+              message,
+              this.now() - this.startedAt,
+              options.timeoutSeconds,
+            ),
           )}\n`,
         );
       }, options.heartbeatMs);
@@ -222,23 +259,25 @@ export class ChatProgressIndicator {
     if (this.stream.isTTY) {
       const currentMessage = this.currentMessage;
       this.clearLine();
-      this.stream.write(`${message}\n`);
+      this.stream.write(`${chatNoticeText(message)}\n`);
       if (currentMessage !== null && this.timer !== null) {
         this.render(currentMessage);
       }
       return;
     }
-    this.stream.write(`${message}\n`);
+    this.stream.write(`${chatNoticeText(message)}\n`);
   }
 
   succeed(message: string): void {
     this.finish(
-      `${message} after ${formatElapsed(this.now() - this.startedAt)}.`,
+      chatSuccessText(
+        `${message} after ${formatElapsed(this.now() - this.startedAt)}.`,
+      ),
     );
   }
 
   fail(message: string): void {
-    this.finish(message);
+    this.finish(chatFailureText(message));
   }
 
   private finish(message: string): void {
@@ -254,9 +293,15 @@ export class ChatProgressIndicator {
     const frames = ["-", "\\", "|", "/"];
     const frame = frames[this.frameIndex % frames.length];
     this.frameIndex += 1;
-    const line = `${frame} ${message} (${formatElapsed(this.now() - this.startedAt)})`;
-    this.lastLineLength = Math.max(this.lastLineLength, line.length);
-    this.stream.write(`\r${line}`);
+    const elapsed = `(${formatElapsed(this.now() - this.startedAt)})`;
+    const plainLine = `${frame} ${message} ${elapsed}`;
+    this.lastLineLength = Math.max(this.lastLineLength, plainLine.length);
+    this.stream.write(
+      `\r${chatProgressText(`${frame} ${message}`)} ${chatColor(
+        "dim",
+        elapsed,
+      )}`,
+    );
   }
 
   private clearLine(): void {
@@ -646,47 +691,63 @@ export function formatChatResponse(context: ChatOutputContext): string {
   const accepted = context.sent.accepted.join(", ") || context.recipient;
   const responseBody = resolveChatResponseBody(context.reply);
   const lines = [
-    "Reply received",
+    chatSuccessText("Reply received"),
     "",
-    "Sent",
-    `  To: ${accepted}`,
-    `  From: ${context.sent.from || context.from}`,
-    `  Subject: ${context.subject}`,
-    `  Sent email id: ${context.sent.id}`,
-    `  Delivery status: ${context.sent.delivery_status ?? context.sent.status}`,
+    chatHeading("Sent"),
+    chatDetailLine(`  To: ${accepted}`),
+    chatDetailLine(`  From: ${context.sent.from || context.from}`),
+    chatDetailLine(`  Subject: ${context.subject}`),
+    chatDetailLine(`  Sent email id: ${context.sent.id}`),
+    chatColor(
+      "green",
+      `  Delivery status: ${context.sent.delivery_status ?? context.sent.status}`,
+    ),
     "",
-    "Reply",
-    `  Email id: ${context.reply.id}`,
-    `  From: ${context.reply.from_email}`,
-    `  To: ${context.reply.to_email}`,
-    `  Subject: ${context.reply.subject ?? "(no subject)"}`,
-    `  Received: ${context.reply.received_at}`,
-    `  Match: ${matchDescription(context.matchStrategy)}`,
+    chatHeading("Reply"),
+    chatDetailLine(`  Email id: ${context.reply.id}`),
+    chatDetailLine(`  From: ${context.reply.from_email}`),
+    chatDetailLine(`  To: ${context.reply.to_email}`),
+    chatDetailLine(`  Subject: ${context.reply.subject ?? "(no subject)"}`),
+    chatDetailLine(`  Received: ${context.reply.received_at}`),
+    chatDetailLine(`  Match: ${matchDescription(context.matchStrategy)}`),
   ];
   if (context.reply.reply_to_sent_email_id) {
     lines.push(
-      `  Reply to sent email id: ${context.reply.reply_to_sent_email_id}`,
+      chatDetailLine(
+        `  Reply to sent email id: ${context.reply.reply_to_sent_email_id}`,
+      ),
     );
   }
   if (context.reply.message_id) {
-    lines.push(`  Message-Id: ${context.reply.message_id}`);
+    lines.push(chatDetailLine(`  Message-Id: ${context.reply.message_id}`));
   }
   if (context.localChatId !== undefined) {
-    lines.push(`  Local chat id: ${context.localChatId}`);
+    lines.push(chatDetailLine(`  Local chat id: ${context.localChatId}`));
   }
   lines.push(
     "",
-    "Helpful follow-up commands",
-    "  Replace <message> before running commands that include it.",
-    "  Commands are templates; use --json for parse-safe output.",
-    "  When shown, --strict-only prefers timing out over matching the wrong reply.",
+    chatHeading("Helpful follow-up commands"),
+    chatDetailLine(
+      "  Replace <message> before running commands that include it.",
+    ),
+    chatDetailLine(
+      "  Commands are templates; use --json for parse-safe output.",
+    ),
+    chatDetailLine(
+      "  When shown, --strict-only prefers timing out over matching the wrong reply.",
+    ),
   );
   for (const { description, command } of buildChatFollowUpCommands(context)) {
-    lines.push(`  ${description}:`, `    ${command}`);
+    lines.push(
+      chatHeading(`  ${description}:`),
+      `    ${chatCommandText(command)}`,
+    );
   }
   lines.push(
     "",
-    `Response body (${responseBody.format}; use --json for parsing)`,
+    chatHeading(
+      `Response body (${responseBody.format}; use --json for parsing)`,
+    ),
     "----- BEGIN RESPONSE -----",
     responseBody.body || "(empty response)",
     "----- END RESPONSE -----",
@@ -698,18 +759,24 @@ export function formatChatRecoveryContext(context: ChatBaseContext): string {
   const accepted = context.sent.accepted.join(", ") || context.recipient;
   const lines = [
     "",
-    "Sent message context",
-    `  To: ${accepted}`,
-    `  From: ${context.sent.from || context.from}`,
-    `  Subject: ${context.subject}`,
-    `  Sent email id: ${context.sent.id}`,
-    `  Delivery status: ${context.sent.delivery_status ?? context.sent.status}`,
-    `  Poll since: ${context.sentAtIso}`,
+    chatHeading("Sent message context"),
+    chatDetailLine(`  To: ${accepted}`),
+    chatDetailLine(`  From: ${context.sent.from || context.from}`),
+    chatDetailLine(`  Subject: ${context.subject}`),
+    chatDetailLine(`  Sent email id: ${context.sent.id}`),
+    chatColor(
+      "green",
+      `  Delivery status: ${context.sent.delivery_status ?? context.sent.status}`,
+    ),
+    chatDetailLine(`  Poll since: ${context.sentAtIso}`),
     "",
-    "Helpful recovery commands",
+    chatHeading("Helpful recovery commands"),
   ];
   for (const { description, command } of buildChatRecoveryCommands(context)) {
-    lines.push(`  ${description}:`, `    ${command}`);
+    lines.push(
+      chatHeading(`  ${description}:`),
+      `    ${chatCommandText(command)}`,
+    );
   }
   return lines.join("\n");
 }

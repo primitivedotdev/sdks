@@ -7,6 +7,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { ux } from "@oclif/core";
 import type { EmailDetail, SendMailResult } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -334,6 +335,34 @@ describe("chat command", () => {
     expect(output).toContain("----- BEGIN RESPONSE -----\nRotate your API key");
     expect(output).toContain("----- END RESPONSE -----");
     expect(output).not.toBe("Rotate your API key from the dashboard.\n");
+  });
+
+  it("colorizes human chat output without changing command text", () => {
+    const colorizeSpy = vi
+      .spyOn(ux, "colorize")
+      .mockImplementation((color, text) => `<${color}>${text}</${color}>`);
+
+    try {
+      const output = formatChatResponse(outputContext());
+
+      expect(output).toContain("<greenBright>Reply received</greenBright>");
+      expect(output).toContain("<bold>Sent</bold>");
+      expect(output).toContain("<bold>Helpful follow-up commands</bold>");
+      expect(output).toContain(
+        "    <cyan>primitive chat reply 0 '<message>'</cyan>",
+      );
+      expect(output).toContain(
+        "    <cyan>primitive chat reply '<message>'</cyan>",
+      );
+      expect(output).toContain(
+        "primitive chat help@agent.example --reply '<message>' --from agent@sender.example",
+      );
+      expect(output).toContain(
+        "----- BEGIN RESPONSE -----\nRotate your API key",
+      );
+    } finally {
+      colorizeSpy.mockRestore();
+    }
   });
 
   it("includes follow-up commands in JSON mode without changing stdout shape to prose", () => {
