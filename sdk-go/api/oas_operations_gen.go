@@ -23,6 +23,7 @@ const (
 	DownloadDomainZoneFileOperation        OperationName = "DownloadDomainZoneFile"
 	DownloadRawEmailOperation              OperationName = "DownloadRawEmail"
 	GetAccountOperation                    OperationName = "GetAccount"
+	GetConversationOperation               OperationName = "GetConversation"
 	GetEmailOperation                      OperationName = "GetEmail"
 	GetFunctionOperation                   OperationName = "GetFunction"
 	GetFunctionTestRunTraceOperation       OperationName = "GetFunctionTestRunTrace"

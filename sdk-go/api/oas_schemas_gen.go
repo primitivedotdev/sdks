@@ -1387,6 +1387,279 @@ func (s *CliSignupVerifyResultTokenType) UnmarshalText(data []byte) error {
 	}
 }
 
+// The full conversation an inbound email belongs to, as ordered,
+// ready-to-prompt turns with bodies. Resolves the thread from the
+// email and returns every message oldest-first, so an agent that
+// received an email can pass `messages` straight to a chat model in
+// one call.
+// Ref: #/components/schemas/Conversation
+type Conversation struct {
+	// The thread this email belongs to, or null when the email
+	// isn't threaded yet (the conversation is then just this one
+	// message).
+	ThreadID NilUUID `json:"thread_id"`
+	// Normalized thread subject (Re/Fwd prefixes stripped), or the
+	// email's own subject when it isn't threaded.
+	Subject OptNilString `json:"subject"`
+	// Total messages in the thread. `messages` is capped, so
+	// `truncated` is true (and this can exceed `messages.length`)
+	// when older messages were omitted.
+	MessageCount int `json:"message_count"`
+	// True when `messages` omits part of the conversation because
+	// the thread exceeds the per-call cap.
+	Truncated bool                  `json:"truncated"`
+	Messages  []ConversationMessage `json:"messages"`
+}
+
+// GetThreadID returns the value of ThreadID.
+func (s *Conversation) GetThreadID() NilUUID {
+	return s.ThreadID
+}
+
+// GetSubject returns the value of Subject.
+func (s *Conversation) GetSubject() OptNilString {
+	return s.Subject
+}
+
+// GetMessageCount returns the value of MessageCount.
+func (s *Conversation) GetMessageCount() int {
+	return s.MessageCount
+}
+
+// GetTruncated returns the value of Truncated.
+func (s *Conversation) GetTruncated() bool {
+	return s.Truncated
+}
+
+// GetMessages returns the value of Messages.
+func (s *Conversation) GetMessages() []ConversationMessage {
+	return s.Messages
+}
+
+// SetThreadID sets the value of ThreadID.
+func (s *Conversation) SetThreadID(val NilUUID) {
+	s.ThreadID = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *Conversation) SetSubject(val OptNilString) {
+	s.Subject = val
+}
+
+// SetMessageCount sets the value of MessageCount.
+func (s *Conversation) SetMessageCount(val int) {
+	s.MessageCount = val
+}
+
+// SetTruncated sets the value of Truncated.
+func (s *Conversation) SetTruncated(val bool) {
+	s.Truncated = val
+}
+
+// SetMessages sets the value of Messages.
+func (s *Conversation) SetMessages(val []ConversationMessage) {
+	s.Messages = val
+}
+
+// One message in the conversation, with its body and a chat role.
+// Ref: #/components/schemas/ConversationMessage
+type ConversationMessage struct {
+	// Chat role derived from `direction`: `user` for inbound
+	// (received) messages, `assistant` for outbound (your own prior
+	// replies). Lets `messages` be passed directly to a chat model.
+	Role ConversationMessageRole `json:"role"`
+	// `inbound` for a received email (`/emails/{id}`), `outbound`
+	// for a send (`/sent-emails/{id}`).
+	Direction ConversationMessageDirection `json:"direction"`
+	ID        uuid.UUID                    `json:"id"`
+	MessageID OptNilString                 `json:"message_id"`
+	From      OptNilString                 `json:"from"`
+	To        OptNilString                 `json:"to"`
+	Subject   OptNilString                 `json:"subject"`
+	// Plain-text body. Empty string when the message has no text
+	// part or its content was discarded by retention.
+	Text string `json:"text"`
+	// Received_at for inbound, created_at for outbound.
+	Timestamp OptNilDateTime `json:"timestamp"`
+}
+
+// GetRole returns the value of Role.
+func (s *ConversationMessage) GetRole() ConversationMessageRole {
+	return s.Role
+}
+
+// GetDirection returns the value of Direction.
+func (s *ConversationMessage) GetDirection() ConversationMessageDirection {
+	return s.Direction
+}
+
+// GetID returns the value of ID.
+func (s *ConversationMessage) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetMessageID returns the value of MessageID.
+func (s *ConversationMessage) GetMessageID() OptNilString {
+	return s.MessageID
+}
+
+// GetFrom returns the value of From.
+func (s *ConversationMessage) GetFrom() OptNilString {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *ConversationMessage) GetTo() OptNilString {
+	return s.To
+}
+
+// GetSubject returns the value of Subject.
+func (s *ConversationMessage) GetSubject() OptNilString {
+	return s.Subject
+}
+
+// GetText returns the value of Text.
+func (s *ConversationMessage) GetText() string {
+	return s.Text
+}
+
+// GetTimestamp returns the value of Timestamp.
+func (s *ConversationMessage) GetTimestamp() OptNilDateTime {
+	return s.Timestamp
+}
+
+// SetRole sets the value of Role.
+func (s *ConversationMessage) SetRole(val ConversationMessageRole) {
+	s.Role = val
+}
+
+// SetDirection sets the value of Direction.
+func (s *ConversationMessage) SetDirection(val ConversationMessageDirection) {
+	s.Direction = val
+}
+
+// SetID sets the value of ID.
+func (s *ConversationMessage) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetMessageID sets the value of MessageID.
+func (s *ConversationMessage) SetMessageID(val OptNilString) {
+	s.MessageID = val
+}
+
+// SetFrom sets the value of From.
+func (s *ConversationMessage) SetFrom(val OptNilString) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *ConversationMessage) SetTo(val OptNilString) {
+	s.To = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *ConversationMessage) SetSubject(val OptNilString) {
+	s.Subject = val
+}
+
+// SetText sets the value of Text.
+func (s *ConversationMessage) SetText(val string) {
+	s.Text = val
+}
+
+// SetTimestamp sets the value of Timestamp.
+func (s *ConversationMessage) SetTimestamp(val OptNilDateTime) {
+	s.Timestamp = val
+}
+
+// `inbound` for a received email (`/emails/{id}`), `outbound`
+// for a send (`/sent-emails/{id}`).
+type ConversationMessageDirection string
+
+const (
+	ConversationMessageDirectionInbound  ConversationMessageDirection = "inbound"
+	ConversationMessageDirectionOutbound ConversationMessageDirection = "outbound"
+)
+
+// AllValues returns all ConversationMessageDirection values.
+func (ConversationMessageDirection) AllValues() []ConversationMessageDirection {
+	return []ConversationMessageDirection{
+		ConversationMessageDirectionInbound,
+		ConversationMessageDirectionOutbound,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ConversationMessageDirection) MarshalText() ([]byte, error) {
+	switch s {
+	case ConversationMessageDirectionInbound:
+		return []byte(s), nil
+	case ConversationMessageDirectionOutbound:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ConversationMessageDirection) UnmarshalText(data []byte) error {
+	switch ConversationMessageDirection(data) {
+	case ConversationMessageDirectionInbound:
+		*s = ConversationMessageDirectionInbound
+		return nil
+	case ConversationMessageDirectionOutbound:
+		*s = ConversationMessageDirectionOutbound
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Chat role derived from `direction`: `user` for inbound
+// (received) messages, `assistant` for outbound (your own prior
+// replies). Lets `messages` be passed directly to a chat model.
+type ConversationMessageRole string
+
+const (
+	ConversationMessageRoleUser      ConversationMessageRole = "user"
+	ConversationMessageRoleAssistant ConversationMessageRole = "assistant"
+)
+
+// AllValues returns all ConversationMessageRole values.
+func (ConversationMessageRole) AllValues() []ConversationMessageRole {
+	return []ConversationMessageRole{
+		ConversationMessageRoleUser,
+		ConversationMessageRoleAssistant,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ConversationMessageRole) MarshalText() ([]byte, error) {
+	switch s {
+	case ConversationMessageRoleUser:
+		return []byte(s), nil
+	case ConversationMessageRoleAssistant:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ConversationMessageRole) UnmarshalText(data []byte) error {
+	switch ConversationMessageRole(data) {
+	case ConversationMessageRoleUser:
+		*s = ConversationMessageRoleUser
+		return nil
+	case ConversationMessageRoleAssistant:
+		*s = ConversationMessageRoleAssistant
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type CreateEndpointBadRequest ErrorResponse
 
 func (*CreateEndpointBadRequest) createEndpointRes() {}
@@ -7390,6 +7663,46 @@ func (*GetAccountOK) getAccountRes() {}
 type GetAccountUnauthorized ErrorResponse
 
 func (*GetAccountUnauthorized) getAccountRes() {}
+
+type GetConversationBadRequest ErrorResponse
+
+func (*GetConversationBadRequest) getConversationRes() {}
+
+type GetConversationNotFound ErrorResponse
+
+func (*GetConversationNotFound) getConversationRes() {}
+
+// Merged schema.
+type GetConversationOK struct {
+	Success bool         `json:"success"`
+	Data    Conversation `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetConversationOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetConversationOK) GetData() Conversation {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetConversationOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetConversationOK) SetData(val Conversation) {
+	s.Data = val
+}
+
+func (*GetConversationOK) getConversationRes() {}
+
+type GetConversationUnauthorized ErrorResponse
+
+func (*GetConversationUnauthorized) getConversationRes() {}
 
 type GetEmailBadRequest ErrorResponse
 

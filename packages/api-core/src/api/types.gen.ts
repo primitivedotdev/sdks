@@ -1192,6 +1192,78 @@ export type ThreadMessage = {
     timestamp?: string | null;
 };
 
+/**
+ * The full conversation an inbound email belongs to, as ordered,
+ * ready-to-prompt turns with bodies. Resolves the thread from the
+ * email and returns every message oldest-first, so an agent that
+ * received an email can pass `messages` straight to a chat model in
+ * one call.
+ *
+ */
+export type Conversation = {
+    /**
+     * The thread this email belongs to, or null when the email
+     * isn't threaded yet (the conversation is then just this one
+     * message).
+     *
+     */
+    thread_id: string | null;
+    /**
+     * Normalized thread subject (Re/Fwd prefixes stripped), or the
+     * email's own subject when it isn't threaded.
+     *
+     */
+    subject?: string | null;
+    /**
+     * Total messages in the thread. `messages` is capped, so
+     * `truncated` is true (and this can exceed `messages.length`)
+     * when older messages were omitted.
+     *
+     */
+    message_count: number;
+    /**
+     * True when `messages` omits part of the conversation because
+     * the thread exceeds the per-call cap.
+     *
+     */
+    truncated: boolean;
+    messages: Array<ConversationMessage>;
+};
+
+/**
+ * One message in the conversation, with its body and a chat role.
+ */
+export type ConversationMessage = {
+    /**
+     * Chat role derived from `direction`: `user` for inbound
+     * (received) messages, `assistant` for outbound (your own prior
+     * replies). Lets `messages` be passed directly to a chat model.
+     *
+     */
+    role: 'user' | 'assistant';
+    /**
+     * `inbound` for a received email (`/emails/{id}`), `outbound`
+     * for a send (`/sent-emails/{id}`).
+     *
+     */
+    direction: 'inbound' | 'outbound';
+    id: string;
+    message_id?: string | null;
+    from?: string | null;
+    to?: string | null;
+    subject?: string | null;
+    /**
+     * Plain-text body. Empty string when the message has no text
+     * part or its content was discarded by retention.
+     *
+     */
+    text: string;
+    /**
+     * received_at for inbound, created_at for outbound.
+     */
+    timestamp?: string | null;
+};
+
 export type SendMailAttachment = {
     /**
      * Attachment filename. Control characters are rejected.
@@ -3664,6 +3736,46 @@ export type DiscardEmailContentResponses = {
 };
 
 export type DiscardEmailContentResponse = DiscardEmailContentResponses[keyof DiscardEmailContentResponses];
+
+export type GetConversationData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/emails/{id}/conversation';
+};
+
+export type GetConversationErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetConversationError = GetConversationErrors[keyof GetConversationErrors];
+
+export type GetConversationResponses = {
+    /**
+     * Conversation
+     */
+    200: SuccessEnvelope & {
+        data?: Conversation;
+    };
+};
+
+export type GetConversationResponse = GetConversationResponses[keyof GetConversationResponses];
 
 export type ListEndpointsData = {
     body?: never;

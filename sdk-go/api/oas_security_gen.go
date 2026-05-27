@@ -55,6 +55,7 @@ var operationRolesBearerAuth = map[string][]string{
 	DownloadDomainZoneFileOperation:  []string{},
 	DownloadRawEmailOperation:        []string{},
 	GetAccountOperation:              []string{},
+	GetConversationOperation:         []string{},
 	GetEmailOperation:                []string{},
 	GetFunctionOperation:             []string{},
 	GetFunctionTestRunTraceOperation: []string{},

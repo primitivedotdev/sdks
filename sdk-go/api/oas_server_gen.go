@@ -190,6 +190,27 @@ type Handler interface {
 	//
 	// GET /account
 	GetAccount(ctx context.Context) (GetAccountRes, error)
+	// GetConversation implements getConversation operation.
+	//
+	// Returns the full conversation the given inbound email belongs
+	// to, as ordered, ready-to-prompt turns WITH bodies. It resolves
+	// the thread from the email and returns every message oldest-first,
+	// so an agent that received an email can pass `messages` straight
+	// to a chat model in one call instead of walking `/threads/{id}`
+	// plus `/emails/{id}` and `/sent-emails/{id}` per message.
+	// Each message carries a `direction` (`inbound` | `outbound`) and a
+	// derived `role`: `inbound` -> `user`, `outbound` -> `assistant`
+	// (your own prior replies). The role mapping assumes the caller
+	// owns the outbound side, which is the agent-reply case this exists
+	// for. If the email has no thread yet (a brand-new message), the
+	// conversation is just that one message as a single user turn.
+	// The message list is capped; check `truncated` to detect when
+	// older messages were omitted. Consecutive same-role turns are not
+	// merged here; that normalization is model-specific and left to the
+	// caller.
+	//
+	// GET /emails/{id}/conversation
+	GetConversation(ctx context.Context, params GetConversationParams) (GetConversationRes, error)
 	// GetEmail implements getEmail operation.
 	//
 	// Returns the full record for an inbound email received at one

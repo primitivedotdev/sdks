@@ -1930,6 +1930,137 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-conversation",
+    "description": "Returns the full conversation the given inbound email belongs\nto, as ordered, ready-to-prompt turns WITH bodies. It resolves\nthe thread from the email and returns every message oldest-first,\nso an agent that received an email can pass `messages` straight\nto a chat model in one call instead of walking `/threads/{id}`\nplus `/emails/{id}` and `/sent-emails/{id}` per message.\n\nEach message carries a `direction` (`inbound` | `outbound`) and a\nderived `role`: `inbound` -> `user`, `outbound` -> `assistant`\n(your own prior replies). The role mapping assumes the caller\nowns the outbound side, which is the agent-reply case this exists\nfor. If the email has no thread yet (a brand-new message), the\nconversation is just that one message as a single user turn.\n\nThe message list is capped; check `truncated` to detect when\nolder messages were omitted. Consecutive same-role turns are not\nmerged here; that normalization is model-specific and left to the\ncaller.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getConversation",
+    "path": "/emails/{id}/conversation",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "The full conversation an inbound email belongs to, as ordered,\nready-to-prompt turns with bodies. Resolves the thread from the\nemail and returns every message oldest-first, so an agent that\nreceived an email can pass `messages` straight to a chat model in\none call.\n",
+      "properties": {
+        "thread_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "The thread this email belongs to, or null when the email\nisn't threaded yet (the conversation is then just this one\nmessage).\n"
+        },
+        "subject": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Normalized thread subject (Re/Fwd prefixes stripped), or the\nemail's own subject when it isn't threaded.\n"
+        },
+        "message_count": {
+          "type": "integer",
+          "description": "Total messages in the thread. `messages` is capped, so\n`truncated` is true (and this can exceed `messages.length`)\nwhen older messages were omitted.\n"
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "True when `messages` omits part of the conversation because\nthe thread exceeds the per-call cap.\n"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "One message in the conversation, with its body and a chat role.",
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "assistant"
+                ],
+                "description": "Chat role derived from `direction`: `user` for inbound\n(received) messages, `assistant` for outbound (your own prior\nreplies). Lets `messages` be passed directly to a chat model.\n"
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "inbound",
+                  "outbound"
+                ],
+                "description": "`inbound` for a received email (`/emails/{id}`), `outbound`\nfor a send (`/sent-emails/{id}`).\n"
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "message_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "to": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "subject": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "description": "Plain-text body. Empty string when the message has no text\npart or its content was discarded by retention.\n"
+              },
+              "timestamp": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "received_at for inbound, created_at for outbound."
+              }
+            },
+            "required": [
+              "role",
+              "direction",
+              "id",
+              "text"
+            ]
+          }
+        }
+      },
+      "required": [
+        "thread_id",
+        "message_count",
+        "truncated",
+        "messages"
+      ]
+    },
+    "sdkName": "getConversation",
+    "summary": "Get the conversation an email belongs to",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "get-email",
     "description": "Returns the full record for an inbound email received at one\nof your verified domains, including the parsed text and HTML\nbodies, threading metadata, SMTP envelope detail, webhook\ndelivery state, and a `replies` array for any outbound sends\nrecorded as replies to this inbound.\n\nFor listing inbound emails (with cursor pagination, status\nand date filters, and free-text search), use\n`/emails`. Outbound (sent) email records are NOT returned\nhere; use `/sent-emails/{id}` for those.\n\nThe response carries four sender-shaped fields whose\nmeanings overlap. `from_email` is the canonical \"who sent\nthis\" field for most use cases (parsed bare address from\nthe `From:` header, with a `sender` fallback). `from_header`\nis the raw header including any display name. `sender` and\n`smtp_mail_from` both carry the SMTP envelope MAIL FROM\n(return-path) and are equal by construction; `sender` is\nthe older field name retained for compatibility. See\n`primitive describe emails:get-email | jq '.responseSchema.properties'`\nfor per-field detail.\n",
     "hasJsonBody": false,
