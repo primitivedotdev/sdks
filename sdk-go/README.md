@@ -152,6 +152,12 @@ wait := true
 _, err = client.Reply(ctx, email, primitive.ReplyParams{
 	BodyText: "Thanks for your email.",
 	BodyHTML: "<p>Thanks for your email.</p>",
+	Attachments: []primitive.SendAttachment{
+		{
+			Filename:      "report.txt",
+			ContentBase64: "aGVsbG8=",
+		},
+	},
 	Wait:     &wait,
 })
 ```

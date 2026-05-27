@@ -1872,7 +1872,17 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "replyToEmail",
         "summary": "Reply to an inbound email",
-        "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody and optional `wait` flag; passing any header or recipient\noverride is rejected by the schema (`additionalProperties:\nfalse`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
+        "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody, optional From override, optional attachments, and optional\n`wait` flag; passing any header or recipient override is\nrejected by the schema (`additionalProperties: false`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
+        "servers": [
+          {
+            "url": "https://api.primitive.dev/v1",
+            "description": "Attachments-supporting send host (recommended)"
+          },
+          {
+            "url": "https://www.primitive.dev/api/v1",
+            "description": "Primary host (attachment-free replies only)"
+          }
+        ],
         "tags": [
           "Sending"
         ],
@@ -6923,6 +6933,14 @@ export const openapiDocument: Record<string, unknown> = {
           "wait": {
             "type": "boolean",
             "description": "When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics."
+          },
+          "attachments": {
+            "type": "array",
+            "maxItems": 100,
+            "description": "Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most 31457280.",
+            "items": {
+              "$ref": "#/components/schemas/SendMailAttachment"
+            }
           }
         }
       },

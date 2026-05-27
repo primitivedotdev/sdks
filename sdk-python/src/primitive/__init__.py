@@ -1,6 +1,7 @@
 from .client import (
     PrimitiveAPIError,
     PrimitiveClient,
+    SendAttachment,
     SendResult,
     SendThread,
     client,
@@ -156,6 +157,7 @@ __all__ = [
     "STANDARD_WEBHOOK_ID_HEADER",
     "STANDARD_WEBHOOK_SIGNATURE_HEADER",
     "STANDARD_WEBHOOK_TIMESTAMP_HEADER",
+    "SendAttachment",
     "SendResult",
     "SendThread",
     "VERIFICATION_ERRORS",

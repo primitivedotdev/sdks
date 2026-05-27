@@ -106,11 +106,17 @@ client.reply(
 `wait` flag the top-level `send()` takes:
 
 ```python
+attachment: primitive.SendAttachment = {
+    "filename": "report.txt",
+    "content_base64": "aGVsbG8=",
+}
+
 client.reply(
     email,
     {
         "text": "Thanks for your email.",
         "html": "<p>Thanks for your email.</p>",
+        "attachments": [attachment],
         "wait": True,
     },
 )

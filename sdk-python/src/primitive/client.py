@@ -6,7 +6,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from http import HTTPStatus
-from typing import Any, cast
+from typing import Any, TypedDict, cast
 from uuid import UUID
 
 import httpx
@@ -172,6 +172,15 @@ class SendThread:
     references: list[str] | None = None
 
 
+class _OptionalSendAttachment(TypedDict, total=False):
+    content_type: str
+
+
+class SendAttachment(_OptionalSendAttachment):
+    filename: str
+    content_base64: str
+
+
 @dataclass(frozen=True)
 class SendResult:
     id: str
@@ -235,19 +244,27 @@ def _build_reply_input(
     body_text: str | None,
     body_html: str | None,
     from_email: str | None,
+    attachments: list[SendAttachment] | None,
     wait: bool | None,
 ) -> ApiReplyInput:
     """Build the small ReplyInput body the server's reply endpoint expects.
 
     Recipients, subject, and threading headers are derived server-side
-    from the inbound row, so this body is intentionally tiny.
+    from the inbound row, so this body only carries caller-controlled
+    reply fields.
     """
-    return ApiReplyInput(
-        body_text=body_text if body_text is not None else UNSET,
-        body_html=body_html if body_html is not None else UNSET,
-        from_=from_email if from_email is not None else UNSET,
-        wait=wait if wait is not None else UNSET,
-    )
+    payload: dict[str, Any] = {}
+    if body_text is not None:
+        payload["body_text"] = body_text
+    if body_html is not None:
+        payload["body_html"] = body_html
+    if from_email is not None:
+        payload["from"] = from_email
+    if attachments is not None:
+        payload["attachments"] = attachments
+    if wait is not None:
+        payload["wait"] = wait
+    return ApiReplyInput.from_dict(payload)
 
 
 def _unwrap_reply_response(response: Any) -> SendResult:
@@ -469,15 +486,22 @@ def _build_forward_text(email: ReceivedEmail, intro: str | None) -> str:
 
 
 def _resolve_reply_payload(
-    text: str | dict[str, str | bool],
-) -> tuple[str | None, str | None, str | None, bool | None]:
-    """Normalize a reply input into ``(body_text, body_html, from, wait)``.
+    text: str | dict[str, Any],
+) -> tuple[
+    str | None,
+    str | None,
+    str | None,
+    list[SendAttachment] | None,
+    bool | None,
+]:
+    """Normalize a reply input into caller-controlled reply fields.
 
     The high-level ``reply()`` accepts either a bare string (treated as
-    text) or a dict with ``text`` / ``html`` / ``from`` / ``wait``.
-    ``subject`` is intentionally not accepted; a custom subject silently
-    breaks Gmail's threading because Gmail's Conversation View needs a
-    normalized-subject match in addition to References.
+    text) or a dict with ``text`` / ``html`` / ``from`` /
+    ``attachments`` / ``wait``. ``subject`` is intentionally not
+    accepted; a custom subject silently breaks Gmail's threading because
+    Gmail's Conversation View needs a normalized-subject match in
+    addition to References.
     """
     payload = {"text": text} if isinstance(text, str) else text
     # Reject subject before the empty-body check so a caller passing
@@ -494,11 +518,15 @@ def _resolve_reply_payload(
     if not body_text and not body_html:
         raise ValueError("reply requires text or html")
     raw_from = payload.get("from")
+    raw_attachments = payload.get("attachments")
     raw_wait = payload.get("wait")
     return (
         body_text if isinstance(body_text, str) else None,
         body_html if isinstance(body_html, str) else None,
         raw_from if isinstance(raw_from, str) else None,
+        cast(list[SendAttachment], raw_attachments)
+        if isinstance(raw_attachments, list)
+        else None,
         raw_wait if isinstance(raw_wait, bool) else None,
     )
 
@@ -526,15 +554,15 @@ class PrimitiveClient:
             raise TypeError(
                 "PrimitiveClient no longer accepts `base_url`; the dual-host "
                 "rename split it into `api_base_url_1` (primary API host) and "
-                "`api_base_url_2` (attachments-supporting send host). Pass "
+                "`api_base_url_2` (attachments-supporting message host). Pass "
                 "`api_base_url_1=...` instead of `base_url=...`.",
             )
         # The primary AuthenticatedClient targets api_base_url_1 and is
         # what callers passing `client=primitive_client.api_client` to a
-        # generated operation get. /send-mail routes to the host-2
-        # client via api_send_client; the send() / asend() wrappers
-        # below pick the right client internally. Customers don't see
-        # the split.
+        # generated operation get. /send-mail and /emails/{id}/reply route
+        # to the host-2 client via api_send_client; the send() / reply()
+        # wrappers below pick the right client internally. Customers don't
+        # see the split.
         self.api_client = AuthenticatedClient(
             base_url=api_base_url_1,
             token=api_key,
@@ -726,9 +754,10 @@ class PrimitiveClient:
     def reply(
         self,
         email: ReceivedEmail,
-        text: str | dict[str, str | bool],
+        text: str | dict[str, Any],
         *,
         from_email: str | None = None,
+        attachments: list[SendAttachment] | None = None,
         idempotency_key: str | None = None,
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
@@ -738,18 +767,22 @@ class PrimitiveClient:
         Calls ``POST /emails/{id}/reply`` on the server. Recipients,
         subject (``Re: <parent>``), and threading headers are derived
         server-side from the inbound row. ``text`` can be a bare
-        string or a dict with ``text`` / ``html`` / ``from`` / ``wait``.
-        ``from_email`` is a kwarg shorthand for the same override.
+        string or a dict with ``text`` / ``html`` / ``from`` /
+        ``attachments`` / ``wait``. ``from_email`` and ``attachments``
+        are kwarg shorthands for the same overrides.
         ``subject`` is intentionally not accepted because Gmail's
         threading needs a normalized-subject match in addition to
         References.
         """
-        body_text, body_html, dict_from, wait = _resolve_reply_payload(text)
+        body_text, body_html, dict_from, dict_attachments, wait = (
+            _resolve_reply_payload(text)
+        )
         return self._do_reply(
             email_id=email.id,
             body_text=body_text,
             body_html=body_html,
             from_email=from_email or dict_from,
+            attachments=attachments if attachments is not None else dict_attachments,
             wait=wait,
             idempotency_key=idempotency_key,
             timeout=timeout,
@@ -759,20 +792,24 @@ class PrimitiveClient:
     async def areply(
         self,
         email: ReceivedEmail,
-        text: str | dict[str, str | bool],
+        text: str | dict[str, Any],
         *,
         from_email: str | None = None,
+        attachments: list[SendAttachment] | None = None,
         idempotency_key: str | None = None,
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
     ) -> SendResult:
         """Async version of :meth:`reply`."""
-        body_text, body_html, dict_from, wait = _resolve_reply_payload(text)
+        body_text, body_html, dict_from, dict_attachments, wait = (
+            _resolve_reply_payload(text)
+        )
         return await self._ado_reply(
             email_id=email.id,
             body_text=body_text,
             body_html=body_html,
             from_email=from_email or dict_from,
+            attachments=attachments if attachments is not None else dict_attachments,
             wait=wait,
             idempotency_key=idempotency_key,
             timeout=timeout,
@@ -786,12 +823,13 @@ class PrimitiveClient:
         body_text: str | None,
         body_html: str | None,
         from_email: str | None,
+        attachments: list[SendAttachment] | None,
         wait: bool | None,
         idempotency_key: str | None,
         timeout: float | None,
         extra_headers: dict[str, str] | None,
     ) -> SendResult:
-        _install_request_hooks(self.api_client)
+        _install_request_hooks(self.api_send_client)
         token = self._set_per_call_options(
             timeout=timeout,
             extra_headers=extra_headers,
@@ -800,11 +838,12 @@ class PrimitiveClient:
         try:
             response = reply_to_email_sync_detailed(
                 id=UUID(email_id),
-                client=self.api_client,
+                client=self.api_send_client,
                 body=_build_reply_input(
                     body_text=body_text,
                     body_html=body_html,
                     from_email=from_email,
+                    attachments=attachments,
                     wait=wait,
                 ),
             )
@@ -819,12 +858,13 @@ class PrimitiveClient:
         body_text: str | None,
         body_html: str | None,
         from_email: str | None,
+        attachments: list[SendAttachment] | None,
         wait: bool | None,
         idempotency_key: str | None,
         timeout: float | None,
         extra_headers: dict[str, str] | None,
     ) -> SendResult:
-        _install_request_hooks(self.api_client)
+        _install_request_hooks(self.api_send_client)
         token = self._set_per_call_options(
             timeout=timeout,
             extra_headers=extra_headers,
@@ -833,11 +873,12 @@ class PrimitiveClient:
         try:
             response = await reply_to_email_async_detailed(
                 id=UUID(email_id),
-                client=self.api_client,
+                client=self.api_send_client,
                 body=_build_reply_input(
                     body_text=body_text,
                     body_html=body_html,
                     from_email=from_email,
+                    attachments=attachments,
                     wait=wait,
                 ),
             )
@@ -927,6 +968,7 @@ def client(
 __all__ = [
     "PrimitiveAPIError",
     "PrimitiveClient",
+    "SendAttachment",
     "SendResult",
     "SendThread",
     "client",

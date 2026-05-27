@@ -28,6 +28,8 @@ type SendThread struct {
 	References []string
 }
 
+type SendAttachment = primitiveapi.SendMailAttachment
+
 type SendParams struct {
 	From           string
 	To             string
@@ -49,10 +51,11 @@ type SendParams struct {
 // match and a normalized-subject match to thread, and a custom
 // subject silently breaks that.
 type ReplyParams struct {
-	BodyText string
-	BodyHTML string
-	From     string
-	Wait     *bool
+	BodyText    string
+	BodyHTML    string
+	From        string
+	Attachments []SendAttachment
+	Wait        *bool
 }
 
 type ForwardParams struct {
@@ -105,11 +108,10 @@ func (e *APIError) Error() string {
 // operation to the right one so customers don't have to think about
 // the host split:
 //   - api / Host 1 (DefaultAPIBaseURL1, "https://www.primitive.dev/api/v1"):
-//     every operation except /send-mail. Today that's also where the
-//     reply / forward endpoints live.
+//     every operation except attachment-capable message sends.
 //   - apiSend / Host 2 (DefaultAPIBaseURL2, "https://api.primitive.dev/v1"):
-//     /send-mail. Cloudflare Worker with a larger request body cap to
-//     support attachment sends.
+//     /send-mail and /emails/{id}/reply. Cloudflare Worker with a larger
+//     request body cap to support attachment sends and replies.
 type Client struct {
 	api     sendAPI
 	apiSend sendAPI
@@ -395,10 +397,13 @@ func mapSendMailResult(data primitiveapi.SendMailResult) SendResult {
 //
 // Calls POST /emails/{id}/reply on the server. Recipients, subject,
 // and threading headers are derived server-side from the inbound row
-// identified by email.ID. The customer controls the body, an optional
-// From override, and an optional Wait flag.
+// identified by email.ID. The customer controls the body, optional
+// From override, optional attachments, and optional Wait flag.
 func (c *Client) Reply(ctx context.Context, email *ReceivedEmail, input ReplyParams) (SendResult, error) {
 	var zero SendResult
+	if c == nil || c.apiSend == nil {
+		return zero, fmt.Errorf("client is not configured")
+	}
 	if email == nil {
 		return zero, fmt.Errorf("email is required")
 	}
@@ -421,11 +426,14 @@ func (c *Client) Reply(ctx context.Context, email *ReceivedEmail, input ReplyPar
 	if input.From != "" {
 		body.SetFrom(primitiveapi.NewOptString(input.From))
 	}
+	if len(input.Attachments) > 0 {
+		body.SetAttachments(input.Attachments)
+	}
 	if input.Wait != nil {
 		body.SetWait(primitiveapi.NewOptBool(*input.Wait))
 	}
 
-	res, err := c.api.ReplyToEmail(ctx, body, primitiveapi.ReplyToEmailParams{ID: emailID})
+	res, err := c.apiSend.ReplyToEmail(ctx, body, primitiveapi.ReplyToEmailParams{ID: emailID})
 	if err != nil {
 		return zero, err
 	}

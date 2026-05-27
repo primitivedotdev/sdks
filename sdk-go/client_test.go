@@ -238,6 +238,39 @@ func TestClientReplyPostsToReplyEndpointWithMinimalBody(t *testing.T) {
 	}
 }
 
+func TestClientReplyPassesAttachmentsViaSendHost(t *testing.T) {
+	primary := &stubSendAPI{}
+	sendHost := &stubSendAPI{
+		replyResult: &primitiveapi.ReplyToEmailOK{Success: true, Data: sendMailResult()},
+	}
+	client := &Client{api: primary, apiSend: sendHost}
+
+	_, err := client.Reply(context.Background(), receivedEmailFixture(), ReplyParams{
+		BodyText: "See attached.",
+		Attachments: []SendAttachment{
+			{
+				Filename:      "report.txt",
+				ContentBase64: "aGVsbG8=",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Reply returned error: %v", err)
+	}
+	if primary.replyCalled {
+		t.Fatal("ReplyToEmail should not use the primary host client")
+	}
+	if !sendHost.replyCalled {
+		t.Fatal("ReplyToEmail was not called on the send host client")
+	}
+	if bodyText, ok := sendHost.replyRequest.BodyText.Get(); !ok || bodyText != "See attached." {
+		t.Fatalf("unexpected reply body_text: %#v", sendHost.replyRequest.BodyText)
+	}
+	if got := sendHost.replyRequest.Attachments; len(got) != 1 || got[0].Filename != "report.txt" || got[0].ContentBase64 != "aGVsbG8=" {
+		t.Fatalf("unexpected attachments: %#v", got)
+	}
+}
+
 func TestClientSendForwardsIdempotentReplay(t *testing.T) {
 	// Pin that the IdempotentReplay field on the generated
 	// SendMailResult lands on the public SendResult. Earlier the

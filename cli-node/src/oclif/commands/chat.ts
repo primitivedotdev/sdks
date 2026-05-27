@@ -19,6 +19,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { readAttachmentFiles } from "../attachments.js";
 import {
   loadActiveChatState,
   loadChatConversationByLocalId,
@@ -837,8 +838,10 @@ class ChatCommand extends Command {
     "<%= config.bin %> chat help@agent.acme.dev 'how do I rotate my API key?'",
     "cat error.log | <%= config.bin %> chat help@agent.acme.dev",
     "<%= config.bin %> chat reply 'one more thing'",
+    "<%= config.bin %> chat reply 'see attached' --attachment ./report.pdf",
     "<%= config.bin %> chat help@agent.acme.dev --reply 'one more thing'",
     "<%= config.bin %> chat help@agent.acme.dev --reply 'one more thing' --reply-to-email-id <inbound-email-id>",
+    "<%= config.bin %> chat help@agent.acme.dev 'can you review this?' --attachment ./report.pdf",
     "<%= config.bin %> chat help@agent.acme.dev 'follow up question' --json",
     "<%= config.bin %> chat help@agent.acme.dev 'one more thing' --timeout 300",
   ];
@@ -891,6 +894,12 @@ class ChatCommand extends Command {
     "in-reply-to": Flags.string({
       description:
         "Raw Message-Id of the parent email to thread a new send against. Prefer --reply-to-email-id with --reply when continuing an inbound email stored by Primitive.",
+    }),
+    attachment: Flags.string({
+      char: "a",
+      description:
+        "Attach a file to this chat message. Repeat --attachment to attach multiple files.",
+      multiple: true,
     }),
     "chat-local-id": Flags.integer({
       description:
@@ -994,6 +1003,7 @@ class ChatCommand extends Command {
       const progress = flags.quiet
         ? null
         : new ChatProgressIndicator(process.stderr);
+      const attachments = readAttachmentFiles(flags.attachment);
 
       let from: string;
       let parentReply: EmailDetail | undefined;
@@ -1079,8 +1089,9 @@ class ChatCommand extends Command {
               body: {
                 body_text: message,
                 from,
+                ...(attachments !== undefined ? { attachments } : {}),
               },
-              client: apiClient.client,
+              client: apiClient._sendClient,
               path: { id: parentReply.id },
               responseStyle: "fields",
             })
@@ -1093,6 +1104,7 @@ class ChatCommand extends Command {
                 ...(flags["in-reply-to"] !== undefined
                   ? { in_reply_to: flags["in-reply-to"] }
                   : {}),
+                ...(attachments !== undefined ? { attachments } : {}),
               },
               client: apiClient._sendClient,
               responseStyle: "fields",
@@ -1230,6 +1242,7 @@ export class ChatReplyCommand extends Command {
     "<%= config.bin %> chat reply 'one more thing'",
     "<%= config.bin %> chat reply 0 'one more thing'",
     "<%= config.bin %> chat reply --id 0 'one more thing'",
+    "<%= config.bin %> chat reply 'see attached' --attachment ./report.pdf",
     "cat follow-up.txt | <%= config.bin %> chat reply",
   ];
 
@@ -1287,6 +1300,12 @@ export class ChatReplyCommand extends Command {
     "strict-only": Flags.boolean({
       description:
         "Disable the time-window fallback. If the active chat was saved from a strict match, this is already the default.",
+    }),
+    attachment: Flags.string({
+      char: "a",
+      description:
+        "Attach a file to the reply. Repeat --attachment to attach multiple files.",
+      multiple: true,
     }),
     interval: Flags.integer({
       description: "Seconds between polls while waiting for the reply.",
@@ -1383,6 +1402,9 @@ export class ChatReplyCommand extends Command {
     }
     if (flags.json) argv.push("--json");
     if (flags.quiet) argv.push("--quiet");
+    for (const attachment of flags.attachment ?? []) {
+      argv.push("--attachment", attachment);
+    }
     if (state.strict_only || flags["strict-only"]) argv.push("--strict-only");
     if (flags.time) argv.push("--time");
 

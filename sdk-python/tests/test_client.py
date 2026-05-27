@@ -9,12 +9,14 @@ from typing import Any, cast
 import httpx
 import pytest
 
+import primitive
 from primitive.api.models.error_response import ErrorResponse
 from primitive.api.models.reply_to_email_response_200 import ReplyToEmailResponse200
 from primitive.api.models.send_email_response_200 import SendEmailResponse200
 from primitive.client import (
     PrimitiveAPIError,
     PrimitiveClient,
+    SendAttachment,
     SendThread,
 )
 from primitive.received_email import (
@@ -415,6 +417,71 @@ def test_reply_posts_to_reply_endpoint_with_minimal_body(monkeypatch: pytest.Mon
 
     assert captured["id"] == RECEIVED_EMAIL.id
     assert captured["body"] == {"body_text": "Thank you for your email."}
+
+
+def test_reply_posts_attachments_to_send_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+    attachment: SendAttachment = {
+        "content_base64": "aGVsbG8=",
+        "filename": "report.txt",
+    }
+
+    def fake_reply_to_email_sync_detailed(*, id, client, body):
+        captured["id"] = str(id)
+        captured["base_url"] = cast(Any, client)._base_url
+        captured["body"] = body.to_dict()
+        return SimpleNamespace(
+            status_code=HTTPStatus.OK,
+            parsed=ReplyToEmailResponse200.from_dict(
+                {
+                    "success": True,
+                    "data": {
+                        **SEND_RESULT,
+                        "queue_id": "reply-attachment-1",
+                    },
+                }
+            ),
+            content=b"",
+        )
+
+    monkeypatch.setattr(
+        client_module,
+        "reply_to_email_sync_detailed",
+        fake_reply_to_email_sync_detailed,
+    )
+
+    client = PrimitiveClient(
+        "prim_test",
+        api_base_url_1="https://primary.example.test/api/v1",
+        api_base_url_2="https://send.example.test/api/v1",
+    )
+    client.reply(
+        RECEIVED_EMAIL,
+        "See attached.",
+        attachments=[attachment],
+    )
+
+    assert captured["id"] == RECEIVED_EMAIL.id
+    assert captured["base_url"] == "https://send.example.test/api/v1"
+    assert captured["body"] == {
+        "attachments": [
+            {
+                "content_base64": "aGVsbG8=",
+                "filename": "report.txt",
+            },
+        ],
+        "body_text": "See attached.",
+    }
+
+
+def test_top_level_exports_send_attachment_type() -> None:
+    assert "SendAttachment" in primitive.__all__
+    attachment: primitive.SendAttachment = {
+        "content_base64": "aGVsbG8=",
+        "filename": "report.txt",
+    }
+
+    assert attachment["filename"] == "report.txt"
 
 
 def test_reply_rejects_subject_override() -> None:

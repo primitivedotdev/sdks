@@ -55,6 +55,8 @@ Use task-oriented commands for normal workflows:
 ```bash
 primitive send --to alice@example.com --body "Hello"
 primitive reply --id <inbound-email-id> --body "Thanks"
+primitive reply --id <inbound-email-id> --body "See attached" --attachment ./report.pdf
+primitive chat reply "See attached" --attachment ./report.pdf
 primitive emails list
 primitive emails get --id <inbound-email-id>
 primitive sent list

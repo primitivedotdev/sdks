@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { EmailDetail, SendMailResult } from "@primitivedotdev/api-core";
@@ -648,6 +654,64 @@ describe("chat command", () => {
     expect(result.stdout).toContain("Follow-up answer.");
   });
 
+  it("continues an exact chat thread with reply attachments", async () => {
+    const attachmentPath = join(tempConfigHome, "report.txt");
+    writeFileSync(attachmentPath, "hello");
+    mocks.getEmail.mockImplementation(async ({ path }) => {
+      if (path.id === "email-2") {
+        return {
+          data: {
+            data: replyEmail({
+              body_text: "Follow-up answer.",
+              id: "email-2",
+              received_at: "2026-05-25T00:00:04.000Z",
+              reply_to_sent_email_id: "sent-reply-1",
+            }),
+          },
+        };
+      }
+      return { data: { data: replyEmail() } };
+    });
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      cursor: null,
+      ok: true,
+      rows: [
+        searchRow({
+          id: "email-2",
+          received_at: "2026-05-25T00:00:04.000Z",
+        }),
+      ],
+    });
+
+    const result = await runChatCommand([
+      "help@agent.example",
+      "--reply",
+      "Can you review this?",
+      "--reply-to-email-id",
+      "email-1",
+      "--attachment",
+      attachmentPath,
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(mocks.replyToEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: {
+          attachments: [
+            {
+              content_base64: "aGVsbG8=",
+              filename: "report.txt",
+            },
+          ],
+          body_text: "Can you review this?",
+          from: "agent@sender.example",
+        },
+        path: { id: "email-1" },
+      }),
+    );
+    expect(result.stdout).toContain("Follow-up answer.");
+  });
+
   it("continues the latest inbound from the recipient with --reply", async () => {
     mocks.getEmail.mockImplementation(async ({ path }) => {
       if (path.id === "email-2") {
@@ -765,6 +829,72 @@ describe("chat command", () => {
     expect(mocks.fetchEmailSearchPage).toHaveBeenCalledWith(
       expect.objectContaining({
         filters: { replyToSentEmailId: "sent-reply-1" },
+      }),
+    );
+    expect(result.stdout).toContain("Active chat follow-up.");
+  });
+
+  it("continues the active chat with chat reply attachments", async () => {
+    const attachmentPath = join(tempConfigHome, "notes.txt");
+    writeFileSync(attachmentPath, "notes");
+    mkdirSync(testConfigDir(), { recursive: true });
+    saveActiveChatState(testConfigDir(), {
+      from: "agent@sender.example",
+      last_reply_email_id: "email-1",
+      last_reply_received_at: "2026-05-25T00:00:02.000Z",
+      last_sent_email_id: "sent-1",
+      recipient: "help@agent.example",
+      strict_only: true,
+      strict_phase_seconds: 60,
+      thread_id: "thread-1",
+      timeout_seconds: 17,
+    });
+    mocks.getEmail.mockImplementation(async ({ path }) => {
+      if (path.id === "email-2") {
+        return {
+          data: {
+            data: replyEmail({
+              body_text: "Active chat follow-up.",
+              id: "email-2",
+              received_at: "2026-05-25T00:00:04.000Z",
+              reply_to_sent_email_id: "sent-reply-1",
+            }),
+          },
+        };
+      }
+      return { data: { data: replyEmail() } };
+    });
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      cursor: null,
+      ok: true,
+      rows: [
+        searchRow({
+          id: "email-2",
+          received_at: "2026-05-25T00:00:04.000Z",
+        }),
+      ],
+    });
+
+    const result = await runChatReplyCommand([
+      "Can you review this?",
+      "--attachment",
+      attachmentPath,
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(mocks.replyToEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: {
+          attachments: [
+            {
+              content_base64: "bm90ZXM=",
+              filename: "notes.txt",
+            },
+          ],
+          body_text: "Can you review this?",
+          from: "agent@sender.example",
+        },
+        path: { id: "email-1" },
       }),
     );
     expect(result.stdout).toContain("Active chat follow-up.");

@@ -9,6 +9,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { readAttachmentFiles } from "../attachments.js";
 import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 
@@ -22,6 +23,7 @@ class ReplyCommand extends Command {
   static examples = [
     "<%= config.bin %> reply --id <inbound-email-id> --body 'Thanks, got it.'",
     "<%= config.bin %> reply --id <inbound-email-id> --body-file ./reply.txt",
+    "<%= config.bin %> reply --id <inbound-email-id> --body 'See attached.' --attachment ./report.pdf",
     "<%= config.bin %> reply --id <inbound-email-id> --html '<p>Thanks, got it.</p>' --wait",
     "<%= config.bin %> reply --id <inbound-email-id> --from 'Support <support@example.com>' --body 'Thanks!'",
   ];
@@ -54,7 +56,7 @@ class ReplyCommand extends Command {
     }),
     "body-file": Flags.string({
       description:
-        "Read the plain-text reply body from a UTF-8 file. Mutually exclusive with --body and --body-stdin.",
+        "Read the plain-text reply body from a UTF-8 file; this does not attach the file. Use --attachment for attachments. Mutually exclusive with --body and --body-stdin.",
     }),
     "body-stdin": Flags.boolean({
       description:
@@ -66,7 +68,7 @@ class ReplyCommand extends Command {
     }),
     "html-file": Flags.string({
       description:
-        "Read the HTML reply body from a UTF-8 file. Mutually exclusive with --html and --html-stdin.",
+        "Read the HTML reply body from a UTF-8 file; this does not attach the file. Use --attachment for attachments. Mutually exclusive with --html and --html-stdin.",
     }),
     "html-stdin": Flags.boolean({
       description:
@@ -75,6 +77,12 @@ class ReplyCommand extends Command {
     from: Flags.string({
       description:
         "Optional From header override. Defaults to the inbound recipient.",
+    }),
+    attachment: Flags.string({
+      char: "a",
+      description:
+        "Attach a file to the reply. Repeat --attachment to attach multiple files.",
+      multiple: true,
     }),
     wait: Flags.boolean({
       description:
@@ -108,15 +116,17 @@ class ReplyCommand extends Command {
           apiBaseUrl2: flags["api-base-url-2"],
           configDir: this.config.configDir,
         });
+      const attachments = readAttachmentFiles(flags.attachment);
 
       const result = await replyToEmail({
         body: {
           ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
           ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
           ...(flags.from !== undefined ? { from: flags.from } : {}),
+          ...(attachments !== undefined ? { attachments } : {}),
           ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
         },
-        client: apiClient.client,
+        client: apiClient._sendClient,
         path: { id: flags.id },
         responseStyle: "fields",
       });
