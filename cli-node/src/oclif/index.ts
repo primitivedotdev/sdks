@@ -4,7 +4,7 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
-import ChatCommand from "./commands/chat.js";
+import ChatCommand, { ChatReplyCommand } from "./commands/chat.js";
 import {
   ConfigCommand,
   ConfigListCommand,
@@ -388,6 +388,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // body). Positioned as the canonical verb for the
   // agents-behind-email-addresses paradigm.
   chat: ChatCommand,
+  "chat:reply": ChatReplyCommand,
   // `login` and `signin` are intentionally interchangeable public
   // auth surfaces. With no args they use browser approval; with an
   // email address they start the email-code flow. `otp` is the

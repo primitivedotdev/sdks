@@ -102,11 +102,18 @@ describe("COMMANDS / manifest coverage", () => {
 
   it("keeps top-level chat registered with reply continuation support", () => {
     expect(COMMANDS.chat).toBeDefined();
+    expect(COMMANDS["chat:reply"]).toBeDefined();
     const chatCommand = COMMANDS.chat as unknown as {
+      flags: Record<string, unknown>;
+    };
+    const chatReplyCommand = COMMANDS["chat:reply"] as unknown as {
       flags: Record<string, unknown>;
     };
     expect(chatCommand.flags.reply).toBeDefined();
     expect(chatCommand.flags["reply-to-email-id"]).toBeDefined();
+    expect(chatCommand.flags["chat-local-id"]).toBeDefined();
+    expect(chatReplyCommand.flags.id).toBeDefined();
+    expect(chatReplyCommand.flags["strict-only"]).toBeDefined();
   });
 
   it("registers friendly thread command aliases", () => {
@@ -228,6 +235,17 @@ describe("COMMANDS / manifest coverage", () => {
 
     expect(packageJson.oclif?.topics?.threads?.description).toContain(
       "primitive threads get --id <thread-id>",
+    );
+  });
+
+  it("documents active chat replies in root help", () => {
+    const packageJson = readCliPackageJson();
+
+    expect(packageJson.oclif?.topics?.chat?.description).toContain(
+      "primitive chat reply <message>",
+    );
+    expect(packageJson.oclif?.topics?.chat?.description).toContain(
+      "primitive chat reply <id> <message>",
     );
   });
 

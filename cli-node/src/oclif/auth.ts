@@ -13,6 +13,7 @@ import {
   DEFAULT_API_BASE_URL_1,
   DEFAULT_API_BASE_URL_2,
 } from "@primitivedotdev/api-core";
+import { deleteChatState } from "./chat-state.js";
 
 const CREDENTIALS_FILE = "credentials.json";
 const CREDENTIALS_LOCK_DIR = "credentials.lock";
@@ -186,6 +187,7 @@ export function loadCliCredentials(
     if (error instanceof LegacyApiKeyCredentialFormatError) {
       try {
         rmSync(path, { force: true });
+        deleteChatState(configDir);
       } catch {
         // Best-effort cleanup; if unlink fails, the next CLI invocation
         // will hit this path again and try once more.
@@ -229,6 +231,7 @@ export function saveCliCredentials(
 
 export function deleteCliCredentials(configDir: string): void {
   rmSync(credentialsPath(configDir), { force: true });
+  deleteChatState(configDir);
 }
 
 export function deleteCliCredentialsLock(configDir: string): void {

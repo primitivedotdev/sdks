@@ -20,6 +20,7 @@ import {
   deleteCliCredentialsLock,
   loadCliCredentials,
 } from "../auth.js";
+import { chatStatePath } from "../chat-state.js";
 import { deletePendingAgentSignup, pendingSignupPath } from "./signup.js";
 
 function cliError(message: string): Errors.CLIError {
@@ -138,6 +139,9 @@ export function runForceLogout(params: { configDir: string }): void {
   const lockPath = credentialsLockPath(params.configDir);
   const removed = [
     existsSync(localCredentialsPath) ? "local Primitive CLI credentials" : null,
+    existsSync(chatStatePath(params.configDir))
+      ? "local chat reply state"
+      : null,
     existsSync(pendingPath) ? "pending email-code auth state" : null,
     existsSync(lockPath) ? "credential lock" : null,
   ].filter((value): value is string => value !== null);
