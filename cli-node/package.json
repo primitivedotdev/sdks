@@ -35,6 +35,9 @@
       "message": "Primitive CLI update available from <%= chalk.greenBright(config.version) %> to <%= chalk.greenBright(latest) %>. Run `npm install -g @primitivedotdev/cli@latest` to update."
     },
     "topics": {
+      "chat": {
+        "description": "Chat with agents over email. Use `primitive chat <email> <message>` to start, `primitive chat reply <message>` to continue the active chat, or `primitive chat reply <id> <message>` to reply in a specific local chat."
+      },
       "cli": {
         "description": "CLI authentication"
       },

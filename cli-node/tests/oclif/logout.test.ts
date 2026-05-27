@@ -15,6 +15,7 @@ import {
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../../src/oclif/auth.js";
+import { chatStatePath } from "../../src/oclif/chat-state.js";
 import {
   runForceLogout,
   runLogoutWithCredentialLock,
@@ -78,6 +79,8 @@ describe("runLogoutWithCredentialLock", () => {
     saveCliCredentials(tempDir, CREDENTIALS);
     const lockPath = join(tempDir, "credentials.lock");
     mkdirSync(lockPath, { recursive: true });
+    const localChatStatePath = chatStatePath(tempDir);
+    writeFileSync(localChatStatePath, "{}\n");
     const pendingPath = pendingSignupPath(tempDir);
     writeFileSync(
       pendingPath,
@@ -96,11 +99,15 @@ describe("runLogoutWithCredentialLock", () => {
     runForceLogout({ configDir: tempDir });
 
     expect(loadCliCredentials(tempDir)).toBeNull();
+    expect(existsSync(localChatStatePath)).toBe(false);
     expect(existsSync(lockPath)).toBe(false);
     expect(existsSync(pendingPath)).toBe(false);
     expect(
       writeSpy.mock.calls.map((call: unknown[]) => String(call[0])).join(""),
     ).toContain("pending email-code auth state");
+    expect(
+      writeSpy.mock.calls.map((call: unknown[]) => String(call[0])).join(""),
+    ).toContain("local chat reply state");
   });
 
   it("force logout reports when no local auth state existed", () => {

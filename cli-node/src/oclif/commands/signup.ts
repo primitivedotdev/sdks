@@ -37,6 +37,7 @@ import {
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../auth.js";
+import { deleteChatState } from "../chat-state.js";
 import { checkExistingLogin } from "./login.js";
 
 const INVALID_VERIFICATION_CODE = "invalid_verification_code";
@@ -380,6 +381,7 @@ function saveSignupCredentials(params: {
   configDir: string;
   signup: AgentSignupVerifyResult;
 }): void {
+  deleteChatState(params.configDir);
   saveCliCredentials(params.configDir, {
     access_token: params.signup.access_token,
     api_base_url_1: params.apiBaseUrl1,

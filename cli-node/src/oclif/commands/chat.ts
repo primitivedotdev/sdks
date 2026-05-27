@@ -19,6 +19,11 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import {
+  loadActiveChatState,
+  loadChatConversationByLocalId,
+  saveActiveChatState,
+} from "../chat-state.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 import {
   collectNewAcceptedEmails,
@@ -67,18 +72,18 @@ import {
 // --strict-only opts out of the fallback for callers that need
 // strict guarantees over success-rate.
 
-const DEFAULT_CHAT_TIMEOUT_SECONDS = 120;
-const DEFAULT_STRICT_PHASE_SECONDS = 60;
+export const DEFAULT_CHAT_TIMEOUT_SECONDS = 120;
+export const DEFAULT_STRICT_PHASE_SECONDS = 60;
 
 function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
 }
 
-async function readStdinToString(): Promise<string> {
+async function readStdinToString(
+  missingMessage = "No message provided. Pass the message as the second positional argument or pipe it via stdin.",
+): Promise<string> {
   if (process.stdin.isTTY) {
-    throw cliError(
-      "No message provided. Pass the message as the second positional argument or pipe it via stdin.",
-    );
+    throw cliError(missingMessage);
   }
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
@@ -90,7 +95,9 @@ async function readStdinToString(): Promise<string> {
 type ChatMatchStrategy = "strict" | "fallback";
 type ChatResponseBodyFormat = "empty" | "html" | "text";
 type ChatFollowUpCommandKind =
+  | "continue_active_chat"
   | "continue_chat"
+  | "continue_chat_explicit"
   | "inspect_reply"
   | "inspect_sent_email"
   | "reply_direct"
@@ -137,6 +144,7 @@ type ChatBaseContext = {
 };
 
 type ChatOutputContext = ChatBaseContext & {
+  localChatId?: number;
   matchStrategy: ChatMatchStrategy;
   reply: EmailDetail;
 };
@@ -296,6 +304,12 @@ function commandFromArgv(argv: string[]): string {
   return argv.map(shellQuote).join(" ");
 }
 
+function parseLocalChatIdArg(value: string | undefined): number | null {
+  if (value === undefined || !/^(0|[1-9]\d*)$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
 export function resolveChatResponseBody(reply: EmailDetail): ChatResponseBody {
   if (reply.body_text && reply.body_text.length > 0) {
     return { body: reply.body_text, format: "text" };
@@ -377,15 +391,59 @@ function buildCommand(
   };
 }
 
+function shouldPreferStrictContinuation(context: ChatOutputContext): boolean {
+  const hasCustomStrictPhase =
+    context.strictPhaseSeconds !== DEFAULT_STRICT_PHASE_SECONDS;
+  return (
+    context.strictOnly ||
+    (context.matchStrategy === "strict" && !hasCustomStrictPhase)
+  );
+}
+
 export function buildChatFollowUpCommands(
   context: ChatOutputContext,
 ): ChatFollowUpCommand[] {
   const commands: ChatFollowUpCommand[] = [];
   const hasCustomStrictPhase =
     context.strictPhaseSeconds !== DEFAULT_STRICT_PHASE_SECONDS;
-  const shouldPreferStrictContinuation =
-    context.strictOnly ||
-    (context.matchStrategy === "strict" && !hasCustomStrictPhase);
+  const preferStrictContinuation = shouldPreferStrictContinuation(context);
+  if (context.localChatId !== undefined) {
+    const localContinueParts = [
+      "primitive",
+      "chat",
+      "reply",
+      String(context.localChatId),
+      "<message>",
+    ];
+    if (context.json) {
+      localContinueParts.push("--json");
+    }
+    if (context.quiet) {
+      localContinueParts.push("--quiet");
+    }
+    commands.push(
+      buildCommand("continue_chat", "Continue this chat", localContinueParts, {
+        requiresMessage: true,
+      }),
+    );
+    const activeContinueParts = ["primitive", "chat", "reply", "<message>"];
+    if (context.json) {
+      activeContinueParts.push("--json");
+    }
+    if (context.quiet) {
+      activeContinueParts.push("--quiet");
+    }
+    commands.push(
+      buildCommand(
+        "continue_active_chat",
+        "Continue the active chat",
+        activeContinueParts,
+        {
+          requiresMessage: true,
+        },
+      ),
+    );
+  }
   const continueParts = [
     "primitive",
     "chat",
@@ -405,7 +463,7 @@ export function buildChatFollowUpCommands(
   if (context.quiet) {
     continueParts.push("--quiet");
   }
-  if (shouldPreferStrictContinuation) {
+  if (preferStrictContinuation) {
     continueParts.push("--strict-only");
   } else if (hasCustomStrictPhase) {
     continueParts.push(
@@ -414,9 +472,18 @@ export function buildChatFollowUpCommands(
     );
   }
   commands.push(
-    buildCommand("continue_chat", "Continue this chat", continueParts, {
-      requiresMessage: true,
-    }),
+    buildCommand(
+      context.localChatId === undefined
+        ? "continue_chat"
+        : "continue_chat_explicit",
+      context.localChatId === undefined
+        ? "Continue this chat"
+        : "Continue this chat explicitly",
+      continueParts,
+      {
+        requiresMessage: true,
+      },
+    ),
   );
   commands.push(
     buildCommand(
@@ -515,6 +582,7 @@ export function buildChatRecoveryCommands(
 
 export function buildChatJsonEnvelope(context: ChatOutputContext): {
   follow_up_commands: ChatFollowUpCommand[];
+  local_chat_id: number | null;
   match: {
     description: string;
     reply_to_sent_email_id: string | null;
@@ -529,6 +597,7 @@ export function buildChatJsonEnvelope(context: ChatOutputContext): {
   return {
     sent: context.sent,
     reply: context.reply,
+    local_chat_id: context.localChatId ?? null,
     response_body: responseBody.body,
     response_body_format: responseBody.format,
     match: {
@@ -538,6 +607,38 @@ export function buildChatJsonEnvelope(context: ChatOutputContext): {
     },
     follow_up_commands: buildChatFollowUpCommands(context),
   };
+}
+
+function persistActiveChat(params: {
+  configDir: string;
+  context: ChatOutputContext;
+  preferredLocalId?: number;
+  writeWarning?: (message: string) => void;
+}): number | null {
+  try {
+    const saved = saveActiveChatState(
+      params.configDir,
+      {
+        from: params.context.from,
+        last_reply_email_id: params.context.reply.id,
+        last_reply_received_at: params.context.reply.received_at,
+        last_sent_email_id: params.context.sent.id,
+        recipient: params.context.recipient,
+        strict_only: shouldPreferStrictContinuation(params.context),
+        strict_phase_seconds: params.context.strictPhaseSeconds,
+        thread_id: params.context.reply.thread_id ?? null,
+        timeout_seconds: params.context.timeoutSeconds,
+      },
+      { preferredLocalId: params.preferredLocalId },
+    );
+    return saved.local_id;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    params.writeWarning?.(
+      `Warning: could not save local chat state: ${detail}\n`,
+    );
+    return null;
+  }
 }
 
 export function formatChatResponse(context: ChatOutputContext): string {
@@ -568,6 +669,9 @@ export function formatChatResponse(context: ChatOutputContext): string {
   }
   if (context.reply.message_id) {
     lines.push(`  Message-Id: ${context.reply.message_id}`);
+  }
+  if (context.localChatId !== undefined) {
+    lines.push(`  Local chat id: ${context.localChatId}`);
   }
   lines.push(
     "",
@@ -708,6 +812,8 @@ class ChatCommand extends Command {
   --reply-to-email-id <inbound-email-id>. Reply mode uses Primitive's
   reply endpoint, so the reply subject and threading headers are
   derived from the inbound email instead of copied into CLI flags.
+  Successful chat turns also save an active local chat, so the next
+  follow-up can be sent with \`primitive chat reply '<message>'\`.
 
   --json emits a structured envelope with both sides of the exchange,
   a direct response_body field, match details, and follow-up command
@@ -730,6 +836,7 @@ class ChatCommand extends Command {
   static examples = [
     "<%= config.bin %> chat help@agent.acme.dev 'how do I rotate my API key?'",
     "cat error.log | <%= config.bin %> chat help@agent.acme.dev",
+    "<%= config.bin %> chat reply 'one more thing'",
     "<%= config.bin %> chat help@agent.acme.dev --reply 'one more thing'",
     "<%= config.bin %> chat help@agent.acme.dev --reply 'one more thing' --reply-to-email-id <inbound-email-id>",
     "<%= config.bin %> chat help@agent.acme.dev 'follow up question' --json",
@@ -784,6 +891,12 @@ class ChatCommand extends Command {
     "in-reply-to": Flags.string({
       description:
         "Raw Message-Id of the parent email to thread a new send against. Prefer --reply-to-email-id with --reply when continuing an inbound email stored by Primitive.",
+    }),
+    "chat-local-id": Flags.integer({
+      description:
+        "Local chat id to update after this command succeeds. Internal plumbing for `primitive chat reply`.",
+      hidden: true,
+      min: 0,
     }),
     json: Flags.boolean({
       description:
@@ -1070,11 +1183,21 @@ class ChatCommand extends Command {
 
       progress?.succeed(`Reply received from ${replyResult.reply.from_email}`);
 
-      const outputContext: ChatOutputContext = {
+      let outputContext: ChatOutputContext = {
         ...baseContext,
         matchStrategy: replyResult.matchStrategy,
         reply: replyResult.reply,
       };
+
+      const localChatId = persistActiveChat({
+        configDir: this.config.configDir,
+        context: outputContext,
+        preferredLocalId: flags["chat-local-id"],
+        writeWarning: (message) => process.stderr.write(message),
+      });
+      if (localChatId !== null) {
+        outputContext = { ...outputContext, localChatId };
+      }
 
       if (flags.json) {
         this.log(JSON.stringify(buildChatJsonEnvelope(outputContext), null, 2));
@@ -1082,6 +1205,188 @@ class ChatCommand extends Command {
         this.log(formatChatResponse(outputContext));
       }
     });
+  }
+}
+
+export class ChatReplyCommand extends Command {
+  static description = `Reply in the active chat.
+
+  A successful \`primitive chat <email> <message>\` saves the latest
+  inbound reply as a local chat and makes it active. Use
+  \`primitive chat reply <message>\` for the active chat, or
+  \`primitive chat reply <local-id> <message>\` / \`--id <local-id>\`
+  for a specific local chat. The command uses Primitive's real reply
+  endpoint against the stored inbound email id, so the recipient,
+  subject, and threading headers are derived server-side from the
+  thread.
+
+  If no chat is open, start one with \`primitive chat <email> '<message>'\`.
+  For explicit control, use \`primitive chat <email> --reply '<message>'
+  --reply-to-email-id <inbound-email-id>\`.`;
+
+  static summary = "Reply in the active chat";
+
+  static examples = [
+    "<%= config.bin %> chat reply 'one more thing'",
+    "<%= config.bin %> chat reply 0 'one more thing'",
+    "<%= config.bin %> chat reply --id 0 'one more thing'",
+    "cat follow-up.txt | <%= config.bin %> chat reply",
+  ];
+
+  static args = {
+    idOrMessage: Args.string({
+      description:
+        "Reply body, or a local chat id when followed by a separate message.",
+    }),
+    message: Args.string({
+      description: "Reply body when the first positional argument is an id.",
+    }),
+  };
+
+  static flags = {
+    "api-key": Flags.string({
+      description:
+        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive signin` credentials)",
+      env: "PRIMITIVE_API_KEY",
+    }),
+    "api-base-url-1": Flags.string({
+      description:
+        "Override the primary API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_1",
+      hidden: true,
+    }),
+    "api-base-url-2": Flags.string({
+      description:
+        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL_2",
+      hidden: true,
+    }),
+    id: Flags.integer({
+      description:
+        "Local chat id to reply in. Omit to use the most recent active chat.",
+      min: 0,
+    }),
+    json: Flags.boolean({
+      description:
+        "Emit a structured JSON envelope { sent, reply, response_body, response_body_format, match, follow_up_commands } on stdout instead of the human-readable transcript.",
+    }),
+    quiet: Flags.boolean({
+      description:
+        "Suppress stderr progress updates while sending and waiting. Errors and recovery commands are still written to stderr.",
+    }),
+    timeout: Flags.integer({
+      description:
+        "Seconds to wait for a reply before exiting non-zero. Defaults to the active chat's last timeout.",
+      min: 0,
+    }),
+    "strict-phase-seconds": Flags.integer({
+      description:
+        "Seconds to wait in strict-threading mode before falling back. Defaults to the active chat's last setting.",
+      min: 1,
+    }),
+    "strict-only": Flags.boolean({
+      description:
+        "Disable the time-window fallback. If the active chat was saved from a strict match, this is already the default.",
+    }),
+    interval: Flags.integer({
+      description: "Seconds between polls while waiting for the reply.",
+      min: 1,
+    }),
+    "page-size": Flags.integer({
+      description:
+        "Inbound emails to fetch per poll while waiting (1-100). Internal tuning knob.",
+      max: 100,
+      min: 1,
+      hidden: true,
+    }),
+    time: Flags.boolean({
+      description: TIME_FLAG_DESCRIPTION,
+    }),
+  };
+
+  async run(): Promise<void> {
+    const { args, flags } = await this.parse(ChatReplyCommand);
+    const positionalLocalId =
+      flags.id === undefined && args.message !== undefined
+        ? parseLocalChatIdArg(args.idOrMessage)
+        : undefined;
+    if (
+      flags.id === undefined &&
+      args.message !== undefined &&
+      positionalLocalId === null
+    ) {
+      throw cliError(
+        "When passing two positional arguments to `primitive chat reply`, the first must be a local chat id. Use `primitive chat reply '<message>'` for the active chat or `primitive chat reply --id <id> '<message>'` for a specific chat.",
+      );
+    }
+    if (flags.id !== undefined && args.message !== undefined) {
+      throw cliError(
+        "With --id, pass the reply body as a single positional argument or pipe it via stdin.",
+      );
+    }
+
+    const localId: number | undefined =
+      flags.id ??
+      (typeof positionalLocalId === "number" ? positionalLocalId : undefined);
+    const state =
+      localId === undefined
+        ? loadActiveChatState(this.config.configDir)
+        : loadChatConversationByLocalId(this.config.configDir, localId);
+    if (!state) {
+      throw cliError(
+        localId === undefined
+          ? "No open chat. Start one with `primitive chat <email> '<message>'`."
+          : `No local chat ${localId}. Start one with \`primitive chat <email> '<message>'\` or omit --id to use the active chat.`,
+      );
+    }
+
+    const message =
+      args.message !== undefined
+        ? args.message
+        : args.idOrMessage !== undefined && args.idOrMessage !== ""
+          ? args.idOrMessage
+          : await readStdinToString(
+              "No reply body provided. Pass the reply body as a positional argument or pipe it via stdin.",
+            );
+    if (!message.trim()) {
+      throw cliError("Reply body is empty.");
+    }
+
+    const argv = [
+      state.recipient,
+      "--reply",
+      message,
+      "--from",
+      state.from,
+      "--reply-to-email-id",
+      state.last_reply_email_id,
+      "--timeout",
+      String(flags.timeout ?? state.timeout_seconds),
+      "--strict-phase-seconds",
+      String(flags["strict-phase-seconds"] ?? state.strict_phase_seconds),
+      "--interval",
+      String(flags.interval ?? DEFAULT_EMAIL_POLL_INTERVAL_SECONDS),
+      "--page-size",
+      String(flags["page-size"] ?? DEFAULT_EMAIL_POLL_PAGE_SIZE),
+      "--chat-local-id",
+      String(state.local_id),
+    ];
+
+    if (flags["api-key"] !== undefined) {
+      argv.push("--api-key", flags["api-key"]);
+    }
+    if (flags["api-base-url-1"] !== undefined) {
+      argv.push("--api-base-url-1", flags["api-base-url-1"]);
+    }
+    if (flags["api-base-url-2"] !== undefined) {
+      argv.push("--api-base-url-2", flags["api-base-url-2"]);
+    }
+    if (flags.json) argv.push("--json");
+    if (flags.quiet) argv.push("--quiet");
+    if (state.strict_only || flags["strict-only"]) argv.push("--strict-only");
+    if (flags.time) argv.push("--time");
+
+    await ChatCommand.run(argv, { root: this.config.root });
   }
 }
 

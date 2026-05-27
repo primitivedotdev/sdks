@@ -1,4 +1,6 @@
-import { resolve } from "node:path";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import type { EmailDetail, SendMailResult } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -52,11 +54,16 @@ vi.mock("../../src/oclif/commands/emails-poll.js", async (importOriginal) => {
   };
 });
 
+import {
+  chatStatePath,
+  saveActiveChatState,
+} from "../../src/oclif/chat-state.js";
 import ChatCommand, {
   buildChatFollowUpCommands,
   buildChatJsonEnvelope,
   buildChatRecoveryCommands,
   ChatProgressIndicator,
+  ChatReplyCommand,
   formatChatRecoveryContext,
   formatChatResponse,
   resolveChatResponseBody,
@@ -64,6 +71,12 @@ import ChatCommand, {
 import { COMMANDS } from "../../src/oclif/index.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
+let tempConfigHome: string;
+let previousXdgConfigHome: string | undefined;
+
+function testConfigDir(): string {
+  return join(tempConfigHome, "primitive");
+}
 
 function sentEmail(overrides: Partial<SendMailResult> = {}): SendMailResult {
   return {
@@ -98,6 +111,7 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
     sender: "help@agent.example",
     status: "accepted",
     subject: "Re: API key help",
+    thread_id: "thread-1",
     to_email: "agent@sender.example",
     webhook_attempt_count: 1,
     webhook_status: "fired",
@@ -142,6 +156,7 @@ function outputContext() {
     strictPhaseSeconds: 60,
     subject: "API key help",
     timeoutSeconds: 120,
+    localChatId: 0,
   };
 }
 
@@ -154,7 +169,10 @@ function searchRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-async function runChatCommand(argv: string[]): Promise<{
+async function runOclifCommand(
+  command: typeof ChatCommand | typeof ChatReplyCommand,
+  argv: string[],
+): Promise<{
   exitCode: NodeJS.Process["exitCode"];
   stderr: string;
   stdout: string;
@@ -174,7 +192,7 @@ async function runChatCommand(argv: string[]): Promise<{
     });
 
   try {
-    await ChatCommand.run(argv, { root: CLI_ROOT });
+    await command.run(argv, { root: CLI_ROOT });
     return {
       exitCode: process.exitCode,
       stderr: stderrChunks.join(""),
@@ -187,8 +205,23 @@ async function runChatCommand(argv: string[]): Promise<{
   }
 }
 
+async function runChatCommand(
+  argv: string[],
+): ReturnType<typeof runOclifCommand> {
+  return runOclifCommand(ChatCommand, argv);
+}
+
+async function runChatReplyCommand(
+  argv: string[],
+): ReturnType<typeof runOclifCommand> {
+  return runOclifCommand(ChatReplyCommand, argv);
+}
+
 describe("chat command", () => {
   beforeEach(() => {
+    previousXdgConfigHome = process.env.XDG_CONFIG_HOME;
+    tempConfigHome = mkdtempSync(join(tmpdir(), "primitive-chat-test-"));
+    process.env.XDG_CONFIG_HOME = tempConfigHome;
     vi.clearAllMocks();
     mocks.createAuthenticatedCliApiClient.mockResolvedValue({
       apiClient: { _sendClient: {}, client: {} },
@@ -223,12 +256,19 @@ describe("chat command", () => {
 
   afterEach(() => {
     process.exitCode = undefined;
+    if (previousXdgConfigHome === undefined) {
+      delete process.env.XDG_CONFIG_HOME;
+    } else {
+      process.env.XDG_CONFIG_HOME = previousXdgConfigHome;
+    }
+    rmSync(tempConfigHome, { force: true, recursive: true });
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
   it("registers the first-party chat command", () => {
     expect(COMMANDS.chat).toBe(ChatCommand);
+    expect(COMMANDS["chat:reply"]).toBe(ChatReplyCommand);
   });
 
   it("keeps JSON mode explicit", () => {
@@ -270,6 +310,9 @@ describe("chat command", () => {
     expect(output).toContain(
       "--strict-only prefers timing out over matching the wrong reply",
     );
+    expect(output).toContain("Local chat id: 0");
+    expect(output).toContain("primitive chat reply 0 '<message>'");
+    expect(output).toContain("primitive chat reply '<message>'");
     expect(output).toContain(
       "primitive chat help@agent.example --reply '<message>' --from agent@sender.example --reply-to-email-id email-1 --timeout 120 --strict-only",
     );
@@ -303,6 +346,7 @@ describe("chat command", () => {
     expect(envelope.match.description).toBe(
       "strict, matched by reply_to_sent_email_id",
     );
+    expect(envelope.local_chat_id).toBe(0);
     expect(envelope.follow_up_commands.map((entry) => entry.command)).toContain(
       "primitive emails get --id email-1",
     );
@@ -310,9 +354,14 @@ describe("chat command", () => {
       kind: "continue_chat",
       requires_message: true,
     });
-    expect(envelope.follow_up_commands[0]?.argv).toEqual(
-      expect.arrayContaining(["--from", "--json", "--strict-only"]),
-    );
+    expect(envelope.follow_up_commands[0]?.argv).toEqual([
+      "primitive",
+      "chat",
+      "reply",
+      "0",
+      "<message>",
+      "--json",
+    ]);
     expect(envelope.follow_up_commands[0]?.placeholders).toEqual([
       {
         description: "Replace with the message body before running.",
@@ -333,6 +382,25 @@ describe("chat command", () => {
     );
   });
 
+  it("does not suggest local chat reply when state was not saved", () => {
+    const commands = buildChatFollowUpCommands({
+      ...outputContext(),
+      localChatId: undefined,
+    });
+
+    expect(commands[0]).toMatchObject({
+      kind: "continue_chat",
+      requires_message: true,
+    });
+    expect(commands[0]?.command).toContain(
+      "primitive chat help@agent.example --reply '<message>'",
+    );
+    expect(commands[0]?.command).not.toContain("primitive chat reply");
+    expect(commands.map((entry) => entry.kind)).not.toContain(
+      "continue_active_chat",
+    );
+  });
+
   it("quotes shell-sensitive follow-up command values", () => {
     const commands = buildChatFollowUpCommands({
       ...outputContext(),
@@ -340,8 +408,8 @@ describe("chat command", () => {
       from: "Agent's Support <agent support@example.com>",
     }).map((entry) => entry.command);
 
-    expect(commands[0]).toContain("'agent support@example.com'");
-    expect(commands[0]).toContain(
+    expect(commands[2]).toContain("'agent support@example.com'");
+    expect(commands[2]).toContain(
       "--from 'Agent'\\''s Support <agent support@example.com>'",
     );
   });
@@ -361,8 +429,8 @@ describe("chat command", () => {
       strictPhaseSeconds: 30,
     }).map((entry) => entry.command);
 
-    expect(commands[0]).toContain("--strict-phase-seconds 30");
-    expect(commands[0]).not.toContain("--strict-only");
+    expect(commands[2]).toContain("--strict-phase-seconds 30");
+    expect(commands[2]).not.toContain("--strict-only");
   });
 
   it("falls back to HTML response body when text is empty", () => {
@@ -492,6 +560,39 @@ describe("chat command", () => {
     expect(result.stdout).toContain(
       "primitive chat help@agent.example --reply '<message>' --from agent@sender.example --reply-to-email-id email-1 --timeout 17 --strict-only",
     );
+    expect(result.stdout).toContain("primitive chat reply 0 '<message>'");
+    expect(result.stdout).toContain("primitive chat reply '<message>'");
+  });
+
+  it("saves the latest inbound reply as the active chat", async () => {
+    const result = await runChatCommand([
+      "help@agent.example",
+      "How do I rotate my API key?",
+      "--from",
+      "agent@sender.example",
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    const state = JSON.parse(
+      readFileSync(chatStatePath(testConfigDir()), "utf8"),
+    );
+    expect(state).toMatchObject({
+      active_local_id: 0,
+      next_local_id: 1,
+      version: 2,
+    });
+    expect(state.conversations).toHaveLength(1);
+    expect(state.conversations[0]).toMatchObject({
+      from: "agent@sender.example",
+      last_reply_email_id: "email-1",
+      last_sent_email_id: "sent-1",
+      local_id: 0,
+      recipient: "help@agent.example",
+      strict_only: true,
+      strict_phase_seconds: 60,
+      thread_id: "thread-1",
+      timeout_seconds: 120,
+    });
   });
 
   it("continues an exact chat thread with --reply-to-email-id", async () => {
@@ -607,6 +708,196 @@ describe("chat command", () => {
     expect(result.stdout).toContain("Latest follow-up.");
   });
 
+  it("continues the active chat with chat reply", async () => {
+    mkdirSync(testConfigDir(), { recursive: true });
+    saveActiveChatState(testConfigDir(), {
+      from: "agent@sender.example",
+      last_reply_email_id: "email-1",
+      last_reply_received_at: "2026-05-25T00:00:02.000Z",
+      last_sent_email_id: "sent-1",
+      recipient: "help@agent.example",
+      strict_only: true,
+      strict_phase_seconds: 60,
+      thread_id: "thread-1",
+      timeout_seconds: 17,
+    });
+    mocks.getEmail.mockImplementation(async ({ path }) => {
+      if (path.id === "email-2") {
+        return {
+          data: {
+            data: replyEmail({
+              body_text: "Active chat follow-up.",
+              id: "email-2",
+              received_at: "2026-05-25T00:00:04.000Z",
+              reply_to_sent_email_id: "sent-reply-1",
+            }),
+          },
+        };
+      }
+      return { data: { data: replyEmail() } };
+    });
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      cursor: null,
+      ok: true,
+      rows: [
+        searchRow({
+          id: "email-2",
+          received_at: "2026-05-25T00:00:04.000Z",
+        }),
+      ],
+    });
+
+    const result = await runChatReplyCommand(["Can you explain?"]);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain("Loading reply context for email-1");
+    expect(result.stderr).toContain("Sending reply to help@agent.example");
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(mocks.replyToEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: {
+          body_text: "Can you explain?",
+          from: "agent@sender.example",
+        },
+        path: { id: "email-1" },
+      }),
+    );
+    expect(mocks.fetchEmailSearchPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filters: { replyToSentEmailId: "sent-reply-1" },
+      }),
+    );
+    expect(result.stdout).toContain("Active chat follow-up.");
+  });
+
+  it("continues a specific local chat id with chat reply", async () => {
+    mkdirSync(testConfigDir(), { recursive: true });
+    saveActiveChatState(testConfigDir(), {
+      from: "agent@sender.example",
+      last_reply_email_id: "email-0",
+      last_reply_received_at: "2026-05-25T00:00:02.000Z",
+      last_sent_email_id: "sent-0",
+      recipient: "first@agent.example",
+      strict_only: true,
+      strict_phase_seconds: 60,
+      thread_id: "thread-0",
+      timeout_seconds: 17,
+    });
+    saveActiveChatState(testConfigDir(), {
+      from: "agent@sender.example",
+      last_reply_email_id: "email-1",
+      last_reply_received_at: "2026-05-25T00:00:03.000Z",
+      last_sent_email_id: "sent-1",
+      recipient: "second@agent.example",
+      strict_only: true,
+      strict_phase_seconds: 60,
+      thread_id: "thread-1",
+      timeout_seconds: 17,
+    });
+    mocks.getEmail.mockImplementation(async ({ path }) => {
+      if (path.id === "email-2") {
+        return {
+          data: {
+            data: replyEmail({
+              body_text: "Specific chat follow-up.",
+              from_email: "first@agent.example",
+              id: "email-2",
+              received_at: "2026-05-25T00:00:04.000Z",
+              reply_to_sent_email_id: "sent-reply-1",
+              thread_id: "thread-0",
+            }),
+          },
+        };
+      }
+      if (path.id === "email-0") {
+        return {
+          data: {
+            data: replyEmail({
+              from_email: "first@agent.example",
+              id: "email-0",
+              thread_id: "thread-0",
+            }),
+          },
+        };
+      }
+      return { data: { data: replyEmail() } };
+    });
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      cursor: null,
+      ok: true,
+      rows: [
+        searchRow({
+          id: "email-2",
+          received_at: "2026-05-25T00:00:04.000Z",
+        }),
+      ],
+    });
+
+    const result = await runChatReplyCommand(["0", "Can you explain?"]);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain("Loading reply context for email-0");
+    expect(result.stderr).toContain("Sending reply to first@agent.example");
+    expect(mocks.replyToEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: {
+          body_text: "Can you explain?",
+          from: "agent@sender.example",
+        },
+        path: { id: "email-0" },
+      }),
+    );
+    expect(result.stdout).toContain("Specific chat follow-up.");
+    expect(result.stdout).toContain("Local chat id: 0");
+  });
+
+  it("uses reply-specific guidance when chat reply needs stdin", async () => {
+    mkdirSync(testConfigDir(), { recursive: true });
+    saveActiveChatState(testConfigDir(), {
+      from: "agent@sender.example",
+      last_reply_email_id: "email-1",
+      last_reply_received_at: "2026-05-25T00:00:02.000Z",
+      last_sent_email_id: "sent-1",
+      recipient: "help@agent.example",
+      strict_only: true,
+      strict_phase_seconds: 60,
+      thread_id: "thread-1",
+      timeout_seconds: 17,
+    });
+    const stdinIsTTYDescriptor = Object.getOwnPropertyDescriptor(
+      process.stdin,
+      "isTTY",
+    );
+    Object.defineProperty(process.stdin, "isTTY", {
+      configurable: true,
+      value: true,
+    });
+
+    try {
+      await expect(
+        ChatReplyCommand.run(["--id", "0"], { root: CLI_ROOT }),
+      ).rejects.toThrow(
+        "No reply body provided. Pass the reply body as a positional argument or pipe it via stdin.",
+      );
+    } finally {
+      if (stdinIsTTYDescriptor) {
+        Object.defineProperty(process.stdin, "isTTY", stdinIsTTYDescriptor);
+      } else {
+        delete (process.stdin as { isTTY?: boolean }).isTTY;
+      }
+    }
+    expect(mocks.createAuthenticatedCliApiClient).not.toHaveBeenCalled();
+  });
+
+  it("fails chat reply before auth when no active chat exists", async () => {
+    await expect(
+      ChatReplyCommand.run(["Can you explain?"], { root: CLI_ROOT }),
+    ).rejects.toThrow(
+      "No open chat. Start one with `primitive chat <email> '<message>'`.",
+    );
+    expect(mocks.createAuthenticatedCliApiClient).not.toHaveBeenCalled();
+  });
+
   it("rejects subject overrides in reply mode", async () => {
     await expect(
       ChatCommand.run(
@@ -642,18 +933,15 @@ describe("chat command", () => {
       kind: "continue_chat",
       requires_message: true,
     });
-    expect(parsed.follow_up_commands[0].argv).toEqual(
-      expect.arrayContaining([
-        "primitive",
-        "chat",
-        "--reply",
-        "<message>",
-        "--reply-to-email-id",
-        "email-1",
-        "--from",
-        "--json",
-      ]),
-    );
+    expect(parsed.local_chat_id).toBe(0);
+    expect(parsed.follow_up_commands[0].argv).toEqual([
+      "primitive",
+      "chat",
+      "reply",
+      "0",
+      "<message>",
+      "--json",
+    ]);
   });
 
   it("invokes the command with recovery context on timeout after send", async () => {

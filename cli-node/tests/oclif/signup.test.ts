@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_API_BASE_URL_1 } from "@primitivedotdev/api-core";
@@ -8,6 +8,7 @@ import {
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../../src/oclif/auth.js";
+import { chatStatePath } from "../../src/oclif/chat-state.js";
 import {
   formatSignupSeconds,
   loadPendingAgentSignup,
@@ -241,6 +242,7 @@ describe("agent signup commands", () => {
   it("confirms signup and saves returned OAuth credentials", async () => {
     const deps = flowDeps({});
     savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+    writeFileSync(chatStatePath(tempDir), "{}\n");
 
     await runSignupConfirmWithCredentialLock({
       code: "123456",
@@ -267,6 +269,7 @@ describe("agent signup commands", () => {
       refresh_token: VERIFY_RESULT.refresh_token,
     });
     expect(loadPendingAgentSignup(tempDir, DEFAULT_API_BASE_URL_1)).toBeNull();
+    expect(existsSync(chatStatePath(tempDir))).toBe(false);
   });
 
   it("passes org id during confirmation when provided", async () => {

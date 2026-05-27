@@ -31,6 +31,7 @@ import {
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../auth.js";
+import { deleteChatState } from "../chat-state.js";
 
 const MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS = 60;
 
@@ -328,6 +329,7 @@ class LoginCommand extends Command {
           throw cliError("Primitive API returned an empty CLI poll response.");
         }
 
+        deleteChatState(this.config.configDir);
         saveCliCredentials(this.config.configDir, {
           access_token: login.access_token,
           api_base_url_1: apiBaseUrl1,

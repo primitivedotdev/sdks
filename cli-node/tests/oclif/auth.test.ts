@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -21,6 +22,7 @@ import {
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../../src/oclif/auth.js";
+import { chatStatePath } from "../../src/oclif/chat-state.js";
 
 const CREDENTIALS: StoredCliCredentials = {
   access_token: "prim_oat_test",
@@ -68,6 +70,16 @@ describe("CLI auth credentials", () => {
     deleteCliCredentials(tempDir);
 
     expect(loadCliCredentials(tempDir)).toBeNull();
+  });
+
+  it("deletes local chat state with saved credentials", () => {
+    saveCliCredentials(tempDir, CREDENTIALS);
+    writeFileSync(chatStatePath(tempDir), "{}\n", { mode: 0o600 });
+
+    deleteCliCredentials(tempDir);
+
+    expect(loadCliCredentials(tempDir)).toBeNull();
+    expect(existsSync(chatStatePath(tempDir))).toBe(false);
   });
 
   it("normalizes explicit base URLs", () => {

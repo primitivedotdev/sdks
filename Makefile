@@ -117,6 +117,15 @@ cli-smoke: cli-build cli-tarball-isolation
 	if "$$bin" chat --help | grep -q -- "--subject"; then echo "chat help must not advertise --subject"; exit 1; fi && \
 	"$$bin" chat --help | grep -q -- "--reply-to-email-id" && \
 	"$$bin" chat --help | grep -q -- "--strict-only" && \
+	"$$bin" chat reply --help | grep -q -- "Reply in the active chat" && \
+	"$$bin" chat reply --help | grep -q -- "--id" && \
+	chat_reply_home="$$smoke_dir/chat-reply-home" && \
+	if HOME="$$chat_reply_home" XDG_CONFIG_HOME="$$chat_reply_home/.config" PRIMITIVE_CONFIG_DIR= "$$bin" chat reply "hello" >"$$smoke_dir/chat-reply.out" 2>"$$smoke_dir/chat-reply.err"; then echo "chat reply should require an active chat"; exit 1; fi && \
+	grep -q -- "No open chat" "$$smoke_dir/chat-reply.err" && \
+	if HOME="$$chat_reply_home" XDG_CONFIG_HOME="$$chat_reply_home/.config" PRIMITIVE_CONFIG_DIR= "$$bin" chat reply 0 "hello" >"$$smoke_dir/chat-reply-id.out" 2>"$$smoke_dir/chat-reply-id.err"; then echo "chat reply with a local id should require that chat"; exit 1; fi && \
+	grep -q -- "No local chat 0" "$$smoke_dir/chat-reply-id.err" && \
+	if HOME="$$chat_reply_home" XDG_CONFIG_HOME="$$chat_reply_home/.config" PRIMITIVE_CONFIG_DIR= "$$bin" chat reply --id 0 "hello" >"$$smoke_dir/chat-reply-flag-id.out" 2>"$$smoke_dir/chat-reply-flag-id.err"; then echo "chat reply --id should require that chat"; exit 1; fi && \
+	grep -q -- "No local chat 0" "$$smoke_dir/chat-reply-flag-id.err" && \
 	"$$bin" threads --help | grep -q -- "primitive threads get --id <thread-id>" && \
 	"$$bin" threads get --help | grep -q -- "Get a conversation thread by id" && \
 	"$$bin" threads get-thread --help | grep -q -- "Get a conversation thread by id" && \
