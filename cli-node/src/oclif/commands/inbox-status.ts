@@ -26,6 +26,7 @@ const DOMAIN_DISPLAY_WIDTH = 34;
 const STATUS_DISPLAY_WIDTH = 12;
 const BOOL_DISPLAY_WIDTH = 7;
 const NUM_DISPLAY_WIDTH = 6;
+const DEFAULT_PRIMITIVE_LOCAL_PART = "agent";
 
 function plural(count: number, singular: string, pluralValue = `${singular}s`) {
   return `${count} ${count === 1 ? singular : pluralValue}`;
@@ -76,6 +77,19 @@ export function domainSummary(domain: InboxStatusDomain): string {
     default:
       return `${domain.domain} has status ${String(domain.status)}.`;
   }
+}
+
+export function findSuggestedPrimitiveAddress(
+  domains: InboxStatusDomain[],
+): { address: string; domain: string } | null {
+  const domain = domains.find(
+    (entry) => entry.managed && entry.active && entry.receiving_ready,
+  );
+  if (!domain) return null;
+  return {
+    address: `${DEFAULT_PRIMITIVE_LOCAL_PART}@${domain.domain}`,
+    domain: domain.domain,
+  };
 }
 
 export function focusInboxStatus(
@@ -139,6 +153,7 @@ export function formatNextAction(action: InboxStatusNextAction): string {
 
 export function formatInboxStatus(status: InboxStatus): string {
   const lines = [status.summary, "", "Domains"];
+  const suggestedAddress = findSuggestedPrimitiveAddress(status.domains);
 
   if (status.domains.length === 0) {
     lines.push("No domains configured.");
@@ -155,6 +170,15 @@ export function formatInboxStatus(status: InboxStatus): string {
     `Functions: ${status.functions.deployed}/${status.functions.total} deployed (${status.functions.pending} pending, ${status.functions.failed} failed)`,
     `Recent inbound: ${plural(status.recent_emails.total, "email")} latest ${formatInboxDate(status.recent_emails.latest_received_at)}`,
   );
+
+  if (suggestedAddress) {
+    lines.push(
+      "",
+      `Primitive address: ${suggestedAddress.address}`,
+      `  Any local-part at ${suggestedAddress.domain} can receive mail.`,
+      `  Try: primitive send --to ${suggestedAddress.address} --subject "hello" --body "test"`,
+    );
+  }
 
   if (status.next_actions.length > 0) {
     lines.push("", "Next actions");
