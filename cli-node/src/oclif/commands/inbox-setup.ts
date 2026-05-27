@@ -199,29 +199,26 @@ export function formatInboxSetupGuide(guide: InboxSetupGuide): string {
     `Processing routes: ${guide.processing.enabled_endpoints} enabled endpoint(s), ${guide.processing.deployed_functions} deployed Function(s)`,
   ];
 
-  if (!guide.processing.active) {
-    const processingMessage = guide.processing.stored_only
-      ? "No processing route is enabled. Scaffold, deploy, and test an email Function:"
-      : "No processing route is enabled yet. Make a receiving-ready domain available if needed, then scaffold, deploy, and test an email Function:";
-    lines.push(
-      "",
-      "Next actions",
-      processingMessage,
-      ...formatScaffoldCommands(guide.commands),
-    );
-  } else if (guide.processing.active) {
-    lines.push(
-      "",
-      "Next actions",
-      "Inbound mail has an active processing route. Run a Function test when you know the Function id:",
-      `  primitive functions test --id ${FUNCTION_ID_PLACEHOLDER} --wait --show-sends`,
-    );
-  } else {
+  if (guide.readiness.mode === "not_receiving") {
     lines.push(
       "",
       "Next actions",
       "Make a receiving-ready domain available, then re-run:",
       `  ${guide.commands.status}`,
+    );
+  } else if (!guide.processing.active) {
+    lines.push(
+      "",
+      "Next actions",
+      "No processing route is enabled. Scaffold, deploy, and test an email Function:",
+      ...formatScaffoldCommands(guide.commands),
+    );
+  } else {
+    lines.push(
+      "",
+      "Next actions",
+      "Inbound mail has an active processing route. Run a Function test when you know the Function id:",
+      `  primitive functions test --id ${FUNCTION_ID_PLACEHOLDER} --wait --show-sends`,
     );
   }
 

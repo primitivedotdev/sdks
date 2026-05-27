@@ -184,6 +184,29 @@ describe("inbox setup guide formatting", () => {
       "primitive functions test --id <function-id> --wait --show-sends",
     );
   });
+
+  it("does not suggest Function scaffold steps before mail can be received", () => {
+    const guide = buildInboxSetupGuide(
+      makeStatus({
+        receiving_ready: false,
+        domains: [
+          makeDomain({
+            receiving_ready: false,
+            status: "pending_dns",
+          }),
+        ],
+      }),
+    );
+    const output = formatInboxSetupGuide(guide);
+
+    expect(guide.readiness.mode).toBe("not_receiving");
+    expect(output).toContain("Mode: not receiving");
+    expect(output).toContain(
+      "Make a receiving-ready domain available, then re-run:",
+    );
+    expect(output).toContain("primitive inbox status");
+    expect(output).not.toContain("primitive functions init inbound-reply");
+  });
 });
 
 describe("inbox setup command invocation", () => {
