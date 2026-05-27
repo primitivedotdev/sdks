@@ -335,7 +335,7 @@ function buildSignupStatus(params: {
     normalizeEmail(pending.email) !== normalizeEmail(params.email)
   ) {
     throw cliError(
-      `Pending ${copy.actionNoun} is for ${pending.email}, not ${params.email}. Run \`primitive signup status\` to inspect it.`,
+      `Pending ${copy.actionNoun} is for ${pending.email}, not ${params.email}. Run \`primitive signup status\` without an email argument to inspect it.`,
     );
   }
 

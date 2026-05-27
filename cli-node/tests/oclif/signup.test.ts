@@ -348,7 +348,9 @@ describe("agent signup commands", () => {
         email: "other@example.com",
         flags: {},
       }),
-    ).toThrow(/Pending signup is for test@example.com, not other@example.com/);
+    ).toThrow(
+      "Pending signup is for test@example.com, not other@example.com. Run `primitive signup status` without an email argument to inspect it.",
+    );
   });
 
   it("checks existing credentials as an already-locked operation", async () => {
