@@ -7,10 +7,10 @@ import { restartWithProxyEnvIfNeeded } from "../dist/oclif/proxy-auto-detect.js"
 // process.env inside this process is too late for built-in fetch.
 restartWithProxyEnvIfNeeded();
 
-const { writeLoggedOutSignupHintIfNeeded } = await import(
+const { writeRootAuthContextIfNeeded } = await import(
   "../dist/oclif/root-signup-hint.js"
 );
-writeLoggedOutSignupHintIfNeeded();
+await writeRootAuthContextIfNeeded();
 
 const { execute } = await import("@oclif/core");
 await execute({ dir: import.meta.url });
