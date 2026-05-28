@@ -668,6 +668,29 @@ func (UnimplementedHandler) SearchEmails(ctx context.Context, params SearchEmail
 	return r, ht.ErrNotImplemented
 }
 
+// SemanticSearch implements semanticSearch operation.
+//
+// Ranked search across both received and sent mail. The `mode`
+// field selects the ranking strategy:
+// - `keyword`: lexical full-text matching only (no embeddings).
+// - `semantic`: meaning-based matching using vector embeddings.
+// - `hybrid` (default): blends the semantic and keyword signals.
+// Results are ordered by a relevance `score`. Every row reports the
+// fields it matched (`matched_fields`), a match-centered excerpt per
+// field (`snippets`), and a `score_breakdown` whose components account
+// for the `score`. Page through results by passing the prior
+// response's `meta.cursor` back as `cursor`.
+// Requires the Pro plan and the `semantic_search_enabled`
+// entitlement; callers without them receive `403`.
+// Host routing: this operation is served only by the search host
+// (`https://api.primitive.dev/v1`). The typed SDKs route it there
+// automatically.
+//
+// POST /semantic-search
+func (UnimplementedHandler) SemanticSearch(ctx context.Context, req *SemanticSearchInput) (r SemanticSearchRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // SendEmail implements sendEmail operation.
 //
 // Sends an outbound email through Primitive's outbound relay. By default

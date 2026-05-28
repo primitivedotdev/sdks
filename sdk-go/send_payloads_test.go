@@ -139,6 +139,10 @@ func (s *capturingSendAPI) ReplyToEmail(_ context.Context, request *primitiveapi
 	}, nil
 }
 
+func (s *capturingSendAPI) SemanticSearch(_ context.Context, _ *primitiveapi.SemanticSearchInput) (primitiveapi.SemanticSearchRes, error) {
+	return nil, nil
+}
+
 func loadSendPayloadFixture(t *testing.T) sendPayloadFixture {
 	t.Helper()
 	_, filename, _, _ := runtime.Caller(0)

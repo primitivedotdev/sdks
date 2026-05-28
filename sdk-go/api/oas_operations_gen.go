@@ -50,6 +50,7 @@ const (
 	ResendCliSignupVerificationOperation   OperationName = "ResendCliSignupVerification"
 	RotateWebhookSecretOperation           OperationName = "RotateWebhookSecret"
 	SearchEmailsOperation                  OperationName = "SearchEmails"
+	SemanticSearchOperation                OperationName = "SemanticSearch"
 	SendEmailOperation                     OperationName = "SendEmail"
 	SetFunctionSecretOperation             OperationName = "SetFunctionSecret"
 	StartAgentSignupOperation              OperationName = "StartAgentSignup"

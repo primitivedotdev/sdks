@@ -9,16 +9,20 @@ import (
 )
 
 type stubSendAPI struct {
-	called       bool
-	request      *primitiveapi.SendMailInput
-	params       primitiveapi.SendEmailParams
-	result       primitiveapi.SendEmailRes
-	err          error
-	replyCalled  bool
-	replyRequest *primitiveapi.ReplyInput
-	replyParams  primitiveapi.ReplyToEmailParams
-	replyResult  primitiveapi.ReplyToEmailRes
-	replyErr     error
+	called          bool
+	request         *primitiveapi.SendMailInput
+	params          primitiveapi.SendEmailParams
+	result          primitiveapi.SendEmailRes
+	err             error
+	replyCalled     bool
+	replyRequest    *primitiveapi.ReplyInput
+	replyParams     primitiveapi.ReplyToEmailParams
+	replyResult     primitiveapi.ReplyToEmailRes
+	replyErr        error
+	semanticCalled  bool
+	semanticRequest *primitiveapi.SemanticSearchInput
+	semanticResult  primitiveapi.SemanticSearchRes
+	semanticErr     error
 }
 
 func (s *stubSendAPI) SendEmail(_ context.Context, request *primitiveapi.SendMailInput, params primitiveapi.SendEmailParams) (primitiveapi.SendEmailRes, error) {
@@ -33,6 +37,12 @@ func (s *stubSendAPI) ReplyToEmail(_ context.Context, request *primitiveapi.Repl
 	s.replyRequest = request
 	s.replyParams = params
 	return s.replyResult, s.replyErr
+}
+
+func (s *stubSendAPI) SemanticSearch(_ context.Context, request *primitiveapi.SemanticSearchInput) (primitiveapi.SemanticSearchRes, error) {
+	s.semanticCalled = true
+	s.semanticRequest = request
+	return s.semanticResult, s.semanticErr
 }
 
 func sendMailResult() primitiveapi.SendMailResult {

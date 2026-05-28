@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import contextvars
 import copy
+import datetime
 import json
 import re
 from dataclasses import dataclass, field
 from http import HTTPStatus
-from typing import Any, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
 from uuid import UUID
 
 import httpx
@@ -15,6 +16,12 @@ from .api import (
     DEFAULT_API_BASE_URL_1,
     DEFAULT_API_BASE_URL_2,
     AuthenticatedClient,
+)
+from .api.api.search.semantic_search import (
+    asyncio_detailed as semantic_search_async_detailed,
+)
+from .api.api.search.semantic_search import (
+    sync_detailed as semantic_search_sync_detailed,
 )
 from .api.api.sending.reply_to_email import (
     asyncio_detailed as reply_to_email_async_detailed,
@@ -29,6 +36,23 @@ from .api.api.sending.send_email import sync_detailed as send_email_sync_detaile
 from .api.models.error_response import ErrorResponse
 from .api.models.reply_input import ReplyInput as ApiReplyInput
 from .api.models.reply_to_email_response_200 import ReplyToEmailResponse200
+from .api.models.semantic_search_input import (
+    SemanticSearchInput as ApiSemanticSearchInput,
+)
+from .api.models.semantic_search_input_corpus_item import (
+    SemanticSearchInputCorpusItem,
+)
+from .api.models.semantic_search_input_include_item import (
+    SemanticSearchInputIncludeItem,
+)
+from .api.models.semantic_search_input_mode import SemanticSearchInputMode
+from .api.models.semantic_search_meta import (
+    SemanticSearchMeta as ApiSemanticSearchMeta,
+)
+from .api.models.semantic_search_response_200 import SemanticSearchResponse200
+from .api.models.semantic_search_result import (
+    SemanticSearchResult as ApiSemanticSearchResult,
+)
 from .api.models.send_email_response_200 import SendEmailResponse200
 from .api.models.send_mail_input import SendMailInput as ApiSendMailInput
 from .api.models.send_mail_result import SendMailResult as ApiSendMailResult
@@ -531,6 +555,47 @@ def _resolve_reply_payload(
     )
 
 
+@dataclass(frozen=True)
+class SemanticSearchResponse:
+    """A page of semantic-search results plus pagination meta.
+
+    Returned by :meth:`PrimitiveClient.semantic_search`. ``data`` is the
+    ranked rows; ``meta.cursor`` is non-null when there is another page.
+    """
+
+    data: list[ApiSemanticSearchResult]
+    meta: ApiSemanticSearchMeta
+
+
+def _build_semantic_search_input(
+    *,
+    query: str,
+    mode: str = "hybrid",
+    corpus: list[str] | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    include: list[str] | None = None,
+    limit: int = 10,
+    cursor: str | None = None,
+) -> ApiSemanticSearchInput:
+    payload = ApiSemanticSearchInput(
+        query=query,
+        mode=SemanticSearchInputMode(mode),
+        limit=limit,
+    )
+    if corpus is not None:
+        payload.corpus = [SemanticSearchInputCorpusItem(c) for c in corpus]
+    if date_from is not None:
+        payload.date_from = datetime.datetime.fromisoformat(date_from)
+    if date_to is not None:
+        payload.date_to = datetime.datetime.fromisoformat(date_to)
+    if include is not None:
+        payload.include = [SemanticSearchInputIncludeItem(i) for i in include]
+    if cursor is not None:
+        payload.cursor = cursor
+    return payload
+
+
 class PrimitiveClient:
     _defaults: _ClientDefaults
 
@@ -747,6 +812,118 @@ class PrimitiveClient:
                     payload=response.content,
                 )
             return _map_send_result(cast(ApiSendMailResult, response.parsed.data))
+
+        _raise_api_error(response)
+        raise AssertionError("unreachable")
+
+    def semantic_search(
+        self,
+        *,
+        query: str,
+        mode: Literal["hybrid", "semantic", "keyword"] = "hybrid",
+        corpus: list[Literal["inbound", "outbound"]] | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        include: list[Literal["coverage"]] | None = None,
+        limit: int = 10,
+        cursor: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
+    ) -> SemanticSearchResponse:
+        """Semantic / hybrid / keyword search across received and sent mail.
+
+        ``POST /v1/semantic-search`` on the search host. Returns ranked
+        rows; each row carries the fields it matched, a match-centered
+        excerpt, and an additive score breakdown. Page with the prior
+        response's ``meta.cursor``.
+
+        Requires the Pro plan and the ``semantic_search_enabled``
+        entitlement; otherwise raises :class:`PrimitiveAPIError` with
+        ``status_code=403``.
+        """
+        _install_request_hooks(self.api_send_client)
+        token = self._set_per_call_options(
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=None,
+        )
+        try:
+            # /v1/semantic-search lives on the same worker host as
+            # /send-mail, reachable through api_send_client (host 2).
+            response = semantic_search_sync_detailed(
+                client=self.api_send_client,
+                body=_build_semantic_search_input(
+                    query=query,
+                    mode=mode,
+                    corpus=cast("list[str] | None", corpus),
+                    date_from=date_from,
+                    date_to=date_to,
+                    include=cast("list[str] | None", include),
+                    limit=limit,
+                    cursor=cursor,
+                ),
+            )
+        finally:
+            _per_call_options_var.reset(token)
+
+        if response.status_code == HTTPStatus.OK and isinstance(
+            response.parsed,
+            SemanticSearchResponse200,
+        ):
+            return SemanticSearchResponse(
+                data=response.parsed.data,
+                meta=response.parsed.meta,
+            )
+
+        _raise_api_error(response)
+        raise AssertionError("unreachable")
+
+    async def asemantic_search(
+        self,
+        *,
+        query: str,
+        mode: Literal["hybrid", "semantic", "keyword"] = "hybrid",
+        corpus: list[Literal["inbound", "outbound"]] | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        include: list[Literal["coverage"]] | None = None,
+        limit: int = 10,
+        cursor: str | None = None,
+        timeout: float | None = None,
+        extra_headers: dict[str, str] | None = None,
+    ) -> SemanticSearchResponse:
+        """Async variant of :meth:`semantic_search`."""
+        _install_request_hooks(self.api_send_client)
+        token = self._set_per_call_options(
+            timeout=timeout,
+            extra_headers=extra_headers,
+            idempotency_key=None,
+        )
+        try:
+            response = await semantic_search_async_detailed(
+                client=self.api_send_client,
+                body=_build_semantic_search_input(
+                    query=query,
+                    mode=mode,
+                    corpus=cast("list[str] | None", corpus),
+                    date_from=date_from,
+                    date_to=date_to,
+                    include=cast("list[str] | None", include),
+                    limit=limit,
+                    cursor=cursor,
+                ),
+            )
+        finally:
+            _per_call_options_var.reset(token)
+
+        if response.status_code == HTTPStatus.OK and isinstance(
+            response.parsed,
+            SemanticSearchResponse200,
+        ):
+            return SemanticSearchResponse(
+                data=response.parsed.data,
+                meta=response.parsed.meta,
+            )
 
         _raise_api_error(response)
         raise AssertionError("unreachable")

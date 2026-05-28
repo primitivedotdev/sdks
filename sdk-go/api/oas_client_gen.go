@@ -551,6 +551,26 @@ type Invoker interface {
 	//
 	// GET /emails/search
 	SearchEmails(ctx context.Context, params SearchEmailsParams) (SearchEmailsRes, error)
+	// SemanticSearch invokes semanticSearch operation.
+	//
+	// Ranked search across both received and sent mail. The `mode`
+	// field selects the ranking strategy:
+	// - `keyword`: lexical full-text matching only (no embeddings).
+	// - `semantic`: meaning-based matching using vector embeddings.
+	// - `hybrid` (default): blends the semantic and keyword signals.
+	// Results are ordered by a relevance `score`. Every row reports the
+	// fields it matched (`matched_fields`), a match-centered excerpt per
+	// field (`snippets`), and a `score_breakdown` whose components account
+	// for the `score`. Page through results by passing the prior
+	// response's `meta.cursor` back as `cursor`.
+	// Requires the Pro plan and the `semantic_search_enabled`
+	// entitlement; callers without them receive `403`.
+	// Host routing: this operation is served only by the search host
+	// (`https://api.primitive.dev/v1`). The typed SDKs route it there
+	// automatically.
+	//
+	// POST /semantic-search
+	SemanticSearch(ctx context.Context, request *SemanticSearchInput) (SemanticSearchRes, error)
 	// SendEmail invokes sendEmail operation.
 	//
 	// Sends an outbound email through Primitive's outbound relay. By default
@@ -6879,6 +6899,130 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 
 	stage = "DecodeResponse"
 	result, err := decodeSearchEmailsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// SemanticSearch invokes semanticSearch operation.
+//
+// Ranked search across both received and sent mail. The `mode`
+// field selects the ranking strategy:
+// - `keyword`: lexical full-text matching only (no embeddings).
+// - `semantic`: meaning-based matching using vector embeddings.
+// - `hybrid` (default): blends the semantic and keyword signals.
+// Results are ordered by a relevance `score`. Every row reports the
+// fields it matched (`matched_fields`), a match-centered excerpt per
+// field (`snippets`), and a `score_breakdown` whose components account
+// for the `score`. Page through results by passing the prior
+// response's `meta.cursor` back as `cursor`.
+// Requires the Pro plan and the `semantic_search_enabled`
+// entitlement; callers without them receive `403`.
+// Host routing: this operation is served only by the search host
+// (`https://api.primitive.dev/v1`). The typed SDKs route it there
+// automatically.
+//
+// POST /semantic-search
+func (c *Client) SemanticSearch(ctx context.Context, request *SemanticSearchInput) (SemanticSearchRes, error) {
+	res, err := c.sendSemanticSearch(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendSemanticSearch(ctx context.Context, request *SemanticSearchInput) (res SemanticSearchRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("semanticSearch"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/semantic-search"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, SemanticSearchOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/semantic-search"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeSemanticSearchRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, SemanticSearchOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSemanticSearchResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

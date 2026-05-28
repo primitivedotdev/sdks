@@ -177,6 +177,10 @@ type SearchEmailsRes interface {
 	searchEmailsRes()
 }
 
+type SemanticSearchRes interface {
+	semanticSearchRes()
+}
+
 type SendEmailRes interface {
 	sendEmailRes()
 }

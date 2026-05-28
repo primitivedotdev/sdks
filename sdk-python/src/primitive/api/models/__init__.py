@@ -164,6 +164,19 @@ from .search_emails_include_facets import SearchEmailsIncludeFacets
 from .search_emails_response_200 import SearchEmailsResponse200
 from .search_emails_snippet import SearchEmailsSnippet
 from .search_emails_sort import SearchEmailsSort
+from .semantic_search_coverage import SemanticSearchCoverage
+from .semantic_search_field import SemanticSearchField
+from .semantic_search_input import SemanticSearchInput
+from .semantic_search_input_corpus_item import SemanticSearchInputCorpusItem
+from .semantic_search_input_include_item import SemanticSearchInputIncludeItem
+from .semantic_search_input_mode import SemanticSearchInputMode
+from .semantic_search_meta import SemanticSearchMeta
+from .semantic_search_meta_mode import SemanticSearchMetaMode
+from .semantic_search_response_200 import SemanticSearchResponse200
+from .semantic_search_result import SemanticSearchResult
+from .semantic_search_result_source_type import SemanticSearchResultSourceType
+from .semantic_search_score_breakdown import SemanticSearchScoreBreakdown
+from .semantic_search_snippet import SemanticSearchSnippet
 from .send_email_response_200 import SendEmailResponse200
 from .send_mail_attachment import SendMailAttachment
 from .send_mail_input import SendMailInput
@@ -388,6 +401,19 @@ __all__ = (
     "SearchEmailsResponse200",
     "SearchEmailsSnippet",
     "SearchEmailsSort",
+    "SemanticSearchCoverage",
+    "SemanticSearchField",
+    "SemanticSearchInput",
+    "SemanticSearchInputCorpusItem",
+    "SemanticSearchInputIncludeItem",
+    "SemanticSearchInputMode",
+    "SemanticSearchMeta",
+    "SemanticSearchMetaMode",
+    "SemanticSearchResponse200",
+    "SemanticSearchResult",
+    "SemanticSearchResultSourceType",
+    "SemanticSearchScoreBreakdown",
+    "SemanticSearchSnippet",
     "SendEmailResponse200",
     "SendMailAttachment",
     "SendMailInput",

@@ -9188,6 +9188,51 @@ func (o NilEmailWebhookStatus) Or(d EmailWebhookStatus) EmailWebhookStatus {
 	return d
 }
 
+// NewNilFloat64 returns new NilFloat64 with value set to v.
+func NewNilFloat64(v float64) NilFloat64 {
+	return NilFloat64{
+		Value: v,
+	}
+}
+
+// NilFloat64 is nullable float64.
+type NilFloat64 struct {
+	Value float64
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilFloat64) SetTo(v float64) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilFloat64) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilFloat64) SetToNull() {
+	o.Null = true
+	var v float64
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilFloat64) Get() (v float64, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilFloat64) Or(d float64) float64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilFunctionTestRunDeliveryEndpoint returns new NilFunctionTestRunDeliveryEndpoint with value set to v.
 func NewNilFunctionTestRunDeliveryEndpoint(v FunctionTestRunDeliveryEndpoint) NilFunctionTestRunDeliveryEndpoint {
 	return NilFunctionTestRunDeliveryEndpoint{
@@ -9362,6 +9407,51 @@ func (o NilInt) Get() (v int, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilSemanticSearchCoverage returns new NilSemanticSearchCoverage with value set to v.
+func NewNilSemanticSearchCoverage(v SemanticSearchCoverage) NilSemanticSearchCoverage {
+	return NilSemanticSearchCoverage{
+		Value: v,
+	}
+}
+
+// NilSemanticSearchCoverage is nullable SemanticSearchCoverage.
+type NilSemanticSearchCoverage struct {
+	Value SemanticSearchCoverage
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilSemanticSearchCoverage) SetTo(v SemanticSearchCoverage) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilSemanticSearchCoverage) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilSemanticSearchCoverage) SetToNull() {
+	o.Null = true
+	var v SemanticSearchCoverage
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilSemanticSearchCoverage) Get() (v SemanticSearchCoverage, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilSemanticSearchCoverage) Or(d SemanticSearchCoverage) SemanticSearchCoverage {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -11105,6 +11195,52 @@ func (o OptSearchEmailsSort) Or(d SearchEmailsSort) SearchEmailsSort {
 	return d
 }
 
+// NewOptSemanticSearchInputMode returns new OptSemanticSearchInputMode with value set to v.
+func NewOptSemanticSearchInputMode(v SemanticSearchInputMode) OptSemanticSearchInputMode {
+	return OptSemanticSearchInputMode{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSemanticSearchInputMode is optional SemanticSearchInputMode.
+type OptSemanticSearchInputMode struct {
+	Value SemanticSearchInputMode
+	Set   bool
+}
+
+// IsSet returns true if OptSemanticSearchInputMode was set.
+func (o OptSemanticSearchInputMode) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSemanticSearchInputMode) Reset() {
+	var v SemanticSearchInputMode
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSemanticSearchInputMode) SetTo(v SemanticSearchInputMode) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSemanticSearchInputMode) Get() (v SemanticSearchInputMode, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSemanticSearchInputMode) Or(d SemanticSearchInputMode) SemanticSearchInputMode {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSentEmailStatus returns new OptSentEmailStatus with value set to v.
 func NewOptSentEmailStatus(v SentEmailStatus) OptSentEmailStatus {
 	return OptSentEmailStatus{
@@ -11884,6 +12020,7 @@ func (*RateLimitedHeaders) replayDeliveryRes()         {}
 func (*RateLimitedHeaders) replayEmailWebhooksRes()    {}
 func (*RateLimitedHeaders) replyToEmailRes()           {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes()    {}
+func (*RateLimitedHeaders) semanticSearchRes()         {}
 func (*RateLimitedHeaders) sendEmailRes()              {}
 func (*RateLimitedHeaders) startAgentSignupRes()       {}
 func (*RateLimitedHeaders) startCliLoginRes()          {}
@@ -12552,6 +12689,839 @@ func (s *SearchEmailsSort) UnmarshalText(data []byte) error {
 type SearchEmailsUnauthorized ErrorResponse
 
 func (*SearchEmailsUnauthorized) searchEmailsRes() {}
+
+type SemanticSearchBadRequest ErrorResponse
+
+func (*SemanticSearchBadRequest) semanticSearchRes() {}
+
+// Index-coverage snapshot for the org, returned only when the `coverage` include option is requested.
+// Ref: #/components/schemas/SemanticSearchCoverage
+type SemanticSearchCoverage struct {
+	EmbeddedChunks              int `json:"embedded_chunks"`
+	PendingChunks               int `json:"pending_chunks"`
+	SkippedPlanChunks           int `json:"skipped_plan_chunks"`
+	SkippedQuotaChunks          int `json:"skipped_quota_chunks"`
+	UnsupportedAttachmentChunks int `json:"unsupported_attachment_chunks"`
+	FailedChunks                int `json:"failed_chunks"`
+}
+
+// GetEmbeddedChunks returns the value of EmbeddedChunks.
+func (s *SemanticSearchCoverage) GetEmbeddedChunks() int {
+	return s.EmbeddedChunks
+}
+
+// GetPendingChunks returns the value of PendingChunks.
+func (s *SemanticSearchCoverage) GetPendingChunks() int {
+	return s.PendingChunks
+}
+
+// GetSkippedPlanChunks returns the value of SkippedPlanChunks.
+func (s *SemanticSearchCoverage) GetSkippedPlanChunks() int {
+	return s.SkippedPlanChunks
+}
+
+// GetSkippedQuotaChunks returns the value of SkippedQuotaChunks.
+func (s *SemanticSearchCoverage) GetSkippedQuotaChunks() int {
+	return s.SkippedQuotaChunks
+}
+
+// GetUnsupportedAttachmentChunks returns the value of UnsupportedAttachmentChunks.
+func (s *SemanticSearchCoverage) GetUnsupportedAttachmentChunks() int {
+	return s.UnsupportedAttachmentChunks
+}
+
+// GetFailedChunks returns the value of FailedChunks.
+func (s *SemanticSearchCoverage) GetFailedChunks() int {
+	return s.FailedChunks
+}
+
+// SetEmbeddedChunks sets the value of EmbeddedChunks.
+func (s *SemanticSearchCoverage) SetEmbeddedChunks(val int) {
+	s.EmbeddedChunks = val
+}
+
+// SetPendingChunks sets the value of PendingChunks.
+func (s *SemanticSearchCoverage) SetPendingChunks(val int) {
+	s.PendingChunks = val
+}
+
+// SetSkippedPlanChunks sets the value of SkippedPlanChunks.
+func (s *SemanticSearchCoverage) SetSkippedPlanChunks(val int) {
+	s.SkippedPlanChunks = val
+}
+
+// SetSkippedQuotaChunks sets the value of SkippedQuotaChunks.
+func (s *SemanticSearchCoverage) SetSkippedQuotaChunks(val int) {
+	s.SkippedQuotaChunks = val
+}
+
+// SetUnsupportedAttachmentChunks sets the value of UnsupportedAttachmentChunks.
+func (s *SemanticSearchCoverage) SetUnsupportedAttachmentChunks(val int) {
+	s.UnsupportedAttachmentChunks = val
+}
+
+// SetFailedChunks sets the value of FailedChunks.
+func (s *SemanticSearchCoverage) SetFailedChunks(val int) {
+	s.FailedChunks = val
+}
+
+// A searchable email field.
+// Ref: #/components/schemas/SemanticSearchField
+type SemanticSearchField string
+
+const (
+	SemanticSearchFieldSubject   SemanticSearchField = "subject"
+	SemanticSearchFieldHeaders   SemanticSearchField = "headers"
+	SemanticSearchFieldAddresses SemanticSearchField = "addresses"
+	SemanticSearchFieldBody      SemanticSearchField = "body"
+)
+
+// AllValues returns all SemanticSearchField values.
+func (SemanticSearchField) AllValues() []SemanticSearchField {
+	return []SemanticSearchField{
+		SemanticSearchFieldSubject,
+		SemanticSearchFieldHeaders,
+		SemanticSearchFieldAddresses,
+		SemanticSearchFieldBody,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SemanticSearchField) MarshalText() ([]byte, error) {
+	switch s {
+	case SemanticSearchFieldSubject:
+		return []byte(s), nil
+	case SemanticSearchFieldHeaders:
+		return []byte(s), nil
+	case SemanticSearchFieldAddresses:
+		return []byte(s), nil
+	case SemanticSearchFieldBody:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SemanticSearchField) UnmarshalText(data []byte) error {
+	switch SemanticSearchField(data) {
+	case SemanticSearchFieldSubject:
+		*s = SemanticSearchFieldSubject
+		return nil
+	case SemanticSearchFieldHeaders:
+		*s = SemanticSearchFieldHeaders
+		return nil
+	case SemanticSearchFieldAddresses:
+		*s = SemanticSearchFieldAddresses
+		return nil
+	case SemanticSearchFieldBody:
+		*s = SemanticSearchFieldBody
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SemanticSearchForbidden ErrorResponse
+
+func (*SemanticSearchForbidden) semanticSearchRes() {}
+
+// Ref: #/components/schemas/SemanticSearchInput
+type SemanticSearchInput struct {
+	// Free-text query. Required for `semantic` and `hybrid` modes;
+	// optional for `keyword` mode.
+	Query OptString `json:"query"`
+	// Ranking strategy. `keyword` is lexical only, `semantic` is
+	// embedding-based, `hybrid` blends both.
+	Mode OptSemanticSearchInputMode `json:"mode"`
+	// Which mail to search. Defaults to both received (`inbound`)
+	// and sent (`outbound`).
+	Corpus []SemanticSearchInputCorpusItem `json:"corpus"`
+	// Restrict matching to these fields. Defaults to all.
+	SearchIn []SemanticSearchField `json:"search_in"`
+	// Exclude these fields from matching.
+	Exclude []SemanticSearchField `json:"exclude"`
+	// Only include mail at or after this timestamp.
+	DateFrom OptDateTime `json:"date_from"`
+	// Only include mail at or before this timestamp.
+	DateTo OptDateTime `json:"date_to"`
+	// Opt-in extras. `coverage` adds an index-coverage snapshot to
+	// `meta`. Matched fields, snippets, and the score breakdown are
+	// always returned regardless of this field.
+	Include []SemanticSearchInputIncludeItem `json:"include"`
+	// Maximum number of results to return.
+	Limit OptInt `json:"limit"`
+	// Opaque pagination cursor from a prior response's `meta.cursor`.
+	Cursor OptString `json:"cursor"`
+}
+
+// GetQuery returns the value of Query.
+func (s *SemanticSearchInput) GetQuery() OptString {
+	return s.Query
+}
+
+// GetMode returns the value of Mode.
+func (s *SemanticSearchInput) GetMode() OptSemanticSearchInputMode {
+	return s.Mode
+}
+
+// GetCorpus returns the value of Corpus.
+func (s *SemanticSearchInput) GetCorpus() []SemanticSearchInputCorpusItem {
+	return s.Corpus
+}
+
+// GetSearchIn returns the value of SearchIn.
+func (s *SemanticSearchInput) GetSearchIn() []SemanticSearchField {
+	return s.SearchIn
+}
+
+// GetExclude returns the value of Exclude.
+func (s *SemanticSearchInput) GetExclude() []SemanticSearchField {
+	return s.Exclude
+}
+
+// GetDateFrom returns the value of DateFrom.
+func (s *SemanticSearchInput) GetDateFrom() OptDateTime {
+	return s.DateFrom
+}
+
+// GetDateTo returns the value of DateTo.
+func (s *SemanticSearchInput) GetDateTo() OptDateTime {
+	return s.DateTo
+}
+
+// GetInclude returns the value of Include.
+func (s *SemanticSearchInput) GetInclude() []SemanticSearchInputIncludeItem {
+	return s.Include
+}
+
+// GetLimit returns the value of Limit.
+func (s *SemanticSearchInput) GetLimit() OptInt {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *SemanticSearchInput) GetCursor() OptString {
+	return s.Cursor
+}
+
+// SetQuery sets the value of Query.
+func (s *SemanticSearchInput) SetQuery(val OptString) {
+	s.Query = val
+}
+
+// SetMode sets the value of Mode.
+func (s *SemanticSearchInput) SetMode(val OptSemanticSearchInputMode) {
+	s.Mode = val
+}
+
+// SetCorpus sets the value of Corpus.
+func (s *SemanticSearchInput) SetCorpus(val []SemanticSearchInputCorpusItem) {
+	s.Corpus = val
+}
+
+// SetSearchIn sets the value of SearchIn.
+func (s *SemanticSearchInput) SetSearchIn(val []SemanticSearchField) {
+	s.SearchIn = val
+}
+
+// SetExclude sets the value of Exclude.
+func (s *SemanticSearchInput) SetExclude(val []SemanticSearchField) {
+	s.Exclude = val
+}
+
+// SetDateFrom sets the value of DateFrom.
+func (s *SemanticSearchInput) SetDateFrom(val OptDateTime) {
+	s.DateFrom = val
+}
+
+// SetDateTo sets the value of DateTo.
+func (s *SemanticSearchInput) SetDateTo(val OptDateTime) {
+	s.DateTo = val
+}
+
+// SetInclude sets the value of Include.
+func (s *SemanticSearchInput) SetInclude(val []SemanticSearchInputIncludeItem) {
+	s.Include = val
+}
+
+// SetLimit sets the value of Limit.
+func (s *SemanticSearchInput) SetLimit(val OptInt) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *SemanticSearchInput) SetCursor(val OptString) {
+	s.Cursor = val
+}
+
+type SemanticSearchInputCorpusItem string
+
+const (
+	SemanticSearchInputCorpusItemInbound  SemanticSearchInputCorpusItem = "inbound"
+	SemanticSearchInputCorpusItemOutbound SemanticSearchInputCorpusItem = "outbound"
+)
+
+// AllValues returns all SemanticSearchInputCorpusItem values.
+func (SemanticSearchInputCorpusItem) AllValues() []SemanticSearchInputCorpusItem {
+	return []SemanticSearchInputCorpusItem{
+		SemanticSearchInputCorpusItemInbound,
+		SemanticSearchInputCorpusItemOutbound,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SemanticSearchInputCorpusItem) MarshalText() ([]byte, error) {
+	switch s {
+	case SemanticSearchInputCorpusItemInbound:
+		return []byte(s), nil
+	case SemanticSearchInputCorpusItemOutbound:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SemanticSearchInputCorpusItem) UnmarshalText(data []byte) error {
+	switch SemanticSearchInputCorpusItem(data) {
+	case SemanticSearchInputCorpusItemInbound:
+		*s = SemanticSearchInputCorpusItemInbound
+		return nil
+	case SemanticSearchInputCorpusItemOutbound:
+		*s = SemanticSearchInputCorpusItemOutbound
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SemanticSearchInputIncludeItem string
+
+const (
+	SemanticSearchInputIncludeItemCoverage SemanticSearchInputIncludeItem = "coverage"
+)
+
+// AllValues returns all SemanticSearchInputIncludeItem values.
+func (SemanticSearchInputIncludeItem) AllValues() []SemanticSearchInputIncludeItem {
+	return []SemanticSearchInputIncludeItem{
+		SemanticSearchInputIncludeItemCoverage,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SemanticSearchInputIncludeItem) MarshalText() ([]byte, error) {
+	switch s {
+	case SemanticSearchInputIncludeItemCoverage:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SemanticSearchInputIncludeItem) UnmarshalText(data []byte) error {
+	switch SemanticSearchInputIncludeItem(data) {
+	case SemanticSearchInputIncludeItemCoverage:
+		*s = SemanticSearchInputIncludeItemCoverage
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ranking strategy. `keyword` is lexical only, `semantic` is
+// embedding-based, `hybrid` blends both.
+type SemanticSearchInputMode string
+
+const (
+	SemanticSearchInputModeHybrid   SemanticSearchInputMode = "hybrid"
+	SemanticSearchInputModeSemantic SemanticSearchInputMode = "semantic"
+	SemanticSearchInputModeKeyword  SemanticSearchInputMode = "keyword"
+)
+
+// AllValues returns all SemanticSearchInputMode values.
+func (SemanticSearchInputMode) AllValues() []SemanticSearchInputMode {
+	return []SemanticSearchInputMode{
+		SemanticSearchInputModeHybrid,
+		SemanticSearchInputModeSemantic,
+		SemanticSearchInputModeKeyword,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SemanticSearchInputMode) MarshalText() ([]byte, error) {
+	switch s {
+	case SemanticSearchInputModeHybrid:
+		return []byte(s), nil
+	case SemanticSearchInputModeSemantic:
+		return []byte(s), nil
+	case SemanticSearchInputModeKeyword:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SemanticSearchInputMode) UnmarshalText(data []byte) error {
+	switch SemanticSearchInputMode(data) {
+	case SemanticSearchInputModeHybrid:
+		*s = SemanticSearchInputModeHybrid
+		return nil
+	case SemanticSearchInputModeSemantic:
+		*s = SemanticSearchInputModeSemantic
+		return nil
+	case SemanticSearchInputModeKeyword:
+		*s = SemanticSearchInputModeKeyword
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SemanticSearchInternalServerError ErrorResponse
+
+func (*SemanticSearchInternalServerError) semanticSearchRes() {}
+
+// Ref: #/components/schemas/SemanticSearchMeta
+type SemanticSearchMeta struct {
+	// Page size used for this request.
+	Limit int `json:"limit"`
+	// Cursor for the next page, or null if there are no more results.
+	Cursor NilString `json:"cursor"`
+	// Ranking mode used for this response.
+	Mode SemanticSearchMetaMode `json:"mode"`
+	// Index-coverage snapshot, present only when requested via
+	// `include: [coverage]`; otherwise null.
+	Coverage NilSemanticSearchCoverage `json:"coverage"`
+}
+
+// GetLimit returns the value of Limit.
+func (s *SemanticSearchMeta) GetLimit() int {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *SemanticSearchMeta) GetCursor() NilString {
+	return s.Cursor
+}
+
+// GetMode returns the value of Mode.
+func (s *SemanticSearchMeta) GetMode() SemanticSearchMetaMode {
+	return s.Mode
+}
+
+// GetCoverage returns the value of Coverage.
+func (s *SemanticSearchMeta) GetCoverage() NilSemanticSearchCoverage {
+	return s.Coverage
+}
+
+// SetLimit sets the value of Limit.
+func (s *SemanticSearchMeta) SetLimit(val int) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *SemanticSearchMeta) SetCursor(val NilString) {
+	s.Cursor = val
+}
+
+// SetMode sets the value of Mode.
+func (s *SemanticSearchMeta) SetMode(val SemanticSearchMetaMode) {
+	s.Mode = val
+}
+
+// SetCoverage sets the value of Coverage.
+func (s *SemanticSearchMeta) SetCoverage(val NilSemanticSearchCoverage) {
+	s.Coverage = val
+}
+
+// Ranking mode used for this response.
+type SemanticSearchMetaMode string
+
+const (
+	SemanticSearchMetaModeHybrid   SemanticSearchMetaMode = "hybrid"
+	SemanticSearchMetaModeSemantic SemanticSearchMetaMode = "semantic"
+	SemanticSearchMetaModeKeyword  SemanticSearchMetaMode = "keyword"
+)
+
+// AllValues returns all SemanticSearchMetaMode values.
+func (SemanticSearchMetaMode) AllValues() []SemanticSearchMetaMode {
+	return []SemanticSearchMetaMode{
+		SemanticSearchMetaModeHybrid,
+		SemanticSearchMetaModeSemantic,
+		SemanticSearchMetaModeKeyword,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SemanticSearchMetaMode) MarshalText() ([]byte, error) {
+	switch s {
+	case SemanticSearchMetaModeHybrid:
+		return []byte(s), nil
+	case SemanticSearchMetaModeSemantic:
+		return []byte(s), nil
+	case SemanticSearchMetaModeKeyword:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SemanticSearchMetaMode) UnmarshalText(data []byte) error {
+	switch SemanticSearchMetaMode(data) {
+	case SemanticSearchMetaModeHybrid:
+		*s = SemanticSearchMetaModeHybrid
+		return nil
+	case SemanticSearchMetaModeSemantic:
+		*s = SemanticSearchMetaModeSemantic
+		return nil
+	case SemanticSearchMetaModeKeyword:
+		*s = SemanticSearchMetaModeKeyword
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Merged schema.
+type SemanticSearchOK struct {
+	Success bool                   `json:"success"`
+	Data    []SemanticSearchResult `json:"data"`
+	Meta    SemanticSearchMeta     `json:"meta"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SemanticSearchOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SemanticSearchOK) GetData() []SemanticSearchResult {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *SemanticSearchOK) GetMeta() SemanticSearchMeta {
+	return s.Meta
+}
+
+// SetSuccess sets the value of Success.
+func (s *SemanticSearchOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SemanticSearchOK) SetData(val []SemanticSearchResult) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *SemanticSearchOK) SetMeta(val SemanticSearchMeta) {
+	s.Meta = val
+}
+
+func (*SemanticSearchOK) semanticSearchRes() {}
+
+// Ref: #/components/schemas/SemanticSearchResult
+type SemanticSearchResult struct {
+	// Whether this row is a received or sent message.
+	SourceType SemanticSearchResultSourceType `json:"source_type"`
+	// Message id. Combine with `api_url` to fetch the full record.
+	ID      string    `json:"id"`
+	Subject NilString `json:"subject"`
+	From    NilString `json:"from"`
+	To      NilString `json:"to"`
+	// Message timestamp (received_at for inbound, created_at for sent).
+	Timestamp string `json:"timestamp"`
+	// Lifecycle status of the message.
+	Status string `json:"status"`
+	// Overall relevance score; the `score_breakdown` components account for it.
+	Score float64 `json:"score"`
+	// Raw semantic similarity signal, or null when not applicable.
+	SemanticScore NilFloat64 `json:"semantic_score"`
+	// Raw keyword (lexical) signal, or null when not applicable.
+	KeywordScore NilFloat64 `json:"keyword_score"`
+	// Fields where the query matched.
+	MatchedFields []SemanticSearchField `json:"matched_fields"`
+	// Match-centered excerpts, one per matched field.
+	Snippets       []SemanticSearchSnippet      `json:"snippets"`
+	ScoreBreakdown SemanticSearchScoreBreakdown `json:"score_breakdown"`
+	// Relative API path to fetch the full message.
+	APIURL NilString `json:"api_url"`
+}
+
+// GetSourceType returns the value of SourceType.
+func (s *SemanticSearchResult) GetSourceType() SemanticSearchResultSourceType {
+	return s.SourceType
+}
+
+// GetID returns the value of ID.
+func (s *SemanticSearchResult) GetID() string {
+	return s.ID
+}
+
+// GetSubject returns the value of Subject.
+func (s *SemanticSearchResult) GetSubject() NilString {
+	return s.Subject
+}
+
+// GetFrom returns the value of From.
+func (s *SemanticSearchResult) GetFrom() NilString {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *SemanticSearchResult) GetTo() NilString {
+	return s.To
+}
+
+// GetTimestamp returns the value of Timestamp.
+func (s *SemanticSearchResult) GetTimestamp() string {
+	return s.Timestamp
+}
+
+// GetStatus returns the value of Status.
+func (s *SemanticSearchResult) GetStatus() string {
+	return s.Status
+}
+
+// GetScore returns the value of Score.
+func (s *SemanticSearchResult) GetScore() float64 {
+	return s.Score
+}
+
+// GetSemanticScore returns the value of SemanticScore.
+func (s *SemanticSearchResult) GetSemanticScore() NilFloat64 {
+	return s.SemanticScore
+}
+
+// GetKeywordScore returns the value of KeywordScore.
+func (s *SemanticSearchResult) GetKeywordScore() NilFloat64 {
+	return s.KeywordScore
+}
+
+// GetMatchedFields returns the value of MatchedFields.
+func (s *SemanticSearchResult) GetMatchedFields() []SemanticSearchField {
+	return s.MatchedFields
+}
+
+// GetSnippets returns the value of Snippets.
+func (s *SemanticSearchResult) GetSnippets() []SemanticSearchSnippet {
+	return s.Snippets
+}
+
+// GetScoreBreakdown returns the value of ScoreBreakdown.
+func (s *SemanticSearchResult) GetScoreBreakdown() SemanticSearchScoreBreakdown {
+	return s.ScoreBreakdown
+}
+
+// GetAPIURL returns the value of APIURL.
+func (s *SemanticSearchResult) GetAPIURL() NilString {
+	return s.APIURL
+}
+
+// SetSourceType sets the value of SourceType.
+func (s *SemanticSearchResult) SetSourceType(val SemanticSearchResultSourceType) {
+	s.SourceType = val
+}
+
+// SetID sets the value of ID.
+func (s *SemanticSearchResult) SetID(val string) {
+	s.ID = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *SemanticSearchResult) SetSubject(val NilString) {
+	s.Subject = val
+}
+
+// SetFrom sets the value of From.
+func (s *SemanticSearchResult) SetFrom(val NilString) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *SemanticSearchResult) SetTo(val NilString) {
+	s.To = val
+}
+
+// SetTimestamp sets the value of Timestamp.
+func (s *SemanticSearchResult) SetTimestamp(val string) {
+	s.Timestamp = val
+}
+
+// SetStatus sets the value of Status.
+func (s *SemanticSearchResult) SetStatus(val string) {
+	s.Status = val
+}
+
+// SetScore sets the value of Score.
+func (s *SemanticSearchResult) SetScore(val float64) {
+	s.Score = val
+}
+
+// SetSemanticScore sets the value of SemanticScore.
+func (s *SemanticSearchResult) SetSemanticScore(val NilFloat64) {
+	s.SemanticScore = val
+}
+
+// SetKeywordScore sets the value of KeywordScore.
+func (s *SemanticSearchResult) SetKeywordScore(val NilFloat64) {
+	s.KeywordScore = val
+}
+
+// SetMatchedFields sets the value of MatchedFields.
+func (s *SemanticSearchResult) SetMatchedFields(val []SemanticSearchField) {
+	s.MatchedFields = val
+}
+
+// SetSnippets sets the value of Snippets.
+func (s *SemanticSearchResult) SetSnippets(val []SemanticSearchSnippet) {
+	s.Snippets = val
+}
+
+// SetScoreBreakdown sets the value of ScoreBreakdown.
+func (s *SemanticSearchResult) SetScoreBreakdown(val SemanticSearchScoreBreakdown) {
+	s.ScoreBreakdown = val
+}
+
+// SetAPIURL sets the value of APIURL.
+func (s *SemanticSearchResult) SetAPIURL(val NilString) {
+	s.APIURL = val
+}
+
+// Whether this row is a received or sent message.
+type SemanticSearchResultSourceType string
+
+const (
+	SemanticSearchResultSourceTypeInboundEmail SemanticSearchResultSourceType = "inbound_email"
+	SemanticSearchResultSourceTypeSentEmail    SemanticSearchResultSourceType = "sent_email"
+)
+
+// AllValues returns all SemanticSearchResultSourceType values.
+func (SemanticSearchResultSourceType) AllValues() []SemanticSearchResultSourceType {
+	return []SemanticSearchResultSourceType{
+		SemanticSearchResultSourceTypeInboundEmail,
+		SemanticSearchResultSourceTypeSentEmail,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SemanticSearchResultSourceType) MarshalText() ([]byte, error) {
+	switch s {
+	case SemanticSearchResultSourceTypeInboundEmail:
+		return []byte(s), nil
+	case SemanticSearchResultSourceTypeSentEmail:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SemanticSearchResultSourceType) UnmarshalText(data []byte) error {
+	switch SemanticSearchResultSourceType(data) {
+	case SemanticSearchResultSourceTypeInboundEmail:
+		*s = SemanticSearchResultSourceTypeInboundEmail
+		return nil
+	case SemanticSearchResultSourceTypeSentEmail:
+		*s = SemanticSearchResultSourceTypeSentEmail
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Additive contributions to `score`. `semantic` and `keyword` are the
+// raw signals times the mode's weight (null when not applicable);
+// these plus `field_boost` and `recency` sum to `score` before each
+// value is independently rounded to 5 decimal places.
+// Ref: #/components/schemas/SemanticSearchScoreBreakdown
+type SemanticSearchScoreBreakdown struct {
+	Semantic   NilFloat64 `json:"semantic"`
+	Keyword    NilFloat64 `json:"keyword"`
+	FieldBoost float64    `json:"field_boost"`
+	Recency    float64    `json:"recency"`
+}
+
+// GetSemantic returns the value of Semantic.
+func (s *SemanticSearchScoreBreakdown) GetSemantic() NilFloat64 {
+	return s.Semantic
+}
+
+// GetKeyword returns the value of Keyword.
+func (s *SemanticSearchScoreBreakdown) GetKeyword() NilFloat64 {
+	return s.Keyword
+}
+
+// GetFieldBoost returns the value of FieldBoost.
+func (s *SemanticSearchScoreBreakdown) GetFieldBoost() float64 {
+	return s.FieldBoost
+}
+
+// GetRecency returns the value of Recency.
+func (s *SemanticSearchScoreBreakdown) GetRecency() float64 {
+	return s.Recency
+}
+
+// SetSemantic sets the value of Semantic.
+func (s *SemanticSearchScoreBreakdown) SetSemantic(val NilFloat64) {
+	s.Semantic = val
+}
+
+// SetKeyword sets the value of Keyword.
+func (s *SemanticSearchScoreBreakdown) SetKeyword(val NilFloat64) {
+	s.Keyword = val
+}
+
+// SetFieldBoost sets the value of FieldBoost.
+func (s *SemanticSearchScoreBreakdown) SetFieldBoost(val float64) {
+	s.FieldBoost = val
+}
+
+// SetRecency sets the value of Recency.
+func (s *SemanticSearchScoreBreakdown) SetRecency(val float64) {
+	s.Recency = val
+}
+
+type SemanticSearchServiceUnavailable ErrorResponse
+
+func (*SemanticSearchServiceUnavailable) semanticSearchRes() {}
+
+// Ref: #/components/schemas/SemanticSearchSnippet
+type SemanticSearchSnippet struct {
+	// The field this excerpt came from.
+	Field string `json:"field"`
+	// Plain-text excerpt centered on the match (no markup).
+	Text string `json:"text"`
+}
+
+// GetField returns the value of Field.
+func (s *SemanticSearchSnippet) GetField() string {
+	return s.Field
+}
+
+// GetText returns the value of Text.
+func (s *SemanticSearchSnippet) GetText() string {
+	return s.Text
+}
+
+// SetField sets the value of Field.
+func (s *SemanticSearchSnippet) SetField(val string) {
+	s.Field = val
+}
+
+// SetText sets the value of Text.
+func (s *SemanticSearchSnippet) SetText(val string) {
+	s.Text = val
+}
+
+type SemanticSearchUnauthorized ErrorResponse
+
+func (*SemanticSearchUnauthorized) semanticSearchRes() {}
 
 type SendEmailBadGateway ErrorResponse
 

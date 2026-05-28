@@ -9,3 +9,15 @@ func (s *CreateEndpointInput) setDefaults() {
 		s.Enabled.SetTo(val)
 	}
 }
+
+// setDefaults set default value of fields.
+func (s *SemanticSearchInput) setDefaults() {
+	{
+		val := SemanticSearchInputMode("hybrid")
+		s.Mode.SetTo(val)
+	}
+	{
+		val := int(10)
+		s.Limit.SetTo(val)
+	}
+}
