@@ -12,6 +12,8 @@ Or with npm:
 ```bash
 npm install -g @primitivedotdev/cli
 primitive whoami
+# `prim` is installed as a short alias for the same CLI.
+prim whoami
 ```
 
 Or with no install:
