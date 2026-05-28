@@ -28,6 +28,7 @@ import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
 import LogoutCommand from "./commands/logout.js";
 import ReplyCommand from "./commands/reply.js";
+import SemanticSearchCommand from "./commands/semantic-search.js";
 import SendCommand from "./commands/send.js";
 import {
   LoginBrowserCommand,
@@ -445,6 +446,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
   "emails:wait": EmailsWaitCommand,
+  // `semantic-search` is the top-level search verb for meaning-aware
+  // cross-corpus mail search. The generated operation remains available
+  // under its manifest id for full API parity.
+  "semantic-search": SemanticSearchCommand,
   // `domains:zone-file` downloads the server-generated DNS import file.
   // The API owns serialization so dashboard and CLI output stay aligned.
   "domains:zone-file": DomainsZoneFileCommand,

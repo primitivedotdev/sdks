@@ -229,7 +229,7 @@ describe("agent signup commands", () => {
   });
 
   it("prints useful status for a pending signup", () => {
-    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL);
 
     runSignupStatus({
       configDir: tempDir,
@@ -255,7 +255,7 @@ describe("agent signup commands", () => {
   });
 
   it("prints pending signup status as JSON", () => {
-    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL);
 
     runSignupStatus({
       configDir: tempDir,
@@ -315,7 +315,7 @@ describe("agent signup commands", () => {
       join(tempDir, "signup.json"),
       `${JSON.stringify({
         ...START_RESULT,
-        api_base_url_1: DEFAULT_API_BASE_URL_1,
+        api_base_url: DEFAULT_API_BASE_URL,
         created_at: "2026-05-01T00:00:00.000Z",
         expires_at: "2026-05-01T00:01:00.000Z",
       })}\n`,
@@ -340,7 +340,7 @@ describe("agent signup commands", () => {
   });
 
   it("fails status clearly when the supplied email does not match", () => {
-    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL);
 
     expect(() =>
       runSignupStatus({
@@ -467,7 +467,7 @@ describe("agent signup commands", () => {
 
   it("infers the resend email from pending signup state", async () => {
     const deps = flowDeps({});
-    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL_1);
+    savePendingAgentSignup(tempDir, START_RESULT, DEFAULT_API_BASE_URL);
 
     await runSignupResendWithCredentialLock({
       configDir: tempDir,

@@ -3,6 +3,7 @@ import type { SemanticSearchResult } from "@primitivedotdev/api-core";
 import { semanticSearch } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
+  API_BASE_URL_FLAG_DESCRIPTION,
   extractErrorPayload,
   runWithTiming,
   surfaceUnauthorizedHint,
@@ -87,16 +88,9 @@ class SemanticSearchCommand extends Command {
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
-    "api-base-url-1": Flags.string({
-      description:
-        "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
-      hidden: true,
-    }),
-    "api-base-url-2": Flags.string({
-      description:
-        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_2",
+    "api-base-url": Flags.string({
+      description: API_BASE_URL_FLAG_DESCRIPTION,
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     mode: Flags.string({
@@ -142,16 +136,12 @@ class SemanticSearchCommand extends Command {
       const { apiClient, auth, baseUrlOverridden } =
         await createAuthenticatedCliApiClient({
           apiKey: flags["api-key"],
-          apiBaseUrl1: flags["api-base-url-1"],
-          apiBaseUrl2: flags["api-base-url-2"],
+          apiBaseUrl: flags["api-base-url"],
           configDir: this.config.configDir,
         });
 
       const result = await semanticSearch({
-        // /v1/semantic-search lives on the worker host; route to it
-        // explicitly. Without this the request would target the primary
-        // host, which does not serve this endpoint.
-        client: apiClient._sendClient,
+        client: apiClient.client,
         body: {
           query: args.query,
           mode: flags.mode as "hybrid" | "semantic" | "keyword",

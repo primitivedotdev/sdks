@@ -393,7 +393,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
   /**
    * Semantic / hybrid / keyword search across received and sent mail.
    *
-   * `POST /v1/semantic-search` on the search host. Returns ranked rows
+   * `POST /v1/semantic-search`. Returns ranked rows
    * with matched fields, match-centered excerpts, and an additive
    * `score_breakdown`. See `SemanticSearchInput` for request fields and
    * `SemanticSearchResult` for the row shape.
@@ -408,10 +408,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
     const result = await generatedOperations.semanticSearch({
       body: input,
       ...resolveRequestOptions(options),
-      // /v1/semantic-search lives on the same worker host as /send-mail
-      // (api.primitive.dev/v1), reachable through the host-2 client.
-      // Customers don't see or configure this; the host swap is internal.
-      client: this._sendClient,
+      client: this.client,
       responseStyle: "fields",
     });
     return unwrapSemanticSearchResult(result);
