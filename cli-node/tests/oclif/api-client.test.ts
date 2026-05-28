@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Errors } from "@oclif/core";
@@ -25,7 +25,7 @@ import {
 
 const CREDENTIALS: StoredCliCredentials = {
   access_token: "prim_oat_existing",
-  api_base_url_1: "https://saved.example/api/v1",
+  api_base_url: "https://api.saved.example/v1",
   auth_method: "oauth",
   created_at: "2026-05-05T00:00:00.000Z",
   expires_at: "2099-05-05T00:00:00.000Z",
@@ -95,9 +95,9 @@ describe("CLI API request config", () => {
     }
   });
 
-  it("writes unnamed config changes to default even when another config is active", () => {
+  it("writes unnamed config changes to the active environment", () => {
     let config = upsertCliEnvironment({
-      apiBaseUrl1: "https://staging.example/api/v1",
+      apiBaseUrl: "https://api.staging.example/v1",
       config: emptyCliConfig(),
       environmentName: "staging",
     });
@@ -108,12 +108,11 @@ describe("CLI API request config", () => {
       headers: ["x-default=yes"],
     });
 
-    expect(config.current_environment).toBe("default");
-    expect(config.environments.default).toMatchObject({
-      headers: { "x-default": "yes" },
-    });
+    expect(config.current_environment).toBe("staging");
+    expect(config.environments.default).toBeUndefined();
     expect(config.environments.staging).toMatchObject({
-      api_base_url_1: "https://staging.example/api/v1",
+      api_base_url: "https://api.staging.example/v1",
+      headers: { "x-default": "yes" },
     });
   });
 
@@ -145,8 +144,7 @@ describe("CLI API request config", () => {
 
   it("loads the active environment and lets env headers override stored headers", () => {
     const config = upsertCliEnvironment({
-      apiBaseUrl1: "https://staging.example/api/v1/",
-      apiBaseUrl2: "https://staging-worker.example/v1/",
+      apiBaseUrl: "https://api.staging.example/v1/",
       config: emptyCliConfig(),
       environmentName: "staging",
       headers: ["x-test=stored", "x-keep=yes"],
@@ -159,18 +157,41 @@ describe("CLI API request config", () => {
     });
 
     expect(resolved).toMatchObject({
-      apiBaseUrl1: "https://staging.example/api/v1",
-      apiBaseUrl2: "https://staging-worker.example/v1",
+      apiBaseUrl: "https://api.staging.example/v1",
       baseUrlOverridden: true,
       environmentName: "staging",
       headers: { "x-keep": "yes", "x-test": "env" },
     });
   });
 
+  it("loads legacy split-host config on the canonical host", () => {
+    writeFileSync(
+      join(tempDir, "config.json"),
+      `${JSON.stringify({
+        version: 1,
+        current_environment: "staging",
+        environments: {
+          staging: {
+            api_base_url_1: "https://primitive-staging-1.com/api/v1",
+            api_base_url_2: "https://api.primitive-staging-1.com/v1",
+            headers: { "x-test": "stored" },
+          },
+        },
+      })}\n`,
+    );
+
+    expect(resolveCliApiRequestConfig({ configDir: tempDir })).toMatchObject({
+      apiBaseUrl: "https://api.primitive-staging-1.com/v1",
+      environmentName: "staging",
+      headers: { "x-test": "stored" },
+      resolvedApiBaseUrl: "https://api.primitive-staging-1.com/v1",
+    });
+  });
+
   it("keeps stored OAuth credentials pinned to their saved API URL", async () => {
     saveCliCredentials(tempDir, CREDENTIALS);
     const config = upsertCliEnvironment({
-      apiBaseUrl1: "https://staging.example/api/v1",
+      apiBaseUrl: "https://api.staging.example/v1",
       config: emptyCliConfig(),
       environmentName: "staging",
       headers: ["x-staging-secret=secret"],
@@ -183,10 +204,10 @@ describe("CLI API request config", () => {
       });
 
     expect(auth.apiKey).toBe(CREDENTIALS.access_token);
-    expect(auth.apiBaseUrl1).toBe("https://saved.example/api/v1");
+    expect(auth.apiBaseUrl).toBe("https://api.saved.example/v1");
     expect(baseUrlOverridden).toBe(true);
     expect(requestConfig.headers).toEqual({ "x-staging-secret": "secret" });
-    expect(apiClient.getConfig().baseUrl).toBe("https://saved.example/api/v1");
+    expect(apiClient.getConfig().baseUrl).toBe("https://api.saved.example/v1");
     const clientHeaders = apiClient.getConfig().headers as Headers;
     expect(clientHeaders.get("x-staging-secret")).toBe("secret");
   });
@@ -201,7 +222,7 @@ describe("CLI API request config", () => {
       url: string | URL | Request,
       init?: RequestInit,
     ) => {
-      expect(String(url)).toBe("https://saved.example/oauth/token");
+      expect(String(url)).toBe("https://api.saved.example/oauth/token");
       expect(init?.method).toBe("POST");
       expect(init?.body?.toString()).toContain("grant_type=refresh_token");
       return new Response(
@@ -215,7 +236,7 @@ describe("CLI API request config", () => {
     };
 
     const refreshed = await refreshStoredCliCredentials({
-      apiBaseUrl1: expired.api_base_url_1,
+      apiBaseUrl: expired.api_base_url,
       configDir: tempDir,
       credentials: expired,
       fetch: fetchMock as typeof fetch,
@@ -238,13 +259,13 @@ describe("CLI API request config", () => {
     saveCliConfig(
       tempDir,
       upsertCliEnvironment({
-        apiBaseUrl1: "https://staging.example/api/v1",
+        apiBaseUrl: "https://api.staging.example/v1",
         config: emptyCliConfig(),
         environmentName: "staging",
       }),
     );
     const fetchMock = async (url: string | URL | Request) => {
-      expect(String(url)).toBe("https://saved.example/oauth/token");
+      expect(String(url)).toBe("https://api.saved.example/oauth/token");
       return new Response(
         JSON.stringify({
           access_token: "prim_oat_refreshed",
@@ -261,7 +282,7 @@ describe("CLI API request config", () => {
       now: () => new Date("2026-05-05T00:00:00.000Z").getTime(),
     });
 
-    expect(auth.apiBaseUrl1).toBe("https://saved.example/api/v1");
+    expect(auth.apiBaseUrl).toBe("https://api.saved.example/v1");
     expect(auth.apiKey).toBe("prim_oat_refreshed");
   });
 
@@ -282,7 +303,7 @@ describe("CLI API request config", () => {
 
     await expect(
       refreshStoredCliCredentials({
-        apiBaseUrl1: expired.api_base_url_1,
+        apiBaseUrl: expired.api_base_url,
         configDir: tempDir,
         credentials: expired,
         fetch: fetchMock as typeof fetch,

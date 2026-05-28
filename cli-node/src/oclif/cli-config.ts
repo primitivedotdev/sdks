@@ -8,15 +8,14 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { Errors } from "@oclif/core";
-import { normalizeApiBaseUrl1, normalizeApiBaseUrl2 } from "./auth.js";
+import { normalizeApiBaseUrl } from "./auth.js";
 
 const CONFIG_FILE = "config.json";
 const CONFIG_VERSION = 1;
 export const DEFAULT_ENVIRONMENT = "default";
 
 export type CliEnvironmentConfig = {
-  api_base_url_1?: string;
-  api_base_url_2?: string;
+  api_base_url?: string;
   headers?: Record<string, string>;
 };
 
@@ -131,17 +130,13 @@ function parseEnvironmentConfig(
   }
 
   const env: CliEnvironmentConfig = {};
-  if (raw.api_base_url_1 !== undefined) {
-    if (typeof raw.api_base_url_1 !== "string") {
-      throw cliConfigError(`${context}.api_base_url_1 must be a string.`);
+  const rawApiBaseUrl =
+    raw.api_base_url ?? raw.api_base_url_2 ?? raw.api_base_url_1;
+  if (rawApiBaseUrl !== undefined) {
+    if (typeof rawApiBaseUrl !== "string") {
+      throw cliConfigError(`${context}.api_base_url must be a string.`);
     }
-    env.api_base_url_1 = normalizeApiBaseUrl1(raw.api_base_url_1);
-  }
-  if (raw.api_base_url_2 !== undefined) {
-    if (typeof raw.api_base_url_2 !== "string") {
-      throw cliConfigError(`${context}.api_base_url_2 must be a string.`);
-    }
-    env.api_base_url_2 = normalizeApiBaseUrl2(raw.api_base_url_2);
+    env.api_base_url = normalizeApiBaseUrl(rawApiBaseUrl);
   }
 
   const headers = parseHeaders(raw.headers, context);
@@ -277,14 +272,15 @@ export function resolveConfigEnvironment(
 export function upsertCliEnvironment(params: {
   config: StoredCliConfig;
   environmentName?: string;
-  apiBaseUrl1?: string;
-  apiBaseUrl2?: string;
+  apiBaseUrl?: string;
   headers?: string[];
   unsetHeaders?: string[];
   use?: boolean;
 }): StoredCliConfig {
   const name = normalizeCliEnvironmentName(
-    params.environmentName ?? DEFAULT_ENVIRONMENT,
+    params.environmentName ??
+      resolveConfigEnvironment(params.config)?.name ??
+      DEFAULT_ENVIRONMENT,
   );
   const existing = params.config.environments[name] ?? {};
   const nextHeaders = { ...(existing.headers ?? {}) };
@@ -299,11 +295,8 @@ export function upsertCliEnvironment(params: {
 
   const nextEnvironment: CliEnvironmentConfig = {
     ...existing,
-    ...(params.apiBaseUrl1 !== undefined
-      ? { api_base_url_1: normalizeApiBaseUrl1(params.apiBaseUrl1) }
-      : {}),
-    ...(params.apiBaseUrl2 !== undefined
-      ? { api_base_url_2: normalizeApiBaseUrl2(params.apiBaseUrl2) }
+    ...(params.apiBaseUrl !== undefined
+      ? { api_base_url: normalizeApiBaseUrl(params.apiBaseUrl) }
       : {}),
     ...(Object.keys(nextHeaders).length > 0 ? { headers: nextHeaders } : {}),
   };

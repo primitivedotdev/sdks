@@ -384,10 +384,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
     const result = await generatedOperations.sendEmail({
       body,
       ...resolveRequestOptions(options),
-      // /send-mail goes to the host that supports attachments. Same
-      // request body shape on both hosts; the host swap is the only
-      // difference. Callers don't see or configure this.
-      client: this._sendClient,
+      client: this.client,
       responseStyle: "fields",
     });
     return unwrapSendResult(result);
@@ -396,7 +393,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
   /**
    * Semantic / hybrid / keyword search across received and sent mail.
    *
-   * `POST /v1/semantic-search` on the search host. Returns ranked rows
+   * `POST /v1/semantic-search`. Returns ranked rows
    * with matched fields, match-centered excerpts, and an additive
    * `score_breakdown`. See `SemanticSearchInput` for request fields and
    * `SemanticSearchResult` for the row shape.
@@ -411,10 +408,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
     const result = await generatedOperations.semanticSearch({
       body: input,
       ...resolveRequestOptions(options),
-      // /v1/semantic-search lives on the same worker host as /send-mail
-      // (api.primitive.dev/v1), reachable through the host-2 client.
-      // Customers don't see or configure this; the host swap is internal.
-      client: this._sendClient,
+      client: this.client,
       responseStyle: "fields",
     });
     return unwrapSemanticSearchResult(result);
@@ -470,7 +464,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
       body,
       path: { id: email.id },
       ...resolveRequestOptions(options),
-      client: this._sendClient,
+      client: this.client,
       responseStyle: "fields",
     });
     return unwrapSendResult(result);
@@ -655,7 +649,7 @@ export type {
 } from "@primitivedotdev/api-core";
 // The single `export *` covers every generated operation / type
 // plus `operations`, `PrimitiveApiClient`, `createPrimitiveApiClient`,
-// `DEFAULT_API_BASE_URL_1/2`, and `PrimitiveApiError`. The aliased
+// `DEFAULT_API_BASE_URL`, and `PrimitiveApiError`. The aliased
 // re-exports below cover the historical `PrimitiveGeneratedApi*`
 // names so existing customer imports keep resolving.
 export * from "@primitivedotdev/api-core";

@@ -105,7 +105,7 @@ describe("root signup hint", () => {
       join(configDir, "credentials.json"),
       `${JSON.stringify({
         access_token: "prim_oat_root",
-        api_base_url_1: "https://api.example.test/api/v1/",
+        api_base_url: "https://api.example.test/v1/",
         auth_method: "oauth",
       })}\n`,
     );
@@ -114,7 +114,7 @@ describe("root signup hint", () => {
       argv: [],
       env: { XDG_CONFIG_HOME: tempDir },
       fetch: async (input, init) => {
-        expect(String(input)).toBe("https://api.example.test/api/v1/account");
+        expect(String(input)).toBe("https://api.example.test/v1/account");
         expect((init?.headers as Record<string, string>).authorization).toBe(
           "Bearer prim_oat_root",
         );
@@ -136,7 +136,7 @@ describe("root signup hint", () => {
       join(configDir, "credentials.json"),
       `${JSON.stringify({
         access_token: "prim_oat_should_not_be_used",
-        api_base_url_1: "https://stored.example.test/api/v1",
+        api_base_url: "https://stored.example.test/v1",
         auth_method: "oauth",
       })}\n`,
     );
@@ -144,14 +144,12 @@ describe("root signup hint", () => {
     const summary = await rootSignedInSummary({
       argv: [],
       env: {
-        PRIMITIVE_API_BASE_URL_1: "https://api-key.example.test/api/v1/",
+        PRIMITIVE_API_BASE_URL: "https://api-key.example.test/v1/",
         PRIMITIVE_API_KEY: "prim_explicit_root",
         XDG_CONFIG_HOME: tempDir,
       },
       fetch: async (input, init) => {
-        expect(String(input)).toBe(
-          "https://api-key.example.test/api/v1/account",
-        );
+        expect(String(input)).toBe("https://api-key.example.test/v1/account");
         expect((init?.headers as Record<string, string>).authorization).toBe(
           "Bearer prim_explicit_root",
         );
@@ -188,7 +186,7 @@ describe("root signup hint", () => {
       join(configDir, "credentials.json"),
       `${JSON.stringify({
         access_token: "prim_oat_root",
-        api_base_url_1: "https://api.example.test/api/v1",
+        api_base_url: "https://api.example.test/v1",
         auth_method: "oauth",
       })}\n`,
     );

@@ -107,7 +107,7 @@ export function renderFishCompletion(binName: string): string {
 
       lines.push(
         `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'api-key' -r -d 'Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)'`,
-        // --api-base-url-1 / --api-base-url-2 are hidden from fish
+        // --api-base-url is hidden from fish
         // completion because they are internal-testing overrides;
         // exposing them in autocomplete would surface them to every
         // customer running the CLI. Hidden oclif flags still work

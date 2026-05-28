@@ -141,8 +141,7 @@ describe("PrimitiveClient", () => {
     const fetchMock = vi.fn<typeof fetch>() as typeof fetch;
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -161,7 +160,7 @@ describe("PrimitiveClient", () => {
   it("posts the send payload and returns the normalized send result", async () => {
     const fetchMock = vi.fn<typeof fetch>(async (input) => {
       const request = input as Request;
-      expect(request.url).toBe("https://example.test/api/v1/send-mail");
+      expect(request.url).toBe("https://api.example.test/v1/send-mail");
       expect(request.headers.get("authorization")).toBe("Bearer prim_test");
       expect(await request.json()).toEqual({
         from: "support@example.com",
@@ -184,8 +183,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -202,8 +200,7 @@ describe("PrimitiveClient", () => {
   it("accepts RFC 5322 display-name From headers", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: vi.fn<typeof fetch>(async (input) => {
         const request = input as Request;
         expect(await request.json()).toMatchObject({
@@ -230,8 +227,7 @@ describe("PrimitiveClient", () => {
   it("sends wait options and idempotency key", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: vi.fn<typeof fetch>(async (input) => {
         const request = input as Request;
         expect(request.headers.get("idempotency-key")).toBe("customer-key");
@@ -278,8 +274,7 @@ describe("PrimitiveClient", () => {
   it("posts html-only send payloads", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: vi.fn<typeof fetch>(async (input) => {
         const request = input as Request;
         expect(await request.json()).toMatchObject({
@@ -311,12 +306,11 @@ describe("PrimitiveClient", () => {
     // send-mail payload the SDK used to build itself.
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: vi.fn<typeof fetch>(async (input) => {
         const request = input as Request;
         expect(new URL(request.url).pathname).toBe(
-          "/api/v1/emails/00000000-0000-0000-0000-000000000001/reply",
+          "/v1/emails/00000000-0000-0000-0000-000000000001/reply",
         );
         expect(await request.json()).toEqual({
           body_text: "Thank you for your email.",
@@ -340,15 +334,14 @@ describe("PrimitiveClient", () => {
     await client.reply(RECEIVED_EMAIL, "Thank you for your email.");
   });
 
-  it("posts reply attachments to the attachment-capable host", async () => {
+  it("posts reply attachments to the API host", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://primary.example.test/api/v1",
-      apiBaseUrl2: "https://send.example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: vi.fn<typeof fetch>(async (input) => {
         const request = input as Request;
         expect(request.url).toBe(
-          "https://send.example.test/api/v1/emails/00000000-0000-0000-0000-000000000001/reply",
+          "https://api.example.test/v1/emails/00000000-0000-0000-0000-000000000001/reply",
         );
         expect(await request.json()).toEqual({
           attachments: [
@@ -389,8 +382,7 @@ describe("PrimitiveClient", () => {
   it("builds forwarded content through send", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: vi.fn<typeof fetch>(async (input) => {
         const request = input as Request;
         const payload = await request.json();
@@ -428,8 +420,7 @@ describe("PrimitiveClient", () => {
   it("wraps API failures in PrimitiveApiError", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: vi.fn<typeof fetch>(
         async () =>
           new Response(
@@ -477,7 +468,7 @@ describe("PrimitiveClient", () => {
     const fetchMock = vi.fn<typeof fetch>(async (input) => {
       const request = input as Request;
       expect(new URL(request.url).pathname).toBe(
-        "/api/v1/emails/00000000-0000-0000-0000-000000000001/reply",
+        "/v1/emails/00000000-0000-0000-0000-000000000001/reply",
       );
       expect(await request.json()).toEqual({
         body_text: "Thanks!",
@@ -494,8 +485,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -530,8 +520,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: vi.fn<typeof fetch>(
         async () =>
           new Response(JSON.stringify(errorBody), {
@@ -577,8 +566,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -611,8 +599,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -644,8 +631,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -675,8 +661,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -706,8 +691,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -731,8 +715,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -757,8 +740,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -782,8 +764,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -812,8 +793,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -839,8 +819,7 @@ describe("PrimitiveClient", () => {
 
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: fetchMock,
     });
 
@@ -862,8 +841,7 @@ describe("PrimitiveClient", () => {
   it("surfaces retry-after header on 429 rate_limit_exceeded", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",
-      apiBaseUrl1: "https://example.test/api/v1",
-      apiBaseUrl2: "https://example.test/api/v1",
+      apiBaseUrl: "https://api.example.test/v1",
       fetch: vi.fn<typeof fetch>(
         async () =>
           new Response(

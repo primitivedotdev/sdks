@@ -929,16 +929,10 @@ class ChatCommand extends Command {
         "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive signin` credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
-      hidden: true,
-    }),
-    "api-base-url-2": Flags.string({
-      description:
-        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_2",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     from: Flags.string({
@@ -1057,8 +1051,7 @@ class ChatCommand extends Command {
       const { apiClient, auth, baseUrlOverridden } =
         await createAuthenticatedCliApiClient({
           apiKey: flags["api-key"],
-          apiBaseUrl1: flags["api-base-url-1"],
-          apiBaseUrl2: flags["api-base-url-2"],
+          apiBaseUrl: flags["api-base-url"],
           configDir: this.config.configDir,
         });
 
@@ -1158,7 +1151,7 @@ class ChatCommand extends Command {
                 from,
                 ...(attachments !== undefined ? { attachments } : {}),
               },
-              client: apiClient._sendClient,
+              client: apiClient.client,
               path: { id: parentReply.id },
               responseStyle: "fields",
             })
@@ -1173,7 +1166,7 @@ class ChatCommand extends Command {
                   : {}),
                 ...(attachments !== undefined ? { attachments } : {}),
               },
-              client: apiClient._sendClient,
+              client: apiClient.client,
               responseStyle: "fields",
             });
 
@@ -1329,16 +1322,10 @@ export class ChatReplyCommand extends Command {
         "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive signin` credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
-      hidden: true,
-    }),
-    "api-base-url-2": Flags.string({
-      description:
-        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_2",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     id: Flags.integer({
@@ -1461,11 +1448,8 @@ export class ChatReplyCommand extends Command {
     if (flags["api-key"] !== undefined) {
       argv.push("--api-key", flags["api-key"]);
     }
-    if (flags["api-base-url-1"] !== undefined) {
-      argv.push("--api-base-url-1", flags["api-base-url-1"]);
-    }
-    if (flags["api-base-url-2"] !== undefined) {
-      argv.push("--api-base-url-2", flags["api-base-url-2"]);
+    if (flags["api-base-url"] !== undefined) {
+      argv.push("--api-base-url", flags["api-base-url"]);
     }
     if (flags.json) argv.push("--json");
     if (flags.quiet) argv.push("--quiet");

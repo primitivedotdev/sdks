@@ -76,16 +76,10 @@ class SendCommand extends Command {
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
-        "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
-      hidden: true,
-    }),
-    "api-base-url-2": Flags.string({
-      description:
-        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_2",
+        "Override the API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     to: Flags.string({
@@ -166,8 +160,7 @@ class SendCommand extends Command {
       const { apiClient, auth, baseUrlOverridden } =
         await createAuthenticatedCliApiClient({
           apiKey: flags["api-key"],
-          apiBaseUrl1: flags["api-base-url-1"],
-          apiBaseUrl2: flags["api-base-url-2"],
+          apiBaseUrl: flags["api-base-url"],
           configDir: this.config.configDir,
         });
 
@@ -198,12 +191,7 @@ class SendCommand extends Command {
             ? { wait_timeout_ms: flags["wait-timeout-ms"] }
             : {}),
         },
-        // /send-mail goes to the attachments-supporting host. The
-        // wrapper exposes the host-2 client as _sendClient for this
-        // and any other host-2 operation that lands here. Customer
-        // SDK callers should use PrimitiveClient.send() instead so
-        // the routing stays internal.
-        client: apiClient._sendClient,
+        client: apiClient.client,
         responseStyle: "fields",
       });
 

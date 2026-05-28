@@ -56,8 +56,7 @@ export * as operations from "./api/sdk.gen.js";
 // CLI never has to depend on sdk-node to construct a request client.
 export {
   createPrimitiveApiClient,
-  DEFAULT_API_BASE_URL_1,
-  DEFAULT_API_BASE_URL_2,
+  DEFAULT_API_BASE_URL,
   PrimitiveApiClient,
   type PrimitiveApiClientOptions,
   PrimitiveApiError,

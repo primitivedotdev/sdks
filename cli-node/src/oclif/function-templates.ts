@@ -230,7 +230,7 @@ export default {
 
       const client = createPrimitiveClient({
         apiKey: env.PRIMITIVE_API_KEY,
-        apiBaseUrl1: env.PRIMITIVE_API_BASE_URL,
+        apiBaseUrl: env.PRIMITIVE_API_BASE_URL,
       });
 
       // To add an LLM or another API, store its key as a Function secret.
@@ -254,7 +254,7 @@ export default {
       // route "support@" to a ticketing flow and "sales@" to a lead
       // capture flow before calling client.reply.
 
-      // client.reply routes through POST /api/v1/emails/{id}/reply
+      // client.reply routes through POST /v1/emails/{id}/reply
       // (NOT /send-mail) so the server derives recipients, the
       // \`Re: <parent>\` subject, threading headers, and the
       // in_reply_to_email_id foreign key automatically. The FK is

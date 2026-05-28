@@ -22,12 +22,12 @@ export const openapiDocument: Record<string, unknown> = {
   },
   "servers": [
     {
-      "url": "https://www.primitive.dev/api/v1",
-      "description": "Primary API host (PRIMITIVE_API_BASE_URL_1). Carries every operation\nexcept attachment-supporting send. Vercel-backed; request body is\ncapped at 4.5 MB by the platform.\n"
+      "url": "https://api.primitive.dev/v1",
+      "description": "Canonical API host (PRIMITIVE_API_BASE_URL). Carries every public\nAPI operation. Cloudflare Workers-backed; attachment-capable send\noperations can carry up to ~30 MiB raw request bodies before base64\nencoding.\n"
     },
     {
-      "url": "https://api.primitive.dev/v1",
-      "description": "Attachments-supporting send host (PRIMITIVE_API_BASE_URL_2).\nCloudflare Worker with a ~30 MiB raw request body cap (before\nbase64 encoding). Today only `/send-mail` is hosted here; future\nlarge-body operations will migrate here over time. SDK clients\nroute /send-mail to this server automatically.\n"
+      "url": "https://www.primitive.dev/api/v1",
+      "description": "Legacy dashboard compatibility host. Requests are forwarded to the\ncanonical API host, but Vercel request body limits still apply before\nproxying. New integrations should use https://api.primitive.dev/v1.\n"
     }
   ],
   "security": [
@@ -1880,11 +1880,11 @@ export const openapiDocument: Record<string, unknown> = {
         "servers": [
           {
             "url": "https://api.primitive.dev/v1",
-            "description": "Attachments-supporting send host (recommended)"
+            "description": "Canonical API host (recommended)"
           },
           {
             "url": "https://www.primitive.dev/api/v1",
-            "description": "Primary host (attachment-free replies only)"
+            "description": "Legacy compatibility host (Vercel body limit applies)"
           }
         ],
         "tags": [
@@ -2716,15 +2716,15 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "sendEmail",
         "summary": "Send outbound email",
-        "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n\n**Host routing.** /send-mail is served by the attachments-\nsupporting host (`https://api.primitive.dev/v1`) so the\nrequest body can carry inline attachments up to ~30 MiB raw.\nThe primary host (`https://www.primitive.dev/api/v1`) also\naccepts /send-mail for attachment-free sends; sends WITH\nattachments to the primary host return 413\n`attachments_unsupported_on_this_endpoint`. The typed SDKs\nroute /send-mail to the attachments host automatically.\n",
+        "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n\n**Host routing.** /send-mail is served by the canonical API host\n(`https://api.primitive.dev/v1`) so the request body can carry\ninline attachments up to ~30 MiB raw. The legacy dashboard\ncompatibility host (`https://www.primitive.dev/api/v1`) also accepts\n/send-mail, but Vercel request body limits apply before proxying.\nThe typed SDKs route /send-mail to the canonical API host\nautomatically.\n",
         "servers": [
           {
             "url": "https://api.primitive.dev/v1",
-            "description": "Attachments-supporting send host (recommended)"
+            "description": "Canonical API host (recommended)"
           },
           {
             "url": "https://www.primitive.dev/api/v1",
-            "description": "Primary host (attachment-free sends only)"
+            "description": "Legacy compatibility host (Vercel body limit applies)"
           }
         ],
         "tags": [

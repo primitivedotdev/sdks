@@ -251,7 +251,7 @@ verifyWebhookSignature({
 
 For most app-code callers, `primitive.receive(...)` from the root import handles both the body extraction and verification in one call (see "Receive and reply in a Next.js route" above). Reach for `verifyWebhookSignature` directly when your framework doesn't expose a standard `Request` and you've already pulled the raw body and header value yourself.
 
-For the full reference (response codes, replay protection details), see the API-level "Webhook signing" section in the [OpenAPI spec](https://primitive.dev/api/v1/openapi).
+For the full reference (response codes, replay protection details), see the API-level "Webhook signing" section in the [OpenAPI spec](https://api.primitive.dev/v1/openapi).
 
 ### Other subpath imports
 
@@ -262,7 +262,7 @@ For the full reference (response codes, replay protection details), see the API-
 ## Going further
 
 - [primitive.dev/docs](https://primitive.dev/docs) for product docs (quickstart, webhook payload reference, FAQ).
-- [primitive.dev/api/v1/openapi](https://primitive.dev/api/v1/openapi) for the machine-readable OpenAPI spec.
+- [api.primitive.dev/v1/openapi](https://api.primitive.dev/v1/openapi) for the machine-readable OpenAPI spec.
 - `primitive list-operations` for the same spec as a JSON manifest, fetched from the bundled SDK.
 - `primitive describe <command>` for the inlined request/response schema of a single operation, including per-field descriptions.
 

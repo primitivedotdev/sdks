@@ -486,7 +486,7 @@ const NETWORK_ERROR_HINTS: Record<string, string> = {
   ETIMEDOUT:
     "Hint: the connection timed out. Check egress rules and proxy configuration; if you're behind a proxy, re-run with NODE_USE_ENV_PROXY=1 and HTTPS_PROXY set. `primitive doctor` reports the local environment in one shot.",
   EAI_AGAIN:
-    "Hint: DNS lookup failed. Check /etc/resolv.conf inside containers, and try `curl -v https://www.primitive.dev/api/v1/account` to confirm the host resolves. `primitive doctor` reports the local environment in one shot.",
+    "Hint: DNS lookup failed. Check /etc/resolv.conf inside containers, and try `curl -v https://api.primitive.dev/v1/account` to confirm the host resolves. `primitive doctor` reports the local environment in one shot.",
 };
 
 // Write a server / SDK error to stderr in the canonical envelope
@@ -538,14 +538,14 @@ export function surfaceUnauthorizedHint(params: {
   const baseUrlDiffersFromSaved =
     params.baseUrlOverridden &&
     params.auth.credentials !== null &&
-    params.auth.apiBaseUrl1 !== params.auth.credentials.api_base_url_1;
+    params.auth.apiBaseUrl !== params.auth.credentials.api_base_url;
 
   if (baseUrlDiffersFromSaved) {
     // API URL overrides are intentionally hidden from --help because
     // they are for internal staging/local testing. Keep this hint as
     // the visible recovery path when an override rejects saved creds.
     process.stderr.write(
-      "Saved Primitive CLI credentials were rejected by the overridden API base URL. The saved credential is preserved; unset PRIMITIVE_API_BASE_URL_1, run `primitive config reset` to clear configured URL overrides, or run `primitive logout` to remove the stored credential.\n",
+      "Saved Primitive CLI credentials were rejected by the overridden API base URL. The saved credential is preserved; unset PRIMITIVE_API_BASE_URL, run `primitive config reset` to clear configured URL overrides, or run `primitive logout` to remove the stored credential.\n",
     );
     return;
   }
@@ -601,25 +601,20 @@ export const TIME_FLAG_DESCRIPTION =
 // Shared description text for the api-base-url override flags. Keeps
 // the wording identical across every command that includes them. The
 // flags themselves are hidden from --help (internal staging/local-only).
-export const API_BASE_URL_1_FLAG_DESCRIPTION =
-  "Override the primary API base URL. Internal testing only; not documented to customers.";
-export const API_BASE_URL_2_FLAG_DESCRIPTION =
-  "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.";
+export const API_BASE_URL_FLAG_DESCRIPTION =
+  "Override the API base URL. Internal testing only; not documented to customers.";
 
-// Helper: was either api-base-url override set by the caller? Used by
+// Helper: was the API base URL override set by the caller? Used by
 // surfaceUnauthorizedHint to decide whether to
 // preserve the saved credential when a 401 comes back.
 export function baseUrlOverriddenFromFlags(
   flags: Record<string, unknown>,
 ): boolean {
-  return (
-    typeof flags["api-base-url-1"] === "string" ||
-    typeof flags["api-base-url-2"] === "string"
-  );
+  return typeof flags["api-base-url"] === "string";
 }
 
 // Helper: resolve auth from a parsed-flags bag. Mirrors what every CLI
-// command does inline so the api-base-url-1 / api-base-url-2 mapping
+// command does inline so the api-base-url mapping
 // stays in one place as we add more migration knobs.
 export function resolveCliAuthFromFlags(
   flags: Record<string, unknown>,
@@ -630,27 +625,17 @@ export function resolveCliAuthFromFlags(
       typeof flags["api-key"] === "string"
         ? (flags["api-key"] as string)
         : undefined,
-    apiBaseUrl1:
-      typeof flags["api-base-url-1"] === "string"
-        ? (flags["api-base-url-1"] as string)
-        : undefined,
-    apiBaseUrl2:
-      typeof flags["api-base-url-2"] === "string"
-        ? (flags["api-base-url-2"] as string)
+    apiBaseUrl:
+      typeof flags["api-base-url"] === "string"
+        ? (flags["api-base-url"] as string)
         : undefined,
     configDir,
   });
 }
 
-// Operations that route to the attachments-supporting host
-// (apiBaseUrl2) instead of the primary API host. Internal to the CLI:
-// as more operations migrate to host 2 over time, add their generated
-// sdkName here.
-const HOST_2_OPERATIONS = new Set<string>(["sendEmail", "replyToEmail"]);
-
 // Reserved flag names the body-field expander must never overwrite.
 // `--raw-body` and `--body-file` are the JSON escape hatches.
-// `--api-key`, `--api-base-url-1`, `--api-base-url-2`, `--output` are
+// `--api-key`, `--api-base-url`, `--output` are
 // infra. Path and query params get added before body fields and take
 // precedence.
 //
@@ -667,8 +652,7 @@ const HOST_2_OPERATIONS = new Set<string>(["sendEmail", "replyToEmail"]);
 // send` defines its own --body for the message text.
 const RESERVED_FLAG_NAMES = new Set([
   "api-key",
-  "api-base-url-1",
-  "api-base-url-2",
+  "api-base-url",
   "raw-body",
   "body-file",
   "envelope",
@@ -723,21 +707,12 @@ function buildFlags(operation: PrimitiveOperationManifest): {
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
-    // Two override knobs for the dual-host setup. Hidden because they
-    // are for internal staging/local testing only. Production users
-    // should not override; the defaults route correctly. Env vars
-    // PRIMITIVE_API_BASE_URL_1 and PRIMITIVE_API_BASE_URL_2 carry the
-    // same semantics. Both are intentionally absent from --help output.
-    "api-base-url-1": Flags.string({
+    // Hidden override knob for staging/local testing. Production users
+    // should not override; the default routes correctly.
+    "api-base-url": Flags.string({
       description:
-        "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
-      hidden: true,
-    }),
-    "api-base-url-2": Flags.string({
-      description:
-        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_2",
+        "Override the API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     time: Flags.boolean({
@@ -955,13 +930,9 @@ export function createOperationCommand(
               typeof parsedFlags["api-key"] === "string"
                 ? (parsedFlags["api-key"] as string)
                 : undefined,
-            apiBaseUrl1:
-              typeof parsedFlags["api-base-url-1"] === "string"
-                ? (parsedFlags["api-base-url-1"] as string)
-                : undefined,
-            apiBaseUrl2:
-              typeof parsedFlags["api-base-url-2"] === "string"
-                ? (parsedFlags["api-base-url-2"] as string)
+            apiBaseUrl:
+              typeof parsedFlags["api-base-url"] === "string"
+                ? (parsedFlags["api-base-url"] as string)
                 : undefined,
             configDir: this.config.configDir,
           });
@@ -1022,14 +993,9 @@ export function createOperationCommand(
         const operationFn = operations[
           operation.sdkName as OperationName
         ] as unknown as OperationExecutor;
-        // Operations in HOST_2_OPERATIONS route to the attachments-
-        // supporting send host (apiBaseUrl2).
-        const targetClient = HOST_2_OPERATIONS.has(operation.sdkName)
-          ? apiClient._sendClient
-          : apiClient.client;
         const result = await operationFn({
           body,
-          client: targetClient,
+          client: apiClient.client,
           parseAs: operation.binaryResponse ? "blob" : "auto",
           path: collectValues(operation.pathParams, parsedFlags),
           query: collectValues(operation.queryParams, parsedFlags),

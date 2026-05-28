@@ -3,6 +3,9 @@ packages:
   - sdk-node
   - packages/*
 
+allowBuilds:
+  esbuild: true
+
 onlyBuiltDependencies:
   - "@biomejs/biome"
   - esbuild

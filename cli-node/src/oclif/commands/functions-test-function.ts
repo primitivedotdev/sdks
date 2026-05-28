@@ -13,8 +13,7 @@ import {
 } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
-  API_BASE_URL_1_FLAG_DESCRIPTION,
-  API_BASE_URL_2_FLAG_DESCRIPTION,
+  API_BASE_URL_FLAG_DESCRIPTION,
   extractErrorPayload,
   runWithTiming,
   surfaceUnauthorizedHint,
@@ -281,14 +280,9 @@ class FunctionsTestFunctionCommand extends Command {
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
-    "api-base-url-1": Flags.string({
-      description: API_BASE_URL_1_FLAG_DESCRIPTION,
-      env: "PRIMITIVE_API_BASE_URL_1",
-      hidden: true,
-    }),
-    "api-base-url-2": Flags.string({
-      description: API_BASE_URL_2_FLAG_DESCRIPTION,
-      env: "PRIMITIVE_API_BASE_URL_2",
+    "api-base-url": Flags.string({
+      description: API_BASE_URL_FLAG_DESCRIPTION,
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     id: Flags.string({
@@ -334,8 +328,7 @@ class FunctionsTestFunctionCommand extends Command {
     const { apiClient, auth, baseUrlOverridden } =
       await createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
-        apiBaseUrl1: flags["api-base-url-1"],
-        apiBaseUrl2: flags["api-base-url-2"],
+        apiBaseUrl: flags["api-base-url"],
         configDir: this.config.configDir,
       });
 

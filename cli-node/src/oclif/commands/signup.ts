@@ -48,24 +48,24 @@ const PENDING_SIGNUP_FILE = "signup.json";
 
 export type SignupFlags = {
   "accept-terms"?: boolean;
-  "api-base-url-1"?: string;
+  "api-base-url"?: string;
   "device-name"?: string;
   "signup-code"?: string;
   force?: boolean;
 };
 
 type SignupConfirmFlags = {
-  "api-base-url-1"?: string;
+  "api-base-url"?: string;
   "org-id"?: string;
   force?: boolean;
 };
 
 type SignupResendFlags = {
-  "api-base-url-1"?: string;
+  "api-base-url"?: string;
 };
 
 type SignupStatusFlags = {
-  "api-base-url-1"?: string;
+  "api-base-url"?: string;
   json?: boolean;
 };
 
@@ -86,7 +86,7 @@ export const DEFAULT_SIGNUP_COMMAND_COPY: SignupCommandCopy = {
 };
 
 export type PendingAgentSignup = AgentSignupStartResult & {
-  api_base_url_1: string;
+  api_base_url: string;
   created_at: string;
   expires_at: string;
 };
@@ -148,15 +148,16 @@ function pendingSignupFromJson(value: unknown): PendingAgentSignup | null {
     typeof value.expires_in !== "number" ||
     typeof value.resend_after !== "number" ||
     typeof value.verification_code_length !== "number" ||
-    typeof value.api_base_url_1 !== "string" ||
     typeof value.created_at !== "string" ||
     typeof value.expires_at !== "string"
   ) {
     return null;
   }
+  const apiBaseUrl = value.api_base_url ?? value.api_base_url_1;
+  if (typeof apiBaseUrl !== "string") return null;
 
   return {
-    api_base_url_1: value.api_base_url_1,
+    api_base_url: apiBaseUrl,
     created_at: value.created_at,
     email: value.email,
     expires_at: value.expires_at,
@@ -179,11 +180,11 @@ export const deletePendingCliSignup = deletePendingAgentSignup;
 
 function pendingSignupFromStart(
   start: AgentSignupStartResult,
-  apiBaseUrl1: string,
+  apiBaseUrl: string,
 ): PendingAgentSignup {
   return {
     ...start,
-    api_base_url_1: apiBaseUrl1,
+    api_base_url: apiBaseUrl,
     created_at: new Date().toISOString(),
     expires_at: new Date(Date.now() + start.expires_in * 1000).toISOString(),
   };
@@ -192,10 +193,10 @@ function pendingSignupFromStart(
 export function savePendingAgentSignup(
   configDir: string,
   start: AgentSignupStartResult,
-  apiBaseUrl1: string,
+  apiBaseUrl: string,
 ): PendingAgentSignup {
   mkdirSync(configDir, { mode: 0o700, recursive: true });
-  const pending = pendingSignupFromStart(start, apiBaseUrl1);
+  const pending = pendingSignupFromStart(start, apiBaseUrl);
   const path = pendingSignupPath(configDir);
   const tempPath = join(
     configDir,
@@ -219,7 +220,7 @@ export const savePendingCliSignup = savePendingAgentSignup;
 
 export function loadPendingAgentSignup(
   configDir: string,
-  apiBaseUrl1: string,
+  apiBaseUrl: string,
 ): PendingAgentSignup | null {
   const path = pendingSignupPath(configDir);
   let contents: string;
@@ -247,7 +248,7 @@ export function loadPendingAgentSignup(
     deletePendingAgentSignup(configDir);
     return null;
   }
-  if (pending.api_base_url_1 !== apiBaseUrl1) return null;
+  if (pending.api_base_url !== apiBaseUrl) return null;
   if (new Date(pending.expires_at).getTime() <= Date.now()) {
     deletePendingAgentSignup(configDir);
     return null;
@@ -266,7 +267,7 @@ export const loadPendingCliSignup = loadPendingAgentSignup;
 
 export function readPendingAgentSignupState(
   configDir: string,
-  apiBaseUrl1: string,
+  apiBaseUrl: string,
 ): PendingAgentSignup | null {
   const path = pendingSignupPath(configDir);
   let contents: string;
@@ -294,7 +295,7 @@ export function readPendingAgentSignupState(
     deletePendingAgentSignup(configDir);
     return null;
   }
-  if (pending.api_base_url_1 !== apiBaseUrl1) return null;
+  if (pending.api_base_url !== apiBaseUrl) return null;
 
   return pending;
 }
@@ -304,7 +305,7 @@ function pendingSignupStartCommand(email?: string): string {
 }
 
 function buildSignupStatus(params: {
-  apiBaseUrl1: string;
+  apiBaseUrl: string;
   copy?: SignupCommandCopy;
   configDir: string;
   email?: string;
@@ -312,7 +313,7 @@ function buildSignupStatus(params: {
   const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
   const pending = readPendingAgentSignupState(
     params.configDir,
-    params.apiBaseUrl1,
+    params.apiBaseUrl,
   );
 
   if (!pending) {
@@ -400,11 +401,11 @@ export function runSignupStatus(params: {
   flags: SignupStatusFlags;
 }): void {
   const { requestConfig } = createCliApiClient({
-    apiBaseUrl1: params.flags["api-base-url-1"],
+    apiBaseUrl: params.flags["api-base-url"],
     configDir: params.configDir,
   });
   const status = buildSignupStatus({
-    apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
+    apiBaseUrl: requestConfig.resolvedApiBaseUrl,
     configDir: params.configDir,
     copy: params.copy,
     email: params.email,
@@ -418,13 +419,13 @@ export function runSignupStatus(params: {
 }
 
 function requirePendingSignupForEmail(params: {
-  apiBaseUrl1: string;
+  apiBaseUrl: string;
   copy?: SignupCommandCopy;
   configDir: string;
   email: string;
 }): PendingAgentSignup {
   const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
-  const pending = loadPendingAgentSignup(params.configDir, params.apiBaseUrl1);
+  const pending = loadPendingAgentSignup(params.configDir, params.apiBaseUrl);
   if (!pending) {
     throw cliError(
       `No pending ${copy.actionNoun} for ${params.email}. Run \`primitive signup status ${params.email}\` to inspect pending state, or \`primitive ${copy.startCommand(params.email)}\` first.`,
@@ -497,7 +498,7 @@ async function confirmTerms(): Promise<void> {
 }
 
 async function checkExistingCredentials(params: {
-  apiBaseUrl1?: string;
+  apiBaseUrl?: string;
   copy?: SignupCommandCopy;
   configDir: string;
   flags: { force?: boolean };
@@ -527,7 +528,7 @@ async function checkExistingCredentials(params: {
   if (!existing) return;
 
   const existingStatus = await checkExistingLoginFn({
-    apiBaseUrl1: params.apiBaseUrl1,
+    apiBaseUrl: params.apiBaseUrl,
     configDir: params.configDir,
     credentials: existing,
     credentialsLockHeld: true,
@@ -548,14 +549,14 @@ async function checkExistingCredentials(params: {
 }
 
 function saveSignupCredentials(params: {
-  apiBaseUrl1: string;
+  apiBaseUrl: string;
   configDir: string;
   signup: AgentSignupVerifyResult;
 }): void {
   deleteChatState(params.configDir);
   saveCliCredentials(params.configDir, {
     access_token: params.signup.access_token,
-    api_base_url_1: params.apiBaseUrl1,
+    api_base_url: params.apiBaseUrl,
     auth_method: "oauth",
     created_at: new Date().toISOString(),
     expires_at: cliAccessTokenExpiresAt(params.signup.expires_in),
@@ -584,7 +585,7 @@ function writeStartInstructions(
 }
 
 async function startSignup(params: {
-  apiBaseUrl1: string;
+  apiBaseUrl: string;
   apiClient: PrimitiveApiClient;
   copy?: SignupCommandCopy;
   configDir: string;
@@ -595,7 +596,7 @@ async function startSignup(params: {
   const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
   const existingPending = loadPendingAgentSignup(
     params.configDir,
-    params.apiBaseUrl1,
+    params.apiBaseUrl,
   );
   if (existingPending && !params.flags.force) {
     if (
@@ -646,14 +647,14 @@ async function startSignup(params: {
     pending: savePendingAgentSignup(
       params.configDir,
       startResult,
-      params.apiBaseUrl1,
+      params.apiBaseUrl,
     ),
     started: true,
   };
 }
 
 async function resendVerificationCode(params: {
-  apiBaseUrl1: string;
+  apiBaseUrl: string;
   apiClient: PrimitiveApiClient;
   configDir: string;
   deps: SignupFlowDeps;
@@ -682,7 +683,7 @@ async function resendVerificationCode(params: {
       pending: savePendingAgentSignup(
         params.configDir,
         next,
-        params.apiBaseUrl1,
+        params.apiBaseUrl,
       ),
       resent: true,
     };
@@ -717,7 +718,7 @@ export async function runSignupStartWithCredentialLock(params: {
   const promptRequiredFn = deps.promptRequired ?? promptRequired;
   const email = params.email ?? (await promptRequiredFn("Email: "));
   await checkExistingCredentials({
-    apiBaseUrl1: flags["api-base-url-1"],
+    apiBaseUrl: flags["api-base-url"],
     configDir,
     copy: params.copy,
     deps,
@@ -725,11 +726,11 @@ export async function runSignupStartWithCredentialLock(params: {
   });
 
   const { apiClient, requestConfig } = createCliApiClient({
-    apiBaseUrl1: flags["api-base-url-1"],
+    apiBaseUrl: flags["api-base-url"],
     configDir,
   });
   const start = await startSignup({
-    apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
+    apiBaseUrl: requestConfig.resolvedApiBaseUrl,
     apiClient,
     configDir,
     copy: params.copy,
@@ -753,7 +754,7 @@ export async function runSignupConfirmWithCredentialLock(params: {
   const deps = params.deps ?? {};
   if (!params.skipExistingCredentialCheck) {
     await checkExistingCredentials({
-      apiBaseUrl1: flags["api-base-url-1"],
+      apiBaseUrl: flags["api-base-url"],
       configDir,
       copy: params.copy,
       deps,
@@ -762,12 +763,12 @@ export async function runSignupConfirmWithCredentialLock(params: {
   }
 
   const { apiClient, requestConfig } = createCliApiClient({
-    apiBaseUrl1: flags["api-base-url-1"],
+    apiBaseUrl: flags["api-base-url"],
     configDir,
   });
-  const apiBaseUrl1 = requestConfig.resolvedApiBaseUrl1;
+  const apiBaseUrl = requestConfig.resolvedApiBaseUrl;
   const pending = requirePendingSignupForEmail({
-    apiBaseUrl1,
+    apiBaseUrl,
     copy: params.copy,
     configDir,
     email: params.email,
@@ -791,7 +792,7 @@ export async function runSignupConfirmWithCredentialLock(params: {
       );
     }
 
-    saveSignupCredentials({ apiBaseUrl1, configDir, signup });
+    saveSignupCredentials({ apiBaseUrl, configDir, signup });
     deletePendingAgentSignup(configDir);
 
     const org = signup.org_name ? ` (${signup.org_name})` : "";
@@ -827,19 +828,19 @@ export async function runSignupResendWithCredentialLock(params: {
   const deps = params.deps ?? {};
   const copy = params.copy ?? DEFAULT_SIGNUP_COMMAND_COPY;
   const { apiClient, requestConfig } = createCliApiClient({
-    apiBaseUrl1: params.flags["api-base-url-1"],
+    apiBaseUrl: params.flags["api-base-url"],
     configDir: params.configDir,
   });
   const pending = params.email
     ? requirePendingSignupForEmail({
-        apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
+        apiBaseUrl: requestConfig.resolvedApiBaseUrl,
         copy,
         configDir: params.configDir,
         email: params.email,
       })
     : loadPendingAgentSignup(
         params.configDir,
-        requestConfig.resolvedApiBaseUrl1,
+        requestConfig.resolvedApiBaseUrl,
       );
   if (!pending) {
     throw cliError(
@@ -847,7 +848,7 @@ export async function runSignupResendWithCredentialLock(params: {
     );
   }
   const resend = await resendVerificationCode({
-    apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
+    apiBaseUrl: requestConfig.resolvedApiBaseUrl,
     apiClient,
     configDir: params.configDir,
     deps,
@@ -869,20 +870,20 @@ export async function runSignupInteractiveWithCredentialLock(params: {
   const deps = params.deps ?? {};
   const promptRequiredFn = deps.promptRequired ?? promptRequired;
   await checkExistingCredentials({
-    apiBaseUrl1: flags["api-base-url-1"],
+    apiBaseUrl: flags["api-base-url"],
     configDir,
     deps,
     flags,
   });
 
   const { apiClient, requestConfig } = createCliApiClient({
-    apiBaseUrl1: flags["api-base-url-1"],
+    apiBaseUrl: flags["api-base-url"],
     configDir,
   });
-  const apiBaseUrl1 = requestConfig.resolvedApiBaseUrl1;
+  const apiBaseUrl = requestConfig.resolvedApiBaseUrl;
   let start = flags.force
     ? null
-    : loadPendingAgentSignup(configDir, apiBaseUrl1);
+    : loadPendingAgentSignup(configDir, apiBaseUrl);
 
   if (start) {
     process.stderr.write(
@@ -891,7 +892,7 @@ export async function runSignupInteractiveWithCredentialLock(params: {
   } else {
     const email = await promptRequiredFn("Email: ");
     const started = await startSignup({
-      apiBaseUrl1,
+      apiBaseUrl,
       apiClient,
       configDir,
       deps,
@@ -917,7 +918,7 @@ export async function runSignupInteractiveWithCredentialLock(params: {
     );
     if (verificationCode.toLowerCase() === "resend") {
       const resend = await resendVerificationCode({
-        apiBaseUrl1,
+        apiBaseUrl,
         apiClient,
         configDir,
         deps,
@@ -939,7 +940,7 @@ export async function runSignupInteractiveWithCredentialLock(params: {
         deps,
         email: start.email,
         flags: {
-          "api-base-url-1": flags["api-base-url-1"],
+          "api-base-url": flags["api-base-url"],
           force: true,
         },
         skipExistingCredentialCheck: true,
@@ -969,10 +970,10 @@ function commonStartFlags() {
       description:
         "Confirm acceptance of Primitive's Terms of Service and Privacy Policy",
     }),
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     "device-name": Flags.string({
@@ -1056,10 +1057,10 @@ export class SignupConfirmCommand extends Command {
   ];
 
   static flags = {
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     force: Flags.boolean({
@@ -1114,10 +1115,10 @@ export class SignupResendCommand extends Command {
   ];
 
   static flags = {
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
   };
@@ -1164,10 +1165,10 @@ export class SignupStatusCommand extends Command {
   ];
 
   static flags = {
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     json: Flags.boolean({

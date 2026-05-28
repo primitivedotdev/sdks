@@ -75,7 +75,7 @@ describe("reply attachments", () => {
     tempDir = mkdtempSync(join(tmpdir(), "primitive-reply-attachments-"));
     vi.clearAllMocks();
     mocks.createAuthenticatedCliApiClient.mockResolvedValue({
-      apiClient: { _sendClient: { host: "send" }, client: { host: "primary" } },
+      apiClient: { client: { host: "api" } },
       auth: { kind: "api-key" },
       baseUrlOverridden: false,
     });
@@ -122,7 +122,7 @@ describe("reply attachments", () => {
           ],
           body_text: "See attached.",
         },
-        client: { host: "send" },
+        client: { host: "api" },
         path: { id: "email-1" },
         responseStyle: "fields",
       }),

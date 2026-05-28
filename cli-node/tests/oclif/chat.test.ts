@@ -231,7 +231,7 @@ describe("chat command", () => {
     process.env.XDG_CONFIG_HOME = tempConfigHome;
     vi.clearAllMocks();
     mocks.createAuthenticatedCliApiClient.mockResolvedValue({
-      apiClient: { _sendClient: {}, client: {} },
+      apiClient: { client: {} },
       auth: { kind: "api-key" },
       baseUrlOverridden: false,
     });
