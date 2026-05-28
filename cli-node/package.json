@@ -10,7 +10,8 @@
     "man"
   ],
   "bin": {
-    "primitive": "./bin/run.js"
+    "primitive": "./bin/run.js",
+    "prim": "./bin/run.js"
   },
   "man": [
     "./man/primitive.1"
