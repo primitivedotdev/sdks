@@ -11,7 +11,7 @@ import { checkExistingLogin } from "../../src/oclif/commands/login.js";
 
 const CREDENTIALS: StoredCliCredentials = {
   access_token: "prim_oat_existing",
-  api_base_url_1: "https://www.primitive.dev/api/v1",
+  api_base_url: "https://api.primitive.dev/v1",
   auth_method: "oauth",
   created_at: "2026-05-05T00:00:00.000Z",
   expires_at: "2099-05-05T00:00:00.000Z",
@@ -69,7 +69,7 @@ describe("checkExistingLogin", () => {
     saveCliCredentials(tempDir, CREDENTIALS);
 
     const result = await checkExistingLogin({
-      apiBaseUrl1: "http://localhost:3000/api/v1",
+      apiBaseUrl: "http://localhost:8787/v1",
       configDir: tempDir,
       credentials: CREDENTIALS,
       checkAccount: async () => ({
@@ -100,7 +100,7 @@ describe("checkExistingLogin", () => {
     saveCliCredentials(tempDir, CREDENTIALS);
 
     const result = await checkExistingLogin({
-      apiBaseUrl1: `${CREDENTIALS.api_base_url_1}/`,
+      apiBaseUrl: `${CREDENTIALS.api_base_url}/`,
       configDir: tempDir,
       credentials: CREDENTIALS,
       checkAccount: async () => ({

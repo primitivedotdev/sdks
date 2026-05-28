@@ -384,10 +384,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
     const result = await generatedOperations.sendEmail({
       body,
       ...resolveRequestOptions(options),
-      // /send-mail goes to the host that supports attachments. Same
-      // request body shape on both hosts; the host swap is the only
-      // difference. Callers don't see or configure this.
-      client: this._sendClient,
+      client: this.client,
       responseStyle: "fields",
     });
     return unwrapSendResult(result);
@@ -470,7 +467,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
       body,
       path: { id: email.id },
       ...resolveRequestOptions(options),
-      client: this._sendClient,
+      client: this.client,
       responseStyle: "fields",
     });
     return unwrapSendResult(result);
@@ -655,7 +652,7 @@ export type {
 } from "@primitivedotdev/api-core";
 // The single `export *` covers every generated operation / type
 // plus `operations`, `PrimitiveApiClient`, `createPrimitiveApiClient`,
-// `DEFAULT_API_BASE_URL_1/2`, and `PrimitiveApiError`. The aliased
+// `DEFAULT_API_BASE_URL`, and `PrimitiveApiError`. The aliased
 // re-exports below cover the historical `PrimitiveGeneratedApi*`
 // names so existing customer imports keep resolving.
 export * from "@primitivedotdev/api-core";

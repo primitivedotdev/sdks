@@ -256,7 +256,7 @@ async function checkAccount(
       code === "ETIMEDOUT" ||
       code === "EAI_AGAIN"
         ? "Network unreachable. If you're behind a proxy, re-run with NODE_USE_ENV_PROXY=1 and HTTPS_PROXY set. If you're in a container, check that egress to *.primitive.dev is allowed."
-        : 'Inspect the error above. `curl https://www.primitive.dev/api/v1/account -H "Authorization: Bearer $PRIMITIVE_API_KEY"` is the fastest way to bisect CLI vs network.';
+        : 'Inspect the error above. `curl https://api.primitive.dev/v1/account -H "Authorization: Bearer $PRIMITIVE_API_KEY"` is the fastest way to bisect CLI vs network.';
     return {
       outcome: {
         status: "fail",
@@ -330,16 +330,10 @@ class DoctorCommand extends Command {
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
-      hidden: true,
-    }),
-    "api-base-url-2": Flags.string({
-      description:
-        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_2",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
   };
@@ -364,8 +358,7 @@ class DoctorCommand extends Command {
     if (apiKeyCheck.status !== "fail") {
       const { apiClient, auth } = await createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
-        apiBaseUrl1: flags["api-base-url-1"],
-        apiBaseUrl2: flags["api-base-url-2"],
+        apiBaseUrl: flags["api-base-url"],
         configDir: this.config.configDir,
       });
       // resolveCliAuth's apiKey is typed as string | undefined; we

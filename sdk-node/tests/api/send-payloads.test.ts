@@ -234,12 +234,7 @@ function captureFetch(): {
 function buildClient(fetchImpl: typeof fetch): PrimitiveClient {
   return new PrimitiveClient({
     apiKey: "prim_test",
-    // Same URL for both bases so the existing assertions about "the
-    // fetch went to example.test/api/v1" still hold whether the path
-    // is /send-mail (routed to host 2) or /emails/{id}/reply (routed
-    // to host 1).
-    apiBaseUrl1: "https://example.test/api/v1",
-    apiBaseUrl2: "https://example.test/api/v1",
+    apiBaseUrl: "https://api.example.test/v1",
     fetch: fetchImpl,
   });
 }
@@ -317,7 +312,7 @@ describe("shared send/reply/forward payloads", () => {
       // A regression that wires reply back to send-mail would silently
       // build the wrong shape; the path assertion catches it before the
       // body assertion can give a misleading diff.
-      expect(captured.path).toBe(`/api/v1${testCase.expected_path}`);
+      expect(captured.path).toBe(`/v1${testCase.expected_path}`);
       expect(captured.body).toEqual(testCase.expected_body);
       expect(captured.idempotencyKey).toBe(testCase.expected_idempotency_key);
     });

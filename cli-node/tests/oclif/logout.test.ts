@@ -24,7 +24,7 @@ import { pendingSignupPath } from "../../src/oclif/commands/signup.js";
 
 const CREDENTIALS: StoredCliCredentials = {
   access_token: "prim_oat_existing",
-  api_base_url_1: "https://www.primitive.dev/api/v1",
+  api_base_url: "https://api.primitive.dev/v1",
   auth_method: "oauth",
   created_at: "2026-05-05T00:00:00.000Z",
   expires_at: "2026-05-05T00:00:00.000Z",
@@ -85,7 +85,7 @@ describe("runLogoutWithCredentialLock", () => {
     writeFileSync(
       pendingPath,
       `${JSON.stringify({
-        api_base_url_1: "https://www.primitive.dev/api/v1",
+        api_base_url: "https://api.primitive.dev/v1",
         created_at: "2026-05-05T00:00:00.000Z",
         email: "user@example.com",
         expires_at: "2099-05-05T00:00:00.000Z",

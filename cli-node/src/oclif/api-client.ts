@@ -5,8 +5,7 @@ import {
   cliAccessTokenExpiresAt,
   deleteCliCredentials,
   loadCliCredentials,
-  normalizeApiBaseUrl1,
-  normalizeApiBaseUrl2,
+  normalizeApiBaseUrl,
   resolveCliAuth,
   type StoredCliCredentials,
   saveCliCredentials,
@@ -36,10 +35,8 @@ type OAuthRefreshSuccess = {
 };
 
 export type ResolvedCliApiRequestConfig = {
-  apiBaseUrl1?: string;
-  apiBaseUrl2?: string;
-  resolvedApiBaseUrl1: string;
-  resolvedApiBaseUrl2: string;
+  apiBaseUrl?: string;
+  resolvedApiBaseUrl: string;
   baseUrlOverridden: boolean;
   environmentName: string | null;
   headers?: Record<string, string>;
@@ -98,63 +95,54 @@ export function cliApiHeadersFromEnv(
 
 export function resolveCliApiRequestConfig(params: {
   configDir: string;
-  apiBaseUrl1?: string;
-  apiBaseUrl2?: string;
+  apiBaseUrl?: string;
   env?: Env;
 }): ResolvedCliApiRequestConfig {
   const cliConfig = loadCliConfig(params.configDir);
   const currentEnvironment = resolveConfigEnvironment(cliConfig);
-  const configuredApiBaseUrl1 = currentEnvironment?.config.api_base_url_1;
-  const configuredApiBaseUrl2 = currentEnvironment?.config.api_base_url_2;
+  const configuredApiBaseUrl = currentEnvironment?.config.api_base_url;
 
   // Refuse to silently fall through to the production default when an
   // explicit non-default environment is active but does not specify
-  // its own API base URL(s). This was a real footgun: a user on
+  // its own API base URL. This was a real footgun: a user on
   // `primitive config use staging` whose staging environment block
-  // had no api_base_url_1 set could log in, talk to production by
+  // had no api_base_url set could log in, talk to production by
   // default, and end up with a production URL persisted into
   // credentials.json - every subsequent command would then hit
   // production with a key minted against the wrong environment.
   if (
     currentEnvironment !== null &&
     currentEnvironment.name !== DEFAULT_ENVIRONMENT &&
-    params.apiBaseUrl1 === undefined &&
-    configuredApiBaseUrl1 === undefined
+    params.apiBaseUrl === undefined &&
+    configuredApiBaseUrl === undefined
   ) {
     throw new Errors.CLIError(
-      `The active Primitive CLI environment \`${currentEnvironment.name}\` does not specify an api_base_url_1. Set one with \`primitive config set --environment ${currentEnvironment.name} --api-base-url-1 https://...\`, or switch to a different environment with \`primitive config use <name>\`. Refusing to fall back to the production default for a non-default environment.`,
+      `The active Primitive CLI environment \`${currentEnvironment.name}\` does not specify an api_base_url. Set one with \`primitive config set --environment ${currentEnvironment.name} --api-base-url https://...\`, or switch to a different environment with \`primitive config use <name>\`. Refusing to fall back to the production default for a non-default environment.`,
       { exit: 1 },
     );
   }
 
-  const apiBaseUrl1 =
-    params.apiBaseUrl1 !== undefined
-      ? normalizeApiBaseUrl1(params.apiBaseUrl1)
-      : configuredApiBaseUrl1;
-  const apiBaseUrl2 =
-    params.apiBaseUrl2 !== undefined
-      ? normalizeApiBaseUrl2(params.apiBaseUrl2)
-      : configuredApiBaseUrl2;
+  const apiBaseUrl =
+    params.apiBaseUrl !== undefined
+      ? normalizeApiBaseUrl(params.apiBaseUrl)
+      : configuredApiBaseUrl;
 
   return {
-    apiBaseUrl1,
-    apiBaseUrl2,
-    baseUrlOverridden: apiBaseUrl1 !== undefined || apiBaseUrl2 !== undefined,
+    apiBaseUrl,
+    baseUrlOverridden: apiBaseUrl !== undefined,
     environmentName: currentEnvironment?.name ?? null,
     headers: mergeHeaders(
       currentEnvironment?.config.headers,
       cliApiHeadersFromEnv(params.env),
     ),
-    resolvedApiBaseUrl1: normalizeApiBaseUrl1(apiBaseUrl1),
-    resolvedApiBaseUrl2: normalizeApiBaseUrl2(apiBaseUrl2),
+    resolvedApiBaseUrl: normalizeApiBaseUrl(apiBaseUrl),
   };
 }
 
 export function createCliApiClient(params: {
   configDir: string;
   apiKey?: string;
-  apiBaseUrl1?: string;
-  apiBaseUrl2?: string;
+  apiBaseUrl?: string;
   env?: Env;
 }): {
   apiClient: PrimitiveApiClient;
@@ -164,16 +152,15 @@ export function createCliApiClient(params: {
   return {
     apiClient: new PrimitiveApiClient({
       apiKey: params.apiKey,
-      apiBaseUrl1: requestConfig.resolvedApiBaseUrl1,
-      apiBaseUrl2: requestConfig.resolvedApiBaseUrl2,
+      apiBaseUrl: requestConfig.resolvedApiBaseUrl,
       headers: requestConfig.headers,
     }),
     requestConfig,
   };
 }
 
-function oauthTokenEndpoint(apiBaseUrl1: string): string {
-  const url = new URL(apiBaseUrl1);
+function oauthTokenEndpoint(apiBaseUrl: string): string {
+  const url = new URL(apiBaseUrl);
   url.pathname = "/oauth/token";
   url.search = "";
   url.hash = "";
@@ -221,7 +208,7 @@ function oauthErrorDescription(value: unknown): string | null {
 }
 
 export async function refreshStoredCliCredentials(params: {
-  apiBaseUrl1: string;
+  apiBaseUrl: string;
   configDir: string;
   credentials: StoredCliCredentials;
   credentialsLockHeld?: boolean;
@@ -261,7 +248,7 @@ export async function refreshStoredCliCredentials(params: {
 
     let response: Response;
     try {
-      response = await fetchImpl(oauthTokenEndpoint(params.apiBaseUrl1), {
+      response = await fetchImpl(oauthTokenEndpoint(params.apiBaseUrl), {
         body,
         headers: {
           ...(params.headers ?? {}),
@@ -317,8 +304,7 @@ export async function refreshStoredCliCredentials(params: {
 export async function createAuthenticatedCliApiClient(params: {
   configDir: string;
   apiKey?: string;
-  apiBaseUrl1?: string;
-  apiBaseUrl2?: string;
+  apiBaseUrl?: string;
   env?: Env;
   fetch?: FetchFn;
   now?: () => number;
@@ -327,13 +313,12 @@ export async function createAuthenticatedCliApiClient(params: {
   const requestConfig = resolveCliApiRequestConfig(params);
   let auth = resolveCliAuth({
     apiKey: params.apiKey,
-    apiBaseUrl1: requestConfig.apiBaseUrl1,
-    apiBaseUrl2: requestConfig.apiBaseUrl2,
+    apiBaseUrl: requestConfig.apiBaseUrl,
     configDir: params.configDir,
   });
   if (auth.source === "stored" && auth.credentials) {
     const refreshed = await refreshStoredCliCredentials({
-      apiBaseUrl1: auth.apiBaseUrl1,
+      apiBaseUrl: auth.apiBaseUrl,
       configDir: params.configDir,
       credentials: auth.credentials,
       credentialsLockHeld: params.credentialsLockHeld,
@@ -350,8 +335,7 @@ export async function createAuthenticatedCliApiClient(params: {
   return {
     apiClient: new PrimitiveApiClient({
       apiKey: auth.apiKey,
-      apiBaseUrl1: auth.apiBaseUrl1,
-      apiBaseUrl2: auth.apiBaseUrl2,
+      apiBaseUrl: auth.apiBaseUrl,
       headers: requestConfig.headers,
     }),
     auth,

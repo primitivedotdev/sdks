@@ -17,7 +17,7 @@ import {
   credentialsPath,
   deleteCliCredentials,
   loadCliCredentials,
-  normalizeApiBaseUrl1,
+  normalizeApiBaseUrl,
   resolveCliAuth,
   type StoredCliCredentials,
   saveCliCredentials,
@@ -26,7 +26,7 @@ import { chatStatePath } from "../../src/oclif/chat-state.js";
 
 const CREDENTIALS: StoredCliCredentials = {
   access_token: "prim_oat_test",
-  api_base_url_1: "https://api.example.test/api/v1",
+  api_base_url: "https://api.example.test/v1",
   auth_method: "oauth",
   created_at: "2026-05-05T00:00:00.000Z",
   expires_at: "2099-05-05T00:00:00.000Z",
@@ -83,8 +83,8 @@ describe("CLI auth credentials", () => {
   });
 
   it("normalizes explicit base URLs", () => {
-    expect(normalizeApiBaseUrl1("https://api.example.test/api/v1///")).toBe(
-      "https://api.example.test/api/v1",
+    expect(normalizeApiBaseUrl("https://api.example.test/v1///")).toBe(
+      "https://api.example.test/v1",
     );
   });
 
@@ -94,12 +94,12 @@ describe("CLI auth credentials", () => {
     expect(
       resolveCliAuth({
         apiKey: "prim_explicit",
-        apiBaseUrl1: "https://override.example/api/v1",
+        apiBaseUrl: "https://api.override.example/v1",
         configDir: tempDir,
       }),
     ).toMatchObject({
       apiKey: "prim_explicit",
-      apiBaseUrl1: "https://override.example/api/v1",
+      apiBaseUrl: "https://api.override.example/v1",
       source: "flag-or-env",
     });
   });
@@ -109,7 +109,7 @@ describe("CLI auth credentials", () => {
 
     expect(resolveCliAuth({ configDir: tempDir })).toMatchObject({
       apiKey: CREDENTIALS.access_token,
-      apiBaseUrl1: CREDENTIALS.api_base_url_1,
+      apiBaseUrl: CREDENTIALS.api_base_url,
       source: "stored",
     });
   });
@@ -142,7 +142,7 @@ describe("CLI auth credentials", () => {
     try {
       const stale = {
         api_key: "prim_old",
-        base_url: "https://api.example.test/api/v1",
+        base_url: "https://api.example.test/v1",
         created_at: "2026-05-05T00:00:00.000Z",
         key_id: "11111111-1111-4111-8111-111111111111",
         key_prefix: "prim_old",

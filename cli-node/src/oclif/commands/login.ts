@@ -75,7 +75,7 @@ type ExistingLoginStatus =
   | { status: "blocked"; message: string; payload: unknown };
 
 export async function checkExistingLogin(params: {
-  apiBaseUrl1?: string;
+  apiBaseUrl?: string;
   configDir: string;
   credentials: StoredCliCredentials;
   credentialsLockHeld?: boolean;
@@ -84,15 +84,15 @@ export async function checkExistingLogin(params: {
   ) => Promise<{ error?: unknown }>;
 }): Promise<ExistingLoginStatus> {
   const requestConfig = resolveCliApiRequestConfig({
-    apiBaseUrl1: params.apiBaseUrl1,
+    apiBaseUrl: params.apiBaseUrl,
     configDir: params.configDir,
   });
   const probeApiBaseUrl1 =
-    requestConfig.apiBaseUrl1 ?? params.credentials.api_base_url_1;
+    requestConfig.apiBaseUrl ?? params.credentials.api_base_url;
   let credentials = params.credentials;
   try {
     credentials = await refreshStoredCliCredentials({
-      apiBaseUrl1: probeApiBaseUrl1,
+      apiBaseUrl: probeApiBaseUrl1,
       configDir: params.configDir,
       credentials,
       credentialsLockHeld: params.credentialsLockHeld,
@@ -112,8 +112,7 @@ export async function checkExistingLogin(params: {
 
   const apiClient = new PrimitiveApiClient({
     apiKey: credentials.access_token,
-    apiBaseUrl1: probeApiBaseUrl1,
-    apiBaseUrl2: requestConfig.resolvedApiBaseUrl2,
+    apiBaseUrl: probeApiBaseUrl1,
     headers: requestConfig.headers,
   });
   const result = await (
@@ -144,7 +143,7 @@ export async function checkExistingLogin(params: {
   // against its original host.
   const baseUrlDiffersFromSaved =
     requestConfig.baseUrlOverridden &&
-    requestConfig.apiBaseUrl1 !== params.credentials.api_base_url_1;
+    requestConfig.apiBaseUrl !== params.credentials.api_base_url;
   if (code === API_ERROR_CODES.unauthorized && !baseUrlDiffersFromSaved) {
     deleteCliCredentials(params.configDir);
     process.stderr.write(
@@ -164,7 +163,7 @@ export async function checkExistingLogin(params: {
 }
 
 export type LoginFlags = {
-  "api-base-url-1"?: string;
+  "api-base-url"?: string;
   "device-name"?: string;
   "no-browser"?: boolean;
   force?: boolean;
@@ -183,10 +182,10 @@ class LoginCommand extends Command {
   ];
 
   static flags = {
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     "device-name": Flags.string({
@@ -237,10 +236,10 @@ class LoginCommand extends Command {
     retryCommand: string,
   ): Promise<void> {
     const { apiClient, requestConfig } = createCliApiClient({
-      apiBaseUrl1: flags["api-base-url-1"],
+      apiBaseUrl: flags["api-base-url"],
       configDir: this.config.configDir,
     });
-    const apiBaseUrl1 = requestConfig.resolvedApiBaseUrl1;
+    const apiBaseUrl = requestConfig.resolvedApiBaseUrl;
     let existing: StoredCliCredentials | null;
     try {
       existing = loadCliCredentials(this.config.configDir);
@@ -259,7 +258,7 @@ class LoginCommand extends Command {
       );
     } else if (existing) {
       const existingStatus = await checkExistingLogin({
-        apiBaseUrl1: flags["api-base-url-1"],
+        apiBaseUrl: flags["api-base-url"],
         configDir: this.config.configDir,
         credentials: existing,
         credentialsLockHeld: true,
@@ -332,7 +331,7 @@ class LoginCommand extends Command {
         deleteChatState(this.config.configDir);
         saveCliCredentials(this.config.configDir, {
           access_token: login.access_token,
-          api_base_url_1: apiBaseUrl1,
+          api_base_url: apiBaseUrl,
           auth_method: "oauth",
           created_at: new Date().toISOString(),
           expires_at: cliAccessTokenExpiresAt(login.expires_in),

@@ -34,16 +34,10 @@ class ReplyCommand extends Command {
         "Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
-        "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
-      hidden: true,
-    }),
-    "api-base-url-2": Flags.string({
-      description:
-        "Override the attachments-supporting send host base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_2",
+        "Override the API base URL. Internal testing only; not documented to customers.",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     id: Flags.string({
@@ -112,8 +106,7 @@ class ReplyCommand extends Command {
       const { apiClient, auth, baseUrlOverridden } =
         await createAuthenticatedCliApiClient({
           apiKey: flags["api-key"],
-          apiBaseUrl1: flags["api-base-url-1"],
-          apiBaseUrl2: flags["api-base-url-2"],
+          apiBaseUrl: flags["api-base-url"],
           configDir: this.config.configDir,
         });
       const attachments = readAttachmentFiles(flags.attachment);
@@ -126,7 +119,7 @@ class ReplyCommand extends Command {
           ...(attachments !== undefined ? { attachments } : {}),
           ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
         },
-        client: apiClient._sendClient,
+        client: apiClient.client,
         path: { id: flags.id },
         responseStyle: "fields",
       });
