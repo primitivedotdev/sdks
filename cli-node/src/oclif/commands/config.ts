@@ -126,7 +126,8 @@ export class ConfigSetCommand extends Command {
   static flags = {
     environment: Flags.string({
       char: "e",
-      description: "Environment name to create or update",
+      description:
+        "Environment name to create or update. Defaults to the active environment, or default when none is active.",
     }),
     "api-base-url": Flags.string({
       description: "API base URL",

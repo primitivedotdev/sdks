@@ -88,6 +88,46 @@ describe("CLI auth credentials", () => {
     );
   });
 
+  it("canonicalizes known legacy web API base URLs", () => {
+    expect(normalizeApiBaseUrl("https://www.primitive.dev/api/v1")).toBe(
+      "https://api.primitive.dev/v1",
+    );
+    expect(normalizeApiBaseUrl("https://primitive-staging-1.com/api/v1")).toBe(
+      "https://api.primitive-staging-1.com/v1",
+    );
+  });
+
+  it("loads legacy saved OAuth credentials on the canonical API host", () => {
+    writeFileSync(
+      credentialsPath(tempDir),
+      `${JSON.stringify({
+        ...CREDENTIALS,
+        api_base_url: undefined,
+        api_base_url_1: "https://primitive-staging-1.com/api/v1",
+      })}\n`,
+    );
+
+    expect(loadCliCredentials(tempDir)?.api_base_url).toBe(
+      "https://api.primitive-staging-1.com/v1",
+    );
+  });
+
+  it("prefers legacy host-2 credentials over legacy host-1 credentials", () => {
+    writeFileSync(
+      credentialsPath(tempDir),
+      `${JSON.stringify({
+        ...CREDENTIALS,
+        api_base_url: undefined,
+        api_base_url_1: "https://primitive-staging-1.com/api/v1",
+        api_base_url_2: "https://api.primitive-staging-1.com/v1",
+      })}\n`,
+    );
+
+    expect(loadCliCredentials(tempDir)?.api_base_url).toBe(
+      "https://api.primitive-staging-1.com/v1",
+    );
+  });
+
   it("prefers explicit API keys over saved credentials", () => {
     saveCliCredentials(tempDir, CREDENTIALS);
 

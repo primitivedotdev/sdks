@@ -130,7 +130,8 @@ function parseEnvironmentConfig(
   }
 
   const env: CliEnvironmentConfig = {};
-  const rawApiBaseUrl = raw.api_base_url ?? raw.api_base_url_1;
+  const rawApiBaseUrl =
+    raw.api_base_url ?? raw.api_base_url_2 ?? raw.api_base_url_1;
   if (rawApiBaseUrl !== undefined) {
     if (typeof rawApiBaseUrl !== "string") {
       throw cliConfigError(`${context}.api_base_url must be a string.`);
@@ -277,7 +278,9 @@ export function upsertCliEnvironment(params: {
   use?: boolean;
 }): StoredCliConfig {
   const name = normalizeCliEnvironmentName(
-    params.environmentName ?? DEFAULT_ENVIRONMENT,
+    params.environmentName ??
+      resolveConfigEnvironment(params.config)?.name ??
+      DEFAULT_ENVIRONMENT,
   );
   const existing = params.config.environments[name] ?? {};
   const nextHeaders = { ...(existing.headers ?? {}) };

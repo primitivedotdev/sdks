@@ -64,13 +64,13 @@ function requireString(
 }
 
 function readStoredApiBaseUrl(raw: Record<string, unknown>): string {
-  const value = raw.api_base_url ?? raw.api_base_url_1;
+  const value = raw.api_base_url ?? raw.api_base_url_2 ?? raw.api_base_url_1;
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(
       `Stored Primitive CLI credentials are malformed: api_base_url must be a non-empty string. ${MALFORMED_CREDENTIALS_HINT}`,
     );
   }
-  return value;
+  return normalizeApiBaseUrl(value);
 }
 
 /**
@@ -149,8 +149,37 @@ function normalize(url: string | undefined, fallback: string): string {
   return trimmed.replace(/\/+$/, "");
 }
 
+function canonicalizeKnownApiBaseUrl(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+
+  const pathname = parsed.pathname.replace(/\/+$/, "");
+  if (pathname !== "/api/v1") return url;
+
+  if (
+    parsed.hostname === "primitive.dev" ||
+    parsed.hostname === "www.primitive.dev"
+  ) {
+    parsed.hostname = "api.primitive.dev";
+    parsed.pathname = "/v1";
+    return parsed.toString().replace(/\/+$/, "");
+  }
+
+  if (parsed.hostname === "primitive-staging-1.com") {
+    parsed.hostname = "api.primitive-staging-1.com";
+    parsed.pathname = "/v1";
+    return parsed.toString().replace(/\/+$/, "");
+  }
+
+  return url;
+}
+
 export function normalizeApiBaseUrl(url: string | undefined): string {
-  return normalize(url, DEFAULT_API_BASE_URL);
+  return canonicalizeKnownApiBaseUrl(normalize(url, DEFAULT_API_BASE_URL));
 }
 
 export function cliAccessTokenExpiresAt(

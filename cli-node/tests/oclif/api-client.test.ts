@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Errors } from "@oclif/core";
@@ -95,7 +95,7 @@ describe("CLI API request config", () => {
     }
   });
 
-  it("writes unnamed config changes to default even when another config is active", () => {
+  it("writes unnamed config changes to the active environment", () => {
     let config = upsertCliEnvironment({
       apiBaseUrl: "https://api.staging.example/v1",
       config: emptyCliConfig(),
@@ -108,12 +108,11 @@ describe("CLI API request config", () => {
       headers: ["x-default=yes"],
     });
 
-    expect(config.current_environment).toBe("default");
-    expect(config.environments.default).toMatchObject({
-      headers: { "x-default": "yes" },
-    });
+    expect(config.current_environment).toBe("staging");
+    expect(config.environments.default).toBeUndefined();
     expect(config.environments.staging).toMatchObject({
       api_base_url: "https://api.staging.example/v1",
+      headers: { "x-default": "yes" },
     });
   });
 
@@ -162,6 +161,30 @@ describe("CLI API request config", () => {
       baseUrlOverridden: true,
       environmentName: "staging",
       headers: { "x-keep": "yes", "x-test": "env" },
+    });
+  });
+
+  it("loads legacy split-host config on the canonical host", () => {
+    writeFileSync(
+      join(tempDir, "config.json"),
+      `${JSON.stringify({
+        version: 1,
+        current_environment: "staging",
+        environments: {
+          staging: {
+            api_base_url_1: "https://primitive-staging-1.com/api/v1",
+            api_base_url_2: "https://api.primitive-staging-1.com/v1",
+            headers: { "x-test": "stored" },
+          },
+        },
+      })}\n`,
+    );
+
+    expect(resolveCliApiRequestConfig({ configDir: tempDir })).toMatchObject({
+      apiBaseUrl: "https://api.primitive-staging-1.com/v1",
+      environmentName: "staging",
+      headers: { "x-test": "stored" },
+      resolvedApiBaseUrl: "https://api.primitive-staging-1.com/v1",
     });
   });
 
