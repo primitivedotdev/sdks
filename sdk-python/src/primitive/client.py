@@ -578,22 +578,35 @@ def _build_semantic_search_input(
     limit: int = 10,
     cursor: str | None = None,
 ) -> ApiSemanticSearchInput:
-    payload = ApiSemanticSearchInput(
+    # Pass every field to the constructor so the attrs validators /
+    # converters run for the request object. Mutating fields after
+    # construction would bypass them.
+    return ApiSemanticSearchInput(
         query=query,
         mode=SemanticSearchInputMode(mode),
         limit=limit,
+        corpus=(
+            [SemanticSearchInputCorpusItem(c) for c in corpus]
+            if corpus is not None
+            else UNSET
+        ),
+        date_from=(
+            datetime.datetime.fromisoformat(date_from)
+            if date_from is not None
+            else UNSET
+        ),
+        date_to=(
+            datetime.datetime.fromisoformat(date_to)
+            if date_to is not None
+            else UNSET
+        ),
+        include=(
+            [SemanticSearchInputIncludeItem(i) for i in include]
+            if include is not None
+            else UNSET
+        ),
+        cursor=cursor if cursor is not None else UNSET,
     )
-    if corpus is not None:
-        payload.corpus = [SemanticSearchInputCorpusItem(c) for c in corpus]
-    if date_from is not None:
-        payload.date_from = datetime.datetime.fromisoformat(date_from)
-    if date_to is not None:
-        payload.date_to = datetime.datetime.fromisoformat(date_to)
-    if include is not None:
-        payload.include = [SemanticSearchInputIncludeItem(i) for i in include]
-    if cursor is not None:
-        payload.cursor = cursor
-    return payload
 
 
 class PrimitiveClient:
