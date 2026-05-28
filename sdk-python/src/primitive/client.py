@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextvars
 import copy
-import datetime
 import json
 import re
 from dataclasses import dataclass, field
@@ -11,6 +10,7 @@ from typing import Any, Literal, TypedDict, cast
 from uuid import UUID
 
 import httpx
+from dateutil.parser import isoparse
 
 from .api import (
     DEFAULT_API_BASE_URL_1,
@@ -590,16 +590,12 @@ def _build_semantic_search_input(
             if corpus is not None
             else UNSET
         ),
-        date_from=(
-            datetime.datetime.fromisoformat(date_from)
-            if date_from is not None
-            else UNSET
-        ),
-        date_to=(
-            datetime.datetime.fromisoformat(date_to)
-            if date_to is not None
-            else UNSET
-        ),
+        # isoparse (python-dateutil) accepts ISO-8601 with the `Z` UTC
+        # suffix; datetime.fromisoformat rejects it on Python 3.10, our
+        # declared minimum. The generated models use isoparse for the
+        # same fields in `from_dict`.
+        date_from=isoparse(date_from) if date_from is not None else UNSET,
+        date_to=isoparse(date_to) if date_to is not None else UNSET,
         include=(
             [SemanticSearchInputIncludeItem(i) for i in include]
             if include is not None
