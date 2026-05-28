@@ -87,12 +87,12 @@ export async function checkExistingLogin(params: {
     apiBaseUrl: params.apiBaseUrl,
     configDir: params.configDir,
   });
-  const probeApiBaseUrl1 =
+  const probeApiBaseUrl =
     requestConfig.apiBaseUrl ?? params.credentials.api_base_url;
   let credentials = params.credentials;
   try {
     credentials = await refreshStoredCliCredentials({
-      apiBaseUrl: probeApiBaseUrl1,
+      apiBaseUrl: probeApiBaseUrl,
       configDir: params.configDir,
       credentials,
       credentialsLockHeld: params.credentialsLockHeld,
@@ -112,7 +112,7 @@ export async function checkExistingLogin(params: {
 
   const apiClient = new PrimitiveApiClient({
     apiKey: credentials.access_token,
-    apiBaseUrl: probeApiBaseUrl1,
+    apiBaseUrl: probeApiBaseUrl,
     headers: requestConfig.headers,
   });
   const result = await (
