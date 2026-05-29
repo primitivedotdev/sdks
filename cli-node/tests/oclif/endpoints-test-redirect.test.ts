@@ -122,7 +122,7 @@ describe("detectFunctionEndpoint", () => {
 });
 
 describe("formatFunctionEndpointRedirect", () => {
-  it("includes the suggested functions:test-function command with the function id", async () => {
+  it("includes the suggested functions:test command with the function id", async () => {
     const output = formatFunctionEndpointRedirect({
       endpointId: ENDPOINT_ID,
       functionId: FUNCTION_ID,

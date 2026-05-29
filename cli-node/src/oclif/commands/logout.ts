@@ -73,7 +73,7 @@ export async function runLogoutWithCredentialLock(params: {
   }
   if (!credentials) {
     throw cliError(
-      "Not logged in. Run `primitive signin` to create saved CLI credentials.",
+      "Not logged in. Run `primitive login` to create saved CLI credentials.",
     );
   }
 

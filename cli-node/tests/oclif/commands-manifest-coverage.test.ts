@@ -3,9 +3,11 @@ import { fileURLToPath } from "node:url";
 import { operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 import {
-  CANONICAL_OPERATION_ALIASES,
-  COMMANDS,
-} from "../../src/oclif/index.js";
+  isPublicGeneratedOperation,
+  operationId,
+  publicOperationCommandId,
+} from "../../src/oclif/command-surface.js";
+import { COMMANDS, publicOperationEntries } from "../../src/oclif/index.js";
 
 function readCliPackageJson(): {
   files?: string[];
@@ -28,11 +30,11 @@ function readCliPackageJson(): {
 }
 
 // Regression guard for the discovery / execution surface staying in
-// sync. `primitive list-operations` enumerates the operation
-// manifest, and the CLI's COMMANDS map auto-registers a wrapper
-// command for every entry. If a new operation lands in the manifest
-// without a matching COMMANDS entry, agents would see it via
-// list-operations but get "command not found" when they invoke it.
+// sync. `primitive list-operations` enumerates public generated
+// operations, and the CLI's COMMANDS map auto-registers a wrapper
+// command for every public entry. If a new public operation lands in
+// the manifest without a matching COMMANDS entry, agents would see it
+// via list-operations but get "command not found" when they invoke it.
 //
 // Separately, a stale static `oclif.manifest.json` shipped in the
 // package would also cause this gap (oclif looks up commands via the
@@ -42,12 +44,46 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
-  it("registers a command for every operation in the manifest", () => {
+  it("registers one canonical command for every public generated operation", () => {
     const missing = operationManifest
-      .map((op) => `${op.tagCommand}:${op.command}`)
+      .filter(isPublicGeneratedOperation)
+      .map(publicOperationCommandId)
       .filter((id) => !(id in COMMANDS));
 
     expect(missing).toEqual([]);
+  });
+
+  it("does not register raw operation ids when a canonical name replaces them", () => {
+    const duplicatedRawIds = operationManifest
+      .filter(isPublicGeneratedOperation)
+      .map((op) => ({
+        publicId: publicOperationCommandId(op),
+        rawId: operationId(op),
+      }))
+      .filter(({ publicId, rawId }) => publicId !== rawId && rawId in COMMANDS)
+      .map(({ rawId }) => rawId);
+
+    expect(duplicatedRawIds).toEqual([]);
+  });
+
+  it("lists only invokable generated commands for discovery", () => {
+    const listedCommandIds = publicOperationEntries().map(
+      (entry) => entry.cliCommandId,
+    );
+    const missingListedCommands = listedCommandIds.filter(
+      (id) => !(id in COMMANDS),
+    );
+    const listedRawIds = operationManifest
+      .filter(isPublicGeneratedOperation)
+      .filter(
+        (operation) =>
+          publicOperationCommandId(operation) !== operationId(operation),
+      )
+      .map(operationId)
+      .filter((id) => listedCommandIds.includes(id));
+
+    expect(missingListedCommands).toEqual([]);
+    expect(listedRawIds).toEqual([]);
   });
 
   it("does not declare a pre-built oclif.manifest.json in package files", () => {
@@ -65,35 +101,17 @@ describe("COMMANDS / manifest coverage", () => {
     expect(prepack).not.toMatch(/oclif\s+manifest/);
   });
 
-  it("has a runtime entry specifically for functions:list-function-logs", () => {
-    // Named regression: an AGX agent ran `primitive list-operations`,
-    // saw `functions:list-function-logs`, and then got "command not
-    // found" when invoking it. The root cause was a stale shipped
-    // oclif.manifest.json; the runtime COMMANDS map always had the
-    // entry. Keeping this assertion separate from the bulk coverage
-    // check above makes the named-regression failure mode obvious.
-    expect(COMMANDS["functions:list-function-logs"]).toBeDefined();
-  });
-
-  it("registers canonical task aliases for generated API operations", () => {
-    for (const [alias, target] of Object.entries(CANONICAL_OPERATION_ALIASES)) {
-      expect(COMMANDS[target]).toBeDefined();
-      expect(COMMANDS[alias]).toBe(COMMANDS[target]);
-    }
+  it("keeps function logs available through the canonical command", () => {
+    expect(COMMANDS["functions:logs"]).toBeDefined();
+    expect(COMMANDS["functions:list-function-logs"]).toBeUndefined();
   });
 
   it("accepts --json on generated API commands that already emit JSON", () => {
     const domainsListCommand = COMMANDS["domains:list"] as unknown as {
       flags: Record<string, unknown>;
     };
-    const rawDomainsListCommand = COMMANDS[
-      "domains:list-domains"
-    ] as unknown as {
-      flags: Record<string, unknown>;
-    };
 
     expect(domainsListCommand.flags.json).toBeDefined();
-    expect(rawDomainsListCommand.flags.json).toBeDefined();
   });
 
   it("registers the top-level reply shortcut", () => {
@@ -119,8 +137,8 @@ describe("COMMANDS / manifest coverage", () => {
   });
 
   it("registers friendly thread command aliases", () => {
-    expect(COMMANDS["threads:get-thread"]).toBeDefined();
-    expect(COMMANDS["threads:get"]).toBe(COMMANDS["threads:get-thread"]);
+    expect(COMMANDS["threads:get"]).toBeDefined();
+    expect(COMMANDS["threads:get-thread"]).toBeUndefined();
   });
 
   it("keeps top-level send registered with attachment support", () => {
@@ -141,9 +159,7 @@ describe("COMMANDS / manifest coverage", () => {
 
   it("registers domain zone-file commands", () => {
     expect(COMMANDS["domains:zone-file"]).toBeDefined();
-    expect(COMMANDS["domains:download-domain-zone-file"]).toBe(
-      COMMANDS["domains:zone-file"],
-    );
+    expect(COMMANDS["domains:download-domain-zone-file"]).toBeUndefined();
     const zoneFileCommand = COMMANDS["domains:zone-file"] as unknown as {
       flags: Record<string, unknown>;
     };
@@ -155,7 +171,7 @@ describe("COMMANDS / manifest coverage", () => {
   it("registers inbox status commands", () => {
     expect(COMMANDS["inbox:setup"]).toBeDefined();
     expect(COMMANDS["inbox:status"]).toBeDefined();
-    expect(COMMANDS["inbox:get-inbox-status"]).toBe(COMMANDS["inbox:status"]);
+    expect(COMMANDS["inbox:get-inbox-status"]).toBeUndefined();
     const inboxSetupCommand = COMMANDS["inbox:setup"] as unknown as {
       flags: Record<string, unknown>;
     };
@@ -167,9 +183,11 @@ describe("COMMANDS / manifest coverage", () => {
     expect(inboxStatusCommand.flags.json).toBeDefined();
   });
 
-  it("registers semantic search as a top-level command", () => {
-    expect(COMMANDS["semantic-search"]).toBeDefined();
-    const semanticSearchCommand = COMMANDS["semantic-search"] as unknown as {
+  it("registers search as a top-level command", () => {
+    expect(COMMANDS.search).toBeDefined();
+    expect(COMMANDS["search:semantic-search"]).toBeUndefined();
+    expect(COMMANDS["semantic-search"]).toBeUndefined();
+    const semanticSearchCommand = COMMANDS.search as unknown as {
       flags: Record<string, unknown>;
     };
     expect(semanticSearchCommand.flags.mode).toBeDefined();
@@ -182,7 +200,7 @@ describe("COMMANDS / manifest coverage", () => {
   it("registers signup commands", () => {
     expect(COMMANDS.signup).toBeDefined();
     expect(COMMANDS["signup:confirm"]).toBeDefined();
-    expect(COMMANDS["signup:interactive"]).toBeDefined();
+    expect(COMMANDS["signup:interactive"]).toBeUndefined();
     expect(COMMANDS["signup:resend"]).toBeDefined();
     expect(COMMANDS["signup:status"]).toBeDefined();
     const signupStatusCommand = COMMANDS["signup:status"] as unknown as {
@@ -191,24 +209,14 @@ describe("COMMANDS / manifest coverage", () => {
     expect(signupStatusCommand.flags.json).toBeDefined();
   });
 
-  it("registers sign-in commands", () => {
+  it("registers login commands without signin/otp duplicates", () => {
     expect(COMMANDS.login).toBeDefined();
     expect(COMMANDS["login:browser"]).toBeDefined();
     expect(COMMANDS["login:confirm"]).toBeDefined();
-    expect(COMMANDS["login:otp"]).toBeDefined();
-    expect(COMMANDS["login:otp:confirm"]).toBeDefined();
-    expect(COMMANDS["login:otp:resend"]).toBeDefined();
     expect(COMMANDS["login:resend"]).toBeDefined();
-    expect(COMMANDS.otp).toBeDefined();
-    expect(COMMANDS["otp:confirm"]).toBeDefined();
-    expect(COMMANDS["otp:resend"]).toBeDefined();
-    expect(COMMANDS.signin).toBeDefined();
-    expect(COMMANDS["signin:browser"]).toBeDefined();
-    expect(COMMANDS["signin:confirm"]).toBeDefined();
-    expect(COMMANDS["signin:otp"]).toBeDefined();
-    expect(COMMANDS["signin:otp:confirm"]).toBeDefined();
-    expect(COMMANDS["signin:otp:resend"]).toBeDefined();
-    expect(COMMANDS["signin:resend"]).toBeDefined();
+    expect(COMMANDS["login:otp"]).toBeUndefined();
+    expect(COMMANDS.otp).toBeUndefined();
+    expect(COMMANDS.signin).toBeUndefined();
   });
 
   it("keeps reply wait flags aligned with the reply API contract", () => {
@@ -221,9 +229,8 @@ describe("COMMANDS / manifest coverage", () => {
   });
 
   it("registers the normal function test alias", () => {
-    expect(COMMANDS["functions:test"]).toBe(
-      COMMANDS["functions:test-function"],
-    );
+    expect(COMMANDS["functions:test"]).toBeDefined();
+    expect(COMMANDS["functions:test-function"]).toBeUndefined();
   });
 
   it("registers config environment commands", () => {

@@ -184,7 +184,7 @@ export async function runSetSecret(
 
 class FunctionsSetSecretCommand extends Command {
   static description =
-    `Write a function secret and optionally redeploy so the new value lands in the running handler. Agent-grade shortcut for functions set-function-secret + functions redeploy.
+    `Write a function secret and optionally redeploy so the new value lands in the running handler.
 
   Without --redeploy this is a plain secret upsert: the value is
   encrypted at rest but is NOT visible to the running handler until

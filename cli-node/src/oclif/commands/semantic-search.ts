@@ -11,12 +11,12 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 
-// `primitive semantic-search` is the cross-corpus, meaning-aware search
+// `primitive search` is the cross-corpus, meaning-aware search
 // surface. Distinct from `primitive emails list --search ...`, which is
 // keyword-only and inbound-only; this one spans sent + received and can
 // rank semantically.
 //
-// Output mirrors the `emails latest` shape: a fixed-width text table on
+// Output is a compact fixed-width text table on
 // stdout (header on stderr so the rows stay grep/awk-friendly), or the
 // raw envelope as JSON with `--json` for piping into jq.
 
@@ -69,10 +69,10 @@ class SemanticSearchCommand extends Command {
     "Semantic / hybrid / keyword search across received and sent mail";
 
   static examples = [
-    '<%= config.bin %> semantic-search "invoice from acme"',
-    '<%= config.bin %> semantic-search "shipping update" --mode keyword',
-    '<%= config.bin %> semantic-search "kickoff" --corpus inbound --limit 25',
-    "<%= config.bin %> semantic-search renewal --json | jq '.data[].id'",
+    '<%= config.bin %> search "invoice from acme"',
+    '<%= config.bin %> search "shipping update" --mode keyword',
+    '<%= config.bin %> search "kickoff" --corpus inbound --limit 25',
+    "<%= config.bin %> search renewal --json | jq '.data[].id'",
   ];
 
   static args = {

@@ -1,9 +1,13 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import type { SendMailResult } from "@primitivedotdev/api-core";
+import type {
+  ReplyToEmailData,
+  SendMailResult,
+} from "@primitivedotdev/api-core";
 import { replyToEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
+  readJsonBody,
   runWithTiming,
   surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
@@ -12,6 +16,29 @@ import {
 import { readAttachmentFiles } from "../attachments.js";
 import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function assertNoRawBodyConflicts(flags: Record<string, unknown>): void {
+  const conflictingFlags = [
+    "body",
+    "body-file",
+    "body-stdin",
+    "html",
+    "html-file",
+    "html-stdin",
+    "from",
+    "attachment",
+    "wait",
+  ].filter((flag) => flags[flag] !== undefined);
+  if (conflictingFlags.length > 0) {
+    throw new Errors.CLIError(
+      `--raw-body cannot be combined with ${conflictingFlags.map((flag) => `--${flag}`).join(", ")}.`,
+    );
+  }
+}
 
 class ReplyCommand extends Command {
   static description = `Reply to an inbound email.
@@ -82,6 +109,10 @@ class ReplyCommand extends Command {
       description:
         "Block until the receiving MTA returns an outcome. Without --wait, the call returns once Primitive has accepted the reply for delivery.",
     }),
+    "raw-body": Flags.string({
+      description:
+        "Full reply request body as raw JSON. Use for advanced fields not exposed as first-class flags; cannot be combined with message flags.",
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -89,6 +120,48 @@ class ReplyCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(ReplyCommand);
+    const rawBody = readJsonBody({ "raw-body": flags["raw-body"] });
+    if (rawBody !== undefined) {
+      assertNoRawBodyConflicts(flags);
+      if (!isJsonObject(rawBody)) {
+        throw new Errors.CLIError("--raw-body must be a JSON object.");
+      }
+
+      await runWithTiming(flags.time, async () => {
+        const { apiClient, auth, baseUrlOverridden } =
+          await createAuthenticatedCliApiClient({
+            apiKey: flags["api-key"],
+            apiBaseUrl: flags["api-base-url"],
+            configDir: this.config.configDir,
+          });
+        const result = await replyToEmail({
+          body: rawBody as ReplyToEmailData["body"],
+          client: apiClient.client,
+          path: { id: flags.id },
+          responseStyle: "fields",
+        });
+        if (result.error) {
+          const errorPayload = extractErrorPayload(result.error);
+          writeErrorWithHints(errorPayload);
+          surfaceUnauthorizedHint({
+            auth,
+            baseUrlOverridden,
+            configDir: this.config.configDir,
+            payload: errorPayload,
+          });
+          process.exitCode = 1;
+          return;
+        }
+        const envelope = result.data as { data?: SendMailResult } | undefined;
+        writeIdempotentReplayBannerIfReplay(envelope?.data, {
+          write: (chunk) => {
+            process.stderr.write(chunk);
+          },
+        });
+        this.log(JSON.stringify(envelope?.data ?? null, null, 2));
+      });
+      return;
+    }
 
     const bodies = resolveMessageBodies({
       body: flags.body,

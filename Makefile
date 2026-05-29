@@ -69,11 +69,11 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" completion fish >/dev/null && \
 	"$$bin" completion bash >/dev/null && \
 	"$$bin" send --help | grep -q -- "--attachment" && \
+	"$$bin" send --help | grep -q -- "--raw-body" && \
 	"$$bin" reply --help | grep -q -- "--wait" && \
 	"$$bin" reply --help | grep -q -- "--attachment" && \
+	"$$bin" reply --help | grep -q -- "--raw-body" && \
 	if "$$bin" reply --help | grep -q -- "--wait-timeout-ms"; then echo "reply help must not advertise unsupported --wait-timeout-ms"; exit 1; fi && \
-	"$$bin" sending reply-to-email --help | grep -q -- "attachments" && \
-	"$$bin" sending send-email --help | grep -q -- "attachments" && \
 	"$$bin" domains list --json --help | grep -q -- "--json" && \
 	"$$bin" domains list --help | grep -q -- "--json" && \
 	"$$bin" sending permissions --help | grep -q -- "where you may send mail to" && \
@@ -87,17 +87,12 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" domains zone-file --help | grep -q -- "--outbound-only" && \
 	"$$bin" inbox status --help | grep -q -- "readiness" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
-	"$$bin" signin --help | grep -q -- "signin <email>" && \
-	"$$bin" signin --help | grep -q -- "signin confirm" && \
 	"$$bin" login --help | grep -q -- "login <email>" && \
 	"$$bin" login --help | grep -q -- "login confirm" && \
 	"$$bin" login browser --help | grep -q -- "Log in with browser approval" && \
 	"$$bin" login confirm --help | grep -q -- "Confirm email-code login" && \
-	"$$bin" otp --help | grep -q -- "Start email-code auth" && \
-	"$$bin" otp confirm --help | grep -q -- "Confirm email-code auth" && \
-	"$$bin" signin confirm --help | grep -q -- "Confirm email-code sign-in" && \
-	"$$bin" signin resend --help | grep -q -- "Resend email-code sign-in code" && \
-	"$$bin" signin otp --help | grep -q -- "Start OTP sign-in" && \
+	if "$$bin" signin --help >"$$smoke_dir/signin-help.out" 2>"$$smoke_dir/signin-help.err"; then echo "signin should not be public"; exit 1; fi && \
+	if "$$bin" otp --help >"$$smoke_dir/otp-help.out" 2>"$$smoke_dir/otp-help.err"; then echo "otp should not be public"; exit 1; fi && \
 	"$$bin" logout --help | grep -q -- "--force" && \
 	force_home="$$smoke_dir/force-logout-home" && \
 	force_root="$$force_home/.config" && \
@@ -113,7 +108,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	lock_root="$$lock_home/.config" && \
 	lock_dir="$$lock_root/primitive" && \
 	mkdir -p "$$lock_dir/credentials.lock" && \
-	if HOME="$$lock_home" XDG_CONFIG_HOME="$$lock_root" PRIMITIVE_CONFIG_DIR= "$$bin" signin smoke@example.com --signup-code invite --accept-terms >"$$smoke_dir/auth-lock.out" 2>"$$smoke_dir/auth-lock.err"; then echo "signin should fail while credentials lock exists"; exit 1; fi && \
+	if HOME="$$lock_home" XDG_CONFIG_HOME="$$lock_root" PRIMITIVE_CONFIG_DIR= "$$bin" login smoke@example.com --signup-code invite --accept-terms >"$$smoke_dir/auth-lock.out" 2>"$$smoke_dir/auth-lock.err"; then echo "login should fail while credentials lock exists"; exit 1; fi && \
 	grep -q -- "primitive logout --force" "$$smoke_dir/auth-lock.err" && \
 	"$$bin" chat --help | grep -q -- "follow-up commands" && \
 	if "$$bin" chat --help | grep -q -- "--subject"; then echo "chat help must not advertise --subject"; exit 1; fi && \
@@ -132,7 +127,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	grep -q -- "No local chat 0" "$$smoke_dir/chat-reply-flag-id.err" && \
 	"$$bin" threads --help | grep -q -- "primitive threads get --id <thread-id>" && \
 	"$$bin" threads get --help | grep -q -- "Get a conversation thread by id" && \
-	"$$bin" threads get-thread --help | grep -q -- "Get a conversation thread by id" && \
+	if "$$bin" threads get-thread --help >"$$smoke_dir/threads-get-thread.out" 2>"$$smoke_dir/threads-get-thread.err"; then echo "threads get-thread should not be public"; exit 1; fi && \
 	function_dir="$$smoke_dir/template-check" && \
 	"$$bin" functions test --help | grep -q -- "completed" && \
 	"$$bin" functions init template-check --out-dir "$$function_dir" >"$$smoke_dir/functions-init.txt" && \
@@ -186,7 +181,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	for i in 1 2 3 4 5 6 7 8 9 10; do test -s "$$filter_port_file" && break; sleep 0.1; done && \
 	test -s "$$filter_port_file" || { cat "$$filter_server_log"; exit 1; } && \
 	filter_port=$$(cat "$$filter_port_file") && \
-	"$$bin" filters update-filter --id "$$filter_id" --no-enabled --api-key prim_test --api-base-url "http://127.0.0.1:$$filter_port/v1" > "$$smoke_dir/filter.json" && \
+	"$$bin" filters update --id "$$filter_id" --no-enabled --api-key prim_test --api-base-url "http://127.0.0.1:$$filter_port/v1" > "$$smoke_dir/filter.json" && \
 	node -e 'const fs = require("node:fs"); const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (data.enabled !== false) throw new Error("expected enabled=false");' "$$smoke_dir/filter.json" \
 	) && \
 	zone_id="33333333-3333-4333-8333-333333333333" && \

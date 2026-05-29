@@ -170,7 +170,7 @@ export class ConfigSetCommand extends Command {
     );
     if (removedCredentials) {
       process.stderr.write(
-        "Removed saved Primitive CLI credentials. Run `primitive signin` to authenticate in the active environment.\n",
+        "Removed saved Primitive CLI credentials. Run `primitive login` to authenticate in the active environment.\n",
       );
     }
   }
@@ -199,7 +199,7 @@ export class ConfigUseCommand extends Command {
     );
     if (removedCredentials) {
       process.stderr.write(
-        "Removed saved Primitive CLI credentials. Run `primitive signin` to authenticate in the active environment.\n",
+        "Removed saved Primitive CLI credentials. Run `primitive login` to authenticate in the active environment.\n",
       );
     }
   }

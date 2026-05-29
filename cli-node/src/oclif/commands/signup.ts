@@ -1186,35 +1186,4 @@ export class SignupStatusCommand extends Command {
   }
 }
 
-export class SignupInteractiveCommand extends Command {
-  static description =
-    "Run the full signup flow in one interactive terminal session.";
-
-  static summary = "Run interactive account signup";
-
-  static examples = ["<%= config.bin %> signup interactive"];
-
-  static flags = commonStartFlags();
-
-  async run(): Promise<void> {
-    const { flags } = await this.parse(SignupInteractiveCommand);
-    let releaseCredentialsLock: () => void;
-    try {
-      releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      throw cliError(detail);
-    }
-
-    try {
-      await runSignupInteractiveWithCredentialLock({
-        configDir: this.config.configDir,
-        flags,
-      });
-    } finally {
-      releaseCredentialsLock();
-    }
-  }
-}
-
 export default SignupCommand;

@@ -1,17 +1,21 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { openapiDocument } from "@primitivedotdev/api-core";
+import { operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
-import { CANONICAL_OPERATION_ALIASES } from "../../src/oclif/index.js";
+import {
+  isPublicGeneratedOperation,
+  publicOperationCommandId,
+} from "../../src/oclif/command-surface.js";
 
-function normalize(value: string): string {
-  return value.toLowerCase().replace(/\s+/g, "-");
-}
-
-const HAND_ROLLED_VISIBLE_TOPICS = new Set(["chat", "login", "otp", "signin"]);
+const HAND_ROLLED_VISIBLE_TOPICS = new Set([
+  "chat",
+  "inbox",
+  "login",
+  "search",
+]);
 
 describe("oclif topics", () => {
-  it("has a topic entry for every spec tag", () => {
+  it("has a topic entry for every public generated operation topic", () => {
     const packageJsonPath = fileURLToPath(
       new URL("../../package.json", import.meta.url),
     );
@@ -19,18 +23,23 @@ describe("oclif topics", () => {
       oclif: { topics: Record<string, unknown> };
     };
     const topicKeys = Object.keys(packageJson.oclif.topics);
-    const specTags = (openapiDocument.tags as { name: string }[]).map(
-      (tag) => tag.name,
-    );
+    const publicGeneratedTopics = operationManifest
+      .filter(isPublicGeneratedOperation)
+      .map((operation) =>
+        publicOperationCommandId(operation).slice(
+          0,
+          publicOperationCommandId(operation).indexOf(":"),
+        ),
+      );
 
-    const missing = specTags
-      .map((tag) => normalize(tag))
-      .filter((normalizedTag) => !topicKeys.includes(normalizedTag));
+    const missing = [...new Set(publicGeneratedTopics)].filter(
+      (topic) => !topicKeys.includes(topic),
+    );
 
     expect(missing).toEqual([]);
   });
 
-  it("has a spec tag or canonical alias for every topic entry", () => {
+  it("has a public operation or hand-rolled command for every visible topic entry", () => {
     const packageJsonPath = fileURLToPath(
       new URL("../../package.json", import.meta.url),
     );
@@ -40,19 +49,20 @@ describe("oclif topics", () => {
     const visibleTopicKeys = Object.entries(packageJson.oclif.topics)
       .filter(([, topic]) => !topic.hidden)
       .map(([name]) => name);
-    const normalizedSpecTags = (openapiDocument.tags as { name: string }[]).map(
-      (tag) => normalize(tag.name),
-    );
-    const aliasTopics = new Set(
-      Object.keys(CANONICAL_OPERATION_ALIASES).map((alias) =>
-        alias.slice(0, alias.indexOf(":")),
-      ),
+    const publicGeneratedTopics = new Set(
+      operationManifest
+        .filter(isPublicGeneratedOperation)
+        .map((operation) =>
+          publicOperationCommandId(operation).slice(
+            0,
+            publicOperationCommandId(operation).indexOf(":"),
+          ),
+        ),
     );
 
     const orphans = visibleTopicKeys.filter(
       (topic) =>
-        !normalizedSpecTags.includes(topic) &&
-        !aliasTopics.has(topic) &&
+        !publicGeneratedTopics.has(topic) &&
         !HAND_ROLLED_VISIBLE_TOPICS.has(topic),
     );
 

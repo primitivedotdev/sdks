@@ -295,7 +295,7 @@ class LoginCommand extends Command {
       throw cliError("Primitive API returned an empty CLI login response.");
     }
 
-    process.stderr.write(`Your sign-in code is: ${start.user_code}\n`);
+    process.stderr.write(`Your login code is: ${start.user_code}\n`);
     if (!flags["no-browser"]) {
       openBrowser(start.verification_uri_complete);
       process.stderr.write("Opening Primitive in your browser...\n");

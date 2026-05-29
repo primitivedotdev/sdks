@@ -22,7 +22,7 @@ import {
 } from "../api-command.js";
 import { DEFAULT_EMAIL_POLL_INTERVAL_SECONDS, sleep } from "./emails-poll.js";
 
-// `primitive functions:test-function` is the agent-grade shortcut for
+// `primitive functions test` is the agent-grade shortcut for
 // triggering a real round-trip and (optionally) waiting for the
 // function to actually run before exiting. The underlying
 // `POST /functions/{id}/test` operation only kicks off a synthetic
@@ -31,17 +31,17 @@ import { DEFAULT_EMAIL_POLL_INTERVAL_SECONDS, sleep } from "./emails-poll.js";
 // time-sink in the verification loop.
 //
 // Shapes:
-//   primitive functions:test-function --id <fn-id>
+//   primitive functions test --id <fn-id>
 //       Fire-and-forget. Returns the TestInvocationResult JSON
 //       (recipient, poll_since, watch_url, trace_url). Same behavior as the
-//       auto-generated functions:test-function it replaces.
+//       auto-generated functions:test-function operation it replaces.
 //
-//   primitive functions:test-function --id <fn-id> --wait
+//   primitive functions test --id <fn-id> --wait
 //       Blocks until the server-owned test-run trace reaches completed,
 //       failed, or send_failed (or --timeout elapses). Exits non-zero on
 //       timeout or terminal failure.
 //
-//   primitive functions:test-function --id <fn-id> --wait --show-sends
+//   primitive functions test --id <fn-id> --wait --show-sends
 //       Same as --wait, plus prints the inbound's `replies` array
 //       (every outbound the function emitted while processing the
 //       test inbound), with each send's id, status, recipient,
@@ -49,7 +49,7 @@ import { DEFAULT_EMAIL_POLL_INTERVAL_SECONDS, sleep } from "./emails-poll.js";
 //
 // The auto-generated functions:test-function entry is filtered out
 // of the generated-command set in oclif/index.ts so this hand-rolled
-// version owns the id.
+// version owns the public id.
 
 const DEFAULT_WAIT_TIMEOUT_SECONDS = 60;
 

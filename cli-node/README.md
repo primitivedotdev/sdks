@@ -27,7 +27,7 @@ This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@pri
 ## Quickstart
 
 ```bash
-primitive signin
+primitive login
 primitive whoami
 primitive functions templates
 primitive functions init my-fn
@@ -35,16 +35,16 @@ cd my-fn && npm install && npm run build
 primitive functions deploy --name my-fn --file ./dist/handler.js
 
 primitive send --to alice@example.com --body "Hello!" --wait
-primitive emails latest --limit 5
+primitive emails list --limit 5
 ```
 
 Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
 
 ## Authentication
 
-Use `primitive signin` or `primitive login` for existing accounts. With no email, both use browser approval; `primitive signin browser` and `primitive login browser` are the explicit browser forms.
+Use `primitive login` for existing accounts. With no email it uses browser approval; `primitive login browser` is the explicit browser form.
 
-Use `primitive signin <email> --signup-code <code> --accept-terms`, then `primitive signin confirm <email> <code>` for email-code sign-in. `primitive login <email>` and `primitive otp <email>` support the same email-code flow with matching `confirm` and `resend` subcommands.
+Use `primitive login <email> --signup-code <code> --accept-terms`, then `primitive login confirm <email> <code>` for email-code login. Use `primitive login resend <email>` to send a new code for a pending login.
 
 Use `primitive logout --force` to remove local CLI credentials, pending email-code auth state, and stale credential locks without contacting Primitive. This is the recovery command when an interrupted auth command leaves the CLI saying another credential operation is already in progress.
 
@@ -69,7 +69,7 @@ primitive functions logs --id <function-id>
 primitive deliveries replay --id <delivery-id>
 ```
 
-Generated API commands remain available for compatibility and full schema parity, for example `primitive emails:list-emails` and `primitive sending:reply-to-email`.
+Commands use one canonical public spelling, for example `primitive emails list` and `primitive reply`.
 
 ## Migrating from `@primitivedotdev/sdk` CLI
 

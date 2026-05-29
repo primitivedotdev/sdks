@@ -467,7 +467,7 @@ export function extractErrorCode(payload: unknown): string | undefined {
 // special-case every command.
 const ERROR_CODE_HINTS = {
   [API_ERROR_CODES.unauthorized]:
-    "Hint: run `primitive signin`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify auth is live.",
+    "Hint: run `primitive login`, pass --api-key explicitly, or set PRIMITIVE_API_KEY in your environment. `primitive whoami` is the fastest way to verify auth is live.",
 } as const satisfies Partial<Record<ApiErrorCode, string>>;
 
 // Network-layer hints keyed by Node's `cause.code` on a fetch failure.
@@ -551,7 +551,7 @@ export function surfaceUnauthorizedHint(params: {
   }
 
   process.stderr.write(
-    "Your saved Primitive CLI OAuth session was rejected. If the command was working a moment ago, please retry; brief retries often clear transient rejections. If it keeps failing, run `primitive logout && primitive signin` to mint a fresh session.\n",
+    "Your saved Primitive CLI OAuth session was rejected. If the command was working a moment ago, please retry; brief retries often clear transient rejections. If it keeps failing, run `primitive logout && primitive login` to mint a fresh session.\n",
   );
 }
 
@@ -576,7 +576,7 @@ export function formatElapsed(ms: number): string {
 //
 // Used by every `--time` callsite across the CLI: generated
 // operation commands and hand-coded shortcuts (send, whoami,
-// emails:latest, describe). Pulled out as a helper so timing is
+// describe). Pulled out as a helper so timing is
 // uniform across commands and a single render-format change
 // propagates everywhere.
 export async function runWithTiming<T>(
@@ -876,15 +876,15 @@ export const OPERATION_HINTS: Record<string, string> = {
   getSendPermissions:
     "Tip: this command answers where you may send mail to. To find usable sender domains for --from, run `primitive domains list` or `primitive inbox status` and use an address at an active verified domain.",
   sendEmail:
-    "Tip: prefer `primitive send --to <address> --body <text> --attachment <file>` for file attachments. This raw command exists for callers passing JSON.",
+    "Tip: use `primitive send --to <address> --body <text> --attachment <file>` for file attachments, or `primitive send --raw-body <json>` for advanced fields.",
   createFunction:
-    "Tip: prefer `primitive functions deploy --name <name> --file <bundle>` for file-input ergonomics. This raw command exists for callers passing JSON.",
+    "Tip: use `primitive functions deploy --name <name> --file <bundle>` for file-input ergonomics.",
   updateFunction:
-    "Tip: prefer `primitive functions redeploy --id <id> --file <bundle>` for file-input ergonomics. This raw command exists for callers passing JSON.",
+    "Tip: use `primitive functions redeploy --id <id> --file <bundle>` for file-input ergonomics.",
   createFunctionSecret:
-    "Tip: prefer `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
+    "Tip: use `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live.",
   setFunctionSecret:
-    "Tip: prefer `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
+    "Tip: use `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live.",
 };
 
 export function createOperationCommand(
@@ -1016,7 +1016,7 @@ export function createOperationCommand(
           // same id IS visible in `endpoints:list-endpoints`. The hook
           // looks the id up via listEndpoints; if it matches a
           // function-kind row, it prints a redirect to
-          // `functions:test-function` (with the function id) so the
+          // `functions test` (with the function id) so the
           // caller does not have to translate the id themselves.
           // No-op for any other operation, any other error code, or
           // when the lookup misses or fails.
@@ -1115,7 +1115,7 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
   listEndpoints:
     "(no results) No webhook endpoints configured. Add one with `primitive endpoints create --url <your-url>`.",
   listEmails:
-    "(no results) No inbound emails received yet on this account. Send one to a verified domain to populate this list. For a compact view, prefer `primitive emails latest`.",
+    "(no results) No inbound emails received yet on this account. Send one to a verified domain to populate this list.",
   listDomains:
     "(no results) No domains on this account. Add one with `primitive domains add --domain <yourdomain.example>`.",
   listFilters: "(no results) No filter rules configured.",
@@ -1125,7 +1125,8 @@ export const EMPTY_RESULT_HINTS: Record<string, string> = {
 
 function canonicalizeCliReferences(description: string): string {
   return description
-    .replaceAll("`primitive emails:latest`", "`primitive emails latest`")
+    .replaceAll("`primitive emails:latest`", "`primitive emails list`")
+    .replaceAll("`primitive emails:list`", "`primitive emails list`")
     .replaceAll(
       "`primitive describe emails:get-email | jq '.responseSchema.properties'`",
       "`primitive describe emails:get | jq '.responseSchema.properties'`",

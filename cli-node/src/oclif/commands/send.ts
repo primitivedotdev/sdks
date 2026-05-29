@@ -1,9 +1,10 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import type { SendMailResult } from "@primitivedotdev/api-core";
+import type { SendEmailData, SendMailResult } from "@primitivedotdev/api-core";
 import { sendEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
+  readJsonBody,
   runWithTiming,
   surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
@@ -14,8 +15,35 @@ import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner
 import { resolveMessageBodies } from "../message-body-sources.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 
-// `primitive send` is the agent-grade shortcut for the most common
-// case: send a fresh outbound email. It wraps `sending:send-email`
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function assertNoRawBodyConflicts(flags: Record<string, unknown>): void {
+  const conflictingFlags = [
+    "to",
+    "from",
+    "subject",
+    "body",
+    "body-file",
+    "body-stdin",
+    "html",
+    "html-file",
+    "html-stdin",
+    "attachment",
+    "in-reply-to",
+    "wait",
+    "wait-timeout-ms",
+  ].filter((flag) => flags[flag] !== undefined);
+  if (conflictingFlags.length > 0) {
+    throw new Errors.CLIError(
+      `--raw-body cannot be combined with ${conflictingFlags.map((flag) => `--${flag}`).join(", ")}.`,
+    );
+  }
+}
+
+// `primitive send` is the agent-grade command for the most common
+// case: send a fresh outbound email. It calls the send-email API
 // with two ergonomic defaults that the underlying operation can't
 // express through manifest-driven flag generation alone:
 //
@@ -34,8 +62,8 @@ import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 // operation distinguishes `body_text` and `body_html`; this
 // shortcut keeps it simple by exposing `--body` for text and
 // `--html` for the HTML alternative. Users who need both can pass
-// both flags or fall back to `sending:send-email` for the full
-// flag list.
+// both flags. For less common request fields, pass the full JSON
+// payload with `--raw-body`.
 //
 // `--attachment` reads file bytes and sends them as MIME attachments.
 // `--body-file` reads a file as message text; it never attaches that
@@ -48,15 +76,14 @@ import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 // HTTPS bearer auth is implicit: saved OAuth login or an explicit API key.
 
 class SendCommand extends Command {
-  static description =
-    `Send an outbound email. Agent-grade shortcut for \`sending send\` with sensible defaults.
+  static description = `Send an outbound email with sensible defaults.
 
   --from defaults to agent@<your-first-verified-outbound-domain> when omitted.
   --subject defaults to the first line of the body when omitted.
   --attachment attaches a file; repeat it to attach multiple files.
 
-  For the full flag set (custom message-id threading on the wire,
-  references arrays, etc.), use \`primitive sending send\`.`;
+  For complex fields that are not exposed as first-class flags,
+  pass the complete send-mail JSON payload with --raw-body.`;
 
   static summary = "Send an email (simplified, agent-friendly)";
 
@@ -84,7 +111,6 @@ class SendCommand extends Command {
     }),
     to: Flags.string({
       description: "Recipient address (e.g. alice@example.com).",
-      required: true,
     }),
     from: Flags.string({
       description:
@@ -135,6 +161,10 @@ class SendCommand extends Command {
       description:
         "Maximum time to wait when --wait is set. Defaults to 30000ms.",
     }),
+    "raw-body": Flags.string({
+      description:
+        "Full send-mail request body as raw JSON. Use for advanced fields not exposed as first-class flags; cannot be combined with message flags.",
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
@@ -142,6 +172,52 @@ class SendCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(SendCommand);
+    const rawBody = readJsonBody({ "raw-body": flags["raw-body"] });
+    if (rawBody !== undefined) {
+      assertNoRawBodyConflicts(flags);
+      if (!isJsonObject(rawBody)) {
+        throw new Errors.CLIError("--raw-body must be a JSON object.");
+      }
+
+      await runWithTiming(flags.time, async () => {
+        const { apiClient, auth, baseUrlOverridden } =
+          await createAuthenticatedCliApiClient({
+            apiKey: flags["api-key"],
+            apiBaseUrl: flags["api-base-url"],
+            configDir: this.config.configDir,
+          });
+        const result = await sendEmail({
+          body: rawBody as SendEmailData["body"],
+          client: apiClient.client,
+          responseStyle: "fields",
+        });
+        if (result.error) {
+          const errorPayload = extractErrorPayload(result.error);
+          writeErrorWithHints(errorPayload);
+          surfaceUnauthorizedHint({
+            auth,
+            baseUrlOverridden,
+            configDir: this.config.configDir,
+            payload: errorPayload,
+          });
+          process.exitCode = 1;
+          return;
+        }
+        const envelope = result.data as { data?: SendMailResult } | undefined;
+        writeIdempotentReplayBannerIfReplay(envelope?.data, {
+          write: (chunk) => {
+            process.stderr.write(chunk);
+          },
+        });
+        this.log(JSON.stringify(envelope?.data ?? null, null, 2));
+      });
+      return;
+    }
+
+    if (!flags.to) {
+      throw new Errors.CLIError("Either --to or --raw-body is required.");
+    }
+    const to = flags.to;
 
     const bodies = resolveMessageBodies({
       body: flags.body,
@@ -178,7 +254,7 @@ class SendCommand extends Command {
       const result = await sendEmail({
         body: {
           from,
-          to: flags.to,
+          to,
           subject,
           ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
           ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),

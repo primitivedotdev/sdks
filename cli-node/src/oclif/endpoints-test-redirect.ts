@@ -9,7 +9,7 @@
 // returns `not_found`, the dispatcher in `api-command.ts` calls
 // `detectFunctionEndpoint` to see whether the id actually belongs to a
 // function-kind endpoint owned by the caller. If yes, we replace the
-// generic envelope with a redirect to `functions:test-function`,
+// generic envelope with a redirect to `functions test`,
 // surfacing both the endpoint id and the function id so the caller
 // does not have to look the function id up themselves.
 //
@@ -133,7 +133,7 @@ export interface MaybeRedirectInputs {
 // Post-error hook: if the operation that just failed is
 // `endpoints:test-endpoint`, the failure is a `not_found`, and the
 // caller's id matches a function-kind endpoint they own, print a
-// redirect to `functions:test-function`. Returns the resolved match
+// redirect to `functions test`. Returns the resolved match
 // so the caller (and the test) can assert the branch taken without
 // scraping stderr.
 export async function maybeWriteFunctionEndpointRedirect(

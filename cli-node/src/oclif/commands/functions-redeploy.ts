@@ -185,7 +185,7 @@ export async function runRedeployWithSecrets(
 
 class FunctionsRedeployCommand extends Command {
   static description =
-    `Update or redeploy a function from a bundled handler file. Agent-grade shortcut for functions:update-function.
+    `Update or redeploy a function from a bundled handler file.
 
   Use to push a new bundle OR to refresh secret bindings into the
   running handler. The same file is fine for both: the deploy reads

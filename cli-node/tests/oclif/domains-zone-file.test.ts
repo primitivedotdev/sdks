@@ -6,11 +6,9 @@ import DomainsZoneFileCommand, {
 import { COMMANDS } from "../../src/oclif/index.js";
 
 describe("domains zone-file command", () => {
-  it("registers the shortcut and generated-operation command ids", () => {
+  it("registers only the canonical shortcut command id", () => {
     expect(COMMANDS["domains:zone-file"]).toBe(DomainsZoneFileCommand);
-    expect(COMMANDS["domains:download-domain-zone-file"]).toBe(
-      DomainsZoneFileCommand,
-    );
+    expect(COMMANDS["domains:download-domain-zone-file"]).toBeUndefined();
   });
 
   it("builds the API-owned zone-file download URL", () => {

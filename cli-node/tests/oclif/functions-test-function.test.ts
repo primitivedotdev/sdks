@@ -7,18 +7,17 @@ import FunctionsTestFunctionCommand, {
 } from "../../src/oclif/commands/functions-test-function.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
-// Smoke tests for the hand-rolled functions:test-function command.
+// Smoke tests for the hand-rolled functions:test command.
 // Verifies that the override is registered (so the auto-generated
 // wrapper does not shadow it) and that the expected --wait /
 // --show-sends / --timeout flags are present. The polling behavior
 // itself is exercised via the existing emails-poll helpers, which
 // have their own coverage in emails-poll.test.ts.
 
-describe("functions:test-function command registration", () => {
-  it("registers the hand-rolled command at the functions:test-function id", () => {
-    expect(COMMANDS["functions:test-function"]).toBe(
-      FunctionsTestFunctionCommand,
-    );
+describe("functions:test command registration", () => {
+  it("registers the hand-rolled command at the functions:test id", () => {
+    expect(COMMANDS["functions:test"]).toBe(FunctionsTestFunctionCommand);
+    expect(COMMANDS["functions:test-function"]).toBeUndefined();
   });
 
   it("exposes the --wait flag described as blocking", () => {

@@ -19,7 +19,6 @@ import {
   runSignupStartWithCredentialLock,
   runSignupStatus,
   SignupConfirmCommand,
-  SignupInteractiveCommand,
   SignupResendCommand,
   SignupStatusCommand,
   savePendingAgentSignup,
@@ -139,7 +138,7 @@ describe("agent signup commands", () => {
 
   it("routes exact signup command shapes", () => {
     expect(COMMANDS["signup:confirm"]).toBe(SignupConfirmCommand);
-    expect(COMMANDS["signup:interactive"]).toBe(SignupInteractiveCommand);
+    expect(COMMANDS["signup:interactive"]).toBeUndefined();
     expect(COMMANDS["signup:resend"]).toBe(SignupResendCommand);
     expect(COMMANDS["signup:status"]).toBe(SignupStatusCommand);
     expect(SignupResendCommand.args.email.required).toBe(false);

@@ -263,13 +263,10 @@ export async function runDeployWithSecrets(
 }
 
 class FunctionsDeployCommand extends Command {
-  static description =
-    `Deploy a new function from a bundled handler file. Agent-grade shortcut for functions:create-function.
+  static description = `Deploy a new function from a bundled handler file.
 
   Reads the bundle off disk (--file) instead of forcing the caller to
-  serialize the source into a JSON body. Use the underlying operation
-  \`functions:create-function\` if you need the full flag surface
-  (raw-body JSON, etc.).
+  serialize the source into a JSON body.
 
   Pass secret source flags to seed bindings in the same command. Keys
   must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters, digits,

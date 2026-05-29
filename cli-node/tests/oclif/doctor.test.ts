@@ -180,7 +180,7 @@ describe("checkApiKey", () => {
     });
     expect(outcome.status).toBe("fail");
     if (outcome.status !== "fail") return;
-    expect(outcome.hint).toMatch(/primitive signin/);
+    expect(outcome.hint).toMatch(/primitive login/);
     expect(outcome.hint).toMatch(/PRIMITIVE_API_KEY/);
   });
 
@@ -206,7 +206,7 @@ describe("checkApiKey", () => {
     }
   });
 
-  it("fails with a sign-in hint for legacy saved API-key credentials", () => {
+  it("fails with a login hint for legacy saved API-key credentials", () => {
     const tmp = mkdtempSync(join(tmpdir(), "primitive-doctor-test-"));
     try {
       writeFileSync(
@@ -221,7 +221,7 @@ describe("checkApiKey", () => {
       expect(outcome.status).toBe("fail");
       if (outcome.status !== "fail") return;
       expect(outcome.message).toMatch(/legacy API-key login state/);
-      expect(outcome.hint).toMatch(/primitive signin/);
+      expect(outcome.hint).toMatch(/primitive login/);
       expect(outcome.hint).toMatch(/--api-key/);
     } finally {
       rmSync(tmp, { force: true, recursive: true });

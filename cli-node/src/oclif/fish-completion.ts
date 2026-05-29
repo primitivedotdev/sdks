@@ -3,6 +3,10 @@ import {
   operationManifest,
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
+import {
+  isPublicGeneratedOperation,
+  publicOperationCommandId,
+} from "./command-surface.js";
 
 type OpenApiTag = {
   description?: string;
@@ -36,15 +40,26 @@ function tagDescriptions(): Map<string, string> {
 }
 
 function operationCondition(operation: PrimitiveOperationManifest): string {
-  return `__fish_${fishEscape(BIN_PLACEHOLDER)}_using_operation ${fishEscape(operation.tagCommand)} ${fishEscape(operation.command)}`;
+  const [topic, command] = publicCommandParts(operation);
+  return `__fish_${fishEscape(BIN_PLACEHOLDER)}_using_operation ${fishEscape(topic)} ${fishEscape(command)}`;
 }
 
 const BIN_PLACEHOLDER = "__BIN__";
 
+function publicCommandParts(
+  operation: PrimitiveOperationManifest,
+): [topic: string, command: string] {
+  const [topic, command] = publicOperationCommandId(operation).split(":");
+  return [topic ?? operation.tagCommand, command ?? operation.command];
+}
+
 export function renderFishCompletion(binName: string): string {
   const tagDescriptionByCommand = tagDescriptions();
+  const publicOperations = operationManifest.filter(isPublicGeneratedOperation);
   const topLevelTopics = [
-    ...new Set(operationManifest.map((operation) => operation.tagCommand)),
+    ...new Set(
+      publicOperations.map((operation) => publicCommandParts(operation)[0]),
+    ),
   ];
   const lines = [
     `function __fish_${binName}_needs_command`,
@@ -88,12 +103,13 @@ export function renderFishCompletion(binName: string): string {
   );
 
   for (const topic of topLevelTopics) {
-    const topicOperations = operationManifest.filter(
-      (operation) => operation.tagCommand === topic,
+    const topicOperations = publicOperations.filter(
+      (operation) => publicCommandParts(operation)[0] === topic,
     );
     for (const operation of topicOperations) {
+      const [, command] = publicCommandParts(operation);
       lines.push(
-        `complete -c ${binName} -f -n '__fish_${binName}_topic_needs_subcommand ${fishEscape(topic)}' -a '${fishEscape(operation.command)}' -d '${fishEscape(operation.summary ?? `${operation.method} ${operation.path}`)}'`,
+        `complete -c ${binName} -f -n '__fish_${binName}_topic_needs_subcommand ${fishEscape(topic)}' -a '${fishEscape(command)}' -d '${fishEscape(operation.summary ?? `${operation.method} ${operation.path}`)}'`,
       );
 
       for (const parameter of [
@@ -122,7 +138,7 @@ export function renderFishCompletion(binName: string): string {
 
       if (operation.hasJsonBody) {
         lines.push(
-          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'body' -r -d 'JSON request body'`,
+          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'raw-body' -r -d 'Full request body as raw JSON'`,
           `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l 'body-file' -r -d 'Path to a JSON file used as the request body'`,
         );
       }

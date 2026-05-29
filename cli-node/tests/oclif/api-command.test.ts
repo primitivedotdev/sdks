@@ -421,7 +421,7 @@ describe("surfaceUnauthorizedHint", () => {
     expect(writes.join("")).toContain(
       "Your saved Primitive CLI OAuth session was rejected",
     );
-    expect(writes.join("")).toContain("primitive logout && primitive signin");
+    expect(writes.join("")).toContain("primitive logout && primitive login");
   });
 
   it("warns about overridden base URL when saved URL differs and preserves credentials", () => {
@@ -797,14 +797,14 @@ describe("createOperationCommand description", () => {
   it("renders canonical command names in generated descriptions", () => {
     const op = makeOperation({
       description:
-        "Use `primitive emails:latest` and `primitive describe emails:get-email | jq '.responseSchema.properties'`.",
+        "Use `primitive emails:list` and `primitive describe emails:get-email | jq '.responseSchema.properties'`.",
     });
     const Cmd = createOperationCommand(op) as unknown as {
       description: string;
     };
-    expect(Cmd.description).toContain("`primitive emails latest`");
+    expect(Cmd.description).toContain("`primitive emails list`");
     expect(Cmd.description).toContain("`primitive describe emails:get | jq");
-    expect(Cmd.description).not.toContain("emails:latest");
+    expect(Cmd.description).not.toContain("emails:list");
     expect(Cmd.description).not.toContain("emails:get-email");
   });
 

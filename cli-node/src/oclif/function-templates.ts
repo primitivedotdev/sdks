@@ -259,7 +259,7 @@ export default {
       // \`Re: <parent>\` subject, threading headers, and the
       // in_reply_to_email_id foreign key automatically. The FK is
       // what populates the inbound's \`replies\` array on
-      // GET /emails/{id}; without it, \`primitive functions:test-function
+      // GET /emails/{id}; without it, \`primitive functions test
       // --show-sends\` would report no outbound emails for this handler
       // because the join would miss. Use client.send only when you
       // need to send to a different address than the inbound sender,
@@ -387,7 +387,7 @@ by the \`@primitivedotdev/cli\` package; install with
 \`npm install -g @primitivedotdev/cli\` or run via
 \`npx @primitivedotdev/cli@latest <command>\`). It requires
 \`PRIMITIVE_API_KEY\` to be set in your shell (or pass \`--api-key\`).
-Run \`primitive signin\` once to save a key in your CLI config if you
+Run \`primitive login\` once to save a key in your CLI config if you
 prefer that to an env var.
 
 After the first deploy, copy the returned function id into your shell:

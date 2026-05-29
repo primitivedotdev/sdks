@@ -39,18 +39,12 @@
       "chat": {
         "description": "Chat with agents over email. Use `primitive chat <email> <message>` to start, `primitive chat reply <message>` to continue the active chat, or `primitive chat reply <id> <message>` to reply in a specific local chat."
       },
-      "cli": {
-        "description": "CLI authentication"
-      },
       "config": {
         "description": "Manage local Primitive CLI request environments",
         "hidden": true
       },
       "account": {
         "description": "Manage your account settings, storage, and webhook secret"
-      },
-      "agent": {
-        "description": "Agent signup and authentication API operations"
       },
       "domains": {
         "description": "Claim, verify, manage email domains, and download DNS zone files"
@@ -59,28 +53,22 @@
         "description": "Check inbound email setup and processing readiness. Prefer `primitive inbox setup` for a guided setup path and `primitive inbox status` for the readiness table."
       },
       "emails": {
-        "description": "List, inspect, and wait for received emails. Prefer task aliases like `primitive emails list`, `primitive emails get`, `primitive emails latest`, `primitive emails wait`, and `primitive emails watch`; generated API names remain available for compatibility."
+        "description": "List, inspect, search, and wait for received emails. Use `primitive emails list`, `primitive emails get`, `primitive emails search`, `primitive emails wait`, and `primitive emails watch`."
       },
       "search": {
-        "description": "Semantic, hybrid, and keyword search across received and sent mail. Use `primitive semantic-search <query>`."
+        "description": "Semantic, hybrid, and keyword search across received and sent mail. Use `primitive search <query>`."
       },
       "sending": {
         "description": "Send outbound emails. Prefer `primitive send` for fresh sends and `primitive reply --id <inbound-id>` for replies. Use `primitive domains list` or `primitive inbox status` to find usable sender domains for --from; `primitive sending permissions` lists recipient-scope destinations you may send to."
       },
-      "signin": {
-        "description": "Sign in to an existing Primitive account"
-      },
       "login": {
-        "description": "Log in to an existing Primitive account"
-      },
-      "otp": {
-        "description": "Authenticate with an emailed one-time code"
+        "description": "Log in to an existing Primitive account. With no email, `primitive login` uses browser approval; with an email, it starts email-code login."
       },
       "sent": {
         "description": "Short aliases for outbound sent-email history: `primitive sent list` and `primitive sent get`."
       },
       "threads": {
-        "description": "Inspect conversation threads spanning received and sent emails. Prefer `primitive threads get --id <thread-id>`; generated API name `primitive threads get-thread --id <thread-id>` remains available."
+        "description": "Inspect conversation threads spanning received and sent emails. Use `primitive threads get --id <thread-id>`."
       },
       "endpoints": {
         "description": "Manage webhook endpoints that receive email events"
@@ -88,14 +76,11 @@
       "filters": {
         "description": "Manage whitelist and blocklist filter rules"
       },
-      "webhook-deliveries": {
-        "description": "View and replay webhook delivery attempts. Prefer `primitive webhook-deliveries list` and `primitive webhook-deliveries replay`."
-      },
       "deliveries": {
-        "description": "Short aliases for webhook delivery attempts: `primitive deliveries list` and `primitive deliveries replay`."
+        "description": "View and replay webhook delivery attempts: `primitive deliveries list` and `primitive deliveries replay`."
       },
       "functions": {
-        "description": "Deploy JavaScript handlers that run on inbound mail. Prefer `primitive functions templates`, `primitive functions init`, `primitive functions deploy`, `primitive functions redeploy`, `primitive functions list`, `primitive functions get`, `primitive functions logs`, and `primitive functions set-secret`; generated API names remain available for compatibility."
+        "description": "Deploy JavaScript handlers that run on inbound mail. Use `primitive functions templates`, `primitive functions init`, `primitive functions deploy`, `primitive functions redeploy`, `primitive functions list`, `primitive functions get`, `primitive functions logs`, and `primitive functions set-secret`."
       }
     },
     "topicSeparator": " "

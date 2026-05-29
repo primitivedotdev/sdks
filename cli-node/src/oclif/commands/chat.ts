@@ -926,7 +926,7 @@ class ChatCommand extends Command {
   static flags = {
     "api-key": Flags.string({
       description:
-        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive signin` credentials)",
+        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "api-base-url": Flags.string({
@@ -1319,7 +1319,7 @@ export class ChatReplyCommand extends Command {
   static flags = {
     "api-key": Flags.string({
       description:
-        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive signin` credentials)",
+        "Primitive API key (defaults to PRIMITIVE_API_KEY or saved `primitive login` credentials)",
       env: "PRIMITIVE_API_KEY",
     }),
     "api-base-url": Flags.string({

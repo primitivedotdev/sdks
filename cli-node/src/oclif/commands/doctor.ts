@@ -171,7 +171,7 @@ function checkApiKey(opts: {
       return {
         status: "fail",
         message: `${credsPath} contains legacy API-key login state`,
-        hint: "Run `primitive signin` to create saved OAuth credentials. Existing API keys still work with --api-key or PRIMITIVE_API_KEY.",
+        hint: "Run `primitive login` to create saved OAuth credentials. Existing API keys still work with --api-key or PRIMITIVE_API_KEY.",
       };
     }
     if (parsed) {
@@ -181,19 +181,19 @@ function checkApiKey(opts: {
       return {
         status: "fail",
         message: `${credsPath} exists but contains no OAuth access_token`,
-        hint: "Run `primitive logout` to clear it, then `primitive signin` to recreate.",
+        hint: "Run `primitive logout` to clear it, then `primitive login` to recreate.",
       };
     }
     return {
       status: "fail",
       message: `${credsPath} exists but is unreadable or malformed${parseError ? ` (${parseError})` : ""}`,
-      hint: "Run `primitive logout` to clear it, then `primitive signin` to recreate.",
+      hint: "Run `primitive logout` to clear it, then `primitive login` to recreate.",
     };
   }
   return {
     status: "fail",
     message: "no CLI OAuth session or explicit API key found",
-    hint: "Run `primitive signin`, pass --api-key explicitly, or export PRIMITIVE_API_KEY=prim_...",
+    hint: "Run `primitive login`, pass --api-key explicitly, or export PRIMITIVE_API_KEY=prim_...",
   };
 }
 
