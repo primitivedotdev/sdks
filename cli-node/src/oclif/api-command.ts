@@ -338,6 +338,10 @@ function parseJson(source: string, flagLabel: string): unknown {
   }
 }
 
+export function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 export function readJsonBody(flags: Record<string, unknown>): unknown {
   const bodyFile = flags["body-file"];
   const rawBody = flags["raw-body"];

@@ -4,6 +4,7 @@ import { sendEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
+  isJsonObject,
   readJsonBody,
   runWithTiming,
   surfaceUnauthorizedHint,
@@ -14,10 +15,6 @@ import { readAttachmentFiles } from "../attachments.js";
 import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
-
-function isJsonObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function assertNoRawBodyConflicts(flags: Record<string, unknown>): void {
   const conflictingFlags = [
