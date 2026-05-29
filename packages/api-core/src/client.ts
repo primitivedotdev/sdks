@@ -75,9 +75,17 @@ export class PrimitiveApiError extends Error {
       requestId?: string;
       retryAfter?: number;
       details?: PrimitiveApiErrorDetails;
+      /**
+       * The underlying error this wraps, when there is one (e.g. a
+       * transport-level `fetch` rejection). Chained onto the standard
+       * `Error.cause` so callers logging `err.cause` see the original
+       * failure — including a network error's `code`/`errno`/`syscall`,
+       * which a bare "fetch failed" message hides.
+       */
+      cause?: unknown;
     },
   ) {
-    super(message);
+    super(message, options.cause !== undefined ? { cause: options.cause } : undefined);
     this.name = "PrimitiveApiError";
     this.payload = options.payload;
     this.status = options.status;

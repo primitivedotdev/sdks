@@ -455,6 +455,50 @@ describe("PrimitiveClient", () => {
     } satisfies Partial<PrimitiveApiError>);
   });
 
+  it("chains the transport error as cause when fetch rejects", async () => {
+    // Mirror the undici shape: a TypeError("fetch failed") whose own
+    // `cause` carries the real socket failure (code/errno/syscall).
+    const socketError = Object.assign(new Error("connect ENETUNREACH"), {
+      code: "ENETUNREACH",
+      errno: -51,
+      syscall: "connect",
+    });
+    const transportError = new TypeError("fetch failed", {
+      cause: socketError,
+    });
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: vi.fn<typeof fetch>(async () => {
+        throw transportError;
+      }) as typeof fetch,
+    });
+
+    const err = await client
+      .send({
+        from: "support@example.com",
+        to: "alice@example.com",
+        subject: "Hello",
+        bodyText: "Hi there",
+      })
+      .then(
+        () => {
+          throw new Error("expected send to reject");
+        },
+        (e: unknown) => e as PrimitiveApiError,
+      );
+
+    expect(err.name).toBe("PrimitiveApiError");
+    expect(err.message).toBe("fetch failed");
+    // The original transport error is chained so callers logging
+    // `err.cause` recover the network detail, not just "fetch failed".
+    expect(err.cause).toBe(transportError);
+    expect((err.cause as { cause?: { code?: string } }).cause?.code).toBe(
+      "ENETUNREACH",
+    );
+  });
+
   it("exposes a small default root surface", () => {
     expect(typeof primitive.receive).toBe("function");
     expect(typeof primitive.client).toBe("function");
