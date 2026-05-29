@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/sdk",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Official Primitive Node.js SDK: webhook, api, openapi, contract, and parser runtime modules.",
   "type": "module",
   "module": "./dist/index.js",
@@ -35,6 +35,11 @@
       "types": "./dist/parser/index.d.ts",
       "import": "./dist/parser/index.js",
       "default": "./dist/parser/index.js"
+    },
+    "./parser/address": {
+      "types": "./dist/parser/address.d.ts",
+      "import": "./dist/parser/address.js",
+      "default": "./dist/parser/address.js"
     }
   },
   "sideEffects": false,

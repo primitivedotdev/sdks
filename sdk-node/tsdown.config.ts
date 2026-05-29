@@ -8,6 +8,7 @@ export default defineConfig({
     "src/openapi/index.ts",
     "src/contract/index.ts",
     "src/parser/index.ts",
+    "src/parser/address.ts",
   ],
   format: ["esm"],
   // Keep `.js` / `.d.ts` extensions so the existing `package.json` exports map
