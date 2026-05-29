@@ -535,6 +535,13 @@ function unwrapSendResult(result: {
       requestId: parsed.requestId,
       retryAfter: parseRetryAfterHeader(response),
       details: parsed.details,
+      // When the generated client surfaces a transport failure (a
+      // rejected `fetch`), `result.error` is the thrown Error whose own
+      // `cause` carries code/errno/syscall. Chain it so callers logging
+      // `err.cause` get the real failure instead of a bare "fetch failed".
+      // Parsed API error bodies are plain objects, not Errors, so this is
+      // undefined for them (status/code/payload already capture those).
+      cause: result.error instanceof Error ? result.error : undefined,
     });
   }
 
@@ -599,6 +606,13 @@ function unwrapSemanticSearchResult(result: {
       requestId: parsed.requestId,
       retryAfter: parseRetryAfterHeader(response),
       details: parsed.details,
+      // When the generated client surfaces a transport failure (a
+      // rejected `fetch`), `result.error` is the thrown Error whose own
+      // `cause` carries code/errno/syscall. Chain it so callers logging
+      // `err.cause` get the real failure instead of a bare "fetch failed".
+      // Parsed API error bodies are plain objects, not Errors, so this is
+      // undefined for them (status/code/payload already capture those).
+      cause: result.error instanceof Error ? result.error : undefined,
     });
   }
 
