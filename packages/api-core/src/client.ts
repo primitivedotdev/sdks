@@ -19,26 +19,16 @@ import type {
   ErrorResponse as GeneratedErrorResponse,
 } from "./api/index.js";
 
-// Default production hosts. Two-host split exists because message
-// endpoints with inline attachments need a larger body cap than Vercel
-// allows; host 2 is a Cloudflare Worker that accepts ~30 MiB raw. Host
-// 1 carries everything else. Customers don't see this split:
-// PrimitiveClient.send() and .reply() route to host 2 internally.
-//
-// Both base URLs are independently overridable via constructor options.
-// Override is for internal staging/local testing; not part of the
-// publicly-supported surface.
-export const DEFAULT_API_BASE_URL_1 = "https://www.primitive.dev/api/v1";
-export const DEFAULT_API_BASE_URL_2 = "https://api.primitive.dev/v1";
+// Default production host. Override is for internal staging/local testing;
+// it is not part of the publicly-supported surface.
+export const DEFAULT_API_BASE_URL = "https://api.primitive.dev/v1";
 
 export interface PrimitiveApiClientOptions
   extends Omit<GeneratedConfig, "auth" | "baseUrl"> {
   apiKey?: string;
   auth?: GeneratedConfig["auth"];
-  /** @internal Override for the primary API host. Production default is correct; this exists for staging/local testing only. */
-  apiBaseUrl1?: string;
-  /** @internal Override for the attachments-supporting send host. Production default is correct; this exists for staging/local testing only. */
-  apiBaseUrl2?: string;
+  /** @internal Override for the API host. Production default is correct; this exists for staging/local testing only. */
+  apiBaseUrl?: string;
 }
 
 function createDefaultAuth(apiKey?: string): GeneratedConfig["auth"] {
@@ -100,31 +90,13 @@ export class PrimitiveApiError extends Error {
 }
 
 export class PrimitiveApiClient {
-  /**
-   * Generated client targeting the primary API host (apiBaseUrl1). Use
-   * this when passing `client: ...` to a generated operation function
-   * for every endpoint EXCEPT attachment-capable message sends. The
-   * hand-written PrimitiveClient.send / .reply / .forward methods on
-   * the subclass route those sends to the host-2 client internally.
-   */
   readonly client: GeneratedClient;
-  /**
-   * @internal Generated client targeting the attachments-supporting
-   * send host (apiBaseUrl2). Used by PrimitiveClient.send() and
-   * PrimitiveClient.reply() under the hood. Exposed for the CLI's
-   * hand-rolled send/reply commands, which call generated operations
-   * directly; not part of the publicly-documented SDK surface.
-   * Customer code should call .send() / .reply() on the subclass
-   * instead.
-   */
-  readonly _sendClient: GeneratedClient;
 
   constructor(options: PrimitiveApiClientOptions = {}) {
     const {
       apiKey,
       auth,
-      apiBaseUrl1 = DEFAULT_API_BASE_URL_1,
-      apiBaseUrl2 = DEFAULT_API_BASE_URL_2,
+      apiBaseUrl = DEFAULT_API_BASE_URL,
       ...config
     } = options;
 
@@ -134,14 +106,7 @@ export class PrimitiveApiClient {
       createConfig({
         ...config,
         auth: resolvedAuth,
-        baseUrl: apiBaseUrl1,
-      }),
-    );
-    this._sendClient = createClient(
-      createConfig({
-        ...config,
-        auth: resolvedAuth,
-        baseUrl: apiBaseUrl2,
+        baseUrl: apiBaseUrl,
       }),
     );
   }

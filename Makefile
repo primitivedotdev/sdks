@@ -163,8 +163,8 @@ cli-smoke: cli-build cli-tarball-isolation
 	config_home="$$smoke_dir/config-home" && \
 	config_root="$$config_home/.config" && \
 	config_dir="$$config_root/primitive" && \
-	HOME="$$config_home" XDG_CONFIG_HOME="$$config_root" PRIMITIVE_CONFIG_DIR= "$$bin" config set --environment default --api-base-url-1 "https://api.default.example/v1" >/dev/null 2>&1 && \
-	HOME="$$config_home" XDG_CONFIG_HOME="$$config_root" PRIMITIVE_CONFIG_DIR= "$$bin" config set --environment staging --api-base-url-1 "https://api.staging.example/v1" >/dev/null 2>&1 && \
+	HOME="$$config_home" XDG_CONFIG_HOME="$$config_root" PRIMITIVE_CONFIG_DIR= "$$bin" config set --environment default --api-base-url "https://api.default.example/v1" >/dev/null 2>&1 && \
+	HOME="$$config_home" XDG_CONFIG_HOME="$$config_root" PRIMITIVE_CONFIG_DIR= "$$bin" config set --environment staging --api-base-url "https://api.staging.example/v1" >/dev/null 2>&1 && \
 	mkdir -p "$$config_dir" && \
 	node -e 'const fs = require("node:fs"); const path = process.argv[1]; fs.writeFileSync(path, JSON.stringify({ auth_method: "oauth", access_token: "prim_oat_smoke", refresh_token: "prim_ort_smoke", token_type: "Bearer", expires_at: "2099-05-25T00:00:00.000Z", oauth_grant_id: "11111111-1111-4111-8111-111111111111", oauth_client_id: "primitive-cli", org_id: "22222222-2222-4222-8222-222222222222", org_name: "Smoke", api_base_url_1: "https://api.staging.example/v1", created_at: "2026-05-25T00:00:00.000Z" }, null, 2) + "\n");' "$$config_dir/credentials.json" && \
 	HOME="$$config_home" XDG_CONFIG_HOME="$$config_root" PRIMITIVE_CONFIG_DIR= "$$bin" config use default >"$$smoke_dir/config-use.out" 2>"$$smoke_dir/config-use.err" && \
@@ -172,7 +172,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	grep -q -- 'Removed saved Primitive CLI credentials' "$$smoke_dir/config-use.err" && \
 	test ! -e "$$config_dir/credentials.json" && \
 	node -e 'const fs = require("node:fs"); const path = process.argv[1]; fs.writeFileSync(path, JSON.stringify({ auth_method: "oauth", access_token: "prim_oat_smoke", refresh_token: "prim_ort_smoke", token_type: "Bearer", expires_at: "2099-05-25T00:00:00.000Z", oauth_grant_id: "11111111-1111-4111-8111-111111111111", oauth_client_id: "primitive-cli", org_id: "22222222-2222-4222-8222-222222222222", org_name: "Smoke", api_base_url_1: "https://api.default.example/v1", created_at: "2026-05-25T00:00:00.000Z" }, null, 2) + "\n");' "$$config_dir/credentials.json" && \
-	HOME="$$config_home" XDG_CONFIG_HOME="$$config_root" PRIMITIVE_CONFIG_DIR= "$$bin" config set --environment staging --api-base-url-1 "https://api.staging.example/v1" >"$$smoke_dir/config-set.out" 2>"$$smoke_dir/config-set.err" && \
+	HOME="$$config_home" XDG_CONFIG_HOME="$$config_root" PRIMITIVE_CONFIG_DIR= "$$bin" config set --environment staging --api-base-url "https://api.staging.example/v1" >"$$smoke_dir/config-set.out" 2>"$$smoke_dir/config-set.err" && \
 	grep -q -- 'Primitive CLI environment staging is active.' "$$smoke_dir/config-set.err" && \
 	grep -q -- 'Removed saved Primitive CLI credentials' "$$smoke_dir/config-set.err" && \
 	test ! -e "$$config_dir/credentials.json" && \
@@ -186,7 +186,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	for i in 1 2 3 4 5 6 7 8 9 10; do test -s "$$filter_port_file" && break; sleep 0.1; done && \
 	test -s "$$filter_port_file" || { cat "$$filter_server_log"; exit 1; } && \
 	filter_port=$$(cat "$$filter_port_file") && \
-	"$$bin" filters update-filter --id "$$filter_id" --no-enabled --api-key prim_test --api-base-url-1 "http://127.0.0.1:$$filter_port/v1" > "$$smoke_dir/filter.json" && \
+	"$$bin" filters update-filter --id "$$filter_id" --no-enabled --api-key prim_test --api-base-url "http://127.0.0.1:$$filter_port/v1" > "$$smoke_dir/filter.json" && \
 	node -e 'const fs = require("node:fs"); const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (data.enabled !== false) throw new Error("expected enabled=false");' "$$smoke_dir/filter.json" \
 	) && \
 	zone_id="33333333-3333-4333-8333-333333333333" && \
@@ -199,19 +199,19 @@ cli-smoke: cli-build cli-tarball-isolation
 	for i in 1 2 3 4 5 6 7 8 9 10; do test -s "$$port_file" && break; sleep 0.1; done && \
 	test -s "$$port_file" || { cat "$$server_log"; exit 1; } && \
 	port=$$(cat "$$port_file") && \
-	"$$bin" domains list --json --api-key prim_test --api-base-url-1 "http://127.0.0.1:$$port/v1" > "$$smoke_dir/domains.json" && \
+	"$$bin" domains list --json --api-key prim_test --api-base-url "http://127.0.0.1:$$port/v1" > "$$smoke_dir/domains.json" && \
 	grep -q -- '"domain": "example.com"' "$$smoke_dir/domains.json" && \
-	"$$bin" inbox status --api-key prim_test --api-base-url-1 "http://127.0.0.1:$$port/v1" > "$$smoke_dir/inbox.txt" && \
+	"$$bin" inbox status --api-key prim_test --api-base-url "http://127.0.0.1:$$port/v1" > "$$smoke_dir/inbox.txt" && \
 	grep -q -- 'Inbound mail is ready' "$$smoke_dir/inbox.txt" && \
-	"$$bin" inbox status --domain example.com --api-key prim_test --api-base-url-1 "http://127.0.0.1:$$port/v1" > "$$smoke_dir/inbox-domain.txt" && \
+	"$$bin" inbox status --domain example.com --api-key prim_test --api-base-url "http://127.0.0.1:$$port/v1" > "$$smoke_dir/inbox-domain.txt" && \
 	grep -q -- 'example.com can receive mail' "$$smoke_dir/inbox-domain.txt" && \
-	"$$bin" whoami --api-key prim_test --api-base-url-1 "http://127.0.0.1:$$port/v1" > "$$smoke_dir/whoami.txt" && \
+	"$$bin" whoami --api-key prim_test --api-base-url "http://127.0.0.1:$$port/v1" > "$$smoke_dir/whoami.txt" && \
 	grep -q -- 'Authenticated as cli@example.com' "$$smoke_dir/whoami.txt" && \
 	grep -q -- 'Plan: pro' "$$smoke_dir/whoami.txt" && \
 	if grep -q -- 'onboarding' "$$smoke_dir/whoami.txt"; then cat "$$smoke_dir/whoami.txt"; exit 1; fi && \
-	"$$bin" whoami --json --api-key prim_test --api-base-url-1 "http://127.0.0.1:$$port/v1" > "$$smoke_dir/whoami.json" && \
+	"$$bin" whoami --json --api-key prim_test --api-base-url "http://127.0.0.1:$$port/v1" > "$$smoke_dir/whoami.json" && \
 	grep -q -- '"onboarding_completed": false' "$$smoke_dir/whoami.json" && \
-	"$$bin" domains zone-file --id "$$zone_id" --outbound-only --api-key prim_test --api-base-url-1 "http://127.0.0.1:$$port/v1" > "$$smoke_dir/example.zone" && \
+	"$$bin" domains zone-file --id "$$zone_id" --outbound-only --api-key prim_test --api-base-url "http://127.0.0.1:$$port/v1" > "$$smoke_dir/example.zone" && \
 	grep -q -- '$$ORIGIN example.com.' "$$smoke_dir/example.zone" && \
 	if [ -d "$$smoke_dir/node_modules/@primitivedotdev/sdk" ] || [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "CLI tarball pulled @primitivedotdev/sdk or @primitivedotdev/api-core into node_modules; both should be bundled inline."; exit 1; fi \
 	)

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { normalizeApiBaseUrl1 } from "./auth.js";
+import { normalizeApiBaseUrl } from "./auth.js";
 import {
   DEFAULT_ENVIRONMENT,
   loadCliConfig,
@@ -22,7 +22,7 @@ type RootSignupHintOptions = {
 
 type RootCredentials = {
   accessToken: string;
-  apiBaseUrl1: string;
+  apiBaseUrl: string;
 };
 
 type RootAccount = {
@@ -31,7 +31,7 @@ type RootAccount = {
 };
 
 type RootRequestConfig = {
-  apiBaseUrl1: string;
+  apiBaseUrl: string;
   headers?: Record<string, string>;
 };
 
@@ -58,23 +58,21 @@ function readRootCredentials(configDir: string): RootCredentials | null {
     ) {
       return null;
     }
-    if (
-      typeof parsed.api_base_url_1 !== "string" ||
-      !parsed.api_base_url_1.trim()
-    ) {
+    const apiBaseUrl = parsed.api_base_url ?? parsed.api_base_url_1;
+    if (typeof apiBaseUrl !== "string" || !apiBaseUrl.trim()) {
       return null;
     }
     return {
       accessToken: parsed.access_token,
-      apiBaseUrl1: parsed.api_base_url_1.replace(/\/+$/, ""),
+      apiBaseUrl: apiBaseUrl.replace(/\/+$/, ""),
     };
   } catch {
     return null;
   }
 }
 
-function accountEndpoint(apiBaseUrl1: string): string {
-  return `${apiBaseUrl1.replace(/\/+$/, "")}/account`;
+function accountEndpoint(apiBaseUrl: string): string {
+  return `${apiBaseUrl.replace(/\/+$/, "")}/account`;
 }
 
 function parseRootAccount(payload: unknown): RootAccount | null {
@@ -105,26 +103,26 @@ function rootRequestConfig(
 ): RootRequestConfig | null {
   const config = loadCliConfig(configDir);
   const currentEnvironment = resolveConfigEnvironment(config);
-  const configuredApiBaseUrl1 = currentEnvironment?.config.api_base_url_1;
-  const envApiBaseUrl1 = env.PRIMITIVE_API_BASE_URL_1?.trim();
+  const configuredApiBaseUrl = currentEnvironment?.config.api_base_url;
+  const envApiBaseUrl = env.PRIMITIVE_API_BASE_URL?.trim();
 
   if (
     currentEnvironment !== null &&
     currentEnvironment.name !== DEFAULT_ENVIRONMENT &&
-    !envApiBaseUrl1 &&
-    !configuredApiBaseUrl1
+    !envApiBaseUrl &&
+    !configuredApiBaseUrl
   ) {
     return null;
   }
 
   return {
-    apiBaseUrl1: normalizeApiBaseUrl1(envApiBaseUrl1 || configuredApiBaseUrl1),
+    apiBaseUrl: normalizeApiBaseUrl(envApiBaseUrl || configuredApiBaseUrl),
     headers: currentEnvironment?.config.headers,
   };
 }
 
 async function fetchRootAccount(params: {
-  apiBaseUrl1: string;
+  apiBaseUrl: string;
   apiKey: string;
   fetch: typeof fetch;
   headers?: Record<string, string>;
@@ -133,7 +131,7 @@ async function fetchRootAccount(params: {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), params.timeoutMs);
   try {
-    const response = await params.fetch(accountEndpoint(params.apiBaseUrl1), {
+    const response = await params.fetch(accountEndpoint(params.apiBaseUrl), {
       headers: {
         ...(params.headers ?? {}),
         accept: "application/json",
@@ -172,7 +170,7 @@ export async function rootSignedInSummary(
   if (!apiKey) return null;
 
   const account = await fetchRootAccount({
-    apiBaseUrl1: stored?.apiBaseUrl1 ?? requestConfig.apiBaseUrl1,
+    apiBaseUrl: stored?.apiBaseUrl ?? requestConfig.apiBaseUrl,
     apiKey,
     fetch: options.fetch ?? fetch,
     headers: requestConfig.headers,

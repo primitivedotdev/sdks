@@ -21,6 +21,7 @@ const (
 type sendAPI interface {
 	SendEmail(ctx context.Context, request *primitiveapi.SendMailInput, params primitiveapi.SendEmailParams) (primitiveapi.SendEmailRes, error)
 	ReplyToEmail(ctx context.Context, request *primitiveapi.ReplyInput, params primitiveapi.ReplyToEmailParams) (primitiveapi.ReplyToEmailRes, error)
+	SemanticSearch(ctx context.Context, request *primitiveapi.SemanticSearchInput) (primitiveapi.SemanticSearchRes, error)
 }
 
 type SendThread struct {
@@ -305,6 +306,76 @@ func mapSendError(res primitiveapi.SendEmailRes) error {
 	default:
 		return &APIError{
 			Message: fmt.Sprintf("primitive API send failed: %T", res),
+			Payload: res,
+		}
+	}
+}
+
+// SemanticSearchResponse is the hand-written return type from
+// [Client.SemanticSearch]. Mirrors the server's success envelope (data
+// + meta) without the boolean success flag, since errors surface as Go
+// errors instead.
+type SemanticSearchResponse struct {
+	Data []primitiveapi.SemanticSearchResult
+	Meta primitiveapi.SemanticSearchMeta
+}
+
+// SemanticSearch runs a semantic / hybrid / keyword search across
+// received and sent mail (POST /v1/semantic-search on the search host).
+// Returns ranked rows; each row carries matched fields, a match-centered
+// excerpt, and an additive score breakdown. See
+// [primitiveapi.SemanticSearchInput] for request fields and
+// [primitiveapi.SemanticSearchResult] for the row shape.
+//
+// Requires the Pro plan and the semantic_search_enabled entitlement;
+// callers without them receive an [APIError] with Status: 403.
+func (c *Client) SemanticSearch(ctx context.Context, request *primitiveapi.SemanticSearchInput) (SemanticSearchResponse, error) {
+	var zero SemanticSearchResponse
+
+	if c == nil || c.apiSend == nil {
+		return zero, fmt.Errorf("client is not configured")
+	}
+	if request == nil {
+		return zero, fmt.Errorf("request is required")
+	}
+
+	// /v1/semantic-search lives on the same worker host as /send-mail,
+	// reachable through the host-2 client (apiSend). The host swap is
+	// internal; callers don't see or configure it.
+	res, err := c.apiSend.SemanticSearch(ctx, request)
+	if err != nil {
+		return zero, err
+	}
+
+	switch v := res.(type) {
+	case *primitiveapi.SemanticSearchOK:
+		return SemanticSearchResponse{Data: v.Data, Meta: v.Meta}, nil
+	default:
+		return zero, mapSemanticSearchError(res)
+	}
+}
+
+func mapSemanticSearchError(res primitiveapi.SemanticSearchRes) error {
+	switch v := res.(type) {
+	case *primitiveapi.SemanticSearchBadRequest:
+		return apiErrorFromErrorResponse(400, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SemanticSearchUnauthorized:
+		return apiErrorFromErrorResponse(401, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SemanticSearchForbidden:
+		return apiErrorFromErrorResponse(403, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SemanticSearchInternalServerError:
+		return apiErrorFromErrorResponse(500, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.SemanticSearchServiceUnavailable:
+		return apiErrorFromErrorResponse(503, primitiveapi.ErrorResponse(*v))
+	case *primitiveapi.RateLimitedHeaders:
+		err := apiErrorFromErrorResponse(429, v.Response)
+		if retryAfter, ok := v.RetryAfter.Get(); ok {
+			err.RetryAfter = &retryAfter
+		}
+		return err
+	default:
+		return &APIError{
+			Message: fmt.Sprintf("primitive API semantic-search failed: %T", res),
 			Payload: res,
 		}
 	}

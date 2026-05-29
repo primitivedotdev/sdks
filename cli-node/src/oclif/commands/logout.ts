@@ -33,7 +33,7 @@ function unwrapData<T>(value: unknown): T | null {
 }
 
 type LogoutFlags = {
-  "api-base-url-1"?: string;
+  "api-base-url"?: string;
   force?: boolean;
 };
 
@@ -82,7 +82,7 @@ export async function runLogoutWithCredentialLock(params: {
   >;
   try {
     authenticated = await deps.createAuthenticatedCliApiClient({
-      apiBaseUrl1: params.flags["api-base-url-1"],
+      apiBaseUrl: params.flags["api-base-url"],
       configDir: params.configDir,
       credentialsLockHeld: true,
     });
@@ -180,10 +180,10 @@ class LogoutCommand extends Command {
   ];
 
   static flags = {
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     force: Flags.boolean({

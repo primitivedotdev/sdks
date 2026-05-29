@@ -531,19 +531,38 @@ type Handler interface {
 	//
 	// GET /emails/search
 	SearchEmails(ctx context.Context, params SearchEmailsParams) (SearchEmailsRes, error)
+	// SemanticSearch implements semanticSearch operation.
+	//
+	// Ranked search across both received and sent mail. The `mode`
+	// field selects the ranking strategy:
+	// - `keyword`: lexical full-text matching only (no embeddings).
+	// - `semantic`: meaning-based matching using vector embeddings.
+	// - `hybrid` (default): blends the semantic and keyword signals.
+	// Results are ordered by a relevance `score`. Every row reports the
+	// fields it matched (`matched_fields`), a match-centered excerpt per
+	// field (`snippets`), and a `score_breakdown` whose components account
+	// for the `score`. Page through results by passing the prior
+	// response's `meta.cursor` back as `cursor`.
+	// Requires the Pro plan and the `semantic_search_enabled`
+	// entitlement; callers without them receive `403`.
+	// Host routing: this operation is served only by the search host
+	// (`https://api.primitive.dev/v1`). The typed SDKs route it there
+	// automatically.
+	//
+	// POST /semantic-search
+	SemanticSearch(ctx context.Context, req *SemanticSearchInput) (SemanticSearchRes, error)
 	// SendEmail implements sendEmail operation.
 	//
 	// Sends an outbound email through Primitive's outbound relay. By default
 	// the request returns once the relay accepts the message for delivery.
 	// Set `wait: true` to wait for the first downstream SMTP delivery outcome.
-	// **Host routing.** /send-mail is served by the attachments-
-	// supporting host (`https://api.primitive.dev/v1`) so the
-	// request body can carry inline attachments up to ~30 MiB raw.
-	// The primary host (`https://www.primitive.dev/api/v1`) also
-	// accepts /send-mail for attachment-free sends; sends WITH
-	// attachments to the primary host return 413
-	// `attachments_unsupported_on_this_endpoint`. The typed SDKs
-	// route /send-mail to the attachments host automatically.
+	// **Host routing.** /send-mail is served by the canonical API host
+	// (`https://api.primitive.dev/v1`) so the request body can carry
+	// inline attachments up to ~30 MiB raw. The legacy dashboard
+	// compatibility host (`https://www.primitive.dev/api/v1`) also accepts
+	// /send-mail, but Vercel request body limits apply before proxying.
+	// The typed SDKs route /send-mail to the canonical API host
+	// automatically.
 	//
 	// POST /send-mail
 	SendEmail(ctx context.Context, req *SendMailInput, params SendEmailParams) (SendEmailRes, error)

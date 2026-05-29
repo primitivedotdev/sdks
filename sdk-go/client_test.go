@@ -9,16 +9,20 @@ import (
 )
 
 type stubSendAPI struct {
-	called       bool
-	request      *primitiveapi.SendMailInput
-	params       primitiveapi.SendEmailParams
-	result       primitiveapi.SendEmailRes
-	err          error
-	replyCalled  bool
-	replyRequest *primitiveapi.ReplyInput
-	replyParams  primitiveapi.ReplyToEmailParams
-	replyResult  primitiveapi.ReplyToEmailRes
-	replyErr     error
+	called          bool
+	request         *primitiveapi.SendMailInput
+	params          primitiveapi.SendEmailParams
+	result          primitiveapi.SendEmailRes
+	err             error
+	replyCalled     bool
+	replyRequest    *primitiveapi.ReplyInput
+	replyParams     primitiveapi.ReplyToEmailParams
+	replyResult     primitiveapi.ReplyToEmailRes
+	replyErr        error
+	semanticCalled  bool
+	semanticRequest *primitiveapi.SemanticSearchInput
+	semanticResult  primitiveapi.SemanticSearchRes
+	semanticErr     error
 }
 
 func (s *stubSendAPI) SendEmail(_ context.Context, request *primitiveapi.SendMailInput, params primitiveapi.SendEmailParams) (primitiveapi.SendEmailRes, error) {
@@ -33,6 +37,12 @@ func (s *stubSendAPI) ReplyToEmail(_ context.Context, request *primitiveapi.Repl
 	s.replyRequest = request
 	s.replyParams = params
 	return s.replyResult, s.replyErr
+}
+
+func (s *stubSendAPI) SemanticSearch(_ context.Context, request *primitiveapi.SemanticSearchInput) (primitiveapi.SemanticSearchRes, error) {
+	s.semanticCalled = true
+	s.semanticRequest = request
+	return s.semanticResult, s.semanticErr
 }
 
 func sendMailResult() primitiveapi.SendMailResult {
@@ -511,5 +521,203 @@ func TestClientReplyHonorsFromOverride(t *testing.T) {
 	}
 	if value, ok := stub.replyRequest.From.Get(); !ok || value != "notifications@example.com" {
 		t.Fatalf("expected from override, got %#v", stub.replyRequest.From)
+	}
+}
+
+// ---------------------------------------------------------------------
+// Client.SemanticSearch
+// ---------------------------------------------------------------------
+
+func semanticSearchResultFixture() primitiveapi.SemanticSearchResult {
+	return primitiveapi.SemanticSearchResult{
+		SourceType:    primitiveapi.SemanticSearchResultSourceTypeInboundEmail,
+		ID:            "ie_abc",
+		Subject:       primitiveapi.NewNilString("Re: Hello"),
+		From:          primitiveapi.NewNilString("alice@example.com"),
+		To:            primitiveapi.NewNilString("ops@example.com"),
+		Timestamp:     "2026-05-27 01:59:33+00",
+		Status:        "completed",
+		Score:         0.39791,
+		SemanticScore: primitiveapi.NewNilFloat64(0),
+		KeywordScore:  primitiveapi.NewNilFloat64(0.1),
+		MatchedFields: []primitiveapi.SemanticSearchField{
+			primitiveapi.SemanticSearchFieldSubject,
+		},
+		Snippets: []primitiveapi.SemanticSearchSnippet{
+			{Field: "subject", Text: "Hello"},
+		},
+		ScoreBreakdown: primitiveapi.SemanticSearchScoreBreakdown{
+			Semantic:   primitiveapi.NewNilFloat64(0),
+			Keyword:    primitiveapi.NewNilFloat64(0.1),
+			FieldBoost: 0.2,
+			Recency:    0.09791,
+		},
+		APIURL: primitiveapi.NewNilString("/api/v1/emails/ie_abc"),
+	}
+}
+
+func TestClientSemanticSearchReturnsResponse(t *testing.T) {
+	row := semanticSearchResultFixture()
+	stub := &stubSendAPI{
+		semanticResult: &primitiveapi.SemanticSearchOK{
+			Success: true,
+			Data:    []primitiveapi.SemanticSearchResult{row},
+			Meta: primitiveapi.SemanticSearchMeta{
+				Limit:  10,
+				Cursor: primitiveapi.NewNilString(""),
+				Mode:   primitiveapi.SemanticSearchMetaModeKeyword,
+			},
+		},
+	}
+	client := NewClientFromAPI(stub)
+
+	got, err := client.SemanticSearch(context.Background(), &primitiveapi.SemanticSearchInput{
+		Query: primitiveapi.NewOptString("hello"),
+		Mode:  primitiveapi.NewOptSemanticSearchInputMode(primitiveapi.SemanticSearchInputModeKeyword),
+	})
+	if err != nil {
+		t.Fatalf("SemanticSearch returned error: %v", err)
+	}
+	if !stub.semanticCalled {
+		t.Fatal("expected apiSend.SemanticSearch to be called")
+	}
+	if len(got.Data) != 1 || got.Data[0].ID != "ie_abc" {
+		t.Fatalf("unexpected data: %#v", got.Data)
+	}
+	if got.Meta.Limit != 10 || got.Meta.Mode != primitiveapi.SemanticSearchMetaModeKeyword {
+		t.Fatalf("unexpected meta: %#v", got.Meta)
+	}
+}
+
+func TestClientSemanticSearchRejectsNilRequest(t *testing.T) {
+	stub := &stubSendAPI{}
+	client := NewClientFromAPI(stub)
+
+	_, err := client.SemanticSearch(context.Background(), nil)
+	if err == nil || err.Error() != "request is required" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if stub.semanticCalled {
+		t.Fatal("apiSend.SemanticSearch should not be called with nil request")
+	}
+}
+
+func TestClientSemanticSearchRejectsNilClient(t *testing.T) {
+	var client *Client
+	_, err := client.SemanticSearch(context.Background(), &primitiveapi.SemanticSearchInput{Query: primitiveapi.NewOptString("x")})
+	if err == nil || err.Error() != "client is not configured" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestClientSemanticSearchWrapsBadRequest(t *testing.T) {
+	stub := &stubSendAPI{
+		semanticResult: &primitiveapi.SemanticSearchBadRequest{
+			Success: false,
+			Error: primitiveapi.ErrorResponseError{
+				Code:    primitiveapi.ErrorResponseErrorCodeValidationError,
+				Message: "query is required for mode=hybrid",
+			},
+		},
+	}
+	client := NewClientFromAPI(stub)
+
+	_, err := client.SemanticSearch(context.Background(), &primitiveapi.SemanticSearchInput{
+		Mode: primitiveapi.NewOptSemanticSearchInputMode(primitiveapi.SemanticSearchInputModeHybrid),
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected APIError, got %T", err)
+	}
+	if apiErr.StatusCode != 400 || apiErr.Code != "validation_error" {
+		t.Fatalf("unexpected API error: %#v", apiErr)
+	}
+}
+
+func TestClientSemanticSearchWrapsForbidden(t *testing.T) {
+	stub := &stubSendAPI{
+		semanticResult: &primitiveapi.SemanticSearchForbidden{
+			Success: false,
+			Error: primitiveapi.ErrorResponseError{
+				Code:    primitiveapi.ErrorResponseErrorCodeAccessDenied,
+				Message: "Semantic search requires the Pro plan",
+			},
+		},
+	}
+	client := NewClientFromAPI(stub)
+
+	_, err := client.SemanticSearch(context.Background(), &primitiveapi.SemanticSearchInput{Query: primitiveapi.NewOptString("x")})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected APIError, got %T", err)
+	}
+	if apiErr.StatusCode != 403 || apiErr.Code != "access_denied" {
+		t.Fatalf("unexpected API error: %#v", apiErr)
+	}
+}
+
+func TestClientSemanticSearchSurfacesRetryAfterOn429(t *testing.T) {
+	retryAfter := 7
+	stub := &stubSendAPI{
+		semanticResult: &primitiveapi.RateLimitedHeaders{
+			RetryAfter: primitiveapi.NewOptInt(retryAfter),
+			Response: primitiveapi.ErrorResponse{
+				Success: false,
+				Error: primitiveapi.ErrorResponseError{
+					Code:    primitiveapi.ErrorResponseErrorCodeRateLimitExceeded,
+					Message: "Rate limit exceeded",
+				},
+			},
+		},
+	}
+	client := NewClientFromAPI(stub)
+
+	_, err := client.SemanticSearch(context.Background(), &primitiveapi.SemanticSearchInput{Query: primitiveapi.NewOptString("x")})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected APIError, got %T", err)
+	}
+	if apiErr.StatusCode != 429 || apiErr.Code != "rate_limit_exceeded" {
+		t.Fatalf("unexpected API error: %#v", apiErr)
+	}
+	if apiErr.RetryAfter == nil || *apiErr.RetryAfter != 7 {
+		t.Fatalf("unexpected retry-after: %#v", apiErr.RetryAfter)
+	}
+}
+
+func TestClientSemanticSearchWrapsServiceUnavailable(t *testing.T) {
+	stub := &stubSendAPI{
+		semanticResult: &primitiveapi.SemanticSearchServiceUnavailable{
+			Success: false,
+			Error: primitiveapi.ErrorResponseError{
+				Code:    primitiveapi.ErrorResponseErrorCodeInternalError,
+				Message: "Embedding provider unavailable",
+			},
+		},
+	}
+	client := NewClientFromAPI(stub)
+
+	_, err := client.SemanticSearch(context.Background(), &primitiveapi.SemanticSearchInput{
+		Query: primitiveapi.NewOptString("x"),
+		Mode:  primitiveapi.NewOptSemanticSearchInputMode(primitiveapi.SemanticSearchInputModeSemantic),
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	apiErr, ok := err.(*APIError)
+	if !ok {
+		t.Fatalf("expected APIError, got %T", err)
+	}
+	if apiErr.StatusCode != 503 {
+		t.Fatalf("unexpected API error: %#v", apiErr)
 	}
 }

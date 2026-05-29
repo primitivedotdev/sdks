@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import InboxStatusCommand, {
   domainSummary,
+  findSuggestedPrimitiveAddress,
   focusInboxStatus,
   formatDomainHeader,
   formatDomainRow,
@@ -130,6 +131,77 @@ describe("inbox status formatting", () => {
     expect(output).toContain("Recent inbound: 2 emails");
     expect(output).toContain("Next actions");
     expect(output).toContain("primitive inbox status");
+  });
+
+  it("shows the first usable Primitive-managed address", () => {
+    const output = formatInboxStatus(
+      makeStatus({
+        domains: [
+          makeDomain({
+            domain: "example.com",
+            managed: false,
+          }),
+          makeDomain({
+            domain: "bright-field.primitive.email",
+            managed: true,
+          }),
+        ],
+      }),
+    );
+
+    expect(output).toContain(
+      "Primitive address: agent@bright-field.primitive.email",
+    );
+    expect(output).toContain(
+      "Any local-part at bright-field.primitive.email can receive mail.",
+    );
+    expect(output).toContain(
+      'primitive send --to agent@bright-field.primitive.email --subject "hello" --body "test"',
+    );
+  });
+
+  it("does not show an address when no managed domain can receive mail", () => {
+    const output = formatInboxStatus(
+      makeStatus({
+        domains: [
+          makeDomain({
+            domain: "inactive.primitive.email",
+            active: false,
+            managed: true,
+          }),
+          makeDomain({
+            domain: "pending.primitive.email",
+            managed: true,
+            receiving_ready: false,
+          }),
+        ],
+      }),
+    );
+
+    expect(output).not.toContain("Primitive address:");
+  });
+
+  it("selects the first active receiving-ready managed domain", () => {
+    expect(
+      findSuggestedPrimitiveAddress([
+        makeDomain({
+          domain: "example.com",
+          managed: false,
+        }),
+        makeDomain({
+          domain: "inactive.primitive.email",
+          active: false,
+          managed: true,
+        }),
+        makeDomain({
+          domain: "ready.primitive.email",
+          managed: true,
+        }),
+      ]),
+    ).toEqual({
+      address: "agent@ready.primitive.email",
+      domain: "ready.primitive.email",
+    });
   });
 });
 

@@ -370,7 +370,7 @@ describe("writeErrorWithHints", () => {
 describe("surfaceUnauthorizedHint", () => {
   const credentials: StoredCliCredentials = {
     access_token: "prim_oat_stale",
-    api_base_url_1: "https://www.primitive.dev/api/v1",
+    api_base_url: "https://api.primitive.dev/v1",
     auth_method: "oauth",
     created_at: "2026-05-05T00:00:00.000Z",
     expires_at: "2099-05-05T00:00:00.000Z",
@@ -408,8 +408,7 @@ describe("surfaceUnauthorizedHint", () => {
     surfaceUnauthorizedHint({
       auth: {
         apiKey: credentials.access_token,
-        apiBaseUrl1: credentials.api_base_url_1,
-        apiBaseUrl2: "https://api.primitive.dev/v1",
+        apiBaseUrl: credentials.api_base_url,
         credentials,
         source: "stored",
       },
@@ -431,8 +430,7 @@ describe("surfaceUnauthorizedHint", () => {
     surfaceUnauthorizedHint({
       auth: {
         apiKey: credentials.access_token,
-        apiBaseUrl1: "http://localhost:3000/api/v1",
-        apiBaseUrl2: "https://api.primitive.dev/v1",
+        apiBaseUrl: "http://localhost:8787/v1",
         credentials,
         source: "stored",
       },
@@ -452,8 +450,7 @@ describe("surfaceUnauthorizedHint", () => {
     surfaceUnauthorizedHint({
       auth: {
         apiKey: credentials.access_token,
-        apiBaseUrl1: credentials.api_base_url_1,
-        apiBaseUrl2: "https://api.primitive.dev/v1",
+        apiBaseUrl: credentials.api_base_url,
         credentials,
         source: "stored",
       },
@@ -472,8 +469,7 @@ describe("surfaceUnauthorizedHint", () => {
     surfaceUnauthorizedHint({
       auth: {
         apiKey: "prim_from_env",
-        apiBaseUrl1: credentials.api_base_url_1,
-        apiBaseUrl2: "https://api.primitive.dev/v1",
+        apiBaseUrl: credentials.api_base_url,
         credentials: null,
         source: "flag-or-env",
       },

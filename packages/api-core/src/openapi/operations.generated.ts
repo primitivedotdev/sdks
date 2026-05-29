@@ -5627,6 +5627,267 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "semantic-search",
+    "description": "Ranked search across both received and sent mail. The `mode`\nfield selects the ranking strategy:\n\n- `keyword`: lexical full-text matching only (no embeddings).\n- `semantic`: meaning-based matching using vector embeddings.\n- `hybrid` (default): blends the semantic and keyword signals.\n\nResults are ordered by a relevance `score`. Every row reports the\nfields it matched (`matched_fields`), a match-centered excerpt per\nfield (`snippets`), and a `score_breakdown` whose components account\nfor the `score`. Page through results by passing the prior\nresponse's `meta.cursor` back as `cursor`.\n\nRequires the Pro plan and the `semantic_search_enabled`\nentitlement; callers without them receive `403`.\n\nHost routing: this operation is served only by the search host\n(`https://api.primitive.dev/v1`). The typed SDKs route it there\nautomatically.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "semanticSearch",
+    "path": "/semantic-search",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "description": "Free-text query. Required for `semantic` and `hybrid` modes;\noptional for `keyword` mode.\n"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "hybrid",
+            "semantic",
+            "keyword"
+          ],
+          "default": "hybrid",
+          "description": "Ranking strategy. `keyword` is lexical only, `semantic` is\nembedding-based, `hybrid` blends both.\n"
+        },
+        "corpus": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "inbound",
+              "outbound"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 2,
+          "description": "Which mail to search. Defaults to both received (`inbound`)\nand sent (`outbound`).\n"
+        },
+        "search_in": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "subject",
+              "headers",
+              "addresses",
+              "body"
+            ],
+            "description": "A searchable email field."
+          },
+          "description": "Restrict matching to these fields. Defaults to all."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "subject",
+              "headers",
+              "addresses",
+              "body"
+            ],
+            "description": "A searchable email field."
+          },
+          "description": "Exclude these fields from matching."
+        },
+        "date_from": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Only include mail at or after this timestamp."
+        },
+        "date_to": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Only include mail at or before this timestamp."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "coverage"
+            ]
+          },
+          "description": "Opt-in extras. `coverage` adds an index-coverage snapshot to\n`meta`. Matched fields, snippets, and the score breakdown are\nalways returned regardless of this field.\n"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10,
+          "description": "Maximum number of results to return."
+        },
+        "cursor": {
+          "type": "string",
+          "description": "Opaque pagination cursor from a prior response's `meta.cursor`."
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "inbound_email",
+              "sent_email"
+            ],
+            "description": "Whether this row is a received or sent message."
+          },
+          "id": {
+            "type": "string",
+            "description": "Message id. Combine with `api_url` to fetch the full record."
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Message timestamp (received_at for inbound, created_at for sent)."
+          },
+          "status": {
+            "type": "string",
+            "description": "Lifecycle status of the message."
+          },
+          "score": {
+            "type": "number",
+            "description": "Overall relevance score; the `score_breakdown` components account for it."
+          },
+          "semantic_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Raw semantic similarity signal, or null when not applicable."
+          },
+          "keyword_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Raw keyword (lexical) signal, or null when not applicable."
+          },
+          "matched_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "subject",
+                "headers",
+                "addresses",
+                "body"
+              ],
+              "description": "A searchable email field."
+            },
+            "description": "Fields where the query matched."
+          },
+          "snippets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "description": "The field this excerpt came from."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Plain-text excerpt centered on the match (no markup)."
+                }
+              },
+              "required": [
+                "field",
+                "text"
+              ]
+            },
+            "description": "Match-centered excerpts, one per matched field."
+          },
+          "score_breakdown": {
+            "type": "object",
+            "description": "Additive contributions to `score`. `semantic` and `keyword` are the\nraw signals times the mode's weight (null when not applicable);\nthese plus `field_boost` and `recency` sum to `score` before each\nvalue is independently rounded to 5 decimal places.\n",
+            "properties": {
+              "semantic": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "keyword": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "field_boost": {
+                "type": "number"
+              },
+              "recency": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "semantic",
+              "keyword",
+              "field_boost",
+              "recency"
+            ]
+          },
+          "api_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Relative API path to fetch the full message."
+          }
+        },
+        "required": [
+          "source_type",
+          "id",
+          "subject",
+          "from",
+          "to",
+          "timestamp",
+          "status",
+          "score",
+          "semantic_score",
+          "keyword_score",
+          "matched_fields",
+          "snippets",
+          "score_breakdown",
+          "api_url"
+        ]
+      }
+    },
+    "sdkName": "semanticSearch",
+    "summary": "Semantic search across received and sent mail",
+    "tag": "Search",
+    "tagCommand": "search"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-send-permissions",
     "description": "Returns a flat list of rules describing every recipient the\ncaller may send to. Each rule has a `type`, a kind-specific\npayload, and a human-readable `description`. If any rule\nmatches the recipient, /send-mail will accept the send under\nthe recipient-scope check.\n\nThe endpoint is the answer to \"where can I send\" without\nexposing internal entitlement names. Agents that don't\nrecognize a `type` can still read the `description` prose\nand act on it.\n\nRule kinds, ordered broadest-first so an agent can stop\nscanning at the first match:\n\n  1. `any_recipient` (one entry, only when the org can send\n     anywhere): every other rule below it is redundant.\n  2. `managed_zone` (always emitted, one per Primitive-managed\n     zone): sends to any address at *.primitive.email or\n     *.email.works always succeed; no entitlement required.\n  3. `your_domain` (one per active verified outbound domain\n     owned by the org): sends to that domain are approved.\n  4. `address` (one per address that has authenticated\n     inbound mail to the org, capped at `meta.address_cap`):\n     sends to that exact address are approved.\n\nThe list is informational, not an authorization check.\n/send-mail remains the source of truth on whether an\nindividual send will succeed (it also enforces the\nfrom-address and the `send_mail` entitlement, which are\nnot recipient-scope concerns and are not represented here).\n",
@@ -6597,7 +6858,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "send-email",
-    "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n\n**Host routing.** /send-mail is served by the attachments-\nsupporting host (`https://api.primitive.dev/v1`) so the\nrequest body can carry inline attachments up to ~30 MiB raw.\nThe primary host (`https://www.primitive.dev/api/v1`) also\naccepts /send-mail for attachment-free sends; sends WITH\nattachments to the primary host return 413\n`attachments_unsupported_on_this_endpoint`. The typed SDKs\nroute /send-mail to the attachments host automatically.\n",
+    "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n\n**Host routing.** /send-mail is served by the canonical API host\n(`https://api.primitive.dev/v1`) so the request body can carry\ninline attachments up to ~30 MiB raw. The legacy dashboard\ncompatibility host (`https://www.primitive.dev/api/v1`) also accepts\n/send-mail, but Vercel request body limits apply before proxying.\nThe typed SDKs route /send-mail to the canonical API host\nautomatically.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "sendEmail",

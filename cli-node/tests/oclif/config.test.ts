@@ -22,7 +22,7 @@ import { COMMANDS } from "../../src/oclif/index.js";
 
 const CREDENTIALS: StoredCliCredentials = {
   access_token: "prim_oat_existing",
-  api_base_url_1: "https://api.default.example/v1",
+  api_base_url: "https://api.default.example/v1",
   auth_method: "oauth",
   created_at: "2026-05-05T00:00:00.000Z",
   expires_at: "2099-05-05T00:00:00.000Z",
@@ -36,12 +36,12 @@ const CREDENTIALS: StoredCliCredentials = {
 
 function configWithDefaultAndStaging() {
   const withDefault = upsertCliEnvironment({
-    apiBaseUrl1: "https://api.default.example/v1",
+    apiBaseUrl: "https://api.default.example/v1",
     config: emptyCliConfig(),
     environmentName: "default",
   });
   const withStaging = upsertCliEnvironment({
-    apiBaseUrl1: "https://api.staging.example/v1",
+    apiBaseUrl: "https://api.staging.example/v1",
     config: withDefault,
     environmentName: "staging",
   });
@@ -86,7 +86,7 @@ describe("config use", () => {
     saveCliCredentials(tempDir, CREDENTIALS);
 
     const result = upsertCliEnvironmentAndClearCredentialsIfSwitched({
-      apiBaseUrl1: "https://api.preview.example/v1",
+      apiBaseUrl: "https://api.preview.example/v1",
       configDir: tempDir,
       environmentName: "preview",
     });
@@ -105,7 +105,7 @@ describe("config use", () => {
     saveCliCredentials(tempDir, CREDENTIALS);
 
     const result = upsertCliEnvironmentAndClearCredentialsIfSwitched({
-      apiBaseUrl1: "https://api.changed.example/v1",
+      apiBaseUrl: "https://api.changed.example/v1",
       configDir: tempDir,
       environmentName: "default",
     });

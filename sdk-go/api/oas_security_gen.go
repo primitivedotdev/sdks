@@ -79,6 +79,7 @@ var operationRolesBearerAuth = map[string][]string{
 	ReplyToEmailOperation:            []string{},
 	RotateWebhookSecretOperation:     []string{},
 	SearchEmailsOperation:            []string{},
+	SemanticSearchOperation:          []string{},
 	SendEmailOperation:               []string{},
 	SetFunctionSecretOperation:       []string{},
 	TestEndpointOperation:            []string{},

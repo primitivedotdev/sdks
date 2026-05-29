@@ -122,18 +122,17 @@ info:
     url: https://primitive.dev/terms
 
 servers:
-  - url: https://www.primitive.dev/api/v1
-    description: |
-      Primary API host (PRIMITIVE_API_BASE_URL_1). Carries every operation
-      except attachment-supporting send. Vercel-backed; request body is
-      capped at 4.5 MB by the platform.
   - url: https://api.primitive.dev/v1
     description: |
-      Attachments-supporting send host (PRIMITIVE_API_BASE_URL_2).
-      Cloudflare Worker with a ~30 MiB raw request body cap (before
-      base64 encoding). Today only `/send-mail` is hosted here; future
-      large-body operations will migrate here over time. SDK clients
-      route /send-mail to this server automatically.
+      Canonical API host (PRIMITIVE_API_BASE_URL). Carries every public
+      API operation. Cloudflare Workers-backed; attachment-capable send
+      operations can carry up to ~30 MiB raw request bodies before base64
+      encoding.
+  - url: https://www.primitive.dev/api/v1
+    description: |
+      Legacy dashboard compatibility host. Requests are forwarded to the
+      canonical API host, but Vercel request body limits still apply before
+      proxying. New integrations should use https://api.primitive.dev/v1.
 
 security:
   - BearerAuth: []
@@ -151,6 +150,8 @@ tags:
     description: Check inbound email setup and processing readiness
   - name: Emails
     description: List, inspect, and manage received emails
+  - name: Search
+    description: Semantic and hybrid search across received and sent mail
   - name: Sending
     description: Send outbound emails through the Primitive API
   - name: Threads
@@ -1442,9 +1443,9 @@ paths:
         the send-mail contract verbatim.
       servers:
         - url: https://api.primitive.dev/v1
-          description: Attachments-supporting send host (recommended)
+          description: Canonical API host (recommended)
         - url: https://www.primitive.dev/api/v1
-          description: Primary host (attachment-free replies only)
+          description: Legacy compatibility host (Vercel body limit applies)
       tags: [Sending]
       requestBody:
         required: true
@@ -2054,19 +2055,18 @@ paths:
         the request returns once the relay accepts the message for delivery.
         Set `wait: true` to wait for the first downstream SMTP delivery outcome.
 
-        **Host routing.** /send-mail is served by the attachments-
-        supporting host (`https://api.primitive.dev/v1`) so the
-        request body can carry inline attachments up to ~30 MiB raw.
-        The primary host (`https://www.primitive.dev/api/v1`) also
-        accepts /send-mail for attachment-free sends; sends WITH
-        attachments to the primary host return 413
-        `attachments_unsupported_on_this_endpoint`. The typed SDKs
-        route /send-mail to the attachments host automatically.
+        **Host routing.** /send-mail is served by the canonical API host
+        (`https://api.primitive.dev/v1`) so the request body can carry
+        inline attachments up to ~30 MiB raw. The legacy dashboard
+        compatibility host (`https://www.primitive.dev/api/v1`) also accepts
+        /send-mail, but Vercel request body limits apply before proxying.
+        The typed SDKs route /send-mail to the canonical API host
+        automatically.
       servers:
         - url: https://api.primitive.dev/v1
-          description: Attachments-supporting send host (recommended)
+          description: Canonical API host (recommended)
         - url: https://www.primitive.dev/api/v1
-          description: Primary host (attachment-free sends only)
+          description: Legacy compatibility host (Vercel body limit applies)
       tags: [Sending]
       parameters:
         - name: Idempotency-Key
@@ -2111,6 +2111,70 @@ paths:
           $ref: '#/components/responses/InternalError'
         '502':
           $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /semantic-search:
+    post:
+      operationId: semanticSearch
+      summary: Semantic search across received and sent mail
+      description: |
+        Ranked search across both received and sent mail. The `mode`
+        field selects the ranking strategy:
+
+        - `keyword`: lexical full-text matching only (no embeddings).
+        - `semantic`: meaning-based matching using vector embeddings.
+        - `hybrid` (default): blends the semantic and keyword signals.
+
+        Results are ordered by a relevance `score`. Every row reports the
+        fields it matched (`matched_fields`), a match-centered excerpt per
+        field (`snippets`), and a `score_breakdown` whose components account
+        for the `score`. Page through results by passing the prior
+        response's `meta.cursor` back as `cursor`.
+
+        Requires the Pro plan and the `semantic_search_enabled`
+        entitlement; callers without them receive `403`.
+
+        Host routing: this operation is served only by the search host
+        (`https://api.primitive.dev/v1`). The typed SDKs route it there
+        automatically.
+      servers:
+        - url: https://api.primitive.dev/v1
+          description: Search host
+      tags: [Search]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SemanticSearchInput'
+      responses:
+        '200':
+          description: Ranked search results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/SemanticSearchResult'
+                      meta:
+                        $ref: '#/components/schemas/SemanticSearchMeta'
+                    required: [data, meta]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
@@ -5079,6 +5143,212 @@ components:
         - to_address
         - subject
         - body_size_bytes
+
+    SemanticSearchField:
+      type: string
+      enum: [subject, headers, addresses, body]
+      description: A searchable email field.
+
+    SemanticSearchInput:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 2048
+          description: |
+            Free-text query. Required for `semantic` and `hybrid` modes;
+            optional for `keyword` mode.
+        mode:
+          type: string
+          enum: [hybrid, semantic, keyword]
+          default: hybrid
+          description: |
+            Ranking strategy. `keyword` is lexical only, `semantic` is
+            embedding-based, `hybrid` blends both.
+        corpus:
+          type: array
+          items:
+            type: string
+            enum: [inbound, outbound]
+          minItems: 1
+          maxItems: 2
+          description: |
+            Which mail to search. Defaults to both received (`inbound`)
+            and sent (`outbound`).
+        search_in:
+          type: array
+          items:
+            $ref: '#/components/schemas/SemanticSearchField'
+          description: Restrict matching to these fields. Defaults to all.
+        exclude:
+          type: array
+          items:
+            $ref: '#/components/schemas/SemanticSearchField'
+          description: Exclude these fields from matching.
+        date_from:
+          type: string
+          format: date-time
+          description: Only include mail at or after this timestamp.
+        date_to:
+          type: string
+          format: date-time
+          description: Only include mail at or before this timestamp.
+        include:
+          type: array
+          items:
+            type: string
+            enum: [coverage]
+          description: |
+            Opt-in extras. `coverage` adds an index-coverage snapshot to
+            `meta`. Matched fields, snippets, and the score breakdown are
+            always returned regardless of this field.
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Maximum number of results to return.
+        cursor:
+          type: string
+          description: Opaque pagination cursor from a prior response's `meta.cursor`.
+
+    SemanticSearchSnippet:
+      type: object
+      properties:
+        field:
+          type: string
+          description: The field this excerpt came from.
+        text:
+          type: string
+          description: Plain-text excerpt centered on the match (no markup).
+      required: [field, text]
+
+    SemanticSearchScoreBreakdown:
+      type: object
+      description: |
+        Additive contributions to `score`. `semantic` and `keyword` are the
+        raw signals times the mode's weight (null when not applicable);
+        these plus `field_boost` and `recency` sum to `score` before each
+        value is independently rounded to 5 decimal places.
+      properties:
+        semantic:
+          type: [number, 'null']
+        keyword:
+          type: [number, 'null']
+        field_boost:
+          type: number
+        recency:
+          type: number
+      required: [semantic, keyword, field_boost, recency]
+
+    SemanticSearchResult:
+      type: object
+      properties:
+        source_type:
+          type: string
+          enum: [inbound_email, sent_email]
+          description: Whether this row is a received or sent message.
+        id:
+          type: string
+          description: Message id. Combine with `api_url` to fetch the full record.
+        subject:
+          type: [string, 'null']
+        from:
+          type: [string, 'null']
+        to:
+          type: [string, 'null']
+        timestamp:
+          type: string
+          description: Message timestamp (received_at for inbound, created_at for sent).
+        status:
+          type: string
+          description: Lifecycle status of the message.
+        score:
+          type: number
+          description: Overall relevance score; the `score_breakdown` components account for it.
+        semantic_score:
+          type: [number, 'null']
+          description: Raw semantic similarity signal, or null when not applicable.
+        keyword_score:
+          type: [number, 'null']
+          description: Raw keyword (lexical) signal, or null when not applicable.
+        matched_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/SemanticSearchField'
+          description: Fields where the query matched.
+        snippets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SemanticSearchSnippet'
+          description: Match-centered excerpts, one per matched field.
+        score_breakdown:
+          $ref: '#/components/schemas/SemanticSearchScoreBreakdown'
+        api_url:
+          type: [string, 'null']
+          description: Relative API path to fetch the full message.
+      required:
+        - source_type
+        - id
+        - subject
+        - from
+        - to
+        - timestamp
+        - status
+        - score
+        - semantic_score
+        - keyword_score
+        - matched_fields
+        - snippets
+        - score_breakdown
+        - api_url
+
+    SemanticSearchCoverage:
+      type: object
+      description: Index-coverage snapshot for the org, returned only when the `coverage` include option is requested.
+      properties:
+        embedded_chunks:
+          type: integer
+        pending_chunks:
+          type: integer
+        skipped_plan_chunks:
+          type: integer
+        skipped_quota_chunks:
+          type: integer
+        unsupported_attachment_chunks:
+          type: integer
+        failed_chunks:
+          type: integer
+      required:
+        - embedded_chunks
+        - pending_chunks
+        - skipped_plan_chunks
+        - skipped_quota_chunks
+        - unsupported_attachment_chunks
+        - failed_chunks
+
+    SemanticSearchMeta:
+      type: object
+      properties:
+        limit:
+          type: integer
+          description: Page size used for this request.
+        cursor:
+          type: [string, 'null']
+          description: Cursor for the next page, or null if there are no more results.
+        mode:
+          type: string
+          enum: [hybrid, semantic, keyword]
+          description: Ranking mode used for this response.
+        coverage:
+          oneOf:
+            - $ref: '#/components/schemas/SemanticSearchCoverage'
+            - type: 'null'
+          description: |
+            Index-coverage snapshot, present only when requested via
+            `include: [coverage]`; otherwise null.
+      required: [limit, cursor, mode, coverage]
 
     SentEmailDetail:
       description: |

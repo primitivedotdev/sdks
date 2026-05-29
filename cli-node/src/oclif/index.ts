@@ -24,9 +24,11 @@ import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
 import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
 import FunctionsTemplatesCommand from "./commands/functions-templates.js";
 import FunctionsTestFunctionCommand from "./commands/functions-test-function.js";
+import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
 import LogoutCommand from "./commands/logout.js";
 import ReplyCommand from "./commands/reply.js";
+import SemanticSearchCommand from "./commands/semantic-search.js";
 import SendCommand from "./commands/send.js";
 import {
   LoginBrowserCommand,
@@ -51,6 +53,7 @@ import SignupCommand, {
   SignupConfirmCommand,
   SignupInteractiveCommand,
   SignupResendCommand,
+  SignupStatusCommand,
 } from "./commands/signup.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
@@ -420,6 +423,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   "signup:confirm": SignupConfirmCommand,
   "signup:interactive": SignupInteractiveCommand,
   "signup:resend": SignupResendCommand,
+  "signup:status": SignupStatusCommand,
   // `logout` revokes the saved OAuth grant and removes local credentials.
   logout: LogoutCommand,
   // `whoami` is the credentials smoke test. Prints the account the
@@ -442,6 +446,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
   "emails:wait": EmailsWaitCommand,
+  // `semantic-search` is the top-level search verb for meaning-aware
+  // cross-corpus mail search. The generated operation remains available
+  // under its manifest id for full API parity.
+  "semantic-search": SemanticSearchCommand,
   // `domains:zone-file` downloads the server-generated DNS import file.
   // The API owns serialization so dashboard and CLI output stay aligned.
   "domains:zone-file": DomainsZoneFileCommand,
@@ -449,6 +457,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // `inbox:status` is the guided readiness view for inbound setup. It folds
   // domain verification, endpoint/function processing, and recent mail into
   // the server-owned status API instead of making agents compose those lists.
+  "inbox:setup": InboxSetupCommand,
   "inbox:status": InboxStatusCommand,
   "inbox:get-inbox-status": InboxStatusCommand,
   // `functions:init` scaffolds a deployable Function project so a

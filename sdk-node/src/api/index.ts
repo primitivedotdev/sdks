@@ -19,6 +19,9 @@ import {
   type GateDenial,
   type ErrorResponse as GeneratedErrorResponse,
   type ReplyInput as GeneratedReplyInput,
+  type SemanticSearchInput as GeneratedSemanticSearchInput,
+  type SemanticSearchMeta as GeneratedSemanticSearchMeta,
+  type SemanticSearchResult as GeneratedSemanticSearchResult,
   type SendMailAttachment as GeneratedSendMailAttachment,
   type SendMailInput as GeneratedSendMailInput,
   type SendMailResult as GeneratedSendMailResult,
@@ -171,6 +174,17 @@ export interface SendResult {
   deliveryStatus?: GeneratedSendMailResult["delivery_status"];
   smtpResponseCode?: number | null;
   smtpResponseText?: string;
+}
+
+/**
+ * Page of semantic-search results plus pagination meta. Returned by
+ * `PrimitiveClient.semanticSearch`. `data` is the ranked rows (newest
+ * tiebreak first within equal scores); `meta.cursor` is non-null when
+ * there's another page.
+ */
+export interface SemanticSearchResponse {
+  data: GeneratedSemanticSearchResult[];
+  meta: GeneratedSemanticSearchMeta;
 }
 
 function validateThreadHeaderValue(field: string, value: string): void {
@@ -370,13 +384,34 @@ export class PrimitiveClient extends PrimitiveApiClient {
     const result = await generatedOperations.sendEmail({
       body,
       ...resolveRequestOptions(options),
-      // /send-mail goes to the host that supports attachments. Same
-      // request body shape on both hosts; the host swap is the only
-      // difference. Callers don't see or configure this.
-      client: this._sendClient,
+      client: this.client,
       responseStyle: "fields",
     });
     return unwrapSendResult(result);
+  }
+
+  /**
+   * Semantic / hybrid / keyword search across received and sent mail.
+   *
+   * `POST /v1/semantic-search`. Returns ranked rows
+   * with matched fields, match-centered excerpts, and an additive
+   * `score_breakdown`. See `SemanticSearchInput` for request fields and
+   * `SemanticSearchResult` for the row shape.
+   *
+   * Requires the Pro plan and the `semantic_search_enabled` entitlement;
+   * otherwise the call throws `PrimitiveApiError` with `status: 403`.
+   */
+  async semanticSearch(
+    input: GeneratedSemanticSearchInput,
+    options?: RequestOptions,
+  ): Promise<SemanticSearchResponse> {
+    const result = await generatedOperations.semanticSearch({
+      body: input,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapSemanticSearchResult(result);
   }
 
   /**
@@ -429,7 +464,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
       body,
       path: { id: email.id },
       ...resolveRequestOptions(options),
-      client: this._sendClient,
+      client: this.client,
       responseStyle: "fields",
     });
     return unwrapSendResult(result);
@@ -539,6 +574,47 @@ function mapSendResult(result: GeneratedSendMailResult): SendResult {
   };
 }
 
+function unwrapSemanticSearchResult(result: {
+  data?:
+    | {
+        data?: GeneratedSemanticSearchResult[];
+        meta?: GeneratedSemanticSearchMeta;
+      }
+    | undefined;
+  error?: GeneratedErrorResponse | unknown;
+  response?: Response;
+}): SemanticSearchResponse {
+  const response = (result as { response?: Response }).response;
+
+  if (result.error) {
+    if (isAbortLikeError(result.error)) {
+      throw result.error;
+    }
+    const parsed = parseApiErrorPayload(result.error);
+    throw new PrimitiveApiError(parsed.message, {
+      payload: result.error,
+      status: response?.status,
+      code: parsed.code,
+      gates: parsed.gates,
+      requestId: parsed.requestId,
+      retryAfter: parseRetryAfterHeader(response),
+      details: parsed.details,
+    });
+  }
+
+  if (!result.data?.data || !result.data.meta) {
+    throw new PrimitiveApiError(
+      "Primitive API returned no semantic-search result",
+      {
+        payload: result,
+        status: response?.status,
+      },
+    );
+  }
+
+  return { data: result.data.data, meta: result.data.meta };
+}
+
 export function createPrimitiveClient(options: PrimitiveClientOptions = {}) {
   return new PrimitiveClient(options);
 }
@@ -573,7 +649,7 @@ export type {
 } from "@primitivedotdev/api-core";
 // The single `export *` covers every generated operation / type
 // plus `operations`, `PrimitiveApiClient`, `createPrimitiveApiClient`,
-// `DEFAULT_API_BASE_URL_1/2`, and `PrimitiveApiError`. The aliased
+// `DEFAULT_API_BASE_URL`, and `PrimitiveApiError`. The aliased
 // re-exports below cover the historical `PrimitiveGeneratedApi*`
 // names so existing customer imports keep resolving.
 export * from "@primitivedotdev/api-core";

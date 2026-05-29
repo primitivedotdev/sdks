@@ -68,10 +68,10 @@ function commonOtpStartFlags() {
       description:
         "Confirm acceptance of Primitive's Terms of Service and Privacy Policy",
     }),
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     "device-name": Flags.string({
@@ -336,10 +336,10 @@ export class SigninOtpConfirmCommand extends Command {
   ];
 
   static flags = {
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
     force: Flags.boolean({
@@ -472,10 +472,10 @@ export class SigninOtpResendCommand extends Command {
   static examples = ["<%= config.bin %> signin otp resend user@example.com"];
 
   static flags = {
-    "api-base-url-1": Flags.string({
+    "api-base-url": Flags.string({
       description:
         "Override the primary API base URL. Internal testing only; not documented to customers.",
-      env: "PRIMITIVE_API_BASE_URL_1",
+      env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
   };

@@ -51,7 +51,7 @@ export const PRIMITIVE_TEAM_AUTHOR: FunctionTemplateAuthor = {
 // patch releases of the SDK pick up automatically. Update alongside
 // any minor or major version bump of the SDK so scaffolded projects
 // use the same SDK version this CLI release was tested against.
-const SDK_VERSION_RANGE = "^0.34.0";
+const SDK_VERSION_RANGE = "^0.35.1";
 
 // The CLI version range that ships in the scaffolded devDependencies.
 // Pinned separately from SDK_VERSION_RANGE because @primitivedotdev/cli
@@ -63,7 +63,7 @@ const SDK_VERSION_RANGE = "^0.34.0";
 // resolves at least v1.2.3, so the user does not silently downgrade
 // the bin under themselves. The lockstep test in functions-init.test.ts
 // enforces that invariant.
-const CLI_VERSION_RANGE = "^0.34.0";
+const CLI_VERSION_RANGE = "^0.35.1";
 
 // esbuild version range. Pinned to the latest stable major used
 // elsewhere in the Primitive codebase for bundling Workers-style
@@ -230,7 +230,7 @@ export default {
 
       const client = createPrimitiveClient({
         apiKey: env.PRIMITIVE_API_KEY,
-        apiBaseUrl1: env.PRIMITIVE_API_BASE_URL,
+        apiBaseUrl: env.PRIMITIVE_API_BASE_URL,
       });
 
       // To add an LLM or another API, store its key as a Function secret.
@@ -254,7 +254,7 @@ export default {
       // route "support@" to a ticketing flow and "sales@" to a lead
       // capture flow before calling client.reply.
 
-      // client.reply routes through POST /api/v1/emails/{id}/reply
+      // client.reply routes through POST /v1/emails/{id}/reply
       // (NOT /send-mail) so the server derives recipients, the
       // \`Re: <parent>\` subject, threading headers, and the
       // in_reply_to_email_id foreign key automatically. The FK is

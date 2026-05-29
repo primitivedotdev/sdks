@@ -153,8 +153,13 @@ describe("COMMANDS / manifest coverage", () => {
   });
 
   it("registers inbox status commands", () => {
+    expect(COMMANDS["inbox:setup"]).toBeDefined();
     expect(COMMANDS["inbox:status"]).toBeDefined();
     expect(COMMANDS["inbox:get-inbox-status"]).toBe(COMMANDS["inbox:status"]);
+    const inboxSetupCommand = COMMANDS["inbox:setup"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(inboxSetupCommand.flags.json).toBeDefined();
     const inboxStatusCommand = COMMANDS["inbox:status"] as unknown as {
       flags: Record<string, unknown>;
     };
@@ -162,11 +167,28 @@ describe("COMMANDS / manifest coverage", () => {
     expect(inboxStatusCommand.flags.json).toBeDefined();
   });
 
+  it("registers semantic search as a top-level command", () => {
+    expect(COMMANDS["semantic-search"]).toBeDefined();
+    const semanticSearchCommand = COMMANDS["semantic-search"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(semanticSearchCommand.flags.mode).toBeDefined();
+    expect(semanticSearchCommand.flags.corpus).toBeDefined();
+    expect(semanticSearchCommand.flags["api-base-url"]).toBeDefined();
+    expect(semanticSearchCommand.flags["api-base-url-1"]).toBeUndefined();
+    expect(semanticSearchCommand.flags["api-base-url-2"]).toBeUndefined();
+  });
+
   it("registers signup commands", () => {
     expect(COMMANDS.signup).toBeDefined();
     expect(COMMANDS["signup:confirm"]).toBeDefined();
     expect(COMMANDS["signup:interactive"]).toBeDefined();
     expect(COMMANDS["signup:resend"]).toBeDefined();
+    expect(COMMANDS["signup:status"]).toBeDefined();
+    const signupStatusCommand = COMMANDS["signup:status"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(signupStatusCommand.flags.json).toBeDefined();
   });
 
   it("registers sign-in commands", () => {

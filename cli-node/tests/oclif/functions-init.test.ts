@@ -101,7 +101,7 @@ describe("renderHandler", () => {
 
   it("calls client.reply (not client.send) so the inbound's replies array gets populated", () => {
     // The whole point of this scaffolder is to ship a handler that
-    // uses the SDK rather than raw fetch against /api/v1/send-mail.
+    // uses the SDK rather than raw fetch against /v1/send-mail.
     // client.reply specifically (not client.send) so the server-side
     // in_reply_to_email_id FK gets set, which is what makes the
     // inbound's `replies` array populate and `functions:test-function
@@ -123,7 +123,7 @@ describe("renderHandler", () => {
 
   it("passes the injected Primitive API base URL to the SDK client", () => {
     const handler = renderHandler();
-    expect(handler).toContain("apiBaseUrl1: env.PRIMITIVE_API_BASE_URL");
+    expect(handler).toContain("apiBaseUrl: env.PRIMITIVE_API_BASE_URL");
   });
 
   it("branches on event.event so future event types do not retry-loop", () => {

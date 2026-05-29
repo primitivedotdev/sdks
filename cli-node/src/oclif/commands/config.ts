@@ -34,8 +34,7 @@ function redactConfig(config: ReturnType<typeof emptyCliConfig>) {
 }
 
 export function upsertCliEnvironmentAndClearCredentialsIfSwitched(params: {
-  apiBaseUrl1?: string;
-  apiBaseUrl2?: string;
+  apiBaseUrl?: string;
   configDir: string;
   environmentName?: string;
   headers?: string[];
@@ -49,8 +48,7 @@ export function upsertCliEnvironmentAndClearCredentialsIfSwitched(params: {
   const previousActiveEnvironment = resolveConfigEnvironment(previousConfig);
   const previousEnvironment = previousActiveEnvironment?.name ?? null;
   const config = upsertCliEnvironment({
-    apiBaseUrl1: params.apiBaseUrl1,
-    apiBaseUrl2: params.apiBaseUrl2,
+    apiBaseUrl: params.apiBaseUrl,
     config: previousConfig,
     environmentName: params.environmentName,
     headers: params.headers,
@@ -61,8 +59,8 @@ export function upsertCliEnvironmentAndClearCredentialsIfSwitched(params: {
   const shouldClearCredentials =
     existsSync(credentialsPath(params.configDir)) &&
     (previousEnvironment !== environment ||
-      previousActiveEnvironment?.config.api_base_url_1 !==
-        activeEnvironment?.config.api_base_url_1);
+      previousActiveEnvironment?.config.api_base_url !==
+        activeEnvironment?.config.api_base_url);
   let removedCredentials = false;
 
   if (shouldClearCredentials) {
@@ -128,13 +126,11 @@ export class ConfigSetCommand extends Command {
   static flags = {
     environment: Flags.string({
       char: "e",
-      description: "Environment name to create or update",
+      description:
+        "Environment name to create or update. Defaults to the active environment, or default when none is active.",
     }),
-    "api-base-url-1": Flags.string({
-      description: "Primary API base URL",
-    }),
-    "api-base-url-2": Flags.string({
-      description: "Attachments-supporting API base URL",
+    "api-base-url": Flags.string({
+      description: "API base URL",
     }),
     header: Flags.string({
       description: "Request header in name=value form. Repeatable.",
@@ -150,8 +146,7 @@ export class ConfigSetCommand extends Command {
     const { flags } = await this.parse(ConfigSetCommand);
     const headers = flags.header ?? [];
     if (
-      flags["api-base-url-1"] === undefined &&
-      flags["api-base-url-2"] === undefined &&
+      flags["api-base-url"] === undefined &&
       headers.length === 0 &&
       (flags["unset-header"] ?? []).length === 0
     ) {
@@ -163,8 +158,7 @@ export class ConfigSetCommand extends Command {
 
     const { environment, removedCredentials } =
       upsertCliEnvironmentAndClearCredentialsIfSwitched({
-        apiBaseUrl1: flags["api-base-url-1"],
-        apiBaseUrl2: flags["api-base-url-2"],
+        apiBaseUrl: flags["api-base-url"],
         configDir: this.config.configDir,
         environmentName: flags.environment,
         headers,
@@ -244,11 +238,8 @@ export class ConfigListCommand extends Command {
       const active = activeEnvironment === name ? "*" : " ";
       const headerNames = Object.keys(environment.headers ?? {});
       this.log(`${active} ${name}`);
-      if (environment.api_base_url_1) {
-        this.log(`    api_base_url_1: ${environment.api_base_url_1}`);
-      }
-      if (environment.api_base_url_2) {
-        this.log(`    api_base_url_2: ${environment.api_base_url_2}`);
+      if (environment.api_base_url) {
+        this.log(`    api_base_url: ${environment.api_base_url}`);
       }
       this.log(
         `    headers: ${headerNames.length > 0 ? headerNames.join(", ") : "(none)"}`,
