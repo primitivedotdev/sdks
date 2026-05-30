@@ -94,6 +94,17 @@ from .function_list_item import FunctionListItem
 from .function_log_row import FunctionLogRow
 from .function_log_row_level import FunctionLogRowLevel
 from .function_log_row_metadata_type_0 import FunctionLogRowMetadataType0
+from .function_route_body import FunctionRouteBody
+from .function_route_body_target_type_0 import FunctionRouteBodyTargetType0
+from .function_route_body_target_type_0_kind import FunctionRouteBodyTargetType0Kind
+from .function_route_body_target_type_1 import FunctionRouteBodyTargetType1
+from .function_route_body_target_type_1_kind import FunctionRouteBodyTargetType1Kind
+from .function_route_result import FunctionRouteResult
+from .function_route_result_conflict import FunctionRouteResultConflict
+from .function_route_result_conflict_kind import FunctionRouteResultConflictKind
+from .function_routing import FunctionRouting
+from .function_routing_domain_type_0 import FunctionRoutingDomainType0
+from .function_routing_rules import FunctionRoutingRules
 from .function_secret_list_item import FunctionSecretListItem
 from .function_secret_write_result import FunctionSecretWriteResult
 from .function_test_run import FunctionTestRun
@@ -115,8 +126,10 @@ from .get_account_response_200 import GetAccountResponse200
 from .get_conversation_response_200 import GetConversationResponse200
 from .get_email_response_200 import GetEmailResponse200
 from .get_function_response_200 import GetFunctionResponse200
+from .get_function_routing_response_200 import GetFunctionRoutingResponse200
 from .get_function_test_run_trace_response_200 import GetFunctionTestRunTraceResponse200
 from .get_inbox_status_response_200 import GetInboxStatusResponse200
+from .get_org_routing_topology_response_200 import GetOrgRoutingTopologyResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
 from .get_storage_stats_response_200 import GetStorageStatsResponse200
@@ -159,6 +172,11 @@ from .resend_agent_signup_verification_response_200 import ResendAgentSignupVeri
 from .resend_cli_signup_verification_input import ResendCliSignupVerificationInput
 from .resend_cli_signup_verification_response_200 import ResendCliSignupVerificationResponse200
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
+from .routing_topology import RoutingTopology
+from .routing_topology_domains_item import RoutingTopologyDomainsItem
+from .routing_topology_domains_item_routed_function_type_0 import RoutingTopologyDomainsItemRoutedFunctionType0
+from .routing_topology_fallback_function_type_0 import RoutingTopologyFallbackFunctionType0
+from .routing_topology_unrouted_functions_item import RoutingTopologyUnroutedFunctionsItem
 from .search_emails_has_attachment import SearchEmailsHasAttachment
 from .search_emails_include_facets import SearchEmailsIncludeFacets
 from .search_emails_response_200 import SearchEmailsResponse200
@@ -193,6 +211,7 @@ from .send_permissions_meta import SendPermissionsMeta
 from .sent_email_detail import SentEmailDetail
 from .sent_email_status import SentEmailStatus
 from .sent_email_summary import SentEmailSummary
+from .set_function_route_response_200 import SetFunctionRouteResponse200
 from .set_function_secret_input import SetFunctionSecretInput
 from .set_function_secret_response_200 import SetFunctionSecretResponse200
 from .set_function_secret_response_201 import SetFunctionSecretResponse201
@@ -215,6 +234,8 @@ from .test_result import TestResult
 from .thread import Thread
 from .thread_message import ThreadMessage
 from .thread_message_direction import ThreadMessageDirection
+from .unset_function_route_response_200 import UnsetFunctionRouteResponse200
+from .unset_function_route_response_200_data import UnsetFunctionRouteResponse200Data
 from .unverified_domain import UnverifiedDomain
 from .update_account_input import UpdateAccountInput
 from .update_account_response_200 import UpdateAccountResponse200
@@ -331,6 +352,17 @@ __all__ = (
     "FunctionLogRow",
     "FunctionLogRowLevel",
     "FunctionLogRowMetadataType0",
+    "FunctionRouteBody",
+    "FunctionRouteBodyTargetType0",
+    "FunctionRouteBodyTargetType0Kind",
+    "FunctionRouteBodyTargetType1",
+    "FunctionRouteBodyTargetType1Kind",
+    "FunctionRouteResult",
+    "FunctionRouteResultConflict",
+    "FunctionRouteResultConflictKind",
+    "FunctionRouting",
+    "FunctionRoutingDomainType0",
+    "FunctionRoutingRules",
     "FunctionSecretListItem",
     "FunctionSecretWriteResult",
     "FunctionTestRun",
@@ -352,8 +384,10 @@ __all__ = (
     "GetConversationResponse200",
     "GetEmailResponse200",
     "GetFunctionResponse200",
+    "GetFunctionRoutingResponse200",
     "GetFunctionTestRunTraceResponse200",
     "GetInboxStatusResponse200",
+    "GetOrgRoutingTopologyResponse200",
     "GetSendPermissionsResponse200",
     "GetSentEmailResponse200",
     "GetStorageStatsResponse200",
@@ -396,6 +430,11 @@ __all__ = (
     "ResendCliSignupVerificationInput",
     "ResendCliSignupVerificationResponse200",
     "RotateWebhookSecretResponse200",
+    "RoutingTopology",
+    "RoutingTopologyDomainsItem",
+    "RoutingTopologyDomainsItemRoutedFunctionType0",
+    "RoutingTopologyFallbackFunctionType0",
+    "RoutingTopologyUnroutedFunctionsItem",
     "SearchEmailsHasAttachment",
     "SearchEmailsIncludeFacets",
     "SearchEmailsResponse200",
@@ -430,6 +469,7 @@ __all__ = (
     "SentEmailDetail",
     "SentEmailStatus",
     "SentEmailSummary",
+    "SetFunctionRouteResponse200",
     "SetFunctionSecretInput",
     "SetFunctionSecretResponse200",
     "SetFunctionSecretResponse201",
@@ -452,6 +492,8 @@ __all__ = (
     "Thread",
     "ThreadMessage",
     "ThreadMessageDirection",
+    "UnsetFunctionRouteResponse200",
+    "UnsetFunctionRouteResponse200Data",
     "UnverifiedDomain",
     "UpdateAccountInput",
     "UpdateAccountResponse200",

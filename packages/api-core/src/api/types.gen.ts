@@ -2391,6 +2391,97 @@ export type TestInvocationResult = {
 };
 
 /**
+ * A single route binding for a function. `domain` is null when the
+ * binding is the org's fallback (any active domain without a scoped
+ * binding); otherwise it carries the scoped domain. `rules` is
+ * reserved for future routing predicates.
+ *
+ */
+export type FunctionRouting = {
+    endpoint_id: string;
+    enabled: boolean;
+    domain: {
+        id: string;
+        name?: string | null;
+    } | null;
+    /**
+     * Future routing predicates. Currently empty.
+     */
+    rules: {
+        [key: string]: unknown;
+    };
+    delivery_count?: number;
+    success_count?: number;
+    failure_count?: number;
+    consecutive_fails?: number;
+    last_delivery_at?: string | null;
+    last_success_at?: string | null;
+    last_failure_at?: string | null;
+};
+
+/**
+ * Org-wide map of function routing: which domain points at which
+ * function, the org's fallback binding (if any), and every
+ * deployed function with no route currently bound.
+ *
+ */
+export type RoutingTopology = {
+    domains: Array<{
+        domain_id: string;
+        domain: string;
+        routed_function: {
+            id: string;
+            name: string;
+        } | null;
+        endpoint_enabled: boolean | null;
+    }>;
+    fallback_function: {
+        id: string;
+        name: string;
+    } | null;
+    fallback_enabled: boolean | null;
+    unrouted_functions: Array<{
+        id: string;
+        name: string;
+    }>;
+};
+
+/**
+ * Target for a route binding. Either a specific verified domain
+ * (scoped) or the org-wide fallback. Pass `takeover: true` to
+ * deactivate any conflicting binding before installing this one.
+ *
+ */
+export type FunctionRouteBody = {
+    target: {
+        kind: 'domain';
+        domainId: string;
+    } | {
+        kind: 'fallback';
+    };
+    /**
+     * When true, deactivate any conflicting binding before installing this one.
+     */
+    takeover?: boolean;
+};
+
+/**
+ * On success, carries the new `routing`. On conflict, carries
+ * `conflict` describing the binding holder so the caller can
+ * re-issue with `takeover: true`.
+ *
+ */
+export type FunctionRouteResult = {
+    routing?: FunctionRouting | unknown;
+    conflict?: {
+        kind: 'http' | 'function';
+        functionId?: string | null;
+        functionName?: string | null;
+        url?: string | null;
+    };
+};
+
+/**
  * High-level state for a function test run trace:
  * - `send_failed`: the initial test email send failed.
  * - `waiting_for_send`: the test run was created but no send result has been recorded yet.
@@ -4981,6 +5072,151 @@ export type GetFunctionTestRunTraceResponses = {
 };
 
 export type GetFunctionTestRunTraceResponse = GetFunctionTestRunTraceResponses[keyof GetFunctionTestRunTraceResponses];
+
+export type GetOrgRoutingTopologyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/functions/routing-topology';
+};
+
+export type GetOrgRoutingTopologyErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type GetOrgRoutingTopologyError = GetOrgRoutingTopologyErrors[keyof GetOrgRoutingTopologyErrors];
+
+export type GetOrgRoutingTopologyResponses = {
+    /**
+     * Routing topology
+     */
+    200: SuccessEnvelope & {
+        data?: RoutingTopology;
+    };
+};
+
+export type GetOrgRoutingTopologyResponse = GetOrgRoutingTopologyResponses[keyof GetOrgRoutingTopologyResponses];
+
+export type GetFunctionRoutingData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/functions/{id}/routing';
+};
+
+export type GetFunctionRoutingErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetFunctionRoutingError = GetFunctionRoutingErrors[keyof GetFunctionRoutingErrors];
+
+export type GetFunctionRoutingResponses = {
+    /**
+     * Function routing
+     */
+    200: SuccessEnvelope & {
+        data?: FunctionRouting | unknown;
+    };
+};
+
+export type GetFunctionRoutingResponse = GetFunctionRoutingResponses[keyof GetFunctionRoutingResponses];
+
+export type UnsetFunctionRouteData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/functions/{id}/route';
+};
+
+export type UnsetFunctionRouteErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type UnsetFunctionRouteError = UnsetFunctionRouteErrors[keyof UnsetFunctionRouteErrors];
+
+export type UnsetFunctionRouteResponses = {
+    /**
+     * Route unbound
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            unrouted: true;
+        };
+    };
+};
+
+export type UnsetFunctionRouteResponse = UnsetFunctionRouteResponses[keyof UnsetFunctionRouteResponses];
+
+export type SetFunctionRouteData = {
+    body: FunctionRouteBody;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/functions/{id}/route';
+};
+
+export type SetFunctionRouteErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type SetFunctionRouteError = SetFunctionRouteErrors[keyof SetFunctionRouteErrors];
+
+export type SetFunctionRouteResponses = {
+    /**
+     * Route bound, or conflict requiring takeover
+     */
+    200: SuccessEnvelope & {
+        data?: FunctionRouteResult;
+    };
+};
+
+export type SetFunctionRouteResponse = SetFunctionRouteResponses[keyof SetFunctionRouteResponses];
 
 export type ListFunctionSecretsData = {
     body?: never;

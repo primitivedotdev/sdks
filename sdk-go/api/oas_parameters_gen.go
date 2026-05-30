@@ -1175,6 +1175,72 @@ func decodeGetFunctionParams(args [1]string, argsEscaped bool, r *http.Request) 
 	return params, nil
 }
 
+// GetFunctionRoutingParams is parameters of getFunctionRouting operation.
+type GetFunctionRoutingParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackGetFunctionRoutingParams(packed middleware.Parameters) (params GetFunctionRoutingParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeGetFunctionRoutingParams(args [1]string, argsEscaped bool, r *http.Request) (params GetFunctionRoutingParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetFunctionTestRunTraceParams is parameters of getFunctionTestRunTrace operation.
 type GetFunctionTestRunTraceParams struct {
 	// Resource UUID.
@@ -4560,6 +4626,72 @@ func decodeSendEmailParams(args [0]string, argsEscaped bool, r *http.Request) (p
 	return params, nil
 }
 
+// SetFunctionRouteParams is parameters of setFunctionRoute operation.
+type SetFunctionRouteParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackSetFunctionRouteParams(packed middleware.Parameters) (params SetFunctionRouteParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeSetFunctionRouteParams(args [1]string, argsEscaped bool, r *http.Request) (params SetFunctionRouteParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // SetFunctionSecretParams is parameters of setFunctionSecret operation.
 type SetFunctionSecretParams struct {
 	// Resource UUID.
@@ -4784,6 +4916,72 @@ func unpackTestFunctionParams(packed middleware.Parameters) (params TestFunction
 }
 
 func decodeTestFunctionParams(args [1]string, argsEscaped bool, r *http.Request) (params TestFunctionParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// UnsetFunctionRouteParams is parameters of unsetFunctionRoute operation.
+type UnsetFunctionRouteParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackUnsetFunctionRouteParams(packed middleware.Parameters) (params UnsetFunctionRouteParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeUnsetFunctionRouteParams(args [1]string, argsEscaped bool, r *http.Request) (params UnsetFunctionRouteParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]

@@ -3,10 +3,12 @@ import type {
   CreateFunctionResult,
   FunctionDetail,
   FunctionSecretWriteResult,
+  PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import {
   createFunction,
   getFunction,
+  getFunctionRouting,
   listFunctions,
   setFunctionSecret,
   updateFunction,
@@ -64,6 +66,39 @@ import {
 // Without secrets the flow is a single create call; with one or more
 // secrets the flow fans out to (create + N set-secret + redeploy) API
 // calls.
+
+// Tell the user whether the function reached "reachable" (route bound)
+// or just "installed" (deployed but no route). AGX feedback: deploy was
+// returning `deploy_status: deployed` and customers assumed inbound
+// mail would now route to the function. It does not until a route is
+// bound. Without this hint, the customer's first test invocation
+// silently times out, even on the fast / happy path.
+async function writeRouteStatusHint(
+  apiClient: PrimitiveApiClient,
+  functionId: string,
+): Promise<void> {
+  try {
+    const result = await getFunctionRouting({
+      client: apiClient.client,
+      path: { id: functionId },
+      responseStyle: "fields",
+    });
+    if (result.error) return;
+    const routing = (result.data as { data?: unknown } | undefined)?.data;
+    if (routing) {
+      process.stderr.write(
+        "Route bound. Function will receive inbound mail.\n",
+      );
+    } else {
+      process.stderr.write(
+        `Deployed but no route is bound. Inbound mail will not reach this function until you bind one: primitive functions route-set --id ${functionId} --domain <domain-id>  (or --fallback)\n`,
+      );
+    }
+  } catch {
+    // Routing hint is advisory only. A network blip here must not break
+    // the deploy command's exit code.
+  }
+}
 
 // Final payload runDeployWithSecrets produces on the happy path.
 // `created` is the initial create result; `redeploy` is the
@@ -572,11 +607,14 @@ class FunctionsDeployCommand extends Command {
             `Function ${payload.id} deploy failed${detail}\n`,
           );
           process.exitCode = 1;
+        } else {
+          await writeRouteStatusHint(apiClient, payload.id);
         }
         return;
       }
 
       this.log(JSON.stringify(payload, null, 2));
+      await writeRouteStatusHint(apiClient, payload.id);
     });
   }
 
@@ -711,11 +749,14 @@ class FunctionsDeployCommand extends Command {
           : ".";
         process.stderr.write(`Function ${payload.id} deploy failed${detail}\n`);
         process.exitCode = 1;
+      } else {
+        await writeRouteStatusHint(apiClient, payload.id);
       }
       return;
     }
 
     this.log(JSON.stringify(payload, null, 2));
+    await writeRouteStatusHint(apiClient, payload.id);
   }
 }
 

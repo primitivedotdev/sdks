@@ -263,7 +263,7 @@ async function maybeWriteEndpointNoiseWarning(params: {
 
 class FunctionsTestFunctionCommand extends Command {
   static description =
-    "Send a real test email through MX to trigger this function. With --wait, blocks until the function has processed the inbound; with --show-sends, also prints any outbound sends the function emitted in response.";
+    "Send a real test email through MX to trigger this function. The function must have an active route bound (see `functions route-set`); without one the API returns a 422 immediately so no doomed test send is queued. With --wait, blocks until the function has processed the inbound; with --show-sends, also prints any outbound sends the function emitted in response.";
 
   static summary = "Trigger a test invocation; with --wait, watch it land";
 
@@ -407,6 +407,23 @@ class FunctionsTestFunctionCommand extends Command {
           return;
         }
         const fetched = (result.data as { data: FunctionTestRunTrace }).data;
+        // Early bail: inbound email landed but webhook delivery has no
+        // endpoints to dispatch to. The server's no_endpoint pre-check
+        // catches the new case, but a route that gets unbound between
+        // the test send and the inbound arrival can still hit this path.
+        // Surface the cause immediately instead of waiting out the full
+        // timeout.
+        if (
+          fetched.inbound_email &&
+          Array.isArray(fetched.deliveries) &&
+          fetched.deliveries.length === 0
+        ) {
+          writeFunctionTestProgress(
+            `Inbound email arrived but no route matched. Bind one with: primitive functions route-set --id ${flags.id} --domain <domain-id> (or --fallback), then retry.`,
+          );
+          process.exitCode = 1;
+          return;
+        }
         if (TERMINAL_TEST_TRACE_STATES.has(fetched.state)) {
           trace = fetched;
           break;
@@ -415,10 +432,29 @@ class FunctionsTestFunctionCommand extends Command {
       }
 
       if (!trace) {
-        this.error(
-          `Timed out after ${flags.timeout}s waiting for function test run ${invocation.test_run_id} to complete. Browse ${invocation.watch_url} for the live view, or inspect ${invocation.trace_url}.`,
-          { exit: 2 },
+        // Fetch one final snapshot so the timeout message can summarize
+        // what landed and what did not, instead of asking the user to
+        // open a browser. The trace endpoint is the same one the poll
+        // loop just hit, so a single extra call is cheap.
+        const finalResult = await getFunctionTestRunTrace({
+          client: apiClient.client,
+          path: { id: flags.id, run_id: invocation.test_run_id },
+          responseStyle: "fields",
+        }).catch(() => null);
+        const finalTrace = (
+          finalResult?.data as { data?: FunctionTestRunTrace } | undefined
+        )?.data;
+        const inboundLanded = Boolean(finalTrace?.inbound_email);
+        const deliveryCount = finalTrace?.deliveries?.length ?? 0;
+        const logCount = finalTrace?.logs?.length ?? 0;
+        const replyCount = finalTrace?.replies?.length ?? 0;
+        const webhookStatus =
+          finalTrace?.inbound_email?.webhook_status ?? "n/a";
+        writeFunctionTestProgress(
+          `Timed out after ${flags.timeout}s. Trace summary: inbound_landed=${inboundLanded} deliveries=${deliveryCount} logs=${logCount} replies=${replyCount} webhook_status=${webhookStatus}. Browse ${invocation.watch_url} for the live view, or inspect ${invocation.trace_url}.`,
         );
+        process.exitCode = 2;
+        return;
       }
 
       // 3. Emit the outcome.

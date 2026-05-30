@@ -349,6 +349,18 @@ class FunctionsSetSecretCommand extends Command {
       }
 
       this.log(JSON.stringify(outcome.result, null, 2));
+
+      // When the user did not pass --redeploy, the secret is written but
+      // is NOT yet visible to the running handler. AGX feedback flagged
+      // this as a recurring surprise: the JSON envelope reads as
+      // success, so customers assumed the value was live. Surface the
+      // missing redeploy step explicitly on stderr so it does not get
+      // buried in the success payload on stdout.
+      if (outcome.result.redeploy === undefined) {
+        process.stderr.write(
+          `Secret ${flags.key} saved. Not live until redeploy. Re-run with --redeploy, or run \`primitive functions redeploy --id ${flags.id} --file <bundle.js>\`.\n`,
+        );
+      }
     });
   }
 }

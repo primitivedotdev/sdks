@@ -396,6 +396,23 @@ After the first deploy, copy the returned function id into your shell:
 export PRIMITIVE_FUNCTION_ID=<fn-id>
 \`\`\`
 
+## Bind a route
+
+A deployed Function does not receive inbound mail until a route is
+bound to it. Without this step, the Function is installed in the
+runtime but unreachable, and \`functions test\` will refuse to send
+(returns 422 \`no_endpoint\`).
+
+\`\`\`
+primitive functions route-set --id "$PRIMITIVE_FUNCTION_ID" --domain <domain-id>
+\`\`\`
+
+Use \`--fallback\` instead of \`--domain\` to bind the Function as the
+org-wide fallback for any active domain that has no scoped binding.
+Run \`primitive functions route-get --id "$PRIMITIVE_FUNCTION_ID"\` to
+inspect the current binding, or \`primitive functions routing-topology\`
+for the org-wide view of which domain points at which Function.
+
 ## Prove it works
 
 \`\`\`

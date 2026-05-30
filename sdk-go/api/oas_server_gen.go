@@ -245,6 +245,15 @@ type Handler interface {
 	//
 	// GET /functions/{id}
 	GetFunction(ctx context.Context, params GetFunctionParams) (GetFunctionRes, error)
+	// GetFunctionRouting implements getFunctionRouting operation.
+	//
+	// Returns the endpoint binding for the function, or null when no
+	// route is currently bound. The binding identifies whether the
+	// function receives mail for a specific domain (scoped) or for any
+	// active domain that has no scoped binding (fallback).
+	//
+	// GET /functions/{id}/routing
+	GetFunctionRouting(ctx context.Context, params GetFunctionRoutingParams) (GetFunctionRoutingRes, error)
 	// GetFunctionTestRunTrace implements getFunctionTestRunTrace operation.
 	//
 	// Returns the current end-to-end trace for a function test run.
@@ -268,6 +277,16 @@ type Handler interface {
 	//
 	// GET /inbox/status
 	GetInboxStatus(ctx context.Context) (GetInboxStatusRes, error)
+	// GetOrgRoutingTopology implements getOrgRoutingTopology operation.
+	//
+	// Returns a single snapshot of how inbound mail is routed across
+	// this org's active domains and functions: which active domain has
+	// which function bound, the org's fallback function (if any), and
+	// every deployed function with no route bound. Use this to answer
+	// "which of my functions actually receive mail?" diagnostically.
+	//
+	// GET /functions/routing-topology
+	GetOrgRoutingTopology(ctx context.Context) (GetOrgRoutingTopologyRes, error)
 	// GetSendPermissions implements getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -568,6 +587,17 @@ type Handler interface {
 	//
 	// POST /send-mail
 	SendEmail(ctx context.Context, req *SendMailInput, params SendEmailParams) (SendEmailRes, error)
+	// SetFunctionRoute implements setFunctionRoute operation.
+	//
+	// Binds inbound mail to this function. The route target is either
+	// a specific verified domain (scoped) or the org's fallback (any
+	// active domain with no scoped binding). If another function is
+	// already bound at the target, returns a `conflict` envelope
+	// describing the holder; re-issue with `takeover: true` to
+	// deactivate that prior binding and install this one.
+	//
+	// PUT /functions/{id}/route
+	SetFunctionRoute(ctx context.Context, req *FunctionRouteBody, params SetFunctionRouteParams) (SetFunctionRouteRes, error)
 	// SetFunctionSecret implements setFunctionSecret operation.
 	//
 	// Path-keyed companion to `POST /functions/{id}/secrets`.
@@ -639,6 +669,14 @@ type Handler interface {
 	//
 	// POST /functions/{id}/test
 	TestFunction(ctx context.Context, req OptTestFunctionReq, params TestFunctionParams) (TestFunctionRes, error)
+	// UnsetFunctionRoute implements unsetFunctionRoute operation.
+	//
+	// Deactivates every active endpoint bound to this function. The
+	// function stays deployed but stops receiving inbound mail. Safe
+	// to call when no route is currently bound (no-op).
+	//
+	// DELETE /functions/{id}/route
+	UnsetFunctionRoute(ctx context.Context, params UnsetFunctionRouteParams) (UnsetFunctionRouteRes, error)
 	// UpdateAccount implements updateAccount operation.
 	//
 	// Update account settings.

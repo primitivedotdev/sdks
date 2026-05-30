@@ -6299,6 +6299,486 @@ func (s *FunctionLogRowMetadata) init() FunctionLogRowMetadata {
 	return m
 }
 
+// Target for a route binding. Either a specific verified domain
+// (scoped) or the org-wide fallback. Pass `takeover: true` to
+// deactivate any conflicting binding before installing this one.
+// Ref: #/components/schemas/FunctionRouteBody
+type FunctionRouteBody struct {
+	Target FunctionRouteBodyTarget `json:"target"`
+	// When true, deactivate any conflicting binding before installing this one.
+	Takeover OptBool `json:"takeover"`
+}
+
+// GetTarget returns the value of Target.
+func (s *FunctionRouteBody) GetTarget() FunctionRouteBodyTarget {
+	return s.Target
+}
+
+// GetTakeover returns the value of Takeover.
+func (s *FunctionRouteBody) GetTakeover() OptBool {
+	return s.Takeover
+}
+
+// SetTarget sets the value of Target.
+func (s *FunctionRouteBody) SetTarget(val FunctionRouteBodyTarget) {
+	s.Target = val
+}
+
+// SetTakeover sets the value of Takeover.
+func (s *FunctionRouteBody) SetTakeover(val OptBool) {
+	s.Takeover = val
+}
+
+// FunctionRouteBodyTarget represents sum type.
+type FunctionRouteBodyTarget struct {
+	Type                     FunctionRouteBodyTargetType // switch on this field
+	FunctionRouteBodyTarget0 FunctionRouteBodyTarget0
+	FunctionRouteBodyTarget1 FunctionRouteBodyTarget1
+}
+
+// FunctionRouteBodyTargetType is oneOf type of FunctionRouteBodyTarget.
+type FunctionRouteBodyTargetType string
+
+// Possible values for FunctionRouteBodyTargetType.
+const (
+	FunctionRouteBodyTarget0FunctionRouteBodyTarget FunctionRouteBodyTargetType = "FunctionRouteBodyTarget0"
+	FunctionRouteBodyTarget1FunctionRouteBodyTarget FunctionRouteBodyTargetType = "FunctionRouteBodyTarget1"
+)
+
+// IsFunctionRouteBodyTarget0 reports whether FunctionRouteBodyTarget is FunctionRouteBodyTarget0.
+func (s FunctionRouteBodyTarget) IsFunctionRouteBodyTarget0() bool {
+	return s.Type == FunctionRouteBodyTarget0FunctionRouteBodyTarget
+}
+
+// IsFunctionRouteBodyTarget1 reports whether FunctionRouteBodyTarget is FunctionRouteBodyTarget1.
+func (s FunctionRouteBodyTarget) IsFunctionRouteBodyTarget1() bool {
+	return s.Type == FunctionRouteBodyTarget1FunctionRouteBodyTarget
+}
+
+// SetFunctionRouteBodyTarget0 sets FunctionRouteBodyTarget to FunctionRouteBodyTarget0.
+func (s *FunctionRouteBodyTarget) SetFunctionRouteBodyTarget0(v FunctionRouteBodyTarget0) {
+	s.Type = FunctionRouteBodyTarget0FunctionRouteBodyTarget
+	s.FunctionRouteBodyTarget0 = v
+}
+
+// GetFunctionRouteBodyTarget0 returns FunctionRouteBodyTarget0 and true boolean if FunctionRouteBodyTarget is FunctionRouteBodyTarget0.
+func (s FunctionRouteBodyTarget) GetFunctionRouteBodyTarget0() (v FunctionRouteBodyTarget0, ok bool) {
+	if !s.IsFunctionRouteBodyTarget0() {
+		return v, false
+	}
+	return s.FunctionRouteBodyTarget0, true
+}
+
+// NewFunctionRouteBodyTarget0FunctionRouteBodyTarget returns new FunctionRouteBodyTarget from FunctionRouteBodyTarget0.
+func NewFunctionRouteBodyTarget0FunctionRouteBodyTarget(v FunctionRouteBodyTarget0) FunctionRouteBodyTarget {
+	var s FunctionRouteBodyTarget
+	s.SetFunctionRouteBodyTarget0(v)
+	return s
+}
+
+// SetFunctionRouteBodyTarget1 sets FunctionRouteBodyTarget to FunctionRouteBodyTarget1.
+func (s *FunctionRouteBodyTarget) SetFunctionRouteBodyTarget1(v FunctionRouteBodyTarget1) {
+	s.Type = FunctionRouteBodyTarget1FunctionRouteBodyTarget
+	s.FunctionRouteBodyTarget1 = v
+}
+
+// GetFunctionRouteBodyTarget1 returns FunctionRouteBodyTarget1 and true boolean if FunctionRouteBodyTarget is FunctionRouteBodyTarget1.
+func (s FunctionRouteBodyTarget) GetFunctionRouteBodyTarget1() (v FunctionRouteBodyTarget1, ok bool) {
+	if !s.IsFunctionRouteBodyTarget1() {
+		return v, false
+	}
+	return s.FunctionRouteBodyTarget1, true
+}
+
+// NewFunctionRouteBodyTarget1FunctionRouteBodyTarget returns new FunctionRouteBodyTarget from FunctionRouteBodyTarget1.
+func NewFunctionRouteBodyTarget1FunctionRouteBodyTarget(v FunctionRouteBodyTarget1) FunctionRouteBodyTarget {
+	var s FunctionRouteBodyTarget
+	s.SetFunctionRouteBodyTarget1(v)
+	return s
+}
+
+type FunctionRouteBodyTarget0 struct {
+	Kind     FunctionRouteBodyTarget0Kind `json:"kind"`
+	DomainId uuid.UUID                    `json:"domainId"`
+}
+
+// GetKind returns the value of Kind.
+func (s *FunctionRouteBodyTarget0) GetKind() FunctionRouteBodyTarget0Kind {
+	return s.Kind
+}
+
+// GetDomainId returns the value of DomainId.
+func (s *FunctionRouteBodyTarget0) GetDomainId() uuid.UUID {
+	return s.DomainId
+}
+
+// SetKind sets the value of Kind.
+func (s *FunctionRouteBodyTarget0) SetKind(val FunctionRouteBodyTarget0Kind) {
+	s.Kind = val
+}
+
+// SetDomainId sets the value of DomainId.
+func (s *FunctionRouteBodyTarget0) SetDomainId(val uuid.UUID) {
+	s.DomainId = val
+}
+
+type FunctionRouteBodyTarget0Kind string
+
+const (
+	FunctionRouteBodyTarget0KindDomain FunctionRouteBodyTarget0Kind = "domain"
+)
+
+// AllValues returns all FunctionRouteBodyTarget0Kind values.
+func (FunctionRouteBodyTarget0Kind) AllValues() []FunctionRouteBodyTarget0Kind {
+	return []FunctionRouteBodyTarget0Kind{
+		FunctionRouteBodyTarget0KindDomain,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s FunctionRouteBodyTarget0Kind) MarshalText() ([]byte, error) {
+	switch s {
+	case FunctionRouteBodyTarget0KindDomain:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *FunctionRouteBodyTarget0Kind) UnmarshalText(data []byte) error {
+	switch FunctionRouteBodyTarget0Kind(data) {
+	case FunctionRouteBodyTarget0KindDomain:
+		*s = FunctionRouteBodyTarget0KindDomain
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type FunctionRouteBodyTarget1 struct {
+	Kind FunctionRouteBodyTarget1Kind `json:"kind"`
+}
+
+// GetKind returns the value of Kind.
+func (s *FunctionRouteBodyTarget1) GetKind() FunctionRouteBodyTarget1Kind {
+	return s.Kind
+}
+
+// SetKind sets the value of Kind.
+func (s *FunctionRouteBodyTarget1) SetKind(val FunctionRouteBodyTarget1Kind) {
+	s.Kind = val
+}
+
+type FunctionRouteBodyTarget1Kind string
+
+const (
+	FunctionRouteBodyTarget1KindFallback FunctionRouteBodyTarget1Kind = "fallback"
+)
+
+// AllValues returns all FunctionRouteBodyTarget1Kind values.
+func (FunctionRouteBodyTarget1Kind) AllValues() []FunctionRouteBodyTarget1Kind {
+	return []FunctionRouteBodyTarget1Kind{
+		FunctionRouteBodyTarget1KindFallback,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s FunctionRouteBodyTarget1Kind) MarshalText() ([]byte, error) {
+	switch s {
+	case FunctionRouteBodyTarget1KindFallback:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *FunctionRouteBodyTarget1Kind) UnmarshalText(data []byte) error {
+	switch FunctionRouteBodyTarget1Kind(data) {
+	case FunctionRouteBodyTarget1KindFallback:
+		*s = FunctionRouteBodyTarget1KindFallback
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// On success, carries the new `routing`. On conflict, carries
+// `conflict` describing the binding holder so the caller can
+// re-issue with `takeover: true`.
+// Ref: #/components/schemas/FunctionRouteResult
+type FunctionRouteResult struct {
+	Routing  OptNilFunctionRouting          `json:"routing"`
+	Conflict OptFunctionRouteResultConflict `json:"conflict"`
+}
+
+// GetRouting returns the value of Routing.
+func (s *FunctionRouteResult) GetRouting() OptNilFunctionRouting {
+	return s.Routing
+}
+
+// GetConflict returns the value of Conflict.
+func (s *FunctionRouteResult) GetConflict() OptFunctionRouteResultConflict {
+	return s.Conflict
+}
+
+// SetRouting sets the value of Routing.
+func (s *FunctionRouteResult) SetRouting(val OptNilFunctionRouting) {
+	s.Routing = val
+}
+
+// SetConflict sets the value of Conflict.
+func (s *FunctionRouteResult) SetConflict(val OptFunctionRouteResultConflict) {
+	s.Conflict = val
+}
+
+type FunctionRouteResultConflict struct {
+	Kind         FunctionRouteResultConflictKind `json:"kind"`
+	FunctionId   OptNilUUID                      `json:"functionId"`
+	FunctionName OptNilString                    `json:"functionName"`
+	URL          OptNilString                    `json:"url"`
+}
+
+// GetKind returns the value of Kind.
+func (s *FunctionRouteResultConflict) GetKind() FunctionRouteResultConflictKind {
+	return s.Kind
+}
+
+// GetFunctionId returns the value of FunctionId.
+func (s *FunctionRouteResultConflict) GetFunctionId() OptNilUUID {
+	return s.FunctionId
+}
+
+// GetFunctionName returns the value of FunctionName.
+func (s *FunctionRouteResultConflict) GetFunctionName() OptNilString {
+	return s.FunctionName
+}
+
+// GetURL returns the value of URL.
+func (s *FunctionRouteResultConflict) GetURL() OptNilString {
+	return s.URL
+}
+
+// SetKind sets the value of Kind.
+func (s *FunctionRouteResultConflict) SetKind(val FunctionRouteResultConflictKind) {
+	s.Kind = val
+}
+
+// SetFunctionId sets the value of FunctionId.
+func (s *FunctionRouteResultConflict) SetFunctionId(val OptNilUUID) {
+	s.FunctionId = val
+}
+
+// SetFunctionName sets the value of FunctionName.
+func (s *FunctionRouteResultConflict) SetFunctionName(val OptNilString) {
+	s.FunctionName = val
+}
+
+// SetURL sets the value of URL.
+func (s *FunctionRouteResultConflict) SetURL(val OptNilString) {
+	s.URL = val
+}
+
+type FunctionRouteResultConflictKind string
+
+const (
+	FunctionRouteResultConflictKindHTTP     FunctionRouteResultConflictKind = "http"
+	FunctionRouteResultConflictKindFunction FunctionRouteResultConflictKind = "function"
+)
+
+// AllValues returns all FunctionRouteResultConflictKind values.
+func (FunctionRouteResultConflictKind) AllValues() []FunctionRouteResultConflictKind {
+	return []FunctionRouteResultConflictKind{
+		FunctionRouteResultConflictKindHTTP,
+		FunctionRouteResultConflictKindFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s FunctionRouteResultConflictKind) MarshalText() ([]byte, error) {
+	switch s {
+	case FunctionRouteResultConflictKindHTTP:
+		return []byte(s), nil
+	case FunctionRouteResultConflictKindFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *FunctionRouteResultConflictKind) UnmarshalText(data []byte) error {
+	switch FunctionRouteResultConflictKind(data) {
+	case FunctionRouteResultConflictKindHTTP:
+		*s = FunctionRouteResultConflictKindHTTP
+		return nil
+	case FunctionRouteResultConflictKindFunction:
+		*s = FunctionRouteResultConflictKindFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// A single route binding for a function. `domain` is null when the
+// binding is the org's fallback (any active domain without a scoped
+// binding); otherwise it carries the scoped domain. `rules` is
+// reserved for future routing predicates.
+// Ref: #/components/schemas/FunctionRouting
+type FunctionRouting struct {
+	EndpointID uuid.UUID                `json:"endpoint_id"`
+	Enabled    bool                     `json:"enabled"`
+	Domain     NilFunctionRoutingDomain `json:"domain"`
+	// Future routing predicates. Currently empty.
+	Rules            FunctionRoutingRules `json:"rules"`
+	DeliveryCount    OptInt               `json:"delivery_count"`
+	SuccessCount     OptInt               `json:"success_count"`
+	FailureCount     OptInt               `json:"failure_count"`
+	ConsecutiveFails OptInt               `json:"consecutive_fails"`
+	LastDeliveryAt   OptNilDateTime       `json:"last_delivery_at"`
+	LastSuccessAt    OptNilDateTime       `json:"last_success_at"`
+	LastFailureAt    OptNilDateTime       `json:"last_failure_at"`
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *FunctionRouting) GetEndpointID() uuid.UUID {
+	return s.EndpointID
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *FunctionRouting) GetEnabled() bool {
+	return s.Enabled
+}
+
+// GetDomain returns the value of Domain.
+func (s *FunctionRouting) GetDomain() NilFunctionRoutingDomain {
+	return s.Domain
+}
+
+// GetRules returns the value of Rules.
+func (s *FunctionRouting) GetRules() FunctionRoutingRules {
+	return s.Rules
+}
+
+// GetDeliveryCount returns the value of DeliveryCount.
+func (s *FunctionRouting) GetDeliveryCount() OptInt {
+	return s.DeliveryCount
+}
+
+// GetSuccessCount returns the value of SuccessCount.
+func (s *FunctionRouting) GetSuccessCount() OptInt {
+	return s.SuccessCount
+}
+
+// GetFailureCount returns the value of FailureCount.
+func (s *FunctionRouting) GetFailureCount() OptInt {
+	return s.FailureCount
+}
+
+// GetConsecutiveFails returns the value of ConsecutiveFails.
+func (s *FunctionRouting) GetConsecutiveFails() OptInt {
+	return s.ConsecutiveFails
+}
+
+// GetLastDeliveryAt returns the value of LastDeliveryAt.
+func (s *FunctionRouting) GetLastDeliveryAt() OptNilDateTime {
+	return s.LastDeliveryAt
+}
+
+// GetLastSuccessAt returns the value of LastSuccessAt.
+func (s *FunctionRouting) GetLastSuccessAt() OptNilDateTime {
+	return s.LastSuccessAt
+}
+
+// GetLastFailureAt returns the value of LastFailureAt.
+func (s *FunctionRouting) GetLastFailureAt() OptNilDateTime {
+	return s.LastFailureAt
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *FunctionRouting) SetEndpointID(val uuid.UUID) {
+	s.EndpointID = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *FunctionRouting) SetEnabled(val bool) {
+	s.Enabled = val
+}
+
+// SetDomain sets the value of Domain.
+func (s *FunctionRouting) SetDomain(val NilFunctionRoutingDomain) {
+	s.Domain = val
+}
+
+// SetRules sets the value of Rules.
+func (s *FunctionRouting) SetRules(val FunctionRoutingRules) {
+	s.Rules = val
+}
+
+// SetDeliveryCount sets the value of DeliveryCount.
+func (s *FunctionRouting) SetDeliveryCount(val OptInt) {
+	s.DeliveryCount = val
+}
+
+// SetSuccessCount sets the value of SuccessCount.
+func (s *FunctionRouting) SetSuccessCount(val OptInt) {
+	s.SuccessCount = val
+}
+
+// SetFailureCount sets the value of FailureCount.
+func (s *FunctionRouting) SetFailureCount(val OptInt) {
+	s.FailureCount = val
+}
+
+// SetConsecutiveFails sets the value of ConsecutiveFails.
+func (s *FunctionRouting) SetConsecutiveFails(val OptInt) {
+	s.ConsecutiveFails = val
+}
+
+// SetLastDeliveryAt sets the value of LastDeliveryAt.
+func (s *FunctionRouting) SetLastDeliveryAt(val OptNilDateTime) {
+	s.LastDeliveryAt = val
+}
+
+// SetLastSuccessAt sets the value of LastSuccessAt.
+func (s *FunctionRouting) SetLastSuccessAt(val OptNilDateTime) {
+	s.LastSuccessAt = val
+}
+
+// SetLastFailureAt sets the value of LastFailureAt.
+func (s *FunctionRouting) SetLastFailureAt(val OptNilDateTime) {
+	s.LastFailureAt = val
+}
+
+type FunctionRoutingDomain struct {
+	ID   uuid.UUID    `json:"id"`
+	Name OptNilString `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *FunctionRoutingDomain) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *FunctionRoutingDomain) GetName() OptNilString {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *FunctionRoutingDomain) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *FunctionRoutingDomain) SetName(val OptNilString) {
+	s.Name = val
+}
+
+// Future routing predicates. Currently empty.
+type FunctionRoutingRules struct{}
+
 // One row from GET /functions/{id}/secrets. Discriminate on the
 // `managed` field:
 // * `managed = true`  — system secret provisioned by Primitive.
@@ -7776,6 +8256,42 @@ func (s *GetFunctionOK) SetData(val FunctionDetail) {
 
 func (*GetFunctionOK) getFunctionRes() {}
 
+type GetFunctionRoutingNotFound ErrorResponse
+
+func (*GetFunctionRoutingNotFound) getFunctionRoutingRes() {}
+
+// Merged schema.
+type GetFunctionRoutingOK struct {
+	Success bool               `json:"success"`
+	Data    NilFunctionRouting `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetFunctionRoutingOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetFunctionRoutingOK) GetData() NilFunctionRouting {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetFunctionRoutingOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetFunctionRoutingOK) SetData(val NilFunctionRouting) {
+	s.Data = val
+}
+
+func (*GetFunctionRoutingOK) getFunctionRoutingRes() {}
+
+type GetFunctionRoutingUnauthorized ErrorResponse
+
+func (*GetFunctionRoutingUnauthorized) getFunctionRoutingRes() {}
+
 type GetFunctionTestRunTraceBadRequest ErrorResponse
 
 func (*GetFunctionTestRunTraceBadRequest) getFunctionTestRunTraceRes() {}
@@ -7851,6 +8367,42 @@ func (s *GetInboxStatusOK) SetData(val InboxStatus) {
 }
 
 func (*GetInboxStatusOK) getInboxStatusRes() {}
+
+type GetOrgRoutingTopologyForbidden ErrorResponse
+
+func (*GetOrgRoutingTopologyForbidden) getOrgRoutingTopologyRes() {}
+
+// Merged schema.
+type GetOrgRoutingTopologyOK struct {
+	Success bool            `json:"success"`
+	Data    RoutingTopology `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetOrgRoutingTopologyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetOrgRoutingTopologyOK) GetData() RoutingTopology {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetOrgRoutingTopologyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetOrgRoutingTopologyOK) SetData(val RoutingTopology) {
+	s.Data = val
+}
+
+func (*GetOrgRoutingTopologyOK) getOrgRoutingTopologyRes() {}
+
+type GetOrgRoutingTopologyUnauthorized ErrorResponse
+
+func (*GetOrgRoutingTopologyUnauthorized) getOrgRoutingTopologyRes() {}
 
 // Merged schema.
 type GetSendPermissionsOK struct {
@@ -9233,6 +9785,96 @@ func (o NilFloat64) Or(d float64) float64 {
 	return d
 }
 
+// NewNilFunctionRouting returns new NilFunctionRouting with value set to v.
+func NewNilFunctionRouting(v FunctionRouting) NilFunctionRouting {
+	return NilFunctionRouting{
+		Value: v,
+	}
+}
+
+// NilFunctionRouting is nullable FunctionRouting.
+type NilFunctionRouting struct {
+	Value FunctionRouting
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilFunctionRouting) SetTo(v FunctionRouting) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilFunctionRouting) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilFunctionRouting) SetToNull() {
+	o.Null = true
+	var v FunctionRouting
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilFunctionRouting) Get() (v FunctionRouting, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilFunctionRouting) Or(d FunctionRouting) FunctionRouting {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilFunctionRoutingDomain returns new NilFunctionRoutingDomain with value set to v.
+func NewNilFunctionRoutingDomain(v FunctionRoutingDomain) NilFunctionRoutingDomain {
+	return NilFunctionRoutingDomain{
+		Value: v,
+	}
+}
+
+// NilFunctionRoutingDomain is nullable FunctionRoutingDomain.
+type NilFunctionRoutingDomain struct {
+	Value FunctionRoutingDomain
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilFunctionRoutingDomain) SetTo(v FunctionRoutingDomain) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilFunctionRoutingDomain) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilFunctionRoutingDomain) SetToNull() {
+	o.Null = true
+	var v FunctionRoutingDomain
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilFunctionRoutingDomain) Get() (v FunctionRoutingDomain, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilFunctionRoutingDomain) Or(d FunctionRoutingDomain) FunctionRoutingDomain {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilFunctionTestRunDeliveryEndpoint returns new NilFunctionTestRunDeliveryEndpoint with value set to v.
 func NewNilFunctionTestRunDeliveryEndpoint(v FunctionTestRunDeliveryEndpoint) NilFunctionTestRunDeliveryEndpoint {
 	return NilFunctionTestRunDeliveryEndpoint{
@@ -9407,6 +10049,96 @@ func (o NilInt) Get() (v int, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilRoutingTopologyDomainsItemRoutedFunction returns new NilRoutingTopologyDomainsItemRoutedFunction with value set to v.
+func NewNilRoutingTopologyDomainsItemRoutedFunction(v RoutingTopologyDomainsItemRoutedFunction) NilRoutingTopologyDomainsItemRoutedFunction {
+	return NilRoutingTopologyDomainsItemRoutedFunction{
+		Value: v,
+	}
+}
+
+// NilRoutingTopologyDomainsItemRoutedFunction is nullable RoutingTopologyDomainsItemRoutedFunction.
+type NilRoutingTopologyDomainsItemRoutedFunction struct {
+	Value RoutingTopologyDomainsItemRoutedFunction
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilRoutingTopologyDomainsItemRoutedFunction) SetTo(v RoutingTopologyDomainsItemRoutedFunction) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilRoutingTopologyDomainsItemRoutedFunction) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilRoutingTopologyDomainsItemRoutedFunction) SetToNull() {
+	o.Null = true
+	var v RoutingTopologyDomainsItemRoutedFunction
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilRoutingTopologyDomainsItemRoutedFunction) Get() (v RoutingTopologyDomainsItemRoutedFunction, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilRoutingTopologyDomainsItemRoutedFunction) Or(d RoutingTopologyDomainsItemRoutedFunction) RoutingTopologyDomainsItemRoutedFunction {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilRoutingTopologyFallbackFunction returns new NilRoutingTopologyFallbackFunction with value set to v.
+func NewNilRoutingTopologyFallbackFunction(v RoutingTopologyFallbackFunction) NilRoutingTopologyFallbackFunction {
+	return NilRoutingTopologyFallbackFunction{
+		Value: v,
+	}
+}
+
+// NilRoutingTopologyFallbackFunction is nullable RoutingTopologyFallbackFunction.
+type NilRoutingTopologyFallbackFunction struct {
+	Value RoutingTopologyFallbackFunction
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilRoutingTopologyFallbackFunction) SetTo(v RoutingTopologyFallbackFunction) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilRoutingTopologyFallbackFunction) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilRoutingTopologyFallbackFunction) SetToNull() {
+	o.Null = true
+	var v RoutingTopologyFallbackFunction
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilRoutingTopologyFallbackFunction) Get() (v RoutingTopologyFallbackFunction, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilRoutingTopologyFallbackFunction) Or(d RoutingTopologyFallbackFunction) RoutingTopologyFallbackFunction {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -10054,6 +10786,52 @@ func (o OptFloat64) Or(d float64) float64 {
 	return d
 }
 
+// NewOptFunctionRouteResultConflict returns new OptFunctionRouteResultConflict with value set to v.
+func NewOptFunctionRouteResultConflict(v FunctionRouteResultConflict) OptFunctionRouteResultConflict {
+	return OptFunctionRouteResultConflict{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptFunctionRouteResultConflict is optional FunctionRouteResultConflict.
+type OptFunctionRouteResultConflict struct {
+	Value FunctionRouteResultConflict
+	Set   bool
+}
+
+// IsSet returns true if OptFunctionRouteResultConflict was set.
+func (o OptFunctionRouteResultConflict) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptFunctionRouteResultConflict) Reset() {
+	var v FunctionRouteResultConflict
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptFunctionRouteResultConflict) SetTo(v FunctionRouteResultConflict) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptFunctionRouteResultConflict) Get() (v FunctionRouteResultConflict, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptFunctionRouteResultConflict) Or(d FunctionRouteResultConflict) FunctionRouteResultConflict {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptGateFix returns new OptGateFix with value set to v.
 func NewOptGateFix(v GateFix) OptGateFix {
 	return OptGateFix{
@@ -10627,6 +11405,69 @@ func (o OptNilFunctionLogRowMetadata) Get() (v FunctionLogRowMetadata, ok bool) 
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilFunctionLogRowMetadata) Or(d FunctionLogRowMetadata) FunctionLogRowMetadata {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilFunctionRouting returns new OptNilFunctionRouting with value set to v.
+func NewOptNilFunctionRouting(v FunctionRouting) OptNilFunctionRouting {
+	return OptNilFunctionRouting{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilFunctionRouting is optional nullable FunctionRouting.
+type OptNilFunctionRouting struct {
+	Value FunctionRouting
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilFunctionRouting was set.
+func (o OptNilFunctionRouting) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilFunctionRouting) Reset() {
+	var v FunctionRouting
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilFunctionRouting) SetTo(v FunctionRouting) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilFunctionRouting) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilFunctionRouting) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v FunctionRouting
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilFunctionRouting) Get() (v FunctionRouting, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilFunctionRouting) Or(d FunctionRouting) FunctionRouting {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -12456,6 +13297,179 @@ func (*RotateWebhookSecretOK) rotateWebhookSecretRes() {}
 type RotateWebhookSecretUnauthorized ErrorResponse
 
 func (*RotateWebhookSecretUnauthorized) rotateWebhookSecretRes() {}
+
+// Org-wide map of function routing: which domain points at which
+// function, the org's fallback binding (if any), and every
+// deployed function with no route currently bound.
+// Ref: #/components/schemas/RoutingTopology
+type RoutingTopology struct {
+	Domains           []RoutingTopologyDomainsItem           `json:"domains"`
+	FallbackFunction  NilRoutingTopologyFallbackFunction     `json:"fallback_function"`
+	FallbackEnabled   NilBool                                `json:"fallback_enabled"`
+	UnroutedFunctions []RoutingTopologyUnroutedFunctionsItem `json:"unrouted_functions"`
+}
+
+// GetDomains returns the value of Domains.
+func (s *RoutingTopology) GetDomains() []RoutingTopologyDomainsItem {
+	return s.Domains
+}
+
+// GetFallbackFunction returns the value of FallbackFunction.
+func (s *RoutingTopology) GetFallbackFunction() NilRoutingTopologyFallbackFunction {
+	return s.FallbackFunction
+}
+
+// GetFallbackEnabled returns the value of FallbackEnabled.
+func (s *RoutingTopology) GetFallbackEnabled() NilBool {
+	return s.FallbackEnabled
+}
+
+// GetUnroutedFunctions returns the value of UnroutedFunctions.
+func (s *RoutingTopology) GetUnroutedFunctions() []RoutingTopologyUnroutedFunctionsItem {
+	return s.UnroutedFunctions
+}
+
+// SetDomains sets the value of Domains.
+func (s *RoutingTopology) SetDomains(val []RoutingTopologyDomainsItem) {
+	s.Domains = val
+}
+
+// SetFallbackFunction sets the value of FallbackFunction.
+func (s *RoutingTopology) SetFallbackFunction(val NilRoutingTopologyFallbackFunction) {
+	s.FallbackFunction = val
+}
+
+// SetFallbackEnabled sets the value of FallbackEnabled.
+func (s *RoutingTopology) SetFallbackEnabled(val NilBool) {
+	s.FallbackEnabled = val
+}
+
+// SetUnroutedFunctions sets the value of UnroutedFunctions.
+func (s *RoutingTopology) SetUnroutedFunctions(val []RoutingTopologyUnroutedFunctionsItem) {
+	s.UnroutedFunctions = val
+}
+
+type RoutingTopologyDomainsItem struct {
+	DomainID        uuid.UUID                                   `json:"domain_id"`
+	Domain          string                                      `json:"domain"`
+	RoutedFunction  NilRoutingTopologyDomainsItemRoutedFunction `json:"routed_function"`
+	EndpointEnabled NilBool                                     `json:"endpoint_enabled"`
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *RoutingTopologyDomainsItem) GetDomainID() uuid.UUID {
+	return s.DomainID
+}
+
+// GetDomain returns the value of Domain.
+func (s *RoutingTopologyDomainsItem) GetDomain() string {
+	return s.Domain
+}
+
+// GetRoutedFunction returns the value of RoutedFunction.
+func (s *RoutingTopologyDomainsItem) GetRoutedFunction() NilRoutingTopologyDomainsItemRoutedFunction {
+	return s.RoutedFunction
+}
+
+// GetEndpointEnabled returns the value of EndpointEnabled.
+func (s *RoutingTopologyDomainsItem) GetEndpointEnabled() NilBool {
+	return s.EndpointEnabled
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *RoutingTopologyDomainsItem) SetDomainID(val uuid.UUID) {
+	s.DomainID = val
+}
+
+// SetDomain sets the value of Domain.
+func (s *RoutingTopologyDomainsItem) SetDomain(val string) {
+	s.Domain = val
+}
+
+// SetRoutedFunction sets the value of RoutedFunction.
+func (s *RoutingTopologyDomainsItem) SetRoutedFunction(val NilRoutingTopologyDomainsItemRoutedFunction) {
+	s.RoutedFunction = val
+}
+
+// SetEndpointEnabled sets the value of EndpointEnabled.
+func (s *RoutingTopologyDomainsItem) SetEndpointEnabled(val NilBool) {
+	s.EndpointEnabled = val
+}
+
+type RoutingTopologyDomainsItemRoutedFunction struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *RoutingTopologyDomainsItemRoutedFunction) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *RoutingTopologyDomainsItemRoutedFunction) GetName() string {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *RoutingTopologyDomainsItemRoutedFunction) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *RoutingTopologyDomainsItemRoutedFunction) SetName(val string) {
+	s.Name = val
+}
+
+type RoutingTopologyFallbackFunction struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *RoutingTopologyFallbackFunction) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *RoutingTopologyFallbackFunction) GetName() string {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *RoutingTopologyFallbackFunction) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *RoutingTopologyFallbackFunction) SetName(val string) {
+	s.Name = val
+}
+
+type RoutingTopologyUnroutedFunctionsItem struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *RoutingTopologyUnroutedFunctionsItem) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *RoutingTopologyUnroutedFunctionsItem) GetName() string {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *RoutingTopologyUnroutedFunctionsItem) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *RoutingTopologyUnroutedFunctionsItem) SetName(val string) {
+	s.Name = val
+}
 
 type SearchEmailsBadRequest ErrorResponse
 
@@ -15356,6 +16370,46 @@ func (s *SentEmailSummary) SetRequestID(val OptNilString) {
 	s.RequestID = val
 }
 
+type SetFunctionRouteBadRequest ErrorResponse
+
+func (*SetFunctionRouteBadRequest) setFunctionRouteRes() {}
+
+type SetFunctionRouteNotFound ErrorResponse
+
+func (*SetFunctionRouteNotFound) setFunctionRouteRes() {}
+
+// Merged schema.
+type SetFunctionRouteOK struct {
+	Success bool                `json:"success"`
+	Data    FunctionRouteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SetFunctionRouteOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SetFunctionRouteOK) GetData() FunctionRouteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SetFunctionRouteOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SetFunctionRouteOK) SetData(val FunctionRouteResult) {
+	s.Data = val
+}
+
+func (*SetFunctionRouteOK) setFunctionRouteRes() {}
+
+type SetFunctionRouteUnauthorized ErrorResponse
+
+func (*SetFunctionRouteUnauthorized) setFunctionRouteRes() {}
+
 type SetFunctionSecretBadRequest ErrorResponse
 
 func (*SetFunctionSecretBadRequest) setFunctionSecretRes() {}
@@ -16388,6 +17442,69 @@ func (s *ThreadMessageDirection) UnmarshalText(data []byte) error {
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
+
+type UnsetFunctionRouteNotFound ErrorResponse
+
+func (*UnsetFunctionRouteNotFound) unsetFunctionRouteRes() {}
+
+// Merged schema.
+type UnsetFunctionRouteOK struct {
+	Success bool                     `json:"success"`
+	Data    UnsetFunctionRouteOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UnsetFunctionRouteOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UnsetFunctionRouteOK) GetData() UnsetFunctionRouteOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UnsetFunctionRouteOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UnsetFunctionRouteOK) SetData(val UnsetFunctionRouteOKData) {
+	s.Data = val
+}
+
+func (*UnsetFunctionRouteOK) unsetFunctionRouteRes() {}
+
+type UnsetFunctionRouteOKData struct {
+	Unrouted UnsetFunctionRouteOKDataUnrouted `json:"unrouted"`
+}
+
+// GetUnrouted returns the value of Unrouted.
+func (s *UnsetFunctionRouteOKData) GetUnrouted() UnsetFunctionRouteOKDataUnrouted {
+	return s.Unrouted
+}
+
+// SetUnrouted sets the value of Unrouted.
+func (s *UnsetFunctionRouteOKData) SetUnrouted(val UnsetFunctionRouteOKDataUnrouted) {
+	s.Unrouted = val
+}
+
+type UnsetFunctionRouteOKDataUnrouted bool
+
+const (
+	UnsetFunctionRouteOKDataUnroutedTrue UnsetFunctionRouteOKDataUnrouted = true
+)
+
+// AllValues returns all UnsetFunctionRouteOKDataUnrouted values.
+func (UnsetFunctionRouteOKDataUnrouted) AllValues() []UnsetFunctionRouteOKDataUnrouted {
+	return []UnsetFunctionRouteOKDataUnrouted{
+		UnsetFunctionRouteOKDataUnroutedTrue,
+	}
+}
+
+type UnsetFunctionRouteUnauthorized ErrorResponse
+
+func (*UnsetFunctionRouteUnauthorized) unsetFunctionRouteRes() {}
 
 // Ref: #/components/schemas/UnverifiedDomain
 type UnverifiedDomain struct {
