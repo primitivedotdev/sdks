@@ -409,14 +409,20 @@ class FunctionsTestFunctionCommand extends Command {
         const fetched = (result.data as { data: FunctionTestRunTrace }).data;
         // Early bail: inbound email landed but webhook delivery has no
         // endpoints to dispatch to. The server's no_endpoint pre-check
-        // catches the new case, but a route that gets unbound between
-        // the test send and the inbound arrival can still hit this path.
-        // Surface the cause immediately instead of waiting out the full
-        // timeout.
+        // catches the obvious case, but a route that gets unbound
+        // between the test send and the inbound arrival can still hit
+        // this path. The empty-deliveries window also exists naturally
+        // between inbound arrival and delivery-row creation for a
+        // healthy function, so require the condition to persist past
+        // that transient window before concluding it's the no-route
+        // case. 15s is well above the normal delivery-row creation
+        // latency and well below the 60s default poll timeout.
+        const inboundLandedNoDeliveriesMs = 15_000;
         if (
           fetched.inbound_email &&
           Array.isArray(fetched.deliveries) &&
-          fetched.deliveries.length === 0
+          fetched.deliveries.length === 0 &&
+          Date.now() - startedAt > inboundLandedNoDeliveriesMs
         ) {
           writeFunctionTestProgress(
             `Inbound email arrived but no route matched. Bind one with: primitive functions route-set --id ${flags.id} --domain <domain-id> (or --fallback), then retry.`,
