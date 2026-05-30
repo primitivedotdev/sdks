@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/sdk",
-  "version": "0.35.3",
+  "version": "0.36.0",
   "description": "Official Primitive Node.js SDK: webhook, api, openapi, contract, and parser runtime modules.",
   "type": "module",
   "module": "./dist/index.js",
