@@ -310,6 +310,18 @@ func (UnimplementedHandler) GetFunction(ctx context.Context, params GetFunctionP
 	return r, ht.ErrNotImplemented
 }
 
+// GetFunctionRouting implements getFunctionRouting operation.
+//
+// Returns the endpoint binding for the function, or null when no
+// route is currently bound. The binding identifies whether the
+// function receives mail for a specific domain (scoped) or for any
+// active domain that has no scoped binding (fallback).
+//
+// GET /functions/{id}/routing
+func (UnimplementedHandler) GetFunctionRouting(ctx context.Context, params GetFunctionRoutingParams) (r GetFunctionRoutingRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetFunctionTestRunTrace implements getFunctionTestRunTrace operation.
 //
 // Returns the current end-to-end trace for a function test run.
@@ -336,6 +348,19 @@ func (UnimplementedHandler) GetFunctionTestRunTrace(ctx context.Context, params 
 //
 // GET /inbox/status
 func (UnimplementedHandler) GetInboxStatus(ctx context.Context) (r GetInboxStatusRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetOrgRoutingTopology implements getOrgRoutingTopology operation.
+//
+// Returns a single snapshot of how inbound mail is routed across
+// this org's active domains and functions: which active domain has
+// which function bound, the org's fallback function (if any), and
+// every deployed function with no route bound. Use this to answer
+// "which of my functions actually receive mail?" diagnostically.
+//
+// GET /functions/routing-topology
+func (UnimplementedHandler) GetOrgRoutingTopology(ctx context.Context) (r GetOrgRoutingTopologyRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -711,6 +736,20 @@ func (UnimplementedHandler) SendEmail(ctx context.Context, req *SendMailInput, p
 	return r, ht.ErrNotImplemented
 }
 
+// SetFunctionRoute implements setFunctionRoute operation.
+//
+// Binds inbound mail to this function. The route target is either
+// a specific verified domain (scoped) or the org's fallback (any
+// active domain with no scoped binding). If another function is
+// already bound at the target, returns a `conflict` envelope
+// describing the holder; re-issue with `takeover: true` to
+// deactivate that prior binding and install this one.
+//
+// PUT /functions/{id}/route
+func (UnimplementedHandler) SetFunctionRoute(ctx context.Context, req *FunctionRouteBody, params SetFunctionRouteParams) (r SetFunctionRouteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // SetFunctionSecret implements setFunctionSecret operation.
 //
 // Path-keyed companion to `POST /functions/{id}/secrets`.
@@ -797,6 +836,17 @@ func (UnimplementedHandler) TestEndpoint(ctx context.Context, params TestEndpoin
 //
 // POST /functions/{id}/test
 func (UnimplementedHandler) TestFunction(ctx context.Context, req OptTestFunctionReq, params TestFunctionParams) (r TestFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UnsetFunctionRoute implements unsetFunctionRoute operation.
+//
+// Deactivates every active endpoint bound to this function. The
+// function stays deployed but stops receiving inbound mail. Safe
+// to call when no route is currently bound (no-op).
+//
+// DELETE /functions/{id}/route
+func (UnimplementedHandler) UnsetFunctionRoute(ctx context.Context, params UnsetFunctionRouteParams) (r UnsetFunctionRouteRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

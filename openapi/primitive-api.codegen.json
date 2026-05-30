@@ -3464,6 +3464,205 @@
         }
       }
     },
+    "/functions/routing-topology": {
+      "get": {
+        "operationId": "getOrgRoutingTopology",
+        "summary": "Get the org's function routing topology",
+        "description": "Returns a single snapshot of how inbound mail is routed across\nthis org's active domains and functions: which active domain has\nwhich function bound, the org's fallback function (if any), and\nevery deployed function with no route bound. Use this to answer\n\"which of my functions actually receive mail?\" diagnostically.\n",
+        "tags": [
+          "Functions"
+        ],
+        "responses": {
+          "200": {
+            "description": "Routing topology",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RoutingTopology"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/functions/{id}/routing": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "operationId": "getFunctionRouting",
+        "summary": "Get a function's current route binding",
+        "description": "Returns the endpoint binding for the function, or null when no\nroute is currently bound. The binding identifies whether the\nfunction receives mail for a specific domain (scoped) or for any\nactive domain that has no scoped binding (fallback).\n",
+        "tags": [
+          "Functions"
+        ],
+        "responses": {
+          "200": {
+            "description": "Function routing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/components/schemas/FunctionRouting"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/functions/{id}/route": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "put": {
+        "operationId": "setFunctionRoute",
+        "summary": "Bind a route to a function",
+        "description": "Binds inbound mail to this function. The route target is either\na specific verified domain (scoped) or the org's fallback (any\nactive domain with no scoped binding). If another function is\nalready bound at the target, returns a `conflict` envelope\ndescribing the holder; re-issue with `takeover: true` to\ndeactivate that prior binding and install this one.\n",
+        "tags": [
+          "Functions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FunctionRouteBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Route bound, or conflict requiring takeover",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/FunctionRouteResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "unsetFunctionRoute",
+        "summary": "Unbind any route from a function",
+        "description": "Deactivates every active endpoint bound to this function. The\nfunction stays deployed but stops receiving inbound mail. Safe\nto call when no route is currently bound (no-op).\n",
+        "tags": [
+          "Functions"
+        ],
+        "responses": {
+          "200": {
+            "description": "Route unbound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "unrouted": {
+                              "type": "boolean",
+                              "enum": [
+                                true
+                              ]
+                            }
+                          },
+                          "required": [
+                            "unrouted"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
     "/functions/{id}/secrets": {
       "parameters": [
         {
@@ -7911,6 +8110,261 @@
           "watch_url",
           "trace_url"
         ]
+      },
+      "FunctionRouting": {
+        "type": "object",
+        "description": "A single route binding for a function. `domain` is null when the\nbinding is the org's fallback (any active domain without a scoped\nbinding); otherwise it carries the scoped domain. `rules` is\nreserved for future routing predicates.\n",
+        "properties": {
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "domain": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "nullable": true
+          },
+          "rules": {
+            "type": "object",
+            "description": "Future routing predicates. Currently empty."
+          },
+          "delivery_count": {
+            "type": "integer"
+          },
+          "success_count": {
+            "type": "integer"
+          },
+          "failure_count": {
+            "type": "integer"
+          },
+          "consecutive_fails": {
+            "type": "integer"
+          },
+          "last_delivery_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "last_success_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "last_failure_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "endpoint_id",
+          "enabled",
+          "domain",
+          "rules"
+        ]
+      },
+      "RoutingTopology": {
+        "type": "object",
+        "description": "Org-wide map of function routing: which domain points at which\nfunction, the org's fallback binding (if any), and every\ndeployed function with no route currently bound.\n",
+        "properties": {
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "domain_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "domain": {
+                  "type": "string"
+                },
+                "routed_function": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "nullable": true
+                },
+                "endpoint_enabled": {
+                  "type": "boolean",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "domain_id",
+                "domain",
+                "routed_function",
+                "endpoint_enabled"
+              ]
+            }
+          },
+          "fallback_function": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "nullable": true
+          },
+          "fallback_enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "unrouted_functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "domains",
+          "fallback_function",
+          "fallback_enabled",
+          "unrouted_functions"
+        ]
+      },
+      "FunctionRouteBody": {
+        "type": "object",
+        "description": "Target for a route binding. Either a specific verified domain\n(scoped) or the org-wide fallback. Pass `takeover: true` to\ndeactivate any conflicting binding before installing this one.\n",
+        "properties": {
+          "target": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "domain"
+                    ]
+                  },
+                  "domainId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "domainId"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "fallback"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            ]
+          },
+          "takeover": {
+            "type": "boolean",
+            "description": "When true, deactivate any conflicting binding before installing this one."
+          }
+        },
+        "required": [
+          "target"
+        ]
+      },
+      "FunctionRouteResult": {
+        "type": "object",
+        "description": "On success, carries the new `routing`. On conflict, carries\n`conflict` describing the binding holder so the caller can\nre-issue with `takeover: true`.\n",
+        "properties": {
+          "routing": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/FunctionRouting"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "conflict": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "http",
+                  "function"
+                ]
+              },
+              "functionId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "functionName": {
+                "type": "string",
+                "nullable": true
+              },
+              "url": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        }
       },
       "FunctionTestRunState": {
         "type": "string",

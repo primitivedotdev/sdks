@@ -4287,6 +4287,115 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-function-routing",
+    "description": "Returns the endpoint binding for the function, or null when no\nroute is currently bound. The binding identifies whether the\nfunction receives mail for a specific domain (scoped) or for any\nactive domain that has no scoped binding (fallback).\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getFunctionRouting",
+    "path": "/functions/{id}/routing",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "A single route binding for a function. `domain` is null when the\nbinding is the org's fallback (any active domain without a scoped\nbinding); otherwise it carries the scoped domain. `rules` is\nreserved for future routing predicates.\n",
+          "properties": {
+            "endpoint_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "domain": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id"
+              ]
+            },
+            "rules": {
+              "type": "object",
+              "description": "Future routing predicates. Currently empty."
+            },
+            "delivery_count": {
+              "type": "integer"
+            },
+            "success_count": {
+              "type": "integer"
+            },
+            "failure_count": {
+              "type": "integer"
+            },
+            "consecutive_fails": {
+              "type": "integer"
+            },
+            "last_delivery_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "last_success_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "last_failure_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "endpoint_id",
+            "enabled",
+            "domain",
+            "rules"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sdkName": "getFunctionRouting",
+    "summary": "Get a function's current route binding",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "get-function-test-run-trace",
     "description": "Returns the current end-to-end trace for a function test run.\nThe trace is intentionally partial while the test is still in\nflight: callers can poll this endpoint and watch it fill in\nfrom send -> inbound -> webhook deliveries -> outbound\nrequests, logs, and replies.\n",
     "hasJsonBody": false,
@@ -4858,6 +4967,125 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-org-routing-topology",
+    "description": "Returns a single snapshot of how inbound mail is routed across\nthis org's active domains and functions: which active domain has\nwhich function bound, the org's fallback function (if any), and\nevery deployed function with no route bound. Use this to answer\n\"which of my functions actually receive mail?\" diagnostically.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getOrgRoutingTopology",
+    "path": "/functions/routing-topology",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "Org-wide map of function routing: which domain points at which\nfunction, the org's fallback binding (if any), and every\ndeployed function with no route currently bound.\n",
+      "properties": {
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "domain_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "routed_function": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ]
+              },
+              "endpoint_enabled": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "domain_id",
+              "domain",
+              "routed_function",
+              "endpoint_enabled"
+            ]
+          }
+        },
+        "fallback_function": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        },
+        "fallback_enabled": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "unrouted_functions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "domains",
+        "fallback_function",
+        "fallback_enabled",
+        "unrouted_functions"
+      ]
+    },
+    "sdkName": "getOrgRoutingTopology",
+    "summary": "Get the org's function routing topology",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "list-function-logs",
     "description": "Returns the most recent `function_logs` rows for the function,\nnewest first. Each row is a single `console.log` / `console.error`\ninvocation captured from the running handler.\n\nPage through history with the opaque `cursor` returned as\n`next_cursor`; pass it back as the `cursor` query param on the\nnext call. `next_cursor` is `null` when there are no further\nrows. The cursor format is an implementation detail and should\nnot be parsed by callers.\n",
     "hasJsonBody": false,
@@ -5114,6 +5342,204 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": true,
+    "command": "set-function-route",
+    "description": "Binds inbound mail to this function. The route target is either\na specific verified domain (scoped) or the org's fallback (any\nactive domain with no scoped binding). If another function is\nalready bound at the target, returns a `conflict` envelope\ndescribing the holder; re-issue with `takeover: true` to\ndeactivate that prior binding and install this one.\n",
+    "hasJsonBody": true,
+    "method": "PUT",
+    "operationId": "setFunctionRoute",
+    "path": "/functions/{id}/route",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "description": "Target for a route binding. Either a specific verified domain\n(scoped) or the org-wide fallback. Pass `takeover: true` to\ndeactivate any conflicting binding before installing this one.\n",
+      "properties": {
+        "target": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "domain"
+                  ]
+                },
+                "domainId": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "kind",
+                "domainId"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "fallback"
+                  ]
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            }
+          ]
+        },
+        "takeover": {
+          "type": "boolean",
+          "description": "When true, deactivate any conflicting binding before installing this one."
+        }
+      },
+      "required": [
+        "target"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "On success, carries the new `routing`. On conflict, carries\n`conflict` describing the binding holder so the caller can\nre-issue with `takeover: true`.\n",
+      "properties": {
+        "routing": {
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "A single route binding for a function. `domain` is null when the\nbinding is the org's fallback (any active domain without a scoped\nbinding); otherwise it carries the scoped domain. `rules` is\nreserved for future routing predicates.\n",
+              "properties": {
+                "endpoint_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "domain": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
+                },
+                "rules": {
+                  "type": "object",
+                  "description": "Future routing predicates. Currently empty."
+                },
+                "delivery_count": {
+                  "type": "integer"
+                },
+                "success_count": {
+                  "type": "integer"
+                },
+                "failure_count": {
+                  "type": "integer"
+                },
+                "consecutive_fails": {
+                  "type": "integer"
+                },
+                "last_delivery_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "last_success_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "last_failure_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "endpoint_id",
+                "enabled",
+                "domain",
+                "rules"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "conflict": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "http",
+                "function"
+              ]
+            },
+            "functionId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "functionName": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "url": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        }
+      }
+    },
+    "sdkName": "setFunctionRoute",
+    "summary": "Bind a route to a function",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
     "command": "set-function-secret",
     "description": "Path-keyed companion to `POST /functions/{id}/secrets`.\nIdempotent: returns 201 the first time the key is set, 200 on\nsubsequent updates. Same validation rules and same write-only\nguarantees as the POST verb; the new value lands in the running\nhandler on the next deploy.\n",
     "hasJsonBody": true,
@@ -5274,6 +5700,45 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "testFunction",
     "summary": "Send a test invocation",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "unset-function-route",
+    "description": "Deactivates every active endpoint bound to this function. The\nfunction stays deployed but stops receiving inbound mail. Safe\nto call when no route is currently bound (no-op).\n",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "unsetFunctionRoute",
+    "path": "/functions/{id}/route",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "unrouted": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        }
+      },
+      "required": [
+        "unrouted"
+      ]
+    },
+    "sdkName": "unsetFunctionRoute",
+    "summary": "Unbind any route from a function",
     "tag": "Functions",
     "tagCommand": "functions"
   },

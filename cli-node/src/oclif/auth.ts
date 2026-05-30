@@ -440,6 +440,29 @@ export function acquireCliCredentialsLock(
   };
 }
 
+/**
+ * Detect the PRIMITIVE_KEY vs PRIMITIVE_API_KEY rename trap.
+ *
+ * AGX feedback: users on older docs (or coming from other tools) set
+ * `PRIMITIVE_KEY` and then cannot figure out why the CLI reports no
+ * API key. The CLI reads `PRIMITIVE_API_KEY` only. Returns a stderr
+ * hint when `PRIMITIVE_KEY` is set but `PRIMITIVE_API_KEY` is not,
+ * otherwise null. Exported as a helper so both `doctor` and the
+ * general auth-resolution path surface the same guidance from the
+ * first command the user runs, instead of forcing them to discover
+ * the rename via `doctor` after the fact.
+ */
+export function detectPrimitiveKeyEnvMisname(
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  const primitiveKey = env.PRIMITIVE_KEY;
+  const primitiveApiKey = env.PRIMITIVE_API_KEY;
+  if ((primitiveKey?.length ?? 0) > 0 && (primitiveApiKey?.length ?? 0) === 0) {
+    return "PRIMITIVE_KEY is set but the CLI reads PRIMITIVE_API_KEY. Rename your env var, or re-run with PRIMITIVE_API_KEY=$PRIMITIVE_KEY.";
+  }
+  return null;
+}
+
 export function resolveCliAuth(params: {
   configDir: string;
   apiKey?: string;

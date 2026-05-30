@@ -8,6 +8,7 @@ import {
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
+import { detectPrimitiveKeyEnvMisname } from "../auth.js";
 
 // `primitive doctor` is a one-command health check the AGX walkthrough
 // kept asking for. Before this command, a user with a misconfigured
@@ -125,19 +126,15 @@ function checkApiKey(opts: {
       hint: "Verify the key is a Primitive API key, not a value from another service.",
     };
   }
-  // PRIMITIVE_KEY rename detection. AGX feedback: users on older docs
-  // (or coming from other tools) set PRIMITIVE_KEY and then can't
-  // figure out why the CLI says "no API key found". The CLI reads
-  // PRIMITIVE_API_KEY only. Surface the rename hint when PRIMITIVE_KEY
-  // is set but PRIMITIVE_API_KEY is not, before falling through to
-  // the credentials.json / no-key checks. The hint runs before the
+  // PRIMITIVE_KEY rename detection. Shared with the general auth
+  // resolver (api-client.ts) so the same hint surfaces from any command,
+  // not only doctor. Doctor runs the check earlier than the
   // credentials.json branch on purpose: if both PRIMITIVE_KEY and a
   // valid credentials file are present, the credentials file wins
   // silently and the user never sees the rename suggestion, which is
   // the same trap by another name.
-  const primitiveKey = env.PRIMITIVE_KEY;
-  const primitiveApiKey = env.PRIMITIVE_API_KEY;
-  if ((primitiveKey?.length ?? 0) > 0 && (primitiveApiKey?.length ?? 0) === 0) {
+  const renameHint = detectPrimitiveKeyEnvMisname(env);
+  if (renameHint) {
     return {
       status: "fail",
       message: "PRIMITIVE_KEY is set but the CLI reads PRIMITIVE_API_KEY",

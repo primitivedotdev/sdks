@@ -81,12 +81,20 @@ type GetFunctionRes interface {
 	getFunctionRes()
 }
 
+type GetFunctionRoutingRes interface {
+	getFunctionRoutingRes()
+}
+
 type GetFunctionTestRunTraceRes interface {
 	getFunctionTestRunTraceRes()
 }
 
 type GetInboxStatusRes interface {
 	getInboxStatusRes()
+}
+
+type GetOrgRoutingTopologyRes interface {
+	getOrgRoutingTopologyRes()
 }
 
 type GetSendPermissionsRes interface {
@@ -185,6 +193,10 @@ type SendEmailRes interface {
 	sendEmailRes()
 }
 
+type SetFunctionRouteRes interface {
+	setFunctionRouteRes()
+}
+
 type SetFunctionSecretRes interface {
 	setFunctionSecretRes()
 }
@@ -207,6 +219,10 @@ type TestEndpointRes interface {
 
 type TestFunctionRes interface {
 	testFunctionRes()
+}
+
+type UnsetFunctionRouteRes interface {
+	unsetFunctionRouteRes()
 }
 
 type UpdateAccountRes interface {

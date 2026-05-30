@@ -2675,6 +2675,136 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /functions/routing-topology:
+    get:
+      operationId: getOrgRoutingTopology
+      summary: Get the org's function routing topology
+      description: |
+        Returns a single snapshot of how inbound mail is routed across
+        this org's active domains and functions: which active domain has
+        which function bound, the org's fallback function (if any), and
+        every deployed function with no route bound. Use this to answer
+        "which of my functions actually receive mail?" diagnostically.
+      tags: [Functions]
+      responses:
+        '200':
+          description: Routing topology
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RoutingTopology'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /functions/{id}/routing:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    get:
+      operationId: getFunctionRouting
+      summary: Get a function's current route binding
+      description: |
+        Returns the endpoint binding for the function, or null when no
+        route is currently bound. The binding identifies whether the
+        function receives mail for a specific domain (scoped) or for any
+        active domain that has no scoped binding (fallback).
+      tags: [Functions]
+      responses:
+        '200':
+          description: Function routing
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        oneOf:
+                          - $ref: '#/components/schemas/FunctionRouting'
+                          - type: 'null'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /functions/{id}/route:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    put:
+      operationId: setFunctionRoute
+      summary: Bind a route to a function
+      description: |
+        Binds inbound mail to this function. The route target is either
+        a specific verified domain (scoped) or the org's fallback (any
+        active domain with no scoped binding). If another function is
+        already bound at the target, returns a `conflict` envelope
+        describing the holder; re-issue with `takeover: true` to
+        deactivate that prior binding and install this one.
+      tags: [Functions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FunctionRouteBody'
+      responses:
+        '200':
+          description: Route bound, or conflict requiring takeover
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FunctionRouteResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: unsetFunctionRoute
+      summary: Unbind any route from a function
+      description: |
+        Deactivates every active endpoint bound to this function. The
+        function stays deployed but stops receiving inbound mail. Safe
+        to call when no route is currently bound (no-op).
+      tags: [Functions]
+      responses:
+        '200':
+          description: Route unbound
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          unrouted:
+                            type: boolean
+                            enum: [true]
+                        required: [unrouted]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /functions/{id}/secrets:
     parameters:
       - $ref: '#/components/parameters/ResourceId'
@@ -6109,6 +6239,158 @@ components:
           type: string
           description: Relative API URL for GET /functions/{id}/test-runs/{test_run_id}/trace.
       required: [test_run_id, inbound_domain, to, from, send_id, subject, poll_since, watch_url, trace_url]
+
+    FunctionRouting:
+      type: object
+      description: |
+        A single route binding for a function. `domain` is null when the
+        binding is the org's fallback (any active domain without a scoped
+        binding); otherwise it carries the scoped domain. `rules` is
+        reserved for future routing predicates.
+      properties:
+        endpoint_id:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        domain:
+          type: [object, 'null']
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: [string, 'null']
+          required: [id]
+        rules:
+          type: object
+          description: Future routing predicates. Currently empty.
+        delivery_count:
+          type: integer
+        success_count:
+          type: integer
+        failure_count:
+          type: integer
+        consecutive_fails:
+          type: integer
+        last_delivery_at:
+          type: [string, 'null']
+          format: date-time
+        last_success_at:
+          type: [string, 'null']
+          format: date-time
+        last_failure_at:
+          type: [string, 'null']
+          format: date-time
+      required: [endpoint_id, enabled, domain, rules]
+
+    RoutingTopology:
+      type: object
+      description: |
+        Org-wide map of function routing: which domain points at which
+        function, the org's fallback binding (if any), and every
+        deployed function with no route currently bound.
+      properties:
+        domains:
+          type: array
+          items:
+            type: object
+            properties:
+              domain_id:
+                type: string
+                format: uuid
+              domain:
+                type: string
+              routed_function:
+                type: [object, 'null']
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                required: [id, name]
+              endpoint_enabled:
+                type: [boolean, 'null']
+            required: [domain_id, domain, routed_function, endpoint_enabled]
+        fallback_function:
+          type: [object, 'null']
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+          required: [id, name]
+        fallback_enabled:
+          type: [boolean, 'null']
+        unrouted_functions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+            required: [id, name]
+      required: [domains, fallback_function, fallback_enabled, unrouted_functions]
+
+    FunctionRouteBody:
+      type: object
+      description: |
+        Target for a route binding. Either a specific verified domain
+        (scoped) or the org-wide fallback. Pass `takeover: true` to
+        deactivate any conflicting binding before installing this one.
+      properties:
+        target:
+          oneOf:
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum: [domain]
+                domainId:
+                  type: string
+                  format: uuid
+              required: [kind, domainId]
+            - type: object
+              properties:
+                kind:
+                  type: string
+                  enum: [fallback]
+              required: [kind]
+        takeover:
+          type: boolean
+          description: When true, deactivate any conflicting binding before installing this one.
+      required: [target]
+
+    FunctionRouteResult:
+      type: object
+      description: |
+        On success, carries the new `routing`. On conflict, carries
+        `conflict` describing the binding holder so the caller can
+        re-issue with `takeover: true`.
+      properties:
+        routing:
+          oneOf:
+            - $ref: '#/components/schemas/FunctionRouting'
+            - type: 'null'
+        conflict:
+          type: object
+          properties:
+            kind:
+              type: string
+              enum: [http, function]
+            functionId:
+              type: [string, 'null']
+              format: uuid
+            functionName:
+              type: [string, 'null']
+            url:
+              type: [string, 'null']
+          required: [kind]
 
     FunctionTestRunState:
       type: string

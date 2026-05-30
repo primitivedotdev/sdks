@@ -4,6 +4,7 @@ import {
   acquireCliCredentialsLock,
   cliAccessTokenExpiresAt,
   deleteCliCredentials,
+  detectPrimitiveKeyEnvMisname,
   loadCliCredentials,
   normalizeApiBaseUrl,
   resolveCliAuth,
@@ -316,6 +317,17 @@ export async function createAuthenticatedCliApiClient(params: {
     apiBaseUrl: requestConfig.apiBaseUrl,
     configDir: params.configDir,
   });
+  // PRIMITIVE_KEY rename trap: if the user set PRIMITIVE_KEY (an older
+  // / common mistake) but no PRIMITIVE_API_KEY, the resolver returns no
+  // key and the API call below will 401 from the very first command.
+  // Surface the rename hint to stderr proactively so the user does not
+  // have to discover it via `primitive doctor` after the fact.
+  if (auth.apiKey === undefined) {
+    const hint = detectPrimitiveKeyEnvMisname(
+      (params.env ?? process.env) as NodeJS.ProcessEnv,
+    );
+    if (hint) process.stderr.write(`${hint}\n`);
+  }
   if (auth.source === "stored" && auth.credentials) {
     const refreshed = await refreshStoredCliCredentials({
       apiBaseUrl: auth.apiBaseUrl,

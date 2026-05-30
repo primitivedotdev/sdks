@@ -265,6 +265,15 @@ type Invoker interface {
 	//
 	// GET /functions/{id}
 	GetFunction(ctx context.Context, params GetFunctionParams) (GetFunctionRes, error)
+	// GetFunctionRouting invokes getFunctionRouting operation.
+	//
+	// Returns the endpoint binding for the function, or null when no
+	// route is currently bound. The binding identifies whether the
+	// function receives mail for a specific domain (scoped) or for any
+	// active domain that has no scoped binding (fallback).
+	//
+	// GET /functions/{id}/routing
+	GetFunctionRouting(ctx context.Context, params GetFunctionRoutingParams) (GetFunctionRoutingRes, error)
 	// GetFunctionTestRunTrace invokes getFunctionTestRunTrace operation.
 	//
 	// Returns the current end-to-end trace for a function test run.
@@ -288,6 +297,16 @@ type Invoker interface {
 	//
 	// GET /inbox/status
 	GetInboxStatus(ctx context.Context) (GetInboxStatusRes, error)
+	// GetOrgRoutingTopology invokes getOrgRoutingTopology operation.
+	//
+	// Returns a single snapshot of how inbound mail is routed across
+	// this org's active domains and functions: which active domain has
+	// which function bound, the org's fallback function (if any), and
+	// every deployed function with no route bound. Use this to answer
+	// "which of my functions actually receive mail?" diagnostically.
+	//
+	// GET /functions/routing-topology
+	GetOrgRoutingTopology(ctx context.Context) (GetOrgRoutingTopologyRes, error)
 	// GetSendPermissions invokes getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -588,6 +607,17 @@ type Invoker interface {
 	//
 	// POST /send-mail
 	SendEmail(ctx context.Context, request *SendMailInput, params SendEmailParams) (SendEmailRes, error)
+	// SetFunctionRoute invokes setFunctionRoute operation.
+	//
+	// Binds inbound mail to this function. The route target is either
+	// a specific verified domain (scoped) or the org's fallback (any
+	// active domain with no scoped binding). If another function is
+	// already bound at the target, returns a `conflict` envelope
+	// describing the holder; re-issue with `takeover: true` to
+	// deactivate that prior binding and install this one.
+	//
+	// PUT /functions/{id}/route
+	SetFunctionRoute(ctx context.Context, request *FunctionRouteBody, params SetFunctionRouteParams) (SetFunctionRouteRes, error)
 	// SetFunctionSecret invokes setFunctionSecret operation.
 	//
 	// Path-keyed companion to `POST /functions/{id}/secrets`.
@@ -659,6 +689,14 @@ type Invoker interface {
 	//
 	// POST /functions/{id}/test
 	TestFunction(ctx context.Context, request OptTestFunctionReq, params TestFunctionParams) (TestFunctionRes, error)
+	// UnsetFunctionRoute invokes unsetFunctionRoute operation.
+	//
+	// Deactivates every active endpoint bound to this function. The
+	// function stays deployed but stops receiving inbound mail. Safe
+	// to call when no route is currently bound (no-op).
+	//
+	// DELETE /functions/{id}/route
+	UnsetFunctionRoute(ctx context.Context, params UnsetFunctionRouteParams) (UnsetFunctionRouteRes, error)
 	// UpdateAccount invokes updateAccount operation.
 	//
 	// Update account settings.
@@ -3415,6 +3453,135 @@ func (c *Client) sendGetFunction(ctx context.Context, params GetFunctionParams) 
 	return result, nil
 }
 
+// GetFunctionRouting invokes getFunctionRouting operation.
+//
+// Returns the endpoint binding for the function, or null when no
+// route is currently bound. The binding identifies whether the
+// function receives mail for a specific domain (scoped) or for any
+// active domain that has no scoped binding (fallback).
+//
+// GET /functions/{id}/routing
+func (c *Client) GetFunctionRouting(ctx context.Context, params GetFunctionRoutingParams) (GetFunctionRoutingRes, error) {
+	res, err := c.sendGetFunctionRouting(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetFunctionRouting(ctx context.Context, params GetFunctionRoutingParams) (res GetFunctionRoutingRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getFunctionRouting"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/functions/{id}/routing"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetFunctionRoutingOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/routing"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetFunctionRoutingOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetFunctionRoutingResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetFunctionTestRunTrace invokes getFunctionTestRunTrace operation.
 //
 // Returns the current end-to-end trace for a function test run.
@@ -3671,6 +3838,117 @@ func (c *Client) sendGetInboxStatus(ctx context.Context) (res GetInboxStatusRes,
 
 	stage = "DecodeResponse"
 	result, err := decodeGetInboxStatusResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetOrgRoutingTopology invokes getOrgRoutingTopology operation.
+//
+// Returns a single snapshot of how inbound mail is routed across
+// this org's active domains and functions: which active domain has
+// which function bound, the org's fallback function (if any), and
+// every deployed function with no route bound. Use this to answer
+// "which of my functions actually receive mail?" diagnostically.
+//
+// GET /functions/routing-topology
+func (c *Client) GetOrgRoutingTopology(ctx context.Context) (GetOrgRoutingTopologyRes, error) {
+	res, err := c.sendGetOrgRoutingTopology(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetOrgRoutingTopology(ctx context.Context) (res GetOrgRoutingTopologyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getOrgRoutingTopology"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/functions/routing-topology"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetOrgRoutingTopologyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/functions/routing-topology"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetOrgRoutingTopologyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetOrgRoutingTopologyResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -7169,6 +7447,140 @@ func (c *Client) sendSendEmail(ctx context.Context, request *SendMailInput, para
 	return result, nil
 }
 
+// SetFunctionRoute invokes setFunctionRoute operation.
+//
+// Binds inbound mail to this function. The route target is either
+// a specific verified domain (scoped) or the org's fallback (any
+// active domain with no scoped binding). If another function is
+// already bound at the target, returns a `conflict` envelope
+// describing the holder; re-issue with `takeover: true` to
+// deactivate that prior binding and install this one.
+//
+// PUT /functions/{id}/route
+func (c *Client) SetFunctionRoute(ctx context.Context, request *FunctionRouteBody, params SetFunctionRouteParams) (SetFunctionRouteRes, error) {
+	res, err := c.sendSetFunctionRoute(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendSetFunctionRoute(ctx context.Context, request *FunctionRouteBody, params SetFunctionRouteParams) (res SetFunctionRouteRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("setFunctionRoute"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/functions/{id}/route"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, SetFunctionRouteOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/route"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeSetFunctionRouteRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, SetFunctionRouteOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSetFunctionRouteResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // SetFunctionSecret invokes setFunctionSecret operation.
 //
 // Path-keyed companion to `POST /functions/{id}/secrets`.
@@ -7830,6 +8242,134 @@ func (c *Client) sendTestFunction(ctx context.Context, request OptTestFunctionRe
 
 	stage = "DecodeResponse"
 	result, err := decodeTestFunctionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UnsetFunctionRoute invokes unsetFunctionRoute operation.
+//
+// Deactivates every active endpoint bound to this function. The
+// function stays deployed but stops receiving inbound mail. Safe
+// to call when no route is currently bound (no-op).
+//
+// DELETE /functions/{id}/route
+func (c *Client) UnsetFunctionRoute(ctx context.Context, params UnsetFunctionRouteParams) (UnsetFunctionRouteRes, error) {
+	res, err := c.sendUnsetFunctionRoute(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendUnsetFunctionRoute(ctx context.Context, params UnsetFunctionRouteParams) (res UnsetFunctionRouteRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("unsetFunctionRoute"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/functions/{id}/route"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UnsetFunctionRouteOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/functions/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/route"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UnsetFunctionRouteOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUnsetFunctionRouteResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

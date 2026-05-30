@@ -21,6 +21,10 @@ import FunctionsDeployCommand from "./commands/functions-deploy.js";
 import FunctionsInitCommand from "./commands/functions-init.js";
 import FunctionsLogsCommand from "./commands/functions-logs.js";
 import FunctionsRedeployCommand from "./commands/functions-redeploy.js";
+import FunctionsRouteGetCommand from "./commands/functions-route-get.js";
+import FunctionsRouteSetCommand from "./commands/functions-route-set.js";
+import FunctionsRouteUnsetCommand from "./commands/functions-route-unset.js";
+import FunctionsRoutingTopologyCommand from "./commands/functions-routing-topology.js";
 import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
 import FunctionsTemplatesCommand from "./commands/functions-templates.js";
 import FunctionsTestFunctionCommand from "./commands/functions-test-function.js";
@@ -494,6 +498,15 @@ export const COMMANDS: Record<string, typeof Command> = {
   // the single biggest verification time-sink.
   "functions:test": FunctionsTestFunctionCommand,
   "functions:test-function": FunctionsTestFunctionCommand,
+  // `functions:route-*` and `functions:routing-topology` wrap the
+  // route-binding operations (`PUT/DELETE/GET /functions/:id/route` and
+  // `GET /functions/routing-topology`). Without these, deploy and test
+  // hints that point users at `route-set` would dead-end at
+  // command-not-found.
+  "functions:route-set": FunctionsRouteSetCommand,
+  "functions:route-unset": FunctionsRouteUnsetCommand,
+  "functions:route-get": FunctionsRouteGetCommand,
+  "functions:routing-topology": FunctionsRoutingTopologyCommand,
   ...generatedCommandAliases,
   ...generatedCommands,
   // `functions:logs` is the human/agent-friendly log viewer: compact
