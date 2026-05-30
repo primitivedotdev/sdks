@@ -85,11 +85,13 @@ func (UnimplementedHandler) CreateFilter(ctx context.Context, req *CreateFilterI
 // (optional) is capped at 5 MiB UTF-8, stored with each deployment
 // attempt, and sent to the runtime so stack traces can resolve to
 // original source files.
-// **Auto-wiring.** On successful deploy, Primitive automatically
-// creates a webhook endpoint that delivers inbound mail to the
-// function. There is nothing to configure on the Endpoints API
-// for this to work; the internal runtime URL is not returned by
-// the API and is not a customer-facing integration surface.
+// **Routing.** On successful deploy, the function code is live
+// in the runtime, but inbound mail will not reach it until at
+// least one route is bound. Routes are managed from the Primitive
+// dashboard. A `deploy_status` of `deployed` means the script is
+// installed, not that the function is receiving mail. The
+// internal runtime URL is not returned by the API and is not a
+// customer-facing integration surface.
 // **Secrets.** New functions ship with the managed secrets
 // (`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,
 // `PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via
@@ -158,7 +160,7 @@ func (UnimplementedHandler) DeleteFilter(ctx context.Context, params DeleteFilte
 // DeleteFunction implements deleteFunction operation.
 //
 // Soft-deletes the function row, removes the script from the edge
-// runtime, and deactivates the auto-wired webhook endpoint so no
+// runtime, and deactivates any route bound to this function so no
 // further inbound mail is delivered. Past deploy history,
 // invocations, and logs are retained.
 // Returns 502 if the runtime delete fails partway; the function

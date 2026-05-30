@@ -88,7 +88,7 @@ def sync_detailed(
     """ Delete a function
 
      Soft-deletes the function row, removes the script from the edge
-    runtime, and deactivates the auto-wired webhook endpoint so no
+    runtime, and deactivates any route bound to this function so no
     further inbound mail is delivered. Past deploy history,
     invocations, and logs are retained.
 
@@ -128,7 +128,7 @@ def sync(
     """ Delete a function
 
      Soft-deletes the function row, removes the script from the edge
-    runtime, and deactivates the auto-wired webhook endpoint so no
+    runtime, and deactivates any route bound to this function so no
     further inbound mail is delivered. Past deploy history,
     invocations, and logs are retained.
 
@@ -163,7 +163,7 @@ async def asyncio_detailed(
     """ Delete a function
 
      Soft-deletes the function row, removes the script from the edge
-    runtime, and deactivates the auto-wired webhook endpoint so no
+    runtime, and deactivates any route bound to this function so no
     further inbound mail is delivered. Past deploy history,
     invocations, and logs are retained.
 
@@ -203,7 +203,7 @@ async def asyncio(
     """ Delete a function
 
      Soft-deletes the function row, removes the script from the edge
-    runtime, and deactivates the auto-wired webhook endpoint so no
+    runtime, and deactivates any route bound to this function so no
     further inbound mail is delivered. Past deploy history,
     invocations, and logs are retained.
 
