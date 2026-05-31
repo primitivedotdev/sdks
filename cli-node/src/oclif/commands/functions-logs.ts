@@ -1,6 +1,6 @@
 import { Command, Flags } from "@oclif/core";
 import type { FunctionLogRow } from "@primitivedotdev/api-core";
-import { listFunctionLogs } from "@primitivedotdev/api-core";
+import { getFunction, listFunctionLogs } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
@@ -69,6 +69,43 @@ function emitLogRows(rows: FunctionLogRow[], jsonl: boolean): void {
   for (const row of rows) {
     const line = jsonl ? JSON.stringify(row) : formatFunctionLogLine(row);
     process.stdout.write(`${line}\n`);
+  }
+}
+
+// Fetch a function's invocation counters so the empty-logs hint can
+// distinguish "function never ran" from "function ran but did not write
+// any log lines." Best-effort: returns null on any failure so a bad
+// response never breaks the primary logs command.
+async function readFunctionInvocations(
+  // biome-ignore lint/suspicious/noExplicitAny: GeneratedClient typing
+  client: any,
+  id: string,
+): Promise<{ invocations_total: number; invocations_24h: number } | null> {
+  try {
+    const result = await getFunction({
+      client,
+      path: { id },
+      responseStyle: "fields",
+    });
+    if (result.error) return null;
+    const envelope = result.data as
+      | {
+          data?: {
+            invocations_total?: number;
+            invocations_24h?: number;
+          };
+        }
+      | undefined;
+    const fn = envelope?.data;
+    if (!fn) return null;
+    return {
+      invocations_total:
+        typeof fn.invocations_total === "number" ? fn.invocations_total : 0,
+      invocations_24h:
+        typeof fn.invocations_24h === "number" ? fn.invocations_24h : 0,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -212,13 +249,28 @@ class FunctionsLogsCommand extends Command {
         }
 
         if (rows.length === 0 && !wroteEmptyHint) {
-          process.stderr.write(
-            flags.follow
-              ? hasObservedLogs
-                ? "Waiting for new function logs...\n"
-                : "No function logs yet. Waiting for new rows...\n"
-              : "No function logs yet. Trigger the function, then run this command again.\n",
-          );
+          let emptyHint: string;
+          if (flags.follow) {
+            emptyHint = hasObservedLogs
+              ? "Waiting for new function logs...\n"
+              : "No function logs yet. Waiting for new rows...\n";
+          } else {
+            // Distinguish "function never ran" from "function ran but
+            // didn't write any log lines." A handler with no
+            // console.log/console.error on the path that fired produces
+            // function_invocations rows but zero function_logs rows, and
+            // a flat "trigger the function" sends the operator hunting a
+            // non-existent routing or deploy bug.
+            const fnInvocations = await readFunctionInvocations(
+              apiClient.client,
+              flags.id,
+            );
+            emptyHint =
+              fnInvocations && fnInvocations.invocations_total > 0
+                ? `No function logs yet, but this function has been invoked ${fnInvocations.invocations_total} time(s) (${fnInvocations.invocations_24h} in the last 24h). Your handler likely has no console.log/console.error calls on the path that fired. Add logging and redeploy to surface details.\n`
+                : "No function logs yet. Trigger the function, then run this command again.\n";
+          }
+          process.stderr.write(emptyHint);
           wroteEmptyHint = true;
         }
 
