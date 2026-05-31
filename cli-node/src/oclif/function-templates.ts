@@ -148,22 +148,50 @@ function inboundRecipientDomains(event: EmailReceivedEvent): Set<string> {
 // SMTP recipients instead.
 //
 // The default check skips:
+//   - bounce notifications, which RFC 5321 requires to use an empty
+//     SMTP envelope sender (MAIL FROM:<>). Replying to a null sender
+//     is forbidden and would itself bounce, producing a
+//     bounce-of-bounce chain. The body header on a bounce typically
+//     reads "From: MAILER-DAEMON@..." which a naive From-only check
+//     would treat as a normal sender, so we gate on the envelope here.
 //   - direct self-mail where From equals one of the inbound recipients;
-//   - mailer-daemon/postmaster bounces from the same domain as the inbound;
+//   - mailer-daemon/postmaster bounces from the same domain as the
+//     inbound, as a backup for bounces that arrive with a non-empty
+//     envelope sender;
 //   - any address explicitly listed in EXTRA_SELF_ADDRESSES.
 //
-// Extend this helper if you need stricter detection. Common additions:
-//   - Honor RFC 3834 auto-response headers: skip when
-//     event.email.headers["auto-submitted"] is anything other than "no",
-//     or when a List-Unsubscribe / Precedence: bulk header is present.
+// Anything with no identifiable sender at all (envelope + From both
+// empty) is treated as a loop terminator: better to drop one ambiguous
+// message than to reply blindly and loop on a bounce.
+//
+// Extend this helper if you need stricter detection. Common additions
+// not implemented here today:
+//   - Honor RFC 3834 auto-response headers: skip when an
+//     auto-submitted header is anything other than "no", or when a
+//     list-unsubscribe / precedence: bulk header is present. The
+//     EmailReceivedEvent.email.headers shape does not currently surface
+//     these, so detection requires either a parsed-headers field on
+//     the event or a parse of the raw RFC 822 body.
 //   - Track Message-ID / In-Reply-To chains to break ping-pong loops
 //     between two cooperating handlers on different domains.
+//   - Rate-limit replies per sender per hour as a safety net.
 export function isLoop(event: EmailReceivedEvent): boolean {
+  // RFC 5321: bounce notifications use the null MAIL FROM (envelope
+  // sender = empty string). Some MTAs report this as "<>" verbatim.
+  // Treat either as an unambiguous bounce signal.
+  const envelopeSender = (event.email.smtp.mail_from || "").trim();
+  if (envelopeSender === "" || envelopeSender === "<>") return true;
+
   const fromAddresses = [
     ...extractEmailAddresses(event.email.headers.from),
     ...extractEmailAddresses(event.email.smtp.mail_from),
   ];
-  if (fromAddresses.length === 0) return false;
+  // No identifiable sender across either envelope or header: treat as
+  // a loop terminator. Was return false in the original template; that
+  // returned mail with empty headers straight back into the handler
+  // and let bounces with malformed bodies slip past the bounce guard
+  // above.
+  if (fromAddresses.length === 0) return true;
 
   const inboundAddresses = new Set(inboundRecipientAddresses(event));
   const inboundDomains = inboundRecipientDomains(event);
