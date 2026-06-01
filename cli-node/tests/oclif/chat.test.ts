@@ -8,9 +8,16 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { ux } from "@oclif/core";
-import type { EmailDetail, SendMailResult } from "@primitivedotdev/api-core";
+import type {
+  EmailDetail,
+  EmailSearchResult,
+  SendMailResult,
+} from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { normalizeEmailAddress } from "../../src/oclif/commands/chat.js";
+import {
+  normalizeEmailAddress,
+  resolveIdempotentReplayReply,
+} from "../../src/oclif/commands/chat.js";
 
 const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
@@ -1175,5 +1182,92 @@ describe("normalizeEmailAddress", () => {
     expect(normalizeEmailAddress("Zork <zork@example.com>")).toBe(
       normalizeEmailAddress("zork@example.com"),
     );
+  });
+});
+
+describe("resolveIdempotentReplayReply", () => {
+  // Minimal EmailSearchResult-shaped fixture. Mirrors the helper in
+  // emails-poll.test.ts so the helper under test sees real shapes.
+  function makeRow(overrides: Partial<EmailSearchResult>): EmailSearchResult {
+    return {
+      attachment_count: 0,
+      created_at: "2026-06-01T15:00:00.000Z",
+      domain: "example.com",
+      from_known_address: false,
+      id: "11111111-1111-4111-8111-111111111111",
+      received_at: "2026-06-01T15:00:00.000Z",
+      recipient: "inbox@example.com",
+      sender: "sender@example.net",
+      status: "accepted",
+      webhook_attempt_count: 0,
+      ...overrides,
+    };
+  }
+
+  it("returns null when the search call failed", async () => {
+    const id = await resolveIdempotentReplayReply({
+      ok: false,
+      error: new Error("http 503"),
+    });
+    expect(id).toBeNull();
+  });
+
+  it("returns null when no rows match", async () => {
+    const id = await resolveIdempotentReplayReply({
+      ok: true,
+      cursor: null,
+      rows: [],
+    });
+    expect(id).toBeNull();
+  });
+
+  it("ignores rows whose status is not accepted/completed", async () => {
+    const id = await resolveIdempotentReplayReply({
+      ok: true,
+      cursor: null,
+      rows: [
+        makeRow({
+          id: "a",
+          status: "pending",
+          received_at: "2026-06-01T15:00:00Z",
+        }),
+        makeRow({
+          id: "b",
+          status: "rejected",
+          received_at: "2026-06-01T15:00:01Z",
+        }),
+      ],
+    });
+    expect(id).toBeNull();
+  });
+
+  it("returns the most recently received accepted row", async () => {
+    const id = await resolveIdempotentReplayReply({
+      ok: true,
+      cursor: null,
+      rows: [
+        makeRow({
+          id: "older",
+          status: "accepted",
+          received_at: "2026-06-01T15:00:00Z",
+        }),
+        makeRow({
+          id: "newest",
+          status: "completed",
+          received_at: "2026-06-01T15:00:30Z",
+        }),
+        makeRow({
+          id: "rejected-newer",
+          status: "rejected",
+          received_at: "2026-06-01T15:00:45Z",
+        }),
+        makeRow({
+          id: "middle",
+          status: "accepted",
+          received_at: "2026-06-01T15:00:15Z",
+        }),
+      ],
+    });
+    expect(id).toBe("newest");
   });
 });
