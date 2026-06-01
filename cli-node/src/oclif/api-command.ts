@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { Command, Errors, Flags } from "@oclif/core";
 import type {
+  AgentSignupVerifyResult,
   ErrorResponse,
   PrimitiveOperationManifest,
   PrimitiveParameterManifest,
@@ -8,6 +9,7 @@ import type {
 import { operations } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
 import { type ResolvedCliAuth, resolveCliAuth } from "./auth.js";
+import { saveSignupCredentials } from "./commands/signup.js";
 import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
@@ -912,6 +914,48 @@ export const OPERATION_FLAG_ALIASES: Record<
   verifyAgentSignup: { verification_code: ["code"] },
 };
 
+// Per-operation post-success hooks keyed by operation.sdkName. Fires
+// AFTER the API call returns a non-error response and BEFORE the
+// auto-gen command prints the JSON output, so a hook can run a side
+// effect and surface a stderr notice next to the response body.
+//
+// Use sparingly: the auto-gen path is supposed to be a thin wrapper
+// over the API. Hook only when the same response would otherwise force
+// every caller to repeat the same downstream work (e.g. persisting
+// OAuth tokens that the server just minted).
+//
+// Hooks MUST be best-effort. A throwing hook prints a warning to
+// stderr and lets the response JSON through so the caller still has
+// the raw payload to act on. The catch is centralized in run() below.
+export type OperationSuccessHookParams = {
+  envelope: { data?: unknown } | null | undefined;
+  configDir: string;
+  apiBaseUrl: string;
+  writeStderr: (chunk: string) => void;
+};
+export const OPERATION_SUCCESS_HOOKS: Record<
+  string,
+  (params: OperationSuccessHookParams) => void
+> = {
+  // verifyAgentSignup just minted OAuth tokens for the caller. Persist
+  // them through the same path the human `signup` command uses, so
+  // `primitive whoami` works on the very next call. Without this, an
+  // agent that signs up via the bare API command gets tokens in the
+  // response JSON but no credentials.json, and the next CLI call
+  // returns "not authenticated" even though the tokens are still
+  // valid. The original AGX walkthrough caught this and worked around
+  // it by writing the tokens to a project-local .env.local; this hook
+  // is the cure.
+  verifyAgentSignup: ({ envelope, configDir, apiBaseUrl, writeStderr }) => {
+    const data = envelope?.data as AgentSignupVerifyResult | undefined;
+    if (!data?.access_token || !data?.refresh_token) return;
+    saveSignupCredentials({ apiBaseUrl, configDir, signup: data });
+    writeStderr(
+      "Credentials saved to the CLI config; `primitive whoami` will work on the next call.\n",
+    );
+  },
+};
+
 export function createOperationCommand(
   operation: PrimitiveOperationManifest,
 ): typeof Command {
@@ -1109,6 +1153,33 @@ export function createOperationCommand(
             process.stderr.write(chunk);
           },
         });
+
+        // Per-operation post-success hook. See OPERATION_SUCCESS_HOOKS
+        // for the contract. A throwing hook never blocks the response
+        // JSON from reaching stdout: we catch, surface a warning to
+        // stderr, and let this.log run, so the caller still has the
+        // raw payload to act on manually.
+        const successHook = OPERATION_SUCCESS_HOOKS[operation.sdkName];
+        if (successHook) {
+          try {
+            successHook({
+              envelope,
+              configDir: this.config.configDir,
+              apiBaseUrl: auth.apiBaseUrl,
+              writeStderr: (chunk) => {
+                process.stderr.write(chunk);
+              },
+            });
+          } catch (hookError) {
+            const detail =
+              hookError instanceof Error
+                ? hookError.message
+                : String(hookError);
+            process.stderr.write(
+              `Warning: ${operation.sdkName} succeeded but its post-success hook threw (${detail}). The response below is still valid; act on it manually.\n`,
+            );
+          }
+        }
 
         this.log(
           JSON.stringify(

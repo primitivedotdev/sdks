@@ -14,6 +14,7 @@ import {
   formatErrorPayload,
   isIncompleteDomainVerification,
   OPERATION_HINTS,
+  OPERATION_SUCCESS_HOOKS,
   operationOutputPayload,
   readJsonBody,
   runWithTiming,
@@ -914,5 +915,78 @@ describe("createOperationCommand description", () => {
     };
 
     expect(Cmd.flags.envelope).toBeUndefined();
+  });
+});
+
+describe("OPERATION_SUCCESS_HOOKS.verifyAgentSignup", () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), "primitive-cli-verify-hook-test-"));
+  });
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  // Mirrors the AgentSignupVerifyResult shape on the wire. Only the
+  // fields saveSignupCredentials reads are included; everything else
+  // is irrelevant to the hook's contract.
+  const SIGNUP_RESPONSE = {
+    access_token: "prim_oat_test_access",
+    refresh_token: "prim_ort_test_refresh",
+    token_type: "Bearer" as const,
+    expires_in: 3600,
+    auth_method: "oauth" as const,
+    oauth_client_id: "client-test",
+    oauth_grant_id: "00000000-0000-0000-0000-000000000001",
+    org_id: "00000000-0000-0000-0000-000000000002",
+    org_name: "test workspace",
+    api_key: "prim_test_api_key",
+    key_id: "00000000-0000-0000-0000-000000000003",
+    key_prefix: "prim_test",
+    orgs: [
+      {
+        id: "00000000-0000-0000-0000-000000000002",
+        name: "test workspace",
+      },
+    ],
+  };
+
+  it("persists OAuth tokens to credentials.json so whoami works on the next call", () => {
+    const stderr: string[] = [];
+    OPERATION_SUCCESS_HOOKS.verifyAgentSignup({
+      envelope: { data: SIGNUP_RESPONSE },
+      configDir: tempDir,
+      apiBaseUrl: "https://api.primitive.dev",
+      writeStderr: (chunk) => stderr.push(chunk),
+    });
+
+    const persisted = loadCliCredentials(tempDir);
+    expect(persisted).not.toBeNull();
+    expect(persisted?.access_token).toBe(SIGNUP_RESPONSE.access_token);
+    expect(persisted?.refresh_token).toBe(SIGNUP_RESPONSE.refresh_token);
+    expect(persisted?.api_base_url).toBe("https://api.primitive.dev");
+    expect(persisted?.org_id).toBe(SIGNUP_RESPONSE.org_id);
+    expect(persisted?.auth_method).toBe("oauth");
+    expect(stderr.join("")).toContain("Credentials saved to the CLI config");
+  });
+
+  it("is a defensive no-op when the response envelope has no token fields", () => {
+    // verifyAgentSignup is supposed to always return tokens on success,
+    // but the hook is best-effort and must not throw when the response
+    // shape is unexpected (e.g. a future API change, a server-side
+    // partial response). Confirm it writes nothing rather than
+    // bringing the whole command down.
+    const stderr: string[] = [];
+    OPERATION_SUCCESS_HOOKS.verifyAgentSignup({
+      envelope: { data: { unrelated: "shape" } },
+      configDir: tempDir,
+      apiBaseUrl: "https://api.primitive.dev",
+      writeStderr: (chunk) => stderr.push(chunk),
+    });
+
+    expect(loadCliCredentials(tempDir)).toBeNull();
+    expect(stderr.join("")).toBe("");
   });
 });

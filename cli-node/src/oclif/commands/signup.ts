@@ -548,7 +548,13 @@ async function checkExistingCredentials(params: {
   );
 }
 
-function saveSignupCredentials(params: {
+// Exported so the auto-generated `agent verify-agent-signup` command
+// can persist OAuth tokens through the same path the human `signup`
+// flow uses. Without this, an agent that signs up via the bare API
+// command gets tokens in the response JSON but no credentials.json,
+// and the very next `primitive whoami` returns "not authenticated"
+// even though the tokens are still valid.
+export function saveSignupCredentials(params: {
   apiBaseUrl: string;
   configDir: string;
   signup: AgentSignupVerifyResult;
