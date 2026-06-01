@@ -659,7 +659,10 @@ const RESERVED_FLAG_NAMES = new Set([
   "output",
 ]);
 
-function bodyFieldFlag(field: BodyFieldDescriptor): unknown {
+function bodyFieldFlag(
+  field: BodyFieldDescriptor,
+  aliases?: string[],
+): unknown {
   // Pass the full first-line description through. oclif's --help
   // renderer wraps long values across multiple lines on its own,
   // so a fixed character cap here just produces ellipsis-truncated
@@ -677,6 +680,7 @@ function bodyFieldFlag(field: BodyFieldDescriptor): unknown {
   // body against the same server-side schema either way.
   const common = {
     description: field.description || field.name,
+    ...(aliases && aliases.length > 0 ? { aliases } : {}),
   };
   if (field.kind === "boolean")
     return Flags.boolean({ ...common, allowNo: true });
@@ -760,12 +764,13 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     // pass would happily pick up the path param's value and
     // silently write it into the body.)
     const bodyFields = extractBodyFields(operation.requestSchema);
+    const aliasesForOperation = OPERATION_FLAG_ALIASES[operation.sdkName];
     for (const field of bodyFields) {
       if (field.kind === "complex") continue;
       const name = flagName(field.name);
       if (RESERVED_FLAG_NAMES.has(name)) continue;
       if (flags[name] !== undefined) continue;
-      flags[name] = bodyFieldFlag(field);
+      flags[name] = bodyFieldFlag(field, aliasesForOperation?.[field.name]);
       bodyFieldFlagToProperty.set(name, field.name);
     }
   }
@@ -885,6 +890,26 @@ export const OPERATION_HINTS: Record<string, string> = {
     "Tip: prefer `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
   setFunctionSecret:
     "Tip: prefer `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
+  startAgentSignup:
+    "Tip: also pass --signup-code <code> (request from Primitive; invite-only during the agent beta) and --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
+  verifyAgentSignup:
+    "Tip: pass --verification-code <code> (or --code; both work). The response carries OAuth tokens but not your assigned inbox domain; run `primitive domains list` (or `primitive whoami`) after success to see the managed *.primitive.email address that routes to this account.",
+};
+
+// Per-operation flag aliases keyed by operation.sdkName and body
+// field property name (the snake_case key in the request schema).
+// The generated flag is the kebab-case form (e.g. `verification-code`);
+// listing aliases here adds shorter / more natural forms that oclif
+// accepts on the command line and renders in --help.
+//
+// Add an entry whenever an agent or human reading the API field name
+// would reach for something shorter than the literal field. Don't
+// over-use; each alias is a name to maintain forever.
+export const OPERATION_FLAG_ALIASES: Record<
+  string,
+  Record<string, string[]>
+> = {
+  verifyAgentSignup: { verification_code: ["code"] },
 };
 
 export function createOperationCommand(

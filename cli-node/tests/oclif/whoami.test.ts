@@ -33,7 +33,7 @@ describe("whoami command", () => {
   });
 
   it("formats a concise summary without setup or billing internals", () => {
-    const output = formatWhoamiSummary(makeAccount());
+    const output = formatWhoamiSummary(makeAccount(), null);
 
     expect(output).toContain("Authenticated as cli@example.com");
     expect(output).toContain("Account id: acct-1");
@@ -41,5 +41,17 @@ describe("whoami command", () => {
     expect(output).not.toContain("onboarding");
     expect(output).not.toContain("stripe");
     expect(output).not.toContain("webhook");
+    expect(output).not.toContain("Managed inbox");
+  });
+
+  it("includes the managed inbox line when a managed domain is present", () => {
+    const output = formatWhoamiSummary(
+      makeAccount(),
+      "crisp-crane.primitive.email",
+    );
+
+    expect(output).toContain(
+      "Managed inbox: any-local-part@crisp-crane.primitive.email",
+    );
   });
 });
