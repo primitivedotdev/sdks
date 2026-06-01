@@ -31,13 +31,11 @@ import {
 } from "../api-command.js";
 import {
   acquireCliCredentialsLock,
-  cliAccessTokenExpiresAt,
   credentialsPath,
   loadCliCredentials,
   type StoredCliCredentials,
-  saveCliCredentials,
+  saveSignupCredentials,
 } from "../auth.js";
-import { deleteChatState } from "../chat-state.js";
 import { checkExistingLogin } from "./login.js";
 
 const INVALID_VERIFICATION_CODE = "invalid_verification_code";
@@ -546,33 +544,6 @@ async function checkExistingCredentials(params: {
   throw cliError(
     `Already logged in${org}. Run \`primitive logout\` before ${copy.actionGerund}.`,
   );
-}
-
-// Exported so the auto-generated `agent verify-agent-signup` command
-// can persist OAuth tokens through the same path the human `signup`
-// flow uses. Without this, an agent that signs up via the bare API
-// command gets tokens in the response JSON but no credentials.json,
-// and the very next `primitive whoami` returns "not authenticated"
-// even though the tokens are still valid.
-export function saveSignupCredentials(params: {
-  apiBaseUrl: string;
-  configDir: string;
-  signup: AgentSignupVerifyResult;
-}): void {
-  deleteChatState(params.configDir);
-  saveCliCredentials(params.configDir, {
-    access_token: params.signup.access_token,
-    api_base_url: params.apiBaseUrl,
-    auth_method: "oauth",
-    created_at: new Date().toISOString(),
-    expires_at: cliAccessTokenExpiresAt(params.signup.expires_in),
-    oauth_client_id: params.signup.oauth_client_id,
-    oauth_grant_id: params.signup.oauth_grant_id,
-    org_id: params.signup.org_id,
-    org_name: params.signup.org_name,
-    refresh_token: params.signup.refresh_token,
-    token_type: params.signup.token_type,
-  });
 }
 
 function writeStartInstructions(

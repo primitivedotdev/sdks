@@ -8,8 +8,11 @@ import type {
 } from "@primitivedotdev/api-core";
 import { operations } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
-import { type ResolvedCliAuth, resolveCliAuth } from "./auth.js";
-import { saveSignupCredentials } from "./commands/signup.js";
+import {
+  type ResolvedCliAuth,
+  resolveCliAuth,
+  saveSignupCredentials,
+} from "./auth.js";
 import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,

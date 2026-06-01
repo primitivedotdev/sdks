@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import type { AgentSignupVerifyResult } from "@primitivedotdev/api-core";
 import { DEFAULT_API_BASE_URL } from "@primitivedotdev/api-core";
 import { deleteChatState } from "./chat-state.js";
 
@@ -259,6 +260,33 @@ export function saveCliCredentials(
 export function deleteCliCredentials(configDir: string): void {
   rmSync(credentialsPath(configDir), { force: true });
   deleteChatState(configDir);
+}
+
+// Turn a server-issued AgentSignupVerifyResult into stored CLI
+// credentials. Lives here (not in commands/signup.ts) because the
+// auto-generated `agent verify-agent-signup` post-success hook also
+// needs it, and a cross-import between api-command.ts and signup.ts
+// would form a cycle. Both callers reduce to the same on-disk format
+// the rest of auth.ts already speaks.
+export function saveSignupCredentials(params: {
+  apiBaseUrl: string;
+  configDir: string;
+  signup: AgentSignupVerifyResult;
+}): void {
+  deleteChatState(params.configDir);
+  saveCliCredentials(params.configDir, {
+    access_token: params.signup.access_token,
+    api_base_url: params.apiBaseUrl,
+    auth_method: "oauth",
+    created_at: new Date().toISOString(),
+    expires_at: cliAccessTokenExpiresAt(params.signup.expires_in),
+    oauth_client_id: params.signup.oauth_client_id,
+    oauth_grant_id: params.signup.oauth_grant_id,
+    org_id: params.signup.org_id,
+    org_name: params.signup.org_name,
+    refresh_token: params.signup.refresh_token,
+    token_type: params.signup.token_type,
+  });
 }
 
 export function deleteCliCredentialsLock(configDir: string): void {
