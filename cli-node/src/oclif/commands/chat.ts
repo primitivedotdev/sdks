@@ -378,8 +378,23 @@ function matchDescription(strategy: ChatMatchStrategy): string {
     : "fallback, matched by sender/time window";
 }
 
-function normalizeEmailAddress(value: string): string {
-  return value.trim().toLowerCase();
+// Exported so the reply-context recipient match can be unit-tested
+// directly. The bare lowercase form is the comparison key everywhere
+// addresses are matched in this command (assertParentMatchesRecipient,
+// findLatestInboundFromRecipient, etc).
+//
+// RFC 5322 lets a From header carry a display name plus the bare
+// address inside angle brackets ("Zork <zork@play.example.com>"). The
+// CLI receives both shapes back from the API: `sender` is bare,
+// `from_email` and `from_header` can carry the wrapper form. A literal
+// string compare on the wrapped form against a bare recipient was
+// rejecting every reply from a sender that sets a display name, which
+// is basically every real service. Strip the angle-bracket wrapper
+// before lowercasing so the two shapes round-trip to the same key.
+export function normalizeEmailAddress(value: string): string {
+  const angleMatch = value.match(/<([^>]+)>/);
+  const bare = angleMatch?.[1] ?? value;
+  return bare.trim().toLowerCase();
 }
 
 function derivedReplySubject(parent: EmailDetail): string {
