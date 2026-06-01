@@ -1,4 +1,15 @@
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtmlLib, { type IOptions } from "sanitize-html";
+
+// HTML sanitizer for parsed email bodies.
+//
+// Implemented with `sanitize-html` (a pure-JS, htmlparser2-based allow-list
+// sanitizer) rather than DOMPurify. DOMPurify needs a live DOM: in the browser
+// that's `window`, and `isomorphic-dompurify` supplies a jsdom one for Node —
+// but jsdom is heavy and, critically, cannot run on edge/Workers runtimes (no
+// DOM, and pure-JS DOM shims either crash at init or silently no-op, which
+// would ship unsanitized HTML). `sanitize-html` needs no DOM, so the same
+// sanitizer runs in the browser, Node, and Workers from one implementation.
+// The allow-list policy below is preserved from the prior DOMPurify config.
 
 const ALLOWED_TAGS = [
   // Structure
@@ -64,7 +75,6 @@ const ALLOWED_ATTRS = [
   "lang",
   "href",
   "title",
-  "target",
   "rel",
   "src",
   "alt",
@@ -84,68 +94,64 @@ const ALLOWED_ATTRS = [
   "face",
 ];
 
-// Allow https, safe raster data:image/ (for inline CID images), mailto, and
-// fragment links. Block data:image/svg+xml (can contain embedded JS) and all
-// other data: schemes (text/html, etc.).
-const ALLOWED_URI_REGEXP =
-  /^(https?:|data:image\/(?!svg\+xml)[a-z0-9][a-z0-9+.-]*[;,]|mailto:|cid:|#)/i;
-
-// Register hooks once at module load to avoid race conditions when
-// multiple calls to sanitizeHtml run concurrently.
+// data:image/svg+xml can carry embedded JavaScript, so it is blocked on src/href
+// even though other (raster) data:image/* is allowed for inline CID images.
 const SVG_DATA_URI_RE = /^data:image\/svg\+xml/i;
 
-DOMPurify.addHook("uponSanitizeAttribute", (_node, data) => {
-  if (data.attrName.startsWith("on")) {
-    data.keepAttr = false;
-  }
-  if (data.attrName === "style") {
-    data.keepAttr = false;
-  }
-  // Block data:image/svg+xml URIs; SVG can contain embedded JavaScript.
-  // DOMPurify's DATA_URI_TAGS allowlist bypasses ALLOWED_URI_REGEXP for
-  // img src, so we must strip it in the hook.
-  if (
-    (data.attrName === "src" || data.attrName === "href") &&
-    SVG_DATA_URI_RE.test(data.attrValue)
-  ) {
-    data.keepAttr = false;
-  }
-});
+// Tags whose entire contents are dropped (not just the tag), so e.g.
+// `<script>`/`<style>` text never survives. Mirrors DOMPurify removing these
+// wholesale. Extends sanitize-html's default nonTextTags with the dangerous
+// container tags that are not in ALLOWED_TAGS.
+const NON_TEXT_TAGS = [
+  "script",
+  "style",
+  "textarea",
+  "option",
+  "noscript",
+  "title",
+  "iframe",
+  "object",
+  "embed",
+  "svg",
+  "math",
+  "form",
+  "select",
+  "button",
+  "input",
+];
 
-DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-  if (node.tagName === "A") {
-    const target = node.getAttribute("target");
-    if (target === "_blank") {
-      node.setAttribute("rel", "noopener noreferrer");
-    }
-  }
-});
-
-const SANITIZE_OPTIONS = {
-  ALLOWED_TAGS,
-  ALLOWED_ATTR: ALLOWED_ATTRS,
-  ALLOW_DATA_ATTR: false,
-  ALLOW_UNKNOWN_PROTOCOLS: false,
-  ALLOWED_URI_REGEXP,
-  FORBID_TAGS: [
-    "style",
-    "script",
-    "iframe",
-    "object",
-    "embed",
-    "form",
-    "input",
-    "button",
-    "select",
-    "textarea",
-    "link",
-    "meta",
-    "base",
-    "svg",
-    "math",
-  ],
+const OPTIONS: IOptions = {
+  allowedTags: ALLOWED_TAGS,
+  // DOMPurify's ALLOWED_ATTR was a global allow-list; "*" applies it to every
+  // tag. Event handlers (on*), `style`, and data-* attributes are absent from
+  // the list and so are dropped — matching ALLOW_DATA_ATTR:false plus the prior
+  // on*/style strip hooks.
+  allowedAttributes: { "*": ALLOWED_ATTRS },
+  // https / mailto / cid plus fragment and relative URLs (no scheme). data: is
+  // permitted only on <img> (below). Protocol-relative ("//host") URLs are
+  // rejected. Equivalent to ALLOW_UNKNOWN_PROTOCOLS:false + the ALLOWED_URI
+  // policy.
+  allowedSchemes: ["http", "https", "mailto", "cid"],
+  allowedSchemesByTag: { img: ["http", "https", "cid", "data"] },
+  allowedSchemesAppliedToAttributes: ["href", "src"],
+  allowProtocolRelative: false,
+  nonTextTags: NON_TEXT_TAGS,
+  disallowedTagsMode: "discard",
+  transformTags: {
+    // `target` is intentionally not in the allow-list (matches the prior
+    // sanitizer: target=_blank is stripped, defeating window.opener attacks).
+    // `data:` is already rejected on <a> (not in its allowed schemes), so only
+    // <img> needs the explicit data:image/svg+xml guard below.
+    img: (tagName, attribs) => {
+      const next: Record<string, string> = { ...attribs };
+      if (next.src && SVG_DATA_URI_RE.test(next.src)) {
+        delete next.src;
+      }
+      return { tagName, attribs: next };
+    },
+  },
 };
 
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, SANITIZE_OPTIONS);
+  return sanitizeHtmlLib(html, OPTIONS);
 }
