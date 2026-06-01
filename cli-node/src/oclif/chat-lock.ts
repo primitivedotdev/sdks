@@ -42,6 +42,52 @@ const LOCK_FILENAME = "chat-state.lock";
 
 let processHolder: { configDir: string; depth: number } | null = null;
 
+/**
+ * Whether we've installed our exit / signal listeners on the
+ * `process` object. Done lazily on first acquire and never undone:
+ * adding handlers per-acquire would let them accumulate (each
+ * acquire registers four listeners, and `process.once` can't be
+ * un-once'd), which is harmless in production but produces
+ * `MaxListenersExceededWarning` + cascading no-op fires in tests
+ * that acquire/release across many `it()` blocks. Greptile P2.
+ *
+ * The handlers consult the current `processHolder` and act only if
+ * a lock is actually held, so leaving them installed across
+ * release boundaries is safe: a released or never-acquired lock
+ * makes them no-ops.
+ */
+let exitListenersInstalled = false;
+
+function installExitListenersOnce(): void {
+  if (exitListenersInstalled) return;
+  exitListenersInstalled = true;
+
+  const cleanup = (): void => {
+    if (processHolder === null) return;
+    try {
+      unlinkSync(lockPath(processHolder.configDir));
+    } catch {
+      // best-effort: another process may have stolen the lock by now
+    }
+    processHolder = null;
+  };
+
+  process.on("exit", cleanup);
+
+  const signals = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
+  for (const signal of signals) {
+    const handler = (): void => {
+      cleanup();
+      // Re-raise with the default handler so the exit code reflects
+      // the signal rather than 0. Remove our own listener first so
+      // the re-raise doesn't recurse.
+      process.removeListener(signal, handler);
+      process.kill(process.pid, signal);
+    };
+    process.on(signal, handler);
+  }
+}
+
 function lockPath(configDir: string): string {
   return join(configDir, LOCK_FILENAME);
 }
@@ -132,31 +178,7 @@ export function acquireChatLock(configDir: string): () => void {
     writeSync(fd, `${process.pid}\n`);
     closeSync(fd);
     processHolder = { configDir, depth: 1 };
-
-    const finalizer = () => {
-      // Best-effort: the process is exiting; we cannot reliably
-      // distinguish our lock from a stolen one here. The PID guard
-      // on acquire handles the false-positive case correctly even
-      // if we miss a release.
-      if (processHolder?.configDir === configDir) {
-        try {
-          unlinkSync(lockPath(configDir));
-        } catch {
-          // ignore — best effort
-        }
-        processHolder = null;
-      }
-    };
-    process.once("exit", finalizer);
-    const signals = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
-    for (const signal of signals) {
-      process.once(signal, () => {
-        finalizer();
-        // Re-raise the signal with the default handler so the exit
-        // code reflects the signal rather than 0.
-        process.kill(process.pid, signal);
-      });
-    }
+    installExitListenersOnce();
 
     let released = false;
     return () => {
