@@ -10,6 +10,7 @@ import { join, resolve } from "node:path";
 import { ux } from "@oclif/core";
 import type { EmailDetail, SendMailResult } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { normalizeEmailAddress } from "../../src/oclif/commands/chat.js";
 
 const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
@@ -1138,5 +1139,41 @@ describe("chat command", () => {
       /primitive emails wait --reply-to-sent-email-id sent-1 --to agent@sender\.example --since \S+ --timeout 1/,
     );
     expect(result.stderr).not.toContain("--table");
+  });
+});
+
+describe("normalizeEmailAddress", () => {
+  it("passes through a bare address with lowercasing and trim", () => {
+    expect(normalizeEmailAddress("  Zork@Play.Example.com  ")).toBe(
+      "zork@play.example.com",
+    );
+  });
+
+  it("strips the RFC 5322 display-name wrapper", () => {
+    // The bug this addresses: the inbound payload's from_email comes
+    // back as "Zork <zork@...>" while the recipient arg the user
+    // passed is the bare "zork@..."; a literal compare was rejecting
+    // them as different recipients.
+    expect(
+      normalizeEmailAddress("Zork <zork@play.primitive-staging-1.com>"),
+    ).toBe("zork@play.primitive-staging-1.com");
+  });
+
+  it("handles a quoted display name", () => {
+    expect(normalizeEmailAddress('"Zork, Inc." <zork@example.com>')).toBe(
+      "zork@example.com",
+    );
+  });
+
+  it("handles a bare angle-bracket wrapper with no display name", () => {
+    expect(normalizeEmailAddress("<zork@example.com>")).toBe(
+      "zork@example.com",
+    );
+  });
+
+  it("round-trips wrapped and bare to the same key for matching", () => {
+    expect(normalizeEmailAddress("Zork <zork@example.com>")).toBe(
+      normalizeEmailAddress("zork@example.com"),
+    );
   });
 });
