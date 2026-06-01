@@ -82,10 +82,16 @@ async function readFunctionInvocations(
   id: string,
 ): Promise<{ invocations_total: number; invocations_24h: number } | null> {
   try {
+    // 3 second timeout: this is a hint, not a load-bearing call.
+    // A server that accepts the connection but never responds should
+    // not hang the primary logs command. AbortSignal.timeout rejects
+    // with AbortError on expiry, which the catch below normalizes to
+    // null along with every other failure mode.
     const result = await getFunction({
       client,
       path: { id },
       responseStyle: "fields",
+      signal: AbortSignal.timeout(3000),
     });
     if (result.error) return null;
     const envelope = result.data as
@@ -254,6 +260,12 @@ class FunctionsLogsCommand extends Command {
             emptyHint = hasObservedLogs
               ? "Waiting for new function logs...\n"
               : "No function logs yet. Waiting for new rows...\n";
+          } else if (flags.cursor) {
+            // User paginated to an empty trailing page. They've already
+            // walked through real rows, so neither "trigger the
+            // function" nor the silent-handler hint applies. Just say
+            // the stream is exhausted.
+            emptyHint = "No more function logs after this cursor.\n";
           } else {
             // Distinguish "function never ran" from "function ran but
             // didn't write any log lines." A handler with no
