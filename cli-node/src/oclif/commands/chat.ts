@@ -20,6 +20,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import { acquireChatLock, ChatLockContentionError } from "../chat-lock.js";
 import {
   loadActiveChatState,
   loadChatConversationByLocalId,
@@ -702,6 +703,33 @@ function persistActiveChat(params: {
   }
 }
 
+/**
+ * Pick the email id to surface from the one-shot strict search we run
+ * when the server returned `idempotent_replay: true`. The search has
+ * no `since` filter (the existing reply, if any, predates this
+ * attempt's `sentAtIso`), so we may receive multiple historical
+ * inbounds matching `reply_to_sent_email_id = sent.id` if the user
+ * has been hammering the same content. Prefer the most recent
+ * accepted/completed row; reject pending/processing rows the way the
+ * normal poll does.
+ */
+export async function resolveIdempotentReplayReply(
+  page: Awaited<ReturnType<typeof fetchEmailSearchPage>>,
+): Promise<string | null> {
+  if (!page.ok || page.rows.length === 0) return null;
+  let latest: { id: string; receivedAt: string } | null = null;
+  for (const row of page.rows) {
+    if (row.status !== "accepted" && row.status !== "completed") continue;
+    if (
+      latest === null ||
+      row.received_at.localeCompare(latest.receivedAt) > 0
+    ) {
+      latest = { id: row.id, receivedAt: row.received_at };
+    }
+  }
+  return latest?.id ?? null;
+}
+
 export function formatChatResponse(context: ChatOutputContext): string {
   const accepted = context.sent.accepted.join(", ") || context.recipient;
   const responseBody = resolveChatResponseBody(context.reply);
@@ -1063,233 +1091,362 @@ class ChatCommand extends Command {
     }
 
     await runWithTiming(flags.time, async () => {
-      const { apiClient, auth, baseUrlOverridden } =
-        await createAuthenticatedCliApiClient({
-          apiKey: flags["api-key"],
-          apiBaseUrl: flags["api-base-url"],
+      // Acquire the chat-state mutex for the duration of the
+      // send-and-wait cycle. ChatReplyCommand also acquires this
+      // around its load→ChatCommand.run, so this call is re-entrant
+      // within the same process and a no-op there. On a direct
+      // `primitive chat <recipient> <message>` invocation it ensures
+      // no other chat command can interleave its persist step.
+      // See chat-lock.ts.
+      let releaseLock: () => void;
+      try {
+        releaseLock = acquireChatLock(this.config.configDir);
+      } catch (err) {
+        if (err instanceof ChatLockContentionError) {
+          throw cliError(err.message);
+        }
+        throw err;
+      }
+      try {
+        const { apiClient, auth, baseUrlOverridden } =
+          await createAuthenticatedCliApiClient({
+            apiKey: flags["api-key"],
+            apiBaseUrl: flags["api-base-url"],
+            configDir: this.config.configDir,
+          });
+
+        const authFailureContext: ChatAuthFailureContext = {
+          auth,
+          baseUrlOverridden,
           configDir: this.config.configDir,
-        });
+        };
+        const progress = flags.quiet
+          ? null
+          : new ChatProgressIndicator(process.stderr);
+        const attachments = readAttachmentFiles(flags.attachment);
 
-      const authFailureContext: ChatAuthFailureContext = {
-        auth,
-        baseUrlOverridden,
-        configDir: this.config.configDir,
-      };
-      const progress = flags.quiet
-        ? null
-        : new ChatProgressIndicator(process.stderr);
-      const attachments = readAttachmentFiles(flags.attachment);
+        let from: string;
+        let parentReply: EmailDetail | undefined;
+        let subject: string;
 
-      let from: string;
-      let parentReply: EmailDetail | undefined;
-      let subject: string;
+        if (replyMode) {
+          const replyContext = await (async (): Promise<{
+            from: string;
+            parentReply: EmailDetail;
+          }> => {
+            let replyContextFailureMessage = "Could not load reply context.";
+            try {
+              if (flags["reply-to-email-id"] !== undefined) {
+                progress?.start(
+                  `Loading reply context for ${flags["reply-to-email-id"]}`,
+                );
+                const exactParentReply = await loadInboundEmailDetail({
+                  apiClient,
+                  authFailureContext,
+                  id: flags["reply-to-email-id"],
+                });
+                replyContextFailureMessage = `Inbound email ${flags["reply-to-email-id"]} does not match recipient ${args.recipient}.`;
+                assertParentMatchesRecipient(exactParentReply, args.recipient);
+                return {
+                  from: flags.from ?? exactParentReply.to_email,
+                  parentReply: exactParentReply,
+                };
+              }
 
-      if (replyMode) {
-        const replyContext = await (async (): Promise<{
-          from: string;
-          parentReply: EmailDetail;
-        }> => {
-          let replyContextFailureMessage = "Could not load reply context.";
-          try {
-            if (flags["reply-to-email-id"] !== undefined) {
+              const replyFrom =
+                flags.from ??
+                (await pickDefaultFromAddress(apiClient, authFailureContext));
               progress?.start(
-                `Loading reply context for ${flags["reply-to-email-id"]}`,
+                `Finding latest inbound email from ${args.recipient}`,
               );
-              const exactParentReply = await loadInboundEmailDetail({
+              const latestParentReply = await findLatestInboundFromRecipient({
                 apiClient,
                 authFailureContext,
-                id: flags["reply-to-email-id"],
+                from: replyFrom,
+                pageSize: flags["page-size"],
+                recipient: args.recipient,
               });
-              replyContextFailureMessage = `Inbound email ${flags["reply-to-email-id"]} does not match recipient ${args.recipient}.`;
-              assertParentMatchesRecipient(exactParentReply, args.recipient);
-              return {
-                from: flags.from ?? exactParentReply.to_email,
-                parentReply: exactParentReply,
-              };
+              if (!latestParentReply) {
+                replyContextFailureMessage = "No prior inbound email found.";
+                throw cliError(
+                  `No prior inbound email from ${args.recipient} to ${replyFrom}. Start a new chat with \`primitive chat ${args.recipient} <message>\`, pass --from, or pass --reply-to-email-id <inbound-email-id>.`,
+                );
+              }
+              replyContextFailureMessage = `Inbound email ${latestParentReply.id} does not match recipient ${args.recipient}.`;
+              assertParentMatchesRecipient(latestParentReply, args.recipient);
+              return { from: replyFrom, parentReply: latestParentReply };
+            } catch (error) {
+              progress?.fail(replyContextFailureMessage);
+              throw error;
             }
+          })();
+          from = replyContext.from;
+          parentReply = replyContext.parentReply;
+          subject = derivedReplySubject(replyContext.parentReply);
+        } else {
+          from =
+            flags.from ??
+            (await pickDefaultFromAddress(apiClient, authFailureContext));
+          subject = flags.subject ?? deriveSubject(message);
+        }
 
-            const replyFrom =
-              flags.from ??
-              (await pickDefaultFromAddress(apiClient, authFailureContext));
-            progress?.start(
-              `Finding latest inbound email from ${args.recipient}`,
-            );
-            const latestParentReply = await findLatestInboundFromRecipient({
-              apiClient,
-              authFailureContext,
-              from: replyFrom,
-              pageSize: flags["page-size"],
-              recipient: args.recipient,
-            });
-            if (!latestParentReply) {
-              replyContextFailureMessage = "No prior inbound email found.";
-              throw cliError(
-                `No prior inbound email from ${args.recipient} to ${replyFrom}. Start a new chat with \`primitive chat ${args.recipient} <message>\`, pass --from, or pass --reply-to-email-id <inbound-email-id>.`,
-              );
-            }
-            replyContextFailureMessage = `Inbound email ${latestParentReply.id} does not match recipient ${args.recipient}.`;
-            assertParentMatchesRecipient(latestParentReply, args.recipient);
-            return { from: replyFrom, parentReply: latestParentReply };
-          } catch (error) {
-            progress?.fail(replyContextFailureMessage);
-            throw error;
-          }
-        })();
-        from = replyContext.from;
-        parentReply = replyContext.parentReply;
-        subject = derivedReplySubject(replyContext.parentReply);
-      } else {
-        from =
-          flags.from ??
-          (await pickDefaultFromAddress(apiClient, authFailureContext));
-        subject = flags.subject ?? deriveSubject(message);
-      }
+        // Capture send time BEFORE issuing the send so the inbound
+        // poll's `since` filter cannot miss a reply that races back
+        // faster than we record the timestamp. A few ms of overlap
+        // with our own outbound row is fine: the search is scoped to
+        // inbound by endpoint (`/emails`), not outbound.
+        const sentAtIso = new Date().toISOString();
 
-      // Capture send time BEFORE issuing the send so the inbound
-      // poll's `since` filter cannot miss a reply that races back
-      // faster than we record the timestamp. A few ms of overlap
-      // with our own outbound row is fine: the search is scoped to
-      // inbound by endpoint (`/emails`), not outbound.
-      const sentAtIso = new Date().toISOString();
+        if (replyMode) {
+          progress?.update(`Sending reply to ${args.recipient}`);
+        } else {
+          progress?.start(`Sending message to ${args.recipient}`);
+        }
 
-      if (replyMode) {
-        progress?.update(`Sending reply to ${args.recipient}`);
-      } else {
-        progress?.start(`Sending message to ${args.recipient}`);
-      }
+        const sendResult =
+          parentReply !== undefined
+            ? await replyToEmail({
+                body: {
+                  body_text: message,
+                  from,
+                  ...(attachments !== undefined ? { attachments } : {}),
+                },
+                client: apiClient.client,
+                path: { id: parentReply.id },
+                responseStyle: "fields",
+              })
+            : await sendEmail({
+                body: {
+                  from,
+                  to: args.recipient,
+                  subject,
+                  body_text: message,
+                  ...(flags["in-reply-to"] !== undefined
+                    ? { in_reply_to: flags["in-reply-to"] }
+                    : {}),
+                  ...(attachments !== undefined ? { attachments } : {}),
+                },
+                client: apiClient.client,
+                responseStyle: "fields",
+              });
 
-      const sendResult =
-        parentReply !== undefined
-          ? await replyToEmail({
-              body: {
-                body_text: message,
-                from,
-                ...(attachments !== undefined ? { attachments } : {}),
-              },
-              client: apiClient.client,
-              path: { id: parentReply.id },
-              responseStyle: "fields",
-            })
-          : await sendEmail({
-              body: {
-                from,
-                to: args.recipient,
-                subject,
-                body_text: message,
-                ...(flags["in-reply-to"] !== undefined
-                  ? { in_reply_to: flags["in-reply-to"] }
-                  : {}),
-                ...(attachments !== undefined ? { attachments } : {}),
-              },
-              client: apiClient.client,
-              responseStyle: "fields",
-            });
+        if (sendResult.error) {
+          progress?.fail(
+            replyMode ? "Reply send failed." : "Message send failed.",
+          );
+          const errorPayload = extractErrorPayload(sendResult.error);
+          writeErrorWithHints(errorPayload);
+          surfaceUnauthorizedHint({
+            ...authFailureContext,
+            payload: errorPayload,
+          });
+          process.exitCode = 1;
+          return;
+        }
 
-      if (sendResult.error) {
-        progress?.fail(
-          replyMode ? "Reply send failed." : "Message send failed.",
-        );
-        const errorPayload = extractErrorPayload(sendResult.error);
-        writeErrorWithHints(errorPayload);
-        surfaceUnauthorizedHint({
-          ...authFailureContext,
-          payload: errorPayload,
-        });
-        process.exitCode = 1;
-        return;
-      }
+        const sentEnvelope = sendResult.data as
+          | { data?: SendMailResult }
+          | undefined;
+        const sent = sentEnvelope?.data;
+        if (!sent) {
+          progress?.fail("Send succeeded but the API returned no data.");
+          throw cliError("Send succeeded but the API returned no data.");
+        }
 
-      const sentEnvelope = sendResult.data as
-        | { data?: SendMailResult }
-        | undefined;
-      const sent = sentEnvelope?.data;
-      if (!sent) {
-        progress?.fail("Send succeeded but the API returned no data.");
-        throw cliError("Send succeeded but the API returned no data.");
-      }
+        const replyAddress = sent.from || from;
 
-      const replyAddress = sent.from || from;
-      progress?.update(
-        `${
-          replyMode ? "Reply" : "Message"
-        } sent; waiting for reply from ${args.recipient}`,
-        { heartbeatMs: 15_000, timeoutSeconds: flags.timeout },
-      );
-
-      const baseContext: ChatBaseContext = {
-        from: replyAddress,
-        json: flags.json,
-        parentReply,
-        quiet: flags.quiet,
-        recipient: args.recipient,
-        sent,
-        sentAtIso,
-        strictOnly: flags["strict-only"],
-        strictPhaseSeconds: flags["strict-phase-seconds"],
-        subject,
-        timeoutSeconds: flags.timeout,
-      };
-
-      let replyResult: ChatReplyResult | null;
-      try {
-        replyResult = await waitForReply({
-          apiClient,
-          authFailureContext,
+        const baseContext: ChatBaseContext = {
           from: replyAddress,
-          interval: flags.interval,
-          notice: (message) => {
-            if (progress) {
-              progress.notice(message);
-              return;
-            }
-            process.stderr.write(`${message}\n`);
-          },
-          pageSize: flags["page-size"],
+          json: flags.json,
+          parentReply,
+          quiet: flags.quiet,
           recipient: args.recipient,
+          sent,
           sentAtIso,
-          sentId: sent.id,
           strictOnly: flags["strict-only"],
           strictPhaseSeconds: flags["strict-phase-seconds"],
+          subject,
           timeoutSeconds: flags.timeout,
-        });
-      } catch (error) {
-        progress?.fail("Reply polling failed.");
-        process.stderr.write(`${formatChatRecoveryContext(baseContext)}\n`);
-        throw error;
-      }
-      if (replyResult === null) {
-        const timeoutMessage = `Timed out after ${flags.timeout}s waiting for a reply from ${args.recipient}.`;
-        progress?.fail(timeoutMessage);
-        if (progress === null) {
-          process.stderr.write(`${timeoutMessage}\n`);
+        };
+
+        // Server-side idempotency dedup: when the same content
+        // (from + to + subject + body) is sent within the dedup
+        // window, /v1/send-mail (and /v1/emails/{id}/reply, which
+        // wraps it) returns the original sent_email row with
+        // `idempotent_replay: true` and no SMTP traffic. The reply,
+        // if any, has `received_at` BEFORE this attempt's
+        // `sentAtIso`, so the normal polling loop's `since` filter
+        // would never find it and we'd time out at 120 s.
+        //
+        // Detect that here, do a one-shot strict-search WITHOUT the
+        // `since` filter, surface the existing reply if it exists,
+        // and exit cleanly otherwise. We do not relax dedup on the
+        // server — that gate still protects against accidental
+        // double-sends — but we make the CLI explain what happened
+        // instead of hanging.
+        if (sent.idempotent_replay) {
+          progress?.update(
+            "Server returned idempotent_replay: looking up the existing reply",
+          );
+          const existing = await fetchEmailSearchPage({
+            apiClient,
+            cursor: null,
+            filters: { replyToSentEmailId: sent.id },
+            pageSize: flags["page-size"],
+            // Intentionally NO `since` — the reply (if any) predates
+            // this attempt.
+          });
+          const replyId = await resolveIdempotentReplayReply(existing);
+          if (replyId) {
+            const full = await getEmail({
+              client: apiClient.client,
+              path: { id: replyId },
+              responseStyle: "fields",
+            });
+            if (full.error) {
+              const payload = extractErrorPayload(full.error);
+              writeErrorWithHints(payload);
+              surfaceUnauthorizedHint({
+                ...authFailureContext,
+                payload,
+              });
+              throw cliError(
+                `Idempotent replay: existing reply found but fetching it failed (id=${replyId}).`,
+              );
+            }
+            const envelope = full.data as
+              | { data?: EmailDetail }
+              | GetEmailResponse
+              | undefined;
+            const detail =
+              (envelope as { data?: EmailDetail } | undefined)?.data ??
+              (envelope as EmailDetail | undefined) ??
+              null;
+            if (!detail) {
+              throw cliError(
+                `Idempotent replay: existing reply body could not be loaded (id=${replyId}).`,
+              );
+            }
+            progress?.succeed(
+              `Idempotent replay; surfacing existing reply from ${
+                detail.from_email ?? args.recipient
+              }`,
+            );
+            let outputContext: ChatOutputContext = {
+              ...baseContext,
+              matchStrategy: "strict",
+              reply: detail,
+            };
+            const localChatId = persistActiveChat({
+              configDir: this.config.configDir,
+              context: outputContext,
+              preferredLocalId: flags["chat-local-id"],
+              writeWarning: (message) => process.stderr.write(message),
+            });
+            if (localChatId !== null) {
+              outputContext = { ...outputContext, localChatId };
+            }
+            if (flags.json) {
+              this.log(
+                JSON.stringify(buildChatJsonEnvelope(outputContext), null, 2),
+              );
+            } else {
+              this.log(formatChatResponse(outputContext));
+            }
+            return;
+          }
+          // No prior reply to this dedup'd send. The user's earlier
+          // identical content reached the server but never received
+          // a reply; sending it again won't change that. Tell the
+          // operator clearly instead of polling for 120 s.
+          progress?.fail(
+            "Server deduplicated this send (idempotent_replay: true).",
+          );
+          process.stderr.write(
+            `${chatNoticeText(
+              `The server detected this exact content was sent earlier and did not put a new message on the wire. ` +
+                `The original send (sent.id=${sent.id}) has not received a reply yet. ` +
+                `Vary the body — or change the parent (reply to a different inbound) — to retry with a fresh send.`,
+            )}\n`,
+          );
+          process.exitCode = 1;
+          return;
         }
-        process.stderr.write(`${formatChatRecoveryContext(baseContext)}\n`);
-        process.exitCode = 1;
-        return;
-      }
 
-      progress?.succeed(`Reply received from ${replyResult.reply.from_email}`);
+        progress?.update(
+          `${
+            replyMode ? "Reply" : "Message"
+          } sent; waiting for reply from ${args.recipient}`,
+          { heartbeatMs: 15_000, timeoutSeconds: flags.timeout },
+        );
 
-      let outputContext: ChatOutputContext = {
-        ...baseContext,
-        matchStrategy: replyResult.matchStrategy,
-        reply: replyResult.reply,
-      };
+        let replyResult: ChatReplyResult | null;
+        try {
+          replyResult = await waitForReply({
+            apiClient,
+            authFailureContext,
+            from: replyAddress,
+            interval: flags.interval,
+            notice: (message) => {
+              if (progress) {
+                progress.notice(message);
+                return;
+              }
+              process.stderr.write(`${message}\n`);
+            },
+            pageSize: flags["page-size"],
+            recipient: args.recipient,
+            sentAtIso,
+            sentId: sent.id,
+            strictOnly: flags["strict-only"],
+            strictPhaseSeconds: flags["strict-phase-seconds"],
+            timeoutSeconds: flags.timeout,
+          });
+        } catch (error) {
+          progress?.fail("Reply polling failed.");
+          process.stderr.write(`${formatChatRecoveryContext(baseContext)}\n`);
+          throw error;
+        }
+        if (replyResult === null) {
+          const timeoutMessage = `Timed out after ${flags.timeout}s waiting for a reply from ${args.recipient}.`;
+          progress?.fail(timeoutMessage);
+          if (progress === null) {
+            process.stderr.write(`${timeoutMessage}\n`);
+          }
+          process.stderr.write(`${formatChatRecoveryContext(baseContext)}\n`);
+          process.exitCode = 1;
+          return;
+        }
 
-      const localChatId = persistActiveChat({
-        configDir: this.config.configDir,
-        context: outputContext,
-        preferredLocalId: flags["chat-local-id"],
-        writeWarning: (message) => process.stderr.write(message),
-      });
-      if (localChatId !== null) {
-        outputContext = { ...outputContext, localChatId };
-      }
+        progress?.succeed(
+          `Reply received from ${replyResult.reply.from_email}`,
+        );
 
-      if (flags.json) {
-        this.log(JSON.stringify(buildChatJsonEnvelope(outputContext), null, 2));
-      } else {
-        this.log(formatChatResponse(outputContext));
+        let outputContext: ChatOutputContext = {
+          ...baseContext,
+          matchStrategy: replyResult.matchStrategy,
+          reply: replyResult.reply,
+        };
+
+        const localChatId = persistActiveChat({
+          configDir: this.config.configDir,
+          context: outputContext,
+          preferredLocalId: flags["chat-local-id"],
+          writeWarning: (message) => process.stderr.write(message),
+        });
+        if (localChatId !== null) {
+          outputContext = { ...outputContext, localChatId };
+        }
+
+        if (flags.json) {
+          this.log(
+            JSON.stringify(buildChatJsonEnvelope(outputContext), null, 2),
+          );
+        } else {
+          this.log(formatChatResponse(outputContext));
+        }
+      } finally {
+        releaseLock();
       }
     });
   }
@@ -1413,68 +1570,88 @@ export class ChatReplyCommand extends Command {
       );
     }
 
-    const localId: number | undefined =
-      flags.id ??
-      (typeof positionalLocalId === "number" ? positionalLocalId : undefined);
-    const state =
-      localId === undefined
-        ? loadActiveChatState(this.config.configDir)
-        : loadChatConversationByLocalId(this.config.configDir, localId);
-    if (!state) {
-      throw cliError(
+    // Acquire the chat-state mutex BEFORE loading state. Holding it
+    // across the inner ChatCommand.run call guarantees a single
+    // load→POST→save sequence per config-dir at a time and stops a
+    // racing `primitive chat reply` from re-sending to a stale
+    // last_reply_email_id (which the server would dedup, leaving the
+    // second invocation polling forever). See chat-lock.ts.
+    let release: () => void;
+    try {
+      release = acquireChatLock(this.config.configDir);
+    } catch (err) {
+      if (err instanceof ChatLockContentionError) {
+        throw cliError(err.message);
+      }
+      throw err;
+    }
+
+    try {
+      const localId: number | undefined =
+        flags.id ??
+        (typeof positionalLocalId === "number" ? positionalLocalId : undefined);
+      const state =
         localId === undefined
-          ? "No open chat. Start one with `primitive chat <email> '<message>'`."
-          : `No local chat ${localId}. Start one with \`primitive chat <email> '<message>'\` or omit --id to use the active chat.`,
-      );
-    }
+          ? loadActiveChatState(this.config.configDir)
+          : loadChatConversationByLocalId(this.config.configDir, localId);
+      if (!state) {
+        throw cliError(
+          localId === undefined
+            ? "No open chat. Start one with `primitive chat <email> '<message>'`."
+            : `No local chat ${localId}. Start one with \`primitive chat <email> '<message>'\` or omit --id to use the active chat.`,
+        );
+      }
 
-    const message =
-      args.message !== undefined
-        ? args.message
-        : args.idOrMessage !== undefined && args.idOrMessage !== ""
-          ? args.idOrMessage
-          : await readStdinToString(
-              "No reply body provided. Pass the reply body as a positional argument or pipe it via stdin.",
-            );
-    if (!message.trim()) {
-      throw cliError("Reply body is empty.");
-    }
+      const message =
+        args.message !== undefined
+          ? args.message
+          : args.idOrMessage !== undefined && args.idOrMessage !== ""
+            ? args.idOrMessage
+            : await readStdinToString(
+                "No reply body provided. Pass the reply body as a positional argument or pipe it via stdin.",
+              );
+      if (!message.trim()) {
+        throw cliError("Reply body is empty.");
+      }
 
-    const argv = [
-      state.recipient,
-      "--reply",
-      message,
-      "--from",
-      state.from,
-      "--reply-to-email-id",
-      state.last_reply_email_id,
-      "--timeout",
-      String(flags.timeout ?? state.timeout_seconds),
-      "--strict-phase-seconds",
-      String(flags["strict-phase-seconds"] ?? state.strict_phase_seconds),
-      "--interval",
-      String(flags.interval ?? DEFAULT_EMAIL_POLL_INTERVAL_SECONDS),
-      "--page-size",
-      String(flags["page-size"] ?? DEFAULT_EMAIL_POLL_PAGE_SIZE),
-      "--chat-local-id",
-      String(state.local_id),
-    ];
+      const argv = [
+        state.recipient,
+        "--reply",
+        message,
+        "--from",
+        state.from,
+        "--reply-to-email-id",
+        state.last_reply_email_id,
+        "--timeout",
+        String(flags.timeout ?? state.timeout_seconds),
+        "--strict-phase-seconds",
+        String(flags["strict-phase-seconds"] ?? state.strict_phase_seconds),
+        "--interval",
+        String(flags.interval ?? DEFAULT_EMAIL_POLL_INTERVAL_SECONDS),
+        "--page-size",
+        String(flags["page-size"] ?? DEFAULT_EMAIL_POLL_PAGE_SIZE),
+        "--chat-local-id",
+        String(state.local_id),
+      ];
 
-    if (flags["api-key"] !== undefined) {
-      argv.push("--api-key", flags["api-key"]);
-    }
-    if (flags["api-base-url"] !== undefined) {
-      argv.push("--api-base-url", flags["api-base-url"]);
-    }
-    if (flags.json) argv.push("--json");
-    if (flags.quiet) argv.push("--quiet");
-    for (const attachment of flags.attachment ?? []) {
-      argv.push("--attachment", attachment);
-    }
-    if (state.strict_only || flags["strict-only"]) argv.push("--strict-only");
-    if (flags.time) argv.push("--time");
+      if (flags["api-key"] !== undefined) {
+        argv.push("--api-key", flags["api-key"]);
+      }
+      if (flags["api-base-url"] !== undefined) {
+        argv.push("--api-base-url", flags["api-base-url"]);
+      }
+      if (flags.json) argv.push("--json");
+      if (flags.quiet) argv.push("--quiet");
+      for (const attachment of flags.attachment ?? []) {
+        argv.push("--attachment", attachment);
+      }
+      if (state.strict_only || flags["strict-only"]) argv.push("--strict-only");
+      if (flags.time) argv.push("--time");
 
-    await ChatCommand.run(argv, { root: this.config.root });
+      await ChatCommand.run(argv, { root: this.config.root });
+    } finally {
+      release();
+    }
   }
 }
 
