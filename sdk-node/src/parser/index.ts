@@ -43,5 +43,5 @@ export {
   toWebhookAttachments,
 } from "./mapping.js";
 
-// sanitize-html: DOMPurify-based email HTML sanitizer
+// sanitize-html: pure-JS (DOM-free) email HTML sanitizer
 export { sanitizeHtml } from "./sanitize-html.js";

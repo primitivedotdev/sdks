@@ -87,9 +87,9 @@
   },
   "dependencies": {
     "ajv": "^8.17.1",
-    "isomorphic-dompurify": "^3.8.0",
     "mailparser": "^3.9.0",
     "nodemailer": "^8.0.7",
+    "sanitize-html": "^2.14.0",
     "tar-stream": "^3.1.8",
     "validator": "^13.15.35"
   },
@@ -100,6 +100,7 @@
     "@types/mailparser": "^3.4.6",
     "@types/node": "^22.10.2",
     "@types/nodemailer": "^8.0.0",
+    "@types/sanitize-html": "^2.13.0",
     "@types/tar-stream": "^3.1.4",
     "@types/validator": "^13.15.10",
     "@vitest/coverage-v8": "^4.1.4",
