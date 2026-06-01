@@ -246,6 +246,40 @@ describe("renderHandler loop protection", () => {
     expect(handler).toContain("event.email.headers.to");
   });
 
+  it("short-circuits on an empty SMTP envelope sender at the top of isLoop", () => {
+    // RFC 5321 sec. 4.5.5 reserves the null MAIL FROM for delivery
+    // status notifications. The body header on a bounce typically
+    // reads "From: MAILER-DAEMON@..." which a naive From-only check
+    // would treat as a normal sender and reply to, kicking off a
+    // bounce-of-bounce chain. The scaffold must inspect the envelope
+    // sender before any From-header gathering and return true on
+    // either "" or the literal "<>" some MTAs report.
+    const handler = renderHandler();
+    const isLoopBody = handler.slice(handler.indexOf("export function isLoop"));
+    expect(isLoopBody).toMatch(/event\.email\.smtp\.mail_from/);
+    expect(isLoopBody).toContain('envelopeSender === ""');
+    expect(isLoopBody).toContain('envelopeSender === "<>"');
+    // Bounce guard must precede the From-header gather, otherwise
+    // gathering "MAILER-DAEMON@..." into fromAddresses still lets the
+    // handler reach the reply path.
+    const envelopeCheckIndex = isLoopBody.indexOf('envelopeSender === ""');
+    const fromGatherIndex = isLoopBody.indexOf("fromAddresses = [");
+    expect(envelopeCheckIndex).toBeGreaterThan(-1);
+    expect(fromGatherIndex).toBeGreaterThan(envelopeCheckIndex);
+  });
+
+  it("treats mail with no identifiable sender as a loop terminator, not as a normal reply", () => {
+    // Earlier scaffold returned false (proceed to reply) on the
+    // no-sender fallback. A bounce with a malformed body and no
+    // envelope sender would slip past the bounce guard and the
+    // handler would attempt to reply to nothing in particular,
+    // producing another bounce. Dropping one ambiguous message is
+    // strictly safer than risking a reply loop, so the fallback
+    // must return true (treat as loop).
+    const handler = renderHandler();
+    expect(handler).toMatch(/if \(fromAddresses\.length === 0\) return true;/);
+  });
+
   it("uses extra self addresses only inside isLoop, never as an outbound from-address", () => {
     // client.reply server-defaults the outbound from-address from the
     // inbound recipient, so the scaffolded handler must NOT pass the
