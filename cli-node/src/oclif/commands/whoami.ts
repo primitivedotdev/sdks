@@ -121,7 +121,13 @@ class WhoamiCommand extends Command {
           responseStyle: "fields",
         });
         if (!domainsResult.error) {
-          const envelope = domainsResult.data as
+          // listDomains has no queryParams in the operation manifest:
+          // the server returns the full domain set in one response, no
+          // pagination cursor to follow. (Confirmed against
+          // packages/api-core/src/openapi/operations.generated.ts.) So
+          // a single fetch is the full set, and rows.find covers any
+          // managed zone the account owns.
+          const domainsEnvelope = domainsResult.data as
             | {
                 data?: Array<{
                   domain: string;
@@ -130,7 +136,7 @@ class WhoamiCommand extends Command {
                 }>;
               }
             | undefined;
-          const rows = envelope?.data ?? [];
+          const rows = domainsEnvelope?.data ?? [];
           const managed = rows.find(
             (row) => row.verified && row.managed_zone !== null,
           );
