@@ -32,6 +32,7 @@ import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
 import LogoutCommand from "./commands/logout.js";
 import ReplyCommand from "./commands/reply.js";
+import SearchCommand from "./commands/search.js";
 import SemanticSearchCommand from "./commands/semantic-search.js";
 import SendCommand from "./commands/send.js";
 import {
@@ -345,6 +346,11 @@ const OVERRIDDEN_OPERATION_IDS = new Set<string>([
   // `inbox:get-inbox-status` is hand-rolled so the CLI defaults to a
   // compact readiness summary instead of dumping a large JSON object.
   "inbox:get-inbox-status",
+  // `search:semantic-search` is folded into the root `semantic-search`
+  // command (which takes a positional query) so users do not have to
+  // discover the topic-nested form. The manual COMMANDS entry below
+  // keeps the topic-nested id callable for back-compat scripts.
+  "search:semantic-search",
 ]);
 
 const generatedCommands = Object.fromEntries(
@@ -450,10 +456,21 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
   "emails:wait": EmailsWaitCommand,
+  // `search` is the canonical top-level search verb. Defaults to
+  // lexical full-text against inbound mail (positional query becomes
+  // `q=<query>` against /v1/emails/search, which already matches every
+  // indexed field). `--mode` switches dispatch to the cross-corpus
+  // semantic backend.
+  search: SearchCommand,
   // `semantic-search` is the top-level search verb for meaning-aware
   // cross-corpus mail search. The generated operation remains available
   // under its manifest id for full API parity.
   "semantic-search": SemanticSearchCommand,
+  // `search:semantic-search` is the old topic-nested form kept callable
+  // so back-compat scripts that learned it from earlier help text do
+  // not break. New surface is `prim search --mode <mode>` or the root
+  // `prim semantic-search`.
+  "search:semantic-search": SemanticSearchCommand,
   // `domains:zone-file` downloads the server-generated DNS import file.
   // The API owns serialization so dashboard and CLI output stay aligned.
   "domains:zone-file": DomainsZoneFileCommand,

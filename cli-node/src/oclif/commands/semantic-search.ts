@@ -29,16 +29,16 @@ const SUBJECT_WIDTH = 40;
 const FROM_WIDTH = 26;
 const SNIPPET_WIDTH = 60;
 
-function truncate(value: string, width: number): string {
+export function truncate(value: string, width: number): string {
   if (value.length <= width) return value.padEnd(width);
   return `${value.slice(0, width - 3)}...`;
 }
 
-function sourceLabel(t: SemanticSearchResult["source_type"]): string {
+export function sourceLabel(t: SemanticSearchResult["source_type"]): string {
   return t === "inbound_email" ? "in" : "out";
 }
 
-function formatRow(r: SemanticSearchResult): string {
+export function formatRow(r: SemanticSearchResult): string {
   const score = r.score.toFixed(3).padStart(SCORE_WIDTH);
   const src = sourceLabel(r.source_type).padEnd(SOURCE_WIDTH);
   const subject = truncate(
@@ -51,7 +51,7 @@ function formatRow(r: SemanticSearchResult): string {
   return `${score}  ${src}  ${subject}  ${from}  ${snippet}`;
 }
 
-function formatHeader(): string {
+export function formatHeader(): string {
   return `${"SCORE".padStart(SCORE_WIDTH)}  ${"SRC".padEnd(SOURCE_WIDTH)}  ${"SUBJECT".padEnd(SUBJECT_WIDTH)}  ${"FROM".padEnd(FROM_WIDTH)}  EXCERPT`;
 }
 
