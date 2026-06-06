@@ -44,7 +44,7 @@ export type EmailSearchPageResult =
 
 type SearchQuery = NonNullable<SearchEmailsData["query"]>;
 
-function quoteDslValue(value: string): string {
+export function quoteDslValue(value: string): string {
   if (/^[^\s"]+$/.test(value)) return value;
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
