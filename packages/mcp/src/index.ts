@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * MCP Server generated from OpenAPI spec for -primitivedotdev-mcp v1.0.0
- * Generated on: 2026-06-06T22:21:40.254Z
+ * Generated on a stable timestamp (postgen strips the generator's wall-clock value)
  */
 
 // Load environment variables from .env file
@@ -47,8 +47,27 @@ interface McpToolDefinition {
 export const SERVER_NAME = "@primitivedotdev/mcp";
 export const SERVER_VERSION = "0.1.0";
 // Base URL for the API, can be set via environment variable or determined from OpenAPI spec
-export const API_BASE_URL = process.env.API_BASE_URL || "https://api.primitive.dev/v1";
-console.error("API_BASE_URL is set to:", API_BASE_URL);
+const DEFAULT_API_BASE_URL = "https://api.primitive.dev/v1";
+const PRIMITIVE_BEARER_HOST_SUFFIX = ".primitive.dev";
+function resolveApiBaseUrl(): string {
+    const raw = process.env.API_BASE_URL;
+    if (!raw) return DEFAULT_API_BASE_URL;
+    let parsed: URL;
+    try { parsed = new URL(raw); }
+    catch { throw new Error(`API_BASE_URL is not a valid URL: ${JSON.stringify(raw)}`); }
+    const isLocal = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1";
+    if (parsed.protocol !== "https:" && !isLocal) {
+        throw new Error(`API_BASE_URL must use https (got ${parsed.protocol} on host ${parsed.hostname}). The MCP server forwards your bearer token to this host on every tool call; http to a non-local host would leak it in transit.`);
+    }
+    if (!isLocal && parsed.hostname !== "primitive.dev" && !parsed.hostname.endsWith(PRIMITIVE_BEARER_HOST_SUFFIX)) {
+        console.error(`WARNING: API_BASE_URL points at ${parsed.hostname}, which is not a *.primitive.dev host. Your bearer token will be sent to this host on every tool call.`);
+    }
+    return raw;
+}
+export const API_BASE_URL = resolveApiBaseUrl();
+if (process.env.API_BASE_URL) {
+  console.error("API_BASE_URL overridden to:", API_BASE_URL);
+}
 
 /**
  * MCP Server instance
@@ -184,7 +203,7 @@ Forwards through the same gates as \`/send-mail\`: the response
 status, error envelope, and \`idempotent_replay\` flag mirror
 the send-mail contract verbatim.
 `,
-    inputSchema: {"type":"object","properties":{"id":{"type":"string","format":"uuid","description":"Resource UUID"},"requestBody":{"type":"object","additionalProperties":false,"description":"Body shape for `/emails/{id}/reply`. Intentionally narrow:\nrecipients (`to`), subject, and threading headers\n(`in_reply_to`, `references`) are derived server-side from\nthe inbound row referenced by the path id and are rejected by\n`additionalProperties` if passed (returns 400).\n\n`from` IS allowed because of legitimate use cases (display-name\naddition, replying from a different verified outbound address,\nmulti-team triage). Send-mail's per-send `canSendFrom` gate\nvalidates the from-domain regardless, so the override carries\nno extra privilege.\n","properties":{"body_text":{"type":"string","description":"Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail)."},"body_html":{"type":"string","description":"HTML reply body. At least one of body_text or body_html is required."},"from":{"type":"string","minLength":3,"maxLength":998,"description":"Optional override for the reply's From header. Defaults to\nthe inbound's recipient. Use to add a display name (`\"Acme\nSupport\" <agent@company.com>`) or to reply from a different\nverified outbound address (e.g. multi-team routing where\nsupport@ triages to billing@). The from-domain must be a\nverified outbound domain for your org, same as send-mail.\n"},"wait":{"type":"boolean","description":"When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics."},"attachments":{"type":"array","maxItems":100,"description":"Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most 31457280.","items":{"type":"object","additionalProperties":false,"properties":{"filename":{"type":"string","minLength":1,"maxLength":255,"description":"Attachment filename. Control characters are rejected."},"content_type":{"type":"string","minLength":1,"maxLength":255,"description":"Optional MIME content type. Control characters are rejected."},"content_base64":{"type":"string","minLength":1,"maxLength":44040192,"description":"Base64-encoded attachment bytes."}},"required":["filename","content_base64"]}}}}},"required":["id","requestBody"]},
+    inputSchema: {"type":"object","additionalProperties":false,"properties":{"id":{"type":"string","format":"uuid","description":"Resource UUID"},"requestBody":{"type":"object","additionalProperties":false,"description":"Body shape for `/emails/{id}/reply`. Intentionally narrow:\nrecipients (`to`), subject, and threading headers\n(`in_reply_to`, `references`) are derived server-side from\nthe inbound row referenced by the path id and are rejected by\n`additionalProperties` if passed (returns 400).\n\n`from` IS allowed because of legitimate use cases (display-name\naddition, replying from a different verified outbound address,\nmulti-team triage). Send-mail's per-send `canSendFrom` gate\nvalidates the from-domain regardless, so the override carries\nno extra privilege.\n","properties":{"body_text":{"type":"string","description":"Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail)."},"body_html":{"type":"string","description":"HTML reply body. At least one of body_text or body_html is required."},"from":{"type":"string","minLength":3,"maxLength":998,"description":"Optional override for the reply's From header. Defaults to\nthe inbound's recipient. Use to add a display name (`\"Acme\nSupport\" <agent@company.com>`) or to reply from a different\nverified outbound address (e.g. multi-team routing where\nsupport@ triages to billing@). The from-domain must be a\nverified outbound domain for your org, same as send-mail.\n"},"wait":{"type":"boolean","description":"When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics."},"attachments":{"type":"array","maxItems":100,"description":"Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most 31457280.","items":{"type":"object","additionalProperties":false,"properties":{"filename":{"type":"string","minLength":1,"maxLength":255,"description":"Attachment filename. Control characters are rejected."},"content_type":{"type":"string","minLength":1,"maxLength":255,"description":"Optional MIME content type. Control characters are rejected."},"content_base64":{"type":"string","minLength":1,"maxLength":44040192,"description":"Base64-encoded attachment bytes."}},"required":["filename","content_base64"]}}}}},"required":["id","requestBody"]},
     method: "post",
     pathTemplate: "/emails/{id}/reply",
     executionParameters: [{"name":"id","in":"path"}],
@@ -205,7 +224,7 @@ compatibility host (\`https://www.primitive.dev/api/v1\`) also accepts
 The typed SDKs route /send-mail to the canonical API host
 automatically.
 `,
-    inputSchema: {"type":"object","properties":{"Idempotency-Key":{"type":"string","minLength":1,"maxLength":255,"pattern":"^[\\x21-\\x7E]+$","description":"Optional customer-supplied idempotency key. If omitted, Primitive\nderives one from the canonical request payload and echoes the\neffective value in the `Idempotency-Key` response header.\n"},"requestBody":{"type":"object","additionalProperties":false,"properties":{"from":{"type":"string","minLength":3,"maxLength":998,"description":"RFC 5322 From header. The sender domain must be a verified outbound domain for your organization."},"to":{"type":"string","minLength":3,"maxLength":320,"description":"Recipient address. Recipient eligibility depends on your account's outbound entitlements."},"subject":{"type":"string","minLength":1,"maxLength":998,"description":"Subject line for the outbound message"},"body_text":{"type":"string","description":"Plain-text message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes."},"body_html":{"type":"string","description":"HTML message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes."},"in_reply_to":{"type":"string","minLength":1,"maxLength":998,"pattern":"^[^\\x00-\\x1F\\x7F]+$","description":"Message-ID of the direct parent email when sending a threaded reply."},"references":{"type":"array","maxItems":100,"description":"Full ordered message-id chain for the thread.","items":{"type":"string","minLength":1,"maxLength":998,"pattern":"^[^\\x00-\\x1F\\x7F]+$"}},"attachments":{"type":"array","maxItems":100,"description":"Inline attachments. Send requests with attachments to https://api.primitive.dev/v1/send-mail. Combined raw decoded attachment bytes must be at most 31457280.","items":{"type":"object","additionalProperties":false,"properties":{"filename":{"type":"string","minLength":1,"maxLength":255,"description":"Attachment filename. Control characters are rejected."},"content_type":{"type":"string","minLength":1,"maxLength":255,"description":"Optional MIME content type. Control characters are rejected."},"content_base64":{"type":"string","minLength":1,"maxLength":44040192,"description":"Base64-encoded attachment bytes."}},"required":["filename","content_base64"]}},"wait":{"type":"boolean","description":"When true, wait for the first downstream SMTP delivery outcome before returning."},"wait_timeout_ms":{"type":"number","minimum":1000,"maximum":30000,"description":"Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000."}},"required":["from","to","subject"],"description":"The JSON request body."}},"required":["requestBody"]},
+    inputSchema: {"type":"object","additionalProperties":false,"properties":{"Idempotency-Key":{"type":"string","minLength":1,"maxLength":255,"pattern":"^[\\x21-\\x7E]+$","description":"Optional customer-supplied idempotency key. If omitted, Primitive\nderives one from the canonical request payload and echoes the\neffective value in the `Idempotency-Key` response header.\n"},"requestBody":{"type":"object","additionalProperties":false,"properties":{"from":{"type":"string","minLength":3,"maxLength":998,"description":"RFC 5322 From header. The sender domain must be a verified outbound domain for your organization."},"to":{"type":"string","minLength":3,"maxLength":320,"description":"Recipient address. Recipient eligibility depends on your account's outbound entitlements."},"subject":{"type":"string","minLength":1,"maxLength":998,"description":"Subject line for the outbound message"},"body_text":{"type":"string","description":"Plain-text message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes."},"body_html":{"type":"string","description":"HTML message body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes."},"in_reply_to":{"type":"string","minLength":1,"maxLength":998,"pattern":"^[^\\x00-\\x1F\\x7F]+$","description":"Message-ID of the direct parent email when sending a threaded reply."},"references":{"type":"array","maxItems":100,"description":"Full ordered message-id chain for the thread.","items":{"type":"string","minLength":1,"maxLength":998,"pattern":"^[^\\x00-\\x1F\\x7F]+$"}},"attachments":{"type":"array","maxItems":100,"description":"Inline attachments. Send requests with attachments to https://api.primitive.dev/v1/send-mail. Combined raw decoded attachment bytes must be at most 31457280.","items":{"type":"object","additionalProperties":false,"properties":{"filename":{"type":"string","minLength":1,"maxLength":255,"description":"Attachment filename. Control characters are rejected."},"content_type":{"type":"string","minLength":1,"maxLength":255,"description":"Optional MIME content type. Control characters are rejected."},"content_base64":{"type":"string","minLength":1,"maxLength":44040192,"description":"Base64-encoded attachment bytes."}},"required":["filename","content_base64"]}},"wait":{"type":"boolean","description":"When true, wait for the first downstream SMTP delivery outcome before returning."},"wait_timeout_ms":{"type":"number","minimum":1000,"maximum":30000,"description":"Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000."}},"required":["from","to","subject"],"description":"The JSON request body."}},"required":["requestBody"]},
     method: "post",
     pathTemplate: "/send-mail",
     executionParameters: [{"name":"Idempotency-Key","in":"header"}],
@@ -279,9 +298,9 @@ declare global {
 async function acquireOAuth2Token(schemeName: string, scheme: any): Promise<string | null | undefined> {
     try {
         // Check if we have the necessary credentials
-        const clientId = process.env[`OAUTH_CLIENT_ID_SCHEMENAME`];
-        const clientSecret = process.env[`OAUTH_CLIENT_SECRET_SCHEMENAME`];
-        const scopes = process.env[`OAUTH_SCOPES_SCHEMENAME`];
+        const clientId = process.env[`OAUTH_CLIENT_ID_${schemeName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}`];
+        const clientSecret = process.env[`OAUTH_CLIENT_SECRET_${schemeName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}`];
+        const scopes = process.env[`OAUTH_SCOPES_${schemeName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}`];
         
         if (!clientId || !clientSecret) {
             console.error(`Missing client credentials for OAuth2 scheme '${schemeName}'`);
@@ -448,7 +467,7 @@ async function executeApiTool(
             // HTTP security (basic, bearer)
             if (scheme.type === 'http') {
                 if (scheme.scheme?.toLowerCase() === 'bearer') {
-                    return !!process.env[`BEARER_TOKEN_${schemeName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}`];
+                    return !!process.env[`BEARER_TOKEN_${schemeName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}`] || !!process.env.PRIMITIVE_API_KEY;
                 }
                 else if (scheme.scheme?.toLowerCase() === 'basic') {
                     return !!process.env[`BASIC_USERNAME_${schemeName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}`] && 
@@ -512,10 +531,9 @@ async function executeApiTool(
             // HTTP security (Bearer or Basic)
             else if (scheme?.type === 'http') {
                 if (scheme.scheme?.toLowerCase() === 'bearer') {
-                    const token = process.env[`BEARER_TOKEN_${schemeName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}`];
+                    const token = process.env[`BEARER_TOKEN_${schemeName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}`] || process.env.PRIMITIVE_API_KEY;
                     if (token) {
                         headers['authorization'] = `Bearer ${token}`;
-                        console.error(`Applied Bearer token for '${schemeName}'`);
                     }
                 } 
                 else if (scheme.scheme?.toLowerCase() === 'basic') {
@@ -582,7 +600,7 @@ async function executeApiTool(
             })
             .join(' OR ');
             
-        console.warn(`Tool '${toolName}' requires security: ${securityRequirementsString}, but no suitable credentials found.`);
+        throw new Error(`Tool '${toolName}' requires authentication, but no Primitive API key was found. Set PRIMITIVE_API_KEY in your MCP client config (or BEARER_TOKEN_BEARERAUTH). Get a key by running: npx -y @primitivedotdev/cli agent start-agent-signup`);
     }
     
 

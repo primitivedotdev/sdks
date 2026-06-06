@@ -35,7 +35,7 @@ Then add an entry to your client's MCP config. The config syntax differs per cli
       "command": "npx",
       "args": ["-y", "@primitivedotdev/mcp"],
       "env": {
-        "BEARER_TOKEN_BEARERAUTH": "prim_..."
+        "PRIMITIVE_API_KEY": "prim_..."
       }
     }
   }
@@ -45,10 +45,10 @@ Then add an entry to your client's MCP config. The config syntax differs per cli
 ### Claude Code
 
 ```bash
-claude mcp add primitive npx -y @primitivedotdev/mcp --env BEARER_TOKEN_BEARERAUTH=prim_...
+claude mcp add primitive -e PRIMITIVE_API_KEY=prim_... -- npx -y @primitivedotdev/mcp
 ```
 
-Or add to `.mcp.json` in the project root.
+The `-e` flag passes env vars, and `--` separates the MCP server name from the command. Or add to `.mcp.json` in the project root with the same shape as the Claude Desktop block above.
 
 ### Cursor
 
@@ -60,7 +60,7 @@ Or add to `.mcp.json` in the project root.
     "primitive": {
       "command": "npx",
       "args": ["-y", "@primitivedotdev/mcp"],
-      "env": { "BEARER_TOKEN_BEARERAUTH": "prim_..." }
+      "env": { "PRIMITIVE_API_KEY": "prim_..." }
     }
   }
 }
@@ -74,7 +74,7 @@ Or add to `.mcp.json` in the project root.
 [mcp_servers.primitive]
 command = "npx"
 args = ["-y", "@primitivedotdev/mcp"]
-env = { BEARER_TOKEN_BEARERAUTH = "prim_..." }
+env = { PRIMITIVE_API_KEY = "prim_..." }
 ```
 
 ### Other clients (Cline, Continue, Zed, Goose, Windsurf, Gemini CLI)
@@ -84,19 +84,24 @@ Same shape, see your client's MCP docs:
 ```
 command: npx
 args:    ["-y", "@primitivedotdev/mcp"]
-env:     BEARER_TOKEN_BEARERAUTH=prim_...
+env:     PRIMITIVE_API_KEY=prim_...
 ```
 
 ## Environment variables
 
 | Var | Meaning |
 |---|---|
-| `BEARER_TOKEN_BEARERAUTH` | Your Primitive API key (`prim_...`). Required for any tool call. |
-| `API_BASE_URL` | Override the API base URL. Defaults to `https://api.primitive.dev/v1`. Set this only if you're targeting a non-production environment. |
+| `PRIMITIVE_API_KEY` | Your Primitive API key (`prim_...`). Required for any tool call. |
+| `BEARER_TOKEN_BEARERAUTH` | Legacy alias for `PRIMITIVE_API_KEY`. Read second; either works. |
+| `API_BASE_URL` | Override the API base URL. Defaults to `https://api.primitive.dev/v1`. Validated at startup: must be `https://` (except for `localhost`), and the MCP server emits a warning on stderr when the host is not a `*.primitive.dev` host. The bearer is forwarded to whatever host you set here on every tool call, so do not point it at an untrusted origin. |
 
 ## Behavior on missing credentials
 
-Without `BEARER_TOKEN_BEARERAUTH`, tool calls return a 401 error from the Primitive API. The MCP server itself starts fine. Set the env var in your client's MCP config block, not as a shell export.
+Without `PRIMITIVE_API_KEY` (or its alias), every tool call returns a clear error pointing at the signup CLI. The MCP server itself starts fine. Set the env var in your client's MCP config block, not as a shell export. The MCP client spawns the server with its own env.
+
+## Pre-1.0 notice
+
+This package is pre-1.0 (`0.x`). Tool names and surface shape may change. The seven tools listed above map 1:1 to Primitive's stable v1 API operations; the alignment is unlikely to break, but anything outside that set is fair game until 1.0.
 
 ## How this is built
 
