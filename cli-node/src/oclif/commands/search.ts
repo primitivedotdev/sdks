@@ -189,7 +189,7 @@ class SearchCommand extends Command {
     }),
     envelope: Flags.boolean({
       description:
-        "Lexical only. With --json, include facets and meta; without --json, surface the next cursor below the table.",
+        "Lexical text-table only. Surface the next pagination cursor (if any) on STDERR below the table. Has no effect with --json; --json already prints the full envelope including meta.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
@@ -231,8 +231,9 @@ class SearchCommand extends Command {
           (name) => (flags as Record<string, unknown>)[name] !== undefined,
         );
         if (incompatible.length > 0) {
+          const isOne = incompatible.length === 1;
           process.stderr.write(
-            `Flag${incompatible.length === 1 ? "" : "s"} --${incompatible.join(", --")} only applies to the lexical backend. Omit --mode to use them.\n`,
+            `Flag${isOne ? "" : "s"} --${incompatible.join(", --")} only ${isOne ? "applies" : "apply"} to the lexical backend. Omit --mode to use ${isOne ? "it" : "them"}.\n`,
           );
           process.exitCode = 2;
           return;
