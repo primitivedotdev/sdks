@@ -1,0 +1,106 @@
+name: MCP Release
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/mcp/package.json'
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    name: Publish MCP Server
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093
+        with:
+          version: 10
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Detect version change
+        id: version
+        run: |
+          current_version=$(node -p "require('./packages/mcp/package.json').version")
+          printf 'current=%s\n' "$current_version" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = 'workflow_dispatch' ] || [ -z "${{ github.event.before }}" ]; then
+            printf 'changed=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          previous_version=
+
+          if git cat-file -e "${{ github.event.before }}:packages/mcp/package.json" 2>/dev/null; then
+            previous_version=$(git show "${{ github.event.before }}:packages/mcp/package.json" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => process.stdout.write(JSON.parse(data).version));")
+          fi
+
+          if [ "$current_version" = "$previous_version" ]; then
+            printf 'changed=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'changed=true\n' >> "$GITHUB_OUTPUT"
+
+      - name: Check npm publish state
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        id: npm_state
+        env:
+          VERSION: ${{ steps.version.outputs.current }}
+        run: |
+          if npm view "@primitivedotdev/mcp@$VERSION" version >/dev/null 2>&1; then
+            printf 'published=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'published=false\n' >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish package to npm
+        if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
+        run: scripts/npm-publish-with-retry.sh --package @primitivedotdev/mcp --version "${{ steps.version.outputs.current }}" --directory packages/mcp
+
+      - name: Check GitHub release state
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        id: release_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: packages/mcp/v${{ steps.version.outputs.current }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            printf 'exists=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'exists=false\n' >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release and tag
+        if: ${{ steps.version.outputs.changed == 'true' && steps.release_state.outputs.exists != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: packages/mcp/v${{ steps.version.outputs.current }}
+          VERSION: ${{ steps.version.outputs.current }}
+        run: |
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "MCP Server v$VERSION" \
+            --generate-notes
