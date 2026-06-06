@@ -41,7 +41,7 @@ dev = [
   "hatchling>=1.27.0,<2",
   "openapi-python-client==0.28.3",
   "pytest>=8.3.0,<9",
-  "pytest-cov>=6.2.0,<7",
+  "pytest-cov>=6.2.0,<8",
   "ruff>=0.12.0,<1",
   "twine>=6.1.0,<7",
 ]
