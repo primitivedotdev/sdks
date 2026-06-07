@@ -763,7 +763,6 @@ export const openapiDocument: Record<string, unknown> = {
     "/account": {
       "get": {
         "operationId": "getAccount",
-        "x-mcp": true,
         "summary": "Get account info",
         "tags": [
           "Account"
@@ -1290,7 +1289,6 @@ export const openapiDocument: Record<string, unknown> = {
     "/inbox/status": {
       "get": {
         "operationId": "getInboxStatus",
-        "x-mcp": true,
         "summary": "Get inbound inbox readiness",
         "description": "Returns one consolidated view of inbound domain readiness,\nwebhook/function processing routes, deployed Functions, and\nrecent inbound email activity.\n\nAgents should call this before guiding a user through inbound\nsetup. It answers the practical questions \"can I receive mail\",\n\"will anything process that mail\", and \"what should I do next\"\nwithout forcing clients to stitch together domains, endpoints,\nfunctions, and emails manually.\n",
         "tags": [
@@ -1331,7 +1329,6 @@ export const openapiDocument: Record<string, unknown> = {
     "/emails": {
       "get": {
         "operationId": "listEmails",
-        "x-mcp": true,
         "summary": "List inbound emails",
         "description": "Returns a paginated list of INBOUND emails received at your\nverified domains. Outbound messages sent via /send-mail are\nnot included; this endpoint is the inbox view, not a\nunified send/receive history.\n\nSupports filtering by domain, status, date range, and\nfree-text search across subject, sender, and recipient\nfields.\n\nFor a compact text-table summary of the most recent N\ninbounds (no filters, no cursor pagination), the CLI ships\n`primitive emails:latest` as a one-line-per-email shortcut.\nIt's TTY-aware so id columns are full UUIDs when piped, and\na `--json` flag returns the same envelope this endpoint\ndoes. Use whichever fits the call site.\n",
         "tags": [
@@ -1427,7 +1424,6 @@ export const openapiDocument: Record<string, unknown> = {
     "/emails/search": {
       "get": {
         "operationId": "searchEmails",
-        "x-mcp": true,
         "summary": "Search inbound emails",
         "description": "Searches inbound emails with structured filters and optional\nfull-text matching across parsed email fields. This endpoint is\noptimized for filtered inbox views and CLI polling workflows:\ncallers that only need new accepted mail can pass\n`sort=received_at_asc`, `snippet=false`, `include_facets=false`,\nand a `date_from` timestamp.\n\n`q`, `subject`, and `body` use the same English full-text index\nas the web inbox search. Structured filters such as `from`, `to`,\n`domain_id`, status, attachment presence, and spam score bounds\nare combined with the text query.\n",
         "tags": [
@@ -1666,7 +1662,6 @@ export const openapiDocument: Record<string, unknown> = {
       ],
       "get": {
         "operationId": "getEmail",
-        "x-mcp": true,
         "summary": "Get inbound email by id",
         "description": "Returns the full record for an inbound email received at one\nof your verified domains, including the parsed text and HTML\nbodies, threading metadata, SMTP envelope detail, webhook\ndelivery state, and a `replies` array for any outbound sends\nrecorded as replies to this inbound.\n\nFor listing inbound emails (with cursor pagination, status\nand date filters, and free-text search), use\n`/emails`. Outbound (sent) email records are NOT returned\nhere; use `/sent-emails/{id}` for those.\n\nThe response carries four sender-shaped fields whose\nmeanings overlap. `from_email` is the canonical \"who sent\nthis\" field for most use cases (parsed bare address from\nthe `From:` header, with a `sender` fallback). `from_header`\nis the raw header including any display name. `sender` and\n`smtp_mail_from` both carry the SMTP envelope MAIL FROM\n(return-path) and are equal by construction; `sender` is\nthe older field name retained for compatibility. See\n`primitive describe emails:get-email | jq '.responseSchema.properties'`\nfor per-field detail.\n",
         "tags": [
@@ -1880,7 +1875,6 @@ export const openapiDocument: Record<string, unknown> = {
       ],
       "post": {
         "operationId": "replyToEmail",
-        "x-mcp": true,
         "summary": "Reply to an inbound email",
         "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody, optional From override, optional attachments, and optional\n`wait` flag; passing any header or recipient override is\nrejected by the schema (`additionalProperties: false`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
         "servers": [
@@ -2721,7 +2715,6 @@ export const openapiDocument: Record<string, unknown> = {
     "/send-mail": {
       "post": {
         "operationId": "sendEmail",
-        "x-mcp": true,
         "summary": "Send outbound email",
         "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n\n**Host routing.** /send-mail is served by the canonical API host\n(`https://api.primitive.dev/v1`) so the request body can carry\ninline attachments up to ~30 MiB raw. The legacy dashboard\ncompatibility host (`https://www.primitive.dev/api/v1`) also accepts\n/send-mail, but Vercel request body limits apply before proxying.\nThe typed SDKs route /send-mail to the canonical API host\nautomatically.\n",
         "servers": [

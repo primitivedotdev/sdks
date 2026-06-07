@@ -2,7 +2,6 @@
 .PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-tarball-isolation cli-coverage
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
-.PHONY: mcp-generate mcp-check-generated mcp-typecheck mcp-build mcp-check
 .PHONY: shared-check check build release-check ci
 
 PYTHON := $(shell if command -v python3 >/dev/null 2>&1; then printf python3; else printf python; fi)
@@ -269,25 +268,11 @@ shared-check:
 	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py
 	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures' ./...
 
-mcp-generate:
-	pnpm --filter @primitivedotdev/mcp generate
+check: node-check cli-check python-check go-check shared-check
 
-mcp-check-generated:
-	pnpm --filter @primitivedotdev/mcp generate && git diff --exit-code -- packages/mcp/src/index.ts
+build: node-build cli-build python-build go-build
 
-mcp-typecheck:
-	pnpm --filter @primitivedotdev/mcp typecheck
-
-mcp-build:
-	pnpm --filter @primitivedotdev/mcp build
-
-mcp-check: mcp-check-generated mcp-typecheck
-
-check: node-check cli-check python-check go-check mcp-check shared-check
-
-build: node-build cli-build python-build go-build mcp-build
-
-release-check: node-check node-build node-smoke cli-check cli-build cli-smoke python-check python-build python-smoke go-check go-build mcp-check mcp-build shared-check
+release-check: node-check node-build node-smoke cli-check cli-build cli-smoke python-check python-build python-smoke go-check go-build shared-check
 
 ci:
 	$(MAKE) node-install
@@ -308,6 +293,4 @@ ci:
 	$(MAKE) go-check
 	$(MAKE) go-build
 	$(MAKE) go-coverage
-	$(MAKE) mcp-check
-	$(MAKE) mcp-build
 	$(MAKE) shared-check

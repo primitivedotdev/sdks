@@ -20,7 +20,6 @@ jobs:
       cli: ${{ steps.full.outputs.cli || steps.filter.outputs.cli }}
       python: ${{ steps.full.outputs.python || steps.filter.outputs.python }}
       go: ${{ steps.full.outputs.go || steps.filter.outputs.go }}
-      mcp: ${{ steps.full.outputs.mcp || steps.filter.outputs.mcp }}
       shared: ${{ steps.full.outputs.shared || steps.filter.outputs.shared }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
@@ -32,7 +31,6 @@ jobs:
           printf 'cli=true\n' >> "$GITHUB_OUTPUT"
           printf 'python=true\n' >> "$GITHUB_OUTPUT"
           printf 'go=true\n' >> "$GITHUB_OUTPUT"
-          printf 'mcp=true\n' >> "$GITHUB_OUTPUT"
           printf 'shared=true\n' >> "$GITHUB_OUTPUT"
 
       - id: filter
@@ -58,11 +56,6 @@ jobs:
             go:
               - 'sdk-go/**'
               - 'openapi/**'
-            mcp:
-              - 'packages/mcp/**'
-              - 'openapi/**'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
             shared:
               - '.github/workflows/**'
               - 'Makefile'
@@ -211,33 +204,6 @@ jobs:
       - name: Collect go coverage
         run: make go-coverage
 
-  mcp:
-    name: MCP
-    needs: changes
-    if: ${{ needs.changes.outputs.mcp == 'true' || needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
-
-      - uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093
-        with:
-          version: 10
-
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: make node-install
-
-      - name: Run mcp checks
-        run: make mcp-check
-
-      - name: Build mcp package
-        run: make mcp-build
-
   shared:
     name: Shared
     needs: changes
@@ -277,13 +243,13 @@ jobs:
 
   ci:
     name: CI
-    needs: [changes, node, cli, python, go, mcp, shared]
+    needs: [changes, node, cli, python, go, shared]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check results
         run: |
-          results=("${{ needs.changes.result }}" "${{ needs.node.result }}" "${{ needs.cli.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.mcp.result }}" "${{ needs.shared.result }}")
+          results=("${{ needs.changes.result }}" "${{ needs.node.result }}" "${{ needs.cli.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
           for r in "${results[@]}"; do
             if [[ "$r" != "success" && "$r" != "skipped" ]]; then
               echo "Job failed with result: $r"
