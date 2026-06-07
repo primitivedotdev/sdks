@@ -24,12 +24,18 @@ The CLI consumes the Node SDK and exposes `primitive <verb>` commands. The SDKs 
 - `openapi/primitive-api.codegen.json` (normalized JSON form for codegen tools)
 - `packages/api-core/src/api/` (Node fetch client + types via `@hey-api/openapi-ts`)
 - `packages/api-core/src/openapi/openapi.generated.ts` (the OpenAPI document embedded as a TS constant)
-- `sdk-python/src/primitive/api/` + `models_generated.py` (via `openapi-python-client`)
-- `sdk-go/api/` + `schema_generated.go` (via in-repo Python scripts)
+- `sdk-python/src/primitive/api/` (via `openapi-python-client`)
+- `sdk-go/api/` (via in-repo Python scripts)
 
-Touching `primitive-api.yaml` means regenerating everything downstream.
+Touching `primitive-api.yaml` means regenerating each downstream artifact in this list.
 
-A separate but related source-of-truth file is `json-schema/email-received-event.schema.json` for the inbound webhook event payload. Its derived files are listed in `CLAUDE.md`.
+The other source-of-truth file is `json-schema/email-received-event.schema.json`, the inbound webhook event payload schema. It is independent of the OpenAPI spec; touching it regenerates a separate set of artifacts:
+
+- `sdk-node/src/schema.generated.ts` + `src/types.generated.ts` + `src/generated/email-received-event.validator.generated.ts`
+- `sdk-python/src/primitive/models_generated.py` + `src/primitive/schemas/email_received_event.schema.json`
+- `sdk-go/schema_generated.go`
+
+The two sources do not overlap: an edit to `primitive-api.yaml` will not refresh `models_generated.py`, and an edit to the JSON schema will not refresh `api/`. Both regen targets are wired into `make node-generate python-generate go-generate`.
 
 ## Build, test, lint
 
