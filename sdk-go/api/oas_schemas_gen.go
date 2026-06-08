@@ -16550,8 +16550,9 @@ func (*StartAgentSignupCreatedHeaders) startAgentSignupRes() {}
 
 // Ref: #/components/schemas/StartAgentSignupInput
 type StartAgentSignupInput struct {
-	Email      string `json:"email"`
-	SignupCode string `json:"signup_code"`
+	Email string `json:"email"`
+	// Optional signup code. Omit if you do not have one.
+	SignupCode OptString `json:"signup_code"`
 	// Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy.
 	TermsAccepted bool `json:"terms_accepted"`
 	// Human-readable device name used for the created agent OAuth session.
@@ -16567,7 +16568,7 @@ func (s *StartAgentSignupInput) GetEmail() string {
 }
 
 // GetSignupCode returns the value of SignupCode.
-func (s *StartAgentSignupInput) GetSignupCode() string {
+func (s *StartAgentSignupInput) GetSignupCode() OptString {
 	return s.SignupCode
 }
 
@@ -16592,7 +16593,7 @@ func (s *StartAgentSignupInput) SetEmail(val string) {
 }
 
 // SetSignupCode sets the value of SignupCode.
-func (s *StartAgentSignupInput) SetSignupCode(val string) {
+func (s *StartAgentSignupInput) SetSignupCode(val OptString) {
 	s.SignupCode = val
 }
 
@@ -16774,8 +16775,9 @@ func (*StartCliSignupCreatedHeaders) startCliSignupRes() {}
 
 // Ref: #/components/schemas/StartCliSignupInput
 type StartCliSignupInput struct {
-	Email      string `json:"email"`
-	SignupCode string `json:"signup_code"`
+	Email string `json:"email"`
+	// Optional signup code. Omit if you do not have one.
+	SignupCode OptString `json:"signup_code"`
 	// Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy.
 	TermsAccepted bool `json:"terms_accepted"`
 	// Human-readable device name used for the created CLI OAuth grant.
@@ -16791,7 +16793,7 @@ func (s *StartCliSignupInput) GetEmail() string {
 }
 
 // GetSignupCode returns the value of SignupCode.
-func (s *StartCliSignupInput) GetSignupCode() string {
+func (s *StartCliSignupInput) GetSignupCode() OptString {
 	return s.SignupCode
 }
 
@@ -16816,7 +16818,7 @@ func (s *StartCliSignupInput) SetEmail(val string) {
 }
 
 // SetSignupCode sets the value of SignupCode.
-func (s *StartCliSignupInput) SetSignupCode(val string) {
+func (s *StartCliSignupInput) SetSignupCode(val OptString) {
 	s.SignupCode = val
 }
 

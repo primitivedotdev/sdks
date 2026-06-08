@@ -73,6 +73,15 @@ export type SignupCommandCopy = {
   confirmCommand: (email: string) => string;
   resendCommand: (email: string) => string;
   startCommand: (email: string) => string;
+  /**
+   * Whether the start endpoint this flow targets requires a signup
+   * code. Signup is open, so signup flows default this to false. The
+   * email-code auth flows (signin / login / otp) reuse the same start
+   * helper but their endpoint still requires a code, so their copies
+   * set this true and the helper prompts for one when the flag is
+   * unset.
+   */
+  codeRequired: boolean;
 };
 
 export const DEFAULT_SIGNUP_COMMAND_COPY: SignupCommandCopy = {
@@ -81,6 +90,7 @@ export const DEFAULT_SIGNUP_COMMAND_COPY: SignupCommandCopy = {
   confirmCommand: (email) => `signup confirm ${email} <code>`,
   resendCommand: (email) => `signup resend ${email}`,
   startCommand: (email) => `signup ${email}`,
+  codeRequired: false,
 };
 
 export type PendingAgentSignup = AgentSignupStartResult & {
@@ -299,7 +309,10 @@ export function readPendingAgentSignupState(
 }
 
 function pendingSignupStartCommand(email?: string): string {
-  return `primitive signup ${email ?? "<email>"} --signup-code <invite-code> --accept-terms`;
+  // signup_code is optional; suggest the simplest invocation. Users
+  // who have a code can pass `--signup-code <code>` per the flag's
+  // help text.
+  return `primitive signup ${email ?? "<email>"} --accept-terms`;
 }
 
 function buildSignupStatus(params: {
@@ -593,18 +606,30 @@ async function startSignup(params: {
   }
   if (params.flags.force) deletePendingAgentSignup(params.configDir);
 
-  const promptRequiredFn = params.deps.promptRequired ?? promptRequired;
   const confirmTermsFn = params.deps.confirmTerms ?? confirmTerms;
+  const promptRequiredFn = params.deps.promptRequired ?? promptRequired;
   const startFn = params.deps.startAgentSignup ?? startAgentSignup;
+  // signup-code: optional for the signup flow (start endpoint accepts
+  // the omitted shape), still required for the email-code auth flows
+  // (signin / login / otp) that reuse this helper via copy.codeRequired.
+  const rawSignupCode = params.flags["signup-code"];
+  const trimmedSignupCode =
+    rawSignupCode && rawSignupCode.trim().length > 0
+      ? rawSignupCode
+      : undefined;
   const signupCode =
-    params.flags["signup-code"] ?? (await promptRequiredFn("Signup code: "));
+    trimmedSignupCode ??
+    (copy.codeRequired ? await promptRequiredFn("Signup code: ") : undefined);
   if (!params.flags["accept-terms"]) await confirmTermsFn();
 
   const started = await startFn({
     body: {
       device_name: params.flags["device-name"] ?? hostname(),
       email: params.email,
-      signup_code: signupCode,
+      // Only include signup_code in the request body when a non-empty
+      // value was supplied. The API treats the omitted-key case and the
+      // empty-string case the same, but omitting is more conventional.
+      ...(signupCode ? { signup_code: signupCode } : {}),
       terms_accepted: true,
     },
     client: params.apiClient.client,
@@ -962,7 +987,7 @@ function commonStartFlags() {
         "Replace saved credentials or pending signup state when needed",
     }),
     "signup-code": Flags.string({
-      description: "Signup code required to create an account",
+      description: "Optional signup code. Omit if you do not have one.",
       env: "PRIMITIVE_SIGNUP_CODE",
     }),
   };
@@ -983,6 +1008,7 @@ class SignupCommand extends Command {
 
   static examples = [
     "<%= config.bin %> signup user@example.com",
+    "<%= config.bin %> signup user@example.com --accept-terms",
     "<%= config.bin %> signup user@example.com --signup-code invite-code --accept-terms",
     "<%= config.bin %> signup confirm user@example.com 123456",
   ];

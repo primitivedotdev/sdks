@@ -196,7 +196,10 @@ export type CliLoginPollResult = {
 
 export type StartCliSignupInput = {
     email: string;
-    signup_code: string;
+    /**
+     * Optional signup code. Omit if you do not have one.
+     */
+    signup_code?: string;
     /**
      * Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy
      */
@@ -294,7 +297,10 @@ export type CliSignupVerifyResult = {
 
 export type StartAgentSignupInput = {
     email: string;
-    signup_code: string;
+    /**
+     * Optional signup code. Omit if you do not have one.
+     */
+    signup_code?: string;
     /**
      * Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy
      */

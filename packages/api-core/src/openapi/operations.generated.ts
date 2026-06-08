@@ -374,7 +374,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "start-agent-signup",
-    "description": "Starts an agent-native signup session. The API validates the signup code,\ncreates a pending signup session, sends an email verification code, and\nreturns an opaque signup token used by the resend and verify steps. This\nendpoint does not require an API key.\n",
+    "description": "Starts an agent-native signup session. `signup_code` is optional;\nomit it to sign up without one. The API creates a pending signup\nsession, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "startAgentSignup",
@@ -393,7 +393,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "signup_code": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 128
+          "maxLength": 128,
+          "description": "Optional signup code. Omit if you do not have one."
         },
         "terms_accepted": {
           "type": "boolean",
@@ -414,7 +415,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       "required": [
         "email",
-        "signup_code",
         "terms_accepted"
       ]
     },
@@ -459,7 +459,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "verify-agent-signup",
-    "description": "Verifies the email code for an agent signup session, creates the account\nwhen needed, redeems the reserved signup code, mints an org-scoped OAuth\nsession for CLI authentication, and returns the raw tokens exactly once.\nFor existing users, the optional `org_id` selects which accessible\nworkspace should receive the new session.\n",
+    "description": "Verifies the email code for an agent signup session and creates\nthe account when needed. When the session was started with a\n`signup_code`, the reserved code is redeemed; sessions started\nwithout a code skip the redemption step. An org-scoped OAuth\nsession for CLI authentication is minted and the raw tokens are\nreturned exactly once. For existing users, the optional `org_id`\nselects which accessible workspace should receive the new\nsession (no signup-code redemption is performed for existing\nusers regardless of how the session was started).\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "verifyAgentSignup",
@@ -874,7 +874,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "start-cli-signup",
-    "description": "Starts a terminal-native CLI signup. The API validates the signup code,\ncreates a pending signup session, sends an email verification code, and\nreturns an opaque signup token used by the resend and verify steps. This\nendpoint does not require an API key.\n",
+    "description": "Starts a terminal-native CLI signup. `signup_code` is optional;\nomit it to sign up without one. The API creates a pending signup\nsession, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "startCliSignup",
@@ -893,7 +893,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "signup_code": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 128
+          "maxLength": 128,
+          "description": "Optional signup code. Omit if you do not have one."
         },
         "terms_accepted": {
           "type": "boolean",
@@ -914,7 +915,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       "required": [
         "email",
-        "signup_code",
         "terms_accepted"
       ]
     },
@@ -959,7 +959,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "verify-cli-signup",
-    "description": "Verifies the email code for a CLI signup session, creates the account,\nredeems the reserved signup code, creates an org-scoped OAuth CLI\nsession, and returns the token set exactly once. This endpoint does not\nrequire an API key.\n",
+    "description": "Verifies the email code for a CLI signup session and creates the\naccount. When the session was started with a `signup_code`, the\nreserved code is redeemed; sessions started without a code skip\nthe redemption step. Either way an org-scoped OAuth CLI session\nis created and the token set is returned exactly once. This\nendpoint does not require an API key.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "verifyCliSignup",

@@ -177,9 +177,15 @@ describe("agent signup commands", () => {
     );
   });
 
-  it("prompts for missing email, signup code, and terms", async () => {
+  it("does not prompt for a signup code when DEFAULT_SIGNUP_COMMAND_COPY is in use", async () => {
+    // DEFAULT_SIGNUP_COMMAND_COPY sets codeRequired: false (signup
+    // accepts requests without one). A user with no email is still
+    // prompted for that (it's required for the verification round
+    // trip), and terms are still confirmed. The signin / login / otp
+    // copies in cli-node/src/oclif/commands/signin.ts set codeRequired
+    // true and still prompt; that path has its own coverage.
     const deps = flowDeps({
-      promptAnswers: ["test@example.com", "signup-code"],
+      promptAnswers: ["test@example.com"],
     });
 
     await runSignupStartWithCredentialLock({
@@ -188,17 +194,32 @@ describe("agent signup commands", () => {
       flags: {},
     });
 
+    expect(deps.promptRequired).toHaveBeenCalledTimes(1);
     expect(deps.promptRequired).toHaveBeenNthCalledWith(1, "Email: ");
-    expect(deps.promptRequired).toHaveBeenNthCalledWith(2, "Signup code: ");
+    expect(deps.promptRequired).not.toHaveBeenCalledWith("Signup code: ");
     expect(deps.confirmTerms).toHaveBeenCalledOnce();
-    expect(deps.startAgentSignup).toHaveBeenCalledWith(
+    // Cast through vi.mocked to recover the mock's .mock.calls without
+    // losing the assertion strength. A `not.toHaveBeenCalledWith
+    // (objectContaining({signup_code: expect.anything()}))` matcher
+    // would silently pass if the regression shipped `{signup_code:
+    // undefined}` (expect.anything ignores undefined). Reading the
+    // actual call body and using Object.hasOwn pins absence of the
+    // key, not just an undefined value.
+    const startMock = vi.mocked(
+      deps.startAgentSignup as unknown as ReturnType<typeof vi.fn>,
+    );
+    const startCall = startMock.mock.calls[0]?.[0] as
+      | { body?: Record<string, unknown> }
+      | undefined;
+    const body = startCall?.body;
+    if (!body) throw new Error("startAgentSignup was not called with a body");
+    expect(body).toEqual(
       expect.objectContaining({
-        body: expect.objectContaining({
-          email: "test@example.com",
-          signup_code: "signup-code",
-        }),
+        email: "test@example.com",
+        terms_accepted: true,
       }),
     );
+    expect(Object.hasOwn(body, "signup_code")).toBe(false);
   });
 
   it("continues an existing pending signup without saying a new code was sent", async () => {
@@ -289,7 +310,7 @@ describe("agent signup commands", () => {
       .join("");
     expect(stdout).toContain("No pending Primitive signup found.\n");
     expect(stdout).toContain(
-      "Start one with `primitive signup new@example.com --signup-code <invite-code> --accept-terms`.\n",
+      "Start one with `primitive signup new@example.com --accept-terms`.\n",
     );
 
     stdoutSpy.mockClear();
@@ -305,8 +326,7 @@ describe("agent signup commands", () => {
       email: null,
       expired: false,
       pending: false,
-      signup_command:
-        "primitive signup <email> --signup-code <invite-code> --accept-terms",
+      signup_command: "primitive signup <email> --accept-terms",
     });
   });
 
@@ -542,7 +562,7 @@ describe("agent signup commands", () => {
 
   it("runs the full interactive flow when requested", async () => {
     const deps = flowDeps({
-      promptAnswers: ["test@example.com", "signup-code", "123456"],
+      promptAnswers: ["test@example.com", "123456"],
     });
 
     await runSignupInteractiveWithCredentialLock({
@@ -602,7 +622,7 @@ describe("agent signup commands", () => {
       })
       .mockResolvedValueOnce({ data: { data: VERIFY_RESULT } });
     const deps = flowDeps({
-      promptAnswers: ["test@example.com", "signup-code", "000000", "123456"],
+      promptAnswers: ["test@example.com", "000000", "123456"],
       verifyAgentSignup,
     });
 
@@ -635,7 +655,7 @@ describe("agent signup commands", () => {
       })
       .mockResolvedValueOnce({ data: { data: VERIFY_RESULT } });
     const deps = flowDeps({
-      promptAnswers: ["test@example.com", "signup-code", "000000", "123456"],
+      promptAnswers: ["test@example.com", "000000", "123456"],
       verifyAgentSignup,
     });
 

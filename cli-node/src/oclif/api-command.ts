@@ -896,7 +896,7 @@ export const OPERATION_HINTS: Record<string, string> = {
   setFunctionSecret:
     "Tip: prefer `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
   startAgentSignup:
-    "Tip: also pass --signup-code <code> (request from Primitive; invite-only during the agent beta) and --terms-accepted. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
+    "Tip: pass --terms-accepted, and optionally --signup-code <code> if you have one. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
   verifyAgentSignup:
     "Tip: pass --verification-code <code> (or --code; both work). The response carries OAuth tokens but not your assigned inbox domain; run `primitive domains list` (or `primitive whoami`) after success to see the managed *.primitive.email address that routes to this account.",
 };
