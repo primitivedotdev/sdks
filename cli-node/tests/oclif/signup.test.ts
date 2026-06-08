@@ -211,14 +211,15 @@ describe("agent signup commands", () => {
     const startCall = startMock.mock.calls[0]?.[0] as
       | { body?: Record<string, unknown> }
       | undefined;
-    expect(startCall?.body).toEqual(
+    const body = startCall?.body;
+    if (!body) throw new Error("startAgentSignup was not called with a body");
+    expect(body).toEqual(
       expect.objectContaining({
         email: "test@example.com",
         terms_accepted: true,
       }),
     );
-    expect(startCall?.body).toBeDefined();
-    expect(Object.hasOwn(startCall!.body!, "signup_code")).toBe(false);
+    expect(Object.hasOwn(body, "signup_code")).toBe(false);
   });
 
   it("continues an existing pending signup without saying a new code was sent", async () => {

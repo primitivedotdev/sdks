@@ -617,8 +617,9 @@ async function startSignup(params: {
     rawSignupCode && rawSignupCode.trim().length > 0
       ? rawSignupCode
       : undefined;
-  const signupCode = trimmedSignupCode
-    ?? (copy.codeRequired ? await promptRequiredFn("Signup code: ") : undefined);
+  const signupCode =
+    trimmedSignupCode ??
+    (copy.codeRequired ? await promptRequiredFn("Signup code: ") : undefined);
   if (!params.flags["accept-terms"]) await confirmTermsFn();
 
   const started = await startFn({
@@ -986,8 +987,7 @@ function commonStartFlags() {
         "Replace saved credentials or pending signup state when needed",
     }),
     "signup-code": Flags.string({
-      description:
-        "Optional signup code. Omit if you do not have one.",
+      description: "Optional signup code. Omit if you do not have one.",
       env: "PRIMITIVE_SIGNUP_CODE",
     }),
   };
