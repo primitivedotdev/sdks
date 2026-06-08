@@ -34927,8 +34927,10 @@ func (s *StartAgentSignupInput) encodeFields(e *jx.Encoder) {
 		e.Str(s.Email)
 	}
 	{
-		e.FieldStart("signup_code")
-		e.Str(s.SignupCode)
+		if s.SignupCode.Set {
+			e.FieldStart("signup_code")
+			s.SignupCode.Encode(e)
+		}
 	}
 	{
 		e.FieldStart("terms_accepted")
@@ -34978,11 +34980,9 @@ func (s *StartAgentSignupInput) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"email\"")
 			}
 		case "signup_code":
-			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				v, err := d.Str()
-				s.SignupCode = string(v)
-				if err != nil {
+				s.SignupCode.Reset()
+				if err := s.SignupCode.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -35031,7 +35031,7 @@ func (s *StartAgentSignupInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00000101,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -35509,8 +35509,10 @@ func (s *StartCliSignupInput) encodeFields(e *jx.Encoder) {
 		e.Str(s.Email)
 	}
 	{
-		e.FieldStart("signup_code")
-		e.Str(s.SignupCode)
+		if s.SignupCode.Set {
+			e.FieldStart("signup_code")
+			s.SignupCode.Encode(e)
+		}
 	}
 	{
 		e.FieldStart("terms_accepted")
@@ -35560,11 +35562,9 @@ func (s *StartCliSignupInput) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"email\"")
 			}
 		case "signup_code":
-			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				v, err := d.Str()
-				s.SignupCode = string(v)
-				if err != nil {
+				s.SignupCode.Reset()
+				if err := s.SignupCode.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -35613,7 +35613,7 @@ func (s *StartCliSignupInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00000101,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

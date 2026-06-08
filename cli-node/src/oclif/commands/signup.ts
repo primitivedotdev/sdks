@@ -299,7 +299,10 @@ export function readPendingAgentSignupState(
 }
 
 function pendingSignupStartCommand(email?: string): string {
-  return `primitive signup ${email ?? "<email>"} --signup-code <invite-code> --accept-terms`;
+  // Code is optional now; suggest the simplest open-signup invocation.
+  // Users who do have a bonus code can pass `--signup-code <code>` per
+  // the flag's help text.
+  return `primitive signup ${email ?? "<email>"} --accept-terms`;
 }
 
 function buildSignupStatus(params: {
@@ -593,18 +596,28 @@ async function startSignup(params: {
   }
   if (params.flags.force) deletePendingAgentSignup(params.configDir);
 
-  const promptRequiredFn = params.deps.promptRequired ?? promptRequired;
   const confirmTermsFn = params.deps.confirmTerms ?? confirmTerms;
   const startFn = params.deps.startAgentSignup ?? startAgentSignup;
+  // signup-code is now an optional bonus. A user without one signs up
+  // through the open path; the new org receives the baseline default
+  // entitlements at bootstrap time. A user with one keeps the previous
+  // behavior (code is validated and reserved at start, redeemed at
+  // verify) so existing scripts and partner-shared codes still work.
+  const rawSignupCode = params.flags["signup-code"];
   const signupCode =
-    params.flags["signup-code"] ?? (await promptRequiredFn("Signup code: "));
+    rawSignupCode && rawSignupCode.trim().length > 0
+      ? rawSignupCode
+      : undefined;
   if (!params.flags["accept-terms"]) await confirmTermsFn();
 
   const started = await startFn({
     body: {
       device_name: params.flags["device-name"] ?? hostname(),
       email: params.email,
-      signup_code: signupCode,
+      // Only include signup_code in the request body when a non-empty
+      // value was supplied. The API treats the omitted-key case and the
+      // empty-string case the same, but omitting is more conventional.
+      ...(signupCode ? { signup_code: signupCode } : {}),
       terms_accepted: true,
     },
     client: params.apiClient.client,
@@ -962,7 +975,8 @@ function commonStartFlags() {
         "Replace saved credentials or pending signup state when needed",
     }),
     "signup-code": Flags.string({
-      description: "Signup code required to create an account",
+      description:
+        "Optional bonus signup code. Omit to sign up without one; new orgs still receive the baseline default entitlements.",
       env: "PRIMITIVE_SIGNUP_CODE",
     }),
   };
@@ -983,6 +997,7 @@ class SignupCommand extends Command {
 
   static examples = [
     "<%= config.bin %> signup user@example.com",
+    "<%= config.bin %> signup user@example.com --accept-terms",
     "<%= config.bin %> signup user@example.com --signup-code invite-code --accept-terms",
     "<%= config.bin %> signup confirm user@example.com 123456",
   ];

@@ -26,16 +26,17 @@ class StartCliSignupInput:
     """ 
         Attributes:
             email (str):
-            signup_code (str):
             terms_accepted (bool): Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy
+            signup_code (str | Unset): Optional bonus signup code. Omit for open signup; new orgs still receive the baseline
+                entitlements via bootstrap.
             device_name (str | Unset): Human-readable device name used for the created CLI OAuth grant
             metadata (StartCliSignupInputMetadata | Unset): Optional client metadata stored with the signup session;
                 serialized JSON must be 2048 bytes or fewer
      """
 
     email: str
-    signup_code: str
     terms_accepted: bool
+    signup_code: str | Unset = UNSET
     device_name: str | Unset = UNSET
     metadata: StartCliSignupInputMetadata | Unset = UNSET
 
@@ -47,9 +48,9 @@ class StartCliSignupInput:
         from ..models.start_cli_signup_input_metadata import StartCliSignupInputMetadata
         email = self.email
 
-        signup_code = self.signup_code
-
         terms_accepted = self.terms_accepted
+
+        signup_code = self.signup_code
 
         device_name = self.device_name
 
@@ -62,9 +63,10 @@ class StartCliSignupInput:
 
         field_dict.update({
             "email": email,
-            "signup_code": signup_code,
             "terms_accepted": terms_accepted,
         })
+        if signup_code is not UNSET:
+            field_dict["signup_code"] = signup_code
         if device_name is not UNSET:
             field_dict["device_name"] = device_name
         if metadata is not UNSET:
@@ -80,9 +82,9 @@ class StartCliSignupInput:
         d = dict(src_dict)
         email = d.pop("email")
 
-        signup_code = d.pop("signup_code")
-
         terms_accepted = d.pop("terms_accepted")
+
+        signup_code = d.pop("signup_code", UNSET)
 
         device_name = d.pop("device_name", UNSET)
 
@@ -98,8 +100,8 @@ class StartCliSignupInput:
 
         start_cli_signup_input = cls(
             email=email,
-            signup_code=signup_code,
             terms_accepted=terms_accepted,
+            signup_code=signup_code,
             device_name=device_name,
             metadata=metadata,
         )

@@ -9667,10 +9667,13 @@ func (s *Server) handleSetFunctionSecretRequest(args [2]string, argsEscaped bool
 
 // handleStartAgentSignupRequest handles startAgentSignup operation.
 //
-// Starts an agent-native signup session. The API validates the signup code,
-// creates a pending signup session, sends an email verification code, and
-// returns an opaque signup token used by the resend and verify steps. This
-// endpoint does not require an API key.
+// Starts an agent-native signup session. If `signup_code` is
+// supplied the API validates and reserves it; if omitted, signup
+// proceeds without one (the new org gets the baseline default
+// entitlements at bootstrap time). Either way the API creates a
+// pending signup session, sends an email verification code, and
+// returns an opaque signup token used by the resend and verify
+// steps. This endpoint does not require an API key.
 //
 // POST /agent/signup/start
 func (s *Server) handleStartAgentSignupRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -9958,10 +9961,13 @@ func (s *Server) handleStartCliLoginRequest(args [0]string, argsEscaped bool, w 
 
 // handleStartCliSignupRequest handles startCliSignup operation.
 //
-// Starts a terminal-native CLI signup. The API validates the signup code,
-// creates a pending signup session, sends an email verification code, and
-// returns an opaque signup token used by the resend and verify steps. This
-// endpoint does not require an API key.
+// Starts a terminal-native CLI signup. If `signup_code` is supplied
+// the API validates and reserves it; if omitted, signup proceeds
+// without one (the new org gets the baseline default entitlements
+// at bootstrap time). Either way the API creates a pending signup
+// session, sends an email verification code, and returns an opaque
+// signup token used by the resend and verify steps. This endpoint
+// does not require an API key.
 //
 // POST /cli/signup/start
 func (s *Server) handleStartCliSignupRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -11711,11 +11717,15 @@ func (s *Server) handleUpdateFunctionRequest(args [1]string, argsEscaped bool, w
 
 // handleVerifyAgentSignupRequest handles verifyAgentSignup operation.
 //
-// Verifies the email code for an agent signup session, creates the account
-// when needed, redeems the reserved signup code, mints an org-scoped OAuth
-// session for CLI authentication, and returns the raw tokens exactly once.
-// For existing users, the optional `org_id` selects which accessible
-// workspace should receive the new session.
+// Verifies the email code for an agent signup session and creates
+// the account when needed. When the session was started with a
+// `signup_code`, the reserved code is redeemed; sessions started
+// without a code skip the redemption step. Either way the new org
+// is bootstrapped with the baseline default entitlements, an
+// org-scoped OAuth session for CLI authentication is minted, and
+// the raw tokens are returned exactly once. For existing users,
+// the optional `org_id` selects which accessible workspace should
+// receive the new session.
 //
 // POST /agent/signup/verify
 func (s *Server) handleVerifyAgentSignupRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -11858,10 +11868,13 @@ func (s *Server) handleVerifyAgentSignupRequest(args [0]string, argsEscaped bool
 
 // handleVerifyCliSignupRequest handles verifyCliSignup operation.
 //
-// Verifies the email code for a CLI signup session, creates the account,
-// redeems the reserved signup code, creates an org-scoped OAuth CLI
-// session, and returns the token set exactly once. This endpoint does not
-// require an API key.
+// Verifies the email code for a CLI signup session and creates the
+// account. When the session was started with a `signup_code`, the
+// reserved code is redeemed; sessions started without a code skip
+// the redemption step. Either way the new org is bootstrapped with
+// the baseline default entitlements, an org-scoped OAuth CLI
+// session is created, and the token set is returned exactly once.
+// This endpoint does not require an API key.
 //
 // POST /cli/signup/verify
 func (s *Server) handleVerifyCliSignupRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

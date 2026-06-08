@@ -177,9 +177,13 @@ describe("agent signup commands", () => {
     );
   });
 
-  it("prompts for missing email, signup code, and terms", async () => {
+  it("prompts for missing email and terms but NOT for a signup code (open signup is the default)", async () => {
+    // signup-code is now an optional bonus, so the CLI no longer
+    // prompts for it. A user with no email at all is still prompted
+    // for that (it's required for the verification round trip), and
+    // terms are still confirmed.
     const deps = flowDeps({
-      promptAnswers: ["test@example.com", "signup-code"],
+      promptAnswers: ["test@example.com"],
     });
 
     await runSignupStartWithCredentialLock({
@@ -188,14 +192,25 @@ describe("agent signup commands", () => {
       flags: {},
     });
 
+    expect(deps.promptRequired).toHaveBeenCalledTimes(1);
     expect(deps.promptRequired).toHaveBeenNthCalledWith(1, "Email: ");
-    expect(deps.promptRequired).toHaveBeenNthCalledWith(2, "Signup code: ");
+    expect(deps.promptRequired).not.toHaveBeenCalledWith("Signup code: ");
     expect(deps.confirmTerms).toHaveBeenCalledOnce();
     expect(deps.startAgentSignup).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           email: "test@example.com",
-          signup_code: "signup-code",
+          terms_accepted: true,
+        }),
+      }),
+    );
+    // signup_code is OMITTED from the request body when no code was
+    // supplied (the SDK contract treats the omitted key and the
+    // empty-string value as equivalent; omitting is more conventional).
+    expect(deps.startAgentSignup).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          signup_code: expect.anything(),
         }),
       }),
     );
@@ -289,7 +304,7 @@ describe("agent signup commands", () => {
       .join("");
     expect(stdout).toContain("No pending Primitive signup found.\n");
     expect(stdout).toContain(
-      "Start one with `primitive signup new@example.com --signup-code <invite-code> --accept-terms`.\n",
+      "Start one with `primitive signup new@example.com --accept-terms`.\n",
     );
 
     stdoutSpy.mockClear();
@@ -305,8 +320,7 @@ describe("agent signup commands", () => {
       email: null,
       expired: false,
       pending: false,
-      signup_command:
-        "primitive signup <email> --signup-code <invite-code> --accept-terms",
+      signup_command: "primitive signup <email> --accept-terms",
     });
   });
 
@@ -542,7 +556,7 @@ describe("agent signup commands", () => {
 
   it("runs the full interactive flow when requested", async () => {
     const deps = flowDeps({
-      promptAnswers: ["test@example.com", "signup-code", "123456"],
+      promptAnswers: ["test@example.com", "123456"],
     });
 
     await runSignupInteractiveWithCredentialLock({
@@ -602,7 +616,7 @@ describe("agent signup commands", () => {
       })
       .mockResolvedValueOnce({ data: { data: VERIFY_RESULT } });
     const deps = flowDeps({
-      promptAnswers: ["test@example.com", "signup-code", "000000", "123456"],
+      promptAnswers: ["test@example.com", "000000", "123456"],
       verifyAgentSignup,
     });
 
@@ -635,7 +649,7 @@ describe("agent signup commands", () => {
       })
       .mockResolvedValueOnce({ data: { data: VERIFY_RESULT } });
     const deps = flowDeps({
-      promptAnswers: ["test@example.com", "signup-code", "000000", "123456"],
+      promptAnswers: ["test@example.com", "000000", "123456"],
       verifyAgentSignup,
     });
 

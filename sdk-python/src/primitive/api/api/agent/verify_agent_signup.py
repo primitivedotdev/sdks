@@ -101,11 +101,15 @@ def sync_detailed(
 ) -> Response[ErrorResponse | VerifyAgentSignupResponse200]:
     """ Verify agent signup and create OAuth tokens
 
-     Verifies the email code for an agent signup session, creates the account
-    when needed, redeems the reserved signup code, mints an org-scoped OAuth
-    session for CLI authentication, and returns the raw tokens exactly once.
-    For existing users, the optional `org_id` selects which accessible
-    workspace should receive the new session.
+     Verifies the email code for an agent signup session and creates
+    the account when needed. When the session was started with a
+    `signup_code`, the reserved code is redeemed; sessions started
+    without a code skip the redemption step. Either way the new org
+    is bootstrapped with the baseline default entitlements, an
+    org-scoped OAuth session for CLI authentication is minted, and
+    the raw tokens are returned exactly once. For existing users,
+    the optional `org_id` selects which accessible workspace should
+    receive the new session.
 
     Args:
         body (VerifyAgentSignupInput):
@@ -138,11 +142,15 @@ def sync(
 ) -> ErrorResponse | VerifyAgentSignupResponse200 | None:
     """ Verify agent signup and create OAuth tokens
 
-     Verifies the email code for an agent signup session, creates the account
-    when needed, redeems the reserved signup code, mints an org-scoped OAuth
-    session for CLI authentication, and returns the raw tokens exactly once.
-    For existing users, the optional `org_id` selects which accessible
-    workspace should receive the new session.
+     Verifies the email code for an agent signup session and creates
+    the account when needed. When the session was started with a
+    `signup_code`, the reserved code is redeemed; sessions started
+    without a code skip the redemption step. Either way the new org
+    is bootstrapped with the baseline default entitlements, an
+    org-scoped OAuth session for CLI authentication is minted, and
+    the raw tokens are returned exactly once. For existing users,
+    the optional `org_id` selects which accessible workspace should
+    receive the new session.
 
     Args:
         body (VerifyAgentSignupInput):
@@ -170,11 +178,15 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | VerifyAgentSignupResponse200]:
     """ Verify agent signup and create OAuth tokens
 
-     Verifies the email code for an agent signup session, creates the account
-    when needed, redeems the reserved signup code, mints an org-scoped OAuth
-    session for CLI authentication, and returns the raw tokens exactly once.
-    For existing users, the optional `org_id` selects which accessible
-    workspace should receive the new session.
+     Verifies the email code for an agent signup session and creates
+    the account when needed. When the session was started with a
+    `signup_code`, the reserved code is redeemed; sessions started
+    without a code skip the redemption step. Either way the new org
+    is bootstrapped with the baseline default entitlements, an
+    org-scoped OAuth session for CLI authentication is minted, and
+    the raw tokens are returned exactly once. For existing users,
+    the optional `org_id` selects which accessible workspace should
+    receive the new session.
 
     Args:
         body (VerifyAgentSignupInput):
@@ -207,11 +219,15 @@ async def asyncio(
 ) -> ErrorResponse | VerifyAgentSignupResponse200 | None:
     """ Verify agent signup and create OAuth tokens
 
-     Verifies the email code for an agent signup session, creates the account
-    when needed, redeems the reserved signup code, mints an org-scoped OAuth
-    session for CLI authentication, and returns the raw tokens exactly once.
-    For existing users, the optional `org_id` selects which accessible
-    workspace should receive the new session.
+     Verifies the email code for an agent signup session and creates
+    the account when needed. When the session was started with a
+    `signup_code`, the reserved code is redeemed; sessions started
+    without a code skip the redemption step. Either way the new org
+    is bootstrapped with the baseline default entitlements, an
+    org-scoped OAuth session for CLI authentication is minted, and
+    the raw tokens are returned exactly once. For existing users,
+    the optional `org_id` selects which accessible workspace should
+    receive the new session.
 
     Args:
         body (VerifyAgentSignupInput):
