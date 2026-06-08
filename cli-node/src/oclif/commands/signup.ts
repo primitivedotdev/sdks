@@ -309,9 +309,9 @@ export function readPendingAgentSignupState(
 }
 
 function pendingSignupStartCommand(email?: string): string {
-  // Code is optional now; suggest the simplest open-signup invocation.
-  // Users who do have a bonus code can pass `--signup-code <code>` per
-  // the flag's help text.
+  // signup_code is optional; suggest the simplest invocation. Users
+  // who have a code can pass `--signup-code <code>` per the flag's
+  // help text.
   return `primitive signup ${email ?? "<email>"} --accept-terms`;
 }
 

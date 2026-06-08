@@ -144,7 +144,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	root_help_config="$$smoke_dir/root-help-config" && \
 	HOME="$$root_help_config" XDG_CONFIG_HOME="$$root_help_config/.config" PRIMITIVE_CONFIG_DIR= PRIMITIVE_API_KEY= PRIMITIVE_HIDE_SIGNUP_HINT= "$$bin" >"$$smoke_dir/root-help.txt" && \
 	grep -qF -- 'primitive signup <email> --accept-terms' "$$smoke_dir/root-help.txt" && \
-	grep -qF -- 'Add `--signup-code <code>` if someone gave you a bonus code.' "$$smoke_dir/root-help.txt" && \
+	grep -qF -- 'Add `--signup-code <code>` if you have one.' "$$smoke_dir/root-help.txt" && \
 	root_auth_home="$$smoke_dir/root-auth-home" && \
 	root_auth_config="$$root_auth_home/.config/primitive" && \
 	root_auth_port_file="$$smoke_dir/root-auth-port" && \
