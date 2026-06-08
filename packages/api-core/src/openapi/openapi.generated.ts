@@ -283,7 +283,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "startCliSignup",
         "summary": "Start CLI account signup",
-        "description": "Starts a terminal-native CLI signup. If `signup_code` is supplied\nthe API validates and reserves it; if omitted, signup proceeds\nwithout one (the new org gets the baseline default entitlements\nat bootstrap time). Either way the API creates a pending signup\nsession, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
+        "description": "Starts a terminal-native CLI signup. `signup_code` is optional;\nomit it to sign up without one. The API creates a pending signup\nsession, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
         "tags": [
           "CLI"
         ],
@@ -423,7 +423,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "verifyCliSignup",
         "summary": "Verify CLI signup and create OAuth session",
-        "description": "Verifies the email code for a CLI signup session and creates the\naccount. When the session was started with a `signup_code`, the\nreserved code is redeemed; sessions started without a code skip\nthe redemption step. Either way the new org is bootstrapped with\nthe baseline default entitlements, an org-scoped OAuth CLI\nsession is created, and the token set is returned exactly once.\nThis endpoint does not require an API key.\n",
+        "description": "Verifies the email code for a CLI signup session and creates the\naccount. When the session was started with a `signup_code`, the\nreserved code is redeemed; sessions started without a code skip\nthe redemption step. Either way an org-scoped OAuth CLI session\nis created and the token set is returned exactly once. This\nendpoint does not require an API key.\n",
         "tags": [
           "CLI"
         ],
@@ -489,7 +489,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "startAgentSignup",
         "summary": "Start agent account signup",
-        "description": "Starts an agent-native signup session. If `signup_code` is\nsupplied the API validates and reserves it; if omitted, signup\nproceeds without one (the new org gets the baseline default\nentitlements at bootstrap time). Either way the API creates a\npending signup session, sends an email verification code, and\nreturns an opaque signup token used by the resend and verify\nsteps. This endpoint does not require an API key.\n",
+        "description": "Starts an agent-native signup session. `signup_code` is optional;\nomit it to sign up without one. The API creates a pending signup\nsession, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
         "tags": [
           "Agent"
         ],
@@ -629,7 +629,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "verifyAgentSignup",
         "summary": "Verify agent signup and create OAuth tokens",
-        "description": "Verifies the email code for an agent signup session and creates\nthe account when needed. When the session was started with a\n`signup_code`, the reserved code is redeemed; sessions started\nwithout a code skip the redemption step. Either way the new org\nis bootstrapped with the baseline default entitlements, an\norg-scoped OAuth session for CLI authentication is minted, and\nthe raw tokens are returned exactly once. For existing users,\nthe optional `org_id` selects which accessible workspace should\nreceive the new session.\n",
+        "description": "Verifies the email code for an agent signup session and creates\nthe account when needed. When the session was started with a\n`signup_code`, the reserved code is redeemed; sessions started\nwithout a code skip the redemption step. An org-scoped OAuth\nsession for CLI authentication is minted and the raw tokens are\nreturned exactly once. For existing users, the optional `org_id`\nselects which accessible workspace should receive the new\nsession (no signup-code redemption is performed for existing\nusers regardless of how the session was started).\n",
         "tags": [
           "Agent"
         ],
@@ -4636,7 +4636,7 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "minLength": 1,
             "maxLength": 128,
-            "description": "Optional bonus signup code. Omit for open signup; new orgs still receive the baseline entitlements via bootstrap."
+            "description": "Optional signup code. Omit if you do not have one."
           },
           "terms_accepted": {
             "type": "boolean",
@@ -4842,7 +4842,7 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "minLength": 1,
             "maxLength": 128,
-            "description": "Optional bonus signup code. Omit for open signup; new orgs still receive the baseline entitlements via bootstrap."
+            "description": "Optional signup code. Omit if you do not have one."
           },
           "terms_accepted": {
             "type": "boolean",

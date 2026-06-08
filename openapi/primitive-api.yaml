@@ -308,10 +308,8 @@ paths:
       operationId: startCliSignup
       summary: Start CLI account signup
       description: |
-        Starts a terminal-native CLI signup. If `signup_code` is supplied
-        the API validates and reserves it; if omitted, signup proceeds
-        without one (the new org gets the baseline default entitlements
-        at bootstrap time). Either way the API creates a pending signup
+        Starts a terminal-native CLI signup. `signup_code` is optional;
+        omit it to sign up without one. The API creates a pending signup
         session, sends an email verification code, and returns an opaque
         signup token used by the resend and verify steps. This endpoint
         does not require an API key.
@@ -403,10 +401,9 @@ paths:
         Verifies the email code for a CLI signup session and creates the
         account. When the session was started with a `signup_code`, the
         reserved code is redeemed; sessions started without a code skip
-        the redemption step. Either way the new org is bootstrapped with
-        the baseline default entitlements, an org-scoped OAuth CLI
-        session is created, and the token set is returned exactly once.
-        This endpoint does not require an API key.
+        the redemption step. Either way an org-scoped OAuth CLI session
+        is created and the token set is returned exactly once. This
+        endpoint does not require an API key.
       tags: [CLI]
       security: []
       requestBody:
@@ -446,13 +443,11 @@ paths:
       operationId: startAgentSignup
       summary: Start agent account signup
       description: |
-        Starts an agent-native signup session. If `signup_code` is
-        supplied the API validates and reserves it; if omitted, signup
-        proceeds without one (the new org gets the baseline default
-        entitlements at bootstrap time). Either way the API creates a
-        pending signup session, sends an email verification code, and
-        returns an opaque signup token used by the resend and verify
-        steps. This endpoint does not require an API key.
+        Starts an agent-native signup session. `signup_code` is optional;
+        omit it to sign up without one. The API creates a pending signup
+        session, sends an email verification code, and returns an opaque
+        signup token used by the resend and verify steps. This endpoint
+        does not require an API key.
       tags: [Agent]
       security: []
       requestBody:
@@ -541,12 +536,12 @@ paths:
         Verifies the email code for an agent signup session and creates
         the account when needed. When the session was started with a
         `signup_code`, the reserved code is redeemed; sessions started
-        without a code skip the redemption step. Either way the new org
-        is bootstrapped with the baseline default entitlements, an
-        org-scoped OAuth session for CLI authentication is minted, and
-        the raw tokens are returned exactly once. For existing users,
-        the optional `org_id` selects which accessible workspace should
-        receive the new session.
+        without a code skip the redemption step. An org-scoped OAuth
+        session for CLI authentication is minted and the raw tokens are
+        returned exactly once. For existing users, the optional `org_id`
+        selects which accessible workspace should receive the new
+        session (no signup-code redemption is performed for existing
+        users regardless of how the session was started).
       tags: [Agent]
       security: []
       requestBody:
@@ -3503,7 +3498,7 @@ components:
           type: string
           minLength: 1
           maxLength: 128
-          description: Optional bonus signup code. Omit for open signup; new orgs still receive the baseline entitlements via bootstrap.
+          description: Optional signup code. Omit if you do not have one.
         terms_accepted:
           type: boolean
           const: true
@@ -3634,7 +3629,7 @@ components:
           type: string
           minLength: 1
           maxLength: 128
-          description: Optional bonus signup code. Omit for open signup; new orgs still receive the baseline entitlements via bootstrap.
+          description: Optional signup code. Omit if you do not have one.
         terms_accepted:
           type: boolean
           const: true

@@ -197,7 +197,7 @@ export type CliLoginPollResult = {
 export type StartCliSignupInput = {
     email: string;
     /**
-     * Optional bonus signup code. Omit for open signup; new orgs still receive the baseline entitlements via bootstrap.
+     * Optional signup code. Omit if you do not have one.
      */
     signup_code?: string;
     /**
@@ -298,7 +298,7 @@ export type CliSignupVerifyResult = {
 export type StartAgentSignupInput = {
     email: string;
     /**
-     * Optional bonus signup code. Omit for open signup; new orgs still receive the baseline entitlements via bootstrap.
+     * Optional signup code. Omit if you do not have one.
      */
     signup_code?: string;
     /**

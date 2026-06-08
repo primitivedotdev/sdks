@@ -16551,8 +16551,7 @@ func (*StartAgentSignupCreatedHeaders) startAgentSignupRes() {}
 // Ref: #/components/schemas/StartAgentSignupInput
 type StartAgentSignupInput struct {
 	Email string `json:"email"`
-	// Optional bonus signup code. Omit for open signup; new orgs still receive the baseline entitlements
-	// via bootstrap.
+	// Optional signup code. Omit if you do not have one.
 	SignupCode OptString `json:"signup_code"`
 	// Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy.
 	TermsAccepted bool `json:"terms_accepted"`
@@ -16777,8 +16776,7 @@ func (*StartCliSignupCreatedHeaders) startCliSignupRes() {}
 // Ref: #/components/schemas/StartCliSignupInput
 type StartCliSignupInput struct {
 	Email string `json:"email"`
-	// Optional bonus signup code. Omit for open signup; new orgs still receive the baseline entitlements
-	// via bootstrap.
+	// Optional signup code. Omit if you do not have one.
 	SignupCode OptString `json:"signup_code"`
 	// Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy.
 	TermsAccepted bool `json:"terms_accepted"`

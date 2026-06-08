@@ -90,10 +90,9 @@ def sync_detailed(
      Verifies the email code for a CLI signup session and creates the
     account. When the session was started with a `signup_code`, the
     reserved code is redeemed; sessions started without a code skip
-    the redemption step. Either way the new org is bootstrapped with
-    the baseline default entitlements, an org-scoped OAuth CLI
-    session is created, and the token set is returned exactly once.
-    This endpoint does not require an API key.
+    the redemption step. Either way an org-scoped OAuth CLI session
+    is created and the token set is returned exactly once. This
+    endpoint does not require an API key.
 
     Args:
         body (VerifyCliSignupInput):
@@ -129,10 +128,9 @@ def sync(
      Verifies the email code for a CLI signup session and creates the
     account. When the session was started with a `signup_code`, the
     reserved code is redeemed; sessions started without a code skip
-    the redemption step. Either way the new org is bootstrapped with
-    the baseline default entitlements, an org-scoped OAuth CLI
-    session is created, and the token set is returned exactly once.
-    This endpoint does not require an API key.
+    the redemption step. Either way an org-scoped OAuth CLI session
+    is created and the token set is returned exactly once. This
+    endpoint does not require an API key.
 
     Args:
         body (VerifyCliSignupInput):
@@ -163,10 +161,9 @@ async def asyncio_detailed(
      Verifies the email code for a CLI signup session and creates the
     account. When the session was started with a `signup_code`, the
     reserved code is redeemed; sessions started without a code skip
-    the redemption step. Either way the new org is bootstrapped with
-    the baseline default entitlements, an org-scoped OAuth CLI
-    session is created, and the token set is returned exactly once.
-    This endpoint does not require an API key.
+    the redemption step. Either way an org-scoped OAuth CLI session
+    is created and the token set is returned exactly once. This
+    endpoint does not require an API key.
 
     Args:
         body (VerifyCliSignupInput):
@@ -202,10 +199,9 @@ async def asyncio(
      Verifies the email code for a CLI signup session and creates the
     account. When the session was started with a `signup_code`, the
     reserved code is redeemed; sessions started without a code skip
-    the redemption step. Either way the new org is bootstrapped with
-    the baseline default entitlements, an org-scoped OAuth CLI
-    session is created, and the token set is returned exactly once.
-    This endpoint does not require an API key.
+    the redemption step. Either way an org-scoped OAuth CLI session
+    is created and the token set is returned exactly once. This
+    endpoint does not require an API key.
 
     Args:
         body (VerifyCliSignupInput):

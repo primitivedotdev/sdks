@@ -27,8 +27,7 @@ class StartAgentSignupInput:
         Attributes:
             email (str):
             terms_accepted (bool): Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy
-            signup_code (str | Unset): Optional bonus signup code. Omit for open signup; new orgs still receive the baseline
-                entitlements via bootstrap.
+            signup_code (str | Unset): Optional signup code. Omit if you do not have one.
             device_name (str | Unset): Human-readable device name used for the created agent OAuth session
             metadata (StartAgentSignupInputMetadata | Unset): Optional client metadata stored with the signup session;
                 serialized JSON must be 2048 bytes or fewer

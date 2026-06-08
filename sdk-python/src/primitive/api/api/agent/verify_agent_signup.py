@@ -104,12 +104,12 @@ def sync_detailed(
      Verifies the email code for an agent signup session and creates
     the account when needed. When the session was started with a
     `signup_code`, the reserved code is redeemed; sessions started
-    without a code skip the redemption step. Either way the new org
-    is bootstrapped with the baseline default entitlements, an
-    org-scoped OAuth session for CLI authentication is minted, and
-    the raw tokens are returned exactly once. For existing users,
-    the optional `org_id` selects which accessible workspace should
-    receive the new session.
+    without a code skip the redemption step. An org-scoped OAuth
+    session for CLI authentication is minted and the raw tokens are
+    returned exactly once. For existing users, the optional `org_id`
+    selects which accessible workspace should receive the new
+    session (no signup-code redemption is performed for existing
+    users regardless of how the session was started).
 
     Args:
         body (VerifyAgentSignupInput):
@@ -145,12 +145,12 @@ def sync(
      Verifies the email code for an agent signup session and creates
     the account when needed. When the session was started with a
     `signup_code`, the reserved code is redeemed; sessions started
-    without a code skip the redemption step. Either way the new org
-    is bootstrapped with the baseline default entitlements, an
-    org-scoped OAuth session for CLI authentication is minted, and
-    the raw tokens are returned exactly once. For existing users,
-    the optional `org_id` selects which accessible workspace should
-    receive the new session.
+    without a code skip the redemption step. An org-scoped OAuth
+    session for CLI authentication is minted and the raw tokens are
+    returned exactly once. For existing users, the optional `org_id`
+    selects which accessible workspace should receive the new
+    session (no signup-code redemption is performed for existing
+    users regardless of how the session was started).
 
     Args:
         body (VerifyAgentSignupInput):
@@ -181,12 +181,12 @@ async def asyncio_detailed(
      Verifies the email code for an agent signup session and creates
     the account when needed. When the session was started with a
     `signup_code`, the reserved code is redeemed; sessions started
-    without a code skip the redemption step. Either way the new org
-    is bootstrapped with the baseline default entitlements, an
-    org-scoped OAuth session for CLI authentication is minted, and
-    the raw tokens are returned exactly once. For existing users,
-    the optional `org_id` selects which accessible workspace should
-    receive the new session.
+    without a code skip the redemption step. An org-scoped OAuth
+    session for CLI authentication is minted and the raw tokens are
+    returned exactly once. For existing users, the optional `org_id`
+    selects which accessible workspace should receive the new
+    session (no signup-code redemption is performed for existing
+    users regardless of how the session was started).
 
     Args:
         body (VerifyAgentSignupInput):
@@ -222,12 +222,12 @@ async def asyncio(
      Verifies the email code for an agent signup session and creates
     the account when needed. When the session was started with a
     `signup_code`, the reserved code is redeemed; sessions started
-    without a code skip the redemption step. Either way the new org
-    is bootstrapped with the baseline default entitlements, an
-    org-scoped OAuth session for CLI authentication is minted, and
-    the raw tokens are returned exactly once. For existing users,
-    the optional `org_id` selects which accessible workspace should
-    receive the new session.
+    without a code skip the redemption step. An org-scoped OAuth
+    session for CLI authentication is minted and the raw tokens are
+    returned exactly once. For existing users, the optional `org_id`
+    selects which accessible workspace should receive the new
+    session (no signup-code redemption is performed for existing
+    users regardless of how the session was started).
 
     Args:
         body (VerifyAgentSignupInput):

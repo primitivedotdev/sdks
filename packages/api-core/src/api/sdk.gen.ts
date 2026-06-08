@@ -55,10 +55,8 @@ export const pollCliLogin = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Start CLI account signup
  *
- * Starts a terminal-native CLI signup. If `signup_code` is supplied
- * the API validates and reserves it; if omitted, signup proceeds
- * without one (the new org gets the baseline default entitlements
- * at bootstrap time). Either way the API creates a pending signup
+ * Starts a terminal-native CLI signup. `signup_code` is optional;
+ * omit it to sign up without one. The API creates a pending signup
  * session, sends an email verification code, and returns an opaque
  * signup token used by the resend and verify steps. This endpoint
  * does not require an API key.
@@ -95,10 +93,9 @@ export const resendCliSignupVerification = <ThrowOnError extends boolean = false
  * Verifies the email code for a CLI signup session and creates the
  * account. When the session was started with a `signup_code`, the
  * reserved code is redeemed; sessions started without a code skip
- * the redemption step. Either way the new org is bootstrapped with
- * the baseline default entitlements, an org-scoped OAuth CLI
- * session is created, and the token set is returned exactly once.
- * This endpoint does not require an API key.
+ * the redemption step. Either way an org-scoped OAuth CLI session
+ * is created and the token set is returned exactly once. This
+ * endpoint does not require an API key.
  *
  */
 export const verifyCliSignup = <ThrowOnError extends boolean = false>(options: Options<VerifyCliSignupData, ThrowOnError>) => (options.client ?? client).post<VerifyCliSignupResponses, VerifyCliSignupErrors, ThrowOnError>({
@@ -113,13 +110,11 @@ export const verifyCliSignup = <ThrowOnError extends boolean = false>(options: O
 /**
  * Start agent account signup
  *
- * Starts an agent-native signup session. If `signup_code` is
- * supplied the API validates and reserves it; if omitted, signup
- * proceeds without one (the new org gets the baseline default
- * entitlements at bootstrap time). Either way the API creates a
- * pending signup session, sends an email verification code, and
- * returns an opaque signup token used by the resend and verify
- * steps. This endpoint does not require an API key.
+ * Starts an agent-native signup session. `signup_code` is optional;
+ * omit it to sign up without one. The API creates a pending signup
+ * session, sends an email verification code, and returns an opaque
+ * signup token used by the resend and verify steps. This endpoint
+ * does not require an API key.
  *
  */
 export const startAgentSignup = <ThrowOnError extends boolean = false>(options: Options<StartAgentSignupData, ThrowOnError>) => (options.client ?? client).post<StartAgentSignupResponses, StartAgentSignupErrors, ThrowOnError>({
@@ -153,12 +148,12 @@ export const resendAgentSignupVerification = <ThrowOnError extends boolean = fal
  * Verifies the email code for an agent signup session and creates
  * the account when needed. When the session was started with a
  * `signup_code`, the reserved code is redeemed; sessions started
- * without a code skip the redemption step. Either way the new org
- * is bootstrapped with the baseline default entitlements, an
- * org-scoped OAuth session for CLI authentication is minted, and
- * the raw tokens are returned exactly once. For existing users,
- * the optional `org_id` selects which accessible workspace should
- * receive the new session.
+ * without a code skip the redemption step. An org-scoped OAuth
+ * session for CLI authentication is minted and the raw tokens are
+ * returned exactly once. For existing users, the optional `org_id`
+ * selects which accessible workspace should receive the new
+ * session (no signup-code redemption is performed for existing
+ * users regardless of how the session was started).
  *
  */
 export const verifyAgentSignup = <ThrowOnError extends boolean = false>(options: Options<VerifyAgentSignupData, ThrowOnError>) => (options.client ?? client).post<VerifyAgentSignupResponses, VerifyAgentSignupErrors, ThrowOnError>({

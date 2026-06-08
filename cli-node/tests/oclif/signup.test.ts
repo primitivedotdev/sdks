@@ -177,11 +177,13 @@ describe("agent signup commands", () => {
     );
   });
 
-  it("prompts for missing email and terms but NOT for a signup code (open signup is the default)", async () => {
-    // signup-code is now an optional bonus, so the CLI no longer
-    // prompts for it. A user with no email at all is still prompted
-    // for that (it's required for the verification round trip), and
-    // terms are still confirmed.
+  it("does not prompt for a signup code when DEFAULT_SIGNUP_COMMAND_COPY is in use", async () => {
+    // DEFAULT_SIGNUP_COMMAND_COPY sets codeRequired: false (signup
+    // accepts requests without one). A user with no email is still
+    // prompted for that (it's required for the verification round
+    // trip), and terms are still confirmed. The signin / login / otp
+    // copies in cli-node/src/oclif/commands/signin.ts set codeRequired
+    // true and still prompt; that path has its own coverage.
     const deps = flowDeps({
       promptAnswers: ["test@example.com"],
     });
@@ -196,24 +198,27 @@ describe("agent signup commands", () => {
     expect(deps.promptRequired).toHaveBeenNthCalledWith(1, "Email: ");
     expect(deps.promptRequired).not.toHaveBeenCalledWith("Signup code: ");
     expect(deps.confirmTerms).toHaveBeenCalledOnce();
-    expect(deps.startAgentSignup).toHaveBeenCalledWith(
+    // Cast through vi.mocked to recover the mock's .mock.calls without
+    // losing the assertion strength. A `not.toHaveBeenCalledWith
+    // (objectContaining({signup_code: expect.anything()}))` matcher
+    // would silently pass if the regression shipped `{signup_code:
+    // undefined}` (expect.anything ignores undefined). Reading the
+    // actual call body and using Object.hasOwn pins absence of the
+    // key, not just an undefined value.
+    const startMock = vi.mocked(
+      deps.startAgentSignup as unknown as ReturnType<typeof vi.fn>,
+    );
+    const startCall = startMock.mock.calls[0]?.[0] as
+      | { body?: Record<string, unknown> }
+      | undefined;
+    expect(startCall?.body).toEqual(
       expect.objectContaining({
-        body: expect.objectContaining({
-          email: "test@example.com",
-          terms_accepted: true,
-        }),
+        email: "test@example.com",
+        terms_accepted: true,
       }),
     );
-    // signup_code is OMITTED from the request body when no code was
-    // supplied (the SDK contract treats the omitted key and the
-    // empty-string value as equivalent; omitting is more conventional).
-    expect(deps.startAgentSignup).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          signup_code: expect.anything(),
-        }),
-      }),
-    );
+    expect(startCall?.body).toBeDefined();
+    expect(Object.hasOwn(startCall!.body!, "signup_code")).toBe(false);
   });
 
   it("continues an existing pending signup without saying a new code was sent", async () => {

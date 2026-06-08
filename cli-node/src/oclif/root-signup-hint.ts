@@ -198,8 +198,8 @@ export function loggedOutSignupHint(): string {
     "New to Primitive?",
     "  You or your user don't have an account yet?",
     "  Run `primitive signup <email> --accept-terms`",
-    "  to create an account, get your own domain, and get started now.",
-    "  Add `--signup-code <code>` if someone gave you a bonus code.",
+    "  to create an account and get started.",
+    "  Add `--signup-code <code>` if you have one.",
     "",
   ].join("\n");
 }

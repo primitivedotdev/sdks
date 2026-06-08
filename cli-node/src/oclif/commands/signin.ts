@@ -13,12 +13,18 @@ function cliError(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
 }
 
+// The email-code auth flows (signin / login / otp) reuse the signup
+// helper but the underlying start endpoint still requires a signup
+// code for these verbs. codeRequired: true makes the helper prompt
+// when the flag is unset (matching the previous shape), so opening
+// signup doesn't silently open sign-in.
 const SIGNIN_OTP_COPY: SignupCommandCopy = {
   actionNoun: "sign-in",
   actionGerund: "signing in",
   confirmCommand: (email) => `signin otp confirm ${email} <code>`,
   resendCommand: (email) => `signin otp resend ${email}`,
   startCommand: (email) => `signin otp ${email}`,
+  codeRequired: true,
 };
 
 const SIGNIN_EMAIL_COPY: SignupCommandCopy = {
@@ -27,6 +33,7 @@ const SIGNIN_EMAIL_COPY: SignupCommandCopy = {
   confirmCommand: (email) => `signin confirm ${email} <code>`,
   resendCommand: (email) => `signin resend ${email}`,
   startCommand: (email) => `signin ${email}`,
+  codeRequired: true,
 };
 
 const LOGIN_EMAIL_COPY: SignupCommandCopy = {
@@ -35,6 +42,7 @@ const LOGIN_EMAIL_COPY: SignupCommandCopy = {
   confirmCommand: (email) => `login confirm ${email} <code>`,
   resendCommand: (email) => `login resend ${email}`,
   startCommand: (email) => `login ${email}`,
+  codeRequired: true,
 };
 
 const LOGIN_OTP_COPY: SignupCommandCopy = {
@@ -43,6 +51,7 @@ const LOGIN_OTP_COPY: SignupCommandCopy = {
   confirmCommand: (email) => `login otp confirm ${email} <code>`,
   resendCommand: (email) => `login otp resend ${email}`,
   startCommand: (email) => `login otp ${email}`,
+  codeRequired: true,
 };
 
 const OTP_COPY: SignupCommandCopy = {
@@ -51,6 +60,7 @@ const OTP_COPY: SignupCommandCopy = {
   confirmCommand: (email) => `otp confirm ${email} <code>`,
   resendCommand: (email) => `otp resend ${email}`,
   startCommand: (email) => `otp ${email}`,
+  codeRequired: true,
 };
 
 function acquireCredentialsLock(configDir: string): () => void {
