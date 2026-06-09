@@ -5,12 +5,14 @@ import type {
   CreateFunctionResult,
   FunctionDetail,
   FunctionListItem,
+  FunctionSecretWriteResult,
 } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   collectSourceFiles,
   renderBuildFailure,
   runSourceDeploy,
+  runSourceDeployWithSecrets,
   type SourceDeployApiSurface,
 } from "../../src/oclif/function-source.js";
 
@@ -194,6 +196,235 @@ describe("runSourceDeploy", () => {
     });
     expect(result.kind).toBe("error");
     if (result.kind === "error") expect(result.stage).toBe("create");
+  });
+});
+
+function secretResult(key: string): FunctionSecretWriteResult {
+  return {
+    created: true,
+    created_at: "2026-05-26T00:00:00Z",
+    key,
+    updated_at: "2026-05-26T00:00:00Z",
+  };
+}
+
+describe("runSourceDeployWithSecrets", () => {
+  it("creates, writes each secret, then redeploys to bind them when no function exists", async () => {
+    const setSecret = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: { data: secretResult("ANTHROPIC_API_KEY") },
+      })
+      .mockResolvedValueOnce({ data: { data: secretResult("OWNER_EMAIL") } });
+    const api: SourceDeployApiSurface = {
+      createFunction: vi.fn(async () => ({
+        data: { data: createResult("dev_help", "id-1") },
+      })),
+      listFunctions: vi.fn(async () => ({ data: { data: [] } })),
+      setSecret,
+      updateFunction: vi.fn(async () => ({
+        data: { data: detail("dev_help", "id-1") },
+      })),
+    };
+    const result = await runSourceDeployWithSecrets(api, {
+      files: FILES,
+      name: "dev_help",
+      secrets: [
+        { key: "ANTHROPIC_API_KEY", value: "sk-anth" },
+        { key: "OWNER_EMAIL", value: "me@example.com" },
+      ],
+    });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.result.action).toBe("created");
+    expect(result.result.redeploy).toEqual(detail("dev_help", "id-1"));
+    expect(result.result.secrets.map((s) => s.key)).toEqual([
+      "ANTHROPIC_API_KEY",
+      "OWNER_EMAIL",
+    ]);
+    expect(setSecret).toHaveBeenCalledTimes(2);
+    // The final updateFunction has to fire AFTER setSecret writes; otherwise
+    // the running handler won't pick up the new bindings.
+    expect(api.updateFunction).toHaveBeenCalledTimes(1);
+    expect(api.updateFunction).toHaveBeenCalledWith({
+      files: FILES,
+      id: "id-1",
+    });
+  });
+
+  it("skips an intermediate redeploy when the function already exists, then writes secrets and redeploys once", async () => {
+    const setSecret = vi.fn(async () => ({
+      data: { data: secretResult("ANTHROPIC_API_KEY") },
+    }));
+    const updateFunction = vi.fn(async () => ({
+      data: { data: detail("dev_help", "id-9") },
+    }));
+    const api: SourceDeployApiSurface = {
+      createFunction: vi.fn(),
+      listFunctions: vi.fn(async () => ({
+        data: { data: [listItem("dev_help", "id-9")] },
+      })),
+      setSecret,
+      updateFunction,
+    };
+    const result = await runSourceDeployWithSecrets(api, {
+      files: FILES,
+      name: "dev_help",
+      secrets: [{ key: "ANTHROPIC_API_KEY", value: "sk-anth" }],
+    });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.result.action).toBe("redeployed");
+    // updateFunction must fire EXACTLY once on the existing-function path.
+    // Calling it twice would briefly run the new code with the OLD secret
+    // bindings (Workers snapshot secret env at deploy time), which is the
+    // race the existing-function branch is built to avoid.
+    expect(updateFunction).toHaveBeenCalledTimes(1);
+    expect(updateFunction).toHaveBeenCalledWith({ files: FILES, id: "id-9" });
+    expect(api.createFunction).not.toHaveBeenCalled();
+    expect(setSecret).toHaveBeenCalledWith({
+      id: "id-9",
+      key: "ANTHROPIC_API_KEY",
+      value: "sk-anth",
+    });
+  });
+
+  it("returns a set-secret error with succeeded and pending keys when a write fails mid-loop", async () => {
+    const setSecret = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { data: secretResult("KEY_A") } })
+      .mockResolvedValueOnce({ error: { code: "rate_limit_exceeded" } });
+    const updateFunction = vi.fn();
+    const api: SourceDeployApiSurface = {
+      createFunction: vi.fn(async () => ({
+        data: { data: createResult("dev_help", "id-1") },
+      })),
+      listFunctions: vi.fn(async () => ({ data: { data: [] } })),
+      setSecret,
+      updateFunction,
+    };
+    const result = await runSourceDeployWithSecrets(api, {
+      files: FILES,
+      name: "dev_help",
+      secrets: [
+        { key: "KEY_A", value: "a" },
+        { key: "KEY_B", value: "b" },
+        { key: "KEY_C", value: "c" },
+      ],
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind !== "error") return;
+    expect(result.stage).toBe("set-secret");
+    if (result.stage !== "set-secret") return;
+    expect(result.failedKey).toBe("KEY_B");
+    expect(result.succeededKeys).toEqual(["KEY_A"]);
+    expect(result.pendingKeys).toEqual(["KEY_C"]);
+    expect(result.functionId).toBe("id-1");
+    expect(result.created).toEqual(createResult("dev_help", "id-1"));
+    // updateFunction must NOT fire after a set-secret failure: only some of
+    // the bindings are written and pushing the bundle now would deploy the
+    // new code with a half-written secret set, which is worse than leaving
+    // the running handler on the previous deploy.
+    expect(updateFunction).not.toHaveBeenCalled();
+  });
+
+  it("omits `created` from set-secret errors when the function already existed", async () => {
+    const setSecret = vi
+      .fn()
+      .mockResolvedValueOnce({ error: { code: "rate_limit_exceeded" } });
+    const api: SourceDeployApiSurface = {
+      createFunction: vi.fn(),
+      listFunctions: vi.fn(async () => ({
+        data: { data: [listItem("dev_help", "id-9")] },
+      })),
+      setSecret,
+      updateFunction: vi.fn(),
+    };
+    const result = await runSourceDeployWithSecrets(api, {
+      files: FILES,
+      name: "dev_help",
+      secrets: [{ key: "KEY_A", value: "a" }],
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind !== "error") return;
+    expect(result.stage).toBe("set-secret");
+    if (result.stage !== "set-secret") return;
+    expect(result.functionId).toBe("id-9");
+    // No fresh create on the existing-function path means no `created`
+    // CreateFunctionResult to surface; the function id is enough.
+    expect(result.created).toBeUndefined();
+  });
+
+  it("returns a secret-redeploy error when the final updateFunction fails", async () => {
+    const setSecret = vi.fn(async () => ({
+      data: { data: secretResult("KEY_A") },
+    }));
+    const api: SourceDeployApiSurface = {
+      createFunction: vi.fn(async () => ({
+        data: { data: createResult("dev_help", "id-1") },
+      })),
+      listFunctions: vi.fn(async () => ({ data: { data: [] } })),
+      setSecret,
+      updateFunction: vi.fn(async () => ({
+        error: {
+          code: "build_failed",
+          details: { phase: "bundle" },
+        },
+      })),
+    };
+    const result = await runSourceDeployWithSecrets(api, {
+      files: FILES,
+      name: "dev_help",
+      secrets: [{ key: "KEY_A", value: "a" }],
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind !== "error") return;
+    expect(result.stage).toBe("secret-redeploy");
+    if (result.stage !== "secret-redeploy") return;
+    expect(result.succeededKeys).toEqual(["KEY_A"]);
+    expect(result.functionId).toBe("id-1");
+  });
+
+  it("surfaces a lookup error without touching create, set-secret, or updateFunction", async () => {
+    const setSecret = vi.fn();
+    const updateFunction = vi.fn();
+    const createFunction = vi.fn();
+    const api: SourceDeployApiSurface = {
+      createFunction,
+      listFunctions: vi.fn(async () => ({ error: { code: "unauthorized" } })),
+      setSecret,
+      updateFunction,
+    };
+    const result = await runSourceDeployWithSecrets(api, {
+      files: FILES,
+      name: "dev_help",
+      secrets: [{ key: "KEY_A", value: "a" }],
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") expect(result.stage).toBe("lookup");
+    expect(createFunction).not.toHaveBeenCalled();
+    expect(setSecret).not.toHaveBeenCalled();
+    expect(updateFunction).not.toHaveBeenCalled();
+  });
+
+  it("returns an error when setSecret is not on the api surface", async () => {
+    // The legacy runSourceDeploy callers omit setSecret from their
+    // SourceDeployApiSurface; reusing that surface with the secrets path
+    // must fail loud rather than crash on undefined-is-not-a-function.
+    const api: SourceDeployApiSurface = {
+      createFunction: vi.fn(),
+      listFunctions: vi.fn(async () => ({ data: { data: [] } })),
+      updateFunction: vi.fn(),
+    };
+    const result = await runSourceDeployWithSecrets(api, {
+      files: FILES,
+      name: "dev_help",
+      secrets: [{ key: "KEY_A", value: "a" }],
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind !== "error") return;
+    expect(result.stage).toBe("create");
+    expect(api.createFunction).not.toHaveBeenCalled();
   });
 });
 

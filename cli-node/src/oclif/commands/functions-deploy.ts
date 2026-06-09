@@ -25,6 +25,7 @@ import {
 import {
   DEFAULT_DEPLOY_POLL_INTERVAL_SECONDS,
   DEFAULT_DEPLOY_WAIT_TIMEOUT_SECONDS,
+  type FunctionDeployWaitSnapshot,
   validateDeployWaitFlags,
   waitForFunctionDeploy,
 } from "../function-deploy-wait.js";
@@ -32,6 +33,7 @@ import {
   collectSourceFiles,
   renderBuildFailure,
   runSourceDeploy,
+  runSourceDeployWithSecrets,
   type SourceDeployApiSurface,
 } from "../function-source.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
@@ -310,12 +312,14 @@ class FunctionsDeployCommand extends Command {
   must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters, digits,
   underscores; first character is a letter or underscore). With one
   or more secrets the deploy fans out to multiple API calls:
-  create-function, set-secret per pair, then a final update-function
-  with the same bundle so the running handler picks up the bindings.
-  If a secret write fails after the create step the function exists
-  with whatever secrets succeeded and the redeploy has NOT fired;
-  re-run \`primitive functions set-secret\` for the missing keys, then
-  \`primitive functions redeploy\` to push them live. ${SECRET_SOURCE_FLAGS_DESCRIPTION}`;
+  create-function (or, with --source against an existing name, a
+  setSecret-only path that skips the intermediate redeploy), set-secret
+  per pair, then a final update-function with the same bundle/source so
+  the running handler picks up the bindings. If a secret write fails
+  before the final redeploy, the function exists with whatever secrets
+  succeeded and the redeploy has NOT fired; re-run \`primitive functions
+  set-secret\` for the missing keys, then \`primitive functions deploy\`
+  (or \`functions redeploy\`) to push them live. ${SECRET_SOURCE_FLAGS_DESCRIPTION}`;
 
   static summary = "Deploy a new function from a bundled handler file";
 
@@ -327,6 +331,7 @@ class FunctionsDeployCommand extends Command {
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --source-map-file ./bundle.js.map",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret OPENAI_KEY=sk-... --secret OWNER_EMAIL=me@example.com",
     "<%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-env OPENAI_KEY --secret-from-env-file .env.local:OWNER_EMAIL",
+    "<%= config.bin %> functions deploy --name triage --source . --secret-from-env ANTHROPIC_API_KEY",
     "printf '%s' \"$OPENAI_KEY\" | <%= config.bin %> functions deploy --name forwarder --file ./bundle.js --secret-from-stdin OPENAI_KEY",
   ];
 
@@ -619,9 +624,10 @@ class FunctionsDeployCommand extends Command {
   }
 
   // Managed-build deploy from a project directory. Collects the source,
-  // then idempotently creates or redeploys the function by name. Secrets
-  // are not supported with --source yet: deploy first, then
-  // `functions set-secret` + `functions redeploy`.
+  // then idempotently creates or redeploys the function by name. When
+  // secret-source flags are passed, fans out to create-or-update + setSecret
+  // per pair + a final updateFunction so the running handler picks up the
+  // bindings, mirroring the --file deploy path.
   private async runSourceMode(
     flags: {
       "api-key"?: string;
@@ -638,16 +644,18 @@ class FunctionsDeployCommand extends Command {
     },
     sourceDir: string,
   ): Promise<void> {
-    const hasSecretFlags =
-      (flags.secret?.length ?? 0) > 0 ||
-      (flags["secret-from-env"]?.length ?? 0) > 0 ||
-      (flags["secret-from-file"]?.length ?? 0) > 0 ||
-      (flags["secret-from-env-file"]?.length ?? 0) > 0 ||
-      flags["secret-from-stdin"] !== undefined;
-    if (hasSecretFlags) {
-      process.stderr.write(
-        "Secret flags are not supported with --source yet. Deploy from source first, then set secrets with `primitive functions set-secret` and redeploy.\n",
-      );
+    // Validate secret pairs BEFORE collecting source or touching the API
+    // so malformed input fails fast with zero side effects. The no-secret
+    // path skips straight through with an empty result.
+    const parsedSecrets = resolveSecretFlags({
+      fromEnv: flags["secret-from-env"] ?? [],
+      fromEnvFile: flags["secret-from-env-file"] ?? [],
+      fromFile: flags["secret-from-file"] ?? [],
+      fromStdin: flags["secret-from-stdin"],
+      inline: flags.secret ?? [],
+    });
+    if (parsedSecrets.kind === "error") {
+      process.stderr.write(`${parsedSecrets.message}\n`);
       process.exitCode = 1;
       return;
     }
@@ -683,6 +691,13 @@ class FunctionsDeployCommand extends Command {
           client: apiClient.client,
           responseStyle: "fields",
         }),
+      setSecret: (p) =>
+        setFunctionSecret({
+          body: { value: p.value },
+          client: apiClient.client,
+          path: { id: p.id, key: p.key },
+          responseStyle: "fields",
+        }),
       updateFunction: (p) =>
         updateFunction({
           body: { files: p.files },
@@ -692,25 +707,122 @@ class FunctionsDeployCommand extends Command {
         }),
     };
 
-    const outcome = await runSourceDeploy(apiSurface, {
+    // Fast path: no secrets means a single create-or-redeploy round-trip,
+    // byte-identical to the pre-flag behavior. The secrets path adds a
+    // setSecret loop + a final redeploy on top.
+    if (parsedSecrets.secrets.length === 0) {
+      const outcome = await runSourceDeploy(apiSurface, {
+        files: collected.files,
+        name: flags.name,
+      });
+      if (outcome.kind === "error") {
+        renderBuildFailure(outcome.payload, (chunk) =>
+          process.stderr.write(chunk),
+        );
+        writeErrorWithHints(outcome.payload);
+        surfaceUnauthorizedHint({
+          ...authFailureContext,
+          payload: outcome.payload,
+        });
+        process.exitCode = 1;
+        return;
+      }
+      await this.finishSourceDeploy({
+        apiClient,
+        authFailureContext,
+        flags,
+        payload: outcome.result,
+      });
+      return;
+    }
+
+    const secretsOutcome = await runSourceDeployWithSecrets(apiSurface, {
       files: collected.files,
       name: flags.name,
+      secrets: parsedSecrets.secrets,
     });
 
-    if (outcome.kind === "error") {
-      renderBuildFailure(outcome.payload, (chunk) =>
-        process.stderr.write(chunk),
-      );
-      writeErrorWithHints(outcome.payload);
+    if (secretsOutcome.kind === "error") {
+      // Stage-specific framing on stderr so callers can tell whether the
+      // function was created before a downstream failure left it without
+      // secrets or without the final redeploy. The JSON envelope still
+      // goes through writeErrorWithHints so any actionable hint (e.g.
+      // unauthorized) is surfaced.
+      if (secretsOutcome.stage === "set-secret") {
+        const succeeded =
+          secretsOutcome.succeededKeys.length > 0
+            ? secretsOutcome.succeededKeys.join(", ")
+            : "(none)";
+        const pending =
+          secretsOutcome.pendingKeys.length > 0
+            ? secretsOutcome.pendingKeys.join(", ")
+            : "(none)";
+        const allMissing = [
+          secretsOutcome.failedKey,
+          ...secretsOutcome.pendingKeys,
+        ].join(", ");
+        const createdClause = secretsOutcome.created
+          ? `Function ${secretsOutcome.created.name} (${secretsOutcome.functionId}) was created`
+          : `Function ${secretsOutcome.functionId} already existed`;
+        process.stderr.write(
+          `${createdClause}, but writing secret ${secretsOutcome.failedKey} failed; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The redeploy is NOT yet live. Re-run \`primitive functions set-secret\` for each of [${allMissing}], then \`primitive functions deploy --source <dir> --name ${flags.name}\` to push them live.\n`,
+        );
+      } else if (secretsOutcome.stage === "secret-redeploy") {
+        const succeeded =
+          secretsOutcome.succeededKeys.length > 0
+            ? secretsOutcome.succeededKeys.join(", ")
+            : "(none)";
+        const createdClause = secretsOutcome.created
+          ? `Function ${secretsOutcome.created.name} (${secretsOutcome.functionId}) was created and`
+          : `Function ${secretsOutcome.functionId} already existed and`;
+        process.stderr.write(
+          `${createdClause} secrets [${succeeded}] were written, but the final redeploy failed; the new bindings are NOT yet live. Re-run \`primitive functions deploy --source <dir> --name ${flags.name}\` once the cause is fixed.\n`,
+        );
+      } else {
+        renderBuildFailure(secretsOutcome.payload, (chunk) =>
+          process.stderr.write(chunk),
+        );
+      }
+      writeErrorWithHints(secretsOutcome.payload);
       surfaceUnauthorizedHint({
         ...authFailureContext,
-        payload: outcome.payload,
+        payload: secretsOutcome.payload,
       });
       process.exitCode = 1;
       return;
     }
 
-    const payload = outcome.result;
+    // Prefer the redeployed FunctionDetail over the initial create payload,
+    // since the redeploy is the state the user actually deployed (it's the
+    // first deploy where the new secret bindings are live).
+    await this.finishSourceDeploy({
+      apiClient,
+      authFailureContext,
+      flags,
+      payload: secretsOutcome.result.redeploy,
+    });
+  }
+
+  // Common --wait + write-route-hint tail for the two source-mode paths
+  // (with and without secret flags). Identical to the body the original
+  // single-path runSourceMode ran after a successful runSourceDeploy.
+  private async finishSourceDeploy(args: {
+    apiClient: Awaited<
+      ReturnType<typeof createAuthenticatedCliApiClient>
+    >["apiClient"];
+    authFailureContext: {
+      auth: Awaited<ReturnType<typeof createAuthenticatedCliApiClient>>["auth"];
+      baseUrlOverridden: boolean;
+      configDir: string;
+    };
+    flags: {
+      wait?: boolean;
+      timeout: number;
+      "poll-interval": number;
+    };
+    payload: FunctionDeployWaitSnapshot;
+  }): Promise<void> {
+    const { apiClient, authFailureContext, flags, payload } = args;
     if (flags.wait) {
       const waitResult = await waitForFunctionDeploy({
         getFunction: (p) =>
