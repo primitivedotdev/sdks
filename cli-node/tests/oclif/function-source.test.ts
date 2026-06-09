@@ -14,6 +14,7 @@ import {
   runSourceDeploy,
   runSourceDeployWithSecrets,
   type SourceDeployApiSurface,
+  type SourceDeployWithSecretsApiSurface,
 } from "../../src/oclif/function-source.js";
 
 const tempDirs: string[] = [];
@@ -216,7 +217,7 @@ describe("runSourceDeployWithSecrets", () => {
         data: { data: secretResult("ANTHROPIC_API_KEY") },
       })
       .mockResolvedValueOnce({ data: { data: secretResult("OWNER_EMAIL") } });
-    const api: SourceDeployApiSurface = {
+    const api: SourceDeployWithSecretsApiSurface = {
       createFunction: vi.fn(async () => ({
         data: { data: createResult("dev_help", "id-1") },
       })),
@@ -259,7 +260,7 @@ describe("runSourceDeployWithSecrets", () => {
     const updateFunction = vi.fn(async () => ({
       data: { data: detail("dev_help", "id-9") },
     }));
-    const api: SourceDeployApiSurface = {
+    const api: SourceDeployWithSecretsApiSurface = {
       createFunction: vi.fn(),
       listFunctions: vi.fn(async () => ({
         data: { data: [listItem("dev_help", "id-9")] },
@@ -295,7 +296,7 @@ describe("runSourceDeployWithSecrets", () => {
       .mockResolvedValueOnce({ data: { data: secretResult("KEY_A") } })
       .mockResolvedValueOnce({ error: { code: "rate_limit_exceeded" } });
     const updateFunction = vi.fn();
-    const api: SourceDeployApiSurface = {
+    const api: SourceDeployWithSecretsApiSurface = {
       createFunction: vi.fn(async () => ({
         data: { data: createResult("dev_help", "id-1") },
       })),
@@ -328,11 +329,12 @@ describe("runSourceDeployWithSecrets", () => {
     expect(updateFunction).not.toHaveBeenCalled();
   });
 
-  it("omits `created` from set-secret errors when the function already existed", async () => {
+  it("omits `created` and populates the full discriminator on set-secret errors against an existing function", async () => {
     const setSecret = vi
       .fn()
+      .mockResolvedValueOnce({ data: { data: secretResult("KEY_A") } })
       .mockResolvedValueOnce({ error: { code: "rate_limit_exceeded" } });
-    const api: SourceDeployApiSurface = {
+    const api: SourceDeployWithSecretsApiSurface = {
       createFunction: vi.fn(),
       listFunctions: vi.fn(async () => ({
         data: { data: [listItem("dev_help", "id-9")] },
@@ -343,7 +345,11 @@ describe("runSourceDeployWithSecrets", () => {
     const result = await runSourceDeployWithSecrets(api, {
       files: FILES,
       name: "dev_help",
-      secrets: [{ key: "KEY_A", value: "a" }],
+      secrets: [
+        { key: "KEY_A", value: "a" },
+        { key: "KEY_B", value: "b" },
+        { key: "KEY_C", value: "c" },
+      ],
     });
     expect(result.kind).toBe("error");
     if (result.kind !== "error") return;
@@ -353,13 +359,20 @@ describe("runSourceDeployWithSecrets", () => {
     // No fresh create on the existing-function path means no `created`
     // CreateFunctionResult to surface; the function id is enough.
     expect(result.created).toBeUndefined();
+    // The discriminator fields the CLI uses to build its stage-specific
+    // stderr hint must still be populated; only `created` differs from
+    // the new-function path. Asserting all three protects callers who
+    // print "[succeeded] are now staged on the function row" warnings.
+    expect(result.failedKey).toBe("KEY_B");
+    expect(result.succeededKeys).toEqual(["KEY_A"]);
+    expect(result.pendingKeys).toEqual(["KEY_C"]);
   });
 
-  it("returns a secret-redeploy error when the final updateFunction fails", async () => {
+  it("returns a secret-redeploy error when the final updateFunction fails on the new-function path", async () => {
     const setSecret = vi.fn(async () => ({
       data: { data: secretResult("KEY_A") },
     }));
-    const api: SourceDeployApiSurface = {
+    const api: SourceDeployWithSecretsApiSurface = {
       createFunction: vi.fn(async () => ({
         data: { data: createResult("dev_help", "id-1") },
       })),
@@ -383,13 +396,94 @@ describe("runSourceDeployWithSecrets", () => {
     if (result.stage !== "secret-redeploy") return;
     expect(result.succeededKeys).toEqual(["KEY_A"]);
     expect(result.functionId).toBe("id-1");
+    expect(result.created).toEqual(createResult("dev_help", "id-1"));
+  });
+
+  it("returns a secret-redeploy error without `created` when the function already existed", async () => {
+    const setSecret = vi.fn(async () => ({
+      data: { data: secretResult("KEY_A") },
+    }));
+    const api: SourceDeployWithSecretsApiSurface = {
+      createFunction: vi.fn(),
+      listFunctions: vi.fn(async () => ({
+        data: { data: [listItem("dev_help", "id-9")] },
+      })),
+      setSecret,
+      updateFunction: vi.fn(async () => ({
+        error: { code: "build_failed", details: { phase: "bundle" } },
+      })),
+    };
+    const result = await runSourceDeployWithSecrets(api, {
+      files: FILES,
+      name: "dev_help",
+      secrets: [{ key: "KEY_A", value: "a" }],
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind !== "error") return;
+    expect(result.stage).toBe("secret-redeploy");
+    if (result.stage !== "secret-redeploy") return;
+    // No fresh create happened on the existing-function path, so `created`
+    // must be absent. The CLI uses this to decide whether the stderr hint
+    // says "was created" or "already existed".
+    expect(result.created).toBeUndefined();
+    expect(result.functionId).toBe("id-9");
+    expect(result.succeededKeys).toEqual(["KEY_A"]);
+  });
+
+  it("surfaces a real createFunction error on the new-function path with its payload", async () => {
+    const setSecret = vi.fn();
+    const updateFunction = vi.fn();
+    const buildFailedPayload = {
+      error: {
+        code: "build_failed",
+        details: {
+          errors: [
+            {
+              code: "unresolved_import",
+              file: "src/index.ts",
+              message: 'Could not resolve "@zorbify/sdk"',
+            },
+          ],
+          phase: "bundle",
+        },
+      },
+    };
+    const api: SourceDeployWithSecretsApiSurface = {
+      createFunction: vi.fn(async () => ({ error: buildFailedPayload })),
+      listFunctions: vi.fn(async () => ({ data: { data: [] } })),
+      setSecret,
+      updateFunction,
+    };
+    const result = await runSourceDeployWithSecrets(api, {
+      files: FILES,
+      name: "dev_help",
+      secrets: [{ key: "KEY_A", value: "a" }],
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind !== "error") return;
+    expect(result.stage).toBe("create");
+    // The CLI's runSourceMode runs renderBuildFailure against payload to
+    // render the structured per-error diagnostics. Carrying the original
+    // payload through unchanged is what makes that work; replacing it with
+    // a generic "create failed" envelope would silently swallow the
+    // bundler's specific error rows. extractErrorPayload unwraps the outer
+    // `{ error: ... }` envelope, so we assert on the inner shape.
+    expect(result.payload).toMatchObject({
+      code: "build_failed",
+      details: {
+        errors: [{ code: "unresolved_import", file: "src/index.ts" }],
+        phase: "bundle",
+      },
+    });
+    expect(setSecret).not.toHaveBeenCalled();
+    expect(updateFunction).not.toHaveBeenCalled();
   });
 
   it("surfaces a lookup error without touching create, set-secret, or updateFunction", async () => {
     const setSecret = vi.fn();
     const updateFunction = vi.fn();
     const createFunction = vi.fn();
-    const api: SourceDeployApiSurface = {
+    const api: SourceDeployWithSecretsApiSurface = {
       createFunction,
       listFunctions: vi.fn(async () => ({ error: { code: "unauthorized" } })),
       setSecret,
@@ -405,26 +499,6 @@ describe("runSourceDeployWithSecrets", () => {
     expect(createFunction).not.toHaveBeenCalled();
     expect(setSecret).not.toHaveBeenCalled();
     expect(updateFunction).not.toHaveBeenCalled();
-  });
-
-  it("returns an error when setSecret is not on the api surface", async () => {
-    // The legacy runSourceDeploy callers omit setSecret from their
-    // SourceDeployApiSurface; reusing that surface with the secrets path
-    // must fail loud rather than crash on undefined-is-not-a-function.
-    const api: SourceDeployApiSurface = {
-      createFunction: vi.fn(),
-      listFunctions: vi.fn(async () => ({ data: { data: [] } })),
-      updateFunction: vi.fn(),
-    };
-    const result = await runSourceDeployWithSecrets(api, {
-      files: FILES,
-      name: "dev_help",
-      secrets: [{ key: "KEY_A", value: "a" }],
-    });
-    expect(result.kind).toBe("error");
-    if (result.kind !== "error") return;
-    expect(result.stage).toBe("create");
-    expect(api.createFunction).not.toHaveBeenCalled();
   });
 });
 

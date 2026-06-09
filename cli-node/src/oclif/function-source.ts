@@ -86,10 +86,8 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
-// Minimal client surface runSourceDeploy and runSourceDeployWithSecrets need.
-// Factored out so the unit test can drive every branch with a fake, without
-// a real client. `setSecret` is optional: only runSourceDeployWithSecrets
-// requires it.
+// Minimal client surface runSourceDeploy needs. Factored out so the unit
+// test can drive every branch with a fake, without a real client.
 export type SourceDeployApiSurface = {
   listFunctions: () => Promise<{
     data?: { data?: FunctionListItem[] };
@@ -103,7 +101,14 @@ export type SourceDeployApiSurface = {
     id: string;
     files: Record<string, string>;
   }) => Promise<{ data?: { data?: FunctionDetail }; error?: unknown }>;
-  setSecret?: (params: { id: string; key: string; value: string }) => Promise<{
+};
+
+// runSourceDeployWithSecrets needs everything runSourceDeploy does plus a
+// setSecret method. Keeping these on separate types means the no-secrets
+// caller doesn't have to wire (or stub) setSecret, and the orchestrator
+// never has to defensively guard against a missing method at runtime.
+export type SourceDeployWithSecretsApiSurface = SourceDeployApiSurface & {
+  setSecret: (params: { id: string; key: string; value: string }) => Promise<{
     data?: { data?: FunctionSecretWriteResult };
     error?: unknown;
   }>;
@@ -183,23 +188,20 @@ export async function runSourceDeploy(
   return { action: "created", kind: "ok", result: data };
 }
 
-// Final payload runSourceDeployWithSecrets produces on the happy path. `code`
-// is the latest deploy of the function (a fresh create's CreateFunctionResult
-// when the function did not exist, or an updateFunction FunctionDetail when
-// it did). `secrets` is the list of secret writes that landed. `redeploy` is
-// the final updateFunction call that bound those secrets into the running
-// handler.
+// Final payload runSourceDeployWithSecrets produces on the happy path.
+// `secrets` is the list of secret writes that landed. `redeploy` is the
+// final updateFunction call that bound those secrets into the running
+// handler. This is what the CLI prints back to the user as the deployed state.
 export type SourceDeployWithSecretsResult = {
   action: "created" | "redeployed";
-  code: CreateFunctionResult | FunctionDetail;
   secrets: FunctionSecretWriteResult[];
   redeploy: FunctionDetail;
 };
 
-// Discriminated result for runSourceDeployWithSecrets. Stages mirror
-// runDeployWithSecrets so the caller can write the same kind of stage-specific
-// stderr hint ("created but secret X failed", "secrets written but final
-// redeploy failed", etc).
+// Discriminated result for runSourceDeployWithSecrets. Stages map to the
+// API calls in order so the caller can write a stage-specific stderr hint
+// ("created but secret X failed", "secrets written but final redeploy
+// failed", etc).
 //
 // `created` is populated on set-secret / secret-redeploy errors that follow a
 // successful create, so the hint can include the function id the user needs to
@@ -211,7 +213,7 @@ export type RunSourceDeployWithSecretsResult =
   | { kind: "ok"; result: SourceDeployWithSecretsResult }
   | {
       kind: "error";
-      stage: "lookup" | "create" | "redeploy";
+      stage: "lookup" | "create";
       payload: unknown;
     }
   | {
@@ -256,34 +258,21 @@ export type RunSourceDeployWithSecretsResult =
 //      the new code and the new secret values atomically.
 //
 // On set-secret failure the orchestrator stops without calling the final
-// updateFunction: bindings are partially written and the running handler
-// has not yet been told about any of them, so resuming is a matter of
-// re-running set-secret for the missing keys and then `functions redeploy`.
+// updateFunction. Note that the secrets that DID land are now staged on the
+// function row: they will become live on the very next deploy of this
+// function, even one triggered by another caller or one that does not pass
+// any --secret flag. Callers should surface that to the operator so a
+// partial-write does not silently arm new bindings on an unrelated future
+// deploy. Recovery is `functions set-secret` for the missing keys followed
+// by a re-run of this command (or `functions redeploy`).
 export async function runSourceDeployWithSecrets(
-  api: SourceDeployApiSurface,
+  api: SourceDeployWithSecretsApiSurface,
   params: {
     name: string;
     files: Record<string, string>;
     secrets: SecretFlagPair[];
   },
 ): Promise<RunSourceDeployWithSecretsResult> {
-  // setSecret is optional on SourceDeployApiSurface for the legacy
-  // runSourceDeploy path; runSourceDeployWithSecrets always requires it.
-  // Fail loud at the boundary rather than crash deep inside the secret
-  // loop with a less actionable "undefined is not a function".
-  if (!api.setSecret) {
-    return {
-      kind: "error",
-      payload: {
-        code: "client_error",
-        message:
-          "runSourceDeployWithSecrets requires api.setSecret on the SourceDeployApiSurface",
-      },
-      stage: "create",
-    };
-  }
-  const setSecret = api.setSecret;
-
   const listed = await api.listFunctions();
   if (listed.error) {
     return {
@@ -297,7 +286,6 @@ export async function runSourceDeployWithSecrets(
 
   let functionId: string;
   let createPayload: CreateFunctionResult | undefined;
-  let initialCode: CreateFunctionResult | FunctionDetail;
   if (foundId === null) {
     const created = await api.createFunction({
       files: params.files,
@@ -320,20 +308,11 @@ export async function runSourceDeployWithSecrets(
     }
     functionId = data.id;
     createPayload = data;
-    initialCode = data;
   } else {
     // Existing function: take its id as-is and skip the intermediate
     // redeploy. The final updateFunction below is the single redeploy
     // that pushes new code + new secret bindings together.
     functionId = foundId;
-    initialCode = {
-      // Carry the id forward; the orchestrator's caller only needs `id` from
-      // this object when printing the eventual happy-path payload (the final
-      // `redeploy` FunctionDetail is what we surface), so a minimal shim is
-      // safer than fabricating a full FunctionDetail.
-      id: foundId,
-      name: params.name,
-    } as CreateFunctionResult;
   }
 
   const writtenSecrets: FunctionSecretWriteResult[] = [];
@@ -341,7 +320,7 @@ export async function runSourceDeployWithSecrets(
   for (let i = 0; i < params.secrets.length; i++) {
     const pair = params.secrets[i];
     const pendingKeys = params.secrets.slice(i + 1).map((p) => p.key);
-    const setResult = await setSecret({
+    const setResult = await api.setSecret({
       id: functionId,
       key: pair.key,
       value: pair.value,
@@ -407,7 +386,6 @@ export async function runSourceDeployWithSecrets(
     kind: "ok",
     result: {
       action: foundId === null ? "created" : "redeployed",
-      code: initialCode,
       redeploy: redeployed,
       secrets: writtenSecrets,
     },

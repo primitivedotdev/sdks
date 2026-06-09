@@ -34,7 +34,7 @@ import {
   renderBuildFailure,
   runSourceDeploy,
   runSourceDeployWithSecrets,
-  type SourceDeployApiSurface,
+  type SourceDeployWithSecretsApiSurface,
 } from "../function-source.js";
 import { emitRawSendMailFetchWarning } from "../lint/raw-send-mail-fetch.js";
 import {
@@ -310,16 +310,23 @@ class FunctionsDeployCommand extends Command {
 
   Pass secret source flags to seed bindings in the same command. Keys
   must match \`^[A-Z_][A-Z0-9_]*$\` (uppercase letters, digits,
-  underscores; first character is a letter or underscore). With one
-  or more secrets the deploy fans out to multiple API calls:
-  create-function (or, with --source against an existing name, a
-  setSecret-only path that skips the intermediate redeploy), set-secret
-  per pair, then a final update-function with the same bundle/source so
-  the running handler picks up the bindings. If a secret write fails
-  before the final redeploy, the function exists with whatever secrets
-  succeeded and the redeploy has NOT fired; re-run \`primitive functions
-  set-secret\` for the missing keys, then \`primitive functions deploy\`
-  (or \`functions redeploy\`) to push them live. ${SECRET_SOURCE_FLAGS_DESCRIPTION}`;
+  underscores; first character is a letter or underscore).
+
+  With one or more secrets the deploy fans out to multiple API calls.
+  For --file (and for --source when no function with the given name
+  exists yet): create-function, set-secret per pair, then a final
+  update-function so the running handler picks up the bindings. For
+  --source against an existing function name: the create-function step
+  is replaced by an id lookup, then set-secret per pair, then a single
+  update-function that binds the new code and the new secret env in
+  one step (avoiding an intermediate redeploy that would briefly run
+  the new code with the previous secret bindings).
+
+  If a secret write fails before the final redeploy, the function row
+  carries whatever bindings landed but the running handler has NOT yet
+  picked them up. Re-run \`primitive functions set-secret\` for the
+  missing keys, then re-run \`primitive functions deploy\` (or
+  \`functions redeploy\`) to push them live. ${SECRET_SOURCE_FLAGS_DESCRIPTION}`;
 
   static summary = "Deploy a new function from a bundled handler file";
 
@@ -625,9 +632,15 @@ class FunctionsDeployCommand extends Command {
 
   // Managed-build deploy from a project directory. Collects the source,
   // then idempotently creates or redeploys the function by name. When
-  // secret-source flags are passed, fans out to create-or-update + setSecret
-  // per pair + a final updateFunction so the running handler picks up the
-  // bindings, mirroring the --file deploy path.
+  // secret-source flags are passed:
+  //   * If the function does NOT exist, mirrors the --file path:
+  //     createFunction(files) → setSecret per pair → final
+  //     updateFunction(files) to bind the secrets into the running handler.
+  //   * If the function ALREADY exists, SKIPS the intermediate redeploy:
+  //     setSecret per pair → single final updateFunction(files) that binds
+  //     new code + new secret env atomically. Writing secrets before the
+  //     redeploy avoids briefly running the new code with the prior
+  //     secret bindings (workers snapshot secret env at deploy time).
   private async runSourceMode(
     flags: {
       "api-key"?: string;
@@ -679,7 +692,7 @@ class FunctionsDeployCommand extends Command {
       configDir: this.config.configDir,
     };
 
-    const apiSurface: SourceDeployApiSurface = {
+    const apiSurface: SourceDeployWithSecretsApiSurface = {
       createFunction: (p) =>
         createFunction({
           body: { files: p.files, name: p.name },
@@ -763,9 +776,18 @@ class FunctionsDeployCommand extends Command {
         ].join(", ");
         const createdClause = secretsOutcome.created
           ? `Function ${secretsOutcome.created.name} (${secretsOutcome.functionId}) was created`
-          : `Function ${secretsOutcome.functionId} already existed`;
+          : `Function ${flags.name} (${secretsOutcome.functionId}) already existed`;
+        // Atomicity warning: succeededKeys are now staged on the function row
+        // and will become live on the NEXT deploy of this function (even one
+        // a colleague triggers, and even one that does not pass --secret).
+        // Call that out so a partial write does not silently arm new bindings
+        // on an unrelated future redeploy.
+        const stagingWarning =
+          secretsOutcome.succeededKeys.length > 0
+            ? ` Note: [${succeeded}] are now staged on the function row and will bind on the next deploy of this function (including one that does not pass --secret).`
+            : "";
         process.stderr.write(
-          `${createdClause}, but writing secret ${secretsOutcome.failedKey} failed; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The redeploy is NOT yet live. Re-run \`primitive functions set-secret\` for each of [${allMissing}], then \`primitive functions deploy --source <dir> --name ${flags.name}\` to push them live.\n`,
+          `${createdClause}, but writing secret ${secretsOutcome.failedKey} failed; succeeded keys so far: ${succeeded}; keys not yet attempted: ${pending}. The redeploy is NOT yet live. Re-run \`primitive functions set-secret\` for each of [${allMissing}], then \`primitive functions deploy --source ${sourceDir} --name ${flags.name}\` to push them live.${stagingWarning}\n`,
         );
       } else if (secretsOutcome.stage === "secret-redeploy") {
         const succeeded =
@@ -774,9 +796,9 @@ class FunctionsDeployCommand extends Command {
             : "(none)";
         const createdClause = secretsOutcome.created
           ? `Function ${secretsOutcome.created.name} (${secretsOutcome.functionId}) was created and`
-          : `Function ${secretsOutcome.functionId} already existed and`;
+          : `Function ${flags.name} (${secretsOutcome.functionId}) already existed and`;
         process.stderr.write(
-          `${createdClause} secrets [${succeeded}] were written, but the final redeploy failed; the new bindings are NOT yet live. Re-run \`primitive functions deploy --source <dir> --name ${flags.name}\` once the cause is fixed.\n`,
+          `${createdClause} secrets [${succeeded}] were written, but the final redeploy failed; the new bindings are NOT yet live. Re-run \`primitive functions deploy --source ${sourceDir} --name ${flags.name}\` once the cause is fixed.\n`,
         );
       } else {
         renderBuildFailure(secretsOutcome.payload, (chunk) =>
