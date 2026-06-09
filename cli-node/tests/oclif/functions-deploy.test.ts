@@ -139,6 +139,18 @@ describe("functions:deploy command", () => {
     expect(flags.timeout.default).toBeGreaterThan(0);
     expect(flags["poll-interval"].default).toBeGreaterThan(0);
   });
+
+  it("documents that --source supports secret flags", () => {
+    // Without this assertion the help text could quietly regress to the
+    // "not supported with --source yet" copy and the friction the
+    // source+secrets path was added to remove would silently come back.
+    const description = FunctionsDeployCommand.description ?? "";
+    expect(description).not.toMatch(/not supported with --source/i);
+    const examples = (FunctionsDeployCommand.examples ?? []) as string[];
+    expect(
+      examples.some((e) => e.includes("--source") && e.includes("--secret")),
+    ).toBe(true);
+  });
 });
 
 describe("parseSecretFlags", () => {
