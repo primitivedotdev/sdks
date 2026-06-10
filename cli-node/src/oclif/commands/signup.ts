@@ -1168,8 +1168,8 @@ export class SignupConfirmCommand extends Command {
   static examples = [
     "<%= config.bin %> signup confirm user@example.com 123456",
     "<%= config.bin %> signup confirm user@example.com 123456 --org-id 00000000-0000-4000-8000-000000000000",
-    "read -rs CODE && <%= config.bin %> signup confirm user@example.com --code-from-env CODE && unset CODE",
-    "printf '%s' \"$CODE\" | <%= config.bin %> signup confirm user@example.com --code-from-stdin",
+    'read -rs CODE && CODE="$CODE" <%= config.bin %> signup confirm user@example.com --code-from-env CODE && unset CODE',
+    "read -rs CODE && printf '%s' \"$CODE\" | <%= config.bin %> signup confirm user@example.com --code-from-stdin && unset CODE",
     "<%= config.bin %> signup confirm user@example.com --code-from-file /run/user/$(id -u)/verification-code",
   ];
 
@@ -1190,7 +1190,7 @@ export class SignupConfirmCommand extends Command {
     }),
     "code-from-env": Flags.string({
       description:
-        "Read the verification code from this environment variable. Pair with `read -rs CODE` so the value never appears on the command line or in shell history.",
+        'Read the verification code from this environment variable. Pair with `read -rs CODE && CODE="$CODE" primitive signup confirm <email> --code-from-env CODE && unset CODE` so the value never appears on the command line or in shell history. Plain `read` creates a shell-local variable that child processes cannot see; the inline `CODE="$CODE"` exports it for just the one command.',
     }),
     force: Flags.boolean({
       char: "f",
