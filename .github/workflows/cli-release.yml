@@ -156,7 +156,7 @@ jobs:
         if: ${{ steps.version.outputs.changed == 'true' }}
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
-          role-to-assume: ${{ secrets.AWS_HOMEBREW_TAP_ROLE_ARN }}
+          role-to-assume: ${{ vars.AWS_HOMEBREW_TAP_ROLE_ARN }}
           aws-region: us-west-2
 
       - name: Fetch CI App credential from Secrets Manager
