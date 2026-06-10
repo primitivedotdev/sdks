@@ -1037,6 +1037,116 @@ class SignupCommand extends Command {
   }
 }
 
+// Resolve the verification code from exactly one of: positional arg,
+// --code-from-stdin, --code-from-file <path>, or --code-from-env <VAR>.
+// The non-positional sources exist so an agent constructing this command
+// for the user can keep the code value out of its own prompt context:
+// the agent writes the command template referencing $CODE / a file path,
+// the user fills the value at the shell, and the OS hands it to the CLI.
+// Inputs come in via flag sources rather than a single value field so the
+// "exactly one source" rule is enforceable client-side before any further
+// work happens.
+export type ResolveVerificationCodeResult =
+  | { kind: "ok"; code: string }
+  | { kind: "error"; message: string };
+
+export type ResolveVerificationCodeInput = {
+  positional?: string;
+  fromStdin?: boolean;
+  fromFile?: string;
+  fromEnv?: string;
+  env?: Record<string, string | undefined>;
+  readFile?: (path: string) => string;
+  readStdin?: () => string;
+};
+
+export function resolveVerificationCode(
+  input: ResolveVerificationCodeInput,
+): ResolveVerificationCodeResult {
+  const sources = [
+    input.positional !== undefined ? "positional" : null,
+    input.fromStdin === true ? "--code-from-stdin" : null,
+    input.fromFile !== undefined ? "--code-from-file" : null,
+    input.fromEnv !== undefined ? "--code-from-env" : null,
+  ].filter((v): v is string => v !== null);
+
+  if (sources.length === 0) {
+    return {
+      kind: "error",
+      message:
+        "Pass the verification code as a positional argument or via one of --code-from-stdin, --code-from-file, or --code-from-env.",
+    };
+  }
+  if (sources.length > 1) {
+    return {
+      kind: "error",
+      message: `Pass exactly one source for the verification code; got ${sources.join(", ")}.`,
+    };
+  }
+
+  if (input.positional !== undefined) {
+    return { kind: "ok", code: input.positional };
+  }
+  if (input.fromEnv !== undefined) {
+    const env = input.env ?? process.env;
+    const value = env[input.fromEnv];
+    if (value === undefined) {
+      return {
+        kind: "error",
+        message: `--code-from-env ${input.fromEnv}: environment variable is not set.`,
+      };
+    }
+    return { kind: "ok", code: stripTrailingNewline(value) };
+  }
+  if (input.fromFile !== undefined) {
+    const readFile = input.readFile ?? defaultReadCodeFile;
+    try {
+      const raw = readFile(input.fromFile);
+      return { kind: "ok", code: stripTrailingNewline(raw) };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `--code-from-file ${input.fromFile}: could not read file: ${detail}`,
+      };
+    }
+  }
+  // sources.length === 1 narrows to one of the four; positional / env / file
+  // are handled above, so the remaining case is --code-from-stdin.
+  const readStdin = input.readStdin ?? defaultReadCodeStdin;
+  try {
+    const raw = readStdin();
+    return { kind: "ok", code: stripTrailingNewline(raw) };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `--code-from-stdin: ${detail}`,
+    };
+  }
+}
+
+function stripTrailingNewline(value: string): string {
+  // `read` and most file editors append a trailing newline. Strip a single
+  // trailing CR/LF so the resolved code matches what the user actually typed.
+  // Aggressive trimming would silently swallow a code that legitimately
+  // contains internal whitespace, so this is intentionally minimal.
+  return value.replace(/\r?\n$/, "");
+}
+
+function defaultReadCodeFile(path: string): string {
+  return readFileSync(path, "utf8");
+}
+
+function defaultReadCodeStdin(): string {
+  if (process.stdin.isTTY) {
+    throw new Error(
+      "stdin is a TTY; pipe the code into this command or use --code-from-file / --code-from-env instead.",
+    );
+  }
+  return readFileSync(0, "utf8");
+}
+
 export class SignupConfirmCommand extends Command {
   static args = {
     email: Args.string({
@@ -1044,8 +1154,9 @@ export class SignupConfirmCommand extends Command {
       required: true,
     }),
     code: Args.string({
-      description: "Verification code from the signup email",
-      required: true,
+      description:
+        "Verification code from the signup email. Optional when one of --code-from-stdin / --code-from-file / --code-from-env is passed; exactly one source must be set.",
+      required: false,
     }),
   };
 
@@ -1057,6 +1168,9 @@ export class SignupConfirmCommand extends Command {
   static examples = [
     "<%= config.bin %> signup confirm user@example.com 123456",
     "<%= config.bin %> signup confirm user@example.com 123456 --org-id 00000000-0000-4000-8000-000000000000",
+    "read -rs CODE && <%= config.bin %> signup confirm user@example.com --code-from-env CODE && unset CODE",
+    "printf '%s' \"$CODE\" | <%= config.bin %> signup confirm user@example.com --code-from-stdin",
+    "<%= config.bin %> signup confirm user@example.com --code-from-file /run/user/$(id -u)/verification-code",
   ];
 
   static flags = {
@@ -1065,6 +1179,18 @@ export class SignupConfirmCommand extends Command {
         "Override the primary API base URL. Internal testing only; not documented to customers.",
       env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
+    }),
+    "code-from-stdin": Flags.boolean({
+      description:
+        "Read the verification code from stdin instead of the positional argument. Use when an agent is constructing the command for the user to run, so the code never enters the agent's prompt context.",
+    }),
+    "code-from-file": Flags.string({
+      description:
+        "Read the verification code from a UTF-8 file at this path. Trailing newlines are stripped.",
+    }),
+    "code-from-env": Flags.string({
+      description:
+        "Read the verification code from this environment variable. Pair with `read -rs CODE` so the value never appears on the command line or in shell history.",
     }),
     force: Flags.boolean({
       char: "f",
@@ -1078,6 +1204,15 @@ export class SignupConfirmCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(SignupConfirmCommand);
+    const resolvedCode = resolveVerificationCode({
+      positional: args.code,
+      fromStdin: flags["code-from-stdin"] === true,
+      fromFile: flags["code-from-file"],
+      fromEnv: flags["code-from-env"],
+    });
+    if (resolvedCode.kind === "error") {
+      throw cliError(resolvedCode.message);
+    }
     let releaseCredentialsLock: () => void;
     try {
       releaseCredentialsLock = acquireCliCredentialsLock(this.config.configDir);
@@ -1088,7 +1223,7 @@ export class SignupConfirmCommand extends Command {
 
     try {
       await runSignupConfirmWithCredentialLock({
-        code: args.code,
+        code: resolvedCode.code,
         configDir: this.config.configDir,
         email: args.email,
         flags,

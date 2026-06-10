@@ -12,6 +12,7 @@ import { chatStatePath } from "../../src/oclif/chat-state.js";
 import {
   formatSignupSeconds,
   loadPendingAgentSignup,
+  resolveVerificationCode,
   retryAfterSeconds,
   runSignupConfirmWithCredentialLock,
   runSignupInteractiveWithCredentialLock,
@@ -115,6 +116,115 @@ describe("signup command helpers", () => {
     const response = new Response(null, { headers: { "Retry-After": "45" } });
     expect(retryAfterSeconds({ response })).toBe(45);
     expect(retryAfterSeconds({ response: new Response(null) })).toBeNull();
+  });
+});
+
+describe("resolveVerificationCode", () => {
+  it("returns the positional value when only the positional source is set", () => {
+    const result = resolveVerificationCode({ positional: "123456" });
+    expect(result).toEqual({ kind: "ok", code: "123456" });
+  });
+
+  it("reads the value from the named environment variable", () => {
+    const result = resolveVerificationCode({
+      fromEnv: "TEST_CODE",
+      env: { TEST_CODE: "482917" },
+    });
+    expect(result).toEqual({ kind: "ok", code: "482917" });
+  });
+
+  it("strips a single trailing newline from --code-from-env values", () => {
+    // Reading via shell `read CODE; export CODE` leaves a trailing LF when
+    // some shells dump env vars; trimming exactly one CR/LF protects against
+    // that without swallowing intentional whitespace inside the code.
+    const result = resolveVerificationCode({
+      fromEnv: "TEST_CODE",
+      env: { TEST_CODE: "482917\n" },
+    });
+    expect(result).toEqual({ kind: "ok", code: "482917" });
+  });
+
+  it("reads the value from --code-from-file and strips the trailing newline", () => {
+    const result = resolveVerificationCode({
+      fromFile: "/run/user/1000/code",
+      readFile: () => "482917\n",
+    });
+    expect(result).toEqual({ kind: "ok", code: "482917" });
+  });
+
+  it("reads the value from --code-from-stdin and strips the trailing newline", () => {
+    const result = resolveVerificationCode({
+      fromStdin: true,
+      readStdin: () => "482917\n",
+    });
+    expect(result).toEqual({ kind: "ok", code: "482917" });
+  });
+
+  it("rejects when no source is set", () => {
+    const result = resolveVerificationCode({});
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain(
+        "Pass the verification code as a positional argument",
+      );
+    }
+  });
+
+  it("rejects when two sources are set", () => {
+    // The exactly-one rule keeps callers from constructing a command that
+    // looks like it consumes from stdin but silently picks the positional
+    // arg, or vice versa. Both names appear in the error so the user can
+    // see which sources collided.
+    const result = resolveVerificationCode({
+      positional: "123456",
+      fromEnv: "TEST_CODE",
+      env: { TEST_CODE: "482917" },
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("positional");
+      expect(result.message).toContain("--code-from-env");
+    }
+  });
+
+  it("rejects --code-from-env pointing at an unset variable", () => {
+    const result = resolveVerificationCode({
+      fromEnv: "MISSING_VAR",
+      env: {},
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("MISSING_VAR");
+      expect(result.message).toContain("not set");
+    }
+  });
+
+  it("surfaces a file read failure as a structured error", () => {
+    const result = resolveVerificationCode({
+      fromFile: "/no/such/file",
+      readFile: () => {
+        throw new Error("ENOENT: no such file or directory");
+      },
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("/no/such/file");
+      expect(result.message).toContain("ENOENT");
+    }
+  });
+
+  it("surfaces a stdin read failure as a structured error", () => {
+    const result = resolveVerificationCode({
+      fromStdin: true,
+      readStdin: () => {
+        throw new Error("stdin is a TTY");
+      },
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.message).toContain("--code-from-stdin");
+      expect(result.message).toContain("TTY");
+    }
   });
 });
 
