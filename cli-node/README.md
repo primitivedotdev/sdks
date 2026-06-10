@@ -16,6 +16,8 @@ primitive whoami
 prim whoami
 ```
 
+The same CLI is also published unscoped as [`primcli`](https://www.npmjs.com/package/primcli) — `npm install -g primcli` installs an identical build with the same `primitive`/`prim` commands. Use whichever name you prefer; they track the same version.
+
 Or with no install:
 
 ```bash
