@@ -152,18 +152,50 @@ jobs:
             --title "CLI v$VERSION" \
             --generate-notes
 
+      - name: Configure AWS credentials
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_HOMEBREW_TAP_ROLE_ARN }}
+          aws-region: us-west-2
+
+      - name: Fetch CI App credential from Secrets Manager
+        id: app-creds
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        run: |
+          set -euo pipefail
+          JSON=$(aws secretsmanager get-secret-value \
+            --secret-id staging/github-ci-app \
+            --query SecretString --output text)
+          APP_ID=$(printf '%s' "$JSON" | jq -r '.app_id')
+          PRIVATE_KEY=$(printf '%s' "$JSON" | jq -r '.private_key')
+          while IFS= read -r line; do
+            [ -n "$line" ] && echo "::add-mask::$line"
+          done <<< "$PRIVATE_KEY"
+          echo "app-id=$APP_ID" >> "$GITHUB_OUTPUT"
+          {
+            echo "private-key<<PEMEOF"
+            printf '%s\n' "$PRIVATE_KEY"
+            echo "PEMEOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Mint Homebrew tap app token
+        id: app-token
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        with:
+          app-id: ${{ steps.app-creds.outputs.app-id }}
+          private-key: ${{ steps.app-creds.outputs.private-key }}
+          owner: primitivedotdev
+          repositories: homebrew-tap
+
       - name: Trigger Homebrew tap update
         if: ${{ steps.version.outputs.changed == 'true' }}
         env:
-          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_BOT_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           VERSION: ${{ steps.version.outputs.current }}
         run: |
           set -euo pipefail
-
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::notice::HOMEBREW_TAP_BOT_TOKEN is not configured; skipping Homebrew tap dispatch."
-            exit 0
-          fi
 
           node <<'NODE' > dispatch.json
           const payload = {
