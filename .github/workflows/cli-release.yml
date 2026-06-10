@@ -110,6 +110,14 @@ jobs:
         if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
         run: scripts/npm-publish-with-retry.sh --package @primitivedotdev/cli --version "${{ steps.version.outputs.current }}" --directory cli-node
 
+      - name: Publish unscoped mirror package to npm
+        # Additive: republishes the identical CLI artifact under the unscoped
+        # `primitivecli` name so `npm i -g primitivecli` works without the scope.
+        # Locked to the same version as @primitivedotdev/cli; a no-op when the
+        # mirror version is already published.
+        if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
+        run: scripts/cli-mirror-publish.sh primitivecli "${{ steps.version.outputs.current }}"
+
       - name: Check GitHub release state
         if: ${{ steps.version.outputs.changed == 'true' }}
         id: release_state

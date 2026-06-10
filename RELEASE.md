@@ -3,7 +3,7 @@
 This repository publishes three language SDKs plus a Node-only CLI from one shared webhook contract and one shared API contract.
 
 - Node SDK: `@primitivedotdev/sdk`
-- Node CLI: `@primitivedotdev/cli`
+- Node CLI: `@primitivedotdev/cli` (also mirrored unscoped as `primitivecli`)
 - Python: `primitivedotdev`
 - Go: `github.com/primitivedotdev/sdks/sdk-go`
 
@@ -41,9 +41,13 @@ Releases are automated from `main`.
 4. Verify the package contents with `npm view @primitivedotdev/cli version`.
 5. Confirm the packed artifact exposes the `primitive` bin and that `primitive list-operations` succeeds in a fresh install.
 
+The same workflow also publishes the CLI a second time under the unscoped name `primitivecli` (via `scripts/cli-mirror-publish.sh`). The mirror is the identical build with only the package `name` changed, locked to the same version, so `npm install -g primitivecli` and `npm install -g @primitivedotdev/cli` are interchangeable. The mirror publish is a no-op when that version already exists, so a re-run is safe. After a release, verify with `npm view primitivecli version`.
+
 Coordinate Node SDK and CLI releases when both ship in the same cycle: cut the SDK first (so its npm version is available), then bump CLI's `@primitivedotdev/sdk` dep range if needed and ship CLI.
 
 Both npm packages use npm trusted publishing from GitHub Actions. Do not add npm API tokens; configure npmjs trusted publishers for `@primitivedotdev/sdk` with `.github/workflows/node-release.yml` and `@primitivedotdev/cli` with `.github/workflows/cli-release.yml`.
+
+The unscoped `primitivecli` mirror needs its own npm trusted publisher (same `.github/workflows/cli-release.yml`). Because npm trusted publishing requires the package to already exist, the first `primitivecli` publish is a one-time manual `npm publish` to claim the name; after that, configure the trusted publisher and the workflow keeps it in lockstep.
 
 ## Python Release
 
