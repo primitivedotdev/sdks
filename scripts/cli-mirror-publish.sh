@@ -6,7 +6,7 @@ usage() {
 Usage: cli-mirror-publish.sh <mirror-package-name> <version>
 
 Publishes the cli-node artifact a second time under an unscoped mirror name
-(for example `primitivecli`). The scoped `@primitivedotdev/cli` package remains
+(for example `primcli`). The scoped `@primitivedotdev/cli` package remains
 the source of truth: this packs the real CLI to capture its exact published
 file set, rewrites only the package.json "name", and republishes it verbatim so
 the two packages always ship identical contents at the same version.
@@ -60,13 +60,16 @@ if [[ ! -f "$pkg_dir/package.json" ]]; then
   exit 1
 fi
 
-# Rewrite only the package name; everything else (version, bin, files, deps,
-# oclif config) is carried over from the scoped package verbatim.
+# Rewrite the package name and drop the build lifecycle scripts. Everything
+# else (version, bin, files, deps, oclif config) is carried over verbatim. The
+# staged directory is the already-built tarball with no node_modules, so the
+# prepack/prepublishOnly build hooks must not re-run at publish time.
 MIRROR_NAME="$mirror_name" node -e '
 const fs = require("fs");
 const file = process.argv[1];
 const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
 pkg.name = process.env.MIRROR_NAME;
+delete pkg.scripts;
 fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + "\n");
 ' "$pkg_dir/package.json"
 
