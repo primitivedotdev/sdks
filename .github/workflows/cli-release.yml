@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'cli-node/package.json'
+      - 'packages/cli-alias/package.json'
   workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
@@ -109,6 +110,20 @@ jobs:
       - name: Publish package to npm
         if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
         run: scripts/npm-publish-with-retry.sh --package @primitivedotdev/cli --version "${{ steps.version.outputs.current }}" --directory cli-node
+
+      - name: Publish unscoped CLI alias to npm
+        # primitive-email is a thin alias of @primitivedotdev/cli so the CLI is
+        # discoverable on npm under the bare brand name. It carries no build of
+        # its own — its bin re-exports the scoped package — so it tracks the CLI
+        # version exactly. Idempotent: the retry script skips if already published.
+        run: |
+          set -euo pipefail
+          cli_version=$(node -p "require('./cli-node/package.json').version")
+          cd packages/cli-alias
+          npm pkg set version="$cli_version"
+          npm pkg set "dependencies.@primitivedotdev/cli"="$cli_version"
+          cd "$GITHUB_WORKSPACE"
+          scripts/npm-publish-with-retry.sh --package primitive-email --version "$cli_version" --directory packages/cli-alias
 
       - name: Check GitHub release state
         if: ${{ steps.version.outputs.changed == 'true' }}

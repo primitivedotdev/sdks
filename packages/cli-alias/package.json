@@ -1,0 +1,39 @@
+{
+  "name": "primitive-email",
+  "version": "1.1.0",
+  "description": "Official Primitive CLI (unscoped alias of @primitivedotdev/cli): send and inspect mail, deploy Primitive Functions, and manage email domains from the terminal. Installs the `primitive` and `prim` commands.",
+  "type": "module",
+  "bin": {
+    "primitive": "./bin/run.js",
+    "prim": "./bin/run.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "keywords": [
+    "primitive",
+    "primitive.dev",
+    "cli",
+    "email",
+    "agent",
+    "functions",
+    "webhook"
+  ],
+  "author": "Primitive <support@primitive.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/primitivedotdev/sdks.git",
+    "directory": "packages/cli-alias"
+  },
+  "bugs": {
+    "url": "https://github.com/primitivedotdev/sdks/issues"
+  },
+  "homepage": "https://primitive.dev",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@primitivedotdev/cli": "workspace:*"
+  }
+}
