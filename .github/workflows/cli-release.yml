@@ -103,7 +103,10 @@ jobs:
         run: scripts/npm-wait-for-version.sh @primitivedotdev/sdk "${{ steps.sdk_version.outputs.current }}" 1200 10
 
       - name: Install cli dependencies
-        if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
+        # Gated only on the version bump (not the scoped publish state) so the
+        # mirror step below can still build and recover even when the scoped
+        # package for this version is already on npm.
+        if: ${{ steps.version.outputs.changed == 'true' }}
         run: make cli-install
 
       - name: Publish package to npm
@@ -113,9 +116,14 @@ jobs:
       - name: Publish unscoped mirror package to npm
         # Additive: republishes the identical CLI artifact under the unscoped
         # `primcli` name so `npm i -g primcli` works without the scope. Locked
-        # to the same version as @primitivedotdev/cli; a no-op when the mirror
-        # version is already published.
-        if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
+        # to the same version as @primitivedotdev/cli; the publish helper is a
+        # no-op when the mirror version is already on npm.
+        #
+        # Gated only on the version bump — NOT on the scoped package's publish
+        # state — so a run where the scoped publish already happened (e.g. the
+        # mirror failed on a prior run before its trusted publisher existed, or
+        # a workflow_dispatch re-run) still attempts the mirror and recovers.
+        if: ${{ steps.version.outputs.changed == 'true' }}
         run: scripts/cli-mirror-publish.sh primcli "${{ steps.version.outputs.current }}"
 
       - name: Check GitHub release state
