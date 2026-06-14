@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 import { Config } from "@oclif/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { COMMANDS } from "../../src/oclif/index.js";
-import { completionFunctionPath } from "../../src/oclif/shell-completion-script.js";
+import {
+  completionFunctionPath,
+  readCompletionFunction,
+} from "../../src/oclif/shell-completion-script.js";
 
 const pkgRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -46,6 +49,19 @@ describe("completionFunctionPath", () => {
     expect(completionFunctionPath("/cache", "primitive", "zsh")).toBe(
       path.join("/cache", "autocomplete", "functions", "zsh", "_primitive"),
     );
+  });
+});
+
+describe("readCompletionFunction", () => {
+  it("throws an actionable error when the cached script is missing", () => {
+    const missingCacheDir = path.join(
+      tmpdir(),
+      "primitive-no-such-cache-dir-xyz",
+    );
+
+    expect(() =>
+      readCompletionFunction(missingCacheDir, "primitive", "bash"),
+    ).toThrow(/--refresh-cache/);
   });
 });
 
