@@ -62,6 +62,7 @@ import SignupCommand, {
 } from "./commands/signup.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
+import { readCompletionFunction } from "./shell-completion-script.js";
 
 class ListOperationsCommand extends Command {
   static description =
@@ -261,15 +262,47 @@ class CompletionCommand extends Command {
   };
 
   static description =
-    "Show shell completion output or installation instructions for supported shells";
+    `Output a sourceable shell completion script, or print setup instructions.
 
-  static summary = "Show shell completion output or installation instructions";
+  For fish, and for bash/zsh when the output is piped or redirected (e.g. into a
+  completion file under bash_completion.d or zsh's site-functions), this emits
+  the raw completion script. For bash/zsh in an interactive terminal it prints
+  the human-readable setup instructions instead. This keeps a redirected
+  \`${"<%= config.bin %>"} completion bash > <file>\` safe to source -- the file holds an
+  actual completion function, never instructional prose a shell would choke on.`;
+
+  static summary =
+    "Output a shell completion script or print setup instructions";
+
+  static examples = [
+    "<%= config.bin %> completion bash >> /etc/bash_completion.d/primitive",
+    "<%= config.bin %> completion zsh > /usr/local/share/zsh/site-functions/_primitive",
+    "<%= config.bin %> completion fish > ~/.config/fish/completions/primitive.fish",
+  ];
 
   async run(): Promise<void> {
     const { args } = await this.parse(CompletionCommand);
+    const shell = args.shell;
 
-    if (args.shell === "fish") {
+    if (shell === "fish") {
       this.log(renderFishCompletion(this.config.bin));
+      return;
+    }
+
+    // When stdout is not an interactive terminal the caller is capturing the
+    // output -- a redirect into a completion file, or a package manager
+    // generating one. In that case emit the raw sourceable completion
+    // *function* rather than `autocomplete`'s human-readable setup
+    // instructions, which a shell would otherwise try to execute line by line
+    // (the cause of `bash: Setup: command not found` style errors when the
+    // instructions land in bash_completion.d).
+    if ((shell === "bash" || shell === "zsh") && !process.stdout.isTTY) {
+      // `--refresh-cache` rebuilds the cached completion function for the
+      // current command set without printing the instructions.
+      await this.config.runCommand("autocomplete", [shell, "--refresh-cache"]);
+      this.log(
+        readCompletionFunction(this.config.cacheDir, this.config.bin, shell),
+      );
       return;
     }
 
