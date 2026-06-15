@@ -154,7 +154,7 @@ jobs:
 
       - name: Configure AWS credentials
         if: ${{ steps.version.outputs.changed == 'true' }}
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ vars.AWS_HOMEBREW_TAP_ROLE_ARN }}
           aws-region: us-west-2
