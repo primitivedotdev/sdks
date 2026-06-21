@@ -307,6 +307,22 @@ def test_email_received_event_model_rejects_null_analysis_objects(
         )
 
 
+@pytest.mark.parametrize("field", ["bounce", "tls_report", "dmarc_report"])
+def test_email_received_event_model_rejects_null_machine_mail_analysis_objects(
+    valid_payload: dict[str, Any], field: str
+) -> None:
+    with pytest.raises(ValidationError):
+        EmailReceivedEvent.model_validate(
+            {
+                **valid_payload,
+                "email": {
+                    **valid_payload["email"],
+                    "analysis": {field: None},
+                },
+            }
+        )
+
+
 def test_validate_email_received_event_rejects_fractional_dkim_key_bits(
     valid_payload: dict[str, Any],
 ) -> None:

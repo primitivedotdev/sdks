@@ -108,9 +108,17 @@ export interface EmailReceivedEvent {
  */
 id: string
 /**
- * Event type identifier. Always `"email.received"` for this event type.
+ * Event type identifier.
+ * 
+ * - `email.received` - A normal inbound email.
+ * - `email.bounced` - A delivery status notification (DSN) reporting that a message delivery failed. Carries `email.analysis.bounce`.
+ * - `email.tls_report` - An SMTP TLS report (RFC 8460). Carries `email.analysis.tls_report`.
+ * - `email.dmarc_report` - A DMARC aggregate report (RFC 7489). Carries `email.analysis.dmarc_report`.
+ * - `email.dmarc_failure` - A DMARC failure (forensic) report.
+ * 
+ * Machine-generated mail (bounces and the report types above) is delivered under its own event type rather than `email.received`, so an endpoint subscribed only to `email.received` receives just normal inbound mail. The payload shape is otherwise identical across event types; the type-specific details live under `email.analysis`.
  */
-event: "email.received"
+event: ("email.received" | "email.bounced" | "email.tls_report" | "email.dmarc_report" | "email.dmarc_failure")
 /**
  * API version in date format (YYYY-MM-DD). Use this to detect version mismatches between webhook and SDK.
  */
@@ -490,6 +498,9 @@ spamassassin?: {
 score: number
 }
 forward?: ForwardAnalysis
+bounce?: BounceAnalysis
+tls_report?: TlsReportAnalysis
+dmarc_report?: DmarcReportAnalysis
 }
 /**
  * Forward detection and analysis results.
@@ -666,6 +677,192 @@ verification: null
 summary: string
 }
 /**
+ * Bounce (delivery status notification) analysis.
+ * 
+ * Present on `email.bounced` events: the parsed DSN reporting that a message you sent could not be delivered. Absent on all other event types.
+ */
+export interface BounceAnalysis {
+/**
+ * Always `true` on a parsed bounce.
+ */
+is_bounce: true
+/**
+ * The machine-mail kind. Always `dsn` for a bounce.
+ */
+kind: "dsn"
+/**
+ * Whether the failure is permanent (hard bounce), transient (soft bounce, may be retried), or undetermined.
+ */
+type: ("permanent" | "transient" | "undetermined")
+/**
+ * Best-effort reason category for the failure.
+ */
+category: ("mailbox_does_not_exist" | "domain_does_not_exist" | "domain_not_accepting_mail" | "mailbox_full" | "mailbox_inactive" | "message_too_large" | "content_rejected" | "policy_blocked" | "auth_failure" | "relay_denied" | "rate_limited" | "network_error" | "recipient_moved" | "expired" | "undetermined")
+/**
+ * Which signal produced `category` (for transparency and debugging).
+ */
+classified_by: ("status_code" | "smtp_code" | "pattern" | "provider" | "none")
+/**
+ * The recipient address that failed, if the report identifies one.
+ */
+failed_recipient: (string | null)
+/**
+ * SMTP reply code (e.g. `550`), if reported.
+ */
+smtp_code: (number | null)
+/**
+ * Enhanced mail system status code (RFC 3463, e.g. `5.1.1`), if reported.
+ */
+status_code: (string | null)
+/**
+ * Raw diagnostic text from the reporting MTA, if present.
+ */
+diagnostic_code: (string | null)
+/**
+ * The MTA that generated the report, if identifiable.
+ */
+reported_by_mta: (string | null)
+/**
+ * Message-ID of the original message that bounced, if recoverable. Match this against the `message_id` of a message you sent to correlate the bounce.
+ */
+original_message_id: (string | null)
+/**
+ * Human-readable reason strings extracted from the report.
+ */
+reasons: string[]
+}
+/**
+ * SMTP TLS report analysis (RFC 8460).
+ * 
+ * Present on `email.tls_report` events: a remote MTA's report of TLS negotiation results for mail sent to your domain. Absent on all other event types.
+ */
+export interface TlsReportAnalysis {
+kind: "tls_report"
+/**
+ * Reporting organization name.
+ */
+organization: (string | null)
+report_id: (string | null)
+/**
+ * Reporter contact, if provided.
+ */
+contact: (string | null)
+date_range: {
+/**
+ * ISO 8601 start of the reporting window.
+ */
+start: (string | null)
+/**
+ * ISO 8601 end of the reporting window.
+ */
+end: (string | null)
+}
+total_successful_sessions: number
+total_failed_sessions: number
+policies: TlsReportPolicy[]
+}
+/**
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "TlsReportPolicy".
+ */
+export interface TlsReportPolicy {
+policy_domain: (string | null)
+/**
+ * Policy type the sessions were evaluated against (e.g. `sts`, `tlsa`, `no-policy-found`).
+ */
+policy_type: (string | null)
+successful_sessions: number
+failed_sessions: number
+failures: TlsReportFailure[]
+}
+/**
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "TlsReportFailure".
+ */
+export interface TlsReportFailure {
+/**
+ * Failure result type (e.g. `certificate-expired`, `starttls-not-supported`).
+ */
+result_type: (string | null)
+/**
+ * Number of sessions that hit this failure.
+ */
+count: number
+sending_mta_ip: (string | null)
+receiving_mx_hostname: (string | null)
+}
+/**
+ * DMARC aggregate report analysis (RFC 7489).
+ * 
+ * Present on `email.dmarc_report` events: a receiver's periodic aggregate report of DMARC authentication results for your domain. Absent on all other event types.
+ */
+export interface DmarcReportAnalysis {
+kind: "dmarc_report"
+organization: (string | null)
+report_id: (string | null)
+date_range: {
+/**
+ * ISO 8601 start of the reporting window.
+ */
+start: (string | null)
+/**
+ * ISO 8601 end of the reporting window.
+ */
+end: (string | null)
+}
+policy_published: {
+domain: (string | null)
+/**
+ * Published domain policy: `none`, `quarantine`, or `reject`.
+ */
+p: (string | null)
+/**
+ * Published subdomain policy.
+ */
+sp: (string | null)
+/**
+ * Percentage of messages the policy is applied to.
+ */
+pct: (number | null)
+/**
+ * DKIM alignment mode: `r` (relaxed) or `s` (strict).
+ */
+adkim: (string | null)
+/**
+ * SPF alignment mode: `r` (relaxed) or `s` (strict).
+ */
+aspf: (string | null)
+}
+/**
+ * Total messages covered by the report.
+ */
+total_count: number
+dkim_pass_count: number
+spf_pass_count: number
+records: DmarcRecord[]
+}
+/**
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "DmarcRecord".
+ */
+export interface DmarcRecord {
+source_ip: (string | null)
+count: number
+/**
+ * Disposition applied by the receiver: `none`, `quarantine`, or `reject`.
+ */
+disposition: (string | null)
+/**
+ * DKIM alignment result: `pass` or `fail`.
+ */
+dkim: (string | null)
+/**
+ * SPF alignment result: `pass` or `fail`.
+ */
+spf: (string | null)
+header_from: (string | null)
+}
+/**
  * Email authentication results (SPF, DKIM, DMARC).
  */
 export interface EmailAuth {
@@ -793,9 +990,17 @@ export interface EmailReceivedEvent1 {
  */
 id: string
 /**
- * Event type identifier. Always `"email.received"` for this event type.
+ * Event type identifier.
+ * 
+ * - `email.received` - A normal inbound email.
+ * - `email.bounced` - A delivery status notification (DSN) reporting that a message delivery failed. Carries `email.analysis.bounce`.
+ * - `email.tls_report` - An SMTP TLS report (RFC 8460). Carries `email.analysis.tls_report`.
+ * - `email.dmarc_report` - A DMARC aggregate report (RFC 7489). Carries `email.analysis.dmarc_report`.
+ * - `email.dmarc_failure` - A DMARC failure (forensic) report.
+ * 
+ * Machine-generated mail (bounces and the report types above) is delivered under its own event type rather than `email.received`, so an endpoint subscribed only to `email.received` receives just normal inbound mail. The payload shape is otherwise identical across event types; the type-specific details live under `email.analysis`.
  */
-event: "email.received"
+event: ("email.received" | "email.bounced" | "email.tls_report" | "email.dmarc_report" | "email.dmarc_failure")
 /**
  * API version in date format (YYYY-MM-DD). Use this to detect version mismatches between webhook and SDK.
  */
@@ -954,6 +1159,147 @@ spamassassin?: {
 score: number
 }
 forward?: ForwardAnalysis
+bounce?: BounceAnalysis
+tls_report?: TlsReportAnalysis
+dmarc_report?: DmarcReportAnalysis
+}
+/**
+ * Parsed delivery status notification (bounce). Present as `email.analysis.bounce` on `email.bounced` events.
+ * 
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "BounceAnalysis".
+ */
+export interface BounceAnalysis1 {
+/**
+ * Always `true` on a parsed bounce.
+ */
+is_bounce: true
+/**
+ * The machine-mail kind. Always `dsn` for a bounce.
+ */
+kind: "dsn"
+/**
+ * Whether the failure is permanent (hard bounce), transient (soft bounce, may be retried), or undetermined.
+ */
+type: ("permanent" | "transient" | "undetermined")
+/**
+ * Best-effort reason category for the failure.
+ */
+category: ("mailbox_does_not_exist" | "domain_does_not_exist" | "domain_not_accepting_mail" | "mailbox_full" | "mailbox_inactive" | "message_too_large" | "content_rejected" | "policy_blocked" | "auth_failure" | "relay_denied" | "rate_limited" | "network_error" | "recipient_moved" | "expired" | "undetermined")
+/**
+ * Which signal produced `category` (for transparency and debugging).
+ */
+classified_by: ("status_code" | "smtp_code" | "pattern" | "provider" | "none")
+/**
+ * The recipient address that failed, if the report identifies one.
+ */
+failed_recipient: (string | null)
+/**
+ * SMTP reply code (e.g. `550`), if reported.
+ */
+smtp_code: (number | null)
+/**
+ * Enhanced mail system status code (RFC 3463, e.g. `5.1.1`), if reported.
+ */
+status_code: (string | null)
+/**
+ * Raw diagnostic text from the reporting MTA, if present.
+ */
+diagnostic_code: (string | null)
+/**
+ * The MTA that generated the report, if identifiable.
+ */
+reported_by_mta: (string | null)
+/**
+ * Message-ID of the original message that bounced, if recoverable. Match this against the `message_id` of a message you sent to correlate the bounce.
+ */
+original_message_id: (string | null)
+/**
+ * Human-readable reason strings extracted from the report.
+ */
+reasons: string[]
+}
+/**
+ * Parsed SMTP TLS report (RFC 8460). Present as `email.analysis.tls_report` on `email.tls_report` events.
+ * 
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "TlsReportAnalysis".
+ */
+export interface TlsReportAnalysis1 {
+kind: "tls_report"
+/**
+ * Reporting organization name.
+ */
+organization: (string | null)
+report_id: (string | null)
+/**
+ * Reporter contact, if provided.
+ */
+contact: (string | null)
+date_range: {
+/**
+ * ISO 8601 start of the reporting window.
+ */
+start: (string | null)
+/**
+ * ISO 8601 end of the reporting window.
+ */
+end: (string | null)
+}
+total_successful_sessions: number
+total_failed_sessions: number
+policies: TlsReportPolicy[]
+}
+/**
+ * Parsed DMARC aggregate report (RFC 7489). Present as `email.analysis.dmarc_report` on `email.dmarc_report` events.
+ * 
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "DmarcReportAnalysis".
+ */
+export interface DmarcReportAnalysis1 {
+kind: "dmarc_report"
+organization: (string | null)
+report_id: (string | null)
+date_range: {
+/**
+ * ISO 8601 start of the reporting window.
+ */
+start: (string | null)
+/**
+ * ISO 8601 end of the reporting window.
+ */
+end: (string | null)
+}
+policy_published: {
+domain: (string | null)
+/**
+ * Published domain policy: `none`, `quarantine`, or `reject`.
+ */
+p: (string | null)
+/**
+ * Published subdomain policy.
+ */
+sp: (string | null)
+/**
+ * Percentage of messages the policy is applied to.
+ */
+pct: (number | null)
+/**
+ * DKIM alignment mode: `r` (relaxed) or `s` (strict).
+ */
+adkim: (string | null)
+/**
+ * SPF alignment mode: `r` (relaxed) or `s` (strict).
+ */
+aspf: (string | null)
+}
+/**
+ * Total messages covered by the report.
+ */
+total_count: number
+dkim_pass_count: number
+spf_pass_count: number
+records: DmarcRecord[]
 }
 /**
  * Forward detection and analysis results.

@@ -81,10 +81,12 @@ type Handler interface {
 	// each delivery and forwards the `Primitive-Signature` header to
 	// the handler. Verify the raw request body with
 	// `PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification
-	// the request body parses to an `email.received` event (see
-	// `EmailReceivedEvent` and the Webhook payload section for the full
-	// schema). Code is bundled before being uploaded; ship a single
-	// self-contained file rather than relying on external imports.
+	// the request body parses to a webhook event whose `event` field is
+	// `email.received` for normal inbound mail, or a machine-mail type
+	// (`email.bounced`, `email.tls_report`, `email.dmarc_report`,
+	// `email.dmarc_failure`) for bounces and reports. Code is bundled
+	// before being uploaded; ship a single self-contained file rather
+	// than relying on external imports.
 	// **Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`
 	// (optional) is capped at 5 MiB UTF-8, stored with each deployment
 	// attempt, and sent to the runtime so stack traces can resolve to

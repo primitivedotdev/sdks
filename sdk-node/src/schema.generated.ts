@@ -21,8 +21,14 @@ export const emailReceivedEventJsonSchema = {
         },
         "event": {
           "type": "string",
-          "const": "email.received",
-          "description": "Event type identifier. Always `\"email.received\"` for this event type."
+          "enum": [
+            "email.received",
+            "email.bounced",
+            "email.tls_report",
+            "email.dmarc_report",
+            "email.dmarc_failure"
+          ],
+          "description": "Event type identifier.\n\n- `email.received` - A normal inbound email.\n- `email.bounced` - A delivery status notification (DSN) reporting that a message delivery failed. Carries `email.analysis.bounce`.\n- `email.tls_report` - An SMTP TLS report (RFC 8460). Carries `email.analysis.tls_report`.\n- `email.dmarc_report` - A DMARC aggregate report (RFC 7489). Carries `email.analysis.dmarc_report`.\n- `email.dmarc_failure` - A DMARC failure (forensic) report.\n\nMachine-generated mail (bounces and the report types above) is delivered under its own event type rather than `email.received`, so an endpoint subscribed only to `email.received` receives just normal inbound mail. The payload shape is otherwise identical across event types; the type-specific details live under `email.analysis`."
         },
         "version": {
           "$ref": "#/definitions/WebhookVersion",
@@ -667,9 +673,462 @@ export const emailReceivedEventJsonSchema = {
         "forward": {
           "$ref": "#/definitions/ForwardAnalysis",
           "description": "Forward detection and analysis results.\n\nOptional. Present when the email was processed by a forward-detection pipeline (always present in Primitive's managed service). When absent, forward detection was not performed on this email."
+        },
+        "bounce": {
+          "$ref": "#/definitions/BounceAnalysis",
+          "description": "Bounce (delivery status notification) analysis.\n\nPresent on `email.bounced` events: the parsed DSN reporting that a message you sent could not be delivered. Absent on all other event types."
+        },
+        "tls_report": {
+          "$ref": "#/definitions/TlsReportAnalysis",
+          "description": "SMTP TLS report analysis (RFC 8460).\n\nPresent on `email.tls_report` events: a remote MTA's report of TLS negotiation results for mail sent to your domain. Absent on all other event types."
+        },
+        "dmarc_report": {
+          "$ref": "#/definitions/DmarcReportAnalysis",
+          "description": "DMARC aggregate report analysis (RFC 7489).\n\nPresent on `email.dmarc_report` events: a receiver's periodic aggregate report of DMARC authentication results for your domain. Absent on all other event types."
         }
       },
       "description": "Email analysis and classification results.\n\nAll properties in this object are optional. Which fields are present depends on the analysis pipeline processing the email. Primitive's managed service populates all fields. Self-hosted or third-party deployments may include some, all, or none of these fields depending on their pipeline configuration.\n\nWhen a field is absent, it means that particular analysis was not performed, not that the analysis produced no results. For example, a missing `spamassassin` field means SpamAssassin was not run, not that the email scored 0.\n\nThese fields may be omitted from the payload entirely but must not be set to null."
+    },
+    "BounceAnalysis": {
+      "type": "object",
+      "properties": {
+        "is_bounce": {
+          "type": "boolean",
+          "const": true,
+          "description": "Always `true` on a parsed bounce."
+        },
+        "kind": {
+          "type": "string",
+          "const": "dsn",
+          "description": "The machine-mail kind. Always `dsn` for a bounce."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "permanent",
+            "transient",
+            "undetermined"
+          ],
+          "description": "Whether the failure is permanent (hard bounce), transient (soft bounce, may be retried), or undetermined."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "mailbox_does_not_exist",
+            "domain_does_not_exist",
+            "domain_not_accepting_mail",
+            "mailbox_full",
+            "mailbox_inactive",
+            "message_too_large",
+            "content_rejected",
+            "policy_blocked",
+            "auth_failure",
+            "relay_denied",
+            "rate_limited",
+            "network_error",
+            "recipient_moved",
+            "expired",
+            "undetermined"
+          ],
+          "description": "Best-effort reason category for the failure."
+        },
+        "classified_by": {
+          "type": "string",
+          "enum": [
+            "status_code",
+            "smtp_code",
+            "pattern",
+            "provider",
+            "none"
+          ],
+          "description": "Which signal produced `category` (for transparency and debugging)."
+        },
+        "failed_recipient": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The recipient address that failed, if the report identifies one."
+        },
+        "smtp_code": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "SMTP reply code (e.g. `550`), if reported."
+        },
+        "status_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Enhanced mail system status code (RFC 3463, e.g. `5.1.1`), if reported."
+        },
+        "diagnostic_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Raw diagnostic text from the reporting MTA, if present."
+        },
+        "reported_by_mta": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The MTA that generated the report, if identifiable."
+        },
+        "original_message_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Message-ID of the original message that bounced, if recoverable. Match this against the `message_id` of a message you sent to correlate the bounce."
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Human-readable reason strings extracted from the report."
+        }
+      },
+      "required": [
+        "is_bounce",
+        "kind",
+        "type",
+        "category",
+        "classified_by",
+        "failed_recipient",
+        "smtp_code",
+        "status_code",
+        "diagnostic_code",
+        "reported_by_mta",
+        "original_message_id",
+        "reasons"
+      ],
+      "description": "Parsed delivery status notification (bounce). Present as `email.analysis.bounce` on `email.bounced` events."
+    },
+    "TlsReportFailure": {
+      "type": "object",
+      "properties": {
+        "result_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Failure result type (e.g. `certificate-expired`, `starttls-not-supported`)."
+        },
+        "count": {
+          "type": "integer",
+          "description": "Number of sessions that hit this failure."
+        },
+        "sending_mta_ip": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receiving_mx_hostname": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "result_type",
+        "count",
+        "sending_mta_ip",
+        "receiving_mx_hostname"
+      ]
+    },
+    "TlsReportPolicy": {
+      "type": "object",
+      "properties": {
+        "policy_domain": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "policy_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Policy type the sessions were evaluated against (e.g. `sts`, `tlsa`, `no-policy-found`)."
+        },
+        "successful_sessions": {
+          "type": "integer"
+        },
+        "failed_sessions": {
+          "type": "integer"
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TlsReportFailure"
+          }
+        }
+      },
+      "required": [
+        "policy_domain",
+        "policy_type",
+        "successful_sessions",
+        "failed_sessions",
+        "failures"
+      ]
+    },
+    "TlsReportAnalysis": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "tls_report"
+        },
+        "organization": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Reporting organization name."
+        },
+        "report_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contact": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Reporter contact, if provided."
+        },
+        "date_range": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ISO 8601 start of the reporting window."
+            },
+            "end": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ISO 8601 end of the reporting window."
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ]
+        },
+        "total_successful_sessions": {
+          "type": "integer"
+        },
+        "total_failed_sessions": {
+          "type": "integer"
+        },
+        "policies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TlsReportPolicy"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "organization",
+        "report_id",
+        "contact",
+        "date_range",
+        "total_successful_sessions",
+        "total_failed_sessions",
+        "policies"
+      ],
+      "description": "Parsed SMTP TLS report (RFC 8460). Present as `email.analysis.tls_report` on `email.tls_report` events."
+    },
+    "DmarcRecord": {
+      "type": "object",
+      "properties": {
+        "source_ip": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "count": {
+          "type": "integer"
+        },
+        "disposition": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Disposition applied by the receiver: `none`, `quarantine`, or `reject`."
+        },
+        "dkim": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "DKIM alignment result: `pass` or `fail`."
+        },
+        "spf": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "SPF alignment result: `pass` or `fail`."
+        },
+        "header_from": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source_ip",
+        "count",
+        "disposition",
+        "dkim",
+        "spf",
+        "header_from"
+      ]
+    },
+    "DmarcReportAnalysis": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "dmarc_report"
+        },
+        "organization": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "report_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "date_range": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ISO 8601 start of the reporting window."
+            },
+            "end": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ISO 8601 end of the reporting window."
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ]
+        },
+        "policy_published": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "p": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Published domain policy: `none`, `quarantine`, or `reject`."
+            },
+            "sp": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Published subdomain policy."
+            },
+            "pct": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Percentage of messages the policy is applied to."
+            },
+            "adkim": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "DKIM alignment mode: `r` (relaxed) or `s` (strict)."
+            },
+            "aspf": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "SPF alignment mode: `r` (relaxed) or `s` (strict)."
+            }
+          },
+          "required": [
+            "domain",
+            "p",
+            "sp",
+            "pct",
+            "adkim",
+            "aspf"
+          ]
+        },
+        "total_count": {
+          "type": "integer",
+          "description": "Total messages covered by the report."
+        },
+        "dkim_pass_count": {
+          "type": "integer"
+        },
+        "spf_pass_count": {
+          "type": "integer"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DmarcRecord"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "organization",
+        "report_id",
+        "date_range",
+        "policy_published",
+        "total_count",
+        "dkim_pass_count",
+        "spf_pass_count",
+        "records"
+      ],
+      "description": "Parsed DMARC aggregate report (RFC 7489). Present as `email.analysis.dmarc_report` on `email.dmarc_report` events."
     },
     "ForwardAnalysis": {
       "type": "object",

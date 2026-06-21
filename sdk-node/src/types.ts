@@ -12,6 +12,10 @@ export type EventType = EmailReceivedEvent["event"];
 
 export const EventType = {
   EmailReceived: "email.received",
+  EmailBounced: "email.bounced",
+  EmailTlsReport: "email.tls_report",
+  EmailDmarcReport: "email.dmarc_report",
+  EmailDmarcFailure: "email.dmarc_failure",
 } as const satisfies Record<string, EventType>;
 
 export type RawContent = EmailReceivedEvent["email"]["content"]["raw"];
