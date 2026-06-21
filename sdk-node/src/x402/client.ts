@@ -72,14 +72,17 @@ export interface X402ChargeInput {
   expiresIn?: number;
 }
 
-const CHARGE_INPUT_KEYS: ReadonlySet<string> = new Set([
-  "amount",
-  "network",
-  "payerOrg",
-  "description",
-  "resource",
-  "expiresIn",
-]);
+// `satisfies Record<keyof X402ChargeInput, true>` makes this a compile-time
+// mirror of the interface: adding a field to X402ChargeInput without adding it
+// here (or vice versa) is a type error, so the allow-set can't silently drift.
+const CHARGE_INPUT_KEYS = {
+  amount: true,
+  network: true,
+  payerOrg: true,
+  description: true,
+  resource: true,
+  expiresIn: true,
+} satisfies Record<keyof X402ChargeInput, true>;
 
 export class X402Error extends Error {
   readonly status: number;
@@ -141,16 +144,16 @@ export class X402Client {
     // Reject unknown keys so a typo (e.g. `payer_org` for `payerOrg`) fails
     // loudly instead of being silently dropped from the request.
     for (const key of Object.keys(input)) {
-      if (!CHARGE_INPUT_KEYS.has(key)) {
+      if (!(key in CHARGE_INPUT_KEYS)) {
         throw new X402Error(
-          `unknown charge() option "${key}"; expected one of: ${[...CHARGE_INPUT_KEYS].join(", ")}`,
+          `unknown charge() option "${key}"; expected one of: ${Object.keys(CHARGE_INPUT_KEYS).join(", ")}`,
           0,
         );
       }
     }
-    if (!input.amount) {
+    if (!input.amount || !/^[1-9][0-9]{0,38}$/.test(input.amount)) {
       throw new X402Error(
-        'charge() requires an `amount` in token base units, e.g. "10000"',
+        'charge() requires `amount` as a positive integer string in token base units, e.g. "10000"',
         0,
       );
     }

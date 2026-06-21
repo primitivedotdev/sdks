@@ -176,7 +176,19 @@ describe("X402Client input validation", () => {
     await expect(
       // @ts-expect-error amount omitted on purpose
       client().charge({ network: "base-sepolia" }),
-    ).rejects.toThrow(/requires an `amount`/);
+    ).rejects.toThrow(/positive integer string/);
+  });
+
+  it("charge() rejects a non-integer / non-positive amount", async () => {
+    await expect(client().charge({ amount: "1.5" })).rejects.toThrow(
+      /positive integer/,
+    );
+    await expect(client().charge({ amount: "abc" })).rejects.toThrow(
+      /positive integer/,
+    );
+    await expect(client().charge({ amount: "0" })).rejects.toThrow(
+      /positive integer/,
+    );
   });
 
   it("pay() rejects a missing/invalid signer", async () => {
