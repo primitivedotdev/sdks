@@ -9,6 +9,7 @@
  */
 import type { Address } from "viem";
 import {
+  buildPayoutRegistrationMessage,
   deriveEip3009Nonce,
   type TransferAuthorization,
   toPaymentPayload,
@@ -56,6 +57,28 @@ export interface X402Receipt {
   id: string;
   status: string;
   settle_tx: string | null;
+}
+
+/** A registered payout address (read shape; mirrors the platform response). */
+export interface X402PayoutAddress {
+  id: string;
+  address: string;
+  network: string;
+  label: string | null;
+  is_default: boolean;
+  verified_at: string | null;
+}
+
+/** The org's spend policy (read shape; also accepted by `setSpendPolicy`). */
+export interface X402SpendPolicy {
+  /** Kill-switch: when true, all outbound payments are refused. */
+  paused: boolean;
+  /** Per-payment cap in token base units, or null for no cap. */
+  max_per_payment: string | null;
+  /** Daily cap in token base units, or null for no cap. */
+  max_per_day: string | null;
+  /** Allowed payee org ids; null = any on-net payee, [] = deny all. */
+  allowlist: string[] | null;
 }
 
 export interface X402ChargeInput {
@@ -362,6 +385,85 @@ export class X402Client {
       "POST",
       `/v1/x402/challenges/${challenge.id}/pay`,
       { payment: toPaymentPayload(challenge.network, auth, signature) },
+    );
+  }
+
+  /** Fetch a challenge by id (scoped to the challenger org that created it). */
+  async getChallenge(id: string): Promise<X402Challenge> {
+    if (!id) throw new X402Error("getChallenge() requires a challenge id", 0);
+    return this.#request<X402Challenge>(
+      "GET",
+      `/v1/x402/challenges/${encodeURIComponent(id)}`,
+    );
+  }
+
+  /**
+   * Register a payout address for your org (payee side). The signer proves
+   * control of its own address with an org-bound `personal_sign`; the proven
+   * address becomes (or updates to) the default payout destination for the
+   * network. `charge()` resolves its `pay_to` from this directory, so a payee
+   * must register before requesting payments.
+   */
+  async registerPayoutAddress(
+    input: { org: string; network?: string; issuedAt?: string },
+    options: { signer: X402Signer },
+  ): Promise<X402PayoutAddress> {
+    if (!input?.org) {
+      throw new X402Error("registerPayoutAddress() requires an org id", 0);
+    }
+    if (typeof options?.signer?.signMessage !== "function") {
+      throw new X402Error(
+        "registerPayoutAddress() requires a signer with signMessage (e.g. a viem LocalAccount)",
+        0,
+      );
+    }
+    const network = input.network ?? "base-sepolia";
+    const issuedAt = input.issuedAt ?? new Date().toISOString();
+    const address = options.signer.address;
+    const message = buildPayoutRegistrationMessage({
+      org: input.org,
+      address,
+      network,
+      issuedAt,
+    });
+    const signature = await options.signer.signMessage({ message });
+    return this.#request<X402PayoutAddress>(
+      "POST",
+      "/v1/x402/payout-addresses",
+      {
+        address,
+        network,
+        signature,
+        issued_at: issuedAt,
+      },
+    );
+  }
+
+  /** List your org's registered payout addresses. */
+  async listPayoutAddresses(): Promise<X402PayoutAddress[]> {
+    return this.#request<X402PayoutAddress[]>(
+      "GET",
+      "/v1/x402/payout-addresses",
+    );
+  }
+
+  /** Read your org's spend policy (kill-switch + caps + allowlist). */
+  async getSpendPolicy(): Promise<X402SpendPolicy> {
+    return this.#request<X402SpendPolicy>("GET", "/v1/x402/spend-policy");
+  }
+
+  /**
+   * Update your org's spend policy. PATCH semantics: only the fields you pass are
+   * changed (a partial update can't silently reset the kill-switch). Pass `null`
+   * to clear a cap; omit a field to leave it untouched.
+   */
+  async setSpendPolicy(
+    update: Partial<X402SpendPolicy>,
+  ): Promise<X402SpendPolicy> {
+    return this.#request<X402SpendPolicy>(
+      "PUT",
+      "/v1/x402/spend-policy",
+      update,
     );
   }
 }

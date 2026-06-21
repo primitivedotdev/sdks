@@ -136,6 +136,43 @@ export function transferWithAuthorizationTypedData(
 export interface X402Signer {
   address: Address;
   signTypedData(typedData: TransferWithAuthorizationTypedData): Promise<Hex>;
+  /**
+   * `personal_sign` over a UTF-8 string. Only needed for
+   * `registerPayoutAddress()` (the ownership proof); a viem `LocalAccount`
+   * provides it directly.
+   */
+  signMessage?(args: { message: string }): Promise<Hex>;
+}
+
+export interface PayoutRegistrationMessageInput {
+  /** The org id the address is being authorized for. Bound into the signature. */
+  org: string;
+  /** The payout address (the signer's own address). Lowercased in the message. */
+  address: string;
+  network: string;
+  /** ISO-8601 timestamp; the server enforces a freshness window against replay. */
+  issuedAt: string;
+}
+
+/**
+ * Build the payout-address ownership message. This MUST be byte-identical to the
+ * platform's `buildPayoutRegistrationMessage`, or registration fails the
+ * ownership proof. The org id is in the signed bytes, so a captured signature
+ * can never register the address under a different org.
+ */
+export function buildPayoutRegistrationMessage(
+  input: PayoutRegistrationMessageInput,
+): string {
+  return [
+    "Primitive x402 payout address authorization",
+    "",
+    "I authorize this address as a payout destination for my Primitive organization.",
+    "",
+    `org: ${input.org}`,
+    `address: ${input.address.toLowerCase()}`,
+    `network: ${input.network}`,
+    `issued: ${input.issuedAt}`,
+  ].join("\n");
 }
 
 /** The x402 wire payload (validated server-side against the x402 schema). */

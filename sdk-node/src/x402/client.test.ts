@@ -318,3 +318,128 @@ describe("X402Client hardening", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("X402Client completeness methods", () => {
+  const ORG = "11111111-1111-4111-8111-111111111111";
+  const signerWithMessage = {
+    address: account.address,
+    signTypedData: (td: TransferWithAuthorizationTypedData) =>
+      account.signTypedData(td),
+    signMessage: ({ message }: { message: string }) =>
+      account.signMessage({ message }),
+  };
+
+  it("registerPayoutAddress signs the org-bound message and POSTs the proof", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        success: true,
+        data: {
+          id: "p1",
+          address: account.address.toLowerCase(),
+          network: "base-sepolia",
+          label: null,
+          is_default: true,
+          verified_at: "2026-01-01T00:00:00.000Z",
+        },
+      }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    const res = await client.registerPayoutAddress(
+      {
+        org: ORG,
+        network: "base-sepolia",
+        issuedAt: "2026-01-01T00:00:00.000Z",
+      },
+      { signer: signerWithMessage },
+    );
+    expect(res.is_default).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("https://api.example/v1/x402/payout-addresses");
+    expect(init.method).toBe("POST");
+    const body = JSON.parse(init.body as string);
+    expect(body).toMatchObject({
+      address: account.address,
+      network: "base-sepolia",
+      issued_at: "2026-01-01T00:00:00.000Z",
+    });
+    expect(body.signature).toMatch(/^0x[0-9a-f]+$/i);
+  });
+
+  it("registerPayoutAddress requires a signer with signMessage", async () => {
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () => jsonResponse({ success: true, data: {} })),
+    });
+    await expect(
+      client.registerPayoutAddress({ org: ORG }, { signer }),
+    ).rejects.toThrow(/signMessage/);
+  });
+
+  it("getChallenge GETs the challenge by id", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: CHALLENGE }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    const ch = await client.getChallenge(CHALLENGE.id);
+    expect(ch.id).toBe(CHALLENGE.id);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe(`https://api.example/v1/x402/challenges/${CHALLENGE.id}`);
+    expect(init.method).toBe("GET");
+  });
+
+  it("getSpendPolicy reads and setSpendPolicy PATCH-writes the policy", async () => {
+    const policy = {
+      paused: false,
+      max_per_payment: "1000000",
+      max_per_day: null,
+      allowlist: null,
+    };
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: policy }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    expect(await client.getSpendPolicy()).toMatchObject({
+      max_per_payment: "1000000",
+    });
+    await client.setSpendPolicy({ paused: true });
+    const [, putInit] = fetchMock.mock.calls[1] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(putInit.method).toBe("PUT");
+    expect(JSON.parse(putInit.body as string)).toEqual({ paused: true });
+  });
+
+  it("listPayoutAddresses GETs the directory", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: [] }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    expect(await client.listPayoutAddresses()).toEqual([]);
+    const [url] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.example/v1/x402/payout-addresses");
+  });
+});

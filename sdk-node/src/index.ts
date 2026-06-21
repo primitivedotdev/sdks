@@ -45,9 +45,11 @@ export {
 } from "./api/index.js";
 export * from "./webhook/index.js";
 export {
+  buildPayoutRegistrationMessage,
   createX402Client,
   deriveEip3009Nonce,
   type NonceBinding,
+  type PayoutRegistrationMessageInput,
   type TokenDomain,
   type TransferAuthorization,
   type X402Challenge,
@@ -57,8 +59,10 @@ export {
   X402Error,
   type X402PaymentPayload,
   type X402PaymentRequirements,
+  type X402PayoutAddress,
   type X402Receipt,
   type X402Signer,
+  type X402SpendPolicy,
 } from "./x402/index.js";
 
 import { client } from "./api/index.js";
