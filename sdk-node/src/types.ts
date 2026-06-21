@@ -49,6 +49,12 @@ export type ForwardAnalysis = NonNullable<EmailAnalysis["forward"]>;
 
 export type ForwardResult = ForwardAnalysis["results"][number];
 
+export type BounceAnalysis = NonNullable<EmailAnalysis["bounce"]>;
+
+export type TlsReportAnalysis = NonNullable<EmailAnalysis["tls_report"]>;
+
+export type DmarcReportAnalysis = NonNullable<EmailAnalysis["dmarc_report"]>;
+
 export type ForwardResultInline = Extract<ForwardResult, { type: "inline" }>;
 
 export type ForwardResultAttachmentAnalyzed = Extract<
