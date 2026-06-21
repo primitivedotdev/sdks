@@ -149,7 +149,7 @@ def test_shared_parse_webhook_event_cases() -> None:
         if expected["kind"] == "email.received":
             known_event = event
             assert isinstance(known_event, EmailReceivedEvent)
-            assert known_event.event == expected.get("event", expected["kind"])
+            assert known_event.event.value == expected.get("event", expected["kind"])
             assert known_event.id == expected["id"]
         else:
             unknown_event = cast(UnknownEvent, event)
