@@ -137,4 +137,20 @@ describe("X402Client.pay", () => {
       "payment_declined",
     );
   });
+
+  it("throws a clear error on a malformed expires_at (not an opaque BigInt error)", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: {} }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    const bad = { ...CHALLENGE, expires_at: "not-a-date" };
+    await expect(client.pay(bad, { signer })).rejects.toThrow(
+      /invalid expires_at/,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

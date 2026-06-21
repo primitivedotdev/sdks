@@ -161,7 +161,14 @@ export class X402Client {
     });
 
     const nowSec = Math.floor(Date.now() / 1000);
-    const expiresAtSec = Math.floor(Date.parse(challenge.expires_at) / 1000);
+    const expiresAtMs = Date.parse(challenge.expires_at);
+    if (Number.isNaN(expiresAtMs)) {
+      throw new X402Error(
+        `challenge has an invalid expires_at: ${challenge.expires_at}`,
+        0,
+      );
+    }
+    const expiresAtSec = Math.floor(expiresAtMs / 1000);
 
     const auth: TransferAuthorization = {
       from: options.signer.address,
