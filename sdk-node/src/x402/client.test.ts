@@ -154,3 +154,35 @@ describe("X402Client.pay", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("X402Client input validation", () => {
+  const client = () =>
+    new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () =>
+        jsonResponse({ success: true, data: CHALLENGE }),
+      ),
+    });
+
+  it("charge() rejects an unknown option (e.g. a snake_case typo)", async () => {
+    await expect(
+      // @ts-expect-error intentionally passing an unknown key
+      client().charge({ amount: "10000", payer_org: "x" }),
+    ).rejects.toThrow(/unknown charge\(\) option "payer_org"/);
+  });
+
+  it("charge() requires an amount", async () => {
+    await expect(
+      // @ts-expect-error amount omitted on purpose
+      client().charge({ network: "base-sepolia" }),
+    ).rejects.toThrow(/requires an `amount`/);
+  });
+
+  it("pay() rejects a missing/invalid signer", async () => {
+    await expect(
+      // @ts-expect-error no signer
+      client().pay(CHALLENGE, {}),
+    ).rejects.toThrow(/requires options.signer/);
+  });
+});
