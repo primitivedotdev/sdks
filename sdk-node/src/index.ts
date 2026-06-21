@@ -13,6 +13,23 @@
  * @packageDocumentation
  */
 
+// Agent-account surface: the `client.agent` methods are reachable from the
+// root client, so their request/response types belong at the root too (the
+// `AgentResource` itself lives behind the `/api` subpath via the generated
+// re-export). Keeps `import type { AgentAccountResult } from "@primitivedotdev/sdk"`
+// consistent with the root-level SendResult / SendInput types.
+export type {
+  AgentAccountResult,
+  AgentAccountUpgradeHint,
+  AgentClaimLinkResult,
+  AgentClaimResult,
+  AgentClaimStartResult,
+  CreateAgentAccountInput,
+  CreateAgentClaimLinkInput,
+  PlanLimits,
+  StartAgentClaimInput,
+  VerifyAgentClaimInput,
+} from "./api/index.js";
 export {
   client,
   createPrimitiveClient,
