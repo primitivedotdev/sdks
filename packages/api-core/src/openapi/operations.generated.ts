@@ -317,6 +317,189 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": true,
+    "command": "create-agent-account",
+    "description": "Creates an emailless agent account without authentication and returns a\none-time API key (prefixed `prim_`) plus a provisioned managed inbox.\nThe account is on the `agent` plan: reply-only (it can send only to\naddresses that have already sent it authenticated mail) with tight send\nlimits. Use the returned `api_key` as a Bearer token on later calls. The\naccount can be upgraded to a full developer account by confirming an\nemail through the claim flow. This endpoint does not require an API key.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createAgentAccount",
+    "path": "/agent/accounts",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "terms_accepted": {
+          "type": "boolean",
+          "enum": [
+            true
+          ],
+          "description": "Must be true to accept the Terms of Service and Privacy Policy."
+        },
+        "device_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Optional label for the device or agent creating the account."
+        }
+      },
+      "required": [
+        "terms_accepted"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "description": "One-time API key (prefixed `prim_`). Shown once; store it securely."
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Provisioned managed inbox FQDN, or null if the inbox publish was deferred."
+        },
+        "plan": {
+          "type": "string",
+          "enum": [
+            "agent"
+          ]
+        },
+        "limits": {
+          "type": "object",
+          "description": "Plan-derived quota limits for an account.",
+          "properties": {
+            "storage_mb": {
+              "type": "number"
+            },
+            "send_per_hour": {
+              "type": "number"
+            },
+            "send_per_day": {
+              "type": "number"
+            },
+            "api_per_minute": {
+              "type": "number"
+            },
+            "webhooks_max_global": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "webhooks_per_domain": {
+              "type": "boolean"
+            },
+            "filters_per_domain": {
+              "type": "boolean"
+            },
+            "spam_thresholds_per_domain": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "storage_mb",
+            "send_per_hour",
+            "send_per_day",
+            "api_per_minute",
+            "webhooks_max_global",
+            "webhooks_per_domain",
+            "filters_per_domain",
+            "spam_thresholds_per_domain"
+          ]
+        },
+        "upgrade": {
+          "type": "object",
+          "description": "In-band pointer to the upgrade path for an agent account.",
+          "properties": {
+            "plan": {
+              "type": "string",
+              "enum": [
+                "developer"
+              ]
+            },
+            "description": {
+              "type": "string"
+            },
+            "claim_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "plan",
+            "description",
+            "claim_path"
+          ]
+        }
+      },
+      "required": [
+        "api_key",
+        "org_id",
+        "address",
+        "plan",
+        "limits",
+        "upgrade"
+      ]
+    },
+    "sdkName": "createAgentAccount",
+    "summary": "Create an emailless agent account",
+    "tag": "Agent",
+    "tagCommand": "agent"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "create-agent-claim-link",
+    "description": "Mints an opaque, single-use link an agent can hand to a human to\ncomplete the email-confirmation upgrade in a browser. Authenticated by\nthe agent's own API key. `claim_url` is null when the API host cannot\nresolve a web origin to build the link.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createAgentClaimLink",
+    "path": "/agent/claim/link",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "No fields; an empty object is accepted.",
+      "properties": {}
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "claim_token": {
+          "type": "string"
+        },
+        "claim_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Browser URL to hand to a human, or null if no web origin is configured."
+        },
+        "expires_in_seconds": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "claim_token",
+        "claim_url",
+        "expires_in_seconds"
+      ]
+    },
+    "sdkName": "createAgentClaimLink",
+    "summary": "Create a browser claim link",
+    "tag": "Agent",
+    "tagCommand": "agent"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
     "command": "resend-agent-signup-verification",
     "description": "Sends a new email verification code for a pending agent signup session.\nThis endpoint does not require an API key.\n",
     "hasJsonBody": true,
@@ -367,6 +550,56 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "resendAgentSignupVerification",
     "summary": "Resend agent signup verification code",
+    "tag": "Agent",
+    "tagCommand": "agent"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "start-agent-claim",
+    "description": "Begins upgrading an emailless `agent` account into a full `developer`\naccount by confirming an email address. Authenticated by the agent's own\nAPI key (the org is taken from the credential). Sends a verification\ncode to the supplied email and returns the claim session id plus resend\ntiming. Submit the code to `/agent/claim/verify` to complete the\nupgrade. Confirming an email that already belongs to a Primitive account\nis rejected.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "startAgentClaim",
+    "path": "/agent/claim/start",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "description": "Email to confirm. Must not already belong to a Primitive account."
+        }
+      },
+      "required": [
+        "email"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "claim_session_id": {
+          "type": "string"
+        },
+        "resend_after_seconds": {
+          "type": "integer"
+        },
+        "expires_in_seconds": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "claim_session_id",
+        "resend_after_seconds",
+        "expires_in_seconds"
+      ]
+    },
+    "sdkName": "startAgentClaim",
+    "summary": "Start an agent account email claim",
     "tag": "Agent",
     "tagCommand": "agent"
   },
@@ -452,6 +685,105 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "startAgentSignup",
     "summary": "Start agent account signup",
+    "tag": "Agent",
+    "tagCommand": "agent"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "verify-agent-claim",
+    "description": "Confirms the verification code emailed by `/agent/claim/start` and\nupgrades the account to the `developer` plan. The org id, API key, and\nmanaged inbox all carry over; the send cap lifts. Authenticated by the\nagent's own API key.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "verifyAgentClaim",
+    "path": "/agent/claim/verify",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verification_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "description": "The verification code emailed by the claim start step."
+        }
+      },
+      "required": [
+        "verification_code"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "plan": {
+          "type": "string",
+          "enum": [
+            "developer"
+          ]
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "limits": {
+          "type": "object",
+          "description": "Plan-derived quota limits for an account.",
+          "properties": {
+            "storage_mb": {
+              "type": "number"
+            },
+            "send_per_hour": {
+              "type": "number"
+            },
+            "send_per_day": {
+              "type": "number"
+            },
+            "api_per_minute": {
+              "type": "number"
+            },
+            "webhooks_max_global": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "webhooks_per_domain": {
+              "type": "boolean"
+            },
+            "filters_per_domain": {
+              "type": "boolean"
+            },
+            "spam_thresholds_per_domain": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "storage_mb",
+            "send_per_hour",
+            "send_per_day",
+            "api_per_minute",
+            "webhooks_max_global",
+            "webhooks_per_domain",
+            "filters_per_domain",
+            "spam_thresholds_per_domain"
+          ]
+        }
+      },
+      "required": [
+        "org_id",
+        "plan",
+        "email",
+        "limits"
+      ]
+    },
+    "sdkName": "verifyAgentClaim",
+    "summary": "Verify an agent account email claim",
     "tag": "Agent",
     "tagCommand": "agent"
   },

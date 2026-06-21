@@ -123,6 +123,20 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS["threads:get"]).toBe(COMMANDS["threads:get-thread"]);
   });
 
+  it("registers friendly agent account command aliases", () => {
+    expect(COMMANDS["agent:create-agent-account"]).toBeDefined();
+    expect(COMMANDS["agent:create"]).toBe(
+      COMMANDS["agent:create-agent-account"],
+    );
+    expect(COMMANDS["agent:claim"]).toBe(COMMANDS["agent:start-agent-claim"]);
+    expect(COMMANDS["agent:claim-verify"]).toBe(
+      COMMANDS["agent:verify-agent-claim"],
+    );
+    expect(COMMANDS["agent:claim-link"]).toBe(
+      COMMANDS["agent:create-agent-claim-link"],
+    );
+  });
+
   it("keeps top-level send registered with attachment support", () => {
     const sendCommand = COMMANDS.send as unknown as {
       flags: Record<string, { multiple?: boolean }>;

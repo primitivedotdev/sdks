@@ -40,6 +40,7 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 var operationRolesBearerAuth = map[string][]string{
 	AddDomainOperation:               []string{},
 	CliLogoutOperation:               []string{},
+	CreateAgentClaimLinkOperation:    []string{},
 	CreateEndpointOperation:          []string{},
 	CreateFilterOperation:            []string{},
 	CreateFunctionOperation:          []string{},
@@ -85,6 +86,7 @@ var operationRolesBearerAuth = map[string][]string{
 	SendEmailOperation:               []string{},
 	SetFunctionRouteOperation:        []string{},
 	SetFunctionSecretOperation:       []string{},
+	StartAgentClaimOperation:         []string{},
 	TestEndpointOperation:            []string{},
 	TestFunctionOperation:            []string{},
 	UnsetFunctionRouteOperation:      []string{},
@@ -93,6 +95,7 @@ var operationRolesBearerAuth = map[string][]string{
 	UpdateEndpointOperation:          []string{},
 	UpdateFilterOperation:            []string{},
 	UpdateFunctionOperation:          []string{},
+	VerifyAgentClaimOperation:        []string{},
 	VerifyDomainOperation:            []string{},
 }
 

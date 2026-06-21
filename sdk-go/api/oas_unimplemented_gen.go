@@ -37,6 +37,33 @@ func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput
 	return r, ht.ErrNotImplemented
 }
 
+// CreateAgentAccount implements createAgentAccount operation.
+//
+// Creates an emailless agent account without authentication and returns a
+// one-time API key (prefixed `prim_`) plus a provisioned managed inbox.
+// The account is on the `agent` plan: reply-only (it can send only to
+// addresses that have already sent it authenticated mail) with tight send
+// limits. Use the returned `api_key` as a Bearer token on later calls. The
+// account can be upgraded to a full developer account by confirming an
+// email through the claim flow. This endpoint does not require an API key.
+//
+// POST /agent/accounts
+func (UnimplementedHandler) CreateAgentAccount(ctx context.Context, req *CreateAgentAccountInput) (r CreateAgentAccountRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateAgentClaimLink implements createAgentClaimLink operation.
+//
+// Mints an opaque, single-use link an agent can hand to a human to
+// complete the email-confirmation upgrade in a browser. Authenticated by
+// the agent's own API key. `claim_url` is null when the API host cannot
+// resolve a web origin to build the link.
+//
+// POST /agent/claim/link
+func (UnimplementedHandler) CreateAgentClaimLink(ctx context.Context, req *CreateAgentClaimLinkInput) (r CreateAgentClaimLinkRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreateEndpoint implements createEndpoint operation.
 //
 // Creates a new webhook endpoint. If a deactivated endpoint
@@ -763,6 +790,21 @@ func (UnimplementedHandler) SetFunctionSecret(ctx context.Context, req *SetFunct
 	return r, ht.ErrNotImplemented
 }
 
+// StartAgentClaim implements startAgentClaim operation.
+//
+// Begins upgrading an emailless `agent` account into a full `developer`
+// account by confirming an email address. Authenticated by the agent's own
+// API key (the org is taken from the credential). Sends a verification
+// code to the supplied email and returns the claim session id plus resend
+// timing. Submit the code to `/agent/claim/verify` to complete the
+// upgrade. Confirming an email that already belongs to a Primitive account
+// is rejected.
+//
+// POST /agent/claim/start
+func (UnimplementedHandler) StartAgentClaim(ctx context.Context, req *StartAgentClaimInput) (r StartAgentClaimRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // StartAgentSignup implements startAgentSignup operation.
 //
 // Starts an agent-native signup session. `signup_code` is optional;
@@ -905,6 +947,18 @@ func (UnimplementedHandler) UpdateFilter(ctx context.Context, req *UpdateFilterI
 //
 // PUT /functions/{id}
 func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (r UpdateFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// VerifyAgentClaim implements verifyAgentClaim operation.
+//
+// Confirms the verification code emailed by `/agent/claim/start` and
+// upgrades the account to the `developer` plan. The org id, API key, and
+// managed inbox all carry over; the send cap lifts. Authenticated by the
+// agent's own API key.
+//
+// POST /agent/claim/verify
+func (UnimplementedHandler) VerifyAgentClaim(ctx context.Context, req *VerifyAgentClaimInput) (r VerifyAgentClaimRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

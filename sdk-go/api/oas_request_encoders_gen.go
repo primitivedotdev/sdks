@@ -44,6 +44,36 @@ func encodeCliLogoutRequest(
 	return nil
 }
 
+func encodeCreateAgentAccountRequest(
+	req *CreateAgentAccountInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeCreateAgentClaimLinkRequest(
+	req *CreateAgentClaimLinkInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		if req != nil {
+			req.Encode(e)
+		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCreateEndpointRequest(
 	req *CreateEndpointInput,
 	r *http.Request,
@@ -212,6 +242,20 @@ func encodeSetFunctionSecretRequest(
 	return nil
 }
 
+func encodeStartAgentClaimRequest(
+	req *StartAgentClaimInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeStartAgentSignupRequest(
 	req *StartAgentSignupInput,
 	r *http.Request,
@@ -338,6 +382,20 @@ func encodeUpdateFilterRequest(
 
 func encodeUpdateFunctionRequest(
 	req *UpdateFunctionInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeVerifyAgentClaimRequest(
+	req *VerifyAgentClaimInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

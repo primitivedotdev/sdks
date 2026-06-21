@@ -16,6 +16,12 @@
  */
 
 import {
+  type AgentAccountResult,
+  type AgentClaimLinkResult,
+  type AgentClaimResult,
+  type AgentClaimStartResult,
+  type CreateAgentAccountInput,
+  type CreateAgentClaimLinkInput,
   type GateDenial,
   type ErrorResponse as GeneratedErrorResponse,
   type ReplyInput as GeneratedReplyInput,
@@ -30,6 +36,8 @@ import {
   type PrimitiveApiClientOptions,
   PrimitiveApiError,
   type PrimitiveApiErrorDetails,
+  type StartAgentClaimInput,
+  type VerifyAgentClaimInput,
 } from "@primitivedotdev/api-core";
 import type { ReceivedEmail } from "../webhook/received-email.js";
 import { formatAddress } from "../webhook/received-email.js";
@@ -359,7 +367,142 @@ function resolveRequestOptions(
   return resolved;
 }
 
+/**
+ * Generic `{ success, data }` envelope unwrap for the simple
+ * data-returning agent operations. Mirrors the error-mapping path of
+ * `unwrapSendResult` so every agent call surfaces a `PrimitiveApiError`
+ * with code / status / request id / retry-after, and re-throws abort and
+ * timeout errors untouched. `label` names the resource in the
+ * empty-body error message.
+ */
+function unwrapData<T>(
+  result: {
+    data?: { data?: T } | undefined;
+    error?: GeneratedErrorResponse | unknown;
+    response?: Response;
+  },
+  label: string,
+): T {
+  const response = (result as { response?: Response }).response;
+
+  if (result.error) {
+    if (isAbortLikeError(result.error)) {
+      throw result.error;
+    }
+    const parsed = parseApiErrorPayload(result.error);
+    throw new PrimitiveApiError(parsed.message, {
+      payload: result.error,
+      status: response?.status,
+      code: parsed.code,
+      gates: parsed.gates,
+      requestId: parsed.requestId,
+      retryAfter: parseRetryAfterHeader(response),
+      details: parsed.details,
+      cause: result.error instanceof Error ? result.error : undefined,
+    });
+  }
+
+  if (result.data?.data === undefined) {
+    throw new PrimitiveApiError(`Primitive API returned no ${label}`, {
+      payload: result,
+      status: response?.status,
+    });
+  }
+
+  return result.data.data;
+}
+
+/**
+ * Agent-account operations, grouped under `client.agent`.
+ *
+ * These cover the emailless agent lifecycle: create a zero-touch account
+ * (no auth required), then later upgrade it to a full developer account by
+ * confirming an email (the claim flow, authenticated by the agent's own
+ * API key). Field shapes are the generated request/response types, matching
+ * the documented API surface.
+ */
+export class AgentResource {
+  constructor(private readonly client: PrimitiveApiClient["client"]) {}
+
+  /**
+   * Create an emailless agent account. Unauthenticated: call this on a
+   * client constructed without an API key. Returns a one-time `api_key`
+   * (prefixed `prim_`, shown once) plus a provisioned managed inbox. The
+   * account is on the reply-only `agent` plan and can be upgraded later via
+   * the claim flow.
+   */
+  async createAccount(
+    input: CreateAgentAccountInput,
+    options?: RequestOptions,
+  ): Promise<AgentAccountResult> {
+    const result = await generatedOperations.createAgentAccount({
+      body: input,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<AgentAccountResult>(result, "agent account");
+  }
+
+  /**
+   * Start the email-claim upgrade for the authenticated agent account.
+   * Sends a verification code to `email` and returns the claim session id
+   * plus resend timing. Authenticated by the agent's own API key.
+   */
+  async claimStart(
+    input: StartAgentClaimInput,
+    options?: RequestOptions,
+  ): Promise<AgentClaimStartResult> {
+    const result = await generatedOperations.startAgentClaim({
+      body: input,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<AgentClaimStartResult>(result, "claim start result");
+  }
+
+  /**
+   * Confirm the claim verification code and upgrade the account to the
+   * `developer` plan. The org id, API key, and managed inbox carry over;
+   * the send cap lifts.
+   */
+  async claimVerify(
+    input: VerifyAgentClaimInput,
+    options?: RequestOptions,
+  ): Promise<AgentClaimResult> {
+    const result = await generatedOperations.verifyAgentClaim({
+      body: input,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<AgentClaimResult>(result, "claim result");
+  }
+
+  /**
+   * Mint a browser claim link to hand to a human for the email-confirmation
+   * upgrade. `claim_url` is null when the API host has no web origin to
+   * build the link.
+   */
+  async claimLink(
+    input: CreateAgentClaimLinkInput = {},
+    options?: RequestOptions,
+  ): Promise<AgentClaimLinkResult> {
+    const result = await generatedOperations.createAgentClaimLink({
+      body: input,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<AgentClaimLinkResult>(result, "claim link result");
+  }
+}
+
 export class PrimitiveClient extends PrimitiveApiClient {
+  /** Agent-account lifecycle operations (create, claim/upgrade). */
+  readonly agent: AgentResource = new AgentResource(this.client);
+
   async send(input: SendInput, options?: RequestOptions): Promise<SendResult> {
     validateSendInput(input);
 
