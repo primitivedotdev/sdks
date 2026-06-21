@@ -57,7 +57,7 @@ class RootModel(PydanticRootModel[RootT]):
         return super().model_dump_json(*args, **kwargs)
 
 
-class Event(Enum):
+class Event(StrEnum):
     email_received = "email.received"
     email_bounced = "email.bounced"
     email_tls_report = "email.tls_report"
