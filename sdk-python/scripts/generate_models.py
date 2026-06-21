@@ -81,6 +81,9 @@ def _patch_generated_models() -> None:
     for enum_name in (
         "Code",
         "Event",
+        "Type",
+        "Category",
+        "ClassifiedBy",
         "ForwardVerdict",
         "AuthConfidence",
         "SpfResult",

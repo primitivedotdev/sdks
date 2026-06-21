@@ -344,13 +344,13 @@ class Spamassassin(BaseModel):
     ]
 
 
-class Type(Enum):
+class Type(StrEnum):
     permanent = "permanent"
     transient = "transient"
     undetermined = "undetermined"
 
 
-class Category(Enum):
+class Category(StrEnum):
     mailbox_does_not_exist = "mailbox_does_not_exist"
     domain_does_not_exist = "domain_does_not_exist"
     domain_not_accepting_mail = "domain_not_accepting_mail"
@@ -368,7 +368,7 @@ class Category(Enum):
     undetermined = "undetermined"
 
 
-class ClassifiedBy(Enum):
+class ClassifiedBy(StrEnum):
     status_code = "status_code"
     smtp_code = "smtp_code"
     pattern = "pattern"
