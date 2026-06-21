@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPayoutRegistrationMessage,
   deriveEip3009Nonce,
   type NonceBinding,
   type TransferAuthorization,
@@ -116,5 +117,31 @@ describe("toPaymentPayload", () => {
         },
       },
     });
+  });
+});
+
+describe("buildPayoutRegistrationMessage", () => {
+  it("builds the byte-identical platform message", () => {
+    const msg = buildPayoutRegistrationMessage({
+      org: "11111111-1111-4111-8111-111111111111",
+      address: "0x2222222222222222222222222222222222222222",
+      network: "base-sepolia",
+      issuedAt: "2026-01-01T00:00:00.000Z",
+    });
+    expect(msg).toBe(
+      "Primitive x402 payout address authorization\n\nI authorize this address as a payout destination for my Primitive organization.\n\norg: 11111111-1111-4111-8111-111111111111\naddress: 0x2222222222222222222222222222222222222222\nnetwork: base-sepolia\nissued: 2026-01-01T00:00:00.000Z",
+    );
+  });
+
+  it("lowercases the address in the signed bytes", () => {
+    const msg = buildPayoutRegistrationMessage({
+      org: "o",
+      address: "0xAbCdEf0000000000000000000000000000000000",
+      network: "base",
+      issuedAt: "t",
+    });
+    expect(msg).toContain(
+      "address: 0xabcdef0000000000000000000000000000000000",
+    );
   });
 });

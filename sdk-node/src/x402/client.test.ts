@@ -198,3 +198,257 @@ describe("X402Client input validation", () => {
     ).rejects.toThrow(/requires options.signer/);
   });
 });
+
+describe("X402Client hardening", () => {
+  const c = (fetchImpl: typeof fetch) =>
+    new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchImpl,
+    });
+
+  it("wraps a transport/network error as X402Error with status 0", async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    });
+    await expect(
+      c(fetchMock as unknown as typeof fetch).charge({ amount: "10000" }),
+    ).rejects.toMatchObject({ name: "X402Error", status: 0 });
+  });
+
+  it("throws X402Error on a non-JSON 2xx body", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response("<html>nope</html>", {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        }),
+    );
+    await expect(
+      c(fetchMock as unknown as typeof fetch).charge({ amount: "10000" }),
+    ).rejects.toThrow(/non-JSON response/);
+  });
+
+  it("throws X402Error when the success/data envelope is missing", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ ok: true }));
+    await expect(
+      c(fetchMock as unknown as typeof fetch).charge({ amount: "10000" }),
+    ).rejects.toThrow(/missing success\/data envelope/);
+  });
+
+  it("surfaces Retry-After on a rate-limit error", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            success: false,
+            error: { message: "rate limited" },
+          }),
+          {
+            status: 429,
+            headers: {
+              "content-type": "application/json",
+              "retry-after": "12",
+            },
+          },
+        ),
+    );
+    await expect(
+      c(fetchMock as unknown as typeof fetch).charge({ amount: "10000" }),
+    ).rejects.toMatchObject({ status: 429, retryAfter: "12" });
+  });
+
+  it("rejects a missing API key before making a request", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: CHALLENGE }),
+    );
+    const client = new X402Client({
+      apiKey: "",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    await expect(client.charge({ amount: "10000" })).rejects.toThrow(
+      /no API key/,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("pay() rejects a malformed challenge before signing", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: {} }),
+    );
+    const noPr = {
+      ...CHALLENGE,
+      payment_requirements: undefined,
+    } as unknown as X402Challenge;
+    await expect(
+      c(fetchMock as unknown as typeof fetch).pay(noPr, { signer }),
+    ).rejects.toThrow(/payment_requirements/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("pay() rejects an already-expired challenge before signing", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: {} }),
+    );
+    const expired = {
+      ...CHALLENGE,
+      expires_at: new Date(Date.now() - 3_600_000).toISOString(),
+    };
+    await expect(
+      c(fetchMock as unknown as typeof fetch).pay(expired, { signer }),
+    ).rejects.toThrow(/already expired/);
+    // Expired only 2 minutes ago, inside SETTLEMENT_MARGIN_SEC: must still be
+    // caught (the guard checks expires_at, not the margin-extended validBefore).
+    const expiredRecently = {
+      ...CHALLENGE,
+      expires_at: new Date(Date.now() - 2 * 60_000).toISOString(),
+    };
+    await expect(
+      c(fetchMock as unknown as typeof fetch).pay(expiredRecently, { signer }),
+    ).rejects.toThrow(/already expired/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("pay() rejects a network/requirements mismatch before signing", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: {} }),
+    );
+    const mismatch = {
+      ...CHALLENGE,
+      payment_requirements: {
+        ...CHALLENGE.payment_requirements,
+        network: "base",
+      },
+    };
+    await expect(
+      c(fetchMock as unknown as typeof fetch).pay(mismatch, { signer }),
+    ).rejects.toThrow(/network mismatch/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("X402Client completeness methods", () => {
+  const ORG = "11111111-1111-4111-8111-111111111111";
+  const signerWithMessage = {
+    address: account.address,
+    signTypedData: (td: TransferWithAuthorizationTypedData) =>
+      account.signTypedData(td),
+    signMessage: ({ message }: { message: string }) =>
+      account.signMessage({ message }),
+  };
+
+  it("registerPayoutAddress signs the org-bound message and POSTs the proof", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        success: true,
+        data: {
+          id: "p1",
+          address: account.address.toLowerCase(),
+          network: "base-sepolia",
+          label: null,
+          is_default: true,
+          verified_at: "2026-01-01T00:00:00.000Z",
+        },
+      }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    const res = await client.registerPayoutAddress(
+      {
+        org: ORG,
+        network: "base-sepolia",
+        issuedAt: "2026-01-01T00:00:00.000Z",
+      },
+      { signer: signerWithMessage },
+    );
+    expect(res.is_default).toBe(true);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("https://api.example/v1/x402/payout-addresses");
+    expect(init.method).toBe("POST");
+    const body = JSON.parse(init.body as string);
+    expect(body).toMatchObject({
+      address: account.address,
+      network: "base-sepolia",
+      issued_at: "2026-01-01T00:00:00.000Z",
+    });
+    expect(body.signature).toMatch(/^0x[0-9a-f]+$/i);
+  });
+
+  it("registerPayoutAddress requires a signer with signMessage", async () => {
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () => jsonResponse({ success: true, data: {} })),
+    });
+    await expect(
+      client.registerPayoutAddress({ org: ORG }, { signer }),
+    ).rejects.toThrow(/signMessage/);
+  });
+
+  it("getChallenge GETs the challenge by id", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: CHALLENGE }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    const ch = await client.getChallenge(CHALLENGE.id);
+    expect(ch.id).toBe(CHALLENGE.id);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe(`https://api.example/v1/x402/challenges/${CHALLENGE.id}`);
+    expect(init.method).toBe("GET");
+  });
+
+  it("getSpendPolicy reads and setSpendPolicy PATCH-writes the policy", async () => {
+    const policy = {
+      paused: false,
+      max_per_payment: "1000000",
+      max_per_day: null,
+      allowlist: null,
+    };
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: policy }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    expect(await client.getSpendPolicy()).toMatchObject({
+      max_per_payment: "1000000",
+    });
+    await client.setSpendPolicy({ paused: true });
+    const [, putInit] = fetchMock.mock.calls[1] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(putInit.method).toBe("PUT");
+    expect(JSON.parse(putInit.body as string)).toEqual({ paused: true });
+  });
+
+  it("listPayoutAddresses GETs the directory", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: [] }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    expect(await client.listPayoutAddresses()).toEqual([]);
+    const [url] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://api.example/v1/x402/payout-addresses");
+  });
+});
