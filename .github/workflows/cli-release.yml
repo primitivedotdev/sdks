@@ -126,6 +126,23 @@ jobs:
         if: ${{ steps.version.outputs.changed == 'true' }}
         run: scripts/cli-mirror-publish.sh primcli "${{ steps.version.outputs.current }}"
 
+      - name: Publish unscoped mirror package to npm (primitive)
+        # Additive: republishes the identical CLI artifact under the unscoped
+        # `primitive` name, the documented primary install (`npm i -g primitive`).
+        # Same artifact and version as @primitivedotdev/cli; the publish helper
+        # is a no-op when the mirror version is already on npm.
+        #
+        # Gated only on the version bump — NOT on the scoped package's publish
+        # state — so a run where the scoped publish already happened (e.g. the
+        # mirror failed on a prior run before its trusted publisher existed, or
+        # a workflow_dispatch re-run) still attempts the mirror and recovers.
+        #
+        # Requires a trusted publisher for the `primitive` package on npm that
+        # authorizes this workflow; without it the publish fails like any other
+        # unconfigured mirror.
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        run: scripts/cli-mirror-publish.sh primitive "${{ steps.version.outputs.current }}"
+
       - name: Check GitHub release state
         if: ${{ steps.version.outputs.changed == 'true' }}
         id: release_state
