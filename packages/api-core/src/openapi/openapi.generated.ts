@@ -818,6 +818,9 @@ export const openapiDocument: Record<string, unknown> = {
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
           "409": {
             "description": "The email is already in use, or the account is not claimable",
             "content": {
@@ -969,6 +972,19 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "The account is not claimable (not an agent account, or already claimed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"

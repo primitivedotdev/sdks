@@ -3140,6 +3140,10 @@ export type StartAgentClaimErrors = {
      */
     401: ErrorResponse;
     /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
      * The email is already in use, or the account is not claimable
      */
     409: ErrorResponse;
@@ -3221,6 +3225,14 @@ export type CreateAgentClaimLinkErrors = {
      * Invalid or missing API key
      */
     401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The account is not claimable (not an agent account, or already claimed)
+     */
+    409: ErrorResponse;
     /**
      * Rate limit exceeded
      */

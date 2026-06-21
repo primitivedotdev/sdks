@@ -2091,9 +2091,17 @@ func (s *CreateAgentAccountOKHeaders) SetResponse(val CreateAgentAccountOK) {
 
 func (*CreateAgentAccountOKHeaders) createAgentAccountRes() {}
 
+type CreateAgentClaimLinkConflict ErrorResponse
+
+func (*CreateAgentClaimLinkConflict) createAgentClaimLinkRes() {}
+
 // No fields; an empty object is accepted.
 // Ref: #/components/schemas/CreateAgentClaimLinkInput
 type CreateAgentClaimLinkInput struct{}
+
+type CreateAgentClaimLinkNotFound ErrorResponse
+
+func (*CreateAgentClaimLinkNotFound) createAgentClaimLinkRes() {}
 
 // Merged schema.
 type CreateAgentClaimLinkOK struct {
@@ -2148,6 +2156,10 @@ func (s *CreateAgentClaimLinkOKHeaders) SetResponse(val CreateAgentClaimLinkOK) 
 }
 
 func (*CreateAgentClaimLinkOKHeaders) createAgentClaimLinkRes() {}
+
+type CreateAgentClaimLinkUnauthorized ErrorResponse
+
+func (*CreateAgentClaimLinkUnauthorized) createAgentClaimLinkRes() {}
 
 type CreateEndpointBadRequest ErrorResponse
 
@@ -5797,7 +5809,6 @@ func (s *ErrorResponse) SetError(val ErrorResponseError) {
 }
 
 func (*ErrorResponse) createAgentAccountRes()            {}
-func (*ErrorResponse) createAgentClaimLinkRes()          {}
 func (*ErrorResponse) getInboxStatusRes()                {}
 func (*ErrorResponse) getSendPermissionsRes()            {}
 func (*ErrorResponse) listDomainsRes()                   {}
@@ -17105,6 +17116,10 @@ func (s *StartAgentClaimInput) GetEmail() string {
 func (s *StartAgentClaimInput) SetEmail(val string) {
 	s.Email = val
 }
+
+type StartAgentClaimNotFound ErrorResponse
+
+func (*StartAgentClaimNotFound) startAgentClaimRes() {}
 
 // Merged schema.
 type StartAgentClaimOK struct {
