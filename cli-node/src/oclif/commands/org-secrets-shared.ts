@@ -89,11 +89,12 @@ export async function runOrgSecretsRequest(
   }
   if (op.kind === "remove") return { kind: "ok", data: null };
 
-  const body = (await response.json().catch(() => ({}))) as {
-    data?: { items?: unknown[] };
-  };
+  // `data` is either `{ items }` (list) or the upserted row (set); keep it
+  // `unknown` and narrow only where we read the list shape.
+  const body = (await response.json().catch(() => ({}))) as { data?: unknown };
   if (op.kind === "list") {
-    return { kind: "ok", data: body.data?.items ?? [] };
+    const data = body.data as { items?: unknown[] } | undefined;
+    return { kind: "ok", data: data?.items ?? [] };
   }
   return { kind: "ok", data: body.data ?? {} };
 }
