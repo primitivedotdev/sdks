@@ -190,27 +190,6 @@ export class X402Client {
       { payment: toPaymentPayload(challenge.network, auth, signature) },
     );
   }
-
-  /**
-   * Wrap `fetch` so a `402 Payment Required` whose JSON body is a challenge is
-   * paid automatically (within your server-enforced spend policy) and retried
-   * once. Lets an agent call paid endpoints without writing payment code.
-   */
-  autopay(options: { signer: X402Signer }): typeof fetch {
-    const doFetch = this.#fetch;
-    const self = this;
-    return async function autopayFetch(input, init) {
-      const res = await doFetch(input as RequestInfo, init);
-      if (res.status !== 402) return res;
-      const challenge = (await res
-        .clone()
-        .json()
-        .catch(() => null)) as X402Challenge | null;
-      if (!challenge?.id || !challenge.nonce_binding) return res;
-      await self.pay(challenge, options);
-      return doFetch(input as RequestInfo, init);
-    };
-  }
 }
 
 export function createX402Client(options: X402ClientOptions = {}): X402Client {

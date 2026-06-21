@@ -1,6 +1,6 @@
 /**
- * x402 agent-to-agent payments: `charge()` to request, `pay()` to settle with a
- * locally-held key, `autopay()` to handle `402` responses automatically.
+ * x402 agent-to-agent payments: `charge()` to request a payment, `pay()` to
+ * settle one with a locally-held key.
  */
 
 export * from "./client.js";
