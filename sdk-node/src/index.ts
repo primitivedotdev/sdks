@@ -27,13 +27,32 @@ export {
   type SendThreadInput,
 } from "./api/index.js";
 export * from "./webhook/index.js";
+export {
+  createX402Client,
+  deriveEip3009Nonce,
+  type NonceBinding,
+  type TokenDomain,
+  type TransferAuthorization,
+  type X402Challenge,
+  type X402ChargeInput,
+  X402Client,
+  type X402ClientOptions,
+  X402Error,
+  type X402PaymentPayload,
+  type X402PaymentRequirements,
+  type X402Receipt,
+  type X402Signer,
+} from "./x402/index.js";
 
 import { client } from "./api/index.js";
 import { receive } from "./webhook/index.js";
+import { createX402Client } from "./x402/index.js";
 
 const primitive = {
   client,
   receive,
+  /** Construct an x402 payments client. See `X402Client`. */
+  x402: createX402Client,
 };
 
 export default primitive;
