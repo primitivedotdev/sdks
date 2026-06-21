@@ -23,6 +23,9 @@ import {
   type CreateAgentAccountInput,
   type CreateAgentClaimLinkInput,
   type GateDenial,
+  type Account as GeneratedAccount,
+  type EmailStatus as GeneratedEmailStatus,
+  type EmailSummary as GeneratedEmailSummary,
   type ErrorResponse as GeneratedErrorResponse,
   type ReplyInput as GeneratedReplyInput,
   type SemanticSearchInput as GeneratedSemanticSearchInput,
@@ -505,9 +508,234 @@ export class AgentResource {
   }
 }
 
+// A `since` cursor strictly before any real row, used when a caller streams the
+// inbox without supplying a starting cursor: the stream then yields the org's
+// inbound mail oldest-first and tails new arrivals. (To process only mail that
+// arrives from now on, persist a cursor and pass it as `since`.)
+const INBOX_EPOCH_CURSOR =
+  "1970-01-01T00:00:00.000000Z|00000000-0000-0000-0000-000000000000";
+const DEFAULT_WAIT_SECONDS = 30;
+
+/**
+ * One inbound email from the forward tail, plus the cursor positioned just
+ * after it and a bound `reply()`. Persist `cursor` after processing to resume
+ * the stream exactly where you left off; the stream advances one email at a
+ * time, so the cursor is per-email exact.
+ */
+export interface InboundEmail {
+  id: string;
+  messageId: string | null;
+  /** SMTP envelope sender (return-path) of the inbound mail. */
+  from: string;
+  to: string;
+  subject: string | null;
+  status: GeneratedEmailStatus;
+  domain: string;
+  spamScore: number | null;
+  threadId: string | null;
+  createdAt: string;
+  receivedAt: string;
+  /** Forward-tail cursor positioned just after this email (persist to resume). */
+  cursor: string;
+  /** Reply to this email. Reply-only agents may reply to senders that mailed them. */
+  reply(input: ReplyInput, options?: RequestOptions): Promise<SendResult>;
+}
+
+export interface InboxStreamOptions {
+  /** Resume cursor. Omit to stream from the beginning (oldest-first) then tail. */
+  since?: string;
+  /** Per-request long-poll hold in seconds (1-30). Default 30. */
+  waitSeconds?: number;
+  /** Stop the stream when this fires. */
+  signal?: AbortSignal;
+}
+
+export interface WaitForNextOptions {
+  since?: string;
+  waitSeconds?: number;
+  signal?: AbortSignal;
+}
+
+function buildReplyBody(input: ReplyInput): GeneratedReplyInput {
+  const resolved = typeof input === "string" ? { text: input } : input;
+  // Reject a subject override loudly (mirrors PrimitiveClient.reply): a custom
+  // subject silently breaks Gmail threading, so it is never accepted.
+  if ("subject" in resolved) {
+    throw new TypeError(
+      "reply does not support a subject override; the server prepends 'Re:' to the parent's subject for thread continuity",
+    );
+  }
+  if (!resolved.text && !resolved.html) {
+    throw new TypeError("reply requires text or html");
+  }
+  return {
+    ...(resolved.text !== undefined ? { body_text: resolved.text } : {}),
+    ...(resolved.html !== undefined ? { body_html: resolved.html } : {}),
+    ...(resolved.from !== undefined ? { from: resolved.from } : {}),
+    ...(resolved.attachments !== undefined
+      ? { attachments: resolved.attachments }
+      : {}),
+    ...(resolved.wait !== undefined ? { wait: resolved.wait } : {}),
+  };
+}
+
+async function replyById(
+  client: PrimitiveApiClient["client"],
+  id: string,
+  input: ReplyInput,
+  options?: RequestOptions,
+): Promise<SendResult> {
+  const result = await generatedOperations.replyToEmail({
+    body: buildReplyBody(input),
+    path: { id },
+    ...resolveRequestOptions(options),
+    client,
+    responseStyle: "fields",
+  });
+  return unwrapSendResult(result);
+}
+
+function toInboundEmail(
+  row: GeneratedEmailSummary,
+  cursor: string,
+  client: PrimitiveApiClient["client"],
+): InboundEmail {
+  return {
+    id: row.id,
+    messageId: row.message_id ?? null,
+    from: row.sender,
+    to: row.recipient,
+    subject: row.subject ?? null,
+    status: row.status,
+    domain: row.domain,
+    spamScore: row.spam_score ?? null,
+    threadId: row.thread_id ?? null,
+    createdAt: row.created_at,
+    receivedAt: row.received_at,
+    cursor,
+    reply: (input, options) => replyById(client, row.id, input, options),
+  };
+}
+
+/** Unwrap a `listEmails` page into rows + the next forward-tail cursor. */
+function unwrapInboxPage(result: {
+  data?:
+    | { data?: GeneratedEmailSummary[]; meta?: { cursor?: string | null } }
+    | undefined;
+  error?: GeneratedErrorResponse | unknown;
+  response?: Response;
+}): { emails: GeneratedEmailSummary[]; cursor: string | null } {
+  const response = (result as { response?: Response }).response;
+  if (result.error) {
+    if (isAbortLikeError(result.error)) throw result.error;
+    const parsed = parseApiErrorPayload(result.error);
+    throw new PrimitiveApiError(parsed.message, {
+      payload: result.error,
+      status: response?.status,
+      code: parsed.code,
+      gates: parsed.gates,
+      requestId: parsed.requestId,
+      retryAfter: parseRetryAfterHeader(response),
+      details: parsed.details,
+      cause: result.error instanceof Error ? result.error : undefined,
+    });
+  }
+  return {
+    emails: result.data?.data ?? [],
+    cursor: result.data?.meta?.cursor ?? null,
+  };
+}
+
+/**
+ * Inbound mail, grouped under `client.inbox`. Wraps the GET /v1/emails forward
+ * tail (`?since` + `?wait` long-poll) so an agent's receive loop is a single
+ * `for await`, with the cursor advanced for you.
+ */
+export class InboxResource {
+  constructor(private readonly client: PrimitiveApiClient["client"]) {}
+
+  /**
+   * Stream inbound emails as they arrive. Long-polls the forward tail, yielding
+   * one email at a time and advancing the cursor. Resumes from `since` (omit to
+   * start oldest-first); stops when `signal` aborts.
+   *
+   *   for await (const email of client.inbox.stream()) {
+   *     await email.reply("got it");
+   *   }
+   */
+  async *stream(
+    options: InboxStreamOptions = {},
+  ): AsyncGenerator<InboundEmail, void, void> {
+    let since = options.since ?? INBOX_EPOCH_CURSOR;
+    const wait = options.waitSeconds ?? DEFAULT_WAIT_SECONDS;
+    while (!options.signal?.aborted) {
+      const result = await generatedOperations.listEmails({
+        // limit 1 makes each page exactly one email, so meta.cursor is the
+        // per-email resume position (yielded as email.cursor).
+        query: { since, wait, limit: 1 },
+        ...resolveRequestOptions({ signal: options.signal }),
+        client: this.client,
+        responseStyle: "fields",
+      });
+      const { emails, cursor } = unwrapInboxPage(result);
+      for (const row of emails) {
+        yield toInboundEmail(row, cursor ?? since, this.client);
+      }
+      // Advance past what we yielded; an empty page (caught up) loops and
+      // re-issues the long-poll, which blocks until the next arrival.
+      if (cursor) since = cursor;
+    }
+  }
+
+  /**
+   * Resolve with the next inbound email after `since`, or null if none arrives
+   * within the wait window. One-shot form of `stream`; pass your current cursor
+   * as `since` to wait for genuinely new mail.
+   */
+  async waitForNext(
+    options: WaitForNextOptions = {},
+  ): Promise<InboundEmail | null> {
+    const since = options.since ?? INBOX_EPOCH_CURSOR;
+    const wait = options.waitSeconds ?? DEFAULT_WAIT_SECONDS;
+    const result = await generatedOperations.listEmails({
+      query: { since, wait, limit: 1 },
+      ...resolveRequestOptions({ signal: options.signal }),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    const { emails, cursor } = unwrapInboxPage(result);
+    return emails.length > 0
+      ? toInboundEmail(emails[0], cursor ?? since, this.client)
+      : null;
+  }
+}
+
+/** Account introspection, grouped under `client.account`. */
+export class AccountResource {
+  constructor(private readonly client: PrimitiveApiClient["client"]) {}
+
+  /**
+   * The authenticated account: plan, limits, granted `entitlements` (e.g. an
+   * emailless agent sees only reply-only keys), and `managed_inbox_address`
+   * (the From address to reply as).
+   */
+  async get(options?: RequestOptions): Promise<GeneratedAccount> {
+    const result = await generatedOperations.getAccount({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedAccount>(result, "account");
+  }
+}
+
 export class PrimitiveClient extends PrimitiveApiClient {
   /** Agent-account lifecycle operations (create, claim/upgrade). */
   readonly agent: AgentResource = new AgentResource(this.client);
+  /** Inbound mail: long-poll stream + waitForNext over the forward tail. */
+  readonly inbox: InboxResource = new InboxResource(this.client);
+  /** Account introspection (plan, limits, entitlements, managed inbox). */
+  readonly account: AccountResource = new AccountResource(this.client);
 
   async send(input: SendInput, options?: RequestOptions): Promise<SendResult> {
     validateSendInput(input);
@@ -582,41 +810,7 @@ export class PrimitiveClient extends PrimitiveApiClient {
     input: ReplyInput,
     options?: RequestOptions,
   ): Promise<SendResult> {
-    const resolved = typeof input === "string" ? { text: input } : input;
-    // Reject the subject override at runtime so a JS caller (no TS
-    // types) gets the same loud error as a TS caller. Without this,
-    // `client.reply(email, { text, subject: "Custom" })` silently
-    // dropped subject and sent a "Re:" reply, breaking Gmail
-    // threading without telling the caller. Mirrors Python's
-    // ValueError. Checked before the empty-body check so passing
-    // ONLY a subject surfaces the more informative error.
-    if ("subject" in resolved) {
-      throw new TypeError(
-        "reply does not support a subject override; the server prepends 'Re:' to the parent's subject for thread continuity",
-      );
-    }
-    if (!resolved.text && !resolved.html) {
-      throw new TypeError("reply requires text or html");
-    }
-
-    const body: GeneratedReplyInput = {
-      ...(resolved.text !== undefined ? { body_text: resolved.text } : {}),
-      ...(resolved.html !== undefined ? { body_html: resolved.html } : {}),
-      ...(resolved.from !== undefined ? { from: resolved.from } : {}),
-      ...(resolved.attachments !== undefined
-        ? { attachments: resolved.attachments }
-        : {}),
-      ...(resolved.wait !== undefined ? { wait: resolved.wait } : {}),
-    };
-
-    const result = await generatedOperations.replyToEmail({
-      body,
-      path: { id: email.id },
-      ...resolveRequestOptions(options),
-      client: this.client,
-      responseStyle: "fields",
-    });
-    return unwrapSendResult(result);
+    return replyById(this.client, email.id, input, options);
   }
 
   async forward(
@@ -785,6 +979,42 @@ export function createPrimitiveClient(options: PrimitiveClientOptions = {}) {
 
 export function client(options: PrimitiveClientOptions = {}) {
   return new PrimitiveClient(options);
+}
+
+export interface CreateAgentOptions extends CreateAgentAccountInput {
+  /** Base URL + transport overrides for the returned client. */
+  client?: PrimitiveClientOptions;
+}
+
+export interface CreatedAgent {
+  /** A PrimitiveClient already authenticated with the new agent's API key. */
+  client: PrimitiveClient;
+  /** The provisioned managed inbox FQDN (the address to receive + reply as). */
+  address: string | null;
+  /** The raw create-account result (api_key shown once, org_id, plan, limits). */
+  account: AgentAccountResult;
+}
+
+/**
+ * Zero-to-receiving in one call: create an emailless agent account (no auth)
+ * and return a PrimitiveClient already wired with its one-time API key, plus
+ * the provisioned managed inbox. From here `result.client.inbox.stream()` and
+ * `result.client.send(...)` work immediately.
+ *
+ *   const { client, address } = await createAgent({ terms_accepted: true });
+ */
+export async function createAgent(
+  options: CreateAgentOptions,
+): Promise<CreatedAgent> {
+  const { client: clientOptions, ...input } = options;
+  // Account creation is unauthenticated; use a keyless client to make the call.
+  const bootstrap = new PrimitiveClient(clientOptions);
+  const account = await bootstrap.agent.createAccount(input);
+  const authed = new PrimitiveClient({
+    ...clientOptions,
+    apiKey: account.api_key,
+  });
+  return { client: authed, address: account.address, account };
 }
 
 // ---------------------------------------------------------------------------

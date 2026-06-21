@@ -526,6 +526,18 @@ export type Account = {
     id: string;
     email: string;
     plan: string;
+    limits: PlanLimits;
+    /**
+     * Granted org entitlement keys (sorted). A headless caller reads its
+     * capabilities here — e.g. an emailless agent seeing only
+     * ["send_mail", "send_to_known_addresses"] knows it is reply-only.
+     *
+     */
+    entitlements: Array<string>;
+    /**
+     * The managed inbox FQDN to reply as, or null if the org has no managed inbox.
+     */
+    managed_inbox_address: string | null;
     created_at: string;
     onboarding_completed?: boolean;
     onboarding_step?: string | null;
@@ -3770,6 +3782,23 @@ export type ListEmailsData = {
          * Filter emails created on or before this timestamp
          */
         date_to?: string;
+        /**
+         * Forward-tail cursor. Returns rows that became visible AFTER this
+         * cursor, oldest-first, so a caller can stream new inbound mail by
+         * re-passing the cursor from each response. Mutually exclusive with
+         * `cursor` (which pages history newest-first). Pass the `meta.cursor`
+         * from the previous `since` response; an empty page means caught up.
+         *
+         */
+        since?: string;
+        /**
+         * Long-poll: hold the request up to this many seconds waiting for new
+         * mail past `since`, returning as soon as any arrives (or an empty
+         * page when the wait elapses). Requires `since`; 0 (default) returns
+         * immediately.
+         *
+         */
+        wait?: number;
     };
     url: '/emails';
 };

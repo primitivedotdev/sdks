@@ -14,9 +14,16 @@ import (
 
 // Ref: #/components/schemas/Account
 type Account struct {
-	ID                               uuid.UUID      `json:"id"`
-	Email                            string         `json:"email"`
-	Plan                             string         `json:"plan"`
+	ID     uuid.UUID  `json:"id"`
+	Email  string     `json:"email"`
+	Plan   string     `json:"plan"`
+	Limits PlanLimits `json:"limits"`
+	// Granted org entitlement keys (sorted). A headless caller reads its
+	// capabilities here — e.g. an emailless agent seeing only
+	// ["send_mail", "send_to_known_addresses"] knows it is reply-only.
+	Entitlements []string `json:"entitlements"`
+	// The managed inbox FQDN to reply as, or null if the org has no managed inbox.
+	ManagedInboxAddress              NilString      `json:"managed_inbox_address"`
 	CreatedAt                        time.Time      `json:"created_at"`
 	OnboardingCompleted              OptBool        `json:"onboarding_completed"`
 	OnboardingStep                   OptNilString   `json:"onboarding_step"`
@@ -41,6 +48,21 @@ func (s *Account) GetEmail() string {
 // GetPlan returns the value of Plan.
 func (s *Account) GetPlan() string {
 	return s.Plan
+}
+
+// GetLimits returns the value of Limits.
+func (s *Account) GetLimits() PlanLimits {
+	return s.Limits
+}
+
+// GetEntitlements returns the value of Entitlements.
+func (s *Account) GetEntitlements() []string {
+	return s.Entitlements
+}
+
+// GetManagedInboxAddress returns the value of ManagedInboxAddress.
+func (s *Account) GetManagedInboxAddress() NilString {
+	return s.ManagedInboxAddress
 }
 
 // GetCreatedAt returns the value of CreatedAt.
@@ -101,6 +123,21 @@ func (s *Account) SetEmail(val string) {
 // SetPlan sets the value of Plan.
 func (s *Account) SetPlan(val string) {
 	s.Plan = val
+}
+
+// SetLimits sets the value of Limits.
+func (s *Account) SetLimits(val PlanLimits) {
+	s.Limits = val
+}
+
+// SetEntitlements sets the value of Entitlements.
+func (s *Account) SetEntitlements(val []string) {
+	s.Entitlements = val
+}
+
+// SetManagedInboxAddress sets the value of ManagedInboxAddress.
+func (s *Account) SetManagedInboxAddress(val NilString) {
+	s.ManagedInboxAddress = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.

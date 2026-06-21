@@ -193,6 +193,16 @@ describe("COMMANDS / manifest coverage", () => {
     expect(semanticSearchCommand.flags["api-base-url-2"]).toBeUndefined();
   });
 
+  it("registers the interactive agent upgrade command", () => {
+    expect(COMMANDS["agent:upgrade"]).toBeDefined();
+    const cmd = COMMANDS["agent:upgrade"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(cmd.flags.email).toBeDefined();
+    expect(cmd.flags.code).toBeDefined();
+    expect(cmd.flags["api-key"]).toBeDefined();
+  });
+
   it("registers signup commands", () => {
     expect(COMMANDS.signup).toBeDefined();
     expect(COMMANDS["signup:confirm"]).toBeDefined();

@@ -28,6 +28,8 @@ def _get_kwargs(
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    since: str | Unset = UNSET,
+    wait: int | Unset = 0,
 
 ) -> dict[str, Any]:
     
@@ -62,6 +64,10 @@ def _get_kwargs(
     if not isinstance(date_to, Unset):
         json_date_to = date_to.isoformat()
     params["date_to"] = json_date_to
+
+    params["since"] = since
+
+    params["wait"] = wait
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -125,6 +131,8 @@ def sync_detailed(
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    since: str | Unset = UNSET,
+    wait: int | Unset = 0,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -179,6 +187,8 @@ def sync_detailed(
         search (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        since (str | Unset):
+        wait (int | Unset):  Default: 0.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -197,6 +207,8 @@ status=status,
 search=search,
 date_from=date_from,
 date_to=date_to,
+since=since,
+wait=wait,
 
     )
 
@@ -216,6 +228,8 @@ def sync(
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    since: str | Unset = UNSET,
+    wait: int | Unset = 0,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -270,6 +284,8 @@ def sync(
         search (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        since (str | Unset):
+        wait (int | Unset):  Default: 0.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -289,6 +305,8 @@ status=status,
 search=search,
 date_from=date_from,
 date_to=date_to,
+since=since,
+wait=wait,
 
     ).parsed
 
@@ -302,6 +320,8 @@ async def asyncio_detailed(
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    since: str | Unset = UNSET,
+    wait: int | Unset = 0,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -356,6 +376,8 @@ async def asyncio_detailed(
         search (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        since (str | Unset):
+        wait (int | Unset):  Default: 0.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -374,6 +396,8 @@ status=status,
 search=search,
 date_from=date_from,
 date_to=date_to,
+since=since,
+wait=wait,
 
     )
 
@@ -393,6 +417,8 @@ async def asyncio(
     search: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    since: str | Unset = UNSET,
+    wait: int | Unset = 0,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -447,6 +473,8 @@ async def asyncio(
         search (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        since (str | Unset):
+        wait (int | Unset):  Default: 0.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -466,5 +494,7 @@ status=status,
 search=search,
 date_from=date_from,
 date_to=date_to,
+since=since,
+wait=wait,
 
     )).parsed

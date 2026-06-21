@@ -16,6 +16,28 @@ func (s *Account) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if err := s.Limits.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "limits",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.Entitlements == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "entitlements",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.SpamThreshold.Get(); ok {
 			if err := func() error {
 				if err := (validate.Float{

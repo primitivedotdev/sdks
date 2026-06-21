@@ -13,6 +13,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.plan_limits import PlanLimits
 
 
 
@@ -29,6 +31,11 @@ class Account:
             id (UUID):
             email (str):
             plan (str):
+            limits (PlanLimits): Plan-derived quota limits for an account.
+            entitlements (list[str]): Granted org entitlement keys (sorted). A headless caller reads its
+                capabilities here — e.g. an emailless agent seeing only
+                ["send_mail", "send_to_known_addresses"] knows it is reply-only.
+            managed_inbox_address (None | str): The managed inbox FQDN to reply as, or null if the org has no managed inbox.
             created_at (datetime.datetime):
             discard_content_on_webhook_confirmed (bool):
             onboarding_completed (bool | Unset):
@@ -43,6 +50,9 @@ class Account:
     id: UUID
     email: str
     plan: str
+    limits: PlanLimits
+    entitlements: list[str]
+    managed_inbox_address: None | str
     created_at: datetime.datetime
     discard_content_on_webhook_confirmed: bool
     onboarding_completed: bool | Unset = UNSET
@@ -59,11 +69,21 @@ class Account:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.plan_limits import PlanLimits
         id = str(self.id)
 
         email = self.email
 
         plan = self.plan
+
+        limits = self.limits.to_dict()
+
+        entitlements = self.entitlements
+
+
+
+        managed_inbox_address: None | str
+        managed_inbox_address = self.managed_inbox_address
 
         created_at = self.created_at.isoformat()
 
@@ -118,6 +138,9 @@ class Account:
             "id": id,
             "email": email,
             "plan": plan,
+            "limits": limits,
+            "entitlements": entitlements,
+            "managed_inbox_address": managed_inbox_address,
             "created_at": created_at,
             "discard_content_on_webhook_confirmed": discard_content_on_webhook_confirmed,
         })
@@ -142,6 +165,7 @@ class Account:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.plan_limits import PlanLimits
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -151,6 +175,22 @@ class Account:
         email = d.pop("email")
 
         plan = d.pop("plan")
+
+        limits = PlanLimits.from_dict(d.pop("limits"))
+
+
+
+
+        entitlements = cast(list[str], d.pop("entitlements"))
+
+
+        def _parse_managed_inbox_address(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        managed_inbox_address = _parse_managed_inbox_address(d.pop("managed_inbox_address"))
+
 
         created_at = isoparse(d.pop("created_at"))
 
@@ -245,6 +285,9 @@ class Account:
             id=id,
             email=email,
             plan=plan,
+            limits=limits,
+            entitlements=entitlements,
+            managed_inbox_address=managed_inbox_address,
             created_at=created_at,
             discard_content_on_webhook_confirmed=discard_content_on_webhook_confirmed,
             onboarding_completed=onboarding_completed,
