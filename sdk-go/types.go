@@ -7,7 +7,21 @@ import (
 
 type EventType string
 
-const EventTypeEmailReceived EventType = "email.received"
+const (
+	// EventTypeEmailReceived is a normal inbound email.
+	EventTypeEmailReceived EventType = "email.received"
+	// EventTypeEmailBounced is a delivery status notification (DSN) reporting
+	// that a message delivery failed. Carries Email.Analysis.Bounce.
+	EventTypeEmailBounced EventType = "email.bounced"
+	// EventTypeEmailTLSReport is an SMTP TLS report (RFC 8460). Carries
+	// Email.Analysis.TLSReport.
+	EventTypeEmailTLSReport EventType = "email.tls_report"
+	// EventTypeEmailDMARCReport is a DMARC aggregate report (RFC 7489). Carries
+	// Email.Analysis.DMARCReport.
+	EventTypeEmailDMARCReport EventType = "email.dmarc_report"
+	// EventTypeEmailDMARCFailure is a DMARC failure (forensic) report.
+	EventTypeEmailDMARCFailure EventType = "email.dmarc_failure"
+)
 
 type ParsedStatus string
 
@@ -253,6 +267,101 @@ type EmailAnalysis struct {
 	// Optional. Present when the email was processed by a forward-detection
 	// pipeline (always present in Primitive's managed service).
 	Forward *ForwardAnalysis `json:"forward,omitempty"`
+
+	// Bounce holds parsed delivery status notification (bounce) details.
+	// Present on email.bounced events; absent on all other event types.
+	Bounce *BounceAnalysis `json:"bounce,omitempty"`
+
+	// TLSReport holds parsed SMTP TLS report (RFC 8460) details.
+	// Present on email.tls_report events; absent on all other event types.
+	TLSReport *TLSReportAnalysis `json:"tls_report,omitempty"`
+
+	// DMARCReport holds parsed DMARC aggregate report (RFC 7489) details.
+	// Present on email.dmarc_report events; absent on all other event types.
+	DMARCReport *DMARCReportAnalysis `json:"dmarc_report,omitempty"`
+}
+
+// BounceAnalysis is the parsed delivery status notification carried on
+// email.bounced events.
+type BounceAnalysis struct {
+	IsBounce          bool     `json:"is_bounce"`
+	Kind              string   `json:"kind"`
+	Type              string   `json:"type"`
+	Category          string   `json:"category"`
+	ClassifiedBy      string   `json:"classified_by"`
+	FailedRecipient   *string  `json:"failed_recipient"`
+	SMTPCode          *int64   `json:"smtp_code"`
+	StatusCode        *string  `json:"status_code"`
+	DiagnosticCode    *string  `json:"diagnostic_code"`
+	ReportedByMTA     *string  `json:"reported_by_mta"`
+	OriginalMessageID *string  `json:"original_message_id"`
+	Reasons           []string `json:"reasons"`
+}
+
+// TLSReportAnalysis is the parsed SMTP TLS report carried on email.tls_report
+// events.
+type TLSReportAnalysis struct {
+	Kind                    string            `json:"kind"`
+	Organization            *string           `json:"organization"`
+	ReportID                *string           `json:"report_id"`
+	Contact                 *string           `json:"contact"`
+	DateRange               ReportDateRange   `json:"date_range"`
+	TotalSuccessfulSessions int64             `json:"total_successful_sessions"`
+	TotalFailedSessions     int64             `json:"total_failed_sessions"`
+	Policies                []TLSReportPolicy `json:"policies"`
+}
+
+type TLSReportPolicy struct {
+	PolicyDomain       *string            `json:"policy_domain"`
+	PolicyType         *string            `json:"policy_type"`
+	SuccessfulSessions int64              `json:"successful_sessions"`
+	FailedSessions     int64              `json:"failed_sessions"`
+	Failures           []TLSReportFailure `json:"failures"`
+}
+
+type TLSReportFailure struct {
+	ResultType          *string `json:"result_type"`
+	Count               int64   `json:"count"`
+	SendingMTAIP        *string `json:"sending_mta_ip"`
+	ReceivingMXHostname *string `json:"receiving_mx_hostname"`
+}
+
+// DMARCReportAnalysis is the parsed DMARC aggregate report carried on
+// email.dmarc_report events.
+type DMARCReportAnalysis struct {
+	Kind            string               `json:"kind"`
+	Organization    *string              `json:"organization"`
+	ReportID        *string              `json:"report_id"`
+	DateRange       ReportDateRange      `json:"date_range"`
+	PolicyPublished DMARCPolicyPublished `json:"policy_published"`
+	TotalCount      int64                `json:"total_count"`
+	DKIMPassCount   int64                `json:"dkim_pass_count"`
+	SPFPassCount    int64                `json:"spf_pass_count"`
+	Records         []DMARCRecord        `json:"records"`
+}
+
+type DMARCPolicyPublished struct {
+	Domain *string `json:"domain"`
+	P      *string `json:"p"`
+	SP     *string `json:"sp"`
+	Pct    *int64  `json:"pct"`
+	Adkim  *string `json:"adkim"`
+	Aspf   *string `json:"aspf"`
+}
+
+type DMARCRecord struct {
+	SourceIP    *string `json:"source_ip"`
+	Count       int64   `json:"count"`
+	Disposition *string `json:"disposition"`
+	DKIM        *string `json:"dkim"`
+	SPF         *string `json:"spf"`
+	HeaderFrom  *string `json:"header_from"`
+}
+
+// ReportDateRange is the reporting window shared by TLS and DMARC reports.
+type ReportDateRange struct {
+	Start *string `json:"start"`
+	End   *string `json:"end"`
 }
 
 type SpamAssassinAnalysis struct {

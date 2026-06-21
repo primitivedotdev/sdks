@@ -240,7 +240,7 @@ def test_handle_webhook_round_trip(valid_payload: dict[str, Any]) -> None:
         headers={"primitive-signature": str(header)},
         secret=secret,
     )
-    assert event.event == "email.received"
+    assert event.event.value == "email.received"
 
 
 def test_handle_webhook_accepts_bytes_body(valid_payload: dict[str, Any]) -> None:

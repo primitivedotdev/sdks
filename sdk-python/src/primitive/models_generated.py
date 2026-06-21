@@ -57,6 +57,14 @@ class RootModel(PydanticRootModel[RootT]):
         return super().model_dump_json(*args, **kwargs)
 
 
+class Event(Enum):
+    email_received = "email.received"
+    email_bounced = "email.bounced"
+    email_tls_report = "email.tls_report"
+    email_dmarc_report = "email.dmarc_report"
+    email_dmarc_failure = "email.dmarc_failure"
+
+
 class Delivery(BaseModel):
     model_config = ConfigDict(
         extra="allow",
@@ -334,6 +342,224 @@ class Spamassassin(BaseModel):
             description="Overall spam score (sum of all rule scores). Higher scores indicate higher likelihood of spam. Unbounded - can be negative (ham) or very high (spam)."
         ),
     ]
+
+
+class Type(Enum):
+    permanent = "permanent"
+    transient = "transient"
+    undetermined = "undetermined"
+
+
+class Category(Enum):
+    mailbox_does_not_exist = "mailbox_does_not_exist"
+    domain_does_not_exist = "domain_does_not_exist"
+    domain_not_accepting_mail = "domain_not_accepting_mail"
+    mailbox_full = "mailbox_full"
+    mailbox_inactive = "mailbox_inactive"
+    message_too_large = "message_too_large"
+    content_rejected = "content_rejected"
+    policy_blocked = "policy_blocked"
+    auth_failure = "auth_failure"
+    relay_denied = "relay_denied"
+    rate_limited = "rate_limited"
+    network_error = "network_error"
+    recipient_moved = "recipient_moved"
+    expired = "expired"
+    undetermined = "undetermined"
+
+
+class ClassifiedBy(Enum):
+    status_code = "status_code"
+    smtp_code = "smtp_code"
+    pattern = "pattern"
+    provider = "provider"
+    none = "none"
+
+
+class BounceAnalysis(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    is_bounce: Annotated[
+        Literal[True], Field(description="Always `true` on a parsed bounce.")
+    ]
+    kind: Annotated[
+        Literal["dsn"],
+        Field(description="The machine-mail kind. Always `dsn` for a bounce."),
+    ]
+    type: Annotated[
+        Type,
+        Field(
+            description="Whether the failure is permanent (hard bounce), transient (soft bounce, may be retried), or undetermined."
+        ),
+    ]
+    category: Annotated[
+        Category, Field(description="Best-effort reason category for the failure.")
+    ]
+    classified_by: Annotated[
+        ClassifiedBy,
+        Field(
+            description="Which signal produced `category` (for transparency and debugging)."
+        ),
+    ]
+    failed_recipient: Annotated[
+        str | None,
+        Field(
+            description="The recipient address that failed, if the report identifies one."
+        ),
+    ]
+    smtp_code: Annotated[
+        int | None, Field(description="SMTP reply code (e.g. `550`), if reported.")
+    ]
+    status_code: Annotated[
+        str | None,
+        Field(
+            description="Enhanced mail system status code (RFC 3463, e.g. `5.1.1`), if reported."
+        ),
+    ]
+    diagnostic_code: Annotated[
+        str | None,
+        Field(description="Raw diagnostic text from the reporting MTA, if present."),
+    ]
+    reported_by_mta: Annotated[
+        str | None,
+        Field(description="The MTA that generated the report, if identifiable."),
+    ]
+    original_message_id: Annotated[
+        str | None,
+        Field(
+            description="Message-ID of the original message that bounced, if recoverable. Match this against the `message_id` of a message you sent to correlate the bounce."
+        ),
+    ]
+    reasons: Annotated[
+        list[str],
+        Field(description="Human-readable reason strings extracted from the report."),
+    ]
+
+
+class TlsReportFailure(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    result_type: Annotated[
+        str | None,
+        Field(
+            description="Failure result type (e.g. `certificate-expired`, `starttls-not-supported`)."
+        ),
+    ]
+    count: Annotated[
+        int, Field(description="Number of sessions that hit this failure.")
+    ]
+    sending_mta_ip: str | None
+    receiving_mx_hostname: str | None
+
+
+class TlsReportPolicy(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    policy_domain: str | None
+    policy_type: Annotated[
+        str | None,
+        Field(
+            description="Policy type the sessions were evaluated against (e.g. `sts`, `tlsa`, `no-policy-found`)."
+        ),
+    ]
+    successful_sessions: int
+    failed_sessions: int
+    failures: list[TlsReportFailure]
+
+
+class DateRange(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    start: Annotated[
+        str | None, Field(description="ISO 8601 start of the reporting window.")
+    ]
+    end: Annotated[
+        str | None, Field(description="ISO 8601 end of the reporting window.")
+    ]
+
+
+class TlsReportAnalysis(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    kind: Literal["tls_report"]
+    organization: Annotated[
+        str | None, Field(description="Reporting organization name.")
+    ]
+    report_id: str | None
+    contact: Annotated[str | None, Field(description="Reporter contact, if provided.")]
+    date_range: DateRange
+    total_successful_sessions: int
+    total_failed_sessions: int
+    policies: list[TlsReportPolicy]
+
+
+class DmarcRecord(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    source_ip: str | None
+    count: int
+    disposition: Annotated[
+        str | None,
+        Field(
+            description="Disposition applied by the receiver: `none`, `quarantine`, or `reject`."
+        ),
+    ]
+    dkim: Annotated[
+        str | None, Field(description="DKIM alignment result: `pass` or `fail`.")
+    ]
+    spf: Annotated[
+        str | None, Field(description="SPF alignment result: `pass` or `fail`.")
+    ]
+    header_from: str | None
+
+
+class PolicyPublished(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    domain: str | None
+    p: Annotated[
+        str | None,
+        Field(
+            description="Published domain policy: `none`, `quarantine`, or `reject`."
+        ),
+    ]
+    sp: Annotated[str | None, Field(description="Published subdomain policy.")]
+    pct: Annotated[
+        int | None,
+        Field(description="Percentage of messages the policy is applied to."),
+    ]
+    adkim: Annotated[
+        str | None,
+        Field(description="DKIM alignment mode: `r` (relaxed) or `s` (strict)."),
+    ]
+    aspf: Annotated[
+        str | None,
+        Field(description="SPF alignment mode: `r` (relaxed) or `s` (strict)."),
+    ]
+
+
+class DmarcReportAnalysis(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    kind: Literal["dmarc_report"]
+    organization: str | None
+    report_id: str | None
+    date_range: DateRange
+    policy_published: PolicyPublished
+    total_count: Annotated[
+        int, Field(description="Total messages covered by the report.")
+    ]
+    dkim_pass_count: int
+    spf_pass_count: int
+    records: list[DmarcRecord]
 
 
 class ForwardOriginalSender(BaseModel):
@@ -798,6 +1024,24 @@ class EmailAnalysis(BaseModel):
             description="Forward detection and analysis results.\n\nOptional. Present when the email was processed by a forward-detection pipeline (always present in Primitive's managed service). When absent, forward detection was not performed on this email."
         ),
     ] = None
+    bounce: Annotated[
+        BounceAnalysis | None,
+        Field(
+            description="Bounce (delivery status notification) analysis.\n\nPresent on `email.bounced` events: the parsed DSN reporting that a message you sent could not be delivered. Absent on all other event types."
+        ),
+    ] = None
+    tls_report: Annotated[
+        TlsReportAnalysis | None,
+        Field(
+            description="SMTP TLS report analysis (RFC 8460).\n\nPresent on `email.tls_report` events: a remote MTA's report of TLS negotiation results for mail sent to your domain. Absent on all other event types."
+        ),
+    ] = None
+    dmarc_report: Annotated[
+        DmarcReportAnalysis | None,
+        Field(
+            description="DMARC aggregate report analysis (RFC 7489).\n\nPresent on `email.dmarc_report` events: a receiver's periodic aggregate report of DMARC authentication results for your domain. Absent on all other event types."
+        ),
+    ] = None
 
     @field_validator("spamassassin", "forward", mode="before")
     @classmethod
@@ -871,9 +1115,9 @@ class EmailReceivedEvent(BaseModel):
         ),
     ]
     event: Annotated[
-        Literal["email.received"],
+        Event,
         Field(
-            description='Event type identifier. Always `"email.received"` for this event type.'
+            description="Event type identifier.\n\n- `email.received` - A normal inbound email.\n- `email.bounced` - A delivery status notification (DSN) reporting that a message delivery failed. Carries `email.analysis.bounce`.\n- `email.tls_report` - An SMTP TLS report (RFC 8460). Carries `email.analysis.tls_report`.\n- `email.dmarc_report` - A DMARC aggregate report (RFC 7489). Carries `email.analysis.dmarc_report`.\n- `email.dmarc_failure` - A DMARC failure (forensic) report.\n\nMachine-generated mail (bounces and the report types above) is delivered under its own event type rather than `email.received`, so an endpoint subscribed only to `email.received` receives just normal inbound mail. The payload shape is otherwise identical across event types; the type-specific details live under `email.analysis`."
         ),
     ]
     version: Annotated[
