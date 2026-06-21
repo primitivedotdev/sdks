@@ -56,8 +56,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "pnpm generate && tsc --noEmit -p tsconfig.typecheck.json",
-    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts tests/",
-    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts tests/",
+    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts tests/",
+    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts tests/",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
@@ -91,7 +91,8 @@
     "nodemailer": "^8.0.7",
     "sanitize-html": "^2.14.0",
     "tar-stream": "^3.1.8",
-    "validator": "^13.15.35"
+    "validator": "^13.15.35",
+    "viem": "^2.21.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
