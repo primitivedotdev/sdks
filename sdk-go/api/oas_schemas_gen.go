@@ -289,6 +289,341 @@ type AddDomainUnauthorized ErrorResponse
 
 func (*AddDomainUnauthorized) addDomainRes() {}
 
+// Ref: #/components/schemas/AgentAccountResult
+type AgentAccountResult struct {
+	// One-time API key (prefixed `prim_`). Shown once; store it securely.
+	APIKey string    `json:"api_key"`
+	OrgID  uuid.UUID `json:"org_id"`
+	// Provisioned managed inbox FQDN, or null if the inbox publish was deferred.
+	Address NilString               `json:"address"`
+	Plan    AgentAccountResultPlan  `json:"plan"`
+	Limits  PlanLimits              `json:"limits"`
+	Upgrade AgentAccountUpgradeHint `json:"upgrade"`
+}
+
+// GetAPIKey returns the value of APIKey.
+func (s *AgentAccountResult) GetAPIKey() string {
+	return s.APIKey
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *AgentAccountResult) GetOrgID() uuid.UUID {
+	return s.OrgID
+}
+
+// GetAddress returns the value of Address.
+func (s *AgentAccountResult) GetAddress() NilString {
+	return s.Address
+}
+
+// GetPlan returns the value of Plan.
+func (s *AgentAccountResult) GetPlan() AgentAccountResultPlan {
+	return s.Plan
+}
+
+// GetLimits returns the value of Limits.
+func (s *AgentAccountResult) GetLimits() PlanLimits {
+	return s.Limits
+}
+
+// GetUpgrade returns the value of Upgrade.
+func (s *AgentAccountResult) GetUpgrade() AgentAccountUpgradeHint {
+	return s.Upgrade
+}
+
+// SetAPIKey sets the value of APIKey.
+func (s *AgentAccountResult) SetAPIKey(val string) {
+	s.APIKey = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *AgentAccountResult) SetOrgID(val uuid.UUID) {
+	s.OrgID = val
+}
+
+// SetAddress sets the value of Address.
+func (s *AgentAccountResult) SetAddress(val NilString) {
+	s.Address = val
+}
+
+// SetPlan sets the value of Plan.
+func (s *AgentAccountResult) SetPlan(val AgentAccountResultPlan) {
+	s.Plan = val
+}
+
+// SetLimits sets the value of Limits.
+func (s *AgentAccountResult) SetLimits(val PlanLimits) {
+	s.Limits = val
+}
+
+// SetUpgrade sets the value of Upgrade.
+func (s *AgentAccountResult) SetUpgrade(val AgentAccountUpgradeHint) {
+	s.Upgrade = val
+}
+
+type AgentAccountResultPlan string
+
+const (
+	AgentAccountResultPlanAgent AgentAccountResultPlan = "agent"
+)
+
+// AllValues returns all AgentAccountResultPlan values.
+func (AgentAccountResultPlan) AllValues() []AgentAccountResultPlan {
+	return []AgentAccountResultPlan{
+		AgentAccountResultPlanAgent,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AgentAccountResultPlan) MarshalText() ([]byte, error) {
+	switch s {
+	case AgentAccountResultPlanAgent:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AgentAccountResultPlan) UnmarshalText(data []byte) error {
+	switch AgentAccountResultPlan(data) {
+	case AgentAccountResultPlanAgent:
+		*s = AgentAccountResultPlanAgent
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// In-band pointer to the upgrade path for an agent account.
+// Ref: #/components/schemas/AgentAccountUpgradeHint
+type AgentAccountUpgradeHint struct {
+	Plan        AgentAccountUpgradeHintPlan `json:"plan"`
+	Description string                      `json:"description"`
+	ClaimPath   string                      `json:"claim_path"`
+}
+
+// GetPlan returns the value of Plan.
+func (s *AgentAccountUpgradeHint) GetPlan() AgentAccountUpgradeHintPlan {
+	return s.Plan
+}
+
+// GetDescription returns the value of Description.
+func (s *AgentAccountUpgradeHint) GetDescription() string {
+	return s.Description
+}
+
+// GetClaimPath returns the value of ClaimPath.
+func (s *AgentAccountUpgradeHint) GetClaimPath() string {
+	return s.ClaimPath
+}
+
+// SetPlan sets the value of Plan.
+func (s *AgentAccountUpgradeHint) SetPlan(val AgentAccountUpgradeHintPlan) {
+	s.Plan = val
+}
+
+// SetDescription sets the value of Description.
+func (s *AgentAccountUpgradeHint) SetDescription(val string) {
+	s.Description = val
+}
+
+// SetClaimPath sets the value of ClaimPath.
+func (s *AgentAccountUpgradeHint) SetClaimPath(val string) {
+	s.ClaimPath = val
+}
+
+type AgentAccountUpgradeHintPlan string
+
+const (
+	AgentAccountUpgradeHintPlanDeveloper AgentAccountUpgradeHintPlan = "developer"
+)
+
+// AllValues returns all AgentAccountUpgradeHintPlan values.
+func (AgentAccountUpgradeHintPlan) AllValues() []AgentAccountUpgradeHintPlan {
+	return []AgentAccountUpgradeHintPlan{
+		AgentAccountUpgradeHintPlanDeveloper,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AgentAccountUpgradeHintPlan) MarshalText() ([]byte, error) {
+	switch s {
+	case AgentAccountUpgradeHintPlanDeveloper:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AgentAccountUpgradeHintPlan) UnmarshalText(data []byte) error {
+	switch AgentAccountUpgradeHintPlan(data) {
+	case AgentAccountUpgradeHintPlanDeveloper:
+		*s = AgentAccountUpgradeHintPlanDeveloper
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/AgentClaimLinkResult
+type AgentClaimLinkResult struct {
+	ClaimToken string `json:"claim_token"`
+	// Browser URL to hand to a human, or null if no web origin is configured.
+	ClaimURL         NilString `json:"claim_url"`
+	ExpiresInSeconds int       `json:"expires_in_seconds"`
+}
+
+// GetClaimToken returns the value of ClaimToken.
+func (s *AgentClaimLinkResult) GetClaimToken() string {
+	return s.ClaimToken
+}
+
+// GetClaimURL returns the value of ClaimURL.
+func (s *AgentClaimLinkResult) GetClaimURL() NilString {
+	return s.ClaimURL
+}
+
+// GetExpiresInSeconds returns the value of ExpiresInSeconds.
+func (s *AgentClaimLinkResult) GetExpiresInSeconds() int {
+	return s.ExpiresInSeconds
+}
+
+// SetClaimToken sets the value of ClaimToken.
+func (s *AgentClaimLinkResult) SetClaimToken(val string) {
+	s.ClaimToken = val
+}
+
+// SetClaimURL sets the value of ClaimURL.
+func (s *AgentClaimLinkResult) SetClaimURL(val NilString) {
+	s.ClaimURL = val
+}
+
+// SetExpiresInSeconds sets the value of ExpiresInSeconds.
+func (s *AgentClaimLinkResult) SetExpiresInSeconds(val int) {
+	s.ExpiresInSeconds = val
+}
+
+// Ref: #/components/schemas/AgentClaimResult
+type AgentClaimResult struct {
+	OrgID  uuid.UUID            `json:"org_id"`
+	Plan   AgentClaimResultPlan `json:"plan"`
+	Email  string               `json:"email"`
+	Limits PlanLimits           `json:"limits"`
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *AgentClaimResult) GetOrgID() uuid.UUID {
+	return s.OrgID
+}
+
+// GetPlan returns the value of Plan.
+func (s *AgentClaimResult) GetPlan() AgentClaimResultPlan {
+	return s.Plan
+}
+
+// GetEmail returns the value of Email.
+func (s *AgentClaimResult) GetEmail() string {
+	return s.Email
+}
+
+// GetLimits returns the value of Limits.
+func (s *AgentClaimResult) GetLimits() PlanLimits {
+	return s.Limits
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *AgentClaimResult) SetOrgID(val uuid.UUID) {
+	s.OrgID = val
+}
+
+// SetPlan sets the value of Plan.
+func (s *AgentClaimResult) SetPlan(val AgentClaimResultPlan) {
+	s.Plan = val
+}
+
+// SetEmail sets the value of Email.
+func (s *AgentClaimResult) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetLimits sets the value of Limits.
+func (s *AgentClaimResult) SetLimits(val PlanLimits) {
+	s.Limits = val
+}
+
+type AgentClaimResultPlan string
+
+const (
+	AgentClaimResultPlanDeveloper AgentClaimResultPlan = "developer"
+)
+
+// AllValues returns all AgentClaimResultPlan values.
+func (AgentClaimResultPlan) AllValues() []AgentClaimResultPlan {
+	return []AgentClaimResultPlan{
+		AgentClaimResultPlanDeveloper,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AgentClaimResultPlan) MarshalText() ([]byte, error) {
+	switch s {
+	case AgentClaimResultPlanDeveloper:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AgentClaimResultPlan) UnmarshalText(data []byte) error {
+	switch AgentClaimResultPlan(data) {
+	case AgentClaimResultPlanDeveloper:
+		*s = AgentClaimResultPlanDeveloper
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/AgentClaimStartResult
+type AgentClaimStartResult struct {
+	ClaimSessionID     string `json:"claim_session_id"`
+	ResendAfterSeconds int    `json:"resend_after_seconds"`
+	ExpiresInSeconds   int    `json:"expires_in_seconds"`
+}
+
+// GetClaimSessionID returns the value of ClaimSessionID.
+func (s *AgentClaimStartResult) GetClaimSessionID() string {
+	return s.ClaimSessionID
+}
+
+// GetResendAfterSeconds returns the value of ResendAfterSeconds.
+func (s *AgentClaimStartResult) GetResendAfterSeconds() int {
+	return s.ResendAfterSeconds
+}
+
+// GetExpiresInSeconds returns the value of ExpiresInSeconds.
+func (s *AgentClaimStartResult) GetExpiresInSeconds() int {
+	return s.ExpiresInSeconds
+}
+
+// SetClaimSessionID sets the value of ClaimSessionID.
+func (s *AgentClaimStartResult) SetClaimSessionID(val string) {
+	s.ClaimSessionID = val
+}
+
+// SetResendAfterSeconds sets the value of ResendAfterSeconds.
+func (s *AgentClaimStartResult) SetResendAfterSeconds(val int) {
+	s.ResendAfterSeconds = val
+}
+
+// SetExpiresInSeconds sets the value of ExpiresInSeconds.
+func (s *AgentClaimStartResult) SetExpiresInSeconds(val int) {
+	s.ExpiresInSeconds = val
+}
+
 // Ref: #/components/schemas/AgentOrgRef
 type AgentOrgRef struct {
 	ID   uuid.UUID `json:"id"`
@@ -1659,6 +1994,160 @@ func (s *ConversationMessageRole) UnmarshalText(data []byte) error {
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
+
+// Ref: #/components/schemas/CreateAgentAccountInput
+type CreateAgentAccountInput struct {
+	// Must be true to accept the Terms of Service and Privacy Policy.
+	TermsAccepted CreateAgentAccountInputTermsAccepted `json:"terms_accepted"`
+	// Optional label for the device or agent creating the account.
+	DeviceName OptString `json:"device_name"`
+}
+
+// GetTermsAccepted returns the value of TermsAccepted.
+func (s *CreateAgentAccountInput) GetTermsAccepted() CreateAgentAccountInputTermsAccepted {
+	return s.TermsAccepted
+}
+
+// GetDeviceName returns the value of DeviceName.
+func (s *CreateAgentAccountInput) GetDeviceName() OptString {
+	return s.DeviceName
+}
+
+// SetTermsAccepted sets the value of TermsAccepted.
+func (s *CreateAgentAccountInput) SetTermsAccepted(val CreateAgentAccountInputTermsAccepted) {
+	s.TermsAccepted = val
+}
+
+// SetDeviceName sets the value of DeviceName.
+func (s *CreateAgentAccountInput) SetDeviceName(val OptString) {
+	s.DeviceName = val
+}
+
+// Must be true to accept the Terms of Service and Privacy Policy.
+type CreateAgentAccountInputTermsAccepted bool
+
+const (
+	CreateAgentAccountInputTermsAcceptedTrue CreateAgentAccountInputTermsAccepted = true
+)
+
+// AllValues returns all CreateAgentAccountInputTermsAccepted values.
+func (CreateAgentAccountInputTermsAccepted) AllValues() []CreateAgentAccountInputTermsAccepted {
+	return []CreateAgentAccountInputTermsAccepted{
+		CreateAgentAccountInputTermsAcceptedTrue,
+	}
+}
+
+// Merged schema.
+type CreateAgentAccountOK struct {
+	Success bool               `json:"success"`
+	Data    AgentAccountResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateAgentAccountOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateAgentAccountOK) GetData() AgentAccountResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateAgentAccountOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateAgentAccountOK) SetData(val AgentAccountResult) {
+	s.Data = val
+}
+
+// CreateAgentAccountOKHeaders wraps CreateAgentAccountOK with response headers.
+type CreateAgentAccountOKHeaders struct {
+	CacheControl OptString
+	Response     CreateAgentAccountOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *CreateAgentAccountOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *CreateAgentAccountOKHeaders) GetResponse() CreateAgentAccountOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *CreateAgentAccountOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *CreateAgentAccountOKHeaders) SetResponse(val CreateAgentAccountOK) {
+	s.Response = val
+}
+
+func (*CreateAgentAccountOKHeaders) createAgentAccountRes() {}
+
+// No fields; an empty object is accepted.
+// Ref: #/components/schemas/CreateAgentClaimLinkInput
+type CreateAgentClaimLinkInput struct{}
+
+// Merged schema.
+type CreateAgentClaimLinkOK struct {
+	Success bool                 `json:"success"`
+	Data    AgentClaimLinkResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateAgentClaimLinkOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateAgentClaimLinkOK) GetData() AgentClaimLinkResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateAgentClaimLinkOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateAgentClaimLinkOK) SetData(val AgentClaimLinkResult) {
+	s.Data = val
+}
+
+// CreateAgentClaimLinkOKHeaders wraps CreateAgentClaimLinkOK with response headers.
+type CreateAgentClaimLinkOKHeaders struct {
+	CacheControl OptString
+	Response     CreateAgentClaimLinkOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *CreateAgentClaimLinkOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *CreateAgentClaimLinkOKHeaders) GetResponse() CreateAgentClaimLinkOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *CreateAgentClaimLinkOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *CreateAgentClaimLinkOKHeaders) SetResponse(val CreateAgentClaimLinkOK) {
+	s.Response = val
+}
+
+func (*CreateAgentClaimLinkOKHeaders) createAgentClaimLinkRes() {}
 
 type CreateEndpointBadRequest ErrorResponse
 
@@ -5307,6 +5796,8 @@ func (s *ErrorResponse) SetError(val ErrorResponseError) {
 	s.Error = val
 }
 
+func (*ErrorResponse) createAgentAccountRes()            {}
+func (*ErrorResponse) createAgentClaimLinkRes()          {}
 func (*ErrorResponse) getInboxStatusRes()                {}
 func (*ErrorResponse) getSendPermissionsRes()            {}
 func (*ErrorResponse) listDomainsRes()                   {}
@@ -12759,6 +13250,99 @@ func (s *ParsedEmailDataStatus) UnmarshalText(data []byte) error {
 	}
 }
 
+// Plan-derived quota limits for an account.
+// Ref: #/components/schemas/PlanLimits
+type PlanLimits struct {
+	StorageMB               float64    `json:"storage_mb"`
+	SendPerHour             float64    `json:"send_per_hour"`
+	SendPerDay              float64    `json:"send_per_day"`
+	APIPerMinute            float64    `json:"api_per_minute"`
+	WebhooksMaxGlobal       NilFloat64 `json:"webhooks_max_global"`
+	WebhooksPerDomain       bool       `json:"webhooks_per_domain"`
+	FiltersPerDomain        bool       `json:"filters_per_domain"`
+	SpamThresholdsPerDomain bool       `json:"spam_thresholds_per_domain"`
+}
+
+// GetStorageMB returns the value of StorageMB.
+func (s *PlanLimits) GetStorageMB() float64 {
+	return s.StorageMB
+}
+
+// GetSendPerHour returns the value of SendPerHour.
+func (s *PlanLimits) GetSendPerHour() float64 {
+	return s.SendPerHour
+}
+
+// GetSendPerDay returns the value of SendPerDay.
+func (s *PlanLimits) GetSendPerDay() float64 {
+	return s.SendPerDay
+}
+
+// GetAPIPerMinute returns the value of APIPerMinute.
+func (s *PlanLimits) GetAPIPerMinute() float64 {
+	return s.APIPerMinute
+}
+
+// GetWebhooksMaxGlobal returns the value of WebhooksMaxGlobal.
+func (s *PlanLimits) GetWebhooksMaxGlobal() NilFloat64 {
+	return s.WebhooksMaxGlobal
+}
+
+// GetWebhooksPerDomain returns the value of WebhooksPerDomain.
+func (s *PlanLimits) GetWebhooksPerDomain() bool {
+	return s.WebhooksPerDomain
+}
+
+// GetFiltersPerDomain returns the value of FiltersPerDomain.
+func (s *PlanLimits) GetFiltersPerDomain() bool {
+	return s.FiltersPerDomain
+}
+
+// GetSpamThresholdsPerDomain returns the value of SpamThresholdsPerDomain.
+func (s *PlanLimits) GetSpamThresholdsPerDomain() bool {
+	return s.SpamThresholdsPerDomain
+}
+
+// SetStorageMB sets the value of StorageMB.
+func (s *PlanLimits) SetStorageMB(val float64) {
+	s.StorageMB = val
+}
+
+// SetSendPerHour sets the value of SendPerHour.
+func (s *PlanLimits) SetSendPerHour(val float64) {
+	s.SendPerHour = val
+}
+
+// SetSendPerDay sets the value of SendPerDay.
+func (s *PlanLimits) SetSendPerDay(val float64) {
+	s.SendPerDay = val
+}
+
+// SetAPIPerMinute sets the value of APIPerMinute.
+func (s *PlanLimits) SetAPIPerMinute(val float64) {
+	s.APIPerMinute = val
+}
+
+// SetWebhooksMaxGlobal sets the value of WebhooksMaxGlobal.
+func (s *PlanLimits) SetWebhooksMaxGlobal(val NilFloat64) {
+	s.WebhooksMaxGlobal = val
+}
+
+// SetWebhooksPerDomain sets the value of WebhooksPerDomain.
+func (s *PlanLimits) SetWebhooksPerDomain(val bool) {
+	s.WebhooksPerDomain = val
+}
+
+// SetFiltersPerDomain sets the value of FiltersPerDomain.
+func (s *PlanLimits) SetFiltersPerDomain(val bool) {
+	s.FiltersPerDomain = val
+}
+
+// SetSpamThresholdsPerDomain sets the value of SpamThresholdsPerDomain.
+func (s *PlanLimits) SetSpamThresholdsPerDomain(val bool) {
+	s.SpamThresholdsPerDomain = val
+}
+
 // Ref: #/components/schemas/PollCliLoginInput
 type PollCliLoginInput struct {
 	DeviceCode string `json:"device_code"`
@@ -12854,6 +13438,8 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
+func (*RateLimitedHeaders) createAgentAccountRes()     {}
+func (*RateLimitedHeaders) createAgentClaimLinkRes()   {}
 func (*RateLimitedHeaders) discardEmailContentRes()    {}
 func (*RateLimitedHeaders) downloadDomainZoneFileRes() {}
 func (*RateLimitedHeaders) getInboxStatusRes()         {}
@@ -12863,10 +13449,12 @@ func (*RateLimitedHeaders) replyToEmailRes()           {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes()    {}
 func (*RateLimitedHeaders) semanticSearchRes()         {}
 func (*RateLimitedHeaders) sendEmailRes()              {}
+func (*RateLimitedHeaders) startAgentClaimRes()        {}
 func (*RateLimitedHeaders) startAgentSignupRes()       {}
 func (*RateLimitedHeaders) startCliLoginRes()          {}
 func (*RateLimitedHeaders) startCliSignupRes()         {}
 func (*RateLimitedHeaders) testEndpointRes()           {}
+func (*RateLimitedHeaders) verifyAgentClaimRes()       {}
 func (*RateLimitedHeaders) verifyAgentSignupRes()      {}
 func (*RateLimitedHeaders) verifyCliSignupRes()        {}
 
@@ -16494,6 +17082,88 @@ type SetFunctionSecretUnauthorized ErrorResponse
 
 func (*SetFunctionSecretUnauthorized) setFunctionSecretRes() {}
 
+type StartAgentClaimBadRequest ErrorResponse
+
+func (*StartAgentClaimBadRequest) startAgentClaimRes() {}
+
+type StartAgentClaimConflict ErrorResponse
+
+func (*StartAgentClaimConflict) startAgentClaimRes() {}
+
+// Ref: #/components/schemas/StartAgentClaimInput
+type StartAgentClaimInput struct {
+	// Email to confirm. Must not already belong to a Primitive account.
+	Email string `json:"email"`
+}
+
+// GetEmail returns the value of Email.
+func (s *StartAgentClaimInput) GetEmail() string {
+	return s.Email
+}
+
+// SetEmail sets the value of Email.
+func (s *StartAgentClaimInput) SetEmail(val string) {
+	s.Email = val
+}
+
+// Merged schema.
+type StartAgentClaimOK struct {
+	Success bool                  `json:"success"`
+	Data    AgentClaimStartResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *StartAgentClaimOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *StartAgentClaimOK) GetData() AgentClaimStartResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *StartAgentClaimOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *StartAgentClaimOK) SetData(val AgentClaimStartResult) {
+	s.Data = val
+}
+
+// StartAgentClaimOKHeaders wraps StartAgentClaimOK with response headers.
+type StartAgentClaimOKHeaders struct {
+	CacheControl OptString
+	Response     StartAgentClaimOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *StartAgentClaimOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *StartAgentClaimOKHeaders) GetResponse() StartAgentClaimOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *StartAgentClaimOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *StartAgentClaimOKHeaders) SetResponse(val StartAgentClaimOK) {
+	s.Response = val
+}
+
+func (*StartAgentClaimOKHeaders) startAgentClaimRes() {}
+
+type StartAgentClaimUnauthorized ErrorResponse
+
+func (*StartAgentClaimUnauthorized) startAgentClaimRes() {}
+
 // Merged schema.
 type StartAgentSignupCreated struct {
 	Success bool                   `json:"success"`
@@ -18072,6 +18742,96 @@ func (s *VerifiedDomain) SetVerificationToken(val OptNilString) {
 func (s *VerifiedDomain) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
+
+type VerifyAgentClaimBadRequest ErrorResponse
+
+func (*VerifyAgentClaimBadRequest) verifyAgentClaimRes() {}
+
+type VerifyAgentClaimConflict ErrorResponse
+
+func (*VerifyAgentClaimConflict) verifyAgentClaimRes() {}
+
+type VerifyAgentClaimGone ErrorResponse
+
+func (*VerifyAgentClaimGone) verifyAgentClaimRes() {}
+
+// Ref: #/components/schemas/VerifyAgentClaimInput
+type VerifyAgentClaimInput struct {
+	// The verification code emailed by the claim start step.
+	VerificationCode string `json:"verification_code"`
+}
+
+// GetVerificationCode returns the value of VerificationCode.
+func (s *VerifyAgentClaimInput) GetVerificationCode() string {
+	return s.VerificationCode
+}
+
+// SetVerificationCode sets the value of VerificationCode.
+func (s *VerifyAgentClaimInput) SetVerificationCode(val string) {
+	s.VerificationCode = val
+}
+
+type VerifyAgentClaimNotFound ErrorResponse
+
+func (*VerifyAgentClaimNotFound) verifyAgentClaimRes() {}
+
+// Merged schema.
+type VerifyAgentClaimOK struct {
+	Success bool             `json:"success"`
+	Data    AgentClaimResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *VerifyAgentClaimOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *VerifyAgentClaimOK) GetData() AgentClaimResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *VerifyAgentClaimOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *VerifyAgentClaimOK) SetData(val AgentClaimResult) {
+	s.Data = val
+}
+
+// VerifyAgentClaimOKHeaders wraps VerifyAgentClaimOK with response headers.
+type VerifyAgentClaimOKHeaders struct {
+	CacheControl OptString
+	Response     VerifyAgentClaimOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *VerifyAgentClaimOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *VerifyAgentClaimOKHeaders) GetResponse() VerifyAgentClaimOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *VerifyAgentClaimOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *VerifyAgentClaimOKHeaders) SetResponse(val VerifyAgentClaimOK) {
+	s.Response = val
+}
+
+func (*VerifyAgentClaimOKHeaders) verifyAgentClaimRes() {}
+
+type VerifyAgentClaimUnauthorized ErrorResponse
+
+func (*VerifyAgentClaimUnauthorized) verifyAgentClaimRes() {}
 
 type VerifyAgentSignupBadRequest ErrorResponse
 

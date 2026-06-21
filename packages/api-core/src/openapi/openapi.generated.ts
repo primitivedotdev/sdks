@@ -704,6 +704,278 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/agent/accounts": {
+      "post": {
+        "operationId": "createAgentAccount",
+        "summary": "Create an emailless agent account",
+        "description": "Creates an emailless agent account without authentication and returns a\none-time API key (prefixed `prim_`) plus a provisioned managed inbox.\nThe account is on the `agent` plan: reply-only (it can send only to\naddresses that have already sent it authenticated mail) with tight send\nlimits. Use the returned `api_key` as a Bearer token on later calls. The\naccount can be upgraded to a full developer account by confirming an\nemail through the claim flow. This endpoint does not require an API key.\n",
+        "tags": [
+          "Agent"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentAccountInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agent account created; the API key is returned once",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Always `no-store`"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentAccountResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/agent/claim/start": {
+      "post": {
+        "operationId": "startAgentClaim",
+        "summary": "Start an agent account email claim",
+        "description": "Begins upgrading an emailless `agent` account into a full `developer`\naccount by confirming an email address. Authenticated by the agent's own\nAPI key (the org is taken from the credential). Sends a verification\ncode to the supplied email and returns the claim session id plus resend\ntiming. Submit the code to `/agent/claim/verify` to complete the\nupgrade. Confirming an email that already belongs to a Primitive account\nis rejected.\n",
+        "tags": [
+          "Agent"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartAgentClaimInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Claim started and verification email sent",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Always `no-store`"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentClaimStartResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "The email is already in use, or the account is not claimable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/agent/claim/verify": {
+      "post": {
+        "operationId": "verifyAgentClaim",
+        "summary": "Verify an agent account email claim",
+        "description": "Confirms the verification code emailed by `/agent/claim/start` and\nupgrades the account to the `developer` plan. The org id, API key, and\nmanaged inbox all carry over; the send cap lifts. Authenticated by the\nagent's own API key.\n",
+        "tags": [
+          "Agent"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyAgentClaimInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Claim verified; account upgraded to developer",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Always `no-store`"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentClaimResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "The account is already claimed, or the email is in use",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The claim or its verification code has expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/agent/claim/link": {
+      "post": {
+        "operationId": "createAgentClaimLink",
+        "summary": "Create a browser claim link",
+        "description": "Mints an opaque, single-use link an agent can hand to a human to\ncomplete the email-confirmation upgrade in a browser. Authenticated by\nthe agent's own API key. `claim_url` is null when the API host cannot\nresolve a web origin to build the link.\n",
+        "tags": [
+          "Agent"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentClaimLinkInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Claim link created",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Always `no-store`"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentClaimLinkResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
     "/cli/logout": {
       "post": {
         "operationId": "cliLogout",
@@ -5060,6 +5332,240 @@ export const openapiDocument: Record<string, unknown> = {
           "org_id",
           "org_name",
           "orgs"
+        ]
+      },
+      "PlanLimits": {
+        "type": "object",
+        "description": "Plan-derived quota limits for an account.",
+        "properties": {
+          "storage_mb": {
+            "type": "number"
+          },
+          "send_per_hour": {
+            "type": "number"
+          },
+          "send_per_day": {
+            "type": "number"
+          },
+          "api_per_minute": {
+            "type": "number"
+          },
+          "webhooks_max_global": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "webhooks_per_domain": {
+            "type": "boolean"
+          },
+          "filters_per_domain": {
+            "type": "boolean"
+          },
+          "spam_thresholds_per_domain": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "storage_mb",
+          "send_per_hour",
+          "send_per_day",
+          "api_per_minute",
+          "webhooks_max_global",
+          "webhooks_per_domain",
+          "filters_per_domain",
+          "spam_thresholds_per_domain"
+        ]
+      },
+      "CreateAgentAccountInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "terms_accepted": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Must be true to accept the Terms of Service and Privacy Policy."
+          },
+          "device_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Optional label for the device or agent creating the account."
+          }
+        },
+        "required": [
+          "terms_accepted"
+        ]
+      },
+      "AgentAccountUpgradeHint": {
+        "type": "object",
+        "description": "In-band pointer to the upgrade path for an agent account.",
+        "properties": {
+          "plan": {
+            "type": "string",
+            "enum": [
+              "developer"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "claim_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "description",
+          "claim_path"
+        ]
+      },
+      "AgentAccountResult": {
+        "type": "object",
+        "properties": {
+          "api_key": {
+            "type": "string",
+            "description": "One-time API key (prefixed `prim_`). Shown once; store it securely."
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Provisioned managed inbox FQDN, or null if the inbox publish was deferred."
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "agent"
+            ]
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PlanLimits"
+          },
+          "upgrade": {
+            "$ref": "#/components/schemas/AgentAccountUpgradeHint"
+          }
+        },
+        "required": [
+          "api_key",
+          "org_id",
+          "address",
+          "plan",
+          "limits",
+          "upgrade"
+        ]
+      },
+      "StartAgentClaimInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "Email to confirm. Must not already belong to a Primitive account."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "AgentClaimStartResult": {
+        "type": "object",
+        "properties": {
+          "claim_session_id": {
+            "type": "string"
+          },
+          "resend_after_seconds": {
+            "type": "integer"
+          },
+          "expires_in_seconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "claim_session_id",
+          "resend_after_seconds",
+          "expires_in_seconds"
+        ]
+      },
+      "VerifyAgentClaimInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "verification_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "The verification code emailed by the claim start step."
+          }
+        },
+        "required": [
+          "verification_code"
+        ]
+      },
+      "AgentClaimResult": {
+        "type": "object",
+        "properties": {
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "developer"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PlanLimits"
+          }
+        },
+        "required": [
+          "org_id",
+          "plan",
+          "email",
+          "limits"
+        ]
+      },
+      "CreateAgentClaimLinkInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "No fields; an empty object is accepted.",
+        "properties": {}
+      },
+      "AgentClaimLinkResult": {
+        "type": "object",
+        "properties": {
+          "claim_token": {
+            "type": "string"
+          },
+          "claim_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Browser URL to hand to a human, or null if no web origin is configured."
+          },
+          "expires_in_seconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "claim_token",
+          "claim_url",
+          "expires_in_seconds"
         ]
       },
       "CliLogoutInput": {

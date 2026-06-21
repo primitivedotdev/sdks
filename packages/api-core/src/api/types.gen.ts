@@ -408,6 +408,98 @@ export type AgentSignupVerifyResult = {
     orgs: Array<AgentOrgRef>;
 };
 
+/**
+ * Plan-derived quota limits for an account.
+ */
+export type PlanLimits = {
+    storage_mb: number;
+    send_per_hour: number;
+    send_per_day: number;
+    api_per_minute: number;
+    webhooks_max_global: number | null;
+    webhooks_per_domain: boolean;
+    filters_per_domain: boolean;
+    spam_thresholds_per_domain: boolean;
+};
+
+export type CreateAgentAccountInput = {
+    /**
+     * Must be true to accept the Terms of Service and Privacy Policy.
+     */
+    terms_accepted: true;
+    /**
+     * Optional label for the device or agent creating the account.
+     */
+    device_name?: string;
+};
+
+/**
+ * In-band pointer to the upgrade path for an agent account.
+ */
+export type AgentAccountUpgradeHint = {
+    plan: 'developer';
+    description: string;
+    claim_path: string;
+};
+
+export type AgentAccountResult = {
+    /**
+     * One-time API key (prefixed `prim_`). Shown once; store it securely.
+     */
+    api_key: string;
+    org_id: string;
+    /**
+     * Provisioned managed inbox FQDN, or null if the inbox publish was deferred.
+     */
+    address: string | null;
+    plan: 'agent';
+    limits: PlanLimits;
+    upgrade: AgentAccountUpgradeHint;
+};
+
+export type StartAgentClaimInput = {
+    /**
+     * Email to confirm. Must not already belong to a Primitive account.
+     */
+    email: string;
+};
+
+export type AgentClaimStartResult = {
+    claim_session_id: string;
+    resend_after_seconds: number;
+    expires_in_seconds: number;
+};
+
+export type VerifyAgentClaimInput = {
+    /**
+     * The verification code emailed by the claim start step.
+     */
+    verification_code: string;
+};
+
+export type AgentClaimResult = {
+    org_id: string;
+    plan: 'developer';
+    email: string;
+    limits: PlanLimits;
+};
+
+/**
+ * No fields; an empty object is accepted.
+ */
+export type CreateAgentClaimLinkInput = {
+    [key: string]: never;
+};
+
+export type AgentClaimLinkResult = {
+    claim_token: string;
+    /**
+     * Browser URL to hand to a human, or null if no web origin is configured.
+     */
+    claim_url: string | null;
+    expires_in_seconds: number;
+};
+
 export type CliLogoutInput = {
     /**
      * Optional id guard; when provided it must match the authenticated OAuth grant id or API key id
@@ -2999,6 +3091,154 @@ export type VerifyAgentSignupResponses = {
 };
 
 export type VerifyAgentSignupResponse = VerifyAgentSignupResponses[keyof VerifyAgentSignupResponses];
+
+export type CreateAgentAccountData = {
+    body: CreateAgentAccountInput;
+    path?: never;
+    query?: never;
+    url: '/agent/accounts';
+};
+
+export type CreateAgentAccountErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type CreateAgentAccountError = CreateAgentAccountErrors[keyof CreateAgentAccountErrors];
+
+export type CreateAgentAccountResponses = {
+    /**
+     * Agent account created; the API key is returned once
+     */
+    200: SuccessEnvelope & {
+        data?: AgentAccountResult;
+    };
+};
+
+export type CreateAgentAccountResponse = CreateAgentAccountResponses[keyof CreateAgentAccountResponses];
+
+export type StartAgentClaimData = {
+    body: StartAgentClaimInput;
+    path?: never;
+    query?: never;
+    url: '/agent/claim/start';
+};
+
+export type StartAgentClaimErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * The email is already in use, or the account is not claimable
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type StartAgentClaimError = StartAgentClaimErrors[keyof StartAgentClaimErrors];
+
+export type StartAgentClaimResponses = {
+    /**
+     * Claim started and verification email sent
+     */
+    200: SuccessEnvelope & {
+        data?: AgentClaimStartResult;
+    };
+};
+
+export type StartAgentClaimResponse = StartAgentClaimResponses[keyof StartAgentClaimResponses];
+
+export type VerifyAgentClaimData = {
+    body: VerifyAgentClaimInput;
+    path?: never;
+    query?: never;
+    url: '/agent/claim/verify';
+};
+
+export type VerifyAgentClaimErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The account is already claimed, or the email is in use
+     */
+    409: ErrorResponse;
+    /**
+     * The claim or its verification code has expired
+     */
+    410: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type VerifyAgentClaimError = VerifyAgentClaimErrors[keyof VerifyAgentClaimErrors];
+
+export type VerifyAgentClaimResponses = {
+    /**
+     * Claim verified; account upgraded to developer
+     */
+    200: SuccessEnvelope & {
+        data?: AgentClaimResult;
+    };
+};
+
+export type VerifyAgentClaimResponse = VerifyAgentClaimResponses[keyof VerifyAgentClaimResponses];
+
+export type CreateAgentClaimLinkData = {
+    body?: CreateAgentClaimLinkInput;
+    path?: never;
+    query?: never;
+    url: '/agent/claim/link';
+};
+
+export type CreateAgentClaimLinkErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type CreateAgentClaimLinkError = CreateAgentClaimLinkErrors[keyof CreateAgentClaimLinkErrors];
+
+export type CreateAgentClaimLinkResponses = {
+    /**
+     * Claim link created
+     */
+    200: SuccessEnvelope & {
+        data?: AgentClaimLinkResult;
+    };
+};
+
+export type CreateAgentClaimLinkResponse = CreateAgentClaimLinkResponses[keyof CreateAgentClaimLinkResponses];
 
 export type CliLogoutData = {
     body?: CliLogoutInput;

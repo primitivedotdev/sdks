@@ -9,6 +9,14 @@ type CliLogoutRes interface {
 	cliLogoutRes()
 }
 
+type CreateAgentAccountRes interface {
+	createAgentAccountRes()
+}
+
+type CreateAgentClaimLinkRes interface {
+	createAgentClaimLinkRes()
+}
+
 type CreateEndpointRes interface {
 	createEndpointRes()
 }
@@ -201,6 +209,10 @@ type SetFunctionSecretRes interface {
 	setFunctionSecretRes()
 }
 
+type StartAgentClaimRes interface {
+	startAgentClaimRes()
+}
+
 type StartAgentSignupRes interface {
 	startAgentSignupRes()
 }
@@ -243,6 +255,10 @@ type UpdateFilterRes interface {
 
 type UpdateFunctionRes interface {
 	updateFunctionRes()
+}
+
+type VerifyAgentClaimRes interface {
+	verifyAgentClaimRes()
 }
 
 type VerifyAgentSignupRes interface {

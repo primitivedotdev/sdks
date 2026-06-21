@@ -4,6 +4,14 @@ from .account import Account
 from .account_updated import AccountUpdated
 from .add_domain_input import AddDomainInput
 from .add_domain_response_201 import AddDomainResponse201
+from .agent_account_result import AgentAccountResult
+from .agent_account_result_plan import AgentAccountResultPlan
+from .agent_account_upgrade_hint import AgentAccountUpgradeHint
+from .agent_account_upgrade_hint_plan import AgentAccountUpgradeHintPlan
+from .agent_claim_link_result import AgentClaimLinkResult
+from .agent_claim_result import AgentClaimResult
+from .agent_claim_result_plan import AgentClaimResultPlan
+from .agent_claim_start_result import AgentClaimStartResult
 from .agent_org_ref import AgentOrgRef
 from .agent_signup_resend_result import AgentSignupResendResult
 from .agent_signup_start_result import AgentSignupStartResult
@@ -26,6 +34,10 @@ from .conversation import Conversation
 from .conversation_message import ConversationMessage
 from .conversation_message_direction import ConversationMessageDirection
 from .conversation_message_role import ConversationMessageRole
+from .create_agent_account_input import CreateAgentAccountInput
+from .create_agent_account_response_200 import CreateAgentAccountResponse200
+from .create_agent_claim_link_input import CreateAgentClaimLinkInput
+from .create_agent_claim_link_response_200 import CreateAgentClaimLinkResponse200
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_rules import CreateEndpointInputRules
 from .create_endpoint_response_201 import CreateEndpointResponse201
@@ -160,6 +172,7 @@ from .pagination_meta import PaginationMeta
 from .parsed_email_data import ParsedEmailData
 from .parsed_email_data_error_type_0 import ParsedEmailDataErrorType0
 from .parsed_email_data_status import ParsedEmailDataStatus
+from .plan_limits import PlanLimits
 from .poll_cli_login_input import PollCliLoginInput
 from .poll_cli_login_response_200 import PollCliLoginResponse200
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
@@ -215,6 +228,8 @@ from .set_function_route_response_200 import SetFunctionRouteResponse200
 from .set_function_secret_input import SetFunctionSecretInput
 from .set_function_secret_response_200 import SetFunctionSecretResponse200
 from .set_function_secret_response_201 import SetFunctionSecretResponse201
+from .start_agent_claim_input import StartAgentClaimInput
+from .start_agent_claim_response_200 import StartAgentClaimResponse200
 from .start_agent_signup_input import StartAgentSignupInput
 from .start_agent_signup_input_metadata import StartAgentSignupInputMetadata
 from .start_agent_signup_response_201 import StartAgentSignupResponse201
@@ -250,6 +265,8 @@ from .update_function_input import UpdateFunctionInput
 from .update_function_input_files import UpdateFunctionInputFiles
 from .update_function_response_200 import UpdateFunctionResponse200
 from .verified_domain import VerifiedDomain
+from .verify_agent_claim_input import VerifyAgentClaimInput
+from .verify_agent_claim_response_200 import VerifyAgentClaimResponse200
 from .verify_agent_signup_input import VerifyAgentSignupInput
 from .verify_agent_signup_response_200 import VerifyAgentSignupResponse200
 from .verify_cli_signup_input import VerifyCliSignupInput
@@ -262,6 +279,14 @@ __all__ = (
     "AccountUpdated",
     "AddDomainInput",
     "AddDomainResponse201",
+    "AgentAccountResult",
+    "AgentAccountResultPlan",
+    "AgentAccountUpgradeHint",
+    "AgentAccountUpgradeHintPlan",
+    "AgentClaimLinkResult",
+    "AgentClaimResult",
+    "AgentClaimResultPlan",
+    "AgentClaimStartResult",
     "AgentOrgRef",
     "AgentSignupResendResult",
     "AgentSignupStartResult",
@@ -284,6 +309,10 @@ __all__ = (
     "ConversationMessage",
     "ConversationMessageDirection",
     "ConversationMessageRole",
+    "CreateAgentAccountInput",
+    "CreateAgentAccountResponse200",
+    "CreateAgentClaimLinkInput",
+    "CreateAgentClaimLinkResponse200",
     "CreateEndpointInput",
     "CreateEndpointInputRules",
     "CreateEndpointResponse201",
@@ -418,6 +447,7 @@ __all__ = (
     "ParsedEmailData",
     "ParsedEmailDataErrorType0",
     "ParsedEmailDataStatus",
+    "PlanLimits",
     "PollCliLoginInput",
     "PollCliLoginResponse200",
     "ReplayDeliveryResponse200",
@@ -473,6 +503,8 @@ __all__ = (
     "SetFunctionSecretInput",
     "SetFunctionSecretResponse200",
     "SetFunctionSecretResponse201",
+    "StartAgentClaimInput",
+    "StartAgentClaimResponse200",
     "StartAgentSignupInput",
     "StartAgentSignupInputMetadata",
     "StartAgentSignupResponse201",
@@ -508,6 +540,8 @@ __all__ = (
     "UpdateFunctionInputFiles",
     "UpdateFunctionResponse200",
     "VerifiedDomain",
+    "VerifyAgentClaimInput",
+    "VerifyAgentClaimResponse200",
     "VerifyAgentSignupInput",
     "VerifyAgentSignupResponse200",
     "VerifyCliSignupInput",

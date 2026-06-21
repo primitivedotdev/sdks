@@ -46,6 +46,27 @@ type Invoker interface {
 	//
 	// POST /cli/logout
 	CliLogout(ctx context.Context, request OptCliLogoutInput) (CliLogoutRes, error)
+	// CreateAgentAccount invokes createAgentAccount operation.
+	//
+	// Creates an emailless agent account without authentication and returns a
+	// one-time API key (prefixed `prim_`) plus a provisioned managed inbox.
+	// The account is on the `agent` plan: reply-only (it can send only to
+	// addresses that have already sent it authenticated mail) with tight send
+	// limits. Use the returned `api_key` as a Bearer token on later calls. The
+	// account can be upgraded to a full developer account by confirming an
+	// email through the claim flow. This endpoint does not require an API key.
+	//
+	// POST /agent/accounts
+	CreateAgentAccount(ctx context.Context, request *CreateAgentAccountInput) (CreateAgentAccountRes, error)
+	// CreateAgentClaimLink invokes createAgentClaimLink operation.
+	//
+	// Mints an opaque, single-use link an agent can hand to a human to
+	// complete the email-confirmation upgrade in a browser. Authenticated by
+	// the agent's own API key. `claim_url` is null when the API host cannot
+	// resolve a web origin to build the link.
+	//
+	// POST /agent/claim/link
+	CreateAgentClaimLink(ctx context.Context, request *CreateAgentClaimLinkInput) (CreateAgentClaimLinkRes, error)
 	// CreateEndpoint invokes createEndpoint operation.
 	//
 	// Creates a new webhook endpoint. If a deactivated endpoint
@@ -628,6 +649,18 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}/secrets/{key}
 	SetFunctionSecret(ctx context.Context, request *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
+	// StartAgentClaim invokes startAgentClaim operation.
+	//
+	// Begins upgrading an emailless `agent` account into a full `developer`
+	// account by confirming an email address. Authenticated by the agent's own
+	// API key (the org is taken from the credential). Sends a verification
+	// code to the supplied email and returns the claim session id plus resend
+	// timing. Submit the code to `/agent/claim/verify` to complete the
+	// upgrade. Confirming an email that already belongs to a Primitive account
+	// is rejected.
+	//
+	// POST /agent/claim/start
+	StartAgentClaim(ctx context.Context, request *StartAgentClaimInput) (StartAgentClaimRes, error)
 	// StartAgentSignup invokes startAgentSignup operation.
 	//
 	// Starts an agent-native signup session. `signup_code` is optional;
@@ -740,6 +773,15 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}
 	UpdateFunction(ctx context.Context, request *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
+	// VerifyAgentClaim invokes verifyAgentClaim operation.
+	//
+	// Confirms the verification code emailed by `/agent/claim/start` and
+	// upgrades the account to the `developer` plan. The org id, API key, and
+	// managed inbox all carry over; the send cap lifts. Authenticated by the
+	// agent's own API key.
+	//
+	// POST /agent/claim/verify
+	VerifyAgentClaim(ctx context.Context, request *VerifyAgentClaimInput) (VerifyAgentClaimRes, error)
 	// VerifyAgentSignup invokes verifyAgentSignup operation.
 	//
 	// Verifies the email code for an agent signup session and creates
@@ -1041,6 +1083,202 @@ func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput) (
 
 	stage = "DecodeResponse"
 	result, err := decodeCliLogoutResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateAgentAccount invokes createAgentAccount operation.
+//
+// Creates an emailless agent account without authentication and returns a
+// one-time API key (prefixed `prim_`) plus a provisioned managed inbox.
+// The account is on the `agent` plan: reply-only (it can send only to
+// addresses that have already sent it authenticated mail) with tight send
+// limits. Use the returned `api_key` as a Bearer token on later calls. The
+// account can be upgraded to a full developer account by confirming an
+// email through the claim flow. This endpoint does not require an API key.
+//
+// POST /agent/accounts
+func (c *Client) CreateAgentAccount(ctx context.Context, request *CreateAgentAccountInput) (CreateAgentAccountRes, error) {
+	res, err := c.sendCreateAgentAccount(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateAgentAccount(ctx context.Context, request *CreateAgentAccountInput) (res CreateAgentAccountRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createAgentAccount"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent/accounts"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateAgentAccountOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent/accounts"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateAgentAccountRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateAgentAccountResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateAgentClaimLink invokes createAgentClaimLink operation.
+//
+// Mints an opaque, single-use link an agent can hand to a human to
+// complete the email-confirmation upgrade in a browser. Authenticated by
+// the agent's own API key. `claim_url` is null when the API host cannot
+// resolve a web origin to build the link.
+//
+// POST /agent/claim/link
+func (c *Client) CreateAgentClaimLink(ctx context.Context, request *CreateAgentClaimLinkInput) (CreateAgentClaimLinkRes, error) {
+	res, err := c.sendCreateAgentClaimLink(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateAgentClaimLink(ctx context.Context, request *CreateAgentClaimLinkInput) (res CreateAgentClaimLinkRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createAgentClaimLink"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent/claim/link"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateAgentClaimLinkOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent/claim/link"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateAgentClaimLinkRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateAgentClaimLinkOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateAgentClaimLinkResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -7740,6 +7978,122 @@ func (c *Client) sendSetFunctionSecret(ctx context.Context, request *SetFunction
 	return result, nil
 }
 
+// StartAgentClaim invokes startAgentClaim operation.
+//
+// Begins upgrading an emailless `agent` account into a full `developer`
+// account by confirming an email address. Authenticated by the agent's own
+// API key (the org is taken from the credential). Sends a verification
+// code to the supplied email and returns the claim session id plus resend
+// timing. Submit the code to `/agent/claim/verify` to complete the
+// upgrade. Confirming an email that already belongs to a Primitive account
+// is rejected.
+//
+// POST /agent/claim/start
+func (c *Client) StartAgentClaim(ctx context.Context, request *StartAgentClaimInput) (StartAgentClaimRes, error) {
+	res, err := c.sendStartAgentClaim(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendStartAgentClaim(ctx context.Context, request *StartAgentClaimInput) (res StartAgentClaimRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("startAgentClaim"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent/claim/start"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, StartAgentClaimOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent/claim/start"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeStartAgentClaimRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, StartAgentClaimOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeStartAgentClaimResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // StartAgentSignup invokes startAgentSignup operation.
 //
 // Starts an agent-native signup session. `signup_code` is optional;
@@ -9013,6 +9367,119 @@ func (c *Client) sendUpdateFunction(ctx context.Context, request *UpdateFunction
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateFunctionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// VerifyAgentClaim invokes verifyAgentClaim operation.
+//
+// Confirms the verification code emailed by `/agent/claim/start` and
+// upgrades the account to the `developer` plan. The org id, API key, and
+// managed inbox all carry over; the send cap lifts. Authenticated by the
+// agent's own API key.
+//
+// POST /agent/claim/verify
+func (c *Client) VerifyAgentClaim(ctx context.Context, request *VerifyAgentClaimInput) (VerifyAgentClaimRes, error) {
+	res, err := c.sendVerifyAgentClaim(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendVerifyAgentClaim(ctx context.Context, request *VerifyAgentClaimInput) (res VerifyAgentClaimRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("verifyAgentClaim"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent/claim/verify"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, VerifyAgentClaimOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent/claim/verify"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeVerifyAgentClaimRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, VerifyAgentClaimOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeVerifyAgentClaimResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
