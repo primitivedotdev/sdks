@@ -108,7 +108,9 @@ const BASE64_PATTERN =
 export { emailReceivedEventJsonSchema } from "../schema.generated.js";
 // Types
 export type {
+  BounceAnalysis,
   DkimSignature,
+  DmarcReportAnalysis,
   EmailAddress,
   // Analysis types
   EmailAnalysis,
@@ -131,6 +133,7 @@ export type {
   RawContent,
   RawContentDownloadOnly,
   RawContentInline,
+  TlsReportAnalysis,
   UnknownEvent,
   ValidateEmailAuthResult,
   WebhookAttachment,
