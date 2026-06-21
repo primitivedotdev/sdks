@@ -97,6 +97,12 @@
       },
       "functions": {
         "description": "Deploy JavaScript handlers that run on inbound mail. Prefer `primitive functions templates`, `primitive functions init`, `primitive functions deploy`, `primitive functions redeploy`, `primitive functions list`, `primitive functions get`, `primitive functions logs`, and `primitive functions set-secret`; generated API names remain available for compatibility."
+      },
+      "org": {
+        "description": "Manage org-level (global) resources shared across functions"
+      },
+      "org:secrets": {
+        "description": "Global secrets shared across every function. Use `primitive org secrets list|set|remove`. Changes land in a function on its next redeploy; a function secret of the same name overrides the global."
       }
     },
     "topicSeparator": " "
