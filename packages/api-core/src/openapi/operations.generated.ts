@@ -3156,8 +3156,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "default": 0,
-        "description": "Long-poll: hold the request up to this many seconds waiting for new\nmail past `since`, returning as soon as any arrives (or an empty\npage when the wait elapses). Requires `since`; 0 (default) returns\nimmediately.\n",
+        "description": "Long-poll: hold the request up to this many seconds waiting for new\nmail past `since`, returning as soon as any arrives (or an empty\npage when the wait elapses). Requires `since`. Omitted means no wait\n(returns immediately); the server treats an absent value as 0. NOT\ngiven an OpenAPI `default` on purpose: a default makes some\ngenerators (e.g. openapi-python-client) send `wait=0` on every call,\nwhich then fails the `wait` requires `since` check for plain history\nlistings.\n",
         "enum": null,
         "maximum": 30,
         "minimum": 0,

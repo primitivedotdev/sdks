@@ -3794,8 +3794,12 @@ export type ListEmailsData = {
         /**
          * Long-poll: hold the request up to this many seconds waiting for new
          * mail past `since`, returning as soon as any arrives (or an empty
-         * page when the wait elapses). Requires `since`; 0 (default) returns
-         * immediately.
+         * page when the wait elapses). Requires `since`. Omitted means no wait
+         * (returns immediately); the server treats an absent value as 0. NOT
+         * given an OpenAPI `default` on purpose: a default makes some
+         * generators (e.g. openapi-python-client) send `wait=0` on every call,
+         * which then fails the `wait` requires `since` check for plain history
+         * listings.
          *
          */
         wait?: number;

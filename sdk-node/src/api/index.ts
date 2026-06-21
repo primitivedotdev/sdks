@@ -678,7 +678,17 @@ export class InboxResource {
         responseStyle: "fields",
       });
       const { emails, cursor } = unwrapInboxPage(result);
+      // The forward tail always returns a cursor when it returns rows. Guard
+      // the contract: a null cursor with rows would leave `since` unadvanced,
+      // re-fetching and re-yielding the same mail forever. Fail loudly instead.
+      if (emails.length > 0 && cursor === null) {
+        throw new PrimitiveApiError(
+          "Forward tail returned emails without a continuation cursor; refusing to advance to avoid re-yielding the same mail.",
+          { payload: result },
+        );
+      }
       for (const row of emails) {
+        // cursor is non-null here (guarded above when emails is non-empty).
         yield toInboundEmail(row, cursor ?? since, this.client);
       }
       // Advance past what we yielded; an empty page (caught up) loops and
@@ -704,9 +714,16 @@ export class InboxResource {
       responseStyle: "fields",
     });
     const { emails, cursor } = unwrapInboxPage(result);
-    return emails.length > 0
-      ? toInboundEmail(emails[0], cursor ?? since, this.client)
-      : null;
+    if (emails.length === 0) return null;
+    // A row with no cursor would make a caller persisting email.cursor re-fetch
+    // the same email on its next call. Surface the contract break instead.
+    if (cursor === null) {
+      throw new PrimitiveApiError(
+        "Forward tail returned an email without a continuation cursor.",
+        { payload: result },
+      );
+    }
+    return toInboundEmail(emails[0], cursor, this.client);
   }
 }
 

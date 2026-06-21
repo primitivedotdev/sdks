@@ -138,6 +138,33 @@ describe("client.inbox", () => {
     expect(got[0].cursor).toBe("cur-1|id1");
     expect(replyUrl).toBe(`/v1/emails/${SUMMARY.id}/reply`);
   });
+
+  it("stream throws if the API returns emails without a continuation cursor", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_k",
+      apiBaseUrl: BASE,
+      fetch: vi.fn<typeof fetch>(async () =>
+        listResponse([SUMMARY], null),
+      ) as typeof fetch,
+    });
+    // A null cursor with rows would re-fetch the same email forever; guard it.
+    await expect(client.inbox.stream().next()).rejects.toThrow(
+      /without a continuation cursor/,
+    );
+  });
+
+  it("waitForNext throws if an email arrives without a continuation cursor", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_k",
+      apiBaseUrl: BASE,
+      fetch: vi.fn<typeof fetch>(async () =>
+        listResponse([SUMMARY], null),
+      ) as typeof fetch,
+    });
+    await expect(client.inbox.waitForNext({ since: "c|i" })).rejects.toThrow(
+      /without a continuation cursor/,
+    );
+  });
 });
 
 describe("client.account", () => {

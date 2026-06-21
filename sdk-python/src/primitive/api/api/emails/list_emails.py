@@ -29,7 +29,7 @@ def _get_kwargs(
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
     since: str | Unset = UNSET,
-    wait: int | Unset = 0,
+    wait: int | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -132,7 +132,7 @@ def sync_detailed(
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
     since: str | Unset = UNSET,
-    wait: int | Unset = 0,
+    wait: int | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -188,7 +188,7 @@ def sync_detailed(
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
         since (str | Unset):
-        wait (int | Unset):  Default: 0.
+        wait (int | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -229,7 +229,7 @@ def sync(
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
     since: str | Unset = UNSET,
-    wait: int | Unset = 0,
+    wait: int | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -285,7 +285,7 @@ def sync(
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
         since (str | Unset):
-        wait (int | Unset):  Default: 0.
+        wait (int | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -321,7 +321,7 @@ async def asyncio_detailed(
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
     since: str | Unset = UNSET,
-    wait: int | Unset = 0,
+    wait: int | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -377,7 +377,7 @@ async def asyncio_detailed(
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
         since (str | Unset):
-        wait (int | Unset):  Default: 0.
+        wait (int | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -418,7 +418,7 @@ async def asyncio(
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
     since: str | Unset = UNSET,
-    wait: int | Unset = 0,
+    wait: int | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -474,7 +474,7 @@ async def asyncio(
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
         since (str | Unset):
-        wait (int | Unset):  Default: 0.
+        wait (int | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
