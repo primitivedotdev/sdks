@@ -51,7 +51,11 @@ const FUTURE_TOLERANCE_SECONDS = 60;
 // fixtures) from silently failing through to SIGNATURE_MISMATCH.
 const HEX_PATTERN = /^[0-9a-f]+$/i;
 const HEX_LENGTH = 64;
-const UNIX_SECONDS_PATTERN = /^\d{1,10}$/;
+// Matches the Node verifier (`../webhook/signing.ts`): accept any digit run and
+// let the shared Number.isSafeInteger + range check below reject out-of-range
+// values, so an 11+ digit timestamp yields TIMESTAMP_OUT_OF_RANGE here too
+// rather than a different INVALID_SIGNATURE_HEADER code.
+const UNIX_SECONDS_PATTERN = /^\d+$/;
 
 export interface VerifyOptions {
   /**

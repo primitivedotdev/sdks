@@ -167,6 +167,12 @@ export interface ForwardInput {
 export interface SendResult {
   id: string;
   status: GeneratedSendMailResult["status"];
+  /**
+   * The bare from-address actually written on the wire. Load-bearing on the
+   * server-derived reply path, where `from` is derived from the inbound rather
+   * than anything the caller passed.
+   */
+  from: string;
   queueId: string | null;
   accepted: string[];
   rejected: string[];
@@ -702,6 +708,7 @@ function mapSendResult(result: GeneratedSendMailResult): SendResult {
   return {
     id: result.id,
     status: result.status,
+    from: result.from,
     queueId: result.queue_id,
     accepted: result.accepted,
     rejected: result.rejected,
