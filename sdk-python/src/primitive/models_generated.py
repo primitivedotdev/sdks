@@ -1043,7 +1043,9 @@ class EmailAnalysis(BaseModel):
         ),
     ] = None
 
-    @field_validator("spamassassin", "forward", mode="before")
+    @field_validator(
+        "spamassassin", "forward", "bounce", "tls_report", "dmarc_report", mode="before"
+    )
     @classmethod
     def reject_explicit_null_optional_objects(cls, value):
         if value is None:

@@ -164,7 +164,9 @@ def _patch_generated_models() -> None:
         text,
         "    ] = None\n\n\nclass Email(BaseModel):\n",
         "    ] = None\n\n"
-        "    @field_validator(\"spamassassin\", \"forward\", mode=\"before\")\n"
+        "    @field_validator(\n"
+        "        \"spamassassin\", \"forward\", \"bounce\", \"tls_report\", \"dmarc_report\", mode=\"before\"\n"
+        "    )\n"
         "    @classmethod\n"
         "    def reject_explicit_null_optional_objects(cls, value):\n"
         "        if value is None:\n"
