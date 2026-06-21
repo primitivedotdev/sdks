@@ -348,17 +348,19 @@ export class X402Client {
       );
     }
     const expiresAtSec = Math.floor(expiresAtMs / 1000);
-    const validAfter = BigInt(nowSec - CLOCK_SKEW_SEC);
-    const validBefore = BigInt(expiresAtSec + SETTLEMENT_MARGIN_SEC);
-    // Don't sign an already-expired authorization (it would revert on-chain with
-    // AuthorizationExpired). This also rules out the validAfter >= validBefore
-    // inversion, since validAfter < now < validBefore here.
-    if (validBefore <= BigInt(nowSec)) {
+    // Refuse a challenge that's already past its expires_at. Check expires_at
+    // itself, NOT validBefore (which carries the settlement margin), so a
+    // challenge that expired within the last SETTLEMENT_MARGIN_SEC is still
+    // caught. This also rules out the validAfter >= validBefore inversion, since
+    // a non-expired challenge has validAfter < now < expiresAtSec < validBefore.
+    if (expiresAtSec <= nowSec) {
       throw new X402Error(
         `challenge has already expired (expires_at ${challenge.expires_at}); not signing`,
         0,
       );
     }
+    const validAfter = BigInt(nowSec - CLOCK_SKEW_SEC);
+    const validBefore = BigInt(expiresAtSec + SETTLEMENT_MARGIN_SEC);
 
     const auth: TransferAuthorization = {
       from: options.signer.address,

@@ -298,6 +298,15 @@ describe("X402Client hardening", () => {
     await expect(
       c(fetchMock as unknown as typeof fetch).pay(expired, { signer }),
     ).rejects.toThrow(/already expired/);
+    // Expired only 2 minutes ago, inside SETTLEMENT_MARGIN_SEC: must still be
+    // caught (the guard checks expires_at, not the margin-extended validBefore).
+    const expiredRecently = {
+      ...CHALLENGE,
+      expires_at: new Date(Date.now() - 2 * 60_000).toISOString(),
+    };
+    await expect(
+      c(fetchMock as unknown as typeof fetch).pay(expiredRecently, { signer }),
+    ).rejects.toThrow(/already expired/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
