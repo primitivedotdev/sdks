@@ -455,9 +455,10 @@ export class X402Client {
   }
 
   /**
-   * Update your org's spend policy. PATCH semantics: only the fields you pass are
-   * changed (a partial update can't silently reset the kill-switch). Pass `null`
-   * to clear a cap; omit a field to leave it untouched.
+   * Update your org's spend policy. The endpoint is a PUT, but the server
+   * applies it as a merge: only the fields you include are changed and omitted
+   * fields keep their current value, so a partial update can't silently reset
+   * the kill-switch. Pass `null` to clear a cap.
    */
   async setSpendPolicy(
     update: Partial<X402SpendPolicy>,
