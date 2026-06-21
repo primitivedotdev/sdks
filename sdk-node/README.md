@@ -200,6 +200,50 @@ email.raw;
 
 Use `email.raw` when you need the original validated webhook event shape.
 
+## x402 agent-to-agent payments
+
+The `x402` client lets one agent request a stablecoin payment and another pay it. Payment is **non-custodial**: the payer signs an EIP-3009 `transferWithAuthorization` locally with their own key and the key never leaves them. The platform resolves the real payee address, verifies every signed field against its own records, enforces the org's spend policy, and settles. Available on Base Sepolia (`base-sepolia`) and Base mainnet (`base`); amounts are token base units (USDC has 6 decimals, so `"10000"` is 0.01 USDC).
+
+Requires the `x402_payments` entitlement on your org.
+
+```ts
+import primitive from "@primitivedotdev/sdk";
+import { privateKeyToAccount } from "viem/accounts";
+
+const x402 = primitive.x402({ apiKey: process.env.PRIMITIVE_API_KEY });
+
+// Payee (one-time): register the address you want to be paid at. The signer
+// proves control of the address; this becomes your default payout destination.
+const account = privateKeyToAccount(process.env.PAYEE_KEY);
+await x402.registerPayoutAddress(
+  { org: process.env.PRIMITIVE_ORG_ID, network: "base-sepolia" },
+  { signer: account },
+);
+
+// Payee: request a payment. `pay_to` is resolved from your registered address.
+const challenge = await x402.charge({
+  amount: "10000",
+  network: "base-sepolia",
+  payerOrg: process.env.PAYER_ORG_ID,
+});
+
+// Payer: sign and settle with your own key.
+const payer = privateKeyToAccount(process.env.PAYER_KEY);
+const receipt = await x402.pay(challenge, { signer: payer });
+// receipt.status === "settled"; receipt.settle_tx is the on-chain hash.
+```
+
+A viem `LocalAccount` satisfies the `X402Signer` interface directly. `pay()` only needs `signTypedData`; `registerPayoutAddress()` also uses `signMessage`.
+
+Guard your outbound spend with a policy (kill-switch, per-payment and daily caps, payee allowlist):
+
+```ts
+await x402.setSpendPolicy({ paused: false, max_per_payment: "5000000" });
+const policy = await x402.getSpendPolicy();
+```
+
+`getChallenge(id)` re-hydrates a challenge (e.g. to retry `pay()` after a restart), and `listPayoutAddresses()` lists your registered addresses. Errors throw `X402Error` (`status`, `body`, `retryAfter`; `status === 0` means the request never reached the server). The client is also available as a subpath import: `import { X402Client } from "@primitivedotdev/sdk/x402"`.
+
 ## Lower-level surfaces
 
 ### Explicit `receive` form

@@ -40,6 +40,11 @@
       "types": "./dist/parser/address.d.ts",
       "import": "./dist/parser/address.js",
       "default": "./dist/parser/address.js"
+    },
+    "./x402": {
+      "types": "./dist/x402/index.d.ts",
+      "import": "./dist/x402/index.js",
+      "default": "./dist/x402/index.js"
     }
   },
   "sideEffects": false,
