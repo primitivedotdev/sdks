@@ -36,6 +36,22 @@ func (s *Account) encodeFields(e *jx.Encoder) {
 		e.Str(s.Plan)
 	}
 	{
+		e.FieldStart("limits")
+		s.Limits.Encode(e)
+	}
+	{
+		e.FieldStart("entitlements")
+		e.ArrStart()
+		for _, elem := range s.Entitlements {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("managed_inbox_address")
+		s.ManagedInboxAddress.Encode(e)
+	}
+	{
 		e.FieldStart("created_at")
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
@@ -87,19 +103,22 @@ func (s *Account) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfAccount = [12]string{
+var jsonFieldsNameOfAccount = [15]string{
 	0:  "id",
 	1:  "email",
 	2:  "plan",
-	3:  "created_at",
-	4:  "onboarding_completed",
-	5:  "onboarding_step",
-	6:  "stripe_subscription_status",
-	7:  "subscription_current_period_end",
-	8:  "subscription_cancel_at_period_end",
-	9:  "spam_threshold",
-	10: "discard_content_on_webhook_confirmed",
-	11: "webhook_secret_rotated_at",
+	3:  "limits",
+	4:  "entitlements",
+	5:  "managed_inbox_address",
+	6:  "created_at",
+	7:  "onboarding_completed",
+	8:  "onboarding_step",
+	9:  "stripe_subscription_status",
+	10: "subscription_current_period_end",
+	11: "subscription_cancel_at_period_end",
+	12: "spam_threshold",
+	13: "discard_content_on_webhook_confirmed",
+	14: "webhook_secret_rotated_at",
 }
 
 // Decode decodes Account from json.
@@ -147,8 +166,48 @@ func (s *Account) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"plan\"")
 			}
-		case "created_at":
+		case "limits":
 			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Limits.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"limits\"")
+			}
+		case "entitlements":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				s.Entitlements = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Entitlements = append(s.Entitlements, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"entitlements\"")
+			}
+		case "managed_inbox_address":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				if err := s.ManagedInboxAddress.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"managed_inbox_address\"")
+			}
+		case "created_at":
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -220,7 +279,7 @@ func (s *Account) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"spam_threshold\"")
 			}
 		case "discard_content_on_webhook_confirmed":
-			requiredBitSet[1] |= 1 << 2
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				v, err := d.Bool()
 				s.DiscardContentOnWebhookConfirmed = bool(v)
@@ -251,8 +310,8 @@ func (s *Account) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
-		0b00001111,
-		0b00000100,
+		0b01111111,
+		0b00100000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

@@ -6532,6 +6532,14 @@ func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w htt
 					Name: "date_to",
 					In:   "query",
 				}: params.DateTo,
+				{
+					Name: "since",
+					In:   "query",
+				}: params.Since,
+				{
+					Name: "wait",
+					In:   "query",
+				}: params.Wait,
 			},
 			Raw: r,
 		}

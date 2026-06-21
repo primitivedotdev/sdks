@@ -70,6 +70,63 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "plan": {
           "type": "string"
         },
+        "limits": {
+          "type": "object",
+          "description": "Plan-derived quota limits for an account.",
+          "properties": {
+            "storage_mb": {
+              "type": "number"
+            },
+            "send_per_hour": {
+              "type": "number"
+            },
+            "send_per_day": {
+              "type": "number"
+            },
+            "api_per_minute": {
+              "type": "number"
+            },
+            "webhooks_max_global": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "webhooks_per_domain": {
+              "type": "boolean"
+            },
+            "filters_per_domain": {
+              "type": "boolean"
+            },
+            "spam_thresholds_per_domain": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "storage_mb",
+            "send_per_hour",
+            "send_per_day",
+            "api_per_minute",
+            "webhooks_max_global",
+            "webhooks_per_domain",
+            "filters_per_domain",
+            "spam_thresholds_per_domain"
+          ]
+        },
+        "entitlements": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here — e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
+        },
+        "managed_inbox_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The managed inbox FQDN to reply as, or null if the org has no managed inbox."
+        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -125,6 +182,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "id",
         "email",
         "plan",
+        "limits",
+        "entitlements",
+        "managed_inbox_address",
         "created_at",
         "discard_content_on_webhook_confirmed"
       ]
@@ -3087,6 +3147,22 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name": "date_to",
         "required": false,
         "type": "string"
+      },
+      {
+        "description": "Forward-tail cursor. Returns rows that became visible AFTER this\ncursor, oldest-first, so a caller can stream new inbound mail by\nre-passing the cursor from each response. Mutually exclusive with\n`cursor` (which pages history newest-first). Pass the `meta.cursor`\nfrom the previous `since` response; an empty page means caught up.\n",
+        "enum": null,
+        "name": "since",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Long-poll: hold the request up to this many seconds waiting for new\nmail past `since`, returning as soon as any arrives (or an empty\npage when the wait elapses). Requires `since`. Omitted means no wait\n(returns immediately); the server treats an absent value as 0. NOT\ngiven an OpenAPI `default` on purpose: a default makes some\ngenerators (e.g. openapi-python-client) send `wait=0` on every call,\nwhich then fails the `wait` requires `since` check for plain history\nlistings.\n",
+        "enum": null,
+        "maximum": 30,
+        "minimum": 0,
+        "name": "wait",
+        "required": false,
+        "type": "integer"
       }
     ],
     "requestSchema": null,

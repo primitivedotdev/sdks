@@ -31,9 +31,17 @@ export type {
   VerifyAgentClaimInput,
 } from "./api/index.js";
 export {
+  type Account,
+  AccountResource,
+  type CreateAgentOptions,
+  type CreatedAgent,
   client,
+  createAgent,
   createPrimitiveClient,
   type ForwardInput,
+  type InboundEmail,
+  InboxResource,
+  type InboxStreamOptions,
   PrimitiveApiError,
   PrimitiveClient,
   type PrimitiveClientOptions,
@@ -42,6 +50,7 @@ export {
   type SendInput,
   type SendResult,
   type SendThreadInput,
+  type WaitForNextOptions,
 } from "./api/index.js";
 export * from "./webhook/index.js";
 export {

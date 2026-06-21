@@ -1665,6 +1665,25 @@
               "format": "date-time"
             },
             "description": "Filter emails created on or before this timestamp"
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Forward-tail cursor. Returns rows that became visible AFTER this\ncursor, oldest-first, so a caller can stream new inbound mail by\nre-passing the cursor from each response. Mutually exclusive with\n`cursor` (which pages history newest-first). Pass the `meta.cursor`\nfrom the previous `since` response; an empty page means caught up.\n"
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "description": "Long-poll: hold the request up to this many seconds waiting for new\nmail past `since`, returning as soon as any arrives (or an empty\npage when the wait elapses). Requires `since`. Omitted means no wait\n(returns immediately); the server treats an absent value as 0. NOT\ngiven an OpenAPI `default` on purpose: a default makes some\ngenerators (e.g. openapi-python-client) send `wait=0` on every call,\nwhich then fails the `wait` requires `since` check for plain history\nlistings.\n"
           }
         ],
         "responses": {
@@ -5605,6 +5624,21 @@
           "plan": {
             "type": "string"
           },
+          "limits": {
+            "$ref": "#/components/schemas/PlanLimits"
+          },
+          "entitlements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here — e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
+          },
+          "managed_inbox_address": {
+            "type": "string",
+            "description": "The managed inbox FQDN to reply as, or null if the org has no managed inbox.",
+            "nullable": true
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -5648,6 +5682,9 @@
           "id",
           "email",
           "plan",
+          "limits",
+          "entitlements",
+          "managed_inbox_address",
           "created_at",
           "discard_content_on_webhook_confirmed"
         ]

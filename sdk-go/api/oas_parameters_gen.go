@@ -1885,6 +1885,21 @@ type ListEmailsParams struct {
 	DateFrom OptDateTime `json:",omitempty,omitzero"`
 	// Filter emails created on or before this timestamp.
 	DateTo OptDateTime `json:",omitempty,omitzero"`
+	// Forward-tail cursor. Returns rows that became visible AFTER this
+	// cursor, oldest-first, so a caller can stream new inbound mail by
+	// re-passing the cursor from each response. Mutually exclusive with
+	// `cursor` (which pages history newest-first). Pass the `meta.cursor`
+	// from the previous `since` response; an empty page means caught up.
+	Since OptString `json:",omitempty,omitzero"`
+	// Long-poll: hold the request up to this many seconds waiting for new
+	// mail past `since`, returning as soon as any arrives (or an empty
+	// page when the wait elapses). Requires `since`. Omitted means no wait
+	// (returns immediately); the server treats an absent value as 0. NOT
+	// given an OpenAPI `default` on purpose: a default makes some
+	// generators (e.g. openapi-python-client) send `wait=0` on every call,
+	// which then fails the `wait` requires `since` check for plain history
+	// listings.
+	Wait OptInt `json:",omitempty,omitzero"`
 }
 
 func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsParams) {
@@ -1949,6 +1964,24 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 		}
 		if v, ok := packed[key]; ok {
 			params.DateTo = v.(OptDateTime)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "since",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Since = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "wait",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Wait = v.(OptInt)
 		}
 	}
 	return params
@@ -2311,6 +2344,140 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "date_to",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: since.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "since",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSinceVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSinceVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Since.SetTo(paramsDotSinceVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Since.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "since",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: wait.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "wait",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotWaitVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotWaitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Wait.SetTo(paramsDotWaitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Wait.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           0,
+							MaxSet:        true,
+							Max:           30,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "wait",
 			In:   "query",
 			Err:  err,
 		}

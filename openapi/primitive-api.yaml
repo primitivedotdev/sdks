@@ -1283,6 +1283,32 @@ paths:
             type: string
             format: date-time
           description: Filter emails created on or before this timestamp
+        - name: since
+          in: query
+          schema:
+            type: string
+            maxLength: 200
+          description: |
+            Forward-tail cursor. Returns rows that became visible AFTER this
+            cursor, oldest-first, so a caller can stream new inbound mail by
+            re-passing the cursor from each response. Mutually exclusive with
+            `cursor` (which pages history newest-first). Pass the `meta.cursor`
+            from the previous `since` response; an empty page means caught up.
+        - name: wait
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 30
+          description: |
+            Long-poll: hold the request up to this many seconds waiting for new
+            mail past `since`, returning as soon as any arrives (or an empty
+            page when the wait elapses). Requires `since`. Omitted means no wait
+            (returns immediately); the server treats an absent value as 0. NOT
+            given an OpenAPI `default` on purpose: a default makes some
+            generators (e.g. openapi-python-client) send `wait=0` on every call,
+            which then fails the `wait` requires `since` check for plain history
+            listings.
       responses:
         '200':
           description: Paginated list of emails
@@ -4140,6 +4166,19 @@ components:
           type: string
         plan:
           type: string
+        limits:
+          $ref: '#/components/schemas/PlanLimits'
+        entitlements:
+          type: array
+          items:
+            type: string
+          description: |
+            Granted org entitlement keys (sorted). A headless caller reads its
+            capabilities here — e.g. an emailless agent seeing only
+            ["send_mail", "send_to_known_addresses"] knows it is reply-only.
+        managed_inbox_address:
+          type: [string, 'null']
+          description: The managed inbox FQDN to reply as, or null if the org has no managed inbox.
         created_at:
           type: string
           format: date-time
@@ -4167,6 +4206,9 @@ components:
         - id
         - email
         - plan
+        - limits
+        - entitlements
+        - managed_inbox_address
         - created_at
         - discard_content_on_webhook_confirmed
 

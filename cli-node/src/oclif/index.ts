@@ -4,6 +4,7 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
+import AgentUpgradeCommand from "./commands/agent-upgrade.js";
 import ChatCommand, { ChatReplyCommand } from "./commands/chat.js";
 import {
   ConfigCommand,
@@ -413,6 +414,9 @@ const generatedCommandAliases = Object.fromEntries(
 
 export const COMMANDS: Record<string, typeof Command> = {
   completion: CompletionCommand,
+  // Interactive one-command upgrade (start claim -> prompt for code -> verify),
+  // on top of the generated agent:claim / agent:claim-verify operations.
+  "agent:upgrade": AgentUpgradeCommand,
   "list-operations": ListOperationsCommand,
   config: ConfigCommand,
   "config:list": ConfigListCommand,
