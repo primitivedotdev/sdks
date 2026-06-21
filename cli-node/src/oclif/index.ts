@@ -32,6 +32,9 @@ import FunctionsTestFunctionCommand from "./commands/functions-test-function.js"
 import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
 import LogoutCommand from "./commands/logout.js";
+import OrgSecretsListCommand from "./commands/org-secrets-list.js";
+import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
+import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
 import ReplyCommand from "./commands/reply.js";
 import SearchCommand from "./commands/search.js";
 import SemanticSearchCommand from "./commands/semantic-search.js";
@@ -548,6 +551,11 @@ export const COMMANDS: Record<string, typeof Command> = {
   // visible to the running handler requires a separate redeploy,
   // which this shortcut folds in via --redeploy.
   "functions:set-secret": FunctionsSetSecretCommand,
+  // Org-level ("global") secrets, shared across every function. Hand-rolled
+  // with raw fetch because /v1/org/secrets is not on the generated client yet.
+  "org:secrets:list": OrgSecretsListCommand,
+  "org:secrets:set": OrgSecretsSetCommand,
+  "org:secrets:remove": OrgSecretsRemoveCommand,
   // `functions:test-function` is hand-rolled to add --wait, --show-sends,
   // and --timeout on top of POST /functions/{id}/test. Without those
   // flags, agents had to manually thread queued-send + emails:wait +
