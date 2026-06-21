@@ -72,6 +72,18 @@ export interface X402ChargeInput {
   expiresIn?: number;
 }
 
+// `satisfies Record<keyof X402ChargeInput, true>` makes this a compile-time
+// mirror of the interface: adding a field to X402ChargeInput without adding it
+// here (or vice versa) is a type error, so the allow-set can't silently drift.
+const CHARGE_INPUT_KEYS = {
+  amount: true,
+  network: true,
+  payerOrg: true,
+  description: true,
+  resource: true,
+  expiresIn: true,
+} satisfies Record<keyof X402ChargeInput, true>;
+
 export class X402Error extends Error {
   readonly status: number;
   readonly body: unknown;
@@ -128,7 +140,23 @@ export class X402Client {
   }
 
   /** Request a payment (payee side). Returns the challenge to hand to the payer. */
-  charge(input: X402ChargeInput): Promise<X402Challenge> {
+  async charge(input: X402ChargeInput): Promise<X402Challenge> {
+    // Reject unknown keys so a typo (e.g. `payer_org` for `payerOrg`) fails
+    // loudly instead of being silently dropped from the request.
+    for (const key of Object.keys(input)) {
+      if (!(key in CHARGE_INPUT_KEYS)) {
+        throw new X402Error(
+          `unknown charge() option "${key}"; expected one of: ${Object.keys(CHARGE_INPUT_KEYS).join(", ")}`,
+          0,
+        );
+      }
+    }
+    if (!input.amount || !/^[1-9][0-9]{0,38}$/.test(input.amount)) {
+      throw new X402Error(
+        'charge() requires `amount` as a positive integer string in token base units, e.g. "10000"',
+        0,
+      );
+    }
     const body: Record<string, unknown> = {
       amount: input.amount,
       network: input.network ?? "base-sepolia",
@@ -148,6 +176,15 @@ export class X402Client {
     challenge: X402Challenge,
     options: { signer: X402Signer },
   ): Promise<X402Receipt> {
+    if (
+      !options?.signer?.address ||
+      typeof options.signer.signTypedData !== "function"
+    ) {
+      throw new X402Error(
+        "pay() requires options.signer with { address, signTypedData } (e.g. a viem LocalAccount)",
+        0,
+      );
+    }
     const chainId = CHAIN_IDS[challenge.network];
     if (chainId === undefined) {
       throw new X402Error(`unsupported network: ${challenge.network}`, 0);
