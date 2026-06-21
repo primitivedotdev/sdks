@@ -93,6 +93,23 @@ describe("verifyWebhookSignature (Web Crypto)", () => {
     });
   });
 
+  it("range-rejects an 11+ digit timestamp like the Node verifier (not a header error)", async () => {
+    // A 12-digit unix-seconds value parses fine but is far future. The Node
+    // verifier returns TIMESTAMP_OUT_OF_RANGE; the Web Crypto verifier must
+    // agree (it previously short-circuited to INVALID_SIGNATURE_HEADER on the
+    // digit-count regex).
+    await expect(
+      verifyWebhookSignature({
+        rawBody: "{}",
+        signatureHeader: "t=100000000000,v1=abc",
+        secret: SECRET,
+      }),
+    ).rejects.toMatchObject({
+      name: "WebhookVerificationError",
+      code: "TIMESTAMP_OUT_OF_RANGE",
+    });
+  });
+
   it("rejects an empty secret with MISSING_SECRET", async () => {
     await expect(
       verifyWebhookSignature({

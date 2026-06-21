@@ -102,6 +102,7 @@ const RECEIVED_EMAIL: ReceivedEmail = {
 const SEND_RESULT = {
   id: "sent-123",
   status: "submitted_to_agent",
+  from: "agent@example.com",
   queue_id: "qid-123",
   accepted: ["alice@example.com"],
   rejected: [],
@@ -114,6 +115,7 @@ const SEND_RESULT = {
 const NORMALIZED_SEND_RESULT = {
   id: "sent-123",
   status: "submitted_to_agent",
+  from: "agent@example.com",
   queueId: "qid-123",
   accepted: ["alice@example.com"],
   rejected: [],
