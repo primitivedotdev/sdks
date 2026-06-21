@@ -123,7 +123,13 @@ jobs:
         # state — so a run where the scoped publish already happened (e.g. the
         # mirror failed on a prior run before its trusted publisher existed, or
         # a workflow_dispatch re-run) still attempts the mirror and recovers.
+        #
+        # continue-on-error: the unscoped mirrors are additive. A mirror failure
+        # must never fail the job and skip the downstream GitHub release and
+        # Homebrew tap steps; the scoped @primitivedotdev/cli publish above is
+        # the source of truth. A failed mirror still surfaces as a step warning.
         if: ${{ steps.version.outputs.changed == 'true' }}
+        continue-on-error: true
         run: scripts/cli-mirror-publish.sh primcli "${{ steps.version.outputs.current }}"
 
       - name: Publish unscoped mirror package to npm (primitive)
@@ -139,8 +145,10 @@ jobs:
         #
         # Requires a trusted publisher for the `primitive` package on npm that
         # authorizes this workflow; without it the publish fails like any other
-        # unconfigured mirror.
+        # unconfigured mirror. continue-on-error keeps that failure from
+        # skipping the downstream GitHub release and Homebrew tap steps.
         if: ${{ steps.version.outputs.changed == 'true' }}
+        continue-on-error: true
         run: scripts/cli-mirror-publish.sh primitive "${{ steps.version.outputs.current }}"
 
       - name: Check GitHub release state
