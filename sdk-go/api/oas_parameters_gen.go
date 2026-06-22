@@ -552,6 +552,92 @@ func decodeDeleteFunctionSecretParams(args [2]string, argsEscaped bool, r *http.
 	return params, nil
 }
 
+// DeleteOrgSecretParams is parameters of deleteOrgSecret operation.
+type DeleteOrgSecretParams struct {
+	// Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.
+	Key string
+}
+
+func unpackDeleteOrgSecretParams(packed middleware.Parameters) (params DeleteOrgSecretParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "key",
+			In:   "path",
+		}
+		params.Key = packed[key].(string)
+	}
+	return params
+}
+
+func decodeDeleteOrgSecretParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteOrgSecretParams, _ error) {
+	// Decode path: key.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "key",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Key = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     0,
+					MaxLengthSet:  false,
+					Email:         false,
+					Hostname:      false,
+					Regex:         regexMap["^[A-Z_][A-Z0-9_]*$"],
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.Key)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "key",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // DiscardEmailContentParams is parameters of discardEmailContent operation.
 type DiscardEmailContentParams struct {
 	// Resource UUID.
@@ -4936,6 +5022,92 @@ func decodeSetFunctionSecretParams(args [2]string, argsEscaped bool, r *http.Req
 		param := args[1]
 		if argsEscaped {
 			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "key",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Key = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     0,
+					MaxLengthSet:  false,
+					Email:         false,
+					Hostname:      false,
+					Regex:         regexMap["^[A-Z_][A-Z0-9_]*$"],
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.Key)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "key",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// SetOrgSecretParams is parameters of setOrgSecret operation.
+type SetOrgSecretParams struct {
+	// Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.
+	Key string
+}
+
+func unpackSetOrgSecretParams(packed middleware.Parameters) (params SetOrgSecretParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "key",
+			In:   "path",
+		}
+		params.Key = packed[key].(string)
+	}
+	return params
+}
+
+func decodeSetOrgSecretParams(args [1]string, argsEscaped bool, r *http.Request) (params SetOrgSecretParams, _ error) {
+	// Decode path: key.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
 			if err != nil {
 				return errors.Wrap(err, "unescape path")
 			}

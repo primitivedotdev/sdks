@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -1327,6 +1327,77 @@ export const deleteFunctionSecret = <ThrowOnError extends boolean = false>(optio
 export const setFunctionSecret = <ThrowOnError extends boolean = false>(options: Options<SetFunctionSecretData, ThrowOnError>) => (options.client ?? client).put<SetFunctionSecretResponses, SetFunctionSecretErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/functions/{id}/secrets/{key}',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * List org-level (global) secrets
+ *
+ * Returns metadata for every org-level secret. Org secrets apply
+ * to every function in the org and are read as `env.<KEY>` in
+ * handlers. **Values are never returned.** Secret writes are
+ * write-only. A function-level secret of the same name overrides
+ * the org-level value for that function.
+ *
+ */
+export const listOrgSecrets = <ThrowOnError extends boolean = false>(options?: Options<ListOrgSecretsData, ThrowOnError>) => (options?.client ?? client).get<ListOrgSecretsResponses, ListOrgSecretsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/org/secrets',
+    ...options
+});
+
+/**
+ * Create or update an org secret
+ *
+ * Idempotent insert-or-update keyed on `(org_id, key)`. Returns
+ * 201 the first time the key is set, 200 on subsequent updates.
+ * Values are encrypted at rest. A changed value lands in a
+ * function only on that function's next deploy.
+ *
+ * Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+ * digits, underscores; first character is a letter or
+ * underscore). Values are at most 4096 UTF-8 bytes. System-
+ * managed keys are reserved and rejected.
+ *
+ */
+export const createOrgSecret = <ThrowOnError extends boolean = false>(options: Options<CreateOrgSecretData, ThrowOnError>) => (options.client ?? client).post<CreateOrgSecretResponses, CreateOrgSecretErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/org/secrets',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Delete an org secret
+ *
+ * Removes the org secret. Functions keep the previous value until
+ * each is redeployed. Returns 404 if the key did not exist.
+ *
+ */
+export const deleteOrgSecret = <ThrowOnError extends boolean = false>(options: Options<DeleteOrgSecretData, ThrowOnError>) => (options.client ?? client).delete<DeleteOrgSecretResponses, DeleteOrgSecretErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/org/secrets/{key}',
+    ...options
+});
+
+/**
+ * Set an org secret by key
+ *
+ * Path-keyed companion to `POST /org/secrets`. Idempotent:
+ * returns 201 the first time the key is set, 200 on subsequent
+ * updates. Same validation and write-only guarantees as POST.
+ *
+ */
+export const setOrgSecret = <ThrowOnError extends boolean = false>(options: Options<SetOrgSecretData, ThrowOnError>) => (options.client ?? client).put<SetOrgSecretResponses, SetOrgSecretErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/org/secrets/{key}',
     ...options,
     headers: {
         ...(options.body !== undefined && { 'Content-Type': 'application/json' }),

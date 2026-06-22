@@ -3205,6 +3205,155 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /org/secrets:
+    get:
+      operationId: listOrgSecrets
+      summary: List org-level (global) secrets
+      description: |
+        Returns metadata for every org-level secret. Org secrets apply
+        to every function in the org and are read as `env.<KEY>` in
+        handlers. **Values are never returned.** Secret writes are
+        write-only. A function-level secret of the same name overrides
+        the org-level value for that function.
+      tags: [Functions]
+      responses:
+        '200':
+          description: List of org secrets (metadata only, no values)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/OrgSecretListItem'
+                        required: [items]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createOrgSecret
+      summary: Create or update an org secret
+      description: |
+        Idempotent insert-or-update keyed on `(org_id, key)`. Returns
+        201 the first time the key is set, 200 on subsequent updates.
+        Values are encrypted at rest. A changed value lands in a
+        function only on that function's next deploy.
+
+        Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+        digits, underscores; first character is a letter or
+        underscore). Values are at most 4096 UTF-8 bytes. System-
+        managed keys are reserved and rejected.
+      tags: [Functions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrgSecretInput'
+      responses:
+        '200':
+          description: Secret updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OrgSecretWriteResult'
+        '201':
+          description: Secret created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OrgSecretWriteResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /org/secrets/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        description: Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.
+        schema:
+          type: string
+          pattern: '^[A-Z_][A-Z0-9_]*$'
+
+    put:
+      operationId: setOrgSecret
+      summary: Set an org secret by key
+      description: |
+        Path-keyed companion to `POST /org/secrets`. Idempotent:
+        returns 201 the first time the key is set, 200 on subsequent
+        updates. Same validation and write-only guarantees as POST.
+      tags: [Functions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetOrgSecretInput'
+      responses:
+        '200':
+          description: Secret updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OrgSecretWriteResult'
+        '201':
+          description: Secret created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OrgSecretWriteResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      operationId: deleteOrgSecret
+      summary: Delete an org secret
+      description: |
+        Removes the org secret. Functions keep the previous value until
+        each is redeployed. Returns 404 if the key did not exist.
+      tags: [Functions]
+      responses:
+        '204':
+          description: Secret deleted
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /functions/{id}/logs:
     parameters:
       - $ref: '#/components/parameters/ResourceId'
@@ -7136,6 +7285,71 @@ components:
     FunctionSecretWriteResult:
       type: object
       description: Returned by POST and PUT secret routes.
+      properties:
+        key:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created:
+          type: boolean
+          description: True if this call inserted a new row, false if it updated an existing one.
+      required: [key, created_at, updated_at, created]
+
+    OrgSecretListItem:
+      type: object
+      description: |
+        One row from GET /org/secrets. Org secrets are always user-set
+        (there are no managed org secrets), so `created_at` /
+        `updated_at` are always present.
+      properties:
+        key:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [key, created_at, updated_at]
+
+    CreateOrgSecretInput:
+      type: object
+      additionalProperties: false
+      description: Body for POST /org/secrets.
+      properties:
+        key:
+          type: string
+          pattern: '^[A-Z_][A-Z0-9_]*$'
+          description: |
+            Uppercase letters, digits, and underscores. Must start with
+            a letter or underscore. System-managed keys are reserved.
+        value:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          description: |
+            Secret value, up to 4096 UTF-8 bytes. Encrypted at rest.
+            Never returned by any read endpoint.
+      required: [key, value]
+
+    SetOrgSecretInput:
+      type: object
+      additionalProperties: false
+      description: Body for PUT /org/secrets/{key}. Key comes from the path.
+      properties:
+        value:
+          type: string
+          minLength: 1
+          maxLength: 4096
+      required: [value]
+
+    OrgSecretWriteResult:
+      type: object
+      description: Returned by POST and PUT org secret routes.
       properties:
         key:
           type: string

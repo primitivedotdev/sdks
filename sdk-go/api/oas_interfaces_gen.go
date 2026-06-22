@@ -33,6 +33,10 @@ type CreateFunctionSecretRes interface {
 	createFunctionSecretRes()
 }
 
+type CreateOrgSecretRes interface {
+	createOrgSecretRes()
+}
+
 type DeleteDomainRes interface {
 	deleteDomainRes()
 }
@@ -55,6 +59,10 @@ type DeleteFunctionRes interface {
 
 type DeleteFunctionSecretRes interface {
 	deleteFunctionSecretRes()
+}
+
+type DeleteOrgSecretRes interface {
+	deleteOrgSecretRes()
 }
 
 type DiscardEmailContentRes interface {
@@ -157,6 +165,10 @@ type ListFunctionsRes interface {
 	listFunctionsRes()
 }
 
+type ListOrgSecretsRes interface {
+	listOrgSecretsRes()
+}
+
 type ListSentEmailsRes interface {
 	listSentEmailsRes()
 }
@@ -207,6 +219,10 @@ type SetFunctionRouteRes interface {
 
 type SetFunctionSecretRes interface {
 	setFunctionSecretRes()
+}
+
+type SetOrgSecretRes interface {
+	setOrgSecretRes()
 }
 
 type StartAgentClaimRes interface {

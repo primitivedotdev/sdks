@@ -120,6 +120,19 @@ type Handler interface {
 	//
 	// POST /functions/{id}/secrets
 	CreateFunctionSecret(ctx context.Context, req *CreateFunctionSecretInput, params CreateFunctionSecretParams) (CreateFunctionSecretRes, error)
+	// CreateOrgSecret implements createOrgSecret operation.
+	//
+	// Idempotent insert-or-update keyed on `(org_id, key)`. Returns
+	// 201 the first time the key is set, 200 on subsequent updates.
+	// Values are encrypted at rest. A changed value lands in a
+	// function only on that function's next deploy.
+	// Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+	// digits, underscores; first character is a letter or
+	// underscore). Values are at most 4096 UTF-8 bytes. System-
+	// managed keys are reserved and rejected.
+	//
+	// POST /org/secrets
+	CreateOrgSecret(ctx context.Context, req *CreateOrgSecretInput) (CreateOrgSecretRes, error)
 	// DeleteDomain implements deleteDomain operation.
 	//
 	// Deletes a verified or unverified domain claim.
@@ -167,6 +180,13 @@ type Handler interface {
 	//
 	// DELETE /functions/{id}/secrets/{key}
 	DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (DeleteFunctionSecretRes, error)
+	// DeleteOrgSecret implements deleteOrgSecret operation.
+	//
+	// Removes the org secret. Functions keep the previous value until
+	// each is redeployed. Returns 404 if the key did not exist.
+	//
+	// DELETE /org/secrets/{key}
+	DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (DeleteOrgSecretRes, error)
 	// DiscardEmailContent implements discardEmailContent operation.
 	//
 	// Permanently deletes the email's raw bytes, parsed body (text + HTML),
@@ -475,6 +495,16 @@ type Handler interface {
 	//
 	// GET /functions
 	ListFunctions(ctx context.Context) (ListFunctionsRes, error)
+	// ListOrgSecrets implements listOrgSecrets operation.
+	//
+	// Returns metadata for every org-level secret. Org secrets apply
+	// to every function in the org and are read as `env.<KEY>` in
+	// handlers. **Values are never returned.** Secret writes are
+	// write-only. A function-level secret of the same name overrides
+	// the org-level value for that function.
+	//
+	// GET /org/secrets
+	ListOrgSecrets(ctx context.Context) (ListOrgSecretsRes, error)
 	// ListSentEmails implements listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -631,6 +661,14 @@ type Handler interface {
 	//
 	// PUT /functions/{id}/secrets/{key}
 	SetFunctionSecret(ctx context.Context, req *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
+	// SetOrgSecret implements setOrgSecret operation.
+	//
+	// Path-keyed companion to `POST /org/secrets`. Idempotent:
+	// returns 201 the first time the key is set, 200 on subsequent
+	// updates. Same validation and write-only guarantees as POST.
+	//
+	// PUT /org/secrets/{key}
+	SetOrgSecret(ctx context.Context, req *SetOrgSecretInput, params SetOrgSecretParams) (SetOrgSecretRes, error)
 	// StartAgentClaim implements startAgentClaim operation.
 	//
 	// Begins upgrading an emailless `agent` account into a full `developer`

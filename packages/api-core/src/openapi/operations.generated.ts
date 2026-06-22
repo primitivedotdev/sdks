@@ -4554,6 +4554,71 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "create-org-secret",
+    "description": "Idempotent insert-or-update keyed on `(org_id, key)`. Returns\n201 the first time the key is set, 200 on subsequent updates.\nValues are encrypted at rest. A changed value lands in a\nfunction only on that function's next deploy.\n\nKeys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,\ndigits, underscores; first character is a letter or\nunderscore). Values are at most 4096 UTF-8 bytes. System-\nmanaged keys are reserved and rejected.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createOrgSecret",
+    "path": "/org/secrets",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Body for POST /org/secrets.",
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Z_][A-Z0-9_]*$",
+          "description": "Uppercase letters, digits, and underscores. Must start with\na letter or underscore. System-managed keys are reserved.\n"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "description": "Secret value, up to 4096 UTF-8 bytes. Encrypted at rest.\nNever returned by any read endpoint.\n"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "Returned by POST and PUT org secret routes.",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created": {
+          "type": "boolean",
+          "description": "True if this call inserted a new row, false if it updated an existing one."
+        }
+      },
+      "required": [
+        "key",
+        "created_at",
+        "updated_at",
+        "created"
+      ]
+    },
+    "sdkName": "createOrgSecret",
+    "summary": "Create or update an org secret",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "delete-function",
     "description": "Soft-deletes the function row, removes the script from the edge\nruntime, and deactivates any route bound to this function so no\nfurther inbound mail is delivered. Past deploy history,\ninvocations, and logs are retained.\n\nReturns 502 if the runtime delete fails partway; the function\nrow stays in place and the call is safe to retry until it\nsucceeds.\n",
@@ -4608,6 +4673,32 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "responseSchema": null,
     "sdkName": "deleteFunctionSecret",
     "summary": "Delete a secret",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-org-secret",
+    "description": "Removes the org secret. Functions keep the previous value until\neach is redeployed. Returns 404 if the key did not exist.\n",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteOrgSecret",
+    "path": "/org/secrets/{key}",
+    "pathParams": [
+      {
+        "description": "Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.",
+        "enum": null,
+        "name": "key",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "deleteOrgSecret",
+    "summary": "Delete an org secret",
     "tag": "Functions",
     "tagCommand": "functions"
   },
@@ -5749,6 +5840,56 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-org-secrets",
+    "description": "Returns metadata for every org-level secret. Org secrets apply\nto every function in the org and are read as `env.<KEY>` in\nhandlers. **Values are never returned.** Secret writes are\nwrite-only. A function-level secret of the same name overrides\nthe org-level value for that function.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listOrgSecrets",
+    "path": "/org/secrets",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "One row from GET /org/secrets. Org secrets are always user-set\n(there are no managed org secrets), so `created_at` /\n`updated_at` are always present.\n",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "key",
+              "created_at",
+              "updated_at"
+            ]
+          }
+        }
+      },
+      "required": [
+        "items"
+      ]
+    },
+    "sdkName": "listOrgSecrets",
+    "summary": "List org-level (global) secrets",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "set-function-route",
     "description": "Binds inbound mail to this function. The route target is either\na specific verified domain (scoped) or the org's fallback (any\nactive domain with no scoped binding). If another function is\nalready bound at the target, returns a `conflict` envelope\ndescribing the holder; re-issue with `takeover: true` to\ndeactivate that prior binding and install this one.\n",
@@ -6015,6 +6156,72 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "setFunctionSecret",
     "summary": "Set a secret by key",
+    "tag": "Functions",
+    "tagCommand": "functions"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "set-org-secret",
+    "description": "Path-keyed companion to `POST /org/secrets`. Idempotent:\nreturns 201 the first time the key is set, 200 on subsequent\nupdates. Same validation and write-only guarantees as POST.\n",
+    "hasJsonBody": true,
+    "method": "PUT",
+    "operationId": "setOrgSecret",
+    "path": "/org/secrets/{key}",
+    "pathParams": [
+      {
+        "description": "Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.",
+        "enum": null,
+        "name": "key",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Body for PUT /org/secrets/{key}. Key comes from the path.",
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "Returned by POST and PUT org secret routes.",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created": {
+          "type": "boolean",
+          "description": "True if this call inserted a new row, false if it updated an existing one."
+        }
+      },
+      "required": [
+        "key",
+        "created_at",
+        "updated_at",
+        "created"
+      ]
+    },
+    "sdkName": "setOrgSecret",
+    "summary": "Set an org secret by key",
     "tag": "Functions",
     "tagCommand": "functions"
   },
