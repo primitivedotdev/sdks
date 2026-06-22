@@ -51,6 +51,9 @@ from .create_function_result import CreateFunctionResult
 from .create_function_secret_input import CreateFunctionSecretInput
 from .create_function_secret_response_200 import CreateFunctionSecretResponse200
 from .create_function_secret_response_201 import CreateFunctionSecretResponse201
+from .create_org_secret_input import CreateOrgSecretInput
+from .create_org_secret_response_200 import CreateOrgSecretResponse200
+from .create_org_secret_response_201 import CreateOrgSecretResponse201
 from .delete_domain_response_200 import DeleteDomainResponse200
 from .delete_domain_response_200_data import DeleteDomainResponse200Data
 from .delete_email_response_200 import DeleteEmailResponse200
@@ -167,7 +170,11 @@ from .list_function_logs_response_200_data import ListFunctionLogsResponse200Dat
 from .list_function_secrets_response_200 import ListFunctionSecretsResponse200
 from .list_function_secrets_response_200_data import ListFunctionSecretsResponse200Data
 from .list_functions_response_200 import ListFunctionsResponse200
+from .list_org_secrets_response_200 import ListOrgSecretsResponse200
+from .list_org_secrets_response_200_data import ListOrgSecretsResponse200Data
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
+from .org_secret_list_item import OrgSecretListItem
+from .org_secret_write_result import OrgSecretWriteResult
 from .pagination_meta import PaginationMeta
 from .parsed_email_data import ParsedEmailData
 from .parsed_email_data_error_type_0 import ParsedEmailDataErrorType0
@@ -228,6 +235,9 @@ from .set_function_route_response_200 import SetFunctionRouteResponse200
 from .set_function_secret_input import SetFunctionSecretInput
 from .set_function_secret_response_200 import SetFunctionSecretResponse200
 from .set_function_secret_response_201 import SetFunctionSecretResponse201
+from .set_org_secret_input import SetOrgSecretInput
+from .set_org_secret_response_200 import SetOrgSecretResponse200
+from .set_org_secret_response_201 import SetOrgSecretResponse201
 from .start_agent_claim_input import StartAgentClaimInput
 from .start_agent_claim_response_200 import StartAgentClaimResponse200
 from .start_agent_signup_input import StartAgentSignupInput
@@ -326,6 +336,9 @@ __all__ = (
     "CreateFunctionSecretInput",
     "CreateFunctionSecretResponse200",
     "CreateFunctionSecretResponse201",
+    "CreateOrgSecretInput",
+    "CreateOrgSecretResponse200",
+    "CreateOrgSecretResponse201",
     "DeleteDomainResponse200",
     "DeleteDomainResponse200Data",
     "DeleteEmailResponse200",
@@ -442,7 +455,11 @@ __all__ = (
     "ListFunctionSecretsResponse200",
     "ListFunctionSecretsResponse200Data",
     "ListFunctionsResponse200",
+    "ListOrgSecretsResponse200",
+    "ListOrgSecretsResponse200Data",
     "ListSentEmailsResponse200",
+    "OrgSecretListItem",
+    "OrgSecretWriteResult",
     "PaginationMeta",
     "ParsedEmailData",
     "ParsedEmailDataErrorType0",
@@ -503,6 +520,9 @@ __all__ = (
     "SetFunctionSecretInput",
     "SetFunctionSecretResponse200",
     "SetFunctionSecretResponse201",
+    "SetOrgSecretInput",
+    "SetOrgSecretResponse200",
+    "SetOrgSecretResponse201",
     "StartAgentClaimInput",
     "StartAgentClaimResponse200",
     "StartAgentSignupInput",

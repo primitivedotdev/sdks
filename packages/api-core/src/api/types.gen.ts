@@ -2832,6 +2832,56 @@ export type FunctionSecretWriteResult = {
 };
 
 /**
+ * One row from GET /org/secrets. Org secrets are always user-set
+ * (there are no managed org secrets), so `created_at` /
+ * `updated_at` are always present.
+ *
+ */
+export type OrgSecretListItem = {
+    key: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Body for POST /org/secrets.
+ */
+export type CreateOrgSecretInput = {
+    /**
+     * Uppercase letters, digits, and underscores. Must start with
+     * a letter or underscore. System-managed keys are reserved.
+     *
+     */
+    key: string;
+    /**
+     * Secret value, up to 4096 UTF-8 bytes. Encrypted at rest.
+     * Never returned by any read endpoint.
+     *
+     */
+    value: string;
+};
+
+/**
+ * Body for PUT /org/secrets/{key}. Key comes from the path.
+ */
+export type SetOrgSecretInput = {
+    value: string;
+};
+
+/**
+ * Returned by POST and PUT org secret routes.
+ */
+export type OrgSecretWriteResult = {
+    key: string;
+    created_at: string;
+    updated_at: string;
+    /**
+     * True if this call inserted a new row, false if it updated an existing one.
+     */
+    created: boolean;
+};
+
+/**
  * Resource UUID
  */
 export type ResourceId = string;
@@ -5684,6 +5734,152 @@ export type SetFunctionSecretResponses = {
 };
 
 export type SetFunctionSecretResponse = SetFunctionSecretResponses[keyof SetFunctionSecretResponses];
+
+export type ListOrgSecretsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/org/secrets';
+};
+
+export type ListOrgSecretsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type ListOrgSecretsError = ListOrgSecretsErrors[keyof ListOrgSecretsErrors];
+
+export type ListOrgSecretsResponses = {
+    /**
+     * List of org secrets (metadata only, no values)
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            items: Array<OrgSecretListItem>;
+        };
+    };
+};
+
+export type ListOrgSecretsResponse = ListOrgSecretsResponses[keyof ListOrgSecretsResponses];
+
+export type CreateOrgSecretData = {
+    body: CreateOrgSecretInput;
+    path?: never;
+    query?: never;
+    url: '/org/secrets';
+};
+
+export type CreateOrgSecretErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type CreateOrgSecretError = CreateOrgSecretErrors[keyof CreateOrgSecretErrors];
+
+export type CreateOrgSecretResponses = {
+    /**
+     * Secret updated
+     */
+    200: SuccessEnvelope & {
+        data?: OrgSecretWriteResult;
+    };
+    /**
+     * Secret created
+     */
+    201: SuccessEnvelope & {
+        data?: OrgSecretWriteResult;
+    };
+};
+
+export type CreateOrgSecretResponse = CreateOrgSecretResponses[keyof CreateOrgSecretResponses];
+
+export type DeleteOrgSecretData = {
+    body?: never;
+    path: {
+        /**
+         * Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.
+         */
+        key: string;
+    };
+    query?: never;
+    url: '/org/secrets/{key}';
+};
+
+export type DeleteOrgSecretErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteOrgSecretError = DeleteOrgSecretErrors[keyof DeleteOrgSecretErrors];
+
+export type DeleteOrgSecretResponses = {
+    /**
+     * Secret deleted
+     */
+    204: void;
+};
+
+export type DeleteOrgSecretResponse = DeleteOrgSecretResponses[keyof DeleteOrgSecretResponses];
+
+export type SetOrgSecretData = {
+    body: SetOrgSecretInput;
+    path: {
+        /**
+         * Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.
+         */
+        key: string;
+    };
+    query?: never;
+    url: '/org/secrets/{key}';
+};
+
+export type SetOrgSecretErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type SetOrgSecretError = SetOrgSecretErrors[keyof SetOrgSecretErrors];
+
+export type SetOrgSecretResponses = {
+    /**
+     * Secret updated
+     */
+    200: SuccessEnvelope & {
+        data?: OrgSecretWriteResult;
+    };
+    /**
+     * Secret created
+     */
+    201: SuccessEnvelope & {
+        data?: OrgSecretWriteResult;
+    };
+};
+
+export type SetOrgSecretResponse = SetOrgSecretResponses[keyof SetOrgSecretResponses];
 
 export type ListFunctionLogsData = {
     body?: never;

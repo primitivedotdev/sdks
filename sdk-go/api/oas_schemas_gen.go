@@ -2683,6 +2683,101 @@ type CreateFunctionUnauthorized ErrorResponse
 
 func (*CreateFunctionUnauthorized) createFunctionRes() {}
 
+type CreateOrgSecretBadRequest ErrorResponse
+
+func (*CreateOrgSecretBadRequest) createOrgSecretRes() {}
+
+// Merged schema.
+type CreateOrgSecretCreated struct {
+	Success bool                 `json:"success"`
+	Data    OrgSecretWriteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateOrgSecretCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateOrgSecretCreated) GetData() OrgSecretWriteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateOrgSecretCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateOrgSecretCreated) SetData(val OrgSecretWriteResult) {
+	s.Data = val
+}
+
+func (*CreateOrgSecretCreated) createOrgSecretRes() {}
+
+// Body for POST /org/secrets.
+// Ref: #/components/schemas/CreateOrgSecretInput
+type CreateOrgSecretInput struct {
+	// Uppercase letters, digits, and underscores. Must start with
+	// a letter or underscore. System-managed keys are reserved.
+	Key string `json:"key"`
+	// Secret value, up to 4096 UTF-8 bytes. Encrypted at rest.
+	// Never returned by any read endpoint.
+	Value string `json:"value"`
+}
+
+// GetKey returns the value of Key.
+func (s *CreateOrgSecretInput) GetKey() string {
+	return s.Key
+}
+
+// GetValue returns the value of Value.
+func (s *CreateOrgSecretInput) GetValue() string {
+	return s.Value
+}
+
+// SetKey sets the value of Key.
+func (s *CreateOrgSecretInput) SetKey(val string) {
+	s.Key = val
+}
+
+// SetValue sets the value of Value.
+func (s *CreateOrgSecretInput) SetValue(val string) {
+	s.Value = val
+}
+
+// Merged schema.
+type CreateOrgSecretOK struct {
+	Success bool                 `json:"success"`
+	Data    OrgSecretWriteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateOrgSecretOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateOrgSecretOK) GetData() OrgSecretWriteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateOrgSecretOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateOrgSecretOK) SetData(val OrgSecretWriteResult) {
+	s.Data = val
+}
+
+func (*CreateOrgSecretOK) createOrgSecretRes() {}
+
+type CreateOrgSecretUnauthorized ErrorResponse
+
+func (*CreateOrgSecretUnauthorized) createOrgSecretRes() {}
+
 type DeleteDomainBadRequest ErrorResponse
 
 func (*DeleteDomainBadRequest) deleteDomainRes() {}
@@ -2759,6 +2854,23 @@ func (*DeleteFunctionSecretUnauthorized) deleteFunctionSecretRes() {}
 type DeleteFunctionUnauthorized ErrorResponse
 
 func (*DeleteFunctionUnauthorized) deleteFunctionRes() {}
+
+type DeleteOrgSecretBadRequest ErrorResponse
+
+func (*DeleteOrgSecretBadRequest) deleteOrgSecretRes() {}
+
+// DeleteOrgSecretNoContent is response for DeleteOrgSecret operation.
+type DeleteOrgSecretNoContent struct{}
+
+func (*DeleteOrgSecretNoContent) deleteOrgSecretRes() {}
+
+type DeleteOrgSecretNotFound ErrorResponse
+
+func (*DeleteOrgSecretNotFound) deleteOrgSecretRes() {}
+
+type DeleteOrgSecretUnauthorized ErrorResponse
+
+func (*DeleteOrgSecretUnauthorized) deleteOrgSecretRes() {}
 
 // Merged schema.
 type Deleted struct {
@@ -5852,6 +5964,7 @@ func (*ErrorResponse) listDomainsRes()                   {}
 func (*ErrorResponse) listEndpointsRes()                 {}
 func (*ErrorResponse) listFiltersRes()                   {}
 func (*ErrorResponse) listFunctionsRes()                 {}
+func (*ErrorResponse) listOrgSecretsRes()                {}
 func (*ErrorResponse) pollCliLoginRes()                  {}
 func (*ErrorResponse) resendAgentSignupVerificationRes() {}
 func (*ErrorResponse) resendCliSignupVerificationRes()   {}
@@ -10097,6 +10210,48 @@ func (s *ListFunctionsOK) SetData(val []FunctionListItem) {
 
 func (*ListFunctionsOK) listFunctionsRes() {}
 
+// Merged schema.
+type ListOrgSecretsOK struct {
+	Success bool                 `json:"success"`
+	Data    ListOrgSecretsOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListOrgSecretsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListOrgSecretsOK) GetData() ListOrgSecretsOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListOrgSecretsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListOrgSecretsOK) SetData(val ListOrgSecretsOKData) {
+	s.Data = val
+}
+
+func (*ListOrgSecretsOK) listOrgSecretsRes() {}
+
+type ListOrgSecretsOKData struct {
+	Items []OrgSecretListItem `json:"items"`
+}
+
+// GetItems returns the value of Items.
+func (s *ListOrgSecretsOKData) GetItems() []OrgSecretListItem {
+	return s.Items
+}
+
+// SetItems sets the value of Items.
+func (s *ListOrgSecretsOKData) SetItems(val []OrgSecretListItem) {
+	s.Items = val
+}
+
 type ListSentEmailsBadRequest ErrorResponse
 
 func (*ListSentEmailsBadRequest) listSentEmailsRes() {}
@@ -13033,6 +13188,96 @@ func (o OptUpdateFunctionInputFiles) Or(d UpdateFunctionInputFiles) UpdateFuncti
 		return v
 	}
 	return d
+}
+
+// One row from GET /org/secrets. Org secrets are always user-set
+// (there are no managed org secrets), so `created_at` /
+// `updated_at` are always present.
+// Ref: #/components/schemas/OrgSecretListItem
+type OrgSecretListItem struct {
+	Key       string    `json:"key"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// GetKey returns the value of Key.
+func (s *OrgSecretListItem) GetKey() string {
+	return s.Key
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *OrgSecretListItem) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *OrgSecretListItem) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetKey sets the value of Key.
+func (s *OrgSecretListItem) SetKey(val string) {
+	s.Key = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *OrgSecretListItem) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *OrgSecretListItem) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// Returned by POST and PUT org secret routes.
+// Ref: #/components/schemas/OrgSecretWriteResult
+type OrgSecretWriteResult struct {
+	Key       string    `json:"key"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	// True if this call inserted a new row, false if it updated an existing one.
+	Created bool `json:"created"`
+}
+
+// GetKey returns the value of Key.
+func (s *OrgSecretWriteResult) GetKey() string {
+	return s.Key
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *OrgSecretWriteResult) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *OrgSecretWriteResult) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetCreated returns the value of Created.
+func (s *OrgSecretWriteResult) GetCreated() bool {
+	return s.Created
+}
+
+// SetKey sets the value of Key.
+func (s *OrgSecretWriteResult) SetKey(val string) {
+	s.Key = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *OrgSecretWriteResult) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *OrgSecretWriteResult) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetCreated sets the value of Created.
+func (s *OrgSecretWriteResult) SetCreated(val bool) {
+	s.Created = val
 }
 
 // Ref: #/components/schemas/PaginationMeta
@@ -17129,6 +17374,86 @@ func (*SetFunctionSecretOK) setFunctionSecretRes() {}
 type SetFunctionSecretUnauthorized ErrorResponse
 
 func (*SetFunctionSecretUnauthorized) setFunctionSecretRes() {}
+
+type SetOrgSecretBadRequest ErrorResponse
+
+func (*SetOrgSecretBadRequest) setOrgSecretRes() {}
+
+// Merged schema.
+type SetOrgSecretCreated struct {
+	Success bool                 `json:"success"`
+	Data    OrgSecretWriteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SetOrgSecretCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SetOrgSecretCreated) GetData() OrgSecretWriteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SetOrgSecretCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SetOrgSecretCreated) SetData(val OrgSecretWriteResult) {
+	s.Data = val
+}
+
+func (*SetOrgSecretCreated) setOrgSecretRes() {}
+
+// Body for PUT /org/secrets/{key}. Key comes from the path.
+// Ref: #/components/schemas/SetOrgSecretInput
+type SetOrgSecretInput struct {
+	Value string `json:"value"`
+}
+
+// GetValue returns the value of Value.
+func (s *SetOrgSecretInput) GetValue() string {
+	return s.Value
+}
+
+// SetValue sets the value of Value.
+func (s *SetOrgSecretInput) SetValue(val string) {
+	s.Value = val
+}
+
+// Merged schema.
+type SetOrgSecretOK struct {
+	Success bool                 `json:"success"`
+	Data    OrgSecretWriteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SetOrgSecretOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SetOrgSecretOK) GetData() OrgSecretWriteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SetOrgSecretOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SetOrgSecretOK) SetData(val OrgSecretWriteResult) {
+	s.Data = val
+}
+
+func (*SetOrgSecretOK) setOrgSecretRes() {}
+
+type SetOrgSecretUnauthorized ErrorResponse
+
+func (*SetOrgSecretUnauthorized) setOrgSecretRes() {}
 
 type StartAgentClaimBadRequest ErrorResponse
 

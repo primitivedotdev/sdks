@@ -149,6 +149,22 @@ func (UnimplementedHandler) CreateFunctionSecret(ctx context.Context, req *Creat
 	return r, ht.ErrNotImplemented
 }
 
+// CreateOrgSecret implements createOrgSecret operation.
+//
+// Idempotent insert-or-update keyed on `(org_id, key)`. Returns
+// 201 the first time the key is set, 200 on subsequent updates.
+// Values are encrypted at rest. A changed value lands in a
+// function only on that function's next deploy.
+// Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+// digits, underscores; first character is a letter or
+// underscore). Values are at most 4096 UTF-8 bytes. System-
+// managed keys are reserved and rejected.
+//
+// POST /org/secrets
+func (UnimplementedHandler) CreateOrgSecret(ctx context.Context, req *CreateOrgSecretInput) (r CreateOrgSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteDomain implements deleteDomain operation.
 //
 // Deletes a verified or unverified domain claim.
@@ -211,6 +227,16 @@ func (UnimplementedHandler) DeleteFunction(ctx context.Context, params DeleteFun
 //
 // DELETE /functions/{id}/secrets/{key}
 func (UnimplementedHandler) DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (r DeleteFunctionSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteOrgSecret implements deleteOrgSecret operation.
+//
+// Removes the org secret. Functions keep the previous value until
+// each is redeployed. Returns 404 if the key did not exist.
+//
+// DELETE /org/secrets/{key}
+func (UnimplementedHandler) DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (r DeleteOrgSecretRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -597,6 +623,19 @@ func (UnimplementedHandler) ListFunctions(ctx context.Context) (r ListFunctionsR
 	return r, ht.ErrNotImplemented
 }
 
+// ListOrgSecrets implements listOrgSecrets operation.
+//
+// Returns metadata for every org-level secret. Org secrets apply
+// to every function in the org and are read as `env.<KEY>` in
+// handlers. **Values are never returned.** Secret writes are
+// write-only. A function-level secret of the same name overrides
+// the org-level value for that function.
+//
+// GET /org/secrets
+func (UnimplementedHandler) ListOrgSecrets(ctx context.Context) (r ListOrgSecretsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListSentEmails implements listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -789,6 +828,17 @@ func (UnimplementedHandler) SetFunctionRoute(ctx context.Context, req *FunctionR
 //
 // PUT /functions/{id}/secrets/{key}
 func (UnimplementedHandler) SetFunctionSecret(ctx context.Context, req *SetFunctionSecretInput, params SetFunctionSecretParams) (r SetFunctionSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SetOrgSecret implements setOrgSecret operation.
+//
+// Path-keyed companion to `POST /org/secrets`. Idempotent:
+// returns 201 the first time the key is set, 200 on subsequent
+// updates. Same validation and write-only guarantees as POST.
+//
+// PUT /org/secrets/{key}
+func (UnimplementedHandler) SetOrgSecret(ctx context.Context, req *SetOrgSecretInput, params SetOrgSecretParams) (r SetOrgSecretRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

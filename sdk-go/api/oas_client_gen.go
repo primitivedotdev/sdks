@@ -140,6 +140,19 @@ type Invoker interface {
 	//
 	// POST /functions/{id}/secrets
 	CreateFunctionSecret(ctx context.Context, request *CreateFunctionSecretInput, params CreateFunctionSecretParams) (CreateFunctionSecretRes, error)
+	// CreateOrgSecret invokes createOrgSecret operation.
+	//
+	// Idempotent insert-or-update keyed on `(org_id, key)`. Returns
+	// 201 the first time the key is set, 200 on subsequent updates.
+	// Values are encrypted at rest. A changed value lands in a
+	// function only on that function's next deploy.
+	// Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+	// digits, underscores; first character is a letter or
+	// underscore). Values are at most 4096 UTF-8 bytes. System-
+	// managed keys are reserved and rejected.
+	//
+	// POST /org/secrets
+	CreateOrgSecret(ctx context.Context, request *CreateOrgSecretInput) (CreateOrgSecretRes, error)
 	// DeleteDomain invokes deleteDomain operation.
 	//
 	// Deletes a verified or unverified domain claim.
@@ -187,6 +200,13 @@ type Invoker interface {
 	//
 	// DELETE /functions/{id}/secrets/{key}
 	DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (DeleteFunctionSecretRes, error)
+	// DeleteOrgSecret invokes deleteOrgSecret operation.
+	//
+	// Removes the org secret. Functions keep the previous value until
+	// each is redeployed. Returns 404 if the key did not exist.
+	//
+	// DELETE /org/secrets/{key}
+	DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (DeleteOrgSecretRes, error)
 	// DiscardEmailContent invokes discardEmailContent operation.
 	//
 	// Permanently deletes the email's raw bytes, parsed body (text + HTML),
@@ -495,6 +515,16 @@ type Invoker interface {
 	//
 	// GET /functions
 	ListFunctions(ctx context.Context) (ListFunctionsRes, error)
+	// ListOrgSecrets invokes listOrgSecrets operation.
+	//
+	// Returns metadata for every org-level secret. Org secrets apply
+	// to every function in the org and are read as `env.<KEY>` in
+	// handlers. **Values are never returned.** Secret writes are
+	// write-only. A function-level secret of the same name overrides
+	// the org-level value for that function.
+	//
+	// GET /org/secrets
+	ListOrgSecrets(ctx context.Context) (ListOrgSecretsRes, error)
 	// ListSentEmails invokes listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -651,6 +681,14 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}/secrets/{key}
 	SetFunctionSecret(ctx context.Context, request *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
+	// SetOrgSecret invokes setOrgSecret operation.
+	//
+	// Path-keyed companion to `POST /org/secrets`. Idempotent:
+	// returns 201 the first time the key is set, 200 on subsequent
+	// updates. Same validation and write-only guarantees as POST.
+	//
+	// PUT /org/secrets/{key}
+	SetOrgSecret(ctx context.Context, request *SetOrgSecretInput, params SetOrgSecretParams) (SetOrgSecretRes, error)
 	// StartAgentClaim invokes startAgentClaim operation.
 	//
 	// Begins upgrading an emailless `agent` account into a full `developer`
@@ -1796,6 +1834,123 @@ func (c *Client) sendCreateFunctionSecret(ctx context.Context, request *CreateFu
 	return result, nil
 }
 
+// CreateOrgSecret invokes createOrgSecret operation.
+//
+// Idempotent insert-or-update keyed on `(org_id, key)`. Returns
+// 201 the first time the key is set, 200 on subsequent updates.
+// Values are encrypted at rest. A changed value lands in a
+// function only on that function's next deploy.
+// Keys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,
+// digits, underscores; first character is a letter or
+// underscore). Values are at most 4096 UTF-8 bytes. System-
+// managed keys are reserved and rejected.
+//
+// POST /org/secrets
+func (c *Client) CreateOrgSecret(ctx context.Context, request *CreateOrgSecretInput) (CreateOrgSecretRes, error) {
+	res, err := c.sendCreateOrgSecret(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateOrgSecret(ctx context.Context, request *CreateOrgSecretInput) (res CreateOrgSecretRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createOrgSecret"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/org/secrets"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateOrgSecretOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/org/secrets"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateOrgSecretRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateOrgSecretOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateOrgSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DeleteDomain invokes deleteDomain operation.
 //
 // Deletes a verified or unverified domain claim.
@@ -2569,6 +2724,132 @@ func (c *Client) sendDeleteFunctionSecret(ctx context.Context, params DeleteFunc
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteFunctionSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteOrgSecret invokes deleteOrgSecret operation.
+//
+// Removes the org secret. Functions keep the previous value until
+// each is redeployed. Returns 404 if the key did not exist.
+//
+// DELETE /org/secrets/{key}
+func (c *Client) DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (DeleteOrgSecretRes, error) {
+	res, err := c.sendDeleteOrgSecret(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (res DeleteOrgSecretRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteOrgSecret"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/org/secrets/{key}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteOrgSecretOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/org/secrets/"
+	{
+		// Encode "key" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "key",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Key))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteOrgSecretOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteOrgSecretResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -6059,6 +6340,117 @@ func (c *Client) sendListFunctions(ctx context.Context) (res ListFunctionsRes, e
 	return result, nil
 }
 
+// ListOrgSecrets invokes listOrgSecrets operation.
+//
+// Returns metadata for every org-level secret. Org secrets apply
+// to every function in the org and are read as `env.<KEY>` in
+// handlers. **Values are never returned.** Secret writes are
+// write-only. A function-level secret of the same name overrides
+// the org-level value for that function.
+//
+// GET /org/secrets
+func (c *Client) ListOrgSecrets(ctx context.Context) (ListOrgSecretsRes, error) {
+	res, err := c.sendListOrgSecrets(ctx)
+	return res, err
+}
+
+func (c *Client) sendListOrgSecrets(ctx context.Context) (res ListOrgSecretsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listOrgSecrets"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/org/secrets"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListOrgSecretsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/org/secrets"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListOrgSecretsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListOrgSecretsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListSentEmails invokes listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -8009,6 +8401,136 @@ func (c *Client) sendSetFunctionSecret(ctx context.Context, request *SetFunction
 
 	stage = "DecodeResponse"
 	result, err := decodeSetFunctionSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// SetOrgSecret invokes setOrgSecret operation.
+//
+// Path-keyed companion to `POST /org/secrets`. Idempotent:
+// returns 201 the first time the key is set, 200 on subsequent
+// updates. Same validation and write-only guarantees as POST.
+//
+// PUT /org/secrets/{key}
+func (c *Client) SetOrgSecret(ctx context.Context, request *SetOrgSecretInput, params SetOrgSecretParams) (SetOrgSecretRes, error) {
+	res, err := c.sendSetOrgSecret(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendSetOrgSecret(ctx context.Context, request *SetOrgSecretInput, params SetOrgSecretParams) (res SetOrgSecretRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("setOrgSecret"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/org/secrets/{key}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, SetOrgSecretOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/org/secrets/"
+	{
+		// Encode "key" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "key",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Key))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeSetOrgSecretRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, SetOrgSecretOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSetOrgSecretResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
