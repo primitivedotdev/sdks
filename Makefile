@@ -38,15 +38,18 @@ node-coverage:
 cli-install:
 	pnpm install --frozen-lockfile
 
-cli-test:
+# The CLI imports @primitivedotdev/sdk/x402 (bundled at build time). Its types
+# resolve to the SDK's dist, so build the SDK first for typecheck, tests, and
+# the bundle to resolve.
+cli-test: node-build
 	pnpm --dir cli-node test
 
-cli-check:
+cli-check: node-build
 	if command -v biome >/dev/null 2>&1; then cd cli-node && biome check --error-on-warnings src tests; else pnpm --dir cli-node lint; fi
 	pnpm --dir cli-node typecheck
-	$(MAKE) cli-test
+	pnpm --dir cli-node test
 
-cli-build:
+cli-build: node-build
 	pnpm --dir cli-node build
 
 cli-tarball-isolation:

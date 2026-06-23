@@ -20,9 +20,6 @@ importers:
       '@oclif/plugin-warn-if-update-available':
         specifier: ^3.1.65
         version: 3.1.65
-      '@primitivedotdev/sdk':
-        specifier: workspace:*
-        version: link:../sdk-node
       viem:
         specifier: ^2.21.0
         version: 2.53.1(typescript@5.9.3)
@@ -33,6 +30,9 @@ importers:
       '@primitivedotdev/api-core':
         specifier: workspace:*
         version: link:../packages/api-core
+      '@primitivedotdev/sdk':
+        specifier: workspace:*
+        version: link:../sdk-node
       '@types/node':
         specifier: ^22.10.2
         version: 22.19.19
