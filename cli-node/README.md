@@ -16,7 +16,7 @@ primitive whoami
 prim whoami
 ```
 
-The same CLI is also published unscoped as [`primcli`](https://www.npmjs.com/package/primcli) — `npm install -g primcli` installs an identical build with the same `primitive`/`prim` commands. Use whichever name you prefer; they track the same version.
+The same CLI is also published unscoped as [`primcli`](https://www.npmjs.com/package/primcli). `npm install -g primcli` installs an identical build with the same `primitive`/`prim` commands. Use whichever name you prefer; they track the same version.
 
 Or with no install:
 
@@ -72,6 +72,45 @@ primitive deliveries replay --id <delivery-id>
 ```
 
 Generated API commands remain available for compatibility and full schema parity, for example `primitive emails:list-emails` and `primitive sending:reply-to-email`.
+
+## x402 payments
+
+The `primitive payments` command group drives non-custodial x402 USDC payments. One agent registers a payout address and requests a payment; the paying agent signs locally with its own wallet key and settles. The key never leaves your machine. Networks are `base` and `base-sepolia`. Amounts take a human USDC value (`--amount-usdc 0.01`) or token base units (`--amount 10000`, since USDC has 6 decimals). Your org is resolved automatically from your API key, so payout registration takes no org flag.
+
+```bash
+# Payee, one time: register the default address your org is paid at. Signs an
+# ownership message locally with your wallet key. Org is auto-resolved.
+primitive payments register-payout-address --network base-sepolia --label treasury
+
+# Payee: request a payment with a human USDC amount. Prints a summary by default.
+primitive payments charge --network base-sepolia --amount-usdc 0.01
+# Capture the raw challenge JSON to hand to the payer.
+primitive payments charge --network base-sepolia --amount-usdc 0.01 --json > challenge.json
+
+# Payer: sign and settle the challenge locally. Reads the challenge inline,
+# from a file, or piped on stdin.
+primitive payments pay --challenge-file challenge.json
+cat challenge.json | primitive payments pay
+
+# Inspect a challenge by id, or list your registered payout addresses.
+primitive payments get-challenge --id <challenge-id>
+primitive payments list-payout-addresses
+
+# Read and update the org spend policy (kill-switch, per-payment and daily caps,
+# payee allowlist). The update merges: omitted fields keep their value.
+primitive payments get-spend-policy
+primitive payments update-spend-policy --max-per-payment 5000000
+```
+
+`charge` is the friendly verb that matches the SDK `charge` and accepts `--amount-usdc`; `create-challenge` is the lower-level command that takes base-unit `--amount`. Either creates a challenge. The signing commands print a human-readable summary by default; pass `--json` for raw JSON suitable for piping.
+
+The two signing commands (`register-payout-address` and `pay`) need your wallet key. Set it in `PRIMITIVE_X402_PRIVATE_KEY` (a `0x`-prefixed hex private key) so it never lands in shell history or the process list:
+
+```bash
+export PRIMITIVE_X402_PRIVATE_KEY=0x...
+```
+
+A hidden `--private-key` flag is available as an escape hatch for scripted use, but the environment variable is preferred. The non-signing commands (`charge`, `get-challenge`, `list-payout-addresses`, `get-spend-policy`, `update-spend-policy`) need only your Primitive API key. Run `primitive payments <command> --help` for the full flag list of any command.
 
 ## Migrating from `@primitivedotdev/sdk` CLI
 

@@ -67,6 +67,18 @@ type Invoker interface {
 	//
 	// POST /agent/claim/link
 	CreateAgentClaimLink(ctx context.Context, request *CreateAgentClaimLinkInput) (CreateAgentClaimLinkRes, error)
+	// CreateChallenge invokes createChallenge operation.
+	//
+	// Create an x402 payment challenge (the payee side of a payment). The
+	// `pay_to` address is resolved server-side from your registered default
+	// payout address for the network, never from the request. The response
+	// carries the `nonce_binding` and `payment_requirements` the payer needs to
+	// sign; hand the whole challenge object to the payer (for example in an
+	// email reply). Amounts are in token base units (USDC has 6 decimals, so
+	// `"10000"` is 0.01 USDC).
+	//
+	// POST /x402/challenges
+	CreateChallenge(ctx context.Context, request *CreateChallengeInput) (CreateChallengeRes, error)
 	// CreateEndpoint invokes createEndpoint operation.
 	//
 	// Creates a new webhook endpoint. If a deactivated endpoint
@@ -255,6 +267,13 @@ type Invoker interface {
 	//
 	// GET /account
 	GetAccount(ctx context.Context) (GetAccountRes, error)
+	// GetChallenge invokes getChallenge operation.
+	//
+	// Fetch a challenge you created, to poll its `status` and settlement
+	// receipt (`settle_tx`). Scoped to the challenger org that created it.
+	//
+	// GET /x402/challenges/{id}
+	GetChallenge(ctx context.Context, params GetChallengeParams) (GetChallengeRes, error)
 	// GetConversation invokes getConversation operation.
 	//
 	// Returns the full conversation the given inbound email belongs
@@ -392,6 +411,14 @@ type Invoker interface {
 	//
 	// GET /sent-emails/{id}
 	GetSentEmail(ctx context.Context, params GetSentEmailParams) (GetSentEmailRes, error)
+	// GetSpendPolicy invokes getSpendPolicy operation.
+	//
+	// Read your org's outbound spend policy: the kill-switch, per-payment and
+	// per-day caps, and the payee allowlist. Returns the defaults (no limits,
+	// not paused) when no policy has been set.
+	//
+	// GET /x402/spend-policy
+	GetSpendPolicy(ctx context.Context) (GetSpendPolicyRes, error)
 	// GetStorageStats invokes getStorageStats operation.
 	//
 	// Get storage usage.
@@ -436,6 +463,15 @@ type Invoker interface {
 	//
 	// GET /account/webhook-secret
 	GetWebhookSecret(ctx context.Context) (GetWebhookSecretRes, error)
+	// ListDeclinedPayments invokes listDeclinedPayments operation.
+	//
+	// The 50 most recent payments your org's spend policy declined, newest
+	// first. Use this to see why an outbound payment was refused (a cap, the
+	// payee allowlist, or the kill-switch) instead of only reading the
+	// dashboard.
+	//
+	// GET /x402/declined-payments
+	ListDeclinedPayments(ctx context.Context) (ListDeclinedPaymentsRes, error)
 	// ListDeliveries invokes listDeliveries operation.
 	//
 	// Returns a paginated list of webhook delivery attempts. Each delivery
@@ -525,6 +561,12 @@ type Invoker interface {
 	//
 	// GET /org/secrets
 	ListOrgSecrets(ctx context.Context) (ListOrgSecretsRes, error)
+	// ListPayoutAddresses invokes listPayoutAddresses operation.
+	//
+	// List your org's registered payout addresses, newest first.
+	//
+	// GET /x402/payout-addresses
+	ListPayoutAddresses(ctx context.Context) (ListPayoutAddressesRes, error)
 	// ListSentEmails invokes listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -545,6 +587,21 @@ type Invoker interface {
 	//
 	// GET /sent-emails
 	ListSentEmails(ctx context.Context, params ListSentEmailsParams) (ListSentEmailsRes, error)
+	// PayChallenge invokes payChallenge operation.
+	//
+	// Settle a challenge addressed to your org as payer. The request body
+	// carries a signed x402 `PaymentPayload`: an EIP-3009
+	// `transferWithAuthorization` signed locally with your own key, whose nonce
+	// is bound to the challenge via the SDK's `deriveEip3009Nonce`. The platform
+	// verifies every signed field against its own record of the challenge,
+	// applies your spend policy, and settles on-chain through a facilitator.
+	// Settlement is non-custodial; Primitive never holds funds. Idempotent:
+	// paying an already-settled challenge returns the original receipt. Most
+	// callers use the SDK `pay()` helper rather than building the payload by
+	// hand.
+	//
+	// POST /x402/challenges/{id}/pay
+	PayChallenge(ctx context.Context, request *PayChallengeInput, params PayChallengeParams) (PayChallengeRes, error)
 	// PollCliLogin invokes pollCliLogin operation.
 	//
 	// Polls a CLI login session until the browser approval either succeeds,
@@ -553,6 +610,20 @@ type Invoker interface {
 	//
 	// POST /cli/login/poll
 	PollCliLogin(ctx context.Context, request *PollCliLoginInput) (PollCliLoginRes, error)
+	// RegisterPayoutAddress invokes registerPayoutAddress operation.
+	//
+	// Register (or update) the default payout address your org receives x402
+	// payments at, for a given network. You prove control of the address with
+	// an org-bound `personal_sign` signature over the message produced by the
+	// SDK helper `buildPayoutRegistrationMessage`. The org id is taken from your
+	// authenticated key, never the body, so a captured signature can't register
+	// an address under another org. Exactly one default address exists per
+	// (org, network); registering again replaces it. A payee MUST register a
+	// payout address before calling `createChallenge`, because the challenge's
+	// `pay_to` is resolved from this directory.
+	//
+	// POST /x402/payout-addresses
+	RegisterPayoutAddress(ctx context.Context, request *RegisterPayoutAddressInput) (RegisterPayoutAddressRes, error)
 	// ReplayDelivery invokes replayDelivery operation.
 	//
 	// Re-sends the stored webhook payload from a previous delivery attempt.
@@ -813,6 +884,15 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}
 	UpdateFunction(ctx context.Context, request *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
+	// UpdateSpendPolicy invokes updateSpendPolicy operation.
+	//
+	// Update your org's spend policy. Applied as a merge: only the fields you
+	// include change, and omitted fields keep their current value, so a partial
+	// update can't silently reset the kill-switch. Send an explicit `null` to
+	// clear a cap. Caps are in token base units.
+	//
+	// PUT /x402/spend-policy
+	UpdateSpendPolicy(ctx context.Context, request *UpdateSpendPolicyInput) (UpdateSpendPolicyRes, error)
 	// VerifyAgentClaim invokes verifyAgentClaim operation.
 	//
 	// Confirms the verification code emailed by `/agent/claim/start` and
@@ -1319,6 +1399,122 @@ func (c *Client) sendCreateAgentClaimLink(ctx context.Context, request *CreateAg
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateAgentClaimLinkResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateChallenge invokes createChallenge operation.
+//
+// Create an x402 payment challenge (the payee side of a payment). The
+// `pay_to` address is resolved server-side from your registered default
+// payout address for the network, never from the request. The response
+// carries the `nonce_binding` and `payment_requirements` the payer needs to
+// sign; hand the whole challenge object to the payer (for example in an
+// email reply). Amounts are in token base units (USDC has 6 decimals, so
+// `"10000"` is 0.01 USDC).
+//
+// POST /x402/challenges
+func (c *Client) CreateChallenge(ctx context.Context, request *CreateChallengeInput) (CreateChallengeRes, error) {
+	res, err := c.sendCreateChallenge(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateChallenge(ctx context.Context, request *CreateChallengeInput) (res CreateChallengeRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createChallenge"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/x402/challenges"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateChallengeOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/x402/challenges"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateChallengeRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateChallengeOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateChallengeResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -3573,6 +3769,132 @@ func (c *Client) sendGetAccount(ctx context.Context) (res GetAccountRes, err err
 	return result, nil
 }
 
+// GetChallenge invokes getChallenge operation.
+//
+// Fetch a challenge you created, to poll its `status` and settlement
+// receipt (`settle_tx`). Scoped to the challenger org that created it.
+//
+// GET /x402/challenges/{id}
+func (c *Client) GetChallenge(ctx context.Context, params GetChallengeParams) (GetChallengeRes, error) {
+	res, err := c.sendGetChallenge(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetChallenge(ctx context.Context, params GetChallengeParams) (res GetChallengeRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getChallenge"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/x402/challenges/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetChallengeOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/x402/challenges/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetChallengeOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetChallengeResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetConversation invokes getConversation operation.
 //
 // Returns the full conversation the given inbound email belongs
@@ -4749,6 +5071,115 @@ func (c *Client) sendGetSentEmail(ctx context.Context, params GetSentEmailParams
 	return result, nil
 }
 
+// GetSpendPolicy invokes getSpendPolicy operation.
+//
+// Read your org's outbound spend policy: the kill-switch, per-payment and
+// per-day caps, and the payee allowlist. Returns the defaults (no limits,
+// not paused) when no policy has been set.
+//
+// GET /x402/spend-policy
+func (c *Client) GetSpendPolicy(ctx context.Context) (GetSpendPolicyRes, error) {
+	res, err := c.sendGetSpendPolicy(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetSpendPolicy(ctx context.Context) (res GetSpendPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getSpendPolicy"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/x402/spend-policy"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetSpendPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/x402/spend-policy"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetSpendPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetSpendPolicyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetStorageStats invokes getStorageStats operation.
 //
 // Get storage usage.
@@ -5107,6 +5538,116 @@ func (c *Client) sendGetWebhookSecret(ctx context.Context) (res GetWebhookSecret
 
 	stage = "DecodeResponse"
 	result, err := decodeGetWebhookSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListDeclinedPayments invokes listDeclinedPayments operation.
+//
+// The 50 most recent payments your org's spend policy declined, newest
+// first. Use this to see why an outbound payment was refused (a cap, the
+// payee allowlist, or the kill-switch) instead of only reading the
+// dashboard.
+//
+// GET /x402/declined-payments
+func (c *Client) ListDeclinedPayments(ctx context.Context) (ListDeclinedPaymentsRes, error) {
+	res, err := c.sendListDeclinedPayments(ctx)
+	return res, err
+}
+
+func (c *Client) sendListDeclinedPayments(ctx context.Context) (res ListDeclinedPaymentsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listDeclinedPayments"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/x402/declined-payments"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListDeclinedPaymentsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/x402/declined-payments"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListDeclinedPaymentsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListDeclinedPaymentsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -6451,6 +6992,113 @@ func (c *Client) sendListOrgSecrets(ctx context.Context) (res ListOrgSecretsRes,
 	return result, nil
 }
 
+// ListPayoutAddresses invokes listPayoutAddresses operation.
+//
+// List your org's registered payout addresses, newest first.
+//
+// GET /x402/payout-addresses
+func (c *Client) ListPayoutAddresses(ctx context.Context) (ListPayoutAddressesRes, error) {
+	res, err := c.sendListPayoutAddresses(ctx)
+	return res, err
+}
+
+func (c *Client) sendListPayoutAddresses(ctx context.Context) (res ListPayoutAddressesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listPayoutAddresses"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/x402/payout-addresses"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListPayoutAddressesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/x402/payout-addresses"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListPayoutAddressesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListPayoutAddressesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListSentEmails invokes listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -6695,6 +7343,144 @@ func (c *Client) sendListSentEmails(ctx context.Context, params ListSentEmailsPa
 	return result, nil
 }
 
+// PayChallenge invokes payChallenge operation.
+//
+// Settle a challenge addressed to your org as payer. The request body
+// carries a signed x402 `PaymentPayload`: an EIP-3009
+// `transferWithAuthorization` signed locally with your own key, whose nonce
+// is bound to the challenge via the SDK's `deriveEip3009Nonce`. The platform
+// verifies every signed field against its own record of the challenge,
+// applies your spend policy, and settles on-chain through a facilitator.
+// Settlement is non-custodial; Primitive never holds funds. Idempotent:
+// paying an already-settled challenge returns the original receipt. Most
+// callers use the SDK `pay()` helper rather than building the payload by
+// hand.
+//
+// POST /x402/challenges/{id}/pay
+func (c *Client) PayChallenge(ctx context.Context, request *PayChallengeInput, params PayChallengeParams) (PayChallengeRes, error) {
+	res, err := c.sendPayChallenge(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendPayChallenge(ctx context.Context, request *PayChallengeInput, params PayChallengeParams) (res PayChallengeRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("payChallenge"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/x402/challenges/{id}/pay"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PayChallengeOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/x402/challenges/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/pay"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePayChallengeRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PayChallengeOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePayChallengeResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // PollCliLogin invokes pollCliLogin operation.
 //
 // Polls a CLI login session until the browser approval either succeeds,
@@ -6767,6 +7553,124 @@ func (c *Client) sendPollCliLogin(ctx context.Context, request *PollCliLoginInpu
 
 	stage = "DecodeResponse"
 	result, err := decodePollCliLoginResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RegisterPayoutAddress invokes registerPayoutAddress operation.
+//
+// Register (or update) the default payout address your org receives x402
+// payments at, for a given network. You prove control of the address with
+// an org-bound `personal_sign` signature over the message produced by the
+// SDK helper `buildPayoutRegistrationMessage`. The org id is taken from your
+// authenticated key, never the body, so a captured signature can't register
+// an address under another org. Exactly one default address exists per
+// (org, network); registering again replaces it. A payee MUST register a
+// payout address before calling `createChallenge`, because the challenge's
+// `pay_to` is resolved from this directory.
+//
+// POST /x402/payout-addresses
+func (c *Client) RegisterPayoutAddress(ctx context.Context, request *RegisterPayoutAddressInput) (RegisterPayoutAddressRes, error) {
+	res, err := c.sendRegisterPayoutAddress(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendRegisterPayoutAddress(ctx context.Context, request *RegisterPayoutAddressInput) (res RegisterPayoutAddressRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("registerPayoutAddress"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/x402/payout-addresses"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RegisterPayoutAddressOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/x402/payout-addresses"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeRegisterPayoutAddressRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RegisterPayoutAddressOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRegisterPayoutAddressResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -9927,6 +10831,119 @@ func (c *Client) sendUpdateFunction(ctx context.Context, request *UpdateFunction
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateFunctionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateSpendPolicy invokes updateSpendPolicy operation.
+//
+// Update your org's spend policy. Applied as a merge: only the fields you
+// include change, and omitted fields keep their current value, so a partial
+// update can't silently reset the kill-switch. Send an explicit `null` to
+// clear a cap. Caps are in token base units.
+//
+// PUT /x402/spend-policy
+func (c *Client) UpdateSpendPolicy(ctx context.Context, request *UpdateSpendPolicyInput) (UpdateSpendPolicyRes, error) {
+	res, err := c.sendUpdateSpendPolicy(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendUpdateSpendPolicy(ctx context.Context, request *UpdateSpendPolicyInput) (res UpdateSpendPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateSpendPolicy"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/x402/spend-policy"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateSpendPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/x402/spend-policy"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateSpendPolicyRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateSpendPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateSpendPolicyResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

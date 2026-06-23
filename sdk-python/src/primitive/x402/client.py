@@ -1,0 +1,633 @@
+"""x402 agent-to-agent payments.
+
+:meth:`X402Client.charge` (payee) asks for a payment; :meth:`X402Client.pay`
+(payer) signs and settles it with the customer's own key. The signing is local
+and non-custodial; the key never leaves the caller. The server resolves the
+real payee address, verifies every signed field against its own records, and
+enforces the spend policy, so the SDK's job is just: derive the bound
+authorization, sign, and submit.
+"""
+
+from __future__ import annotations
+
+import math
+import os
+import re
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any
+from urllib.parse import quote
+
+import httpx
+from dateutil.parser import isoparse
+
+from .sign import (
+    NonceBinding,
+    PayoutRegistrationMessageInput,
+    TokenDomain,
+    TransferAuthorization,
+    X402Signer,
+    build_payout_registration_message,
+    derive_eip3009_nonce,
+    to_payment_payload,
+    transfer_with_authorization_typed_data,
+)
+
+_CHAIN_IDS: dict[str, int] = {
+    "base-sepolia": 84532,
+    "base": 8453,
+}
+
+# Generous past-dating for clock skew + headroom past challenge expiry so a
+# verified payment still has time to settle. Mirrors the server's window.
+_CLOCK_SKEW_SEC = 5 * 60
+_SETTLEMENT_MARGIN_SEC = 5 * 60
+
+_DEFAULT_BASE_URL = "https://api.primitive.dev"
+_DEFAULT_TIMEOUT_SEC = 30.0
+
+_ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
+_AMOUNT_RE = re.compile(r"^[1-9][0-9]{0,38}$")
+
+_CHARGE_INPUT_KEYS = frozenset(
+    {
+        "amount",
+        "amount_usdc",
+        "network",
+        "payer_org",
+        "description",
+        "resource",
+        "expires_in",
+    }
+)
+
+_USDC_AMOUNT_RE = re.compile(r"^[0-9]+(\.[0-9]+)?$")
+
+
+def _usdc_to_base_units(human: str) -> str | None:
+    """Convert a human USDC amount ("0.01") to base units ("10000").
+
+    USDC has 6 decimals. The conversion uses integer math (no float) so there
+    is no rounding. Returns ``None`` for a non-positive, malformed, or
+    over-precise (>6 decimals) value.
+    """
+    trimmed = human.strip()
+    if not _USDC_AMOUNT_RE.fullmatch(trimmed):
+        return None
+    whole, _, frac = trimmed.partition(".")
+    if len(frac) > 6:
+        return None
+    base = int(whole) * 1_000_000 + int(frac.ljust(6, "0"))
+    return str(base) if base > 0 else None
+
+
+class X402Error(Exception):
+    """A client- or server-side x402 failure.
+
+    ``status`` is the HTTP status, or 0 for a client-side / transport error that
+    never reached the server (on :meth:`X402Client.pay`, a status-0 error means
+    the request may never have been sent).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        status: int,
+        body: Any = None,
+        *,
+        retry_after: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status = status
+        self.body = body
+        self.retry_after = retry_after
+        """The ``Retry-After`` response header, if the server sent one."""
+
+
+@dataclass(frozen=True, slots=True)
+class X402PaymentRequirements:
+    scheme: str
+    network: str
+    max_amount_required: str
+    pay_to: str
+    asset: str
+    extra: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
+class X402Challenge:
+    """A request for payment, as returned by ``charge()`` / the platform."""
+
+    id: str
+    network: str
+    amount: str
+    pay_to: str
+    nonce_binding: dict[str, str]
+    payment_requirements: X402PaymentRequirements
+    expires_at: str
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> X402Challenge:
+        pr = data.get("payment_requirements") or {}
+        return cls(
+            id=data.get("id", ""),
+            network=data.get("network", ""),
+            amount=data.get("amount", ""),
+            pay_to=data.get("pay_to", ""),
+            nonce_binding=data.get("nonce_binding") or {},
+            payment_requirements=X402PaymentRequirements(
+                scheme=pr.get("scheme", ""),
+                network=pr.get("network", ""),
+                max_amount_required=pr.get("maxAmountRequired", ""),
+                pay_to=pr.get("payTo", ""),
+                asset=pr.get("asset", ""),
+                extra=pr.get("extra") or {},
+            )
+            if data.get("payment_requirements") is not None
+            else None,  # type: ignore[arg-type]
+            expires_at=data.get("expires_at", ""),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class X402Receipt:
+    id: str
+    status: str
+    settle_tx: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> X402Receipt:
+        return cls(
+            id=data.get("id", ""),
+            status=data.get("status", ""),
+            settle_tx=data.get("settle_tx"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class X402PayoutAddress:
+    """A registered payout address (read shape; mirrors the platform response)."""
+
+    id: str
+    address: str
+    network: str
+    label: str | None
+    is_default: bool
+    verified_at: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> X402PayoutAddress:
+        return cls(
+            id=data.get("id", ""),
+            address=data.get("address", ""),
+            network=data.get("network", ""),
+            label=data.get("label"),
+            is_default=bool(data.get("is_default", False)),
+            verified_at=data.get("verified_at"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class X402SpendPolicy:
+    """The org's spend policy (read shape; also accepted by ``set_spend_policy``)."""
+
+    paused: bool
+    """Kill-switch: when true, all outbound payments are refused."""
+    max_per_payment: str | None
+    """Per-payment cap in token base units, or None for no cap."""
+    max_per_day: str | None
+    """Daily cap in token base units, or None for no cap."""
+    allowlist: list[str] | None
+    """Allowed payee org ids; None = any on-net payee, [] = deny all."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> X402SpendPolicy:
+        return cls(
+            paused=bool(data.get("paused", False)),
+            max_per_payment=data.get("max_per_payment"),
+            max_per_day=data.get("max_per_day"),
+            allowlist=data.get("allowlist"),
+        )
+
+
+def _validate_challenge(c: X402Challenge | None) -> None:
+    """Assert a challenge is fully hydrated before signing.
+
+    A missing field fails with a named :class:`X402Error` instead of an opaque
+    crypto error mid-sign.
+    """
+
+    def bad(field: str) -> None:
+        raise X402Error(f"challenge is missing or malformed: {field}", 0)
+
+    if not c or not isinstance(c, X402Challenge):
+        bad("challenge")
+    assert c is not None
+    if not c.id:
+        bad("id")
+    if not c.network:
+        bad("network")
+    if not c.expires_at:
+        bad("expires_at")
+    nb = c.nonce_binding
+    if (
+        not nb
+        or not nb.get("interaction_id")
+        or not nb.get("challenge_step_id")
+        or not nb.get("challenge_nonce")
+    ):
+        bad("nonce_binding")
+    pr = c.payment_requirements
+    if not pr:
+        bad("payment_requirements")
+    if not pr.max_amount_required:
+        bad("payment_requirements.maxAmountRequired")
+    if not _ADDRESS_RE.fullmatch(pr.pay_to or ""):
+        bad("payment_requirements.payTo (expected a 0x address)")
+    if not _ADDRESS_RE.fullmatch(pr.asset or ""):
+        bad("payment_requirements.asset (expected a 0x address)")
+    if not pr.extra or not pr.extra.get("name") or not pr.extra.get("version"):
+        bad("payment_requirements.extra (name/version)")
+
+
+class X402Client:
+    """A high-level client for the x402 payment endpoints.
+
+    Mirrors the Node SDK's ``X402Client``. All endpoints return a
+    ``{success, data}`` envelope; the returned objects are the unwrapped
+    ``data``.
+    """
+
+    def __init__(
+        self,
+        *,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        timeout: float | None = None,
+        http_client: httpx.Client | None = None,
+    ) -> None:
+        self._api_key = (
+            api_key if api_key is not None else os.environ.get("PRIMITIVE_API_KEY", "")
+        )
+        self._base_url = (base_url or _DEFAULT_BASE_URL).rstrip("/")
+        self._timeout = timeout if timeout is not None else _DEFAULT_TIMEOUT_SEC
+        self._http = http_client
+
+    def _request(
+        self,
+        method: str,
+        path: str,
+        body: Any = None,
+    ) -> Any:
+        if not self._api_key:
+            raise X402Error(
+                "no API key configured; set PRIMITIVE_API_KEY or pass api_key "
+                "to the client",
+                0,
+            )
+
+        headers = {
+            "authorization": f"Bearer {self._api_key}",
+            "content-type": "application/json",
+        }
+        url = f"{self._base_url}{path}"
+
+        try:
+            if self._http is not None:
+                response = self._http.request(
+                    method,
+                    url,
+                    headers=headers,
+                    json=body,
+                    timeout=self._timeout,
+                )
+            else:
+                response = httpx.request(
+                    method,
+                    url,
+                    headers=headers,
+                    json=body,
+                    timeout=self._timeout,
+                )
+        except httpx.TimeoutException as cause:
+            raise X402Error(
+                f"request to {path} timed out after {self._timeout}s",
+                0,
+            ) from cause
+        except httpx.HTTPError as cause:
+            # A failed request (DNS, connection refused, TLS) must not escape as
+            # a raw httpx error: callers rely on isinstance(err, X402Error), and
+            # on pay() a status-0 error signals an indeterminate request.
+            raise X402Error(
+                f"request to {path} failed: {cause}",
+                0,
+            ) from cause
+
+        retry_after = response.headers.get("retry-after")
+        text = response.text or ""
+        json_body: dict[str, Any] | None = None
+        if text:
+            try:
+                json_body = response.json()
+            except (ValueError, httpx.DecodingError) as cause:
+                raise X402Error(
+                    f"non-JSON response ({response.status_code}) from {path}: "
+                    f"{text[:200]}",
+                    response.status_code,
+                    text[:500],
+                    retry_after=retry_after,
+                ) from cause
+
+        success = json_body.get("success") if isinstance(json_body, dict) else None
+        if not response.is_success or success is False:
+            message = None
+            if isinstance(json_body, dict):
+                error = json_body.get("error")
+                if isinstance(error, dict):
+                    message = error.get("message")
+            raise X402Error(
+                message or f"request failed with {response.status_code}",
+                response.status_code,
+                json_body if json_body is not None else text[:500],
+                retry_after=retry_after,
+            )
+        if (
+            not isinstance(json_body, dict)
+            or json_body.get("success") is not True
+            or json_body.get("data") is None
+        ):
+            raise X402Error(
+                f"unexpected response shape ({response.status_code}) from "
+                f"{path}: missing success/data envelope",
+                response.status_code,
+                json_body if json_body is not None else text[:500],
+                retry_after=retry_after,
+            )
+        return json_body["data"]
+
+    def charge(
+        self,
+        *,
+        amount: str | None = None,
+        amount_usdc: str | None = None,
+        network: str | None = None,
+        payer_org: str | None = None,
+        description: str | None = None,
+        resource: str | None = None,
+        expires_in: int | None = None,
+        **unknown: Any,
+    ) -> X402Challenge:
+        """Request a payment (payee side).
+
+        Provide exactly one of ``amount`` (token base units, e.g. ``"10000"``)
+        or ``amount_usdc`` (human USDC, e.g. ``"0.01"``). Returns the challenge
+        to hand to the payer.
+        """
+        if unknown:
+            key = next(iter(unknown))
+            raise X402Error(
+                f'unknown charge() option "{key}"; expected one of: '
+                f"{', '.join(sorted(_CHARGE_INPUT_KEYS))}",
+                0,
+            )
+        if amount is not None and amount_usdc is not None:
+            raise X402Error(
+                "charge() takes exactly one of `amount` (base units) or "
+                "`amount_usdc` (human USDC), not both",
+                0,
+            )
+        resolved = (
+            _usdc_to_base_units(amount_usdc) if amount_usdc is not None else amount
+        )
+        if not resolved or not _AMOUNT_RE.fullmatch(resolved):
+            raise X402Error(
+                "charge() requires `amount` as a positive integer string in "
+                'token base units (e.g. "10000"), or `amount_usdc` as a '
+                "positive USDC amount with at most 6 decimals (e.g. \"0.01\")",
+                0,
+            )
+        amount = resolved
+        body: dict[str, Any] = {
+            "amount": amount,
+            "network": network or "base-sepolia",
+        }
+        if payer_org:
+            body["payer_org"] = payer_org
+        if description:
+            body["description"] = description
+        if resource:
+            body["resource"] = resource
+        if expires_in is not None:
+            body["expires_in"] = expires_in
+        data = self._request("POST", "/v1/x402/challenges", body)
+        return X402Challenge.from_dict(data)
+
+    def pay(self, challenge: X402Challenge, *, signer: X402Signer) -> X402Receipt:
+        """Pay a challenge (payer side).
+
+        Derives the interaction-bound authorization, signs it locally with the
+        caller's key, and submits it for settlement.
+        """
+        if (
+            signer is None
+            or not getattr(signer, "address", None)
+            or not callable(getattr(signer, "sign_typed_data", None))
+        ):
+            raise X402Error(
+                "pay() requires a signer with { address, sign_typed_data } "
+                "(e.g. a PrivateKeySigner)",
+                0,
+            )
+        _validate_challenge(challenge)
+        chain_id = _CHAIN_IDS.get(challenge.network)
+        if chain_id is None:
+            raise X402Error(f"unsupported network: {challenge.network}", 0)
+        pr = challenge.payment_requirements
+        # chainId is derived from challenge.network but the token domain
+        # (contract/name/version) comes from payment_requirements; cross-check
+        # they agree so we never sign a chainId mismatched to the asset.
+        if pr.network != challenge.network:
+            raise X402Error(
+                f"challenge network mismatch: {challenge.network} vs "
+                f"payment_requirements {pr.network}",
+                0,
+            )
+        if pr.scheme != "exact":
+            raise X402Error(f"unsupported payment scheme: {pr.scheme}", 0)
+
+        nonce = derive_eip3009_nonce(
+            NonceBinding(
+                interaction_id=challenge.nonce_binding["interaction_id"],
+                challenge_step_id=challenge.nonce_binding["challenge_step_id"],
+                challenge_nonce=challenge.nonce_binding["challenge_nonce"],
+            )
+        )
+
+        now_sec = math.floor(datetime.now(timezone.utc).timestamp())
+        try:
+            expires_at_sec = math.floor(isoparse(challenge.expires_at).timestamp())
+        except (ValueError, OverflowError) as cause:
+            raise X402Error(
+                f"challenge has an invalid expires_at: {challenge.expires_at}",
+                0,
+            ) from cause
+        # Refuse a challenge already past its expires_at. Check expires_at
+        # itself, NOT validBefore (which carries the settlement margin), so a
+        # challenge that expired within the last _SETTLEMENT_MARGIN_SEC is still
+        # caught. This also rules out validAfter >= validBefore inversion.
+        if expires_at_sec <= now_sec:
+            raise X402Error(
+                f"challenge has already expired (expires_at "
+                f"{challenge.expires_at}); not signing",
+                0,
+            )
+        valid_after = now_sec - _CLOCK_SKEW_SEC
+        valid_before = expires_at_sec + _SETTLEMENT_MARGIN_SEC
+
+        auth = TransferAuthorization(
+            from_=signer.address,
+            to=pr.pay_to,
+            value=int(pr.max_amount_required),
+            valid_after=valid_after,
+            valid_before=valid_before,
+            nonce=nonce,
+        )
+
+        signature = signer.sign_typed_data(
+            transfer_with_authorization_typed_data(
+                TokenDomain(
+                    name=pr.extra["name"],
+                    version=pr.extra["version"],
+                    chain_id=chain_id,
+                    verifying_contract=pr.asset,
+                ),
+                auth,
+            )
+        )
+
+        data = self._request(
+            "POST",
+            f"/v1/x402/challenges/{_quote(challenge.id)}/pay",
+            {
+                "payment": to_payment_payload(
+                    challenge.network, auth, signature
+                ).to_dict()
+            },
+        )
+        return X402Receipt.from_dict(data)
+
+    def get_challenge(self, id: str) -> X402Challenge:
+        """Fetch a challenge by id (scoped to the challenger org that created it)."""
+        if not id:
+            raise X402Error("get_challenge() requires a challenge id", 0)
+        data = self._request("GET", f"/v1/x402/challenges/{_quote(id)}")
+        return X402Challenge.from_dict(data)
+
+    def _resolve_org_id(self) -> str:
+        """Resolve the caller's own organization id from the account endpoint."""
+        account = self._request("GET", "/v1/account")
+        org_id = account.get("id") if isinstance(account, dict) else None
+        if not org_id:
+            raise X402Error(
+                "could not resolve your organization id from /v1/account; pass "
+                "`org` explicitly",
+                0,
+            )
+        return org_id
+
+    def register_payout_address(
+        self,
+        *,
+        org: str | None = None,
+        signer: X402Signer,
+        network: str | None = None,
+        issued_at: str | None = None,
+        label: str | None = None,
+    ) -> X402PayoutAddress:
+        """Register a payout address for your org (payee side).
+
+        The signer proves control of its own address with an org-bound
+        ``personal_sign``; the proven address becomes (or updates to) the
+        default payout destination for the network. ``charge()`` resolves its
+        ``pay_to`` from this directory, so a payee must register before
+        requesting payments.
+
+        ``org`` is optional: when omitted it is resolved from your authenticated
+        account, so most callers never need to supply it.
+        """
+        if not callable(getattr(signer, "sign_message", None)):
+            raise X402Error(
+                "register_payout_address() requires a signer with sign_message "
+                "(e.g. a PrivateKeySigner)",
+                0,
+            )
+        org = org or self._resolve_org_id()
+        network = network or "base-sepolia"
+        issued_at = issued_at or _now_iso()
+        address = signer.address
+        message = build_payout_registration_message(
+            PayoutRegistrationMessageInput(
+                org=org,
+                address=address,
+                network=network,
+                issued_at=issued_at,
+            )
+        )
+        signature = signer.sign_message(message)
+        body: dict[str, Any] = {
+            "address": address,
+            "network": network,
+            "signature": signature,
+            "issued_at": issued_at,
+        }
+        if label is not None:
+            body["label"] = label
+        data = self._request("POST", "/v1/x402/payout-addresses", body)
+        return X402PayoutAddress.from_dict(data)
+
+    def list_payout_addresses(self) -> list[X402PayoutAddress]:
+        """List your org's registered payout addresses."""
+        data = self._request("GET", "/v1/x402/payout-addresses")
+        return [X402PayoutAddress.from_dict(item) for item in data]
+
+    def get_spend_policy(self) -> X402SpendPolicy:
+        """Read your org's spend policy (kill-switch + caps + allowlist)."""
+        data = self._request("GET", "/v1/x402/spend-policy")
+        return X402SpendPolicy.from_dict(data)
+
+    def set_spend_policy(self, update: dict[str, Any]) -> X402SpendPolicy:
+        """Update your org's spend policy.
+
+        The endpoint is a PUT, but the server applies it as a merge: only the
+        fields you include are changed and omitted fields keep their current
+        value, so a partial update can't silently reset the kill-switch. Pass
+        ``None`` to clear a cap.
+        """
+        data = self._request("PUT", "/v1/x402/spend-policy", update)
+        return X402SpendPolicy.from_dict(data)
+
+
+def create_x402_client(
+    *,
+    api_key: str | None = None,
+    base_url: str | None = None,
+    timeout: float | None = None,
+    http_client: httpx.Client | None = None,
+) -> X402Client:
+    return X402Client(
+        api_key=api_key,
+        base_url=base_url,
+        timeout=timeout,
+        http_client=http_client,
+    )
+
+
+def _now_iso() -> str:
+    # ISO-8601 in UTC with a trailing Z, matching the Node client's
+    # new Date().toISOString().
+    now = datetime.now(timezone.utc)
+    return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
+
+
+def _quote(value: str) -> str:
+    return quote(value, safe="")

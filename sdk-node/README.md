@@ -200,49 +200,86 @@ email.raw;
 
 Use `email.raw` when you need the original validated webhook event shape.
 
-## x402 agent-to-agent payments
+## x402 payments
 
-The `x402` client lets one agent request a stablecoin payment and another pay it. Payment is **non-custodial**: the payer signs an EIP-3009 `transferWithAuthorization` locally with their own key and the key never leaves them. The platform resolves the real payee address, verifies every signed field against its own records, enforces the org's spend policy, and settles. Available on Base Sepolia (`base-sepolia`) and Base mainnet (`base`); amounts are token base units (USDC has 6 decimals, so `"10000"` is 0.01 USDC).
+The `x402` client lets one agent request a USDC payment and another pay it. It is non-custodial: the payer signs an EIP-3009 `transferWithAuthorization` locally with their own key, and the key never leaves the caller. The platform resolves the real payee address, verifies every signed field against its own records, enforces the org's spend policy, and settles on chain.
 
-Requires the `x402_payments` entitlement on your org.
+The model in four steps:
+
+1. The payee registers a payout address once (proving control of it with a local signature).
+2. The payee creates a challenge with `charge()`, which the platform fills in with the registered payout address.
+3. The payer signs the challenge locally and submits it with `pay()`.
+4. The platform verifies and settles.
+
+Amounts can be given as a human USDC string (`amountUsdc: "0.01"`) or as token base units (`amount: "10000"`, since USDC has 6 decimals). Networks are `base` (mainnet) and `base-sepolia` (testnet). A viem `LocalAccount` from `privateKeyToAccount` is a valid signer: `pay()` uses its `signTypedData`, and `registerPayoutAddress()` also uses its `signMessage`.
+
+Construct the client from the `x402` subpath import (or `primitive.x402(...)` from the root import):
 
 ```ts
-import primitive from "@primitivedotdev/sdk";
-import { privateKeyToAccount } from "viem/accounts";
+import { createX402Client } from "@primitivedotdev/sdk/x402";
 
-const x402 = primitive.x402({ apiKey: process.env.PRIMITIVE_API_KEY });
-
-// Payee (one-time): register the address you want to be paid at. The signer
-// proves control of the address; this becomes your default payout destination.
-const account = privateKeyToAccount(process.env.PAYEE_KEY);
-await x402.registerPayoutAddress(
-  { org: process.env.PRIMITIVE_ORG_ID, network: "base-sepolia" },
-  { signer: account },
-);
-
-// Payee: request a payment. `pay_to` is resolved from your registered address.
-const challenge = await x402.charge({
-  amount: "10000",
-  network: "base-sepolia",
-  payerOrg: process.env.PAYER_ORG_ID,
-});
-
-// Payer: sign and settle with your own key.
-const payer = privateKeyToAccount(process.env.PAYER_KEY);
-const receipt = await x402.pay(challenge, { signer: payer });
-// receipt.status === "settled"; receipt.settle_tx is the on-chain hash.
+const x402 = createX402Client({ apiKey: process.env.PRIMITIVE_API_KEY! });
 ```
 
-A viem `LocalAccount` satisfies the `X402Signer` interface directly. `pay()` only needs `signTypedData`; `registerPayoutAddress()` also uses `signMessage`.
+### Register a payout address (payee, one time)
 
-Guard your outbound spend with a policy (kill-switch, per-payment and daily caps, payee allowlist):
+The signer proves control of its own address with an ownership message that binds your organization id, so a captured signature can never register the address under a different org. The recovered address becomes your default payout destination for that network, and `charge()` resolves its `pay_to` from this directory, so register before requesting payments. The org id is resolved automatically from your account, so you do not pass it (supply `org` only to override).
+
+```ts
+import { createX402Client } from "@primitivedotdev/sdk/x402";
+import { privateKeyToAccount } from "viem/accounts";
+
+const x402 = createX402Client({ apiKey: process.env.PRIMITIVE_API_KEY! });
+const payee = privateKeyToAccount(process.env.PAYEE_KEY as `0x${string}`);
+
+await x402.registerPayoutAddress(
+  { network: "base-sepolia", label: "treasury" },
+  { signer: payee },
+);
+```
+
+### Create a challenge (payee)
+
+```ts
+const challenge = await x402.charge({
+  amountUsdc: "0.01", // human USDC amount
+  network: "base-sepolia",
+  payerOrg: process.env.PAYER_ORG_ID, // org allowed to pay this challenge
+  description: "API call",
+});
+```
+
+Pass exactly one of `amountUsdc` (a human USDC string like `"0.01"`) or `amount` (token base units, e.g. `"10000"`). `amountUsdc` is the easy path; `amount` remains available when you already have a base-unit value.
+
+Hand the returned `challenge` object to the payer (for example over email or any out-of-band channel). `getChallenge(id)` re-hydrates a challenge by id, for example to retry `pay()` after a restart.
+
+### Pay a challenge (payer)
+
+The payer signs the interaction-bound authorization locally and submits it. The key never leaves the caller.
+
+```ts
+import { privateKeyToAccount } from "viem/accounts";
+
+const payer = privateKeyToAccount(process.env.PAYER_KEY as `0x${string}`);
+const receipt = await x402.pay(challenge, { signer: payer });
+
+console.log(receipt.status, receipt.settle_tx); // settled, on-chain tx hash
+```
+
+### Read and set the spend policy
+
+The spend policy guards outbound payments: a `paused` kill-switch, per-payment and daily caps (token base units, or `null` for no cap), and a payee `allowlist` (`null` means any on-net payee, `[]` denies all). `setSpendPolicy` merges: only the fields you pass change, and omitted fields keep their current value. Pass `null` to clear a cap.
 
 ```ts
 await x402.setSpendPolicy({ paused: false, max_per_payment: "5000000" });
 const policy = await x402.getSpendPolicy();
+
+await x402.listPayoutAddresses();
 ```
 
-`getChallenge(id)` re-hydrates a challenge (e.g. to retry `pay()` after a restart), and `listPayoutAddresses()` lists your registered addresses. Errors throw `X402Error` (`status`, `body`, `retryAfter`; `status === 0` means the request never reached the server). The client is also available as a subpath import: `import { X402Client } from "@primitivedotdev/sdk/x402"`.
+### Errors
+
+Every method throws `X402Error` on a client-side, transport, or non-2xx server error. It carries `status` (the HTTP status, or `0` for a request that never reached the server), `body` (the parsed error envelope when present), and `retryAfter` (the `Retry-After` header, when the server sent one). On `pay()`, a `status === 0` error means the request may not have been sent, so the payment outcome is indeterminate.
 
 ## Lower-level surfaces
 

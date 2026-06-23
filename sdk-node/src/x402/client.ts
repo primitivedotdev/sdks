@@ -81,9 +81,28 @@ export interface X402SpendPolicy {
   allowlist: string[] | null;
 }
 
-export interface X402ChargeInput {
-  /** Amount in token base units (USDC has 6 decimals, so "10000" = 0.01). */
+/** A payment the org's spend policy refused (read shape). */
+export interface X402DeclinedPayment {
+  id: string;
+  challenge_id: string | null;
+  counterparty_org: string | null;
+  network: string;
   amount: string;
+  reason: string;
+  declined_at: string;
+}
+
+export interface X402ChargeInput {
+  /**
+   * Amount in token base units (USDC has 6 decimals, so "10000" = 0.01).
+   * Provide exactly one of `amount` or `amountUsdc`.
+   */
+  amount?: string;
+  /**
+   * Amount as human USDC (e.g. "0.01"), converted to base units for you.
+   * Provide exactly one of `amount` or `amountUsdc`.
+   */
+  amountUsdc?: string;
   /** Defaults to "base-sepolia". */
   network?: string;
   /** The org id allowed to pay this challenge (on-net binding). */
@@ -93,6 +112,11 @@ export interface X402ChargeInput {
   resource?: string;
   /** Seconds until the challenge expires (default 1h). */
   expiresIn?: number;
+  /**
+   * Optional idempotency key. Retrying `charge()` with the same key returns the
+   * original challenge instead of creating a duplicate.
+   */
+  idempotencyKey?: string;
 }
 
 // `satisfies Record<keyof X402ChargeInput, true>` makes this a compile-time
@@ -100,12 +124,26 @@ export interface X402ChargeInput {
 // here (or vice versa) is a type error, so the allow-set can't silently drift.
 const CHARGE_INPUT_KEYS = {
   amount: true,
+  amountUsdc: true,
   network: true,
   payerOrg: true,
   description: true,
   resource: true,
   expiresIn: true,
+  idempotencyKey: true,
 } satisfies Record<keyof X402ChargeInput, true>;
+
+// USDC has 6 decimals. Convert a human amount ("0.01") to base units ("10000")
+// with string/BigInt math so there is no float rounding. Returns null on a
+// non-positive, malformed, or over-precise (>6 decimals) value.
+function usdcToBaseUnits(human: string): string | null {
+  const trimmed = human.trim();
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) return null;
+  const [whole, frac = ""] = trimmed.split(".");
+  if (frac.length > 6) return null;
+  const base = BigInt(whole) * 1_000_000n + BigInt(frac.padEnd(6, "0"));
+  return base > 0n ? base.toString() : null;
+}
 
 export class X402Error extends Error {
   /** HTTP status, or 0 for a client-side / transport error that never reached the server. */
@@ -188,7 +226,7 @@ export class X402Client {
     method: string,
     path: string,
     body?: unknown,
-    init?: { signal?: AbortSignal },
+    init?: { signal?: AbortSignal; headers?: Record<string, string> },
   ): Promise<T> {
     if (!this.#apiKey) {
       throw new X402Error(
@@ -208,6 +246,7 @@ export class X402Client {
         headers: {
           authorization: `Bearer ${this.#apiKey}`,
           "content-type": "application/json",
+          ...init?.headers,
         },
         body: body === undefined ? undefined : JSON.stringify(body),
         signal,
@@ -280,21 +319,35 @@ export class X402Client {
         );
       }
     }
-    if (!input.amount || !/^[1-9][0-9]{0,38}$/.test(input.amount)) {
+    if (input.amount !== undefined && input.amountUsdc !== undefined) {
       throw new X402Error(
-        'charge() requires `amount` as a positive integer string in token base units, e.g. "10000"',
+        "charge() takes exactly one of `amount` (base units) or `amountUsdc` (human USDC), not both",
+        0,
+      );
+    }
+    const amount =
+      input.amountUsdc !== undefined
+        ? usdcToBaseUnits(input.amountUsdc)
+        : (input.amount ?? null);
+    if (!amount || !/^[1-9][0-9]{0,38}$/.test(amount)) {
+      throw new X402Error(
+        'charge() requires `amount` as a positive integer string in token base units (e.g. "10000"), or `amountUsdc` as a positive USDC amount with at most 6 decimals (e.g. "0.01")',
         0,
       );
     }
     const body: Record<string, unknown> = {
-      amount: input.amount,
+      amount,
       network: input.network ?? "base-sepolia",
     };
     if (input.payerOrg) body.payer_org = input.payerOrg;
     if (input.description) body.description = input.description;
     if (input.resource) body.resource = input.resource;
     if (input.expiresIn !== undefined) body.expires_in = input.expiresIn;
-    return this.#request<X402Challenge>("POST", "/v1/x402/challenges", body);
+    return this.#request<X402Challenge>("POST", "/v1/x402/challenges", body, {
+      headers: input.idempotencyKey
+        ? { "idempotency-key": input.idempotencyKey }
+        : undefined,
+    });
   }
 
   /**
@@ -399,31 +452,49 @@ export class X402Client {
     );
   }
 
+  /** Resolve the caller's own organization id from the account endpoint. */
+  async #resolveOrgId(): Promise<string> {
+    const account = await this.#request<{ id?: string }>("GET", "/v1/account");
+    if (!account?.id) {
+      throw new X402Error(
+        "could not resolve your organization id from /v1/account; pass { org } explicitly",
+        0,
+      );
+    }
+    return account.id;
+  }
+
   /**
    * Register a payout address for your org (payee side). The signer proves
    * control of its own address with an org-bound `personal_sign`; the proven
    * address becomes (or updates to) the default payout destination for the
    * network. `charge()` resolves its `pay_to` from this directory, so a payee
    * must register before requesting payments.
+   *
+   * `org` is optional: when omitted it is resolved from your authenticated
+   * account, so most callers never need to supply it.
    */
   async registerPayoutAddress(
-    input: { org: string; network?: string; issuedAt?: string },
+    input: {
+      org?: string;
+      network?: string;
+      issuedAt?: string;
+      label?: string;
+    },
     options: { signer: X402Signer },
   ): Promise<X402PayoutAddress> {
-    if (!input?.org) {
-      throw new X402Error("registerPayoutAddress() requires an org id", 0);
-    }
     if (typeof options?.signer?.signMessage !== "function") {
       throw new X402Error(
         "registerPayoutAddress() requires a signer with signMessage (e.g. a viem LocalAccount)",
         0,
       );
     }
+    const org = input.org ?? (await this.#resolveOrgId());
     const network = input.network ?? "base-sepolia";
     const issuedAt = input.issuedAt ?? new Date().toISOString();
     const address = options.signer.address;
     const message = buildPayoutRegistrationMessage({
-      org: input.org,
+      org,
       address,
       network,
       issuedAt,
@@ -437,6 +508,7 @@ export class X402Client {
         network,
         signature,
         issued_at: issuedAt,
+        ...(input.label !== undefined ? { label: input.label } : {}),
       },
     );
   }
@@ -446,6 +518,17 @@ export class X402Client {
     return this.#request<X402PayoutAddress[]>(
       "GET",
       "/v1/x402/payout-addresses",
+    );
+  }
+
+  /**
+   * List the most recent payments your org's spend policy declined (newest
+   * first). Use this to see why an outbound payment was refused.
+   */
+  async listDeclinedPayments(): Promise<X402DeclinedPayment[]> {
+    return this.#request<X402DeclinedPayment[]>(
+      "GET",
+      "/v1/x402/declined-payments",
     );
   }
 

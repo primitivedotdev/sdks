@@ -6708,6 +6708,990 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": true,
+    "command": "create-challenge",
+    "description": "Create an x402 payment challenge (the payee side of a payment). The\n`pay_to` address is resolved server-side from your registered default\npayout address for the network, never from the request. The response\ncarries the `nonce_binding` and `payment_requirements` the payer needs to\nsign; hand the whole challenge object to the payer (for example in an\nemail reply). Amounts are in token base units (USDC has 6 decimals, so\n`\"10000\"` is 0.01 USDC).\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createChallenge",
+    "path": "/x402/challenges",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,38}$",
+          "description": "Amount to collect, in token base units. USDC has 6 decimals, so\n`\"10000\"` is 0.01 USDC.\n"
+        },
+        "network": {
+          "type": "string",
+          "enum": [
+            "base",
+            "base-sepolia"
+          ]
+        },
+        "payer_org": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The org id allowed to pay this challenge (on-net binding). Optional.\n"
+        },
+        "expires_in": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Seconds until the challenge expires. Defaults to 3600."
+        },
+        "resource": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048,
+          "description": "Optional URL identifying what is being paid for. Defaults to a\nsynthetic `x402:challenge:<id>` identifier.\n"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Optional human-readable description of the payment."
+        }
+      },
+      "required": [
+        "amount",
+        "network"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "settling",
+            "settled",
+            "failed",
+            "expired"
+          ]
+        },
+        "network": {
+          "type": "string",
+          "enum": [
+            "base",
+            "base-sepolia"
+          ]
+        },
+        "asset": {
+          "type": "string",
+          "description": "Token contract address (checksummed)."
+        },
+        "amount": {
+          "type": "string",
+          "description": "Amount in token base units."
+        },
+        "pay_to": {
+          "type": "string",
+          "description": "The payee's resolved payout address (checksummed)."
+        },
+        "payer_org": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The org id bound as payer, if one was set at creation."
+        },
+        "resource": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nonce_binding": {
+          "type": "object",
+          "description": "The interaction binding the payer hashes into the EIP-3009 nonce\n(`deriveEip3009Nonce`). Pinning the nonce to this binding is what lets an\nx402 payment ride asynchronous transports safely: a replayed challenge\ncan't redirect funds and a signed payment can't settle twice.\n",
+          "properties": {
+            "interaction_id": {
+              "type": "string",
+              "description": "Interaction id, including its `@domain` part."
+            },
+            "challenge_step_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "challenge_nonce": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$",
+              "description": "32 random bytes as 64 lowercase hex chars."
+            }
+          },
+          "required": [
+            "interaction_id",
+            "challenge_step_id",
+            "challenge_nonce"
+          ]
+        },
+        "settle_tx": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "On-chain settlement transaction hash once settled."
+        },
+        "settled_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "failure_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "payment_requirements": {
+          "description": "Present on the create response. Hand the whole challenge (including\nthis) to the payer; `getChallenge` omits it (it is for status polling\nby the challenger).\n",
+          "allOf": [
+            {
+              "type": "object",
+              "description": "The x402 `PaymentRequirements` the payer signs over. Field names are\nx402's native camelCase, preserved byte-for-byte.\n",
+              "properties": {
+                "scheme": {
+                  "type": "string",
+                  "description": "The x402 settlement scheme. Always `exact` for v1.",
+                  "example": "exact"
+                },
+                "network": {
+                  "type": "string",
+                  "enum": [
+                    "base",
+                    "base-sepolia"
+                  ]
+                },
+                "maxAmountRequired": {
+                  "type": "string",
+                  "description": "Amount in token base units."
+                },
+                "payTo": {
+                  "type": "string",
+                  "description": "The payee's resolved payout address (checksummed)."
+                },
+                "asset": {
+                  "type": "string",
+                  "description": "The token contract address (checksummed). USDC."
+                },
+                "resource": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "maxTimeoutSeconds": {
+                  "type": "integer"
+                },
+                "extra": {
+                  "type": "object",
+                  "description": "The token's load-bearing EIP-712 domain params. `name` differs by\nchain (Base mainnet USDC is `USD Coin`, Base Sepolia is `USDC`); a\nwrong value produces a signature the verifier rejects.\n",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "version"
+                  ]
+                }
+              },
+              "required": [
+                "scheme",
+                "network",
+                "maxAmountRequired",
+                "payTo",
+                "asset",
+                "extra"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "network",
+        "asset",
+        "amount",
+        "pay_to",
+        "nonce_binding",
+        "expires_at"
+      ]
+    },
+    "sdkName": "createChallenge",
+    "summary": "Create a payment challenge",
+    "tag": "Payments",
+    "tagCommand": "payments"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-challenge",
+    "description": "Fetch a challenge you created, to poll its `status` and settlement\nreceipt (`settle_tx`). Scoped to the challenger org that created it.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getChallenge",
+    "path": "/x402/challenges/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "settling",
+            "settled",
+            "failed",
+            "expired"
+          ]
+        },
+        "network": {
+          "type": "string",
+          "enum": [
+            "base",
+            "base-sepolia"
+          ]
+        },
+        "asset": {
+          "type": "string",
+          "description": "Token contract address (checksummed)."
+        },
+        "amount": {
+          "type": "string",
+          "description": "Amount in token base units."
+        },
+        "pay_to": {
+          "type": "string",
+          "description": "The payee's resolved payout address (checksummed)."
+        },
+        "payer_org": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The org id bound as payer, if one was set at creation."
+        },
+        "resource": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nonce_binding": {
+          "type": "object",
+          "description": "The interaction binding the payer hashes into the EIP-3009 nonce\n(`deriveEip3009Nonce`). Pinning the nonce to this binding is what lets an\nx402 payment ride asynchronous transports safely: a replayed challenge\ncan't redirect funds and a signed payment can't settle twice.\n",
+          "properties": {
+            "interaction_id": {
+              "type": "string",
+              "description": "Interaction id, including its `@domain` part."
+            },
+            "challenge_step_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "challenge_nonce": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$",
+              "description": "32 random bytes as 64 lowercase hex chars."
+            }
+          },
+          "required": [
+            "interaction_id",
+            "challenge_step_id",
+            "challenge_nonce"
+          ]
+        },
+        "settle_tx": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "On-chain settlement transaction hash once settled."
+        },
+        "settled_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "failure_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "payment_requirements": {
+          "description": "Present on the create response. Hand the whole challenge (including\nthis) to the payer; `getChallenge` omits it (it is for status polling\nby the challenger).\n",
+          "allOf": [
+            {
+              "type": "object",
+              "description": "The x402 `PaymentRequirements` the payer signs over. Field names are\nx402's native camelCase, preserved byte-for-byte.\n",
+              "properties": {
+                "scheme": {
+                  "type": "string",
+                  "description": "The x402 settlement scheme. Always `exact` for v1.",
+                  "example": "exact"
+                },
+                "network": {
+                  "type": "string",
+                  "enum": [
+                    "base",
+                    "base-sepolia"
+                  ]
+                },
+                "maxAmountRequired": {
+                  "type": "string",
+                  "description": "Amount in token base units."
+                },
+                "payTo": {
+                  "type": "string",
+                  "description": "The payee's resolved payout address (checksummed)."
+                },
+                "asset": {
+                  "type": "string",
+                  "description": "The token contract address (checksummed). USDC."
+                },
+                "resource": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "maxTimeoutSeconds": {
+                  "type": "integer"
+                },
+                "extra": {
+                  "type": "object",
+                  "description": "The token's load-bearing EIP-712 domain params. `name` differs by\nchain (Base mainnet USDC is `USD Coin`, Base Sepolia is `USDC`); a\nwrong value produces a signature the verifier rejects.\n",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "version"
+                  ]
+                }
+              },
+              "required": [
+                "scheme",
+                "network",
+                "maxAmountRequired",
+                "payTo",
+                "asset",
+                "extra"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "network",
+        "asset",
+        "amount",
+        "pay_to",
+        "nonce_binding",
+        "expires_at"
+      ]
+    },
+    "sdkName": "getChallenge",
+    "summary": "Get a payment challenge",
+    "tag": "Payments",
+    "tagCommand": "payments"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-spend-policy",
+    "description": "Read your org's outbound spend policy: the kill-switch, per-payment and\nper-day caps, and the payee allowlist. Returns the defaults (no limits,\nnot paused) when no policy has been set.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getSpendPolicy",
+    "path": "/x402/spend-policy",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "The payer's outbound spend policy. Returned with defaults (not paused,\nno caps, any on-net payee) when none is set.\n",
+      "properties": {
+        "paused": {
+          "type": "boolean",
+          "description": "Kill-switch. When true, all outbound payments are refused."
+        },
+        "max_per_payment": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Per-payment cap in token base units, or null for no cap."
+        },
+        "max_per_day": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Rolling-day cap in token base units, or null for no cap."
+        },
+        "allowlist": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Allowed payee org ids. `null` allows any on-net payee; `[]` denies\nall.\n"
+        }
+      },
+      "required": [
+        "paused",
+        "max_per_payment",
+        "max_per_day",
+        "allowlist"
+      ]
+    },
+    "sdkName": "getSpendPolicy",
+    "summary": "Get your spend policy",
+    "tag": "Payments",
+    "tagCommand": "payments"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-declined-payments",
+    "description": "The 50 most recent payments your org's spend policy declined, newest\nfirst. Use this to see why an outbound payment was refused (a cap, the\npayee allowlist, or the kill-switch) instead of only reading the\ndashboard.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listDeclinedPayments",
+    "path": "/x402/declined-payments",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "A payment the org's spend policy refused.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "challenge_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The challenge that was declined, if still present."
+          },
+          "counterparty_org": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The payee (challenger) org, when known."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base",
+              "base-sepolia"
+            ]
+          },
+          "amount": {
+            "type": "string",
+            "description": "Amount in token base units."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why the payment was declined (cap, allowlist, paused)."
+          },
+          "declined_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "network",
+          "amount",
+          "reason",
+          "declined_at"
+        ]
+      }
+    },
+    "sdkName": "listDeclinedPayments",
+    "summary": "List declined payments",
+    "tag": "Payments",
+    "tagCommand": "payments"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-payout-addresses",
+    "description": "List your org's registered payout addresses, newest first.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listPayoutAddresses",
+    "path": "/x402/payout-addresses",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "address": {
+            "type": "string",
+            "description": "The checksummed payout address."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base",
+              "base-sepolia"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "Exactly one address per (org, network) is the default."
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When ownership of the address was last proven."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "network",
+          "label",
+          "is_default",
+          "verified_at"
+        ]
+      }
+    },
+    "sdkName": "listPayoutAddresses",
+    "summary": "List payout addresses",
+    "tag": "Payments",
+    "tagCommand": "payments"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "pay-challenge",
+    "description": "Settle a challenge addressed to your org as payer. The request body\ncarries a signed x402 `PaymentPayload`: an EIP-3009\n`transferWithAuthorization` signed locally with your own key, whose nonce\nis bound to the challenge via the SDK's `deriveEip3009Nonce`. The platform\nverifies every signed field against its own record of the challenge,\napplies your spend policy, and settles on-chain through a facilitator.\nSettlement is non-custodial; Primitive never holds funds. Idempotent:\npaying an already-settled challenge returns the original receipt. Most\ncallers use the SDK `pay()` helper rather than building the payload by\nhand.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "payChallenge",
+    "path": "/x402/challenges/{id}/pay",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "payment": {
+          "type": "object",
+          "description": "A signed x402 v1 `PaymentPayload`. The SDK `pay()` helper builds this;\ncallers rarely construct it by hand. Field names are x402-native.\n",
+          "properties": {
+            "x402Version": {
+              "type": "integer",
+              "const": 1
+            },
+            "scheme": {
+              "type": "string",
+              "const": "exact"
+            },
+            "network": {
+              "type": "string",
+              "enum": [
+                "base",
+                "base-sepolia"
+              ]
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "signature": {
+                  "type": "string",
+                  "pattern": "^0x[0-9a-fA-F]+$",
+                  "description": "The EIP-712 signature over the authorization."
+                },
+                "authorization": {
+                  "type": "object",
+                  "description": "The EIP-3009 `transferWithAuthorization` fields, as strings.",
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    },
+                    "validAfter": {
+                      "type": "string"
+                    },
+                    "validBefore": {
+                      "type": "string"
+                    },
+                    "nonce": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "value",
+                    "validAfter",
+                    "validBefore",
+                    "nonce"
+                  ]
+                }
+              },
+              "required": [
+                "signature",
+                "authorization"
+              ]
+            }
+          },
+          "required": [
+            "x402Version",
+            "scheme",
+            "network",
+            "payload"
+          ]
+        }
+      },
+      "required": [
+        "payment"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "settled"
+          ]
+        },
+        "settle_tx": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "On-chain settlement transaction hash."
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "settle_tx"
+      ]
+    },
+    "sdkName": "payChallenge",
+    "summary": "Pay a payment challenge",
+    "tag": "Payments",
+    "tagCommand": "payments"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "register-payout-address",
+    "description": "Register (or update) the default payout address your org receives x402\npayments at, for a given network. You prove control of the address with\nan org-bound `personal_sign` signature over the message produced by the\nSDK helper `buildPayoutRegistrationMessage`. The org id is taken from your\nauthenticated key, never the body, so a captured signature can't register\nan address under another org. Exactly one default address exists per\n(org, network); registering again replaces it. A payee MUST register a\npayout address before calling `createChallenge`, because the challenge's\n`pay_to` is resolved from this directory.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "registerPayoutAddress",
+    "path": "/x402/payout-addresses",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]{40}$",
+          "description": "The payout address (your signer's own EVM address), 0x-prefixed."
+        },
+        "network": {
+          "type": "string",
+          "enum": [
+            "base",
+            "base-sepolia"
+          ],
+          "description": "The chain the address receives on."
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^0x[0-9a-fA-F]+$",
+          "description": "A `personal_sign` signature over the org-bound message produced by\nthe SDK helper `buildPayoutRegistrationMessage`. Recovered and\nchecked against `address`; the org id is bound into the signed bytes.\n"
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO-8601 timestamp embedded in the signed message. Must be within a\nshort freshness window (about 10 minutes) of server time.\n"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Optional human-readable label."
+        }
+      },
+      "required": [
+        "address",
+        "network",
+        "signature",
+        "issued_at"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "address": {
+          "type": "string",
+          "description": "The checksummed payout address."
+        },
+        "network": {
+          "type": "string",
+          "enum": [
+            "base",
+            "base-sepolia"
+          ]
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_default": {
+          "type": "boolean",
+          "description": "Exactly one address per (org, network) is the default."
+        },
+        "verified_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When ownership of the address was last proven."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "address",
+        "network",
+        "label",
+        "is_default",
+        "verified_at"
+      ]
+    },
+    "sdkName": "registerPayoutAddress",
+    "summary": "Register a payout address",
+    "tag": "Payments",
+    "tagCommand": "payments"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-spend-policy",
+    "description": "Update your org's spend policy. Applied as a merge: only the fields you\ninclude change, and omitted fields keep their current value, so a partial\nupdate can't silently reset the kill-switch. Send an explicit `null` to\nclear a cap. Caps are in token base units.\n",
+    "hasJsonBody": true,
+    "method": "PUT",
+    "operationId": "updateSpendPolicy",
+    "path": "/x402/spend-policy",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Merge update: only the fields you include change; omit a field to keep\nits current value; send `null` to clear a cap.\n",
+      "properties": {
+        "paused": {
+          "type": "boolean"
+        },
+        "max_per_payment": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[1-9][0-9]{0,38}$"
+        },
+        "max_per_day": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[1-9][0-9]{0,38}$"
+        },
+        "allowlist": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 1000,
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "The payer's outbound spend policy. Returned with defaults (not paused,\nno caps, any on-net payee) when none is set.\n",
+      "properties": {
+        "paused": {
+          "type": "boolean",
+          "description": "Kill-switch. When true, all outbound payments are refused."
+        },
+        "max_per_payment": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Per-payment cap in token base units, or null for no cap."
+        },
+        "max_per_day": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Rolling-day cap in token base units, or null for no cap."
+        },
+        "allowlist": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "Allowed payee org ids. `null` allows any on-net payee; `[]` denies\nall.\n"
+        }
+      },
+      "required": [
+        "paused",
+        "max_per_payment",
+        "max_per_day",
+        "allowlist"
+      ]
+    },
+    "sdkName": "updateSpendPolicy",
+    "summary": "Update your spend policy",
+    "tag": "Payments",
+    "tagCommand": "payments"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
     "command": "semantic-search",
     "description": "Ranked search across both received and sent mail. The `mode`\nfield selects the ranking strategy:\n\n- `keyword`: lexical full-text matching only (no embeddings).\n- `semantic`: meaning-based matching using vector embeddings.\n- `hybrid` (default): blends the semantic and keyword signals.\n\nResults are ordered by a relevance `score`. Every row reports the\nfields it matched (`matched_fields`), a match-centered excerpt per\nfield (`snippets`), and a `score_breakdown` whose components account\nfor the `score`. Page through results by passing the prior\nresponse's `meta.cursor` back as `cursor`.\n\nRequires the Pro plan and the `semantic_search_enabled`\nentitlement; callers without them receive `403`.\n\nHost routing: this operation is served only by the search host\n(`https://api.primitive.dev/v1`). The typed SDKs route it there\nautomatically.\n",
     "hasJsonBody": true,

@@ -172,11 +172,83 @@ describe("X402Client input validation", () => {
     ).rejects.toThrow(/unknown charge\(\) option "payer_org"/);
   });
 
-  it("charge() requires an amount", async () => {
+  it("charge() requires an amount or amountUsdc", async () => {
+    await expect(client().charge({ network: "base-sepolia" })).rejects.toThrow(
+      /positive integer string/,
+    );
+  });
+
+  it("charge() accepts a human amountUsdc and converts it to base units", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: { body?: string }) => {
+      const body = JSON.parse(init?.body ?? "{}");
+      return jsonResponse({
+        success: true,
+        data: { ...CHALLENGE, amount: body.amount },
+      });
+    });
+    const c = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    const ch = await c.charge({ amountUsdc: "0.01", network: "base-sepolia" });
+    expect(ch.amount).toBe("10000");
+  });
+
+  it("charge() sends an Idempotency-Key header when given idempotencyKey", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: CHALLENGE }),
+    );
+    const c = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    await c.charge({ amount: "10000", idempotencyKey: "abc-123" });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect((init.headers as Record<string, string>)["idempotency-key"]).toBe(
+      "abc-123",
+    );
+  });
+
+  it("charge() rejects passing both amount and amountUsdc", async () => {
     await expect(
-      // @ts-expect-error amount omitted on purpose
-      client().charge({ network: "base-sepolia" }),
-    ).rejects.toThrow(/positive integer string/);
+      client().charge({ amount: "10000", amountUsdc: "0.01" }),
+    ).rejects.toThrow(/exactly one of/);
+  });
+
+  it("registerPayoutAddress() auto-resolves org from /v1/account when omitted", async () => {
+    const calls: string[] = [];
+    const fetchMock = vi.fn(async (url: string) => {
+      calls.push(url);
+      if (url.endsWith("/v1/account")) {
+        return jsonResponse({ success: true, data: { id: "org-xyz" } });
+      }
+      return jsonResponse({
+        success: true,
+        data: {
+          id: "p1",
+          address: account.address,
+          network: "base-sepolia",
+          label: null,
+          is_default: true,
+          verified_at: null,
+        },
+      });
+    });
+    const c = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    await c.registerPayoutAddress(
+      { network: "base-sepolia" },
+      { signer: account },
+    );
+    expect(calls.some((u) => u.endsWith("/v1/account"))).toBe(true);
   });
 
   it("charge() rejects a non-integer / non-positive amount", async () => {
@@ -450,5 +522,23 @@ describe("X402Client completeness methods", () => {
     expect(await client.listPayoutAddresses()).toEqual([]);
     const [url] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://api.example/v1/x402/payout-addresses");
+  });
+
+  it("listDeclinedPayments GETs the declines log", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: [] }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    expect(await client.listDeclinedPayments()).toEqual([]);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("https://api.example/v1/x402/declined-payments");
+    expect(init.method).toBe("GET");
   });
 });

@@ -210,6 +210,112 @@ email.thread.references
 email.raw
 ```
 
+## x402 payments
+
+The x402 client lets one agent request a USDC payment and another pay it. It is
+non-custodial: the payer signs an EIP-3009 ``transferWithAuthorization`` locally
+with their own key, and the key never leaves the caller. The platform resolves
+the real payee address, verifies every signed field against its own records,
+enforces the org's spend policy, and settles on chain.
+
+The model in four steps:
+
+1. The payee registers a payout address once (proving control of it with a local
+   signature).
+2. The payee creates a challenge with ``charge()``, which the platform fills in
+   with the registered payout address.
+3. The payer signs the challenge locally and submits it with ``pay()``.
+4. The platform verifies and settles.
+
+Amounts can be given as a human USDC string (``amount_usdc="0.01"``) or as token
+base units (``amount="10000"``, since USDC has 6 decimals). Networks are ``base``
+(mainnet) and ``base-sepolia`` (testnet). A ``PrivateKeySigner`` holds the wallet
+key in process and signs both the EIP-712 payment authorization (for ``pay``) and
+the ownership message (for ``register_payout_address``); the key is never sent to
+Primitive.
+
+The public names are exported from both ``primitive`` and ``primitive.x402``:
+``create_x402_client``, ``X402Client``, ``PrivateKeySigner``, ``X402Error``,
+``X402Challenge``, ``X402Receipt``, ``X402PayoutAddress``, and
+``X402SpendPolicy``.
+
+### Register a payout address (payee, one time)
+
+The signer proves control of its own address with an ownership message; the
+recovered address becomes your default payout destination for that network.
+``charge()`` resolves its ``pay_to`` from this directory, so register before
+requesting payments. The org is resolved automatically from your API key, so you
+do not pass it (supply ``org`` only to override the default).
+
+```python
+import os
+import primitive
+
+x402 = primitive.create_x402_client(api_key=os.environ["PRIMITIVE_API_KEY"])
+payee = primitive.PrivateKeySigner(os.environ["PAYEE_KEY"])
+
+x402.register_payout_address(
+    signer=payee,
+    network="base-sepolia",
+    label="treasury",
+)
+```
+
+### Create a challenge (payee)
+
+```python
+challenge = x402.charge(
+    amount_usdc="0.01",  # human USDC amount
+    network="base-sepolia",
+    payer_org=os.environ.get("PAYER_ORG_ID"),  # org allowed to pay
+    description="API call",
+)
+```
+
+Pass exactly one of ``amount_usdc`` (a human USDC string like ``"0.01"``) or
+``amount`` (token base units, e.g. ``"10000"``). ``amount_usdc`` is the easy
+path; ``amount`` remains available when you already have a base-unit value.
+
+Hand the returned ``challenge`` to the payer over any out-of-band channel.
+``x402.get_challenge(id)`` re-hydrates a challenge by id, for example to retry
+``pay()`` after a restart.
+
+### Pay a challenge (payer)
+
+The payer signs the interaction-bound authorization locally and submits it. The
+key never leaves the caller.
+
+```python
+payer = primitive.PrivateKeySigner(os.environ["PAYER_KEY"])
+receipt = x402.pay(challenge, signer=payer)
+
+print(receipt.status, receipt.settle_tx)  # settled, on-chain tx hash
+```
+
+### Read and set the spend policy
+
+The spend policy guards outbound payments: a ``paused`` kill-switch, per-payment
+and daily caps (token base units, or ``None`` for no cap), and a payee
+``allowlist`` (``None`` means any on-net payee, ``[]`` denies all).
+``set_spend_policy`` merges: only the fields you pass change, and omitted fields
+keep their current value. Pass ``None`` to clear a cap.
+
+```python
+x402.set_spend_policy({"paused": False, "max_per_payment": "5000000"})
+policy = x402.get_spend_policy()
+
+x402.list_payout_addresses()
+```
+
+### Errors
+
+Every method raises ``primitive.X402Error`` on a client-side, transport, or
+non-2xx server error. It carries ``status`` (the HTTP status, or ``0`` for a
+request that never reached the server), ``body`` (the parsed error envelope when
+present), and ``retry_after`` (the ``Retry-After`` header, when the server sent
+one). On ``pay()``, a ``status == 0`` error means the request may not have been
+sent, so the payment outcome is indeterminate.
+
 ## Advanced usage
 
 ### Generated API module

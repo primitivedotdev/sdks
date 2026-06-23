@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/cli",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
   "sideEffects": false,
@@ -103,6 +103,9 @@
       },
       "org:secrets": {
         "description": "Global secrets shared across every function. Use `primitive org secrets list|set|remove`. Changes land in a function on its next redeploy; a function secret of the same name overrides the global."
+      },
+      "payments": {
+        "description": "Collect and pay x402 stablecoin (USDC) payments. Start with `primitive payments register-payout-address`, then `primitive payments create-challenge` to request a payment and `primitive payments pay` to settle one. Settlement is non-custodial; signing happens locally with your wallet key. Manage caps with `primitive payments get-policy|update-spend-policy`."
       }
     },
     "topicSeparator": " "
@@ -143,7 +146,9 @@
     "@oclif/core": "^4.10.5",
     "@oclif/plugin-autocomplete": "^3.2.45",
     "@oclif/plugin-help": "^6.2.44",
-    "@oclif/plugin-warn-if-update-available": "^3.1.65"
+    "@oclif/plugin-warn-if-update-available": "^3.1.65",
+    "@primitivedotdev/sdk": "workspace:*",
+    "viem": "^2.21.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",

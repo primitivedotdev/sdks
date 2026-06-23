@@ -198,6 +198,128 @@ email.Thread.References
 email.Raw
 ```
 
+## x402 payments
+
+The x402 client lets one agent request a USDC payment and another pay it. It is
+non-custodial: the payer signs an EIP-3009 `transferWithAuthorization` locally
+with their own key, and the key never leaves the caller. The platform resolves
+the real payee address, verifies every signed field against its own records,
+enforces the org's spend policy, and settles on chain.
+
+The model in four steps:
+
+1. The payee registers a payout address once (proving control of it with a local
+   signature).
+2. The payee creates a challenge with `Charge`, which the platform fills in with
+   the registered payout address.
+3. The payer signs the challenge locally and submits it with `Pay`.
+4. The platform verifies and settles.
+
+Amounts can be given as a human USDC string (`AmountUsdc: "0.01"`) or as token
+base units (`Amount: "10000"`, since USDC has 6 decimals). Networks are `base`
+(mainnet) and `base-sepolia` (testnet). A `PrivateKeySigner` built from a hex
+private key holds the wallet key in process and signs both the EIP-712 payment
+authorization (for `Pay`) and the ownership message (for `RegisterPayoutAddress`);
+the key is never sent to Primitive.
+
+Build the client with `NewX402Client`. With zero options it reads
+`PRIMITIVE_API_KEY` from the environment and targets the production host.
+
+```go
+client := primitive.NewX402Client(primitive.X402ClientOptions{
+	APIKey: os.Getenv("PRIMITIVE_API_KEY"),
+})
+```
+
+### Register a payout address (payee, one time)
+
+The signer proves control of its own address with an ownership message; the
+recovered address becomes your default payout destination for that network.
+`Charge` resolves its `PayTo` from this directory, so register before requesting
+payments. The org is resolved automatically from your API key, so you do not set
+it (set `Org` only to override the default).
+
+```go
+payee, err := primitive.NewPrivateKeySigner(os.Getenv("PAYEE_KEY"))
+if err != nil {
+	log.Fatal(err)
+}
+
+label := "treasury"
+_, err = client.RegisterPayoutAddress(ctx, primitive.X402PayoutRegistrationInput{
+	Network: "base-sepolia",
+	Label:   &label,
+}, payee)
+```
+
+### Create a challenge (payee)
+
+```go
+challenge, err := client.Charge(ctx, primitive.X402ChargeInput{
+	AmountUsdc:  "0.01", // human USDC amount
+	Network:     "base-sepolia",
+	PayerOrg:    os.Getenv("PAYER_ORG_ID"), // org allowed to pay
+	Description: "API call",
+})
+```
+
+Set exactly one of `AmountUsdc` (a human USDC string like `"0.01"`) or `Amount`
+(token base units, e.g. `"10000"`). `AmountUsdc` is the easy path; `Amount`
+remains available when you already have a base-unit value.
+
+Hand the returned `*X402Challenge` to the payer over any out-of-band channel.
+`client.GetChallenge(ctx, id)` re-hydrates a challenge by id, for example to
+retry `Pay` after a restart.
+
+### Pay a challenge (payer)
+
+The payer signs the interaction-bound authorization locally and submits it. The
+key never leaves the caller.
+
+```go
+payer, err := primitive.NewPrivateKeySigner(os.Getenv("PAYER_KEY"))
+if err != nil {
+	log.Fatal(err)
+}
+
+receipt, err := client.Pay(ctx, challenge, payer)
+if err != nil {
+	log.Fatal(err)
+}
+log.Println(receipt.Status, receipt.SettleTx) // settled, on-chain tx hash
+```
+
+### Read and set the spend policy
+
+The spend policy guards outbound payments: a `Paused` kill-switch, per-payment
+and daily caps (token base units, or nil for no cap), and a payee allowlist (nil
+means any on-net payee, an empty slice denies all). `SetSpendPolicy` merges: only
+the fields you set on the update change, and omitted fields keep their current
+value. Use the builder methods on `X402SpendPolicyUpdate`, and
+`ClearMaxPerPayment` / `ClearMaxPerDay` to remove a cap.
+
+```go
+var update primitive.X402SpendPolicyUpdate
+update.SetPaused(false).SetMaxPerPayment("5000000")
+
+policy, err := client.SetSpendPolicy(ctx, update)
+if err != nil {
+	log.Fatal(err)
+}
+_ = policy
+
+addresses, err := client.ListPayoutAddresses(ctx)
+```
+
+### Errors
+
+Every method returns a `*primitive.X402Error` on a client-side, transport, or
+non-2xx server error. Use `errors.As` to inspect it. It carries `Status` (the
+HTTP status, or `0` for a request that never reached the server), `Body` (the
+parsed error envelope when present), and `RetryAfter` (the `Retry-After` header,
+when the server sent one). On `Pay`, a `Status == 0` error means the request may
+not have been sent, so the payment outcome is indeterminate.
+
 ## Advanced usage
 
 ### Generated API package

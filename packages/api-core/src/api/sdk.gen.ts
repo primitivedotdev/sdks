@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateChallengeData, CreateChallengeErrors, CreateChallengeResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetChallengeData, GetChallengeErrors, GetChallengeResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetSpendPolicyData, GetSpendPolicyErrors, GetSpendPolicyResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeclinedPaymentsData, ListDeclinedPaymentsErrors, ListDeclinedPaymentsResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListPayoutAddressesData, ListPayoutAddressesErrors, ListPayoutAddressesResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PayChallengeData, PayChallengeErrors, PayChallengeResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, RegisterPayoutAddressData, RegisterPayoutAddressErrors, RegisterPayoutAddressResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, UpdateSpendPolicyData, UpdateSpendPolicyErrors, UpdateSpendPolicyResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -1422,5 +1422,148 @@ export const setOrgSecret = <ThrowOnError extends boolean = false>(options: Opti
 export const listFunctionLogs = <ThrowOnError extends boolean = false>(options: Options<ListFunctionLogsData, ThrowOnError>) => (options.client ?? client).get<ListFunctionLogsResponses, ListFunctionLogsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/functions/{id}/logs',
+    ...options
+});
+
+/**
+ * List payout addresses
+ *
+ * List your org's registered payout addresses, newest first.
+ */
+export const listPayoutAddresses = <ThrowOnError extends boolean = false>(options?: Options<ListPayoutAddressesData, ThrowOnError>) => (options?.client ?? client).get<ListPayoutAddressesResponses, ListPayoutAddressesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/x402/payout-addresses',
+    ...options
+});
+
+/**
+ * Register a payout address
+ *
+ * Register (or update) the default payout address your org receives x402
+ * payments at, for a given network. You prove control of the address with
+ * an org-bound `personal_sign` signature over the message produced by the
+ * SDK helper `buildPayoutRegistrationMessage`. The org id is taken from your
+ * authenticated key, never the body, so a captured signature can't register
+ * an address under another org. Exactly one default address exists per
+ * (org, network); registering again replaces it. A payee MUST register a
+ * payout address before calling `createChallenge`, because the challenge's
+ * `pay_to` is resolved from this directory.
+ *
+ */
+export const registerPayoutAddress = <ThrowOnError extends boolean = false>(options: Options<RegisterPayoutAddressData, ThrowOnError>) => (options.client ?? client).post<RegisterPayoutAddressResponses, RegisterPayoutAddressErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/x402/payout-addresses',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Create a payment challenge
+ *
+ * Create an x402 payment challenge (the payee side of a payment). The
+ * `pay_to` address is resolved server-side from your registered default
+ * payout address for the network, never from the request. The response
+ * carries the `nonce_binding` and `payment_requirements` the payer needs to
+ * sign; hand the whole challenge object to the payer (for example in an
+ * email reply). Amounts are in token base units (USDC has 6 decimals, so
+ * `"10000"` is 0.01 USDC).
+ *
+ */
+export const createChallenge = <ThrowOnError extends boolean = false>(options: Options<CreateChallengeData, ThrowOnError>) => (options.client ?? client).post<CreateChallengeResponses, CreateChallengeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/x402/challenges',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Get a payment challenge
+ *
+ * Fetch a challenge you created, to poll its `status` and settlement
+ * receipt (`settle_tx`). Scoped to the challenger org that created it.
+ *
+ */
+export const getChallenge = <ThrowOnError extends boolean = false>(options: Options<GetChallengeData, ThrowOnError>) => (options.client ?? client).get<GetChallengeResponses, GetChallengeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/x402/challenges/{id}',
+    ...options
+});
+
+/**
+ * Pay a payment challenge
+ *
+ * Settle a challenge addressed to your org as payer. The request body
+ * carries a signed x402 `PaymentPayload`: an EIP-3009
+ * `transferWithAuthorization` signed locally with your own key, whose nonce
+ * is bound to the challenge via the SDK's `deriveEip3009Nonce`. The platform
+ * verifies every signed field against its own record of the challenge,
+ * applies your spend policy, and settles on-chain through a facilitator.
+ * Settlement is non-custodial; Primitive never holds funds. Idempotent:
+ * paying an already-settled challenge returns the original receipt. Most
+ * callers use the SDK `pay()` helper rather than building the payload by
+ * hand.
+ *
+ */
+export const payChallenge = <ThrowOnError extends boolean = false>(options: Options<PayChallengeData, ThrowOnError>) => (options.client ?? client).post<PayChallengeResponses, PayChallengeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/x402/challenges/{id}/pay',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Get your spend policy
+ *
+ * Read your org's outbound spend policy: the kill-switch, per-payment and
+ * per-day caps, and the payee allowlist. Returns the defaults (no limits,
+ * not paused) when no policy has been set.
+ *
+ */
+export const getSpendPolicy = <ThrowOnError extends boolean = false>(options?: Options<GetSpendPolicyData, ThrowOnError>) => (options?.client ?? client).get<GetSpendPolicyResponses, GetSpendPolicyErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/x402/spend-policy',
+    ...options
+});
+
+/**
+ * Update your spend policy
+ *
+ * Update your org's spend policy. Applied as a merge: only the fields you
+ * include change, and omitted fields keep their current value, so a partial
+ * update can't silently reset the kill-switch. Send an explicit `null` to
+ * clear a cap. Caps are in token base units.
+ *
+ */
+export const updateSpendPolicy = <ThrowOnError extends boolean = false>(options: Options<UpdateSpendPolicyData, ThrowOnError>) => (options.client ?? client).put<UpdateSpendPolicyResponses, UpdateSpendPolicyErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/x402/spend-policy',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * List declined payments
+ *
+ * The 50 most recent payments your org's spend policy declined, newest
+ * first. Use this to see why an outbound payment was refused (a cap, the
+ * payee allowlist, or the kill-switch) instead of only reading the
+ * dashboard.
+ *
+ */
+export const listDeclinedPayments = <ThrowOnError extends boolean = false>(options?: Options<ListDeclinedPaymentsData, ThrowOnError>) => (options?.client ?? client).get<ListDeclinedPaymentsResponses, ListDeclinedPaymentsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/x402/declined-payments',
     ...options
 });

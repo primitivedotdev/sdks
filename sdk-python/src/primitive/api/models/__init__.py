@@ -38,6 +38,9 @@ from .create_agent_account_input import CreateAgentAccountInput
 from .create_agent_account_response_200 import CreateAgentAccountResponse200
 from .create_agent_claim_link_input import CreateAgentClaimLinkInput
 from .create_agent_claim_link_response_200 import CreateAgentClaimLinkResponse200
+from .create_challenge_input import CreateChallengeInput
+from .create_challenge_input_network import CreateChallengeInputNetwork
+from .create_challenge_response_201 import CreateChallengeResponse201
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_rules import CreateEndpointInputRules
 from .create_endpoint_response_201 import CreateEndpointResponse201
@@ -138,6 +141,7 @@ from .gate_denial_reason import GateDenialReason
 from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
+from .get_challenge_response_200 import GetChallengeResponse200
 from .get_conversation_response_200 import GetConversationResponse200
 from .get_email_response_200 import GetEmailResponse200
 from .get_function_response_200 import GetFunctionResponse200
@@ -147,6 +151,7 @@ from .get_inbox_status_response_200 import GetInboxStatusResponse200
 from .get_org_routing_topology_response_200 import GetOrgRoutingTopologyResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
+from .get_spend_policy_response_200 import GetSpendPolicyResponse200
 from .get_storage_stats_response_200 import GetStorageStatsResponse200
 from .get_thread_response_200 import GetThreadResponse200
 from .get_webhook_secret_response_200 import GetWebhookSecretResponse200
@@ -158,6 +163,7 @@ from .inbox_status_function_summary import InboxStatusFunctionSummary
 from .inbox_status_next_action import InboxStatusNextAction
 from .inbox_status_next_action_kind import InboxStatusNextActionKind
 from .inbox_status_recent_email_summary import InboxStatusRecentEmailSummary
+from .list_declined_payments_response_200 import ListDeclinedPaymentsResponse200
 from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
 from .list_domains_response_200 import ListDomainsResponse200
@@ -172,6 +178,7 @@ from .list_function_secrets_response_200_data import ListFunctionSecretsResponse
 from .list_functions_response_200 import ListFunctionsResponse200
 from .list_org_secrets_response_200 import ListOrgSecretsResponse200
 from .list_org_secrets_response_200_data import ListOrgSecretsResponse200Data
+from .list_payout_addresses_response_200 import ListPayoutAddressesResponse200
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
 from .org_secret_list_item import OrgSecretListItem
 from .org_secret_write_result import OrgSecretWriteResult
@@ -179,9 +186,14 @@ from .pagination_meta import PaginationMeta
 from .parsed_email_data import ParsedEmailData
 from .parsed_email_data_error_type_0 import ParsedEmailDataErrorType0
 from .parsed_email_data_status import ParsedEmailDataStatus
+from .pay_challenge_input import PayChallengeInput
+from .pay_challenge_response_200 import PayChallengeResponse200
 from .plan_limits import PlanLimits
 from .poll_cli_login_input import PollCliLoginInput
 from .poll_cli_login_response_200 import PollCliLoginResponse200
+from .register_payout_address_input import RegisterPayoutAddressInput
+from .register_payout_address_input_network import RegisterPayoutAddressInputNetwork
+from .register_payout_address_response_201 import RegisterPayoutAddressResponse201
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
 from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
@@ -274,6 +286,8 @@ from .update_filter_response_200 import UpdateFilterResponse200
 from .update_function_input import UpdateFunctionInput
 from .update_function_input_files import UpdateFunctionInputFiles
 from .update_function_response_200 import UpdateFunctionResponse200
+from .update_spend_policy_input import UpdateSpendPolicyInput
+from .update_spend_policy_response_200 import UpdateSpendPolicyResponse200
 from .verified_domain import VerifiedDomain
 from .verify_agent_claim_input import VerifyAgentClaimInput
 from .verify_agent_claim_response_200 import VerifyAgentClaimResponse200
@@ -283,6 +297,24 @@ from .verify_cli_signup_input import VerifyCliSignupInput
 from .verify_cli_signup_response_200 import VerifyCliSignupResponse200
 from .verify_domain_response_200 import VerifyDomainResponse200
 from .webhook_secret import WebhookSecret
+from .x402_challenge import X402Challenge
+from .x402_challenge_network import X402ChallengeNetwork
+from .x402_challenge_status import X402ChallengeStatus
+from .x402_declined_payment import X402DeclinedPayment
+from .x402_declined_payment_network import X402DeclinedPaymentNetwork
+from .x402_nonce_binding import X402NonceBinding
+from .x402_payment_payload import X402PaymentPayload
+from .x402_payment_payload_network import X402PaymentPayloadNetwork
+from .x402_payment_payload_payload import X402PaymentPayloadPayload
+from .x402_payment_payload_payload_authorization import X402PaymentPayloadPayloadAuthorization
+from .x402_payment_requirements import X402PaymentRequirements
+from .x402_payment_requirements_extra import X402PaymentRequirementsExtra
+from .x402_payment_requirements_network import X402PaymentRequirementsNetwork
+from .x402_payout_address import X402PayoutAddress
+from .x402_payout_address_network import X402PayoutAddressNetwork
+from .x402_receipt import X402Receipt
+from .x402_receipt_status import X402ReceiptStatus
+from .x402_spend_policy import X402SpendPolicy
 
 __all__ = (
     "Account",
@@ -323,6 +355,9 @@ __all__ = (
     "CreateAgentAccountResponse200",
     "CreateAgentClaimLinkInput",
     "CreateAgentClaimLinkResponse200",
+    "CreateChallengeInput",
+    "CreateChallengeInputNetwork",
+    "CreateChallengeResponse201",
     "CreateEndpointInput",
     "CreateEndpointInputRules",
     "CreateEndpointResponse201",
@@ -423,6 +458,7 @@ __all__ = (
     "GateFix",
     "GateFixAction",
     "GetAccountResponse200",
+    "GetChallengeResponse200",
     "GetConversationResponse200",
     "GetEmailResponse200",
     "GetFunctionResponse200",
@@ -432,6 +468,7 @@ __all__ = (
     "GetOrgRoutingTopologyResponse200",
     "GetSendPermissionsResponse200",
     "GetSentEmailResponse200",
+    "GetSpendPolicyResponse200",
     "GetStorageStatsResponse200",
     "GetThreadResponse200",
     "GetWebhookSecretResponse200",
@@ -443,6 +480,7 @@ __all__ = (
     "InboxStatusNextAction",
     "InboxStatusNextActionKind",
     "InboxStatusRecentEmailSummary",
+    "ListDeclinedPaymentsResponse200",
     "ListDeliveriesResponse200",
     "ListDeliveriesStatus",
     "ListDomainsResponse200",
@@ -457,6 +495,7 @@ __all__ = (
     "ListFunctionsResponse200",
     "ListOrgSecretsResponse200",
     "ListOrgSecretsResponse200Data",
+    "ListPayoutAddressesResponse200",
     "ListSentEmailsResponse200",
     "OrgSecretListItem",
     "OrgSecretWriteResult",
@@ -464,9 +503,14 @@ __all__ = (
     "ParsedEmailData",
     "ParsedEmailDataErrorType0",
     "ParsedEmailDataStatus",
+    "PayChallengeInput",
+    "PayChallengeResponse200",
     "PlanLimits",
     "PollCliLoginInput",
     "PollCliLoginResponse200",
+    "RegisterPayoutAddressInput",
+    "RegisterPayoutAddressInputNetwork",
+    "RegisterPayoutAddressResponse201",
     "ReplayDeliveryResponse200",
     "ReplayEmailWebhooksResponse200",
     "ReplayResult",
@@ -559,6 +603,8 @@ __all__ = (
     "UpdateFunctionInput",
     "UpdateFunctionInputFiles",
     "UpdateFunctionResponse200",
+    "UpdateSpendPolicyInput",
+    "UpdateSpendPolicyResponse200",
     "VerifiedDomain",
     "VerifyAgentClaimInput",
     "VerifyAgentClaimResponse200",
@@ -568,4 +614,22 @@ __all__ = (
     "VerifyCliSignupResponse200",
     "VerifyDomainResponse200",
     "WebhookSecret",
+    "X402Challenge",
+    "X402ChallengeNetwork",
+    "X402ChallengeStatus",
+    "X402DeclinedPayment",
+    "X402DeclinedPaymentNetwork",
+    "X402NonceBinding",
+    "X402PaymentPayload",
+    "X402PaymentPayloadNetwork",
+    "X402PaymentPayloadPayload",
+    "X402PaymentPayloadPayloadAuthorization",
+    "X402PaymentRequirements",
+    "X402PaymentRequirementsExtra",
+    "X402PaymentRequirementsNetwork",
+    "X402PayoutAddress",
+    "X402PayoutAddressNetwork",
+    "X402Receipt",
+    "X402ReceiptStatus",
+    "X402SpendPolicy",
 )

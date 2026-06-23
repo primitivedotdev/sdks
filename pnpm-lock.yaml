@@ -20,6 +20,12 @@ importers:
       '@oclif/plugin-warn-if-update-available':
         specifier: ^3.1.65
         version: 3.1.65
+      '@primitivedotdev/sdk':
+        specifier: workspace:*
+        version: link:../sdk-node
+      viem:
+        specifier: ^2.21.0
+        version: 2.53.1(typescript@5.9.3)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.10

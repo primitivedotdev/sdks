@@ -74,6 +74,20 @@ func encodeCreateAgentClaimLinkRequest(
 	return nil
 }
 
+func encodeCreateChallengeRequest(
+	req *CreateChallengeInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCreateEndpointRequest(
 	req *CreateEndpointInput,
 	r *http.Request,
@@ -144,8 +158,36 @@ func encodeCreateOrgSecretRequest(
 	return nil
 }
 
+func encodePayChallengeRequest(
+	req *PayChallengeInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodePollCliLoginRequest(
 	req *PollCliLoginInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeRegisterPayoutAddressRequest(
+	req *RegisterPayoutAddressInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -410,6 +452,20 @@ func encodeUpdateFilterRequest(
 
 func encodeUpdateFunctionRequest(
 	req *UpdateFunctionInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateSpendPolicyRequest(
+	req *UpdateSpendPolicyInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
