@@ -17,6 +17,10 @@ type CreateAgentClaimLinkRes interface {
 	createAgentClaimLinkRes()
 }
 
+type CreateChallengeRes interface {
+	createChallengeRes()
+}
+
 type CreateEndpointRes interface {
 	createEndpointRes()
 }
@@ -85,6 +89,10 @@ type GetAccountRes interface {
 	getAccountRes()
 }
 
+type GetChallengeRes interface {
+	getChallengeRes()
+}
+
 type GetConversationRes interface {
 	getConversationRes()
 }
@@ -121,6 +129,10 @@ type GetSentEmailRes interface {
 	getSentEmailRes()
 }
 
+type GetSpendPolicyRes interface {
+	getSpendPolicyRes()
+}
+
 type GetStorageStatsRes interface {
 	getStorageStatsRes()
 }
@@ -131,6 +143,10 @@ type GetThreadRes interface {
 
 type GetWebhookSecretRes interface {
 	getWebhookSecretRes()
+}
+
+type ListDeclinedPaymentsRes interface {
+	listDeclinedPaymentsRes()
 }
 
 type ListDeliveriesRes interface {
@@ -169,12 +185,24 @@ type ListOrgSecretsRes interface {
 	listOrgSecretsRes()
 }
 
+type ListPayoutAddressesRes interface {
+	listPayoutAddressesRes()
+}
+
 type ListSentEmailsRes interface {
 	listSentEmailsRes()
 }
 
+type PayChallengeRes interface {
+	payChallengeRes()
+}
+
 type PollCliLoginRes interface {
 	pollCliLoginRes()
+}
+
+type RegisterPayoutAddressRes interface {
+	registerPayoutAddressRes()
 }
 
 type ReplayDeliveryRes interface {
@@ -271,6 +299,10 @@ type UpdateFilterRes interface {
 
 type UpdateFunctionRes interface {
 	updateFunctionRes()
+}
+
+type UpdateSpendPolicyRes interface {
+	updateSpendPolicyRes()
 }
 
 type VerifyAgentClaimRes interface {

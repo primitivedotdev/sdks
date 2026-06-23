@@ -35,6 +35,9 @@ import LogoutCommand from "./commands/logout.js";
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
+import PaymentsChargeCommand from "./commands/payments-charge.js";
+import PaymentsPayCommand from "./commands/payments-pay.js";
+import PaymentsRegisterPayoutAddressCommand from "./commands/payments-register-payout-address.js";
 import ReplyCommand from "./commands/reply.js";
 import SearchCommand from "./commands/search.js";
 import SemanticSearchCommand from "./commands/semantic-search.js";
@@ -392,6 +395,15 @@ const OVERRIDDEN_OPERATION_IDS = new Set<string>([
   // discover the topic-nested form. The manual COMMANDS entry below
   // keeps the topic-nested id callable for back-compat scripts.
   "search:semantic-search",
+  // `payments:register-payout-address` and `payments:pay-challenge` are
+  // hand-rolled because their wire bodies carry signatures the user cannot
+  // produce by hand: the ownership proof and the signed EIP-3009 payment. The
+  // hand-rolled commands sign locally with the caller's wallet key. The other
+  // five x402 operations (create-challenge, get-challenge, list-payout-
+  // addresses, get/update-spend-policy) need no signing and keep their
+  // auto-generated wrappers.
+  "payments:register-payout-address",
+  "payments:pay-challenge",
 ]);
 
 const generatedCommands = Object.fromEntries(
@@ -580,4 +592,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   // tailing. The raw generated functions:list-function-logs operation
   // remains available for callers that want the full page envelope.
   "functions:logs": FunctionsLogsCommand,
+  // x402 payments. The two signing commands are hand-rolled (see
+  // OVERRIDDEN_OPERATION_IDS); the friendly `payments:pay` /
+  // `payments:register-payout` aliases sit alongside the canonical
+  // operation-shaped ids so both are discoverable.
+  "payments:register-payout-address": PaymentsRegisterPayoutAddressCommand,
+  "payments:register-payout": PaymentsRegisterPayoutAddressCommand,
+  "payments:charge": PaymentsChargeCommand,
+  "payments:pay-challenge": PaymentsPayCommand,
+  "payments:pay": PaymentsPayCommand,
 };

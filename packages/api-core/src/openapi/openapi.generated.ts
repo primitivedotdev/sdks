@@ -81,6 +81,10 @@ export const openapiDocument: Record<string, unknown> = {
       "description": "Manage whitelist and blocklist filter rules"
     },
     {
+      "name": "Payments",
+      "description": "Collect and pay stablecoin (USDC) payments with x402. Settlement is\nnon-custodial: funds move directly from payer to payee on-chain via an\nEIP-3009 authorization the payer signs with their own key, and Primitive\nnever holds funds. The payee registers a payout address and creates a\nchallenge; the payer signs and settles it under a configurable spend\npolicy (kill-switch, per-payment and per-day caps, payee allowlist).\n"
+    },
+    {
       "name": "Webhook Deliveries",
       "description": "View and replay webhook delivery attempts"
     },
@@ -4534,6 +4538,478 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       }
+    },
+    "/x402/payout-addresses": {
+      "post": {
+        "operationId": "registerPayoutAddress",
+        "summary": "Register a payout address",
+        "description": "Register (or update) the default payout address your org receives x402\npayments at, for a given network. You prove control of the address with\nan org-bound `personal_sign` signature over the message produced by the\nSDK helper `buildPayoutRegistrationMessage`. The org id is taken from your\nauthenticated key, never the body, so a captured signature can't register\nan address under another org. Exactly one default address exists per\n(org, network); registering again replaces it. A payee MUST register a\npayout address before calling `createChallenge`, because the challenge's\n`pay_to` is resolved from this directory.\n",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPayoutAddressInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payout address registered (or updated) and set as default",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/X402PayoutAddress"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "get": {
+        "operationId": "listPayoutAddresses",
+        "summary": "List payout addresses",
+        "description": "List your org's registered payout addresses, newest first.",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Your registered payout addresses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/X402PayoutAddress"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/x402/challenges": {
+      "post": {
+        "operationId": "createChallenge",
+        "summary": "Create a payment challenge",
+        "description": "Create an x402 payment challenge (the payee side of a payment). The\n`pay_to` address is resolved server-side from your registered default\npayout address for the network, never from the request. The response\ncarries the `nonce_binding` and `payment_requirements` the payer needs to\nsign; hand the whole challenge object to the payer (for example in an\nemail reply). Amounts are in token base units (USDC has 6 decimals, so\n`\"10000\"` is 0.01 USDC).\n",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChallengeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Challenge created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/X402Challenge"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/x402/challenges/{id}": {
+      "get": {
+        "operationId": "getChallenge",
+        "summary": "Get a payment challenge",
+        "description": "Fetch a challenge you created, to poll its `status` and settlement\nreceipt (`settle_tx`). Scoped to the challenger org that created it.\n",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ResourceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/X402Challenge"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/x402/challenges/{id}/pay": {
+      "post": {
+        "operationId": "payChallenge",
+        "summary": "Pay a payment challenge",
+        "description": "Settle a challenge addressed to your org as payer. The request body\ncarries a signed x402 `PaymentPayload`: an EIP-3009\n`transferWithAuthorization` signed locally with your own key, whose nonce\nis bound to the challenge via the SDK's `deriveEip3009Nonce`. The platform\nverifies every signed field against its own record of the challenge,\napplies your spend policy, and settles on-chain through a facilitator.\nSettlement is non-custodial; Primitive never holds funds. Idempotent:\npaying an already-settled challenge returns the original receipt. Most\ncallers use the SDK `pay()` helper rather than building the payload by\nhand.\n",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ResourceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayChallengeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Challenge settled (or already settled)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/X402Receipt"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/BadGateway"
+          }
+        }
+      }
+    },
+    "/x402/spend-policy": {
+      "get": {
+        "operationId": "getSpendPolicy",
+        "summary": "Get your spend policy",
+        "description": "Read your org's outbound spend policy: the kill-switch, per-payment and\nper-day caps, and the payee allowlist. Returns the defaults (no limits,\nnot paused) when no policy has been set.\n",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The spend policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/X402SpendPolicy"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateSpendPolicy",
+        "summary": "Update your spend policy",
+        "description": "Update your org's spend policy. Applied as a merge: only the fields you\ninclude change, and omitted fields keep their current value, so a partial\nupdate can't silently reset the kill-switch. Send an explicit `null` to\nclear a cap. Caps are in token base units.\n",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSpendPolicyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated spend policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/X402SpendPolicy"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/x402/declined-payments": {
+      "get": {
+        "operationId": "listDeclinedPayments",
+        "summary": "List declined payments",
+        "description": "The 50 most recent payments your org's spend policy declined, newest\nfirst. Use this to see why an outbound payment was refused (a cap, the\npayee allowlist, or the kill-switch) instead of only reading the\ndashboard.\n",
+        "tags": [
+          "Payments"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recently declined payments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/X402DeclinedPayment"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4743,6 +5219,40 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       },
+      "Conflict": {
+        "description": "The request conflicts with the current state of the resource",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "conflict",
+                "message": "settlement already in progress"
+              }
+            }
+          }
+        }
+      },
+      "UnprocessableEntity": {
+        "description": "The request was well-formed but could not be processed. For Payments\nthis covers a missing payout address, a failed payment verification, a\nspend-policy decline, or an expired challenge; `error.code` distinguishes\nthem.\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": {
+                "code": "payment_declined",
+                "message": "payment exceeds the per-payment cap"
+              }
+            }
+          }
+        }
+      },
       "Deleted": {
         "description": "Resource deleted",
         "content": {
@@ -4776,6 +5286,570 @@ export const openapiDocument: Record<string, unknown> = {
       }
     },
     "schemas": {
+      "RegisterPayoutAddressInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$",
+            "description": "The payout address (your signer's own EVM address), 0x-prefixed."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base",
+              "base-sepolia"
+            ],
+            "description": "The chain the address receives on."
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]+$",
+            "description": "A `personal_sign` signature over the org-bound message produced by\nthe SDK helper `buildPayoutRegistrationMessage`. Recovered and\nchecked against `address`; the org id is bound into the signed bytes.\n"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO-8601 timestamp embedded in the signed message. Must be within a\nshort freshness window (about 10 minutes) of server time.\n"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Optional human-readable label."
+          }
+        },
+        "required": [
+          "address",
+          "network",
+          "signature",
+          "issued_at"
+        ]
+      },
+      "X402PayoutAddress": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "address": {
+            "type": "string",
+            "description": "The checksummed payout address."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base",
+              "base-sepolia"
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "Exactly one address per (org, network) is the default."
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When ownership of the address was last proven."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "network",
+          "label",
+          "is_default",
+          "verified_at"
+        ]
+      },
+      "CreateChallengeInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,38}$",
+            "description": "Amount to collect, in token base units. USDC has 6 decimals, so\n`\"10000\"` is 0.01 USDC.\n"
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base",
+              "base-sepolia"
+            ]
+          },
+          "payer_org": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The org id allowed to pay this challenge (on-net binding). Optional.\n"
+          },
+          "expires_in": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 86400,
+            "description": "Seconds until the challenge expires. Defaults to 3600."
+          },
+          "resource": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048,
+            "description": "Optional URL identifying what is being paid for. Defaults to a\nsynthetic `x402:challenge:<id>` identifier.\n"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 512,
+            "description": "Optional human-readable description of the payment."
+          }
+        },
+        "required": [
+          "amount",
+          "network"
+        ]
+      },
+      "X402NonceBinding": {
+        "type": "object",
+        "description": "The interaction binding the payer hashes into the EIP-3009 nonce\n(`deriveEip3009Nonce`). Pinning the nonce to this binding is what lets an\nx402 payment ride asynchronous transports safely: a replayed challenge\ncan't redirect funds and a signed payment can't settle twice.\n",
+        "properties": {
+          "interaction_id": {
+            "type": "string",
+            "description": "Interaction id, including its `@domain` part."
+          },
+          "challenge_step_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "challenge_nonce": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "32 random bytes as 64 lowercase hex chars."
+          }
+        },
+        "required": [
+          "interaction_id",
+          "challenge_step_id",
+          "challenge_nonce"
+        ]
+      },
+      "X402PaymentRequirements": {
+        "type": "object",
+        "description": "The x402 `PaymentRequirements` the payer signs over. Field names are\nx402's native camelCase, preserved byte-for-byte.\n",
+        "properties": {
+          "scheme": {
+            "type": "string",
+            "description": "The x402 settlement scheme. Always `exact` for v1.",
+            "example": "exact"
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base",
+              "base-sepolia"
+            ]
+          },
+          "maxAmountRequired": {
+            "type": "string",
+            "description": "Amount in token base units."
+          },
+          "payTo": {
+            "type": "string",
+            "description": "The payee's resolved payout address (checksummed)."
+          },
+          "asset": {
+            "type": "string",
+            "description": "The token contract address (checksummed). USDC."
+          },
+          "resource": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "maxTimeoutSeconds": {
+            "type": "integer"
+          },
+          "extra": {
+            "type": "object",
+            "description": "The token's load-bearing EIP-712 domain params. `name` differs by\nchain (Base mainnet USDC is `USD Coin`, Base Sepolia is `USDC`); a\nwrong value produces a signature the verifier rejects.\n",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "scheme",
+          "network",
+          "maxAmountRequired",
+          "payTo",
+          "asset",
+          "extra"
+        ]
+      },
+      "X402Challenge": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "settling",
+              "settled",
+              "failed",
+              "expired"
+            ]
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base",
+              "base-sepolia"
+            ]
+          },
+          "asset": {
+            "type": "string",
+            "description": "Token contract address (checksummed)."
+          },
+          "amount": {
+            "type": "string",
+            "description": "Amount in token base units."
+          },
+          "pay_to": {
+            "type": "string",
+            "description": "The payee's resolved payout address (checksummed)."
+          },
+          "payer_org": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The org id bound as payer, if one was set at creation."
+          },
+          "resource": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nonce_binding": {
+            "$ref": "#/components/schemas/X402NonceBinding"
+          },
+          "settle_tx": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "On-chain settlement transaction hash once settled."
+          },
+          "settled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "failure_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "payment_requirements": {
+            "description": "Present on the create response. Hand the whole challenge (including\nthis) to the payer; `getChallenge` omits it (it is for status polling\nby the challenger).\n",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/X402PaymentRequirements"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "network",
+          "asset",
+          "amount",
+          "pay_to",
+          "nonce_binding",
+          "expires_at"
+        ]
+      },
+      "X402PaymentPayload": {
+        "type": "object",
+        "description": "A signed x402 v1 `PaymentPayload`. The SDK `pay()` helper builds this;\ncallers rarely construct it by hand. Field names are x402-native.\n",
+        "properties": {
+          "x402Version": {
+            "type": "integer",
+            "const": 1
+          },
+          "scheme": {
+            "type": "string",
+            "const": "exact"
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base",
+              "base-sepolia"
+            ]
+          },
+          "payload": {
+            "type": "object",
+            "properties": {
+              "signature": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]+$",
+                "description": "The EIP-712 signature over the authorization."
+              },
+              "authorization": {
+                "type": "object",
+                "description": "The EIP-3009 `transferWithAuthorization` fields, as strings.",
+                "properties": {
+                  "from": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "validAfter": {
+                    "type": "string"
+                  },
+                  "validBefore": {
+                    "type": "string"
+                  },
+                  "nonce": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "value",
+                  "validAfter",
+                  "validBefore",
+                  "nonce"
+                ]
+              }
+            },
+            "required": [
+              "signature",
+              "authorization"
+            ]
+          }
+        },
+        "required": [
+          "x402Version",
+          "scheme",
+          "network",
+          "payload"
+        ]
+      },
+      "PayChallengeInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "payment": {
+            "$ref": "#/components/schemas/X402PaymentPayload"
+          }
+        },
+        "required": [
+          "payment"
+        ]
+      },
+      "X402Receipt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "settled"
+            ]
+          },
+          "settle_tx": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "On-chain settlement transaction hash."
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "settle_tx"
+        ]
+      },
+      "X402SpendPolicy": {
+        "type": "object",
+        "description": "The payer's outbound spend policy. Returned with defaults (not paused,\nno caps, any on-net payee) when none is set.\n",
+        "properties": {
+          "paused": {
+            "type": "boolean",
+            "description": "Kill-switch. When true, all outbound payments are refused."
+          },
+          "max_per_payment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Per-payment cap in token base units, or null for no cap."
+          },
+          "max_per_day": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Rolling-day cap in token base units, or null for no cap."
+          },
+          "allowlist": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Allowed payee org ids. `null` allows any on-net payee; `[]` denies\nall.\n"
+          }
+        },
+        "required": [
+          "paused",
+          "max_per_payment",
+          "max_per_day",
+          "allowlist"
+        ]
+      },
+      "UpdateSpendPolicyInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Merge update: only the fields you include change; omit a field to keep\nits current value; send `null` to clear a cap.\n",
+        "properties": {
+          "paused": {
+            "type": "boolean"
+          },
+          "max_per_payment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[1-9][0-9]{0,38}$"
+          },
+          "max_per_day": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[1-9][0-9]{0,38}$"
+          },
+          "allowlist": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "maxItems": 1000,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "X402DeclinedPayment": {
+        "type": "object",
+        "description": "A payment the org's spend policy refused.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "challenge_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The challenge that was declined, if still present."
+          },
+          "counterparty_org": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The payee (challenger) org, when known."
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base",
+              "base-sepolia"
+            ]
+          },
+          "amount": {
+            "type": "string",
+            "description": "Amount in token base units."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why the payment was declined (cap, allowlist, paused)."
+          },
+          "declined_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "network",
+          "amount",
+          "reason",
+          "declined_at"
+        ]
+      },
       "SuccessEnvelope": {
         "type": "object",
         "properties": {
@@ -4875,7 +5949,14 @@ export const openapiDocument: Record<string, unknown> = {
                   "email_delivery_failed",
                   "clerk_signup_failed",
                   "no_orgs_for_user",
-                  "org_not_accessible"
+                  "org_not_accessible",
+                  "feature_disabled",
+                  "no_payout_address",
+                  "ownership_proof_failed",
+                  "payment_verification_failed",
+                  "payment_declined",
+                  "challenge_expired",
+                  "settlement_failed"
                 ]
               },
               "message": {

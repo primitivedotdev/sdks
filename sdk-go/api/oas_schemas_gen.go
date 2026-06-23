@@ -2198,6 +2198,168 @@ type CreateAgentClaimLinkUnauthorized ErrorResponse
 
 func (*CreateAgentClaimLinkUnauthorized) createAgentClaimLinkRes() {}
 
+type CreateChallengeBadRequest ErrorResponse
+
+func (*CreateChallengeBadRequest) createChallengeRes() {}
+
+// Merged schema.
+type CreateChallengeCreated struct {
+	Success bool          `json:"success"`
+	Data    X402Challenge `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateChallengeCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateChallengeCreated) GetData() X402Challenge {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateChallengeCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateChallengeCreated) SetData(val X402Challenge) {
+	s.Data = val
+}
+
+func (*CreateChallengeCreated) createChallengeRes() {}
+
+type CreateChallengeForbidden ErrorResponse
+
+func (*CreateChallengeForbidden) createChallengeRes() {}
+
+// Ref: #/components/schemas/CreateChallengeInput
+type CreateChallengeInput struct {
+	// Amount to collect, in token base units. USDC has 6 decimals, so
+	// `"10000"` is 0.01 USDC.
+	Amount  string                      `json:"amount"`
+	Network CreateChallengeInputNetwork `json:"network"`
+	// The org id allowed to pay this challenge (on-net binding). Optional.
+	PayerOrg OptUUID `json:"payer_org"`
+	// Seconds until the challenge expires. Defaults to 3600.
+	ExpiresIn OptInt `json:"expires_in"`
+	// Optional URL identifying what is being paid for. Defaults to a
+	// synthetic `x402:challenge:<id>` identifier.
+	Resource OptURI `json:"resource"`
+	// Optional human-readable description of the payment.
+	Description OptString `json:"description"`
+}
+
+// GetAmount returns the value of Amount.
+func (s *CreateChallengeInput) GetAmount() string {
+	return s.Amount
+}
+
+// GetNetwork returns the value of Network.
+func (s *CreateChallengeInput) GetNetwork() CreateChallengeInputNetwork {
+	return s.Network
+}
+
+// GetPayerOrg returns the value of PayerOrg.
+func (s *CreateChallengeInput) GetPayerOrg() OptUUID {
+	return s.PayerOrg
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *CreateChallengeInput) GetExpiresIn() OptInt {
+	return s.ExpiresIn
+}
+
+// GetResource returns the value of Resource.
+func (s *CreateChallengeInput) GetResource() OptURI {
+	return s.Resource
+}
+
+// GetDescription returns the value of Description.
+func (s *CreateChallengeInput) GetDescription() OptString {
+	return s.Description
+}
+
+// SetAmount sets the value of Amount.
+func (s *CreateChallengeInput) SetAmount(val string) {
+	s.Amount = val
+}
+
+// SetNetwork sets the value of Network.
+func (s *CreateChallengeInput) SetNetwork(val CreateChallengeInputNetwork) {
+	s.Network = val
+}
+
+// SetPayerOrg sets the value of PayerOrg.
+func (s *CreateChallengeInput) SetPayerOrg(val OptUUID) {
+	s.PayerOrg = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *CreateChallengeInput) SetExpiresIn(val OptInt) {
+	s.ExpiresIn = val
+}
+
+// SetResource sets the value of Resource.
+func (s *CreateChallengeInput) SetResource(val OptURI) {
+	s.Resource = val
+}
+
+// SetDescription sets the value of Description.
+func (s *CreateChallengeInput) SetDescription(val OptString) {
+	s.Description = val
+}
+
+type CreateChallengeInputNetwork string
+
+const (
+	CreateChallengeInputNetworkBase        CreateChallengeInputNetwork = "base"
+	CreateChallengeInputNetworkBaseSepolia CreateChallengeInputNetwork = "base-sepolia"
+)
+
+// AllValues returns all CreateChallengeInputNetwork values.
+func (CreateChallengeInputNetwork) AllValues() []CreateChallengeInputNetwork {
+	return []CreateChallengeInputNetwork{
+		CreateChallengeInputNetworkBase,
+		CreateChallengeInputNetworkBaseSepolia,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateChallengeInputNetwork) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateChallengeInputNetworkBase:
+		return []byte(s), nil
+	case CreateChallengeInputNetworkBaseSepolia:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateChallengeInputNetwork) UnmarshalText(data []byte) error {
+	switch CreateChallengeInputNetwork(data) {
+	case CreateChallengeInputNetworkBase:
+		*s = CreateChallengeInputNetworkBase
+		return nil
+	case CreateChallengeInputNetworkBaseSepolia:
+		*s = CreateChallengeInputNetworkBaseSepolia
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CreateChallengeUnauthorized ErrorResponse
+
+func (*CreateChallengeUnauthorized) createChallengeRes() {}
+
+type CreateChallengeUnprocessableEntity ErrorResponse
+
+func (*CreateChallengeUnprocessableEntity) createChallengeRes() {}
+
 type CreateEndpointBadRequest ErrorResponse
 
 func (*CreateEndpointBadRequest) createEndpointRes() {}
@@ -6071,6 +6233,13 @@ const (
 	ErrorResponseErrorCodeClerkSignupFailed         ErrorResponseErrorCode = "clerk_signup_failed"
 	ErrorResponseErrorCodeNoOrgsForUser             ErrorResponseErrorCode = "no_orgs_for_user"
 	ErrorResponseErrorCodeOrgNotAccessible          ErrorResponseErrorCode = "org_not_accessible"
+	ErrorResponseErrorCodeFeatureDisabled           ErrorResponseErrorCode = "feature_disabled"
+	ErrorResponseErrorCodeNoPayoutAddress           ErrorResponseErrorCode = "no_payout_address"
+	ErrorResponseErrorCodeOwnershipProofFailed      ErrorResponseErrorCode = "ownership_proof_failed"
+	ErrorResponseErrorCodePaymentVerificationFailed ErrorResponseErrorCode = "payment_verification_failed"
+	ErrorResponseErrorCodePaymentDeclined           ErrorResponseErrorCode = "payment_declined"
+	ErrorResponseErrorCodeChallengeExpired          ErrorResponseErrorCode = "challenge_expired"
+	ErrorResponseErrorCodeSettlementFailed          ErrorResponseErrorCode = "settlement_failed"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -6108,6 +6277,13 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeClerkSignupFailed,
 		ErrorResponseErrorCodeNoOrgsForUser,
 		ErrorResponseErrorCodeOrgNotAccessible,
+		ErrorResponseErrorCodeFeatureDisabled,
+		ErrorResponseErrorCodeNoPayoutAddress,
+		ErrorResponseErrorCodeOwnershipProofFailed,
+		ErrorResponseErrorCodePaymentVerificationFailed,
+		ErrorResponseErrorCodePaymentDeclined,
+		ErrorResponseErrorCodeChallengeExpired,
+		ErrorResponseErrorCodeSettlementFailed,
 	}
 }
 
@@ -6177,6 +6353,20 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeNoOrgsForUser:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeOrgNotAccessible:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeFeatureDisabled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNoPayoutAddress:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOwnershipProofFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePaymentVerificationFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePaymentDeclined:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeChallengeExpired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSettlementFailed:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -6281,6 +6471,27 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeOrgNotAccessible:
 		*s = ErrorResponseErrorCodeOrgNotAccessible
+		return nil
+	case ErrorResponseErrorCodeFeatureDisabled:
+		*s = ErrorResponseErrorCodeFeatureDisabled
+		return nil
+	case ErrorResponseErrorCodeNoPayoutAddress:
+		*s = ErrorResponseErrorCodeNoPayoutAddress
+		return nil
+	case ErrorResponseErrorCodeOwnershipProofFailed:
+		*s = ErrorResponseErrorCodeOwnershipProofFailed
+		return nil
+	case ErrorResponseErrorCodePaymentVerificationFailed:
+		*s = ErrorResponseErrorCodePaymentVerificationFailed
+		return nil
+	case ErrorResponseErrorCodePaymentDeclined:
+		*s = ErrorResponseErrorCodePaymentDeclined
+		return nil
+	case ErrorResponseErrorCodeChallengeExpired:
+		*s = ErrorResponseErrorCodeChallengeExpired
+		return nil
+	case ErrorResponseErrorCodeSettlementFailed:
+		*s = ErrorResponseErrorCodeSettlementFailed
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -8796,6 +9007,50 @@ type GetAccountUnauthorized ErrorResponse
 
 func (*GetAccountUnauthorized) getAccountRes() {}
 
+type GetChallengeBadRequest ErrorResponse
+
+func (*GetChallengeBadRequest) getChallengeRes() {}
+
+type GetChallengeForbidden ErrorResponse
+
+func (*GetChallengeForbidden) getChallengeRes() {}
+
+type GetChallengeNotFound ErrorResponse
+
+func (*GetChallengeNotFound) getChallengeRes() {}
+
+// Merged schema.
+type GetChallengeOK struct {
+	Success bool          `json:"success"`
+	Data    X402Challenge `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetChallengeOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetChallengeOK) GetData() X402Challenge {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetChallengeOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetChallengeOK) SetData(val X402Challenge) {
+	s.Data = val
+}
+
+func (*GetChallengeOK) getChallengeRes() {}
+
+type GetChallengeUnauthorized ErrorResponse
+
+func (*GetChallengeUnauthorized) getChallengeRes() {}
+
 type GetConversationBadRequest ErrorResponse
 
 func (*GetConversationBadRequest) getConversationRes() {}
@@ -9134,6 +9389,42 @@ func (*GetSentEmailOK) getSentEmailRes() {}
 type GetSentEmailUnauthorized ErrorResponse
 
 func (*GetSentEmailUnauthorized) getSentEmailRes() {}
+
+type GetSpendPolicyForbidden ErrorResponse
+
+func (*GetSpendPolicyForbidden) getSpendPolicyRes() {}
+
+// Merged schema.
+type GetSpendPolicyOK struct {
+	Success bool            `json:"success"`
+	Data    X402SpendPolicy `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetSpendPolicyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetSpendPolicyOK) GetData() X402SpendPolicy {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetSpendPolicyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetSpendPolicyOK) SetData(val X402SpendPolicy) {
+	s.Data = val
+}
+
+func (*GetSpendPolicyOK) getSpendPolicyRes() {}
+
+type GetSpendPolicyUnauthorized ErrorResponse
+
+func (*GetSpendPolicyUnauthorized) getSpendPolicyRes() {}
 
 type GetStorageStatsNotFound ErrorResponse
 
@@ -9828,6 +10119,42 @@ func (s *InboxStatusRecentEmailSummary) SetLatestReceivedAt(val NilDateTime) {
 	s.LatestReceivedAt = val
 }
 
+type ListDeclinedPaymentsForbidden ErrorResponse
+
+func (*ListDeclinedPaymentsForbidden) listDeclinedPaymentsRes() {}
+
+// Merged schema.
+type ListDeclinedPaymentsOK struct {
+	Success bool                  `json:"success"`
+	Data    []X402DeclinedPayment `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListDeclinedPaymentsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListDeclinedPaymentsOK) GetData() []X402DeclinedPayment {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListDeclinedPaymentsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListDeclinedPaymentsOK) SetData(val []X402DeclinedPayment) {
+	s.Data = val
+}
+
+func (*ListDeclinedPaymentsOK) listDeclinedPaymentsRes() {}
+
+type ListDeclinedPaymentsUnauthorized ErrorResponse
+
+func (*ListDeclinedPaymentsUnauthorized) listDeclinedPaymentsRes() {}
+
 type ListDeliveriesBadRequest ErrorResponse
 
 func (*ListDeliveriesBadRequest) listDeliveriesRes() {}
@@ -10251,6 +10578,42 @@ func (s *ListOrgSecretsOKData) GetItems() []OrgSecretListItem {
 func (s *ListOrgSecretsOKData) SetItems(val []OrgSecretListItem) {
 	s.Items = val
 }
+
+type ListPayoutAddressesForbidden ErrorResponse
+
+func (*ListPayoutAddressesForbidden) listPayoutAddressesRes() {}
+
+// Merged schema.
+type ListPayoutAddressesOK struct {
+	Success bool                `json:"success"`
+	Data    []X402PayoutAddress `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListPayoutAddressesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListPayoutAddressesOK) GetData() []X402PayoutAddress {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListPayoutAddressesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListPayoutAddressesOK) SetData(val []X402PayoutAddress) {
+	s.Data = val
+}
+
+func (*ListPayoutAddressesOK) listPayoutAddressesRes() {}
+
+type ListPayoutAddressesUnauthorized ErrorResponse
+
+func (*ListPayoutAddressesUnauthorized) listPayoutAddressesRes() {}
 
 type ListSentEmailsBadRequest ErrorResponse
 
@@ -12546,6 +12909,69 @@ func (o OptNilUUID) Or(d uuid.UUID) uuid.UUID {
 	return d
 }
 
+// NewOptNilUUIDArray returns new OptNilUUIDArray with value set to v.
+func NewOptNilUUIDArray(v []uuid.UUID) OptNilUUIDArray {
+	return OptNilUUIDArray{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilUUIDArray is optional nullable []uuid.UUID.
+type OptNilUUIDArray struct {
+	Value []uuid.UUID
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilUUIDArray was set.
+func (o OptNilUUIDArray) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilUUIDArray) Reset() {
+	var v []uuid.UUID
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilUUIDArray) SetTo(v []uuid.UUID) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilUUIDArray) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilUUIDArray) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v []uuid.UUID
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilUUIDArray) Get() (v []uuid.UUID, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilUUIDArray) Or(d []uuid.UUID) []uuid.UUID {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSearchEmailsHasAttachment returns new OptSearchEmailsHasAttachment with value set to v.
 func NewOptSearchEmailsHasAttachment(v SearchEmailsHasAttachment) OptSearchEmailsHasAttachment {
 	return OptSearchEmailsHasAttachment{
@@ -13098,6 +13524,52 @@ func (o OptTestFunctionReq) Or(d TestFunctionReq) TestFunctionReq {
 	return d
 }
 
+// NewOptURI returns new OptURI with value set to v.
+func NewOptURI(v url.URL) OptURI {
+	return OptURI{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptURI is optional url.URL.
+type OptURI struct {
+	Value url.URL
+	Set   bool
+}
+
+// IsSet returns true if OptURI was set.
+func (o OptURI) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptURI) Reset() {
+	var v url.URL
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptURI) SetTo(v url.URL) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptURI) Get() (v url.URL, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptURI) Or(d url.URL) url.URL {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptUUID returns new OptUUID with value set to v.
 func NewOptUUID(v uuid.UUID) OptUUID {
 	return OptUUID{
@@ -13184,6 +13656,52 @@ func (o OptUpdateFunctionInputFiles) Get() (v UpdateFunctionInputFiles, ok bool)
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUpdateFunctionInputFiles) Or(d UpdateFunctionInputFiles) UpdateFunctionInputFiles {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptX402PaymentRequirements returns new OptX402PaymentRequirements with value set to v.
+func NewOptX402PaymentRequirements(v X402PaymentRequirements) OptX402PaymentRequirements {
+	return OptX402PaymentRequirements{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptX402PaymentRequirements is optional X402PaymentRequirements.
+type OptX402PaymentRequirements struct {
+	Value X402PaymentRequirements
+	Set   bool
+}
+
+// IsSet returns true if OptX402PaymentRequirements was set.
+func (o OptX402PaymentRequirements) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptX402PaymentRequirements) Reset() {
+	var v X402PaymentRequirements
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptX402PaymentRequirements) SetTo(v X402PaymentRequirements) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptX402PaymentRequirements) Get() (v X402PaymentRequirements, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptX402PaymentRequirements) Or(d X402PaymentRequirements) X402PaymentRequirements {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -13543,6 +14061,77 @@ func (s *ParsedEmailDataStatus) UnmarshalText(data []byte) error {
 	}
 }
 
+type PayChallengeBadGateway ErrorResponse
+
+func (*PayChallengeBadGateway) payChallengeRes() {}
+
+type PayChallengeBadRequest ErrorResponse
+
+func (*PayChallengeBadRequest) payChallengeRes() {}
+
+type PayChallengeConflict ErrorResponse
+
+func (*PayChallengeConflict) payChallengeRes() {}
+
+type PayChallengeForbidden ErrorResponse
+
+func (*PayChallengeForbidden) payChallengeRes() {}
+
+// Ref: #/components/schemas/PayChallengeInput
+type PayChallengeInput struct {
+	Payment X402PaymentPayload `json:"payment"`
+}
+
+// GetPayment returns the value of Payment.
+func (s *PayChallengeInput) GetPayment() X402PaymentPayload {
+	return s.Payment
+}
+
+// SetPayment sets the value of Payment.
+func (s *PayChallengeInput) SetPayment(val X402PaymentPayload) {
+	s.Payment = val
+}
+
+type PayChallengeNotFound ErrorResponse
+
+func (*PayChallengeNotFound) payChallengeRes() {}
+
+// Merged schema.
+type PayChallengeOK struct {
+	Success bool        `json:"success"`
+	Data    X402Receipt `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *PayChallengeOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *PayChallengeOK) GetData() X402Receipt {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *PayChallengeOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *PayChallengeOK) SetData(val X402Receipt) {
+	s.Data = val
+}
+
+func (*PayChallengeOK) payChallengeRes() {}
+
+type PayChallengeUnauthorized ErrorResponse
+
+func (*PayChallengeUnauthorized) payChallengeRes() {}
+
+type PayChallengeUnprocessableEntity ErrorResponse
+
+func (*PayChallengeUnprocessableEntity) payChallengeRes() {}
+
 // Plan-derived quota limits for an account.
 // Ref: #/components/schemas/PlanLimits
 type PlanLimits struct {
@@ -13733,9 +14322,16 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 
 func (*RateLimitedHeaders) createAgentAccountRes()     {}
 func (*RateLimitedHeaders) createAgentClaimLinkRes()   {}
+func (*RateLimitedHeaders) createChallengeRes()        {}
 func (*RateLimitedHeaders) discardEmailContentRes()    {}
 func (*RateLimitedHeaders) downloadDomainZoneFileRes() {}
+func (*RateLimitedHeaders) getChallengeRes()           {}
 func (*RateLimitedHeaders) getInboxStatusRes()         {}
+func (*RateLimitedHeaders) getSpendPolicyRes()         {}
+func (*RateLimitedHeaders) listDeclinedPaymentsRes()   {}
+func (*RateLimitedHeaders) listPayoutAddressesRes()    {}
+func (*RateLimitedHeaders) payChallengeRes()           {}
+func (*RateLimitedHeaders) registerPayoutAddressRes()  {}
 func (*RateLimitedHeaders) replayDeliveryRes()         {}
 func (*RateLimitedHeaders) replayEmailWebhooksRes()    {}
 func (*RateLimitedHeaders) replyToEmailRes()           {}
@@ -13747,9 +14343,163 @@ func (*RateLimitedHeaders) startAgentSignupRes()       {}
 func (*RateLimitedHeaders) startCliLoginRes()          {}
 func (*RateLimitedHeaders) startCliSignupRes()         {}
 func (*RateLimitedHeaders) testEndpointRes()           {}
+func (*RateLimitedHeaders) updateSpendPolicyRes()      {}
 func (*RateLimitedHeaders) verifyAgentClaimRes()       {}
 func (*RateLimitedHeaders) verifyAgentSignupRes()      {}
 func (*RateLimitedHeaders) verifyCliSignupRes()        {}
+
+type RegisterPayoutAddressBadRequest ErrorResponse
+
+func (*RegisterPayoutAddressBadRequest) registerPayoutAddressRes() {}
+
+// Merged schema.
+type RegisterPayoutAddressCreated struct {
+	Success bool              `json:"success"`
+	Data    X402PayoutAddress `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *RegisterPayoutAddressCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *RegisterPayoutAddressCreated) GetData() X402PayoutAddress {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *RegisterPayoutAddressCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *RegisterPayoutAddressCreated) SetData(val X402PayoutAddress) {
+	s.Data = val
+}
+
+func (*RegisterPayoutAddressCreated) registerPayoutAddressRes() {}
+
+type RegisterPayoutAddressForbidden ErrorResponse
+
+func (*RegisterPayoutAddressForbidden) registerPayoutAddressRes() {}
+
+// Ref: #/components/schemas/RegisterPayoutAddressInput
+type RegisterPayoutAddressInput struct {
+	// The payout address (your signer's own EVM address), 0x-prefixed.
+	Address string `json:"address"`
+	// The chain the address receives on.
+	Network RegisterPayoutAddressInputNetwork `json:"network"`
+	// A `personal_sign` signature over the org-bound message produced by
+	// the SDK helper `buildPayoutRegistrationMessage`. Recovered and
+	// checked against `address`; the org id is bound into the signed bytes.
+	Signature string `json:"signature"`
+	// ISO-8601 timestamp embedded in the signed message. Must be within a
+	// short freshness window (about 10 minutes) of server time.
+	IssuedAt time.Time `json:"issued_at"`
+	// Optional human-readable label.
+	Label OptString `json:"label"`
+}
+
+// GetAddress returns the value of Address.
+func (s *RegisterPayoutAddressInput) GetAddress() string {
+	return s.Address
+}
+
+// GetNetwork returns the value of Network.
+func (s *RegisterPayoutAddressInput) GetNetwork() RegisterPayoutAddressInputNetwork {
+	return s.Network
+}
+
+// GetSignature returns the value of Signature.
+func (s *RegisterPayoutAddressInput) GetSignature() string {
+	return s.Signature
+}
+
+// GetIssuedAt returns the value of IssuedAt.
+func (s *RegisterPayoutAddressInput) GetIssuedAt() time.Time {
+	return s.IssuedAt
+}
+
+// GetLabel returns the value of Label.
+func (s *RegisterPayoutAddressInput) GetLabel() OptString {
+	return s.Label
+}
+
+// SetAddress sets the value of Address.
+func (s *RegisterPayoutAddressInput) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetNetwork sets the value of Network.
+func (s *RegisterPayoutAddressInput) SetNetwork(val RegisterPayoutAddressInputNetwork) {
+	s.Network = val
+}
+
+// SetSignature sets the value of Signature.
+func (s *RegisterPayoutAddressInput) SetSignature(val string) {
+	s.Signature = val
+}
+
+// SetIssuedAt sets the value of IssuedAt.
+func (s *RegisterPayoutAddressInput) SetIssuedAt(val time.Time) {
+	s.IssuedAt = val
+}
+
+// SetLabel sets the value of Label.
+func (s *RegisterPayoutAddressInput) SetLabel(val OptString) {
+	s.Label = val
+}
+
+// The chain the address receives on.
+type RegisterPayoutAddressInputNetwork string
+
+const (
+	RegisterPayoutAddressInputNetworkBase        RegisterPayoutAddressInputNetwork = "base"
+	RegisterPayoutAddressInputNetworkBaseSepolia RegisterPayoutAddressInputNetwork = "base-sepolia"
+)
+
+// AllValues returns all RegisterPayoutAddressInputNetwork values.
+func (RegisterPayoutAddressInputNetwork) AllValues() []RegisterPayoutAddressInputNetwork {
+	return []RegisterPayoutAddressInputNetwork{
+		RegisterPayoutAddressInputNetworkBase,
+		RegisterPayoutAddressInputNetworkBaseSepolia,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RegisterPayoutAddressInputNetwork) MarshalText() ([]byte, error) {
+	switch s {
+	case RegisterPayoutAddressInputNetworkBase:
+		return []byte(s), nil
+	case RegisterPayoutAddressInputNetworkBaseSepolia:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RegisterPayoutAddressInputNetwork) UnmarshalText(data []byte) error {
+	switch RegisterPayoutAddressInputNetwork(data) {
+	case RegisterPayoutAddressInputNetworkBase:
+		*s = RegisterPayoutAddressInputNetworkBase
+		return nil
+	case RegisterPayoutAddressInputNetworkBaseSepolia:
+		*s = RegisterPayoutAddressInputNetworkBaseSepolia
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type RegisterPayoutAddressUnauthorized ErrorResponse
+
+func (*RegisterPayoutAddressUnauthorized) registerPayoutAddressRes() {}
+
+type RegisterPayoutAddressUnprocessableEntity ErrorResponse
+
+func (*RegisterPayoutAddressUnprocessableEntity) registerPayoutAddressRes() {}
 
 type ReplayDeliveryBadRequest ErrorResponse
 
@@ -19028,6 +19778,96 @@ type UpdateFunctionUnauthorized ErrorResponse
 
 func (*UpdateFunctionUnauthorized) updateFunctionRes() {}
 
+type UpdateSpendPolicyBadRequest ErrorResponse
+
+func (*UpdateSpendPolicyBadRequest) updateSpendPolicyRes() {}
+
+type UpdateSpendPolicyForbidden ErrorResponse
+
+func (*UpdateSpendPolicyForbidden) updateSpendPolicyRes() {}
+
+// Merge update: only the fields you include change; omit a field to keep
+// its current value; send `null` to clear a cap.
+// Ref: #/components/schemas/UpdateSpendPolicyInput
+type UpdateSpendPolicyInput struct {
+	Paused        OptBool         `json:"paused"`
+	MaxPerPayment OptNilString    `json:"max_per_payment"`
+	MaxPerDay     OptNilString    `json:"max_per_day"`
+	Allowlist     OptNilUUIDArray `json:"allowlist"`
+}
+
+// GetPaused returns the value of Paused.
+func (s *UpdateSpendPolicyInput) GetPaused() OptBool {
+	return s.Paused
+}
+
+// GetMaxPerPayment returns the value of MaxPerPayment.
+func (s *UpdateSpendPolicyInput) GetMaxPerPayment() OptNilString {
+	return s.MaxPerPayment
+}
+
+// GetMaxPerDay returns the value of MaxPerDay.
+func (s *UpdateSpendPolicyInput) GetMaxPerDay() OptNilString {
+	return s.MaxPerDay
+}
+
+// GetAllowlist returns the value of Allowlist.
+func (s *UpdateSpendPolicyInput) GetAllowlist() OptNilUUIDArray {
+	return s.Allowlist
+}
+
+// SetPaused sets the value of Paused.
+func (s *UpdateSpendPolicyInput) SetPaused(val OptBool) {
+	s.Paused = val
+}
+
+// SetMaxPerPayment sets the value of MaxPerPayment.
+func (s *UpdateSpendPolicyInput) SetMaxPerPayment(val OptNilString) {
+	s.MaxPerPayment = val
+}
+
+// SetMaxPerDay sets the value of MaxPerDay.
+func (s *UpdateSpendPolicyInput) SetMaxPerDay(val OptNilString) {
+	s.MaxPerDay = val
+}
+
+// SetAllowlist sets the value of Allowlist.
+func (s *UpdateSpendPolicyInput) SetAllowlist(val OptNilUUIDArray) {
+	s.Allowlist = val
+}
+
+// Merged schema.
+type UpdateSpendPolicyOK struct {
+	Success bool            `json:"success"`
+	Data    X402SpendPolicy `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateSpendPolicyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateSpendPolicyOK) GetData() X402SpendPolicy {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateSpendPolicyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateSpendPolicyOK) SetData(val X402SpendPolicy) {
+	s.Data = val
+}
+
+func (*UpdateSpendPolicyOK) updateSpendPolicyRes() {}
+
+type UpdateSpendPolicyUnauthorized ErrorResponse
+
+func (*UpdateSpendPolicyUnauthorized) updateSpendPolicyRes() {}
+
 // Ref: #/components/schemas/VerifiedDomain
 type VerifiedDomain struct {
 	ID                uuid.UUID     `json:"id"`
@@ -19459,4 +20299,1086 @@ func (s *WebhookSecret) GetSecret() string {
 // SetSecret sets the value of Secret.
 func (s *WebhookSecret) SetSecret(val string) {
 	s.Secret = val
+}
+
+// Ref: #/components/schemas/X402Challenge
+type X402Challenge struct {
+	ID      uuid.UUID            `json:"id"`
+	Status  X402ChallengeStatus  `json:"status"`
+	Network X402ChallengeNetwork `json:"network"`
+	// Token contract address (checksummed).
+	Asset string `json:"asset"`
+	// Amount in token base units.
+	Amount string `json:"amount"`
+	// The payee's resolved payout address (checksummed).
+	PayTo string `json:"pay_to"`
+	// The org id bound as payer, if one was set at creation.
+	PayerOrg     OptNilString     `json:"payer_org"`
+	Resource     OptNilString     `json:"resource"`
+	Description  OptNilString     `json:"description"`
+	NonceBinding X402NonceBinding `json:"nonce_binding"`
+	// On-chain settlement transaction hash once settled.
+	SettleTx      OptNilString   `json:"settle_tx"`
+	SettledAt     OptNilDateTime `json:"settled_at"`
+	FailureReason OptNilString   `json:"failure_reason"`
+	ExpiresAt     time.Time      `json:"expires_at"`
+	CreatedAt     OptDateTime    `json:"created_at"`
+	// Present on the create response. Hand the whole challenge (including
+	// this) to the payer; `getChallenge` omits it (it is for status polling
+	// by the challenger).
+	PaymentRequirements OptX402PaymentRequirements `json:"payment_requirements"`
+}
+
+// GetID returns the value of ID.
+func (s *X402Challenge) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *X402Challenge) GetStatus() X402ChallengeStatus {
+	return s.Status
+}
+
+// GetNetwork returns the value of Network.
+func (s *X402Challenge) GetNetwork() X402ChallengeNetwork {
+	return s.Network
+}
+
+// GetAsset returns the value of Asset.
+func (s *X402Challenge) GetAsset() string {
+	return s.Asset
+}
+
+// GetAmount returns the value of Amount.
+func (s *X402Challenge) GetAmount() string {
+	return s.Amount
+}
+
+// GetPayTo returns the value of PayTo.
+func (s *X402Challenge) GetPayTo() string {
+	return s.PayTo
+}
+
+// GetPayerOrg returns the value of PayerOrg.
+func (s *X402Challenge) GetPayerOrg() OptNilString {
+	return s.PayerOrg
+}
+
+// GetResource returns the value of Resource.
+func (s *X402Challenge) GetResource() OptNilString {
+	return s.Resource
+}
+
+// GetDescription returns the value of Description.
+func (s *X402Challenge) GetDescription() OptNilString {
+	return s.Description
+}
+
+// GetNonceBinding returns the value of NonceBinding.
+func (s *X402Challenge) GetNonceBinding() X402NonceBinding {
+	return s.NonceBinding
+}
+
+// GetSettleTx returns the value of SettleTx.
+func (s *X402Challenge) GetSettleTx() OptNilString {
+	return s.SettleTx
+}
+
+// GetSettledAt returns the value of SettledAt.
+func (s *X402Challenge) GetSettledAt() OptNilDateTime {
+	return s.SettledAt
+}
+
+// GetFailureReason returns the value of FailureReason.
+func (s *X402Challenge) GetFailureReason() OptNilString {
+	return s.FailureReason
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *X402Challenge) GetExpiresAt() time.Time {
+	return s.ExpiresAt
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *X402Challenge) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetPaymentRequirements returns the value of PaymentRequirements.
+func (s *X402Challenge) GetPaymentRequirements() OptX402PaymentRequirements {
+	return s.PaymentRequirements
+}
+
+// SetID sets the value of ID.
+func (s *X402Challenge) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *X402Challenge) SetStatus(val X402ChallengeStatus) {
+	s.Status = val
+}
+
+// SetNetwork sets the value of Network.
+func (s *X402Challenge) SetNetwork(val X402ChallengeNetwork) {
+	s.Network = val
+}
+
+// SetAsset sets the value of Asset.
+func (s *X402Challenge) SetAsset(val string) {
+	s.Asset = val
+}
+
+// SetAmount sets the value of Amount.
+func (s *X402Challenge) SetAmount(val string) {
+	s.Amount = val
+}
+
+// SetPayTo sets the value of PayTo.
+func (s *X402Challenge) SetPayTo(val string) {
+	s.PayTo = val
+}
+
+// SetPayerOrg sets the value of PayerOrg.
+func (s *X402Challenge) SetPayerOrg(val OptNilString) {
+	s.PayerOrg = val
+}
+
+// SetResource sets the value of Resource.
+func (s *X402Challenge) SetResource(val OptNilString) {
+	s.Resource = val
+}
+
+// SetDescription sets the value of Description.
+func (s *X402Challenge) SetDescription(val OptNilString) {
+	s.Description = val
+}
+
+// SetNonceBinding sets the value of NonceBinding.
+func (s *X402Challenge) SetNonceBinding(val X402NonceBinding) {
+	s.NonceBinding = val
+}
+
+// SetSettleTx sets the value of SettleTx.
+func (s *X402Challenge) SetSettleTx(val OptNilString) {
+	s.SettleTx = val
+}
+
+// SetSettledAt sets the value of SettledAt.
+func (s *X402Challenge) SetSettledAt(val OptNilDateTime) {
+	s.SettledAt = val
+}
+
+// SetFailureReason sets the value of FailureReason.
+func (s *X402Challenge) SetFailureReason(val OptNilString) {
+	s.FailureReason = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *X402Challenge) SetExpiresAt(val time.Time) {
+	s.ExpiresAt = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *X402Challenge) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetPaymentRequirements sets the value of PaymentRequirements.
+func (s *X402Challenge) SetPaymentRequirements(val OptX402PaymentRequirements) {
+	s.PaymentRequirements = val
+}
+
+type X402ChallengeNetwork string
+
+const (
+	X402ChallengeNetworkBase        X402ChallengeNetwork = "base"
+	X402ChallengeNetworkBaseSepolia X402ChallengeNetwork = "base-sepolia"
+)
+
+// AllValues returns all X402ChallengeNetwork values.
+func (X402ChallengeNetwork) AllValues() []X402ChallengeNetwork {
+	return []X402ChallengeNetwork{
+		X402ChallengeNetworkBase,
+		X402ChallengeNetworkBaseSepolia,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s X402ChallengeNetwork) MarshalText() ([]byte, error) {
+	switch s {
+	case X402ChallengeNetworkBase:
+		return []byte(s), nil
+	case X402ChallengeNetworkBaseSepolia:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *X402ChallengeNetwork) UnmarshalText(data []byte) error {
+	switch X402ChallengeNetwork(data) {
+	case X402ChallengeNetworkBase:
+		*s = X402ChallengeNetworkBase
+		return nil
+	case X402ChallengeNetworkBaseSepolia:
+		*s = X402ChallengeNetworkBaseSepolia
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type X402ChallengeStatus string
+
+const (
+	X402ChallengeStatusPending  X402ChallengeStatus = "pending"
+	X402ChallengeStatusSettling X402ChallengeStatus = "settling"
+	X402ChallengeStatusSettled  X402ChallengeStatus = "settled"
+	X402ChallengeStatusFailed   X402ChallengeStatus = "failed"
+	X402ChallengeStatusExpired  X402ChallengeStatus = "expired"
+)
+
+// AllValues returns all X402ChallengeStatus values.
+func (X402ChallengeStatus) AllValues() []X402ChallengeStatus {
+	return []X402ChallengeStatus{
+		X402ChallengeStatusPending,
+		X402ChallengeStatusSettling,
+		X402ChallengeStatusSettled,
+		X402ChallengeStatusFailed,
+		X402ChallengeStatusExpired,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s X402ChallengeStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case X402ChallengeStatusPending:
+		return []byte(s), nil
+	case X402ChallengeStatusSettling:
+		return []byte(s), nil
+	case X402ChallengeStatusSettled:
+		return []byte(s), nil
+	case X402ChallengeStatusFailed:
+		return []byte(s), nil
+	case X402ChallengeStatusExpired:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *X402ChallengeStatus) UnmarshalText(data []byte) error {
+	switch X402ChallengeStatus(data) {
+	case X402ChallengeStatusPending:
+		*s = X402ChallengeStatusPending
+		return nil
+	case X402ChallengeStatusSettling:
+		*s = X402ChallengeStatusSettling
+		return nil
+	case X402ChallengeStatusSettled:
+		*s = X402ChallengeStatusSettled
+		return nil
+	case X402ChallengeStatusFailed:
+		*s = X402ChallengeStatusFailed
+		return nil
+	case X402ChallengeStatusExpired:
+		*s = X402ChallengeStatusExpired
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// A payment the org's spend policy refused.
+// Ref: #/components/schemas/X402DeclinedPayment
+type X402DeclinedPayment struct {
+	ID uuid.UUID `json:"id"`
+	// The challenge that was declined, if still present.
+	ChallengeID OptNilUUID `json:"challenge_id"`
+	// The payee (challenger) org, when known.
+	CounterpartyOrg OptNilUUID                 `json:"counterparty_org"`
+	Network         X402DeclinedPaymentNetwork `json:"network"`
+	// Amount in token base units.
+	Amount string `json:"amount"`
+	// Why the payment was declined (cap, allowlist, paused).
+	Reason     string    `json:"reason"`
+	DeclinedAt time.Time `json:"declined_at"`
+}
+
+// GetID returns the value of ID.
+func (s *X402DeclinedPayment) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetChallengeID returns the value of ChallengeID.
+func (s *X402DeclinedPayment) GetChallengeID() OptNilUUID {
+	return s.ChallengeID
+}
+
+// GetCounterpartyOrg returns the value of CounterpartyOrg.
+func (s *X402DeclinedPayment) GetCounterpartyOrg() OptNilUUID {
+	return s.CounterpartyOrg
+}
+
+// GetNetwork returns the value of Network.
+func (s *X402DeclinedPayment) GetNetwork() X402DeclinedPaymentNetwork {
+	return s.Network
+}
+
+// GetAmount returns the value of Amount.
+func (s *X402DeclinedPayment) GetAmount() string {
+	return s.Amount
+}
+
+// GetReason returns the value of Reason.
+func (s *X402DeclinedPayment) GetReason() string {
+	return s.Reason
+}
+
+// GetDeclinedAt returns the value of DeclinedAt.
+func (s *X402DeclinedPayment) GetDeclinedAt() time.Time {
+	return s.DeclinedAt
+}
+
+// SetID sets the value of ID.
+func (s *X402DeclinedPayment) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetChallengeID sets the value of ChallengeID.
+func (s *X402DeclinedPayment) SetChallengeID(val OptNilUUID) {
+	s.ChallengeID = val
+}
+
+// SetCounterpartyOrg sets the value of CounterpartyOrg.
+func (s *X402DeclinedPayment) SetCounterpartyOrg(val OptNilUUID) {
+	s.CounterpartyOrg = val
+}
+
+// SetNetwork sets the value of Network.
+func (s *X402DeclinedPayment) SetNetwork(val X402DeclinedPaymentNetwork) {
+	s.Network = val
+}
+
+// SetAmount sets the value of Amount.
+func (s *X402DeclinedPayment) SetAmount(val string) {
+	s.Amount = val
+}
+
+// SetReason sets the value of Reason.
+func (s *X402DeclinedPayment) SetReason(val string) {
+	s.Reason = val
+}
+
+// SetDeclinedAt sets the value of DeclinedAt.
+func (s *X402DeclinedPayment) SetDeclinedAt(val time.Time) {
+	s.DeclinedAt = val
+}
+
+type X402DeclinedPaymentNetwork string
+
+const (
+	X402DeclinedPaymentNetworkBase        X402DeclinedPaymentNetwork = "base"
+	X402DeclinedPaymentNetworkBaseSepolia X402DeclinedPaymentNetwork = "base-sepolia"
+)
+
+// AllValues returns all X402DeclinedPaymentNetwork values.
+func (X402DeclinedPaymentNetwork) AllValues() []X402DeclinedPaymentNetwork {
+	return []X402DeclinedPaymentNetwork{
+		X402DeclinedPaymentNetworkBase,
+		X402DeclinedPaymentNetworkBaseSepolia,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s X402DeclinedPaymentNetwork) MarshalText() ([]byte, error) {
+	switch s {
+	case X402DeclinedPaymentNetworkBase:
+		return []byte(s), nil
+	case X402DeclinedPaymentNetworkBaseSepolia:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *X402DeclinedPaymentNetwork) UnmarshalText(data []byte) error {
+	switch X402DeclinedPaymentNetwork(data) {
+	case X402DeclinedPaymentNetworkBase:
+		*s = X402DeclinedPaymentNetworkBase
+		return nil
+	case X402DeclinedPaymentNetworkBaseSepolia:
+		*s = X402DeclinedPaymentNetworkBaseSepolia
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// The interaction binding the payer hashes into the EIP-3009 nonce
+// (`deriveEip3009Nonce`). Pinning the nonce to this binding is what lets an
+// x402 payment ride asynchronous transports safely: a replayed challenge
+// can't redirect funds and a signed payment can't settle twice.
+// Ref: #/components/schemas/X402NonceBinding
+type X402NonceBinding struct {
+	// Interaction id, including its `@domain` part.
+	InteractionID   string    `json:"interaction_id"`
+	ChallengeStepID uuid.UUID `json:"challenge_step_id"`
+	// 32 random bytes as 64 lowercase hex chars.
+	ChallengeNonce string `json:"challenge_nonce"`
+}
+
+// GetInteractionID returns the value of InteractionID.
+func (s *X402NonceBinding) GetInteractionID() string {
+	return s.InteractionID
+}
+
+// GetChallengeStepID returns the value of ChallengeStepID.
+func (s *X402NonceBinding) GetChallengeStepID() uuid.UUID {
+	return s.ChallengeStepID
+}
+
+// GetChallengeNonce returns the value of ChallengeNonce.
+func (s *X402NonceBinding) GetChallengeNonce() string {
+	return s.ChallengeNonce
+}
+
+// SetInteractionID sets the value of InteractionID.
+func (s *X402NonceBinding) SetInteractionID(val string) {
+	s.InteractionID = val
+}
+
+// SetChallengeStepID sets the value of ChallengeStepID.
+func (s *X402NonceBinding) SetChallengeStepID(val uuid.UUID) {
+	s.ChallengeStepID = val
+}
+
+// SetChallengeNonce sets the value of ChallengeNonce.
+func (s *X402NonceBinding) SetChallengeNonce(val string) {
+	s.ChallengeNonce = val
+}
+
+// A signed x402 v1 `PaymentPayload`. The SDK `pay()` helper builds this;
+// callers rarely construct it by hand. Field names are x402-native.
+// Ref: #/components/schemas/X402PaymentPayload
+type X402PaymentPayload struct {
+	X402Version int                       `json:"x402Version"`
+	Scheme      string                    `json:"scheme"`
+	Network     X402PaymentPayloadNetwork `json:"network"`
+	Payload     X402PaymentPayloadPayload `json:"payload"`
+}
+
+// GetX402Version returns the value of X402Version.
+func (s *X402PaymentPayload) GetX402Version() int {
+	return s.X402Version
+}
+
+// GetScheme returns the value of Scheme.
+func (s *X402PaymentPayload) GetScheme() string {
+	return s.Scheme
+}
+
+// GetNetwork returns the value of Network.
+func (s *X402PaymentPayload) GetNetwork() X402PaymentPayloadNetwork {
+	return s.Network
+}
+
+// GetPayload returns the value of Payload.
+func (s *X402PaymentPayload) GetPayload() X402PaymentPayloadPayload {
+	return s.Payload
+}
+
+// SetX402Version sets the value of X402Version.
+func (s *X402PaymentPayload) SetX402Version(val int) {
+	s.X402Version = val
+}
+
+// SetScheme sets the value of Scheme.
+func (s *X402PaymentPayload) SetScheme(val string) {
+	s.Scheme = val
+}
+
+// SetNetwork sets the value of Network.
+func (s *X402PaymentPayload) SetNetwork(val X402PaymentPayloadNetwork) {
+	s.Network = val
+}
+
+// SetPayload sets the value of Payload.
+func (s *X402PaymentPayload) SetPayload(val X402PaymentPayloadPayload) {
+	s.Payload = val
+}
+
+type X402PaymentPayloadNetwork string
+
+const (
+	X402PaymentPayloadNetworkBase        X402PaymentPayloadNetwork = "base"
+	X402PaymentPayloadNetworkBaseSepolia X402PaymentPayloadNetwork = "base-sepolia"
+)
+
+// AllValues returns all X402PaymentPayloadNetwork values.
+func (X402PaymentPayloadNetwork) AllValues() []X402PaymentPayloadNetwork {
+	return []X402PaymentPayloadNetwork{
+		X402PaymentPayloadNetworkBase,
+		X402PaymentPayloadNetworkBaseSepolia,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s X402PaymentPayloadNetwork) MarshalText() ([]byte, error) {
+	switch s {
+	case X402PaymentPayloadNetworkBase:
+		return []byte(s), nil
+	case X402PaymentPayloadNetworkBaseSepolia:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *X402PaymentPayloadNetwork) UnmarshalText(data []byte) error {
+	switch X402PaymentPayloadNetwork(data) {
+	case X402PaymentPayloadNetworkBase:
+		*s = X402PaymentPayloadNetworkBase
+		return nil
+	case X402PaymentPayloadNetworkBaseSepolia:
+		*s = X402PaymentPayloadNetworkBaseSepolia
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type X402PaymentPayloadPayload struct {
+	// The EIP-712 signature over the authorization.
+	Signature string `json:"signature"`
+	// The EIP-3009 `transferWithAuthorization` fields, as strings.
+	Authorization X402PaymentPayloadPayloadAuthorization `json:"authorization"`
+}
+
+// GetSignature returns the value of Signature.
+func (s *X402PaymentPayloadPayload) GetSignature() string {
+	return s.Signature
+}
+
+// GetAuthorization returns the value of Authorization.
+func (s *X402PaymentPayloadPayload) GetAuthorization() X402PaymentPayloadPayloadAuthorization {
+	return s.Authorization
+}
+
+// SetSignature sets the value of Signature.
+func (s *X402PaymentPayloadPayload) SetSignature(val string) {
+	s.Signature = val
+}
+
+// SetAuthorization sets the value of Authorization.
+func (s *X402PaymentPayloadPayload) SetAuthorization(val X402PaymentPayloadPayloadAuthorization) {
+	s.Authorization = val
+}
+
+// The EIP-3009 `transferWithAuthorization` fields, as strings.
+type X402PaymentPayloadPayloadAuthorization struct {
+	From        string `json:"from"`
+	To          string `json:"to"`
+	Value       string `json:"value"`
+	ValidAfter  string `json:"validAfter"`
+	ValidBefore string `json:"validBefore"`
+	Nonce       string `json:"nonce"`
+}
+
+// GetFrom returns the value of From.
+func (s *X402PaymentPayloadPayloadAuthorization) GetFrom() string {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *X402PaymentPayloadPayloadAuthorization) GetTo() string {
+	return s.To
+}
+
+// GetValue returns the value of Value.
+func (s *X402PaymentPayloadPayloadAuthorization) GetValue() string {
+	return s.Value
+}
+
+// GetValidAfter returns the value of ValidAfter.
+func (s *X402PaymentPayloadPayloadAuthorization) GetValidAfter() string {
+	return s.ValidAfter
+}
+
+// GetValidBefore returns the value of ValidBefore.
+func (s *X402PaymentPayloadPayloadAuthorization) GetValidBefore() string {
+	return s.ValidBefore
+}
+
+// GetNonce returns the value of Nonce.
+func (s *X402PaymentPayloadPayloadAuthorization) GetNonce() string {
+	return s.Nonce
+}
+
+// SetFrom sets the value of From.
+func (s *X402PaymentPayloadPayloadAuthorization) SetFrom(val string) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *X402PaymentPayloadPayloadAuthorization) SetTo(val string) {
+	s.To = val
+}
+
+// SetValue sets the value of Value.
+func (s *X402PaymentPayloadPayloadAuthorization) SetValue(val string) {
+	s.Value = val
+}
+
+// SetValidAfter sets the value of ValidAfter.
+func (s *X402PaymentPayloadPayloadAuthorization) SetValidAfter(val string) {
+	s.ValidAfter = val
+}
+
+// SetValidBefore sets the value of ValidBefore.
+func (s *X402PaymentPayloadPayloadAuthorization) SetValidBefore(val string) {
+	s.ValidBefore = val
+}
+
+// SetNonce sets the value of Nonce.
+func (s *X402PaymentPayloadPayloadAuthorization) SetNonce(val string) {
+	s.Nonce = val
+}
+
+// The x402 `PaymentRequirements` the payer signs over. Field names are
+// x402's native camelCase, preserved byte-for-byte.
+// Ref: #/components/schemas/X402PaymentRequirements
+type X402PaymentRequirements struct {
+	// The x402 settlement scheme. Always `exact` for v1.
+	Scheme  string                         `json:"scheme"`
+	Network X402PaymentRequirementsNetwork `json:"network"`
+	// Amount in token base units.
+	MaxAmountRequired string `json:"maxAmountRequired"`
+	// The payee's resolved payout address (checksummed).
+	PayTo string `json:"payTo"`
+	// The token contract address (checksummed). USDC.
+	Asset             string    `json:"asset"`
+	Resource          OptString `json:"resource"`
+	Description       OptString `json:"description"`
+	MaxTimeoutSeconds OptInt    `json:"maxTimeoutSeconds"`
+	// The token's load-bearing EIP-712 domain params. `name` differs by
+	// chain (Base mainnet USDC is `USD Coin`, Base Sepolia is `USDC`); a
+	// wrong value produces a signature the verifier rejects.
+	Extra X402PaymentRequirementsExtra `json:"extra"`
+}
+
+// GetScheme returns the value of Scheme.
+func (s *X402PaymentRequirements) GetScheme() string {
+	return s.Scheme
+}
+
+// GetNetwork returns the value of Network.
+func (s *X402PaymentRequirements) GetNetwork() X402PaymentRequirementsNetwork {
+	return s.Network
+}
+
+// GetMaxAmountRequired returns the value of MaxAmountRequired.
+func (s *X402PaymentRequirements) GetMaxAmountRequired() string {
+	return s.MaxAmountRequired
+}
+
+// GetPayTo returns the value of PayTo.
+func (s *X402PaymentRequirements) GetPayTo() string {
+	return s.PayTo
+}
+
+// GetAsset returns the value of Asset.
+func (s *X402PaymentRequirements) GetAsset() string {
+	return s.Asset
+}
+
+// GetResource returns the value of Resource.
+func (s *X402PaymentRequirements) GetResource() OptString {
+	return s.Resource
+}
+
+// GetDescription returns the value of Description.
+func (s *X402PaymentRequirements) GetDescription() OptString {
+	return s.Description
+}
+
+// GetMaxTimeoutSeconds returns the value of MaxTimeoutSeconds.
+func (s *X402PaymentRequirements) GetMaxTimeoutSeconds() OptInt {
+	return s.MaxTimeoutSeconds
+}
+
+// GetExtra returns the value of Extra.
+func (s *X402PaymentRequirements) GetExtra() X402PaymentRequirementsExtra {
+	return s.Extra
+}
+
+// SetScheme sets the value of Scheme.
+func (s *X402PaymentRequirements) SetScheme(val string) {
+	s.Scheme = val
+}
+
+// SetNetwork sets the value of Network.
+func (s *X402PaymentRequirements) SetNetwork(val X402PaymentRequirementsNetwork) {
+	s.Network = val
+}
+
+// SetMaxAmountRequired sets the value of MaxAmountRequired.
+func (s *X402PaymentRequirements) SetMaxAmountRequired(val string) {
+	s.MaxAmountRequired = val
+}
+
+// SetPayTo sets the value of PayTo.
+func (s *X402PaymentRequirements) SetPayTo(val string) {
+	s.PayTo = val
+}
+
+// SetAsset sets the value of Asset.
+func (s *X402PaymentRequirements) SetAsset(val string) {
+	s.Asset = val
+}
+
+// SetResource sets the value of Resource.
+func (s *X402PaymentRequirements) SetResource(val OptString) {
+	s.Resource = val
+}
+
+// SetDescription sets the value of Description.
+func (s *X402PaymentRequirements) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// SetMaxTimeoutSeconds sets the value of MaxTimeoutSeconds.
+func (s *X402PaymentRequirements) SetMaxTimeoutSeconds(val OptInt) {
+	s.MaxTimeoutSeconds = val
+}
+
+// SetExtra sets the value of Extra.
+func (s *X402PaymentRequirements) SetExtra(val X402PaymentRequirementsExtra) {
+	s.Extra = val
+}
+
+// The token's load-bearing EIP-712 domain params. `name` differs by
+// chain (Base mainnet USDC is `USD Coin`, Base Sepolia is `USDC`); a
+// wrong value produces a signature the verifier rejects.
+type X402PaymentRequirementsExtra struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// GetName returns the value of Name.
+func (s *X402PaymentRequirementsExtra) GetName() string {
+	return s.Name
+}
+
+// GetVersion returns the value of Version.
+func (s *X402PaymentRequirementsExtra) GetVersion() string {
+	return s.Version
+}
+
+// SetName sets the value of Name.
+func (s *X402PaymentRequirementsExtra) SetName(val string) {
+	s.Name = val
+}
+
+// SetVersion sets the value of Version.
+func (s *X402PaymentRequirementsExtra) SetVersion(val string) {
+	s.Version = val
+}
+
+type X402PaymentRequirementsNetwork string
+
+const (
+	X402PaymentRequirementsNetworkBase        X402PaymentRequirementsNetwork = "base"
+	X402PaymentRequirementsNetworkBaseSepolia X402PaymentRequirementsNetwork = "base-sepolia"
+)
+
+// AllValues returns all X402PaymentRequirementsNetwork values.
+func (X402PaymentRequirementsNetwork) AllValues() []X402PaymentRequirementsNetwork {
+	return []X402PaymentRequirementsNetwork{
+		X402PaymentRequirementsNetworkBase,
+		X402PaymentRequirementsNetworkBaseSepolia,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s X402PaymentRequirementsNetwork) MarshalText() ([]byte, error) {
+	switch s {
+	case X402PaymentRequirementsNetworkBase:
+		return []byte(s), nil
+	case X402PaymentRequirementsNetworkBaseSepolia:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *X402PaymentRequirementsNetwork) UnmarshalText(data []byte) error {
+	switch X402PaymentRequirementsNetwork(data) {
+	case X402PaymentRequirementsNetworkBase:
+		*s = X402PaymentRequirementsNetworkBase
+		return nil
+	case X402PaymentRequirementsNetworkBaseSepolia:
+		*s = X402PaymentRequirementsNetworkBaseSepolia
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/X402PayoutAddress
+type X402PayoutAddress struct {
+	ID uuid.UUID `json:"id"`
+	// The checksummed payout address.
+	Address string                   `json:"address"`
+	Network X402PayoutAddressNetwork `json:"network"`
+	Label   NilString                `json:"label"`
+	// Exactly one address per (org, network) is the default.
+	IsDefault bool `json:"is_default"`
+	// When ownership of the address was last proven.
+	VerifiedAt time.Time   `json:"verified_at"`
+	CreatedAt  OptDateTime `json:"created_at"`
+}
+
+// GetID returns the value of ID.
+func (s *X402PayoutAddress) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetAddress returns the value of Address.
+func (s *X402PayoutAddress) GetAddress() string {
+	return s.Address
+}
+
+// GetNetwork returns the value of Network.
+func (s *X402PayoutAddress) GetNetwork() X402PayoutAddressNetwork {
+	return s.Network
+}
+
+// GetLabel returns the value of Label.
+func (s *X402PayoutAddress) GetLabel() NilString {
+	return s.Label
+}
+
+// GetIsDefault returns the value of IsDefault.
+func (s *X402PayoutAddress) GetIsDefault() bool {
+	return s.IsDefault
+}
+
+// GetVerifiedAt returns the value of VerifiedAt.
+func (s *X402PayoutAddress) GetVerifiedAt() time.Time {
+	return s.VerifiedAt
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *X402PayoutAddress) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// SetID sets the value of ID.
+func (s *X402PayoutAddress) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetAddress sets the value of Address.
+func (s *X402PayoutAddress) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetNetwork sets the value of Network.
+func (s *X402PayoutAddress) SetNetwork(val X402PayoutAddressNetwork) {
+	s.Network = val
+}
+
+// SetLabel sets the value of Label.
+func (s *X402PayoutAddress) SetLabel(val NilString) {
+	s.Label = val
+}
+
+// SetIsDefault sets the value of IsDefault.
+func (s *X402PayoutAddress) SetIsDefault(val bool) {
+	s.IsDefault = val
+}
+
+// SetVerifiedAt sets the value of VerifiedAt.
+func (s *X402PayoutAddress) SetVerifiedAt(val time.Time) {
+	s.VerifiedAt = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *X402PayoutAddress) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+type X402PayoutAddressNetwork string
+
+const (
+	X402PayoutAddressNetworkBase        X402PayoutAddressNetwork = "base"
+	X402PayoutAddressNetworkBaseSepolia X402PayoutAddressNetwork = "base-sepolia"
+)
+
+// AllValues returns all X402PayoutAddressNetwork values.
+func (X402PayoutAddressNetwork) AllValues() []X402PayoutAddressNetwork {
+	return []X402PayoutAddressNetwork{
+		X402PayoutAddressNetworkBase,
+		X402PayoutAddressNetworkBaseSepolia,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s X402PayoutAddressNetwork) MarshalText() ([]byte, error) {
+	switch s {
+	case X402PayoutAddressNetworkBase:
+		return []byte(s), nil
+	case X402PayoutAddressNetworkBaseSepolia:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *X402PayoutAddressNetwork) UnmarshalText(data []byte) error {
+	switch X402PayoutAddressNetwork(data) {
+	case X402PayoutAddressNetworkBase:
+		*s = X402PayoutAddressNetworkBase
+		return nil
+	case X402PayoutAddressNetworkBaseSepolia:
+		*s = X402PayoutAddressNetworkBaseSepolia
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/X402Receipt
+type X402Receipt struct {
+	ID     uuid.UUID         `json:"id"`
+	Status X402ReceiptStatus `json:"status"`
+	// On-chain settlement transaction hash.
+	SettleTx NilString `json:"settle_tx"`
+}
+
+// GetID returns the value of ID.
+func (s *X402Receipt) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetStatus returns the value of Status.
+func (s *X402Receipt) GetStatus() X402ReceiptStatus {
+	return s.Status
+}
+
+// GetSettleTx returns the value of SettleTx.
+func (s *X402Receipt) GetSettleTx() NilString {
+	return s.SettleTx
+}
+
+// SetID sets the value of ID.
+func (s *X402Receipt) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *X402Receipt) SetStatus(val X402ReceiptStatus) {
+	s.Status = val
+}
+
+// SetSettleTx sets the value of SettleTx.
+func (s *X402Receipt) SetSettleTx(val NilString) {
+	s.SettleTx = val
+}
+
+type X402ReceiptStatus string
+
+const (
+	X402ReceiptStatusSettled X402ReceiptStatus = "settled"
+)
+
+// AllValues returns all X402ReceiptStatus values.
+func (X402ReceiptStatus) AllValues() []X402ReceiptStatus {
+	return []X402ReceiptStatus{
+		X402ReceiptStatusSettled,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s X402ReceiptStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case X402ReceiptStatusSettled:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *X402ReceiptStatus) UnmarshalText(data []byte) error {
+	switch X402ReceiptStatus(data) {
+	case X402ReceiptStatusSettled:
+		*s = X402ReceiptStatusSettled
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// The payer's outbound spend policy. Returned with defaults (not paused,
+// no caps, any on-net payee) when none is set.
+// Ref: #/components/schemas/X402SpendPolicy
+type X402SpendPolicy struct {
+	// Kill-switch. When true, all outbound payments are refused.
+	Paused bool `json:"paused"`
+	// Per-payment cap in token base units, or null for no cap.
+	MaxPerPayment NilString `json:"max_per_payment"`
+	// Rolling-day cap in token base units, or null for no cap.
+	MaxPerDay NilString `json:"max_per_day"`
+	// Allowed payee org ids. `null` allows any on-net payee; `[]` denies
+	// all.
+	Allowlist []uuid.UUID `json:"allowlist"`
+}
+
+// GetPaused returns the value of Paused.
+func (s *X402SpendPolicy) GetPaused() bool {
+	return s.Paused
+}
+
+// GetMaxPerPayment returns the value of MaxPerPayment.
+func (s *X402SpendPolicy) GetMaxPerPayment() NilString {
+	return s.MaxPerPayment
+}
+
+// GetMaxPerDay returns the value of MaxPerDay.
+func (s *X402SpendPolicy) GetMaxPerDay() NilString {
+	return s.MaxPerDay
+}
+
+// GetAllowlist returns the value of Allowlist.
+func (s *X402SpendPolicy) GetAllowlist() []uuid.UUID {
+	return s.Allowlist
+}
+
+// SetPaused sets the value of Paused.
+func (s *X402SpendPolicy) SetPaused(val bool) {
+	s.Paused = val
+}
+
+// SetMaxPerPayment sets the value of MaxPerPayment.
+func (s *X402SpendPolicy) SetMaxPerPayment(val NilString) {
+	s.MaxPerPayment = val
+}
+
+// SetMaxPerDay sets the value of MaxPerDay.
+func (s *X402SpendPolicy) SetMaxPerDay(val NilString) {
+	s.MaxPerDay = val
+}
+
+// SetAllowlist sets the value of Allowlist.
+func (s *X402SpendPolicy) SetAllowlist(val []uuid.UUID) {
+	s.Allowlist = val
 }

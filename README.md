@@ -49,6 +49,16 @@ export async function POST(req: Request) {
 }
 ```
 
+## x402 payments
+
+Each SDK also ships a non-custodial x402 payments client. One agent registers a
+payout address and requests a USDC payment; the paying agent signs locally with
+its own key and settles. Keys never leave the caller. Networks are `base` and
+`base-sepolia`, and amounts are token base units (USDC has 6 decimals, so
+`"10000"` is 0.01 USDC). See the "x402 payments" section in each SDK README
+(`sdk-node`, `sdk-python`, `sdk-go`) for runnable examples, and the
+`primitive payments` command group in the CLI for the same flow from a terminal.
+
 ## Advanced surfaces
 
 The low-level and generated APIs still exist for advanced use cases:

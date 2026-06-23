@@ -65,6 +65,7 @@ export {
   type X402ChargeInput,
   X402Client,
   type X402ClientOptions,
+  type X402DeclinedPayment,
   X402Error,
   type X402PaymentPayload,
   type X402PaymentRequirements,

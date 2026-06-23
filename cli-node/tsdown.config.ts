@@ -38,7 +38,12 @@ export default defineConfig({
     // runtime resolution of the private workspace package. Without
     // this, every CLI command would fail at startup with a missing-
     // module error on the api-core specifier.
-    alwaysBundle: ["@primitivedotdev/api-core"],
+    //
+    // @primitivedotdev/sdk is bundled too: the payments commands use its
+    // x402 client + signer, and the tarball-isolation check forbids the SDK
+    // as a runtime dependency. viem (the SDK's and our own crypto dep) stays
+    // external and is declared as a runtime dependency.
+    alwaysBundle: ["@primitivedotdev/api-core", "@primitivedotdev/sdk"],
   },
   clean: true,
   sourcemap: false,

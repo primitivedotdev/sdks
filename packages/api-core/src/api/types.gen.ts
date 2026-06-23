@@ -4,6 +4,283 @@ export type ClientOptions = {
     baseUrl: 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | (string & {});
 };
 
+export type RegisterPayoutAddressInput = {
+    /**
+     * The payout address (your signer's own EVM address), 0x-prefixed.
+     */
+    address: string;
+    /**
+     * The chain the address receives on.
+     */
+    network: 'base' | 'base-sepolia';
+    /**
+     * A `personal_sign` signature over the org-bound message produced by
+     * the SDK helper `buildPayoutRegistrationMessage`. Recovered and
+     * checked against `address`; the org id is bound into the signed bytes.
+     *
+     */
+    signature: string;
+    /**
+     * ISO-8601 timestamp embedded in the signed message. Must be within a
+     * short freshness window (about 10 minutes) of server time.
+     *
+     */
+    issued_at: string;
+    /**
+     * Optional human-readable label.
+     */
+    label?: string;
+};
+
+export type X402PayoutAddress = {
+    id: string;
+    /**
+     * The checksummed payout address.
+     */
+    address: string;
+    network: 'base' | 'base-sepolia';
+    label: string | null;
+    /**
+     * Exactly one address per (org, network) is the default.
+     */
+    is_default: boolean;
+    /**
+     * When ownership of the address was last proven.
+     */
+    verified_at: string;
+    created_at?: string;
+};
+
+export type CreateChallengeInput = {
+    /**
+     * Amount to collect, in token base units. USDC has 6 decimals, so
+     * `"10000"` is 0.01 USDC.
+     *
+     */
+    amount: string;
+    network: 'base' | 'base-sepolia';
+    /**
+     * The org id allowed to pay this challenge (on-net binding). Optional.
+     *
+     */
+    payer_org?: string;
+    /**
+     * Seconds until the challenge expires. Defaults to 3600.
+     */
+    expires_in?: number;
+    /**
+     * Optional URL identifying what is being paid for. Defaults to a
+     * synthetic `x402:challenge:<id>` identifier.
+     *
+     */
+    resource?: string;
+    /**
+     * Optional human-readable description of the payment.
+     */
+    description?: string;
+};
+
+/**
+ * The interaction binding the payer hashes into the EIP-3009 nonce
+ * (`deriveEip3009Nonce`). Pinning the nonce to this binding is what lets an
+ * x402 payment ride asynchronous transports safely: a replayed challenge
+ * can't redirect funds and a signed payment can't settle twice.
+ *
+ */
+export type X402NonceBinding = {
+    /**
+     * Interaction id, including its `@domain` part.
+     */
+    interaction_id: string;
+    challenge_step_id: string;
+    /**
+     * 32 random bytes as 64 lowercase hex chars.
+     */
+    challenge_nonce: string;
+};
+
+/**
+ * The x402 `PaymentRequirements` the payer signs over. Field names are
+ * x402's native camelCase, preserved byte-for-byte.
+ *
+ */
+export type X402PaymentRequirements = {
+    /**
+     * The x402 settlement scheme. Always `exact` for v1.
+     */
+    scheme: string;
+    network: 'base' | 'base-sepolia';
+    /**
+     * Amount in token base units.
+     */
+    maxAmountRequired: string;
+    /**
+     * The payee's resolved payout address (checksummed).
+     */
+    payTo: string;
+    /**
+     * The token contract address (checksummed). USDC.
+     */
+    asset: string;
+    resource?: string;
+    description?: string;
+    maxTimeoutSeconds?: number;
+    /**
+     * The token's load-bearing EIP-712 domain params. `name` differs by
+     * chain (Base mainnet USDC is `USD Coin`, Base Sepolia is `USDC`); a
+     * wrong value produces a signature the verifier rejects.
+     *
+     */
+    extra: {
+        name: string;
+        version: string;
+    };
+};
+
+export type X402Challenge = {
+    id: string;
+    status: 'pending' | 'settling' | 'settled' | 'failed' | 'expired';
+    network: 'base' | 'base-sepolia';
+    /**
+     * Token contract address (checksummed).
+     */
+    asset: string;
+    /**
+     * Amount in token base units.
+     */
+    amount: string;
+    /**
+     * The payee's resolved payout address (checksummed).
+     */
+    pay_to: string;
+    /**
+     * The org id bound as payer, if one was set at creation.
+     */
+    payer_org?: string | null;
+    resource?: string | null;
+    description?: string | null;
+    nonce_binding: X402NonceBinding;
+    /**
+     * On-chain settlement transaction hash once settled.
+     */
+    settle_tx?: string | null;
+    settled_at?: string | null;
+    failure_reason?: string | null;
+    expires_at: string;
+    created_at?: string;
+    /**
+     * Present on the create response. Hand the whole challenge (including
+     * this) to the payer; `getChallenge` omits it (it is for status polling
+     * by the challenger).
+     *
+     */
+    payment_requirements?: X402PaymentRequirements;
+};
+
+/**
+ * A signed x402 v1 `PaymentPayload`. The SDK `pay()` helper builds this;
+ * callers rarely construct it by hand. Field names are x402-native.
+ *
+ */
+export type X402PaymentPayload = {
+    x402Version: number;
+    scheme: string;
+    network: 'base' | 'base-sepolia';
+    payload: {
+        /**
+         * The EIP-712 signature over the authorization.
+         */
+        signature: string;
+        /**
+         * The EIP-3009 `transferWithAuthorization` fields, as strings.
+         */
+        authorization: {
+            from: string;
+            to: string;
+            value: string;
+            validAfter: string;
+            validBefore: string;
+            nonce: string;
+        };
+    };
+};
+
+export type PayChallengeInput = {
+    payment: X402PaymentPayload;
+};
+
+export type X402Receipt = {
+    id: string;
+    status: 'settled';
+    /**
+     * On-chain settlement transaction hash.
+     */
+    settle_tx: string | null;
+};
+
+/**
+ * The payer's outbound spend policy. Returned with defaults (not paused,
+ * no caps, any on-net payee) when none is set.
+ *
+ */
+export type X402SpendPolicy = {
+    /**
+     * Kill-switch. When true, all outbound payments are refused.
+     */
+    paused: boolean;
+    /**
+     * Per-payment cap in token base units, or null for no cap.
+     */
+    max_per_payment: string | null;
+    /**
+     * Rolling-day cap in token base units, or null for no cap.
+     */
+    max_per_day: string | null;
+    /**
+     * Allowed payee org ids. `null` allows any on-net payee; `[]` denies
+     * all.
+     *
+     */
+    allowlist: Array<string> | null;
+};
+
+/**
+ * Merge update: only the fields you include change; omit a field to keep
+ * its current value; send `null` to clear a cap.
+ *
+ */
+export type UpdateSpendPolicyInput = {
+    paused?: boolean;
+    max_per_payment?: string | null;
+    max_per_day?: string | null;
+    allowlist?: Array<string> | null;
+};
+
+/**
+ * A payment the org's spend policy refused.
+ */
+export type X402DeclinedPayment = {
+    id: string;
+    /**
+     * The challenge that was declined, if still present.
+     */
+    challenge_id?: string | null;
+    /**
+     * The payee (challenger) org, when known.
+     */
+    counterparty_org?: string | null;
+    network: 'base' | 'base-sepolia';
+    /**
+     * Amount in token base units.
+     */
+    amount: string;
+    /**
+     * Why the payment was declined (cap, allowlist, paused).
+     */
+    reason: string;
+    declined_at: string;
+};
+
 export type SuccessEnvelope = {
     success: boolean;
 };
@@ -31,7 +308,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -5945,3 +6222,353 @@ export type ListFunctionLogsResponses = {
 };
 
 export type ListFunctionLogsResponse = ListFunctionLogsResponses[keyof ListFunctionLogsResponses];
+
+export type ListPayoutAddressesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/x402/payout-addresses';
+};
+
+export type ListPayoutAddressesErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type ListPayoutAddressesError = ListPayoutAddressesErrors[keyof ListPayoutAddressesErrors];
+
+export type ListPayoutAddressesResponses = {
+    /**
+     * Your registered payout addresses
+     */
+    200: SuccessEnvelope & {
+        data?: Array<X402PayoutAddress>;
+    };
+};
+
+export type ListPayoutAddressesResponse = ListPayoutAddressesResponses[keyof ListPayoutAddressesResponses];
+
+export type RegisterPayoutAddressData = {
+    body: RegisterPayoutAddressInput;
+    path?: never;
+    query?: never;
+    url: '/x402/payout-addresses';
+};
+
+export type RegisterPayoutAddressErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * The request was well-formed but could not be processed. For Payments
+     * this covers a missing payout address, a failed payment verification, a
+     * spend-policy decline, or an expired challenge; `error.code` distinguishes
+     * them.
+     *
+     */
+    422: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type RegisterPayoutAddressError = RegisterPayoutAddressErrors[keyof RegisterPayoutAddressErrors];
+
+export type RegisterPayoutAddressResponses = {
+    /**
+     * Payout address registered (or updated) and set as default
+     */
+    201: SuccessEnvelope & {
+        data?: X402PayoutAddress;
+    };
+};
+
+export type RegisterPayoutAddressResponse = RegisterPayoutAddressResponses[keyof RegisterPayoutAddressResponses];
+
+export type CreateChallengeData = {
+    body: CreateChallengeInput;
+    path?: never;
+    query?: never;
+    url: '/x402/challenges';
+};
+
+export type CreateChallengeErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * The request was well-formed but could not be processed. For Payments
+     * this covers a missing payout address, a failed payment verification, a
+     * spend-policy decline, or an expired challenge; `error.code` distinguishes
+     * them.
+     *
+     */
+    422: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type CreateChallengeError = CreateChallengeErrors[keyof CreateChallengeErrors];
+
+export type CreateChallengeResponses = {
+    /**
+     * Challenge created
+     */
+    201: SuccessEnvelope & {
+        data?: X402Challenge;
+    };
+};
+
+export type CreateChallengeResponse = CreateChallengeResponses[keyof CreateChallengeResponses];
+
+export type GetChallengeData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/x402/challenges/{id}';
+};
+
+export type GetChallengeErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetChallengeError = GetChallengeErrors[keyof GetChallengeErrors];
+
+export type GetChallengeResponses = {
+    /**
+     * The challenge
+     */
+    200: SuccessEnvelope & {
+        data?: X402Challenge;
+    };
+};
+
+export type GetChallengeResponse = GetChallengeResponses[keyof GetChallengeResponses];
+
+export type PayChallengeData = {
+    body: PayChallengeInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/x402/challenges/{id}/pay';
+};
+
+export type PayChallengeErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * The request was well-formed but could not be processed. For Payments
+     * this covers a missing payout address, a failed payment verification, a
+     * spend-policy decline, or an expired challenge; `error.code` distinguishes
+     * them.
+     *
+     */
+    422: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+    /**
+     * Primitive could not complete the downstream SMTP request
+     */
+    502: ErrorResponse;
+};
+
+export type PayChallengeError = PayChallengeErrors[keyof PayChallengeErrors];
+
+export type PayChallengeResponses = {
+    /**
+     * Challenge settled (or already settled)
+     */
+    200: SuccessEnvelope & {
+        data?: X402Receipt;
+    };
+};
+
+export type PayChallengeResponse = PayChallengeResponses[keyof PayChallengeResponses];
+
+export type GetSpendPolicyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/x402/spend-policy';
+};
+
+export type GetSpendPolicyErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetSpendPolicyError = GetSpendPolicyErrors[keyof GetSpendPolicyErrors];
+
+export type GetSpendPolicyResponses = {
+    /**
+     * The spend policy
+     */
+    200: SuccessEnvelope & {
+        data?: X402SpendPolicy;
+    };
+};
+
+export type GetSpendPolicyResponse = GetSpendPolicyResponses[keyof GetSpendPolicyResponses];
+
+export type UpdateSpendPolicyData = {
+    body: UpdateSpendPolicyInput;
+    path?: never;
+    query?: never;
+    url: '/x402/spend-policy';
+};
+
+export type UpdateSpendPolicyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type UpdateSpendPolicyError = UpdateSpendPolicyErrors[keyof UpdateSpendPolicyErrors];
+
+export type UpdateSpendPolicyResponses = {
+    /**
+     * The updated spend policy
+     */
+    200: SuccessEnvelope & {
+        data?: X402SpendPolicy;
+    };
+};
+
+export type UpdateSpendPolicyResponse = UpdateSpendPolicyResponses[keyof UpdateSpendPolicyResponses];
+
+export type ListDeclinedPaymentsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/x402/declined-payments';
+};
+
+export type ListDeclinedPaymentsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type ListDeclinedPaymentsError = ListDeclinedPaymentsErrors[keyof ListDeclinedPaymentsErrors];
+
+export type ListDeclinedPaymentsResponses = {
+    /**
+     * Recently declined payments
+     */
+    200: SuccessEnvelope & {
+        data?: Array<X402DeclinedPayment>;
+    };
+};
+
+export type ListDeclinedPaymentsResponse = ListDeclinedPaymentsResponses[keyof ListDeclinedPaymentsResponses];

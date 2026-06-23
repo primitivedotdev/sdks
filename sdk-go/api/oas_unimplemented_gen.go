@@ -64,6 +64,21 @@ func (UnimplementedHandler) CreateAgentClaimLink(ctx context.Context, req *Creat
 	return r, ht.ErrNotImplemented
 }
 
+// CreateChallenge implements createChallenge operation.
+//
+// Create an x402 payment challenge (the payee side of a payment). The
+// `pay_to` address is resolved server-side from your registered default
+// payout address for the network, never from the request. The response
+// carries the `nonce_binding` and `payment_requirements` the payer needs to
+// sign; hand the whole challenge object to the payer (for example in an
+// email reply). Amounts are in token base units (USDC has 6 decimals, so
+// `"10000"` is 0.01 USDC).
+//
+// POST /x402/challenges
+func (UnimplementedHandler) CreateChallenge(ctx context.Context, req *CreateChallengeInput) (r CreateChallengeRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreateEndpoint implements createEndpoint operation.
 //
 // Creates a new webhook endpoint. If a deactivated endpoint
@@ -303,6 +318,16 @@ func (UnimplementedHandler) GetAccount(ctx context.Context) (r GetAccountRes, _ 
 	return r, ht.ErrNotImplemented
 }
 
+// GetChallenge implements getChallenge operation.
+//
+// Fetch a challenge you created, to poll its `status` and settlement
+// receipt (`settle_tx`). Scoped to the challenger org that created it.
+//
+// GET /x402/challenges/{id}
+func (UnimplementedHandler) GetChallenge(ctx context.Context, params GetChallengeParams) (r GetChallengeRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetConversation implements getConversation operation.
 //
 // Returns the full conversation the given inbound email belongs
@@ -467,6 +492,17 @@ func (UnimplementedHandler) GetSentEmail(ctx context.Context, params GetSentEmai
 	return r, ht.ErrNotImplemented
 }
 
+// GetSpendPolicy implements getSpendPolicy operation.
+//
+// Read your org's outbound spend policy: the kill-switch, per-payment and
+// per-day caps, and the payee allowlist. Returns the defaults (no limits,
+// not paused) when no policy has been set.
+//
+// GET /x402/spend-policy
+func (UnimplementedHandler) GetSpendPolicy(ctx context.Context) (r GetSpendPolicyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetStorageStats implements getStorageStats operation.
 //
 // Get storage usage.
@@ -517,6 +553,18 @@ func (UnimplementedHandler) GetThread(ctx context.Context, params GetThreadParam
 //
 // GET /account/webhook-secret
 func (UnimplementedHandler) GetWebhookSecret(ctx context.Context) (r GetWebhookSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListDeclinedPayments implements listDeclinedPayments operation.
+//
+// The 50 most recent payments your org's spend policy declined, newest
+// first. Use this to see why an outbound payment was refused (a cap, the
+// payee allowlist, or the kill-switch) instead of only reading the
+// dashboard.
+//
+// GET /x402/declined-payments
+func (UnimplementedHandler) ListDeclinedPayments(ctx context.Context) (r ListDeclinedPaymentsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -636,6 +684,15 @@ func (UnimplementedHandler) ListOrgSecrets(ctx context.Context) (r ListOrgSecret
 	return r, ht.ErrNotImplemented
 }
 
+// ListPayoutAddresses implements listPayoutAddresses operation.
+//
+// List your org's registered payout addresses, newest first.
+//
+// GET /x402/payout-addresses
+func (UnimplementedHandler) ListPayoutAddresses(ctx context.Context) (r ListPayoutAddressesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListSentEmails implements listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -659,6 +716,24 @@ func (UnimplementedHandler) ListSentEmails(ctx context.Context, params ListSentE
 	return r, ht.ErrNotImplemented
 }
 
+// PayChallenge implements payChallenge operation.
+//
+// Settle a challenge addressed to your org as payer. The request body
+// carries a signed x402 `PaymentPayload`: an EIP-3009
+// `transferWithAuthorization` signed locally with your own key, whose nonce
+// is bound to the challenge via the SDK's `deriveEip3009Nonce`. The platform
+// verifies every signed field against its own record of the challenge,
+// applies your spend policy, and settles on-chain through a facilitator.
+// Settlement is non-custodial; Primitive never holds funds. Idempotent:
+// paying an already-settled challenge returns the original receipt. Most
+// callers use the SDK `pay()` helper rather than building the payload by
+// hand.
+//
+// POST /x402/challenges/{id}/pay
+func (UnimplementedHandler) PayChallenge(ctx context.Context, req *PayChallengeInput, params PayChallengeParams) (r PayChallengeRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // PollCliLogin implements pollCliLogin operation.
 //
 // Polls a CLI login session until the browser approval either succeeds,
@@ -667,6 +742,23 @@ func (UnimplementedHandler) ListSentEmails(ctx context.Context, params ListSentE
 //
 // POST /cli/login/poll
 func (UnimplementedHandler) PollCliLogin(ctx context.Context, req *PollCliLoginInput) (r PollCliLoginRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RegisterPayoutAddress implements registerPayoutAddress operation.
+//
+// Register (or update) the default payout address your org receives x402
+// payments at, for a given network. You prove control of the address with
+// an org-bound `personal_sign` signature over the message produced by the
+// SDK helper `buildPayoutRegistrationMessage`. The org id is taken from your
+// authenticated key, never the body, so a captured signature can't register
+// an address under another org. Exactly one default address exists per
+// (org, network); registering again replaces it. A payee MUST register a
+// payout address before calling `createChallenge`, because the challenge's
+// `pay_to` is resolved from this directory.
+//
+// POST /x402/payout-addresses
+func (UnimplementedHandler) RegisterPayoutAddress(ctx context.Context, req *RegisterPayoutAddressInput) (r RegisterPayoutAddressRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -999,6 +1091,18 @@ func (UnimplementedHandler) UpdateFilter(ctx context.Context, req *UpdateFilterI
 //
 // PUT /functions/{id}
 func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (r UpdateFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateSpendPolicy implements updateSpendPolicy operation.
+//
+// Update your org's spend policy. Applied as a merge: only the fields you
+// include change, and omitted fields keep their current value, so a partial
+// update can't silently reset the kill-switch. Send an explicit `null` to
+// clear a cap. Caps are in token base units.
+//
+// PUT /x402/spend-policy
+func (UnimplementedHandler) UpdateSpendPolicy(ctx context.Context, req *UpdateSpendPolicyInput) (r UpdateSpendPolicyRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
