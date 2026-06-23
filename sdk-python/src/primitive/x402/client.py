@@ -58,6 +58,7 @@ _CHARGE_INPUT_KEYS = frozenset(
         "description",
         "resource",
         "expires_in",
+        "idempotency_key",
     }
 )
 
@@ -210,6 +211,31 @@ class X402SpendPolicy:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class X402DeclinedPayment:
+    """A payment the org's spend policy refused (read shape)."""
+
+    id: str
+    challenge_id: str | None
+    counterparty_org: str | None
+    network: str
+    amount: str
+    reason: str
+    declined_at: str
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> X402DeclinedPayment:
+        return cls(
+            id=data.get("id", ""),
+            challenge_id=data.get("challenge_id"),
+            counterparty_org=data.get("counterparty_org"),
+            network=data.get("network", ""),
+            amount=data.get("amount", ""),
+            reason=data.get("reason", ""),
+            declined_at=data.get("declined_at", ""),
+        )
+
+
 def _validate_challenge(c: X402Challenge | None) -> None:
     """Assert a challenge is fully hydrated before signing.
 
@@ -278,6 +304,8 @@ class X402Client:
         method: str,
         path: str,
         body: Any = None,
+        *,
+        extra_headers: dict[str, str] | None = None,
     ) -> Any:
         if not self._api_key:
             raise X402Error(
@@ -290,6 +318,8 @@ class X402Client:
             "authorization": f"Bearer {self._api_key}",
             "content-type": "application/json",
         }
+        if extra_headers:
+            headers.update(extra_headers)
         url = f"{self._base_url}{path}"
 
         try:
@@ -375,6 +405,7 @@ class X402Client:
         description: str | None = None,
         resource: str | None = None,
         expires_in: int | None = None,
+        idempotency_key: str | None = None,
         **unknown: Any,
     ) -> X402Challenge:
         """Request a payment (payee side).
@@ -382,6 +413,10 @@ class X402Client:
         Provide exactly one of ``amount`` (token base units, e.g. ``"10000"``)
         or ``amount_usdc`` (human USDC, e.g. ``"0.01"``). Returns the challenge
         to hand to the payer.
+
+        Pass ``idempotency_key`` to make the request idempotent: retrying
+        ``charge()`` with the same key returns the original challenge instead of
+        creating a duplicate. It is sent as an ``Idempotency-Key`` header.
         """
         if unknown:
             key = next(iter(unknown))
@@ -419,7 +454,12 @@ class X402Client:
             body["resource"] = resource
         if expires_in is not None:
             body["expires_in"] = expires_in
-        data = self._request("POST", "/v1/x402/challenges", body)
+        extra_headers = (
+            {"idempotency-key": idempotency_key} if idempotency_key else None
+        )
+        data = self._request(
+            "POST", "/v1/x402/challenges", body, extra_headers=extra_headers
+        )
         return X402Challenge.from_dict(data)
 
     def pay(self, challenge: X402Challenge, *, signer: X402Signer) -> X402Receipt:
@@ -589,6 +629,15 @@ class X402Client:
         """List your org's registered payout addresses."""
         data = self._request("GET", "/v1/x402/payout-addresses")
         return [X402PayoutAddress.from_dict(item) for item in data]
+
+    def list_declined_payments(self) -> list[X402DeclinedPayment]:
+        """List the most recent payments your org's spend policy declined.
+
+        Returned newest first. Use this to see why an outbound payment was
+        refused.
+        """
+        data = self._request("GET", "/v1/x402/declined-payments")
+        return [X402DeclinedPayment.from_dict(item) for item in data]
 
     def get_spend_policy(self) -> X402SpendPolicy:
         """Read your org's spend policy (kill-switch + caps + allowlist)."""

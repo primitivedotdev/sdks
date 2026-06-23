@@ -110,6 +110,20 @@ class TestCharge:
         assert body["description"] == "demo"
         assert req.headers["authorization"] == "Bearer k"
 
+    def test_sends_idempotency_key_header_when_given(self) -> None:
+        client, rec = _client(
+            _json_response({"success": True, "data": _challenge_dict()})
+        )
+        client.charge(amount="10000", idempotency_key="abc-123")
+        assert rec.calls[0].headers["idempotency-key"] == "abc-123"
+
+    def test_omits_idempotency_key_header_when_not_given(self) -> None:
+        client, rec = _client(
+            _json_response({"success": True, "data": _challenge_dict()})
+        )
+        client.charge(amount="10000")
+        assert "idempotency-key" not in rec.calls[0].headers
+
     def test_rejects_an_unknown_option(self) -> None:
         client, _ = _client(_json_response({"success": True, "data": {}}))
         with pytest.raises(X402Error, match=r'unknown charge\(\) option "payer_x"'):
@@ -415,3 +429,28 @@ class TestCompletenessMethods:
         assert client.list_payout_addresses() == []
         req = rec.calls[0]
         assert str(req.url) == "https://api.example/v1/x402/payout-addresses"
+
+    def test_list_declined_payments_gets_the_declines_log(self) -> None:
+        declined = {
+            "id": "d1",
+            "challenge_id": "11111111-1111-4111-8111-111111111111",
+            "counterparty_org": ORG,
+            "network": "base-sepolia",
+            "amount": "10000",
+            "reason": "max_per_payment_exceeded",
+            "declined_at": "2026-01-01T00:00:00.000Z",
+        }
+        client, rec = _client(_json_response({"success": True, "data": [declined]}))
+        rows = client.list_declined_payments()
+        assert len(rows) == 1
+        assert rows[0].id == "d1"
+        assert rows[0].reason == "max_per_payment_exceeded"
+        assert rows[0].challenge_id == "11111111-1111-4111-8111-111111111111"
+        req = rec.calls[0]
+        assert str(req.url) == "https://api.example/v1/x402/declined-payments"
+        assert req.method == "GET"
+
+    def test_list_declined_payments_returns_empty_for_no_declines(self) -> None:
+        client, rec = _client(_json_response({"success": True, "data": []}))
+        assert client.list_declined_payments() == []
+        assert str(rec.calls[0].url) == "https://api.example/v1/x402/declined-payments"

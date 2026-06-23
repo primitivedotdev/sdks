@@ -9,6 +9,7 @@ from __future__ import annotations
 from .client import (
     X402Challenge,
     X402Client,
+    X402DeclinedPayment,
     X402Error,
     X402PaymentRequirements,
     X402PayoutAddress,
@@ -40,6 +41,7 @@ __all__ = [
     "TransferAuthorization",
     "X402Challenge",
     "X402Client",
+    "X402DeclinedPayment",
     "X402Error",
     "X402PaymentPayload",
     "X402PaymentRequirements",

@@ -705,6 +705,86 @@ func TestX402Client_SpendPolicy(t *testing.T) {
 	}
 }
 
+func TestEscapePathSegment_PadsLowBytes(t *testing.T) {
+	// A byte below 0x10 must encode as two hex digits (e.g. tab -> %09), not a
+	// single digit (%9), which is a malformed percent-escape.
+	if got := escapePathSegment("\t"); got != "%09" {
+		t.Fatalf("tab should encode as %%09, got %q", got)
+	}
+	// Also check a space (0x20) for good measure.
+	if got := escapePathSegment(" "); got != "%20" {
+		t.Fatalf("space should encode as %%20, got %q", got)
+	}
+}
+
+func TestX402Client_Charge_IdempotencyKeyHeader(t *testing.T) {
+	cases := []struct {
+		name string
+		key  string
+		want string // expected Idempotency-Key header value
+	}{
+		{"set", "abc-123", "abc-123"},
+		{"empty", "", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var gotHeader string
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotHeader = r.Header.Get("Idempotency-Key")
+				w.Write(envelope(t, sampleChallenge()))
+			}))
+			defer srv.Close()
+			client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: srv.URL})
+			_, err := client.Charge(context.Background(), X402ChargeInput{Amount: "10000", IdempotencyKey: tc.key})
+			if err != nil {
+				t.Fatalf("charge failed: %v", err)
+			}
+			if gotHeader != tc.want {
+				t.Fatalf("Idempotency-Key header: got %q want %q", gotHeader, tc.want)
+			}
+		})
+	}
+}
+
+func TestX402Client_ListDeclinedPayments(t *testing.T) {
+	challengeID := "22222222-2222-4222-8222-222222222222"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/v1/x402/declined-payments" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		w.Write(envelope(t, []any{
+			map[string]any{
+				"id":               "d1",
+				"challenge_id":     challengeID,
+				"counterparty_org": "33333333-3333-4333-8333-333333333333",
+				"network":          "base-sepolia",
+				"amount":           "10000",
+				"reason":           "max_per_payment_exceeded",
+				"declined_at":      "2026-01-01T00:00:00.000Z",
+			},
+		}))
+	}))
+	defer srv.Close()
+	client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: srv.URL})
+	declined, err := client.ListDeclinedPayments(context.Background())
+	if err != nil {
+		t.Fatalf("list declined failed: %v", err)
+	}
+	if len(declined) != 1 {
+		t.Fatalf("expected 1 declined payment, got %d", len(declined))
+	}
+	d := declined[0]
+	if d.ID != "d1" || d.Network != "base-sepolia" || d.Amount != "10000" || d.Reason != "max_per_payment_exceeded" {
+		t.Fatalf("unexpected declined payment: %+v", d)
+	}
+	if d.ChallengeID == nil || *d.ChallengeID != challengeID {
+		t.Fatalf("bad challenge_id: %v", d.ChallengeID)
+	}
+	if d.DeclinedAt != "2026-01-01T00:00:00.000Z" {
+		t.Fatalf("bad declined_at: %s", d.DeclinedAt)
+	}
+}
+
 func TestX402SpendPolicyUpdate_ClearCap(t *testing.T) {
 	var update X402SpendPolicyUpdate
 	update.ClearMaxPerPayment()

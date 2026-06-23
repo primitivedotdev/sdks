@@ -28,7 +28,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -390,6 +389,18 @@ type X402SpendPolicy struct {
 	Allowlist []string `json:"allowlist"`
 }
 
+// X402DeclinedPayment is a payment the org's spend policy refused (read shape).
+// Mirrors the Node SDK's X402DeclinedPayment.
+type X402DeclinedPayment struct {
+	ID              string  `json:"id"`
+	ChallengeID     *string `json:"challenge_id"`
+	CounterpartyOrg *string `json:"counterparty_org"`
+	Network         string  `json:"network"`
+	Amount          string  `json:"amount"`
+	Reason          string  `json:"reason"`
+	DeclinedAt      string  `json:"declined_at"`
+}
+
 // X402ChargeInput is the input shape for [X402Client.Charge].
 type X402ChargeInput struct {
 	// Amount in token base units (USDC has 6 decimals, so "10000" = 0.01).
@@ -408,6 +419,10 @@ type X402ChargeInput struct {
 	// ExpiresIn is seconds until the challenge expires (default 1h server-side).
 	// A pointer so 0 ("never"/server-default) is distinguishable from unset.
 	ExpiresIn *int
+	// IdempotencyKey, when set, is sent as the Idempotency-Key HTTP header on the
+	// create-challenge request. Retrying Charge with the same key returns the
+	// original challenge instead of creating a duplicate. Mirrors the Node SDK.
+	IdempotencyKey string
 }
 
 // X402PayoutRegistrationInput is the input shape for
@@ -584,8 +599,9 @@ func NewX402Client(options X402ClientOptions) *X402Client {
 
 // request performs an authenticated JSON request and unmarshals data from the
 // {success, data} envelope into out. Mirrors the Node SDK's #request, including
-// the status-0 transport error and Retry-After surfacing.
-func (c *X402Client) request(ctx context.Context, method, path string, body any, out any) error {
+// the status-0 transport error and Retry-After surfacing. Any entries in headers
+// are set on the outgoing request (e.g. Idempotency-Key on Charge).
+func (c *X402Client) request(ctx context.Context, method, path string, body any, out any, headers map[string]string) error {
 	if c.apiKey == "" {
 		return newX402Error("no API key configured; set PRIMITIVE_API_KEY or pass APIKey to the client", 0)
 	}
@@ -605,6 +621,9 @@ func (c *X402Client) request(ctx context.Context, method, path string, body any,
 	}
 	req.Header.Set("authorization", "Bearer "+c.apiKey)
 	req.Header.Set("content-type", "application/json")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
@@ -724,8 +743,16 @@ func (c *X402Client) Charge(ctx context.Context, input X402ChargeInput) (*X402Ch
 		body["expires_in"] = *input.ExpiresIn
 	}
 
+	// An idempotency key (when set) goes on the HTTP header, never in the body:
+	// retrying with the same key returns the original challenge instead of
+	// creating a duplicate. Mirrors the Node SDK.
+	var headers map[string]string
+	if input.IdempotencyKey != "" {
+		headers = map[string]string{"Idempotency-Key": input.IdempotencyKey}
+	}
+
 	var challenge X402Challenge
-	if err := c.request(ctx, http.MethodPost, "/v1/x402/challenges", body, &challenge); err != nil {
+	if err := c.request(ctx, http.MethodPost, "/v1/x402/challenges", body, &challenge, headers); err != nil {
 		return nil, err
 	}
 	return &challenge, nil
@@ -806,7 +833,9 @@ func (c *X402Client) Pay(ctx context.Context, challenge *X402Challenge, signer X
 	}
 
 	nowSec := time.Now().Unix()
-	expiresAt, err := time.Parse(time.RFC3339, challenge.ExpiresAt)
+	// The server sends millisecond-precision ISO-8601 (e.g. "...T00:00:00.000Z"),
+	// so parse with RFC3339Nano to make the fractional-second intent explicit.
+	expiresAt, err := time.Parse(time.RFC3339Nano, challenge.ExpiresAt)
 	if err != nil {
 		return nil, newX402Error("challenge has an invalid expires_at: "+challenge.ExpiresAt, 0)
 	}
@@ -850,7 +879,7 @@ func (c *X402Client) Pay(ctx context.Context, challenge *X402Challenge, signer X
 
 	body := map[string]any{"payment": toPaymentPayload(challenge.Network, auth, signature)}
 	var receipt X402Receipt
-	if err := c.request(ctx, http.MethodPost, "/v1/x402/challenges/"+challenge.ID+"/pay", body, &receipt); err != nil {
+	if err := c.request(ctx, http.MethodPost, "/v1/x402/challenges/"+challenge.ID+"/pay", body, &receipt, nil); err != nil {
 		return nil, err
 	}
 	return &receipt, nil
@@ -863,7 +892,7 @@ func (c *X402Client) GetChallenge(ctx context.Context, id string) (*X402Challeng
 		return nil, newX402Error("getChallenge requires a challenge id", 0)
 	}
 	var challenge X402Challenge
-	if err := c.request(ctx, http.MethodGet, "/v1/x402/challenges/"+escapePathSegment(id), nil, &challenge); err != nil {
+	if err := c.request(ctx, http.MethodGet, "/v1/x402/challenges/"+escapePathSegment(id), nil, &challenge, nil); err != nil {
 		return nil, err
 	}
 	return &challenge, nil
@@ -876,7 +905,7 @@ func (c *X402Client) resolveOrgID(ctx context.Context) (string, error) {
 	var account struct {
 		ID string `json:"id"`
 	}
-	if err := c.request(ctx, http.MethodGet, "/v1/account", nil, &account); err != nil {
+	if err := c.request(ctx, http.MethodGet, "/v1/account", nil, &account, nil); err != nil {
 		return "", err
 	}
 	if account.ID == "" {
@@ -931,7 +960,7 @@ func (c *X402Client) RegisterPayoutAddress(ctx context.Context, input X402Payout
 	}
 
 	var payout X402PayoutAddress
-	if err := c.request(ctx, http.MethodPost, "/v1/x402/payout-addresses", body, &payout); err != nil {
+	if err := c.request(ctx, http.MethodPost, "/v1/x402/payout-addresses", body, &payout, nil); err != nil {
 		return nil, err
 	}
 	return &payout, nil
@@ -941,17 +970,28 @@ func (c *X402Client) RegisterPayoutAddress(ctx context.Context, input X402Payout
 // GET /v1/x402/payout-addresses.
 func (c *X402Client) ListPayoutAddresses(ctx context.Context) ([]X402PayoutAddress, error) {
 	var addresses []X402PayoutAddress
-	if err := c.request(ctx, http.MethodGet, "/v1/x402/payout-addresses", nil, &addresses); err != nil {
+	if err := c.request(ctx, http.MethodGet, "/v1/x402/payout-addresses", nil, &addresses, nil); err != nil {
 		return nil, err
 	}
 	return addresses, nil
+}
+
+// ListDeclinedPayments lists the most recent payments your org's spend policy
+// refused (newest first). Use it to see why an outbound payment was declined.
+// GET /v1/x402/declined-payments.
+func (c *X402Client) ListDeclinedPayments(ctx context.Context) ([]X402DeclinedPayment, error) {
+	var declined []X402DeclinedPayment
+	if err := c.request(ctx, http.MethodGet, "/v1/x402/declined-payments", nil, &declined, nil); err != nil {
+		return nil, err
+	}
+	return declined, nil
 }
 
 // GetSpendPolicy reads your org's spend policy (kill-switch + caps + allowlist).
 // GET /v1/x402/spend-policy.
 func (c *X402Client) GetSpendPolicy(ctx context.Context) (*X402SpendPolicy, error) {
 	var policy X402SpendPolicy
-	if err := c.request(ctx, http.MethodGet, "/v1/x402/spend-policy", nil, &policy); err != nil {
+	if err := c.request(ctx, http.MethodGet, "/v1/x402/spend-policy", nil, &policy, nil); err != nil {
 		return nil, err
 	}
 	return &policy, nil
@@ -964,7 +1004,7 @@ func (c *X402Client) GetSpendPolicy(ctx context.Context) (*X402SpendPolicy, erro
 // PUT /v1/x402/spend-policy.
 func (c *X402Client) SetSpendPolicy(ctx context.Context, update X402SpendPolicyUpdate) (*X402SpendPolicy, error) {
 	var policy X402SpendPolicy
-	if err := c.request(ctx, http.MethodPut, "/v1/x402/spend-policy", update.body(), &policy); err != nil {
+	if err := c.request(ctx, http.MethodPut, "/v1/x402/spend-policy", update.body(), &policy, nil); err != nil {
 		return nil, err
 	}
 	return &policy, nil
@@ -982,7 +1022,7 @@ func escapePathSegment(s string) string {
 			ch == '-' || ch == '_' || ch == '.' || ch == '~' {
 			b.WriteByte(ch)
 		} else {
-			b.WriteString("%" + strings.ToUpper(strconv.FormatInt(int64(ch), 16)))
+			b.WriteString(fmt.Sprintf("%%%02X", ch))
 		}
 	}
 	return b.String()
