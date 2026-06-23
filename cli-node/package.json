@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/cli",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
   "sideEffects": false,
@@ -111,7 +111,7 @@
     "topicSeparator": " "
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "pnpm --filter @primitivedotdev/sdk build && tsdown && node scripts/assert-bundled.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
