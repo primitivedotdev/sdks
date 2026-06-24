@@ -260,8 +260,13 @@ def _validate_challenge(c: X402Challenge | None) -> None:
     pr = c.payment_requirements
     if not pr:
         bad("payment_requirements")
-    if not pr.max_amount_required:
-        bad("payment_requirements.maxAmountRequired")
+    # Require a positive integer base-units string so the later int()
+    # conversion in pay() cannot raise a raw ValueError on a malformed value.
+    if not _AMOUNT_RE.fullmatch(pr.max_amount_required or ""):
+        bad(
+            "payment_requirements.maxAmountRequired (expected a positive "
+            "integer string in token base units)"
+        )
     if not _ADDRESS_RE.fullmatch(pr.pay_to or ""):
         bad("payment_requirements.payTo (expected a 0x address)")
     if not _ADDRESS_RE.fullmatch(pr.asset or ""):

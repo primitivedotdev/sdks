@@ -181,7 +181,13 @@ function validateChallenge(c: X402Challenge): void {
   }
   const pr = c.payment_requirements;
   if (!pr) bad("payment_requirements");
-  if (!pr.maxAmountRequired) bad("payment_requirements.maxAmountRequired");
+  // Require a positive integer base-units string so the later BigInt()
+  // conversion in pay() cannot throw a raw SyntaxError on a malformed value.
+  if (!/^[1-9][0-9]{0,38}$/.test(pr.maxAmountRequired ?? "")) {
+    bad(
+      "payment_requirements.maxAmountRequired (expected a positive integer string in token base units)",
+    );
+  }
   if (!/^0x[0-9a-fA-F]{40}$/.test(pr.payTo ?? "")) {
     bad("payment_requirements.payTo (expected a 0x address)");
   }

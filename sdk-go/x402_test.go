@@ -649,6 +649,16 @@ func TestX402Client_Pay_RejectsMalformedChallenge(t *testing.T) {
 	}
 }
 
+func TestX402Client_Pay_RejectsMalformedMaxAmountRequired(t *testing.T) {
+	// A non-integer amount must surface as a named X402Error, not a panic.
+	client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: "http://unused"})
+	bad := sampleChallenge()
+	bad.PaymentRequirements.MaxAmountRequired = "not-a-number"
+	if _, err := client.Pay(context.Background(), bad, newTestSigner(t)); err == nil || !strings.Contains(err.Error(), "maxAmountRequired") {
+		t.Fatalf("expected maxAmountRequired error, got %v", err)
+	}
+}
+
 func TestX402Client_NoAPIKey(t *testing.T) {
 	t.Setenv("PRIMITIVE_API_KEY", "")
 	client := NewX402Client(X402ClientOptions{BaseURL: "http://unused"})

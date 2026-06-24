@@ -239,6 +239,16 @@ class TestPay:
             client.pay(X402Challenge.from_dict(bad), signer=SIGNER)
         assert rec.calls == []
 
+    def test_rejects_a_malformed_max_amount_required_before_signing(self) -> None:
+        # A non-integer amount must surface as a named X402Error, not a raw
+        # ValueError from int().
+        client, rec = _client(_json_response({"success": True, "data": {}}))
+        bad = _challenge_dict()
+        bad["payment_requirements"]["maxAmountRequired"] = "not-a-number"
+        with pytest.raises(X402Error, match="maxAmountRequired"):
+            client.pay(X402Challenge.from_dict(bad), signer=SIGNER)
+        assert rec.calls == []
+
     def test_rejects_an_already_expired_challenge_before_signing(self) -> None:
         client, rec = _client(_json_response({"success": True, "data": {}}))
         with pytest.raises(X402Error, match="already expired"):
