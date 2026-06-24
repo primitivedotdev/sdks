@@ -21,6 +21,10 @@ type CreateChallengeRes interface {
 	createChallengeRes()
 }
 
+type CreateEmailChallengeRes interface {
+	createEmailChallengeRes()
+}
+
 type CreateEndpointRes interface {
 	createEndpointRes()
 }

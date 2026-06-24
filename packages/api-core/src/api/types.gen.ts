@@ -178,6 +178,80 @@ export type X402Challenge = {
 };
 
 /**
+ * Issue a payment challenge over an email thread. `from` is your sending
+ * address (the funds receiver; ownership is enforced at send, exactly as
+ * for outbound mail) and `to` is the payer's address. The `pay_to` payout
+ * wallet and the token asset are resolved server-side, never taken from
+ * the request.
+ *
+ */
+export type CreateEmailChallengeInput = {
+    /**
+     * Your sending address (the payee / funds receiver). Must be an
+     * address your org is allowed to send from.
+     *
+     */
+    from: string;
+    /**
+     * The payer's email address the challenge is sent to.
+     */
+    to: string;
+    /**
+     * Amount to collect, in token base units. USDC has 6 decimals, so
+     * `"10000"` is 0.01 USDC.
+     *
+     */
+    amount: string;
+    network: 'base' | 'base-sepolia';
+    /**
+     * Seconds until the challenge expires. Defaults to 3600.
+     */
+    expires_in?: number;
+    /**
+     * Optional URL identifying what is being paid for.
+     */
+    resource?: string;
+    /**
+     * Optional human-readable description of the payment.
+     */
+    description?: string;
+};
+
+/**
+ * The challenge the payer needs to sign and pay, carried inside an
+ * email-native challenge response.
+ *
+ */
+export type X402EmailChallengeDetails = {
+    payment_requirements: X402PaymentRequirements;
+    nonce_binding: X402NonceBinding;
+    /**
+     * ISO-8601 expiry of the challenge.
+     */
+    expires_at: string;
+};
+
+/**
+ * The result of issuing an email-native payment challenge. `interaction_id`
+ * is the real email thread id (`uuid@domain`) the payment is bound to;
+ * `challenge_id` is the underlying challenge record. Hand the `challenge`
+ * to the payer, who replies with a signed `payment` interaction step (the
+ * SDK `payEmailChallenge` helper builds it).
+ *
+ */
+export type X402EmailChallenge = {
+    /**
+     * The email thread id (`uuid@domain`) the payment is bound to.
+     */
+    interaction_id: string;
+    /**
+     * The underlying challenge record id.
+     */
+    challenge_id: string;
+    challenge: X402EmailChallengeDetails;
+};
+
+/**
  * A signed x402 v1 `PaymentPayload`. The SDK `pay()` helper builds this;
  * callers rarely construct it by hand. Field names are x402-native.
  *
@@ -3162,6 +3236,14 @@ export type OrgSecretWriteResult = {
  * Resource UUID
  */
 export type ResourceId = string;
+
+/**
+ * Optional idempotency key. Retrying a request with the same key returns
+ * the original result instead of repeating the side effect (for
+ * `createEmailChallenge`, re-sending the email).
+ *
+ */
+export type IdempotencyKey = string;
 
 /**
  * Pagination cursor from a previous response's `meta.cursor` field.
@@ -6304,6 +6386,74 @@ export type RegisterPayoutAddressResponses = {
 };
 
 export type RegisterPayoutAddressResponse = RegisterPayoutAddressResponses[keyof RegisterPayoutAddressResponses];
+
+export type CreateEmailChallengeData = {
+    body: CreateEmailChallengeInput;
+    headers?: {
+        /**
+         * Optional idempotency key. Retrying a request with the same key returns
+         * the original result instead of repeating the side effect (for
+         * `createEmailChallenge`, re-sending the email).
+         *
+         */
+        'idempotency-key'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/x402/email-challenges';
+};
+
+export type CreateEmailChallengeErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * The request was well-formed but could not be processed. For Payments
+     * this covers a missing payout address, a failed payment verification, a
+     * spend-policy decline, or an expired challenge; `error.code` distinguishes
+     * them.
+     *
+     */
+    422: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type CreateEmailChallengeError = CreateEmailChallengeErrors[keyof CreateEmailChallengeErrors];
+
+export type CreateEmailChallengeResponses = {
+    /**
+     * Idempotent replay: a request with a previously-used idempotency key
+     * returns the original issued challenge without sending a second email.
+     *
+     */
+    200: SuccessEnvelope & {
+        data?: X402EmailChallenge;
+    };
+    /**
+     * Email challenge issued
+     */
+    201: SuccessEnvelope & {
+        data?: X402EmailChallenge;
+    };
+};
+
+export type CreateEmailChallengeResponse = CreateEmailChallengeResponses[keyof CreateEmailChallengeResponses];
 
 export type CreateChallengeData = {
     body: CreateChallengeInput;

@@ -12,6 +12,7 @@ from primitive import (
     PrivateKeySigner,
     X402Challenge,
     X402Client,
+    X402EmailChallenge,
     X402Error,
     build_payout_registration_message,
 )
@@ -464,3 +465,154 @@ class TestCompletenessMethods:
         client, rec = _client(_json_response({"success": True, "data": []}))
         assert client.list_declined_payments() == []
         assert str(rec.calls[0].url) == "https://api.example/v1/x402/declined-payments"
+
+
+# The canonical binding locks to the normative nonce vector the platform
+# recomputes; the bound nonce MUST be 0xc955...6c6e, or every email payment
+# fails verification.
+NORMATIVE_NONCE = "0xc955a08812ab83f9e25c92e5162267b913957c3cc8678de1cf1449f77b516c6e"
+EMAIL_INTERACTION_ID = "a1b2c3d4-0000-0000-0000-000000000001@payer.example"
+EMAIL_CHALLENGE_STEP_ID = "f00dface-0000-0000-0000-0000000000aa"
+
+
+def _email_challenge_dict() -> dict[str, Any]:
+    return {
+        "interaction_id": EMAIL_INTERACTION_ID,
+        "challenge_id": "22222222-2222-4222-8222-222222222222",
+        "challenge": {
+            "payment_requirements": {
+                "scheme": "exact",
+                "network": "base-sepolia",
+                "maxAmountRequired": "10000",
+                "payTo": "0x1111111111111111111111111111111111111111",
+                "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                "extra": {"name": "USDC", "version": "2"},
+            },
+            "nonce_binding": {
+                "interaction_id": EMAIL_INTERACTION_ID,
+                "challenge_step_id": EMAIL_CHALLENGE_STEP_ID,
+                "challenge_nonce": (
+                    "aabbccddeeff00112233445566778899"
+                    "aabbccddeeff00112233445566778899"
+                ),
+            },
+            "expires_at": _iso(3600),
+        },
+    }
+
+
+def _email_challenge(**overrides: Any) -> X402EmailChallenge:
+    data = _email_challenge_dict()
+    data.update(overrides)
+    return X402EmailChallenge.from_dict(data)
+
+
+class TestCreateEmailChallenge:
+    def test_posts_from_to_amount_network(self) -> None:
+        client, rec = _client(
+            _json_response(
+                {"success": True, "data": _email_challenge_dict()}, 201
+            )
+        )
+        res = client.create_email_challenge(
+            from_="payee@seller.example",
+            to="payer@buyer.example",
+            amount="10000",
+            network="base-sepolia",
+            idempotency_key="idem-1",
+        )
+        assert res.interaction_id == EMAIL_INTERACTION_ID
+        req = rec.calls[0]
+        assert str(req.url) == "https://api.example/v1/x402/email-challenges"
+        assert req.method == "POST"
+        body = json.loads(req.content)
+        assert body["from"] == "payee@seller.example"
+        assert body["to"] == "payer@buyer.example"
+        assert body["amount"] == "10000"
+        assert body["network"] == "base-sepolia"
+        assert req.headers["idempotency-key"] == "idem-1"
+
+    def test_amount_usdc_converts_to_base_units(self) -> None:
+        client, rec = _client(
+            _json_response(
+                {"success": True, "data": _email_challenge_dict()}, 201
+            )
+        )
+        client.create_email_challenge(
+            from_="payee@seller.example",
+            to="payer@buyer.example",
+            amount_usdc="0.01",
+        )
+        assert json.loads(rec.calls[0].content)["amount"] == "10000"
+
+    def test_requires_from_and_to(self) -> None:
+        client, _ = _client(_json_response({"success": True, "data": {}}))
+        with pytest.raises(X402Error, match=r"requires `from_`"):
+            client.create_email_challenge(
+                from_="", to="payer@buyer.example", amount="10000"
+            )
+        with pytest.raises(X402Error, match=r"requires `to`"):
+            client.create_email_challenge(
+                from_="payee@seller.example", to="", amount="10000"
+            )
+
+
+class TestPayEmailChallenge:
+    def test_builds_signed_payment_step_with_bound_normative_nonce(self) -> None:
+        client, rec = _client(_json_response({"success": True, "data": {}}))
+        built = client.pay_email_challenge(_email_challenge(), signer=SIGNER)
+
+        env = built.envelope
+        assert env["interaction_version"] == 1
+        assert env["interaction_id"] == EMAIL_INTERACTION_ID
+        assert env["protocol"] == "x402.payment"
+        assert env["protocol_version"] == 1
+        assert env["step"] == "payment"
+        # The payment step is threaded after the challenge step.
+        assert env["prev_step_id"] == EMAIL_CHALLENGE_STEP_ID
+
+        # CRITICAL: the signed authorization carries the interaction-bound nonce,
+        # byte-identical to the normative vector the platform recomputes.
+        authz = env["payload"]["payment"]["payload"]["authorization"]
+        assert authz["nonce"] == NORMATIVE_NONCE
+        assert authz["from"].lower() == SIGNER.address.lower()
+        assert authz["to"] == "0x1111111111111111111111111111111111111111"
+        assert authz["value"] == "10000"
+        assert env["payload"]["payment"]["payload"]["signature"].startswith("0x")
+
+        # The canonical JSON round-trips to the same envelope (attached bytes).
+        assert json.loads(built.json) == env
+        # No network call is made.
+        assert rec.calls == []
+
+    def test_rejects_missing_signer(self) -> None:
+        client, _ = _client(_json_response({"success": True, "data": {}}))
+        with pytest.raises(X402Error, match="requires a signer"):
+            client.pay_email_challenge(_email_challenge(), signer=None)  # type: ignore[arg-type]
+
+    def test_rejects_already_expired_challenge(self) -> None:
+        client, rec = _client(_json_response({"success": True, "data": {}}))
+        data = _email_challenge_dict()
+        data["challenge"]["expires_at"] = _iso(-3600)
+        with pytest.raises(X402Error, match="already expired"):
+            client.pay_email_challenge(
+                X402EmailChallenge.from_dict(data), signer=SIGNER
+            )
+        assert rec.calls == []
+
+    def test_rejects_interaction_id_mismatch(self) -> None:
+        client, _ = _client(_json_response({"success": True, "data": {}}))
+        bad = _email_challenge(
+            interaction_id="deadbeef-0000-0000-0000-000000000099@payer.example"
+        )
+        with pytest.raises(X402Error, match="interaction_id"):
+            client.pay_email_challenge(bad, signer=SIGNER)
+
+    def test_rejects_malformed_payment_requirements(self) -> None:
+        client, _ = _client(_json_response({"success": True, "data": {}}))
+        data = _email_challenge_dict()
+        data["challenge"]["payment_requirements"]["maxAmountRequired"] = "nope"
+        with pytest.raises(X402Error, match="maxAmountRequired"):
+            client.pay_email_challenge(
+                X402EmailChallenge.from_dict(data), signer=SIGNER
+            )

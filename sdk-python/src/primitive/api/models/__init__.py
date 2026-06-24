@@ -41,6 +41,10 @@ from .create_agent_claim_link_response_200 import CreateAgentClaimLinkResponse20
 from .create_challenge_input import CreateChallengeInput
 from .create_challenge_input_network import CreateChallengeInputNetwork
 from .create_challenge_response_201 import CreateChallengeResponse201
+from .create_email_challenge_input import CreateEmailChallengeInput
+from .create_email_challenge_input_network import CreateEmailChallengeInputNetwork
+from .create_email_challenge_response_200 import CreateEmailChallengeResponse200
+from .create_email_challenge_response_201 import CreateEmailChallengeResponse201
 from .create_endpoint_input import CreateEndpointInput
 from .create_endpoint_input_rules import CreateEndpointInputRules
 from .create_endpoint_response_201 import CreateEndpointResponse201
@@ -302,6 +306,8 @@ from .x402_challenge_network import X402ChallengeNetwork
 from .x402_challenge_status import X402ChallengeStatus
 from .x402_declined_payment import X402DeclinedPayment
 from .x402_declined_payment_network import X402DeclinedPaymentNetwork
+from .x402_email_challenge import X402EmailChallenge
+from .x402_email_challenge_details import X402EmailChallengeDetails
 from .x402_nonce_binding import X402NonceBinding
 from .x402_payment_payload import X402PaymentPayload
 from .x402_payment_payload_network import X402PaymentPayloadNetwork
@@ -358,6 +364,10 @@ __all__ = (
     "CreateChallengeInput",
     "CreateChallengeInputNetwork",
     "CreateChallengeResponse201",
+    "CreateEmailChallengeInput",
+    "CreateEmailChallengeInputNetwork",
+    "CreateEmailChallengeResponse200",
+    "CreateEmailChallengeResponse201",
     "CreateEndpointInput",
     "CreateEndpointInputRules",
     "CreateEndpointResponse201",
@@ -619,6 +629,8 @@ __all__ = (
     "X402ChallengeStatus",
     "X402DeclinedPayment",
     "X402DeclinedPaymentNetwork",
+    "X402EmailChallenge",
+    "X402EmailChallengeDetails",
     "X402NonceBinding",
     "X402PaymentPayload",
     "X402PaymentPayloadNetwork",

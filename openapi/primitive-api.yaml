@@ -3506,6 +3506,70 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  /x402/email-challenges:
+    post:
+      operationId: createEmailChallenge
+      summary: Create an email-native payment challenge
+      description: |
+        Issue an x402 payment challenge over a real email thread (the payee
+        side). Unlike `createChallenge` (which mints a synthetic challenge id),
+        this sends the challenge as an email from `from` to `to` and binds the
+        payment to that DKIM-authenticated thread. The `pay_to` address and the
+        token asset are resolved server-side from your registered default payout
+        address for the network, never from the request. The response carries
+        the thread's `interaction_id` plus the `challenge` (the
+        `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
+        needs to sign; the payer replies with a signed `payment` interaction
+        step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
+        is 0.01 USDC).
+      tags: [Payments]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmailChallengeInput'
+      responses:
+        '201':
+          description: Email challenge issued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/X402EmailChallenge'
+        '200':
+          description: |
+            Idempotent replay: a request with a previously-used idempotency key
+            returns the original issued challenge without sending a second email.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/X402EmailChallenge'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
   /x402/challenges:
     post:
       operationId: createChallenge
@@ -3759,6 +3823,18 @@ components:
         type: string
         format: uuid
       description: Resource UUID
+
+    IdempotencyKey:
+      name: idempotency-key
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 255
+      description: |
+        Optional idempotency key. Retrying a request with the same key returns
+        the original result instead of repeating the side effect (for
+        `createEmailChallenge`, re-sending the email).
 
     Cursor:
       name: cursor
@@ -4153,6 +4229,87 @@ components:
           allOf:
             - $ref: '#/components/schemas/X402PaymentRequirements'
       required: [id, status, network, asset, amount, pay_to, nonce_binding, expires_at]
+
+    CreateEmailChallengeInput:
+      type: object
+      additionalProperties: false
+      description: |
+        Issue a payment challenge over an email thread. `from` is your sending
+        address (the funds receiver; ownership is enforced at send, exactly as
+        for outbound mail) and `to` is the payer's address. The `pay_to` payout
+        wallet and the token asset are resolved server-side, never taken from
+        the request.
+      properties:
+        from:
+          type: string
+          format: email
+          description: |
+            Your sending address (the payee / funds receiver). Must be an
+            address your org is allowed to send from.
+        to:
+          type: string
+          format: email
+          description: The payer's email address the challenge is sent to.
+        amount:
+          type: string
+          pattern: '^[1-9][0-9]{0,38}$'
+          description: |
+            Amount to collect, in token base units. USDC has 6 decimals, so
+            `"10000"` is 0.01 USDC.
+        network:
+          type: string
+          enum: [base, base-sepolia]
+        expires_in:
+          type: integer
+          minimum: 60
+          maximum: 86400
+          description: Seconds until the challenge expires. Defaults to 3600.
+        resource:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: Optional URL identifying what is being paid for.
+        description:
+          type: string
+          maxLength: 512
+          description: Optional human-readable description of the payment.
+      required: [from, to, amount, network]
+
+    X402EmailChallengeDetails:
+      type: object
+      description: |
+        The challenge the payer needs to sign and pay, carried inside an
+        email-native challenge response.
+      properties:
+        payment_requirements:
+          $ref: '#/components/schemas/X402PaymentRequirements'
+        nonce_binding:
+          $ref: '#/components/schemas/X402NonceBinding'
+        expires_at:
+          type: string
+          format: date-time
+          description: ISO-8601 expiry of the challenge.
+      required: [payment_requirements, nonce_binding, expires_at]
+
+    X402EmailChallenge:
+      type: object
+      description: |
+        The result of issuing an email-native payment challenge. `interaction_id`
+        is the real email thread id (`uuid@domain`) the payment is bound to;
+        `challenge_id` is the underlying challenge record. Hand the `challenge`
+        to the payer, who replies with a signed `payment` interaction step (the
+        SDK `payEmailChallenge` helper builds it).
+      properties:
+        interaction_id:
+          type: string
+          description: The email thread id (`uuid@domain`) the payment is bound to.
+        challenge_id:
+          type: string
+          format: uuid
+          description: The underlying challenge record id.
+        challenge:
+          $ref: '#/components/schemas/X402EmailChallengeDetails'
+      required: [interaction_id, challenge_id, challenge]
 
     X402PaymentPayload:
       type: object

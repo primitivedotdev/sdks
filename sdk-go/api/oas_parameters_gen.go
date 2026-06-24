@@ -16,6 +16,98 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
+// CreateEmailChallengeParams is parameters of createEmailChallenge operation.
+type CreateEmailChallengeParams struct {
+	// Optional idempotency key. Retrying a request with the same key returns
+	// the original result instead of repeating the side effect (for
+	// `createEmailChallenge`, re-sending the email).
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackCreateEmailChallengeParams(packed middleware.Parameters) (params CreateEmailChallengeParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "idempotency-key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeCreateEmailChallengeParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateEmailChallengeParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: idempotency-key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "idempotency-key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "idempotency-key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // CreateFunctionSecretParams is parameters of createFunctionSecret operation.
 type CreateFunctionSecretParams struct {
 	// Resource UUID.

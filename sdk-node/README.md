@@ -266,6 +266,52 @@ const receipt = await x402.pay(challenge, { signer: payer });
 console.log(receipt.status, receipt.settle_tx); // settled, on-chain tx hash
 ```
 
+### Email-native payments
+
+The challenge can also ride a real email thread instead of a synthetic id. The payee issues the challenge as an email; the payer signs it into an `interaction.json` payment step and sends it back as an attachment on the reply.
+
+The payee issues the challenge with `createEmailChallenge`. The `pay_to` payout wallet and the token asset are resolved server-side; you only supply the addresses, amount, and network:
+
+```ts
+const issued = await x402.createEmailChallenge({
+  from: "payee@your-domain.example", // your sending address (the funds receiver)
+  to: "payer@their-domain.example", // the payer's address
+  amountUsdc: "0.01",
+  network: "base-sepolia",
+});
+// issued.interaction_id is the email thread the payment is bound to;
+// issued.challenge carries the payment_requirements + nonce_binding the payer signs.
+```
+
+The payer, on receiving the challenge, signs it locally with `payEmailChallenge` and sends the resulting envelope back as an `interaction.json` attachment. `payEmailChallenge` does not send anything; it returns the signed payment-step envelope and its canonical JSON bytes:
+
+```ts
+import { privateKeyToAccount } from "viem/accounts";
+
+const payer = privateKeyToAccount(process.env.PAYER_KEY as `0x${string}`);
+const built = await x402.payEmailChallenge(issued, { signer: payer });
+
+// `built.json` is the interaction.json body. The payer received the challenge
+// as an inbound email; reply to it with the envelope attached as
+// `interaction.json` using the email client's `reply` method (see the email
+// client above). The platform reads the envelope, re-derives the
+// interaction-bound nonce, and settles on chain.
+import { Buffer } from "node:buffer";
+import { createClient } from "@primitivedotdev/sdk";
+
+const mail = createClient({ apiKey: process.env.PRIMITIVE_API_KEY! });
+await mail.reply(challengeEmail, {
+  text: "Payment attached.",
+  attachments: [
+    {
+      filename: "interaction.json",
+      content_type: "application/json",
+      content_base64: Buffer.from(built.json, "utf8").toString("base64"),
+    },
+  ],
+});
+```
+
 ### Signing primitives (lower level)
 
 `pay()` builds and signs the payment for you. When you need to drive the signing yourself, for example to sign a challenge carried in an email reply and submit the payment separately, the same building blocks are exported directly:
