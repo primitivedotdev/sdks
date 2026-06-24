@@ -14,9 +14,10 @@ import math
 import os
 import re
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, NoReturn
 from urllib.parse import quote
 
 import httpx
@@ -299,7 +300,7 @@ def _validate_challenge(c: X402Challenge | None) -> None:
     crypto error mid-sign.
     """
 
-    def bad(field: str) -> None:
+    def bad(field: str) -> NoReturn:
         raise X402Error(f"challenge is missing or malformed: {field}", 0)
 
     if not c or not isinstance(c, X402Challenge):
@@ -324,7 +325,7 @@ def _validate_challenge(c: X402Challenge | None) -> None:
 
 def _validate_payment_requirements(
     pr: X402PaymentRequirements | None,
-    bad: Any,
+    bad: Callable[[str], NoReturn],
 ) -> None:
     """Validate the x402 PaymentRequirements shared by both challenge shapes."""
     if not pr:
@@ -348,7 +349,7 @@ def _validate_payment_requirements(
 def _validate_email_challenge(c: X402EmailChallenge | None) -> None:
     """Assert an email-native challenge is fully hydrated before signing."""
 
-    def bad(field: str) -> None:
+    def bad(field: str) -> NoReturn:
         raise X402Error(
             f"email challenge is missing or malformed: {field}", 0
         )

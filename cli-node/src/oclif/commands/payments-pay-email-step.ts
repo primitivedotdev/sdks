@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { Command, Flags } from "@oclif/core";
-import type { X402EmailChallenge } from "@primitivedotdev/sdk/x402";
+import {
+  createX402Client,
+  type X402EmailChallenge,
+} from "@primitivedotdev/sdk/x402";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
@@ -8,11 +11,11 @@ import {
   TIME_FLAG_DESCRIPTION,
 } from "../api-command.js";
 import {
-  buildX402Client,
   PRIVATE_KEY_ENV,
   PRIVATE_KEY_FLAG_DESCRIPTION,
   reportX402Error,
   signerFromPrivateKey,
+  x402BaseUrl,
 } from "./payments-shared.js";
 
 // `primitive payments pay-email-step` is the payer side of an email-native
@@ -39,6 +42,13 @@ export function readEmailChallenge(input: {
   } else {
     // Default to stdin so a challenge can be piped:
     //   primitive payments create-email-challenge ... | primitive payments pay-email-step
+    // On an interactive TTY (no pipe) readFileSync(0) blocks silently waiting
+    // for EOF, so print a hint first the way `jq` does.
+    if (process.stdin.isTTY) {
+      process.stderr.write(
+        "Reading the email challenge JSON from stdin; paste it and press Ctrl-D (or use --challenge / --challenge-file).\n",
+      );
+    }
     raw = readFileSync(0, "utf8");
   }
   const trimmed = raw.trim();
@@ -131,17 +141,15 @@ class PaymentsPayEmailStepCommand extends Command {
       });
 
     await runWithTiming(flags.time, async () => {
-      // The signing is fully local; the client is only used to keep base-URL /
-      // auth handling consistent with the other payments commands and to give a
-      // not-signed-in caller the same hint.
-      const client = buildX402Client({
-        apiKey: auth.apiKey,
-        resolvedApiBaseUrl: requestConfig.resolvedApiBaseUrl,
+      // `payEmailChallenge` is fully local (no network call), so this command
+      // deliberately does NOT require an API key: a payer with a wallet key and
+      // a received challenge can sign even when not signed in to Primitive. The
+      // client is constructed only to reuse the SDK helper; `apiKey` is passed
+      // through when present but is never used for the signing path.
+      const client = createX402Client({
+        apiKey: auth.apiKey || undefined,
+        baseUrl: x402BaseUrl(requestConfig.resolvedApiBaseUrl),
       });
-      if (!client) {
-        process.exitCode = 1;
-        return;
-      }
 
       try {
         const challenge = readEmailChallenge({
