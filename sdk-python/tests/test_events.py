@@ -18,7 +18,6 @@ from primitive import (
     parse_webhook_event,
     sign_webhook_payload,
 )
-from primitive.webhook import _get_event_header
 
 SECRET = "whsec_test_secret_for_events"
 
@@ -96,10 +95,39 @@ def test_is_known_webhook_event_type() -> None:
     assert not is_known_webhook_event_type(None)
 
 
-def test_get_event_header_case_insensitive() -> None:
-    assert _get_event_header({"x-webhook-event": "payment.settled"}) == "payment.settled"
-    assert _get_event_header({"X-Webhook-Event": "email.received"}) == "email.received"
-    assert _get_event_header({}) is None
+def test_event_header_is_read_case_insensitively() -> None:
+    # Exercise header keying through the public verify-then-parse entry point:
+    # the X-Webhook-Event header is the discriminator and must be matched
+    # regardless of letter case. A payment body carries its name in `type`, so a
+    # correctly read header is what overlays the canonical `event`.
+    body = json.dumps(
+        {"type": "payment.settled", "id": "pay_h", "payment": {"amount": "5"}}
+    )
+    signature = _sign(body)
+
+    for header_name in ("x-webhook-event", "X-Webhook-Event", "X-WEBHOOK-EVENT"):
+        event = handle_webhook_event(
+            body=body,
+            headers={"primitive-signature": signature, header_name: "payment.settled"},
+            secret=SECRET,
+        )
+        assert _event_name(event) == "payment.settled"
+        assert is_payment_settled_event(event)
+
+
+def test_missing_event_header_falls_back_to_body_event() -> None:
+    # With no X-Webhook-Event header present, the public entry point falls back
+    # to the body's own `event` field rather than inventing a name.
+    body = json.dumps({"event": "payment.failed", "id": "pay_b"})
+
+    event = handle_webhook_event(
+        body=body,
+        headers={"primitive-signature": _sign(body)},
+        secret=SECRET,
+    )
+
+    assert _event_name(event) == "payment.failed"
+    assert is_payment_failed_event(event)
 
 
 def test_handle_webhook_event_verifies_payment_body() -> None:

@@ -10,7 +10,13 @@ across all three families, which is why the parser keys on it.
 
 from __future__ import annotations
 
+import sys
 from typing import Any, Literal, TypedDict, TypeGuard
+
+if sys.version_info >= (3, 13):
+    from typing import ReadOnly
+else:
+    from typing_extensions import ReadOnly
 
 #: The five first-party email events (subject = an email).
 EMAIL_EVENT_TYPES: tuple[str, ...] = (
@@ -70,17 +76,35 @@ class PaymentEvent(TypedDict, total=False):
     on a single field.
     """
 
-    event: Literal["payment.settled", "payment.failed"]
+    # ReadOnly so subclasses may narrow this Literal (PEP 705); a mutable
+    # TypedDict field is invariant and could not be narrowed in a subclass.
+    event: ReadOnly[Literal["payment.settled", "payment.failed"]]
     type: str
     id: str
     created_at: str
     payment: dict[str, Any]
 
 
-#: A ``payment.settled`` webhook event.
-PaymentSettledEvent = PaymentEvent
-#: A ``payment.failed`` webhook event.
-PaymentFailedEvent = PaymentEvent
+class PaymentSettledEvent(PaymentEvent, total=False):
+    """A ``payment.settled`` webhook event.
+
+    Mirrors the TypeScript SDK: a subclass of :class:`PaymentEvent` whose
+    ``event`` field is narrowed to ``Literal["payment.settled"]`` so a type
+    checker rejects treating it as a failed event after a guard narrows to it.
+    """
+
+    event: ReadOnly[Literal["payment.settled"]]
+
+
+class PaymentFailedEvent(PaymentEvent, total=False):
+    """A ``payment.failed`` webhook event.
+
+    Mirrors the TypeScript SDK: a subclass of :class:`PaymentEvent` whose
+    ``event`` field is narrowed to ``Literal["payment.failed"]`` so a type
+    checker rejects treating it as a settled event after a guard narrows to it.
+    """
+
+    event: ReadOnly[Literal["payment.failed"]]
 
 
 class InteractionEvent(TypedDict, total=False):
@@ -112,12 +136,12 @@ def is_payment_event(event: object) -> TypeGuard[PaymentEvent]:
     return _event_name(event) in ("payment.settled", "payment.failed")
 
 
-def is_payment_settled_event(event: object) -> TypeGuard[PaymentEvent]:
+def is_payment_settled_event(event: object) -> TypeGuard[PaymentSettledEvent]:
     """Type guard for the ``payment.settled`` event."""
     return _event_name(event) == "payment.settled"
 
 
-def is_payment_failed_event(event: object) -> TypeGuard[PaymentEvent]:
+def is_payment_failed_event(event: object) -> TypeGuard[PaymentFailedEvent]:
     """Type guard for the ``payment.failed`` event."""
     return _event_name(event) == "payment.failed"
 
