@@ -190,6 +190,12 @@ describe("readEmailChallenge", () => {
   it("rejects empty input", () => {
     expect(() => readEmailChallenge({ inline: "   " })).toThrow(/no challenge/);
   });
+
+  it("rejects a { data: null } envelope instead of returning null", () => {
+    expect(() =>
+      readEmailChallenge({ inline: JSON.stringify({ data: null }) }),
+    ).toThrow(/no `data` object/);
+  });
 });
 
 describe("reportX402Error", () => {

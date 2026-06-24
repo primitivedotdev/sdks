@@ -4,12 +4,13 @@ import {
   createX402Client,
   type X402EmailChallenge,
 } from "@primitivedotdev/sdk/x402";
-import { createAuthenticatedCliApiClient } from "../api-client.js";
+import { resolveCliApiRequestConfig } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
   runWithTiming,
   TIME_FLAG_DESCRIPTION,
 } from "../api-command.js";
+import type { ResolvedCliAuth } from "../auth.js";
 import {
   PRIVATE_KEY_ENV,
   PRIVATE_KEY_FLAG_DESCRIPTION,
@@ -65,9 +66,17 @@ export function readEmailChallenge(input: {
   }
   // Accept either the bare email-challenge object or a `{ data: { ... } }`
   // envelope so the output of `payments create-email-challenge` can be piped
-  // straight in.
+  // straight in. Guard against a null/non-object `data` (e.g. `{"data":null}`)
+  // so it fails here with a clear message instead of surfacing a confusing
+  // downstream crash when the SDK reads the (missing) challenge fields.
   if (parsed && typeof parsed === "object" && "data" in parsed) {
-    return (parsed as { data: X402EmailChallenge }).data;
+    const data = (parsed as { data: unknown }).data;
+    if (!data || typeof data !== "object") {
+      throw new Error(
+        'challenge envelope has no `data` object; pass the email challenge JSON itself or a `{ "data": { ... } }` envelope',
+      );
+    }
+    return data as X402EmailChallenge;
   }
   return parsed as X402EmailChallenge;
 }
@@ -133,21 +142,30 @@ class PaymentsPayEmailStepCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(PaymentsPayEmailStepCommand);
 
-    const { auth, baseUrlOverridden, requestConfig } =
-      await createAuthenticatedCliApiClient({
-        apiKey: flags["api-key"],
-        apiBaseUrl: flags["api-base-url"],
-        configDir: this.config.configDir,
-      });
+    // `payEmailChallenge` is fully local (no network call), so this command
+    // deliberately does NOT authenticate: a payer with a wallet key and a
+    // received challenge can sign even when not signed in to Primitive (or with
+    // an expired stored login). Resolve only the request config for the base
+    // URL; do not build the authenticated client, which can throw when stored
+    // credentials are expired/malformed and would block the offline signer.
+    const requestConfig = resolveCliApiRequestConfig({
+      apiBaseUrl: flags["api-base-url"],
+      configDir: this.config.configDir,
+    });
+    const baseUrlOverridden = requestConfig.baseUrlOverridden;
+    // A synthetic "no credentials" auth so the shared error reporter stays a
+    // no-op for the unauthorized hint (this path never makes a request that
+    // could 401).
+    const auth: ResolvedCliAuth = {
+      apiKey: flags["api-key"],
+      apiBaseUrl: requestConfig.resolvedApiBaseUrl,
+      source: "none",
+      credentials: null,
+    };
 
     await runWithTiming(flags.time, async () => {
-      // `payEmailChallenge` is fully local (no network call), so this command
-      // deliberately does NOT require an API key: a payer with a wallet key and
-      // a received challenge can sign even when not signed in to Primitive. The
-      // client is constructed only to reuse the SDK helper; `apiKey` is passed
-      // through when present but is never used for the signing path.
       const client = createX402Client({
-        apiKey: auth.apiKey || undefined,
+        apiKey: flags["api-key"] || undefined,
         baseUrl: x402BaseUrl(requestConfig.resolvedApiBaseUrl),
       });
 
