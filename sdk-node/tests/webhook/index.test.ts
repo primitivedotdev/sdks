@@ -15,8 +15,8 @@ import {
   PrimitiveWebhookError,
   parseWebhookEvent,
   RawEmailDecodeError,
-  type UnknownEvent,
   verifyRawEmailDownload,
+  type WebhookEvent,
   WebhookPayloadError,
   WebhookValidationError,
   WebhookVerificationError,
@@ -53,7 +53,10 @@ describe("parseWebhookEvent", () => {
         result satisfies EmailReceivedEvent;
         expect(result.event).toBe("email.received");
       } else {
-        result satisfies UnknownEvent;
+        // The else branch is the rest of the WebhookEvent union (payment.*,
+        // interaction.x402.*, UnknownEvent) now that the parser keys on the
+        // X-Webhook-Event header and returns typed non-email events.
+        result satisfies Exclude<WebhookEvent, EmailReceivedEvent>;
         expect.fail("expected valid payload to narrow to EmailReceivedEvent");
       }
     });

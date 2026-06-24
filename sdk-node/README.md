@@ -434,6 +434,43 @@ For most app-code callers, `primitive.receive(...)` from the root import handles
 
 For the full reference (response codes, replay protection details), see the API-level "Webhook signing" section in the [OpenAPI spec](https://api.primitive.dev/v1/openapi).
 
+### Payment and interaction webhook events
+
+Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{ interaction: { ... } }` with no event/type field at all.
+
+`handleWebhookEvent` verifies the signature over the raw body first, then keys on the header to return a typed event for known types and an `UnknownEvent` (it does not throw) for the rest:
+
+```ts
+import {
+  handleWebhookEvent,
+  isPaymentSettledEvent,
+  isInteractionX402Event,
+} from "@primitivedotdev/sdk/webhook";
+
+const event = handleWebhookEvent({
+  body: rawBodyString,
+  headers: req.headers,
+  secret: process.env.PRIMITIVE_WEBHOOK_SECRET!,
+});
+
+if (isPaymentSettledEvent(event)) {
+  // typed PaymentSettledEvent; settlement details are under event.payment
+  console.log("settled", event.id);
+} else if (isInteractionX402Event(event)) {
+  // typed interaction.x402.* event (challenge/payment/settled/...)
+  console.log(event.event, event.interaction);
+}
+```
+
+The full catalog of header values is the `WebhookEventType` union, also exported as the `WEBHOOK_EVENT_TYPES` array:
+
+- `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
+- `payment.settled`, `payment.failed`
+- `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
+- `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
+
+Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed with the dual-header scheme: the primary `Primitive-Signature` header and a legacy `MyMX-Signature` header carrying the same value. `handleWebhook` remains hard-typed to `email.received` for backward compatibility; reach for `handleWebhookEvent` when you need the full event union.
+
 ### Other subpath imports
 
 - `@primitivedotdev/sdk/openapi` exports the OpenAPI document and the operation manifest as JSON. Useful for tools that want the spec inline.

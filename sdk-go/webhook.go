@@ -161,7 +161,16 @@ func VerifyWebhookSignature(options VerifyOptions) (bool, error) {
 	return false, NewWebhookVerificationError("SIGNATURE_MISMATCH", message, "")
 }
 
-func ParseWebhookEvent(input any) (WebhookEvent, error) {
+// ParseWebhookEvent classifies a webhook payload into a typed event.
+//
+// The event name is carried in the X-Webhook-Event HEADER for every event
+// family; pass it as the optional eventType argument (HandleWebhookEvent reads
+// it for you). The stored body is sent verbatim with no envelope: email.*
+// bodies carry "event", payment.* bodies carry the name in "type", and
+// interaction.* bodies are just {"interaction": {...}} with no event/type
+// field. The header is therefore the PRIMARY discriminator; a top-level "event"
+// string in the body is used only as a backward-compat fallback.
+func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
 	if input == nil {
 		return nil, NewWebhookPayloadError("PAYLOAD_NULL", "Received null instead of webhook payload", "Check that your request body variable is defined.", nil)
 	}
@@ -184,22 +193,58 @@ func ParseWebhookEvent(input any) (WebhookEvent, error) {
 	if err != nil {
 		return nil, err
 	}
-	eventName, ok := obj["event"].(string)
-	if !ok {
-		return nil, NewWebhookPayloadError("PAYLOAD_MISSING_EVENT", "Missing 'event' field in payload", "This doesn't look like a Primitive webhook payload.", nil)
+
+	resolvedEvent := ""
+	if len(eventType) > 0 && eventType[0] != "" {
+		resolvedEvent = eventType[0]
+	} else if bodyEvent, ok := obj["event"].(string); ok {
+		resolvedEvent = bodyEvent
 	}
-	if eventName == string(EventTypeEmailReceived) {
+
+	if resolvedEvent == "" {
+		// No X-Webhook-Event header AND no in-body "event" field: we cannot
+		// classify this payload. Preserve the legacy contract and return an
+		// error. The real sender always sets the header, so HandleWebhookEvent
+		// never hits this.
+		return nil, NewWebhookPayloadError("PAYLOAD_MISSING_EVENT", "Missing event discriminator: no X-Webhook-Event header and no 'event' field in payload", "Pass the X-Webhook-Event header (the canonical discriminator) or call HandleWebhookEvent, which reads it for you.", nil)
+	}
+
+	if resolvedEvent == string(EventTypeEmailReceived) {
 		event, err := ValidateEmailReceivedEvent(obj)
 		if err != nil {
 			return nil, err
 		}
 		return *event, nil
 	}
+
 	preserved, err := mapFromInputPreservingNumbers(input)
 	if err != nil {
 		return nil, err
 	}
-	unknown := UnknownEvent{Event: eventName, Payload: preserved}
+
+	if resolvedEvent == "payment.settled" || resolvedEvent == "payment.failed" {
+		// Payment bodies carry the name in "type"; overlay a canonical Event
+		// (from the header) so consumers branch on a single field.
+		payment := PaymentEvent{Event: resolvedEvent, Payload: preserved}
+		if t, ok := preserved["type"].(string); ok {
+			payment.Type = t
+		}
+		if id, ok := preserved["id"].(string); ok {
+			payment.ID = &id
+		}
+		return payment, nil
+	}
+
+	if len(resolvedEvent) >= len("interaction.") && resolvedEvent[:len("interaction.")] == "interaction." {
+		// Interaction event: the body has no event/type field, so surface the
+		// canonical name from the header. Covers the typed interaction.x402.*
+		// lifecycle and the interaction.ack.* events.
+		return InteractionEvent{Event: resolvedEvent, Payload: preserved}, nil
+	}
+
+	// Any other event (including non-email.received email.* events, which have
+	// no dedicated typed shape): return UnknownEvent for forward compatibility.
+	unknown := UnknownEvent{Event: resolvedEvent, Payload: preserved}
 	if id, ok := preserved["id"].(string); ok {
 		unknown.ID = &id
 	}
@@ -270,7 +315,10 @@ func HandleWebhookEvent(options HandleWebhookOptions) (WebhookEvent, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ParseWebhookEvent(parsed)
+	// Classify on the X-Webhook-Event header (the primary discriminator).
+	// Verification above runs on the RAW body and is independent of the event
+	// type, so it works identically for email.*, payment.*, interaction.*.
+	return ParseWebhookEvent(parsed, getHeaderValue(options.Headers, WebhookEventHeader))
 }
 
 func HandleWebhook(options HandleWebhookOptions) (*EmailReceivedEvent, error) {

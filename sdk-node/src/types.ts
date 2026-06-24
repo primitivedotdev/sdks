@@ -162,6 +162,22 @@ export interface UnknownEvent {
   [key: string]: unknown;
 }
 
-export type KnownWebhookEvent = EmailReceivedEvent;
+import type {
+  InteractionX402Event,
+  PaymentFailedEvent,
+  PaymentSettledEvent,
+} from "./webhook/events.js";
+
+/**
+ * The webhook events the SDK returns as fully typed values. The email.received
+ * body is schema-validated; the payment.* and interaction.x402.* shapes are
+ * keyed off the `X-Webhook-Event` header and surfaced with a canonical `event`
+ * field so consumers can branch on a single discriminator.
+ */
+export type KnownWebhookEvent =
+  | EmailReceivedEvent
+  | PaymentSettledEvent
+  | PaymentFailedEvent
+  | InteractionX402Event;
 
 export type WebhookEvent = KnownWebhookEvent | UnknownEvent;

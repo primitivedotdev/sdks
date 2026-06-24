@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from typing import Literal, TypeAlias, TypedDict
 
 from ._compat import StrEnum
+from .events import (
+    InteractionX402Event,
+    PaymentFailedEvent,
+    PaymentSettledEvent,
+)
 
 if sys.version_info >= (3, 11):
     from typing import NotRequired
@@ -246,5 +251,10 @@ class UnknownEvent(TypedDict):
     version: NotRequired[str]
 
 
-KnownWebhookEvent: TypeAlias = GeneratedEmailReceivedEvent
+KnownWebhookEvent: TypeAlias = (
+    GeneratedEmailReceivedEvent
+    | PaymentSettledEvent
+    | PaymentFailedEvent
+    | InteractionX402Event
+)
 WebhookEvent: TypeAlias = KnownWebhookEvent | UnknownEvent

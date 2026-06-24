@@ -444,11 +444,48 @@ client = create_client("prim_test")
 account = get_account(client=client)
 ```
 
+### Payment and interaction webhook events
+
+Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{"interaction": {...}}` with no event/type field at all.
+
+`handle_webhook_event(...)` verifies the signature over the raw body first, then keys on the header to return a typed event for known types and an `UnknownEvent` (it does not raise) for the rest:
+
+```python
+from primitive import (
+    handle_webhook_event,
+    is_payment_settled_event,
+    is_interaction_x402_event,
+)
+
+event = handle_webhook_event(
+    body=raw_body,
+    headers=request.headers,
+    secret=os.environ["PRIMITIVE_WEBHOOK_SECRET"],
+)
+
+if is_payment_settled_event(event):
+    # settlement details are under event["payment"]
+    ...
+elif is_interaction_x402_event(event):
+    # interaction.x402.* event (challenge/payment/settled/...)
+    ...
+```
+
+The full catalog of header values is exported as the `WEBHOOK_EVENT_TYPES` tuple:
+
+- `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
+- `payment.settled`, `payment.failed`
+- `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
+- `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
+
+Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed with the dual-header scheme: the primary `Primitive-Signature` header and a legacy `MyMX-Signature` header carrying the same value. `handle_webhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `handle_webhook_event(...)` when you need the full event union.
+
 ### Lower-level webhook helpers
 
 You can still use the raw helpers directly:
 
 - `handle_webhook(...)`
+- `handle_webhook_event(...)`
 - `parse_webhook_event(...)`
 - `verify_webhook_signature(...)`
 - `validate_email_received_event(...)`
