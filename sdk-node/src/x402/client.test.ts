@@ -359,6 +359,23 @@ describe("X402Client hardening", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("pay() rejects a malformed maxAmountRequired with a named X402Error (not a raw BigInt error)", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: {} }),
+    );
+    const badAmount = {
+      ...CHALLENGE,
+      payment_requirements: {
+        ...CHALLENGE.payment_requirements,
+        maxAmountRequired: "not-a-number",
+      },
+    } as unknown as X402Challenge;
+    await expect(
+      c(fetchMock as unknown as typeof fetch).pay(badAmount, { signer }),
+    ).rejects.toThrow(/maxAmountRequired/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("pay() rejects an already-expired challenge before signing", async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({ success: true, data: {} }),

@@ -225,6 +225,179 @@ func TestPrivateKeySigner_EIP712RoundTrip(t *testing.T) {
 	}
 }
 
+func TestComputePaymentValidityWindow_ExpiryPlusMarginAndNowMinusSkew(t *testing.T) {
+	va, vb, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: 2000,
+		NowSec:                1000,
+		SettlementMarginSec:   300,
+		ClockSkewSec:          120,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if vb.Cmp(big.NewInt(2300)) != 0 {
+		t.Fatalf("validBefore: got %s want 2300", vb)
+	}
+	if va.Cmp(big.NewInt(880)) != 0 {
+		t.Fatalf("validAfter: got %s want 880", va)
+	}
+}
+
+func TestComputePaymentValidityWindow_Defaults(t *testing.T) {
+	va, vb, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: 2000,
+		NowSec:                1000,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if vb.Cmp(big.NewInt(2300)) != 0 {
+		t.Fatalf("validBefore: got %s want 2300", vb)
+	}
+	if va.Cmp(big.NewInt(700)) != 0 {
+		t.Fatalf("validAfter: got %s want 700", va)
+	}
+}
+
+func TestComputePaymentValidityWindow_Degenerate(t *testing.T) {
+	_, _, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: 1000,
+		NowSec:                100000,
+		SettlementMarginSec:   60,
+		ClockSkewSec:          60,
+	})
+	if err == nil {
+		t.Fatal("expected an error for a degenerate window")
+	}
+	if !strings.Contains(err.Error(), "invalid validity window") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestComputePaymentValidityWindow_ExceedsCap(t *testing.T) {
+	_, _, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: 1000 + 48*60*60,
+		NowSec:                1000,
+	})
+	if err == nil {
+		t.Fatal("expected an error for an over-cap window")
+	}
+	if !strings.Contains(err.Error(), "exceeds the") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestSignInteractionPayment_InjectsBoundNonce(t *testing.T) {
+	s, err := NewPrivateKeySigner(testPrivateKey)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	domain := TokenDomain{
+		Name:              "USDC",
+		Version:           "2",
+		ChainID:           84532,
+		VerifyingContract: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+	}
+	auth, sigHex, err := SignInteractionPayment(SignInteractionPaymentInput{
+		Sign:         s.SignTypedData,
+		Payer:        s.Address(),
+		Domain:       domain,
+		PayTo:        "0x1111111111111111111111111111111111111111",
+		Amount:       big.NewInt(10000),
+		NonceBinding: canonicalBinding(),
+		ValidAfter:   big.NewInt(1),
+		ValidBefore:  big.NewInt(99999999),
+	})
+	if err != nil {
+		t.Fatalf("sign failed: %v", err)
+	}
+	// The bound nonce for the canonical binding is the locked normative vector.
+	if auth.Nonce != normativeNonce {
+		t.Fatalf("nonce mismatch:\n got  %s\n want %s", auth.Nonce, normativeNonce)
+	}
+	if auth.From != s.Address() {
+		t.Fatalf("from: got %s want %s", auth.From, s.Address())
+	}
+	if auth.Value.Cmp(big.NewInt(10000)) != 0 {
+		t.Fatalf("value: got %s want 10000", auth.Value)
+	}
+
+	// The signature recovers to the signer.
+	td := transferWithAuthorizationTypedData(domain, auth)
+	digest, _, err := apitypes.TypedDataAndHash(td)
+	if err != nil {
+		t.Fatalf("hash typed data failed: %v", err)
+	}
+	sig, err := hexutil.Decode(sigHex)
+	if err != nil {
+		t.Fatalf("bad signature hex: %v", err)
+	}
+	if sig[64] >= 27 {
+		sig[64] -= 27
+	}
+	pub, err := ethcrypto.SigToPub(digest, sig)
+	if err != nil {
+		t.Fatalf("recover failed: %v", err)
+	}
+	if recovered := ethcrypto.PubkeyToAddress(*pub).Hex(); recovered != testAddress {
+		t.Fatalf("signature did not recover to the payer:\n got  %s\n want %s", recovered, testAddress)
+	}
+}
+
+func TestBuildExactEvmPaymentPayload_WrapsWithVersionAndDecimalStrings(t *testing.T) {
+	auth := TransferAuthorization{
+		From:        "0x2222222222222222222222222222222222222222",
+		To:          "0x1111111111111111111111111111111111111111",
+		Value:       big.NewInt(10000),
+		ValidAfter:  big.NewInt(1),
+		ValidBefore: big.NewInt(99999),
+		Nonce:       normativeNonce,
+	}
+	sig := "0x" + strings.Repeat("ab", 65)
+	p, err := BuildExactEvmPaymentPayload("base-sepolia", auth, sig)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p.X402Version != 1 || p.Scheme != "exact" || p.Network != "base-sepolia" {
+		t.Fatalf("unexpected envelope: %+v", p)
+	}
+	if p.Payload.Signature != sig {
+		t.Fatalf("signature: got %s", p.Payload.Signature)
+	}
+	if p.Payload.Authorization.Value != "10000" {
+		t.Fatalf("value: got %s want 10000", p.Payload.Authorization.Value)
+	}
+	if p.Payload.Authorization.ValidAfter != "1" || p.Payload.Authorization.ValidBefore != "99999" {
+		t.Fatalf("window strings: %+v", p.Payload.Authorization)
+	}
+	if p.Payload.Authorization.Nonce != normativeNonce {
+		t.Fatalf("nonce: got %s", p.Payload.Authorization.Nonce)
+	}
+}
+
+func TestBuildExactEvmPaymentPayload_RejectsMalformedInputs(t *testing.T) {
+	auth := TransferAuthorization{
+		From:        "0x2222222222222222222222222222222222222222",
+		To:          "0x1111111111111111111111111111111111111111",
+		Value:       big.NewInt(10000),
+		ValidAfter:  big.NewInt(1),
+		ValidBefore: big.NewInt(99999),
+		Nonce:       normativeNonce,
+	}
+	goodSig := "0x" + strings.Repeat("ab", 65)
+	if _, err := BuildExactEvmPaymentPayload("ethereum", auth, goodSig); err == nil {
+		t.Fatal("expected an error for an unsupported network")
+	}
+	if _, err := BuildExactEvmPaymentPayload("base-sepolia", auth, "not-hex"); err == nil {
+		t.Fatal("expected an error for a malformed signature")
+	}
+	bad := auth
+	bad.Nonce = "0xdeadbeef"
+	if _, err := BuildExactEvmPaymentPayload("base-sepolia", bad, goodSig); err == nil {
+		t.Fatal("expected an error for a malformed nonce")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Client tests
 // ---------------------------------------------------------------------------
@@ -473,6 +646,16 @@ func TestX402Client_Pay_RejectsMalformedChallenge(t *testing.T) {
 	noPr.PaymentRequirements = X402PaymentRequirements{}
 	if _, err := client.Pay(context.Background(), noPr, newTestSigner(t)); err == nil || !strings.Contains(err.Error(), "payment_requirements") {
 		t.Fatalf("expected payment_requirements error, got %v", err)
+	}
+}
+
+func TestX402Client_Pay_RejectsMalformedMaxAmountRequired(t *testing.T) {
+	// A non-integer amount must surface as a named X402Error, not a panic.
+	client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: "http://unused"})
+	bad := sampleChallenge()
+	bad.PaymentRequirements.MaxAmountRequired = "not-a-number"
+	if _, err := client.Pay(context.Background(), bad, newTestSigner(t)); err == nil || !strings.Contains(err.Error(), "maxAmountRequired") {
+		t.Fatalf("expected maxAmountRequired error, got %v", err)
 	}
 }
 

@@ -10,8 +10,11 @@ from primitive import (
     PrivateKeySigner,
     TokenDomain,
     TransferAuthorization,
+    build_exact_evm_payment_payload,
     build_payout_registration_message,
+    compute_payment_validity_window,
     derive_eip3009_nonce,
+    sign_interaction_payment,
     to_payment_payload,
     transfer_with_authorization_typed_data,
 )
@@ -207,3 +210,162 @@ class TestBuildPayoutRegistrationMessage:
             encode_defunct(text=msg), signature=bytes.fromhex(signature[2:])
         )
         assert recovered == TEST_ADDRESS
+
+
+class TestComputePaymentValidityWindow:
+    def test_sets_valid_before_to_expiry_plus_margin_and_after_to_now_minus_skew(
+        self,
+    ) -> None:
+        valid_after, valid_before = compute_payment_validity_window(
+            challenge_expires_at_sec=2000,
+            now_sec=1000,
+            settlement_margin_sec=300,
+            clock_skew_sec=120,
+        )
+        assert valid_before == 2300
+        assert valid_after == 880
+
+    def test_uses_minute_scale_defaults(self) -> None:
+        valid_after, valid_before = compute_payment_validity_window(
+            challenge_expires_at_sec=2000, now_sec=1000
+        )
+        assert valid_before == 2000 + 300
+        assert valid_after == 1000 - 300
+
+    def test_raises_when_the_window_is_degenerate(self) -> None:
+        with pytest.raises(ValueError, match="invalid validity window"):
+            compute_payment_validity_window(
+                challenge_expires_at_sec=1000,
+                now_sec=100000,
+                settlement_margin_sec=60,
+                clock_skew_sec=60,
+            )
+
+    def test_raises_when_the_total_window_exceeds_the_cap(self) -> None:
+        with pytest.raises(ValueError, match="exceeds the .* cap"):
+            compute_payment_validity_window(
+                challenge_expires_at_sec=1000 + 48 * 60 * 60,
+                now_sec=1000,
+            )
+
+
+class TestSignInteractionPayment:
+    _DOMAIN = TokenDomain(
+        name="USDC",
+        version="2",
+        chain_id=84532,
+        verifying_contract="0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    )
+    _PAY_TO = "0x1111111111111111111111111111111111111111"
+
+    def test_injects_the_interaction_bound_nonce_not_a_random_one(self) -> None:
+        signer = PrivateKeySigner(TEST_KEY)
+        authorization, _ = sign_interaction_payment(
+            sign=signer.sign_typed_data,
+            payer=signer.address,
+            domain=self._DOMAIN,
+            pay_to=self._PAY_TO,
+            amount=10000,
+            nonce_binding=CANONICAL,
+            valid_after=1,
+            valid_before=99_999_999,
+        )
+        # The bound nonce for CANONICAL is the locked normative vector.
+        assert authorization.nonce == NORMATIVE_NONCE
+
+    def test_eip712_signature_recovers_the_signer(self) -> None:
+        signer = PrivateKeySigner(TEST_KEY)
+        authorization, signature = sign_interaction_payment(
+            sign=signer.sign_typed_data,
+            payer=signer.address,
+            domain=self._DOMAIN,
+            pay_to=self._PAY_TO,
+            amount=10000,
+            nonce_binding=CANONICAL,
+            valid_after=1,
+            valid_before=99_999_999,
+        )
+        td = transfer_with_authorization_typed_data(self._DOMAIN, authorization)
+        signable = encode_typed_data(full_message=td)
+        recovered = Account.recover_message(
+            signable, signature=bytes.fromhex(signature[2:])
+        )
+        assert recovered == TEST_ADDRESS
+
+    def test_sets_from_to_value_as_given(self) -> None:
+        signer = PrivateKeySigner(TEST_KEY)
+        authorization, _ = sign_interaction_payment(
+            sign=signer.sign_typed_data,
+            payer=signer.address,
+            domain=self._DOMAIN,
+            pay_to=self._PAY_TO,
+            amount=10000,
+            nonce_binding=CANONICAL,
+            valid_after=1,
+            valid_before=99_999_999,
+        )
+        assert authorization.from_ == TEST_ADDRESS
+        assert authorization.to == self._PAY_TO
+        assert authorization.value == 10000
+
+
+class TestBuildExactEvmPaymentPayload:
+    _SIG = "0x" + "ab" * 65
+
+    def _auth(self) -> TransferAuthorization:
+        return TransferAuthorization(
+            from_="0x2222222222222222222222222222222222222222",
+            to="0x1111111111111111111111111111111111111111",
+            value=10000,
+            valid_after=1,
+            valid_before=99999,
+            nonce=NORMATIVE_NONCE,
+        )
+
+    def test_wraps_with_x402_version_1_and_decimal_string_fields(self) -> None:
+        p = build_exact_evm_payment_payload(
+            network="base-sepolia",
+            authorization=self._auth(),
+            signature=self._SIG,
+        ).to_dict()
+        assert p["x402Version"] == 1
+        assert p["scheme"] == "exact"
+        assert p["network"] == "base-sepolia"
+        assert p["payload"]["signature"] == self._SIG
+        authz = p["payload"]["authorization"]
+        assert authz["value"] == "10000"
+        assert authz["validAfter"] == "1"
+        assert authz["validBefore"] == "99999"
+        assert authz["nonce"] == NORMATIVE_NONCE
+
+    def test_rejects_a_malformed_signature(self) -> None:
+        with pytest.raises(ValueError, match="signature"):
+            build_exact_evm_payment_payload(
+                network="base-sepolia",
+                authorization=self._auth(),
+                signature="not-hex",
+            )
+
+    def test_rejects_a_malformed_nonce(self) -> None:
+        bad = TransferAuthorization(
+            from_=self._auth().from_,
+            to=self._auth().to,
+            value=10000,
+            valid_after=1,
+            valid_before=99999,
+            nonce="0xdeadbeef",
+        )
+        with pytest.raises(ValueError, match="nonce"):
+            build_exact_evm_payment_payload(
+                network="base-sepolia",
+                authorization=bad,
+                signature=self._SIG,
+            )
+
+    def test_rejects_an_unsupported_network(self) -> None:
+        with pytest.raises(ValueError, match="network"):
+            build_exact_evm_payment_payload(
+                network="ethereum",
+                authorization=self._auth(),
+                signature=self._SIG,
+            )
