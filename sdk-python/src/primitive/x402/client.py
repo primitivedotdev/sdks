@@ -25,23 +25,17 @@ from .sign import (
     NonceBinding,
     PayoutRegistrationMessageInput,
     TokenDomain,
-    TransferAuthorization,
     X402Signer,
+    build_exact_evm_payment_payload,
     build_payout_registration_message,
-    derive_eip3009_nonce,
-    to_payment_payload,
-    transfer_with_authorization_typed_data,
+    compute_payment_validity_window,
+    sign_interaction_payment,
 )
 
 _CHAIN_IDS: dict[str, int] = {
     "base-sepolia": 84532,
     "base": 8453,
 }
-
-# Generous past-dating for clock skew + headroom past challenge expiry so a
-# verified payment still has time to settle. Mirrors the server's window.
-_CLOCK_SKEW_SEC = 5 * 60
-_SETTLEMENT_MARGIN_SEC = 5 * 60
 
 _DEFAULT_BASE_URL = "https://api.primitive.dev"
 _DEFAULT_TIMEOUT_SEC = 30.0
@@ -495,14 +489,6 @@ class X402Client:
         if pr.scheme != "exact":
             raise X402Error(f"unsupported payment scheme: {pr.scheme}", 0)
 
-        nonce = derive_eip3009_nonce(
-            NonceBinding(
-                interaction_id=challenge.nonce_binding["interaction_id"],
-                challenge_step_id=challenge.nonce_binding["challenge_step_id"],
-                challenge_nonce=challenge.nonce_binding["challenge_nonce"],
-            )
-        )
-
         now_sec = math.floor(datetime.now(timezone.utc).timestamp())
         try:
             expires_at_sec = math.floor(isoparse(challenge.expires_at).timestamp())
@@ -513,7 +499,7 @@ class X402Client:
             ) from cause
         # Refuse a challenge already past its expires_at. Check expires_at
         # itself, NOT validBefore (which carries the settlement margin), so a
-        # challenge that expired within the last _SETTLEMENT_MARGIN_SEC is still
+        # challenge that expired within the last settlement margin is still
         # caught. This also rules out validAfter >= validBefore inversion.
         if expires_at_sec <= now_sec:
             raise X402Error(
@@ -521,36 +507,42 @@ class X402Client:
                 f"{challenge.expires_at}); not signing",
                 0,
             )
-        valid_after = now_sec - _CLOCK_SKEW_SEC
-        valid_before = expires_at_sec + _SETTLEMENT_MARGIN_SEC
+        try:
+            valid_after, valid_before = compute_payment_validity_window(
+                challenge_expires_at_sec=expires_at_sec,
+                now_sec=now_sec,
+            )
+        except ValueError as cause:
+            raise X402Error(str(cause), 0) from cause
 
-        auth = TransferAuthorization(
-            from_=signer.address,
-            to=pr.pay_to,
-            value=int(pr.max_amount_required),
+        auth, signature = sign_interaction_payment(
+            sign=signer.sign_typed_data,
+            payer=signer.address,
+            domain=TokenDomain(
+                name=pr.extra["name"],
+                version=pr.extra["version"],
+                chain_id=chain_id,
+                verifying_contract=pr.asset,
+            ),
+            pay_to=pr.pay_to,
+            amount=int(pr.max_amount_required),
+            nonce_binding=NonceBinding(
+                interaction_id=challenge.nonce_binding["interaction_id"],
+                challenge_step_id=challenge.nonce_binding["challenge_step_id"],
+                challenge_nonce=challenge.nonce_binding["challenge_nonce"],
+            ),
             valid_after=valid_after,
             valid_before=valid_before,
-            nonce=nonce,
-        )
-
-        signature = signer.sign_typed_data(
-            transfer_with_authorization_typed_data(
-                TokenDomain(
-                    name=pr.extra["name"],
-                    version=pr.extra["version"],
-                    chain_id=chain_id,
-                    verifying_contract=pr.asset,
-                ),
-                auth,
-            )
         )
 
         data = self._request(
             "POST",
             f"/v1/x402/challenges/{_quote(challenge.id)}/pay",
             {
-                "payment": to_payment_payload(
-                    challenge.network, auth, signature
+                "payment": build_exact_evm_payment_payload(
+                    network=challenge.network,
+                    authorization=auth,
+                    signature=signature,
                 ).to_dict()
             },
         )

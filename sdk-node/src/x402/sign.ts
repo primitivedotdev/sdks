@@ -11,6 +11,7 @@
 import {
   type Address,
   concat,
+  getAddress,
   type Hex,
   hexToBytes,
   keccak256,
@@ -215,4 +216,129 @@ export function toPaymentPayload(
       },
     },
   };
+}
+
+/**
+ * Absolute ceiling on the total signed window (validBefore - validAfter). A
+ * signed EIP-3009 authorization stays settleable on-chain until validBefore
+ * regardless of the interaction state, so an unbounded window is a standing
+ * "funds committed" risk. The real window is minutes; this 24h cap is the hard
+ * safety ceiling, enforced so a caller-supplied window cannot bypass it.
+ */
+export const DEFAULT_MAX_WINDOW_SEC = 24 * 60 * 60;
+
+/**
+ * Compute the EIP-3009 validity window for a payment. `validBefore` is the
+ * value that governs on-chain validity, so it MUST cover the challenge's
+ * `expires_at` plus a settlement margin; `validAfter` is set generously in the
+ * past for clock skew. The total window is hard-capped at `maxWindowSec` so
+ * neither a far-future `challengeExpiresAtSec` nor a widened margin can produce
+ * a window the platform verifier would later reject.
+ */
+export function computePaymentValidityWindow(params: {
+  /** The challenge's expires_at, unix seconds. */
+  challengeExpiresAtSec: number;
+  /** Current time, unix seconds. */
+  nowSec: number;
+  /** Headroom past expiry for verify+settle to complete. Default 5 min. */
+  settlementMarginSec?: number;
+  /** How far in the past to set validAfter for clock skew. Default 5 min. */
+  clockSkewSec?: number;
+  /** Hard ceiling on validBefore - validAfter. Default 24h. */
+  maxWindowSec?: number;
+}): { validAfter: bigint; validBefore: bigint } {
+  const margin = params.settlementMarginSec ?? 5 * 60;
+  const skew = params.clockSkewSec ?? 5 * 60;
+  const validBefore = BigInt(params.challengeExpiresAtSec + margin);
+  const validAfter = BigInt(params.nowSec - skew);
+  if (validBefore <= validAfter) {
+    throw new Error(
+      "invalid validity window: validBefore must be after validAfter (challenge already expired?)",
+    );
+  }
+  const maxWindow = BigInt(params.maxWindowSec ?? DEFAULT_MAX_WINDOW_SEC);
+  if (validBefore - validAfter > maxWindow) {
+    throw new Error(
+      `invalid validity window: total window exceeds the ${maxWindow}s cap (challenge expiry too far out?)`,
+    );
+  }
+  return { validAfter, validBefore };
+}
+
+/** The x402 named networks supported in v1 (testnet first). */
+export type X402Network = "base-sepolia" | "base";
+
+/**
+ * The interaction-aware signer: derive the bound nonce, assemble the
+ * authorization, and sign it. This is the one piece a stock x402 signer cannot
+ * do (it generates the nonce internally with no injection point), so the payer
+ * side needs this Primitive-provided helper. The key never leaves the caller.
+ */
+export async function signInteractionPayment(params: {
+  /** Sign EIP-712 typed data with the caller's own key. */
+  sign: (typedData: TransferWithAuthorizationTypedData) => Promise<Hex>;
+  /** Payer (from) address. */
+  payer: Address;
+  domain: TokenDomain;
+  /** Recipient (the challenger's payTo). */
+  payTo: Address;
+  /** Amount in token base units. */
+  amount: bigint;
+  /** Inputs that derive the interaction-bound EIP-3009 nonce. */
+  nonceBinding: NonceBinding;
+  validAfter: bigint;
+  validBefore: bigint;
+}): Promise<{ authorization: TransferAuthorization; signature: Hex }> {
+  const authorization: TransferAuthorization = {
+    from: getAddress(params.payer),
+    to: getAddress(params.payTo),
+    value: params.amount,
+    validAfter: params.validAfter,
+    validBefore: params.validBefore,
+    nonce: deriveEip3009Nonce(params.nonceBinding),
+  };
+  const signature = await params.sign(
+    transferWithAuthorizationTypedData(params.domain, authorization),
+  );
+  return { authorization, signature };
+}
+
+/** A challenge nonce is 32 bytes rendered as 64 lowercase hex chars, no 0x. */
+const NONCE_HEX_RE = /^0x[0-9a-fA-F]{64}$/;
+
+/** A shape-valid EIP signature is 65 bytes (r,s,v) rendered as 130 hex chars. */
+const SIGNATURE_HEX_RE = /^0x[0-9a-fA-F]{130}$/;
+
+/**
+ * Assemble (and validate) the exact-EVM x402 wire payload from an
+ * interaction-bound, locally-signed authorization. The numeric authorization
+ * fields are decimal strings in the wire schema, so the bigints are stringified
+ * here; the nonce passes through as hex. Validation rejects a malformed nonce or
+ * signature loudly rather than emitting a payload the platform will reject.
+ */
+export function buildExactEvmPaymentPayload(params: {
+  network: X402Network;
+  authorization: TransferAuthorization;
+  signature: Hex;
+}): X402PaymentPayload {
+  if (params.network !== "base" && params.network !== "base-sepolia") {
+    throw new Error(
+      `buildExactEvmPaymentPayload: unsupported network ${params.network}`,
+    );
+  }
+  if (!SIGNATURE_HEX_RE.test(params.signature)) {
+    throw new Error(
+      "buildExactEvmPaymentPayload: signature must be a 0x-prefixed 65-byte (130 hex char) EIP signature",
+    );
+  }
+  if (!NONCE_HEX_RE.test(params.authorization.nonce)) {
+    throw new Error(
+      "buildExactEvmPaymentPayload: authorization.nonce must be a 0x-prefixed 32-byte (64 hex char) value",
+    );
+  }
+  return toPaymentPayload(
+    params.network,
+    params.authorization,
+    params.signature,
+  );
 }

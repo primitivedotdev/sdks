@@ -268,6 +268,112 @@ def to_payment_payload(
     )
 
 
+# Absolute ceiling on the total signed window (valid_before - valid_after). A
+# signed EIP-3009 authorization stays settleable on-chain until valid_before
+# regardless of the interaction state, so an unbounded window is a standing
+# "funds committed" risk. The real window is minutes; this 24h cap is the hard
+# safety ceiling, enforced so a caller-supplied window cannot bypass it.
+DEFAULT_MAX_WINDOW_SEC = 24 * 60 * 60
+
+
+def compute_payment_validity_window(
+    *,
+    challenge_expires_at_sec: int,
+    now_sec: int,
+    settlement_margin_sec: int = 5 * 60,
+    clock_skew_sec: int = 5 * 60,
+    max_window_sec: int = DEFAULT_MAX_WINDOW_SEC,
+) -> tuple[int, int]:
+    """Compute the EIP-3009 ``(valid_after, valid_before)`` window for a payment.
+
+    ``valid_before`` governs on-chain validity, so it MUST cover the challenge's
+    ``expires_at`` plus a settlement margin; ``valid_after`` is set generously in
+    the past for clock skew. The total window is hard-capped at ``max_window_sec``
+    so neither a far-future expiry nor a widened margin can produce a window the
+    platform verifier would later reject. Returns ``(valid_after, valid_before)``.
+    """
+    valid_before = challenge_expires_at_sec + settlement_margin_sec
+    valid_after = now_sec - clock_skew_sec
+    if valid_before <= valid_after:
+        raise ValueError(
+            "invalid validity window: valid_before must be after valid_after "
+            "(challenge already expired?)"
+        )
+    if valid_before - valid_after > max_window_sec:
+        raise ValueError(
+            f"invalid validity window: total window exceeds the {max_window_sec}s "
+            "cap (challenge expiry too far out?)"
+        )
+    return valid_after, valid_before
+
+
+def sign_interaction_payment(
+    *,
+    sign: Any,
+    payer: str,
+    domain: TokenDomain,
+    pay_to: str,
+    amount: int,
+    nonce_binding: NonceBinding,
+    valid_after: int,
+    valid_before: int,
+) -> tuple[TransferAuthorization, str]:
+    """Derive the bound nonce, assemble the authorization, and sign it.
+
+    ``sign`` is a callable taking the EIP-712 typed-data document and returning a
+    ``0x`` hex signature (e.g. ``PrivateKeySigner.sign_typed_data``). This is the
+    one piece a stock x402 signer cannot do (it generates the nonce internally
+    with no injection point). The key never leaves the caller. Returns
+    ``(authorization, signature)``.
+    """
+    authorization = TransferAuthorization(
+        from_=payer,
+        to=pay_to,
+        value=amount,
+        valid_after=valid_after,
+        valid_before=valid_before,
+        nonce=derive_eip3009_nonce(nonce_binding),
+    )
+    signature = sign(transfer_with_authorization_typed_data(domain, authorization))
+    return authorization, signature
+
+
+# A shape-valid EIP signature is 65 bytes (r,s,v) rendered as 130 hex chars.
+_SIGNATURE_HEX_RE = re.compile(r"^0x[0-9a-fA-F]{130}$")
+# An EIP-3009 nonce is 32 bytes rendered as 64 hex chars.
+_NONCE_HEX_RE = re.compile(r"^0x[0-9a-fA-F]{64}$")
+
+
+def build_exact_evm_payment_payload(
+    *,
+    network: str,
+    authorization: TransferAuthorization,
+    signature: str,
+) -> X402PaymentPayload:
+    """Assemble (and validate) the exact-EVM x402 wire payload.
+
+    The numeric authorization fields are decimal strings in the wire schema, so
+    the ints are stringified; the nonce passes through as hex. Validation rejects
+    a malformed nonce or signature loudly rather than emitting a payload the
+    platform will reject.
+    """
+    if network not in ("base", "base-sepolia"):
+        raise ValueError(
+            f"build_exact_evm_payment_payload: unsupported network {network}"
+        )
+    if not _SIGNATURE_HEX_RE.fullmatch(signature):
+        raise ValueError(
+            "build_exact_evm_payment_payload: signature must be a 0x-prefixed "
+            "65-byte (130 hex char) EIP signature"
+        )
+    if not _NONCE_HEX_RE.fullmatch(authorization.nonce):
+        raise ValueError(
+            "build_exact_evm_payment_payload: authorization.nonce must be a "
+            "0x-prefixed 32-byte (64 hex char) value"
+        )
+    return to_payment_payload(network, authorization, signature)
+
+
 def _hex_to_bytes(value: str) -> bytes:
     return bytes.fromhex(value[2:] if value.startswith("0x") else value)
 

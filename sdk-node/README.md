@@ -266,6 +266,60 @@ const receipt = await x402.pay(challenge, { signer: payer });
 console.log(receipt.status, receipt.settle_tx); // settled, on-chain tx hash
 ```
 
+### Signing primitives (lower level)
+
+`pay()` builds and signs the payment for you. When you need to drive the signing yourself, for example to sign a challenge carried in an email reply and submit the payment separately, the same building blocks are exported directly:
+
+- `deriveEip3009Nonce(binding)` derives the interaction-bound EIP-3009 nonce. The byte layout (`keccak256` over the lowercased `interaction_id`, a `0x00` separator, the lowercased `challenge_step_id`, a `0x00` separator, and the 32 raw bytes of the challenge nonce) is locked to a normative vector the platform recomputes.
+- `computePaymentValidityWindow({ challengeExpiresAtSec, nowSec })` returns the `{ validAfter, validBefore }` window. `validBefore` covers the challenge expiry plus a settlement margin; the total window is hard-capped (24h) so an over-wide authorization can never be produced.
+- `signInteractionPayment({ sign, payer, domain, payTo, amount, nonceBinding, validAfter, validBefore })` derives the bound nonce, assembles the authorization, and signs it with your `sign` callback. Returns `{ authorization, signature }`. The key never leaves the caller.
+- `buildExactEvmPaymentPayload({ network, authorization, signature })` assembles the exact-EVM x402 wire payload, validating the nonce and signature shape.
+
+```ts
+import {
+  buildExactEvmPaymentPayload,
+  computePaymentValidityWindow,
+  signInteractionPayment,
+} from "@primitivedotdev/sdk/x402";
+import { privateKeyToAccount } from "viem/accounts";
+
+const payer = privateKeyToAccount(process.env.PAYER_KEY as `0x${string}`);
+const pr = challenge.payment_requirements;
+const nowSec = Math.floor(Date.now() / 1000);
+
+const { validAfter, validBefore } = computePaymentValidityWindow({
+  challengeExpiresAtSec: Math.floor(Date.parse(challenge.expires_at) / 1000),
+  nowSec,
+});
+
+const { authorization, signature } = await signInteractionPayment({
+  sign: (typedData) => payer.signTypedData(typedData),
+  payer: payer.address,
+  domain: {
+    name: pr.extra.name,
+    version: pr.extra.version,
+    chainId: 84532, // base-sepolia
+    verifyingContract: pr.asset as `0x${string}`,
+  },
+  payTo: pr.payTo as `0x${string}`,
+  amount: BigInt(pr.maxAmountRequired),
+  nonceBinding: {
+    interactionId: challenge.nonce_binding.interaction_id,
+    challengeStepId: challenge.nonce_binding.challenge_step_id,
+    challengeNonce: challenge.nonce_binding.challenge_nonce,
+  },
+  validAfter,
+  validBefore,
+});
+
+const payment = buildExactEvmPaymentPayload({
+  network: "base-sepolia",
+  authorization,
+  signature,
+});
+// submit `payment` to /v1/x402/challenges/{id}/pay
+```
+
 ### Read and set the spend policy
 
 The spend policy guards outbound payments: a `paused` kill-switch, per-payment and daily caps (token base units, or `null` for no cap), and a payee `allowlist` (`null` means any on-net payee, `[]` denies all). `setSpendPolicy` merges: only the fields you pass change, and omitted fields keep their current value. Pass `null` to clear a cap.

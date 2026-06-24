@@ -292,6 +292,73 @@ receipt = x402.pay(challenge, signer=payer)
 print(receipt.status, receipt.settle_tx)  # settled, on-chain tx hash
 ```
 
+### Signing primitives (lower level)
+
+``pay()`` builds and signs the payment for you. When you need to drive the
+signing yourself, for example to sign a challenge carried in an email reply and
+submit the payment separately, the same building blocks are exported directly:
+
+- ``derive_eip3009_nonce(binding)`` derives the interaction-bound EIP-3009
+  nonce, locked to a normative vector the platform recomputes.
+- ``compute_payment_validity_window(challenge_expires_at_sec=..., now_sec=...)``
+  returns the ``(valid_after, valid_before)`` window, hard-capped at 24h.
+- ``sign_interaction_payment(sign=..., payer=..., domain=..., pay_to=...,
+  amount=..., nonce_binding=..., valid_after=..., valid_before=...)`` derives the
+  bound nonce, assembles the authorization, and signs it. The key never leaves
+  the caller.
+- ``build_exact_evm_payment_payload(network=..., authorization=...,
+  signature=...)`` assembles the exact-EVM x402 wire payload.
+
+```python
+import math
+import time
+from dateutil.parser import isoparse
+from primitive import (
+    PrivateKeySigner,
+    TokenDomain,
+    NonceBinding,
+    compute_payment_validity_window,
+    sign_interaction_payment,
+    build_exact_evm_payment_payload,
+)
+
+payer = PrivateKeySigner(os.environ["PAYER_KEY"])
+pr = challenge.payment_requirements
+now_sec = math.floor(time.time())
+
+valid_after, valid_before = compute_payment_validity_window(
+    challenge_expires_at_sec=math.floor(isoparse(challenge.expires_at).timestamp()),
+    now_sec=now_sec,
+)
+
+authorization, signature = sign_interaction_payment(
+    sign=payer.sign_typed_data,
+    payer=payer.address,
+    domain=TokenDomain(
+        name=pr.extra["name"],
+        version=pr.extra["version"],
+        chain_id=84532,  # base-sepolia
+        verifying_contract=pr.asset,
+    ),
+    pay_to=pr.pay_to,
+    amount=int(pr.max_amount_required),
+    nonce_binding=NonceBinding(
+        interaction_id=challenge.nonce_binding["interaction_id"],
+        challenge_step_id=challenge.nonce_binding["challenge_step_id"],
+        challenge_nonce=challenge.nonce_binding["challenge_nonce"],
+    ),
+    valid_after=valid_after,
+    valid_before=valid_before,
+)
+
+payment = build_exact_evm_payment_payload(
+    network="base-sepolia",
+    authorization=authorization,
+    signature=signature,
+).to_dict()
+# submit `payment` to /v1/x402/challenges/{id}/pay
+```
+
 ### Read and set the spend policy
 
 The spend policy guards outbound payments: a ``paused`` kill-switch, per-payment

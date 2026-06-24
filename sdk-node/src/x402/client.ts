@@ -9,11 +9,11 @@
  */
 import type { Address } from "viem";
 import {
+  buildExactEvmPaymentPayload,
   buildPayoutRegistrationMessage,
-  deriveEip3009Nonce,
-  type TransferAuthorization,
-  toPaymentPayload,
-  transferWithAuthorizationTypedData,
+  computePaymentValidityWindow,
+  signInteractionPayment,
+  type X402Network,
   type X402Signer,
 } from "./sign.js";
 
@@ -21,11 +21,6 @@ const CHAIN_IDS: Record<string, number> = {
   "base-sepolia": 84532,
   base: 8453,
 };
-
-// Generous past-dating for clock skew + headroom past challenge expiry so a
-// verified payment still has time to settle. Mirrors the server's window.
-const CLOCK_SKEW_SEC = 5 * 60;
-const SETTLEMENT_MARGIN_SEC = 5 * 60;
 
 const DEFAULT_BASE_URL = "https://api.primitive.dev";
 
@@ -386,12 +381,6 @@ export class X402Client {
       throw new X402Error(`unsupported payment scheme: ${pr.scheme}`, 0);
     }
 
-    const nonce = deriveEip3009Nonce({
-      interactionId: challenge.nonce_binding.interaction_id,
-      challengeStepId: challenge.nonce_binding.challenge_step_id,
-      challengeNonce: challenge.nonce_binding.challenge_nonce,
-    });
-
     const nowSec = Math.floor(Date.now() / 1000);
     const expiresAtMs = Date.parse(challenge.expires_at);
     if (Number.isNaN(expiresAtMs)) {
@@ -403,43 +392,61 @@ export class X402Client {
     const expiresAtSec = Math.floor(expiresAtMs / 1000);
     // Refuse a challenge that's already past its expires_at. Check expires_at
     // itself, NOT validBefore (which carries the settlement margin), so a
-    // challenge that expired within the last SETTLEMENT_MARGIN_SEC is still
-    // caught. This also rules out the validAfter >= validBefore inversion, since
-    // a non-expired challenge has validAfter < now < expiresAtSec < validBefore.
+    // challenge that expired within the last settlement margin is still caught.
+    // This also rules out the validAfter >= validBefore inversion, since a
+    // non-expired challenge has validAfter < now < expiresAtSec < validBefore.
     if (expiresAtSec <= nowSec) {
       throw new X402Error(
         `challenge has already expired (expires_at ${challenge.expires_at}); not signing`,
         0,
       );
     }
-    const validAfter = BigInt(nowSec - CLOCK_SKEW_SEC);
-    const validBefore = BigInt(expiresAtSec + SETTLEMENT_MARGIN_SEC);
+    let validAfter: bigint;
+    let validBefore: bigint;
+    try {
+      ({ validAfter, validBefore } = computePaymentValidityWindow({
+        challengeExpiresAtSec: expiresAtSec,
+        nowSec,
+      }));
+    } catch (cause) {
+      throw new X402Error(
+        cause instanceof Error ? cause.message : String(cause),
+        0,
+        undefined,
+        { cause },
+      );
+    }
 
-    const auth: TransferAuthorization = {
-      from: options.signer.address,
-      to: pr.payTo as Address,
-      value: BigInt(pr.maxAmountRequired),
+    const { authorization, signature } = await signInteractionPayment({
+      sign: (typedData) => options.signer.signTypedData(typedData),
+      payer: options.signer.address,
+      domain: {
+        name: pr.extra.name,
+        version: pr.extra.version,
+        chainId,
+        verifyingContract: pr.asset as Address,
+      },
+      payTo: pr.payTo as Address,
+      amount: BigInt(pr.maxAmountRequired),
+      nonceBinding: {
+        interactionId: challenge.nonce_binding.interaction_id,
+        challengeStepId: challenge.nonce_binding.challenge_step_id,
+        challengeNonce: challenge.nonce_binding.challenge_nonce,
+      },
       validAfter,
       validBefore,
-      nonce,
-    };
-
-    const signature = await options.signer.signTypedData(
-      transferWithAuthorizationTypedData(
-        {
-          name: pr.extra.name,
-          version: pr.extra.version,
-          chainId,
-          verifyingContract: pr.asset as Address,
-        },
-        auth,
-      ),
-    );
+    });
 
     return this.#request<X402Receipt>(
       "POST",
       `/v1/x402/challenges/${challenge.id}/pay`,
-      { payment: toPaymentPayload(challenge.network, auth, signature) },
+      {
+        payment: buildExactEvmPaymentPayload({
+          network: challenge.network as X402Network,
+          authorization,
+          signature,
+        }),
+      },
     );
   }
 

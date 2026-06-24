@@ -1,8 +1,14 @@
+import { getAddress, type Hex } from "viem";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 import {
+  buildExactEvmPaymentPayload,
   buildPayoutRegistrationMessage,
+  computePaymentValidityWindow,
   deriveEip3009Nonce,
   type NonceBinding,
+  signInteractionPayment,
+  type TokenDomain,
   type TransferAuthorization,
   toPaymentPayload,
   transferWithAuthorizationTypedData,
@@ -143,5 +149,156 @@ describe("buildPayoutRegistrationMessage", () => {
     expect(msg).toContain(
       "address: 0xabcdef0000000000000000000000000000000000",
     );
+  });
+});
+
+// USDC on Base Sepolia. The on-chain EIP-712 domain name is "USDC" (mainnet USDC
+// reports "USD Coin" instead). A wrong name silently breaks verification.
+const USDC_BASE_SEPOLIA: TokenDomain = {
+  name: "USDC",
+  version: "2",
+  chainId: 84532,
+  verifyingContract: getAddress("0x036CbD53842c5426634e7929541eC2318f3dCF7e"),
+};
+
+const PAY_TO = getAddress("0x1111111111111111111111111111111111111111");
+const AMOUNT = 10000n; // 0.01 USDC (6 decimals)
+
+function newSigner() {
+  const account = privateKeyToAccount(generatePrivateKey());
+  const sign = (td: ReturnType<typeof transferWithAuthorizationTypedData>) =>
+    account.signTypedData(td);
+  return { account, sign, payer: account.address };
+}
+
+describe("computePaymentValidityWindow", () => {
+  it("sets validBefore to expiry + margin and validAfter to now - skew", () => {
+    const w = computePaymentValidityWindow({
+      challengeExpiresAtSec: 2000,
+      nowSec: 1000,
+      settlementMarginSec: 300,
+      clockSkewSec: 120,
+    });
+    expect(w.validBefore).toBe(2300n);
+    expect(w.validAfter).toBe(880n);
+  });
+
+  it("uses minute-scale defaults (on-net: not days)", () => {
+    const w = computePaymentValidityWindow({
+      challengeExpiresAtSec: 2000,
+      nowSec: 1000,
+    });
+    expect(w.validBefore).toBe(2000n + 300n);
+    expect(w.validAfter).toBe(1000n - 300n);
+  });
+
+  it("throws when the window is degenerate (challenge already long expired)", () => {
+    expect(() =>
+      computePaymentValidityWindow({
+        challengeExpiresAtSec: 1000,
+        nowSec: 100000,
+        settlementMarginSec: 60,
+        clockSkewSec: 60,
+      }),
+    ).toThrow(/invalid validity window/);
+  });
+
+  it("throws when the total window exceeds the cap (expiry too far out)", () => {
+    expect(() =>
+      computePaymentValidityWindow({
+        challengeExpiresAtSec: 1000 + 48 * 60 * 60, // 48h out, past the 24h cap
+        nowSec: 1000,
+      }),
+    ).toThrow(/exceeds the .* cap/);
+  });
+});
+
+describe("signInteractionPayment", () => {
+  it("injects the interaction-bound nonce, not a random one", async () => {
+    const { sign, payer } = newSigner();
+    const { validAfter, validBefore } = computePaymentValidityWindow({
+      challengeExpiresAtSec: 1_900_003_600,
+      nowSec: 1_900_000_000,
+    });
+    const { authorization } = await signInteractionPayment({
+      sign,
+      payer,
+      domain: USDC_BASE_SEPOLIA,
+      payTo: PAY_TO,
+      amount: AMOUNT,
+      nonceBinding: CANONICAL,
+      validAfter,
+      validBefore,
+    });
+    // The bound nonce for CANONICAL is the locked normative vector.
+    expect(authorization.nonce).toBe(NORMATIVE_NONCE);
+  });
+
+  it("sets from/to/value as given", async () => {
+    const { sign, payer } = newSigner();
+    const { authorization } = await signInteractionPayment({
+      sign,
+      payer,
+      domain: USDC_BASE_SEPOLIA,
+      payTo: PAY_TO,
+      amount: AMOUNT,
+      nonceBinding: CANONICAL,
+      validAfter: 1n,
+      validBefore: 99_999_999n,
+    });
+    expect(getAddress(authorization.from)).toBe(getAddress(payer));
+    expect(getAddress(authorization.to)).toBe(PAY_TO);
+    expect(authorization.value).toBe(AMOUNT);
+  });
+});
+
+describe("buildExactEvmPaymentPayload", () => {
+  const auth: TransferAuthorization = {
+    from: "0x2222222222222222222222222222222222222222",
+    to: PAY_TO,
+    value: 10000n,
+    validAfter: 1n,
+    validBefore: 99_999n,
+    nonce: NORMATIVE_NONCE,
+  };
+  // A shape-valid 65-byte EIP signature (r,s,v); not cryptographically meaningful.
+  const SIG = ("0x" + "ab".repeat(65)) as Hex;
+
+  it("wraps the authorization with x402Version 1 and decimal-string fields", () => {
+    const p = buildExactEvmPaymentPayload({
+      network: "base-sepolia",
+      authorization: auth,
+      signature: SIG,
+    });
+    expect(p.x402Version).toBe(1);
+    expect(p.scheme).toBe("exact");
+    expect(p.network).toBe("base-sepolia");
+    expect(p.payload.signature).toBe(SIG);
+    expect(p.payload.authorization.from).toBe(auth.from);
+    expect(p.payload.authorization.to).toBe(PAY_TO);
+    expect(p.payload.authorization.value).toBe("10000");
+    expect(p.payload.authorization.validAfter).toBe("1");
+    expect(p.payload.authorization.validBefore).toBe("99999");
+    expect(p.payload.authorization.nonce).toBe(auth.nonce);
+  });
+
+  it("rejects a malformed signature", () => {
+    expect(() =>
+      buildExactEvmPaymentPayload({
+        network: "base-sepolia",
+        authorization: auth,
+        signature: "not-hex" as Hex,
+      }),
+    ).toThrow(/signature/);
+  });
+
+  it("rejects a malformed nonce", () => {
+    expect(() =>
+      buildExactEvmPaymentPayload({
+        network: "base-sepolia",
+        authorization: { ...auth, nonce: "0xdeadbeef" as Hex },
+        signature: SIG,
+      }),
+    ).toThrow(/nonce/);
   });
 });

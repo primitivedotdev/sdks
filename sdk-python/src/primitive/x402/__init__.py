@@ -18,6 +18,7 @@ from .client import (
     create_x402_client,
 )
 from .sign import (
+    DEFAULT_MAX_WINDOW_SEC,
     TRANSFER_WITH_AUTHORIZATION_TYPES,
     NonceBinding,
     PayoutRegistrationMessageInput,
@@ -26,13 +27,17 @@ from .sign import (
     TransferAuthorization,
     X402PaymentPayload,
     X402Signer,
+    build_exact_evm_payment_payload,
     build_payout_registration_message,
+    compute_payment_validity_window,
     derive_eip3009_nonce,
+    sign_interaction_payment,
     to_payment_payload,
     transfer_with_authorization_typed_data,
 )
 
 __all__ = [
+    "DEFAULT_MAX_WINDOW_SEC",
     "TRANSFER_WITH_AUTHORIZATION_TYPES",
     "NonceBinding",
     "PayoutRegistrationMessageInput",
@@ -49,9 +54,12 @@ __all__ = [
     "X402Receipt",
     "X402Signer",
     "X402SpendPolicy",
+    "build_exact_evm_payment_payload",
     "build_payout_registration_message",
+    "compute_payment_validity_window",
     "create_x402_client",
     "derive_eip3009_nonce",
+    "sign_interaction_payment",
     "to_payment_payload",
     "transfer_with_authorization_typed_data",
 ]

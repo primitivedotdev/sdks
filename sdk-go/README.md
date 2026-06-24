@@ -289,6 +289,69 @@ if err != nil {
 log.Println(receipt.Status, receipt.SettleTx) // settled, on-chain tx hash
 ```
 
+### Signing primitives (lower level)
+
+`Pay` builds and signs the payment for you. When you need to drive the signing
+yourself, for example to sign a challenge carried in an email reply and submit
+the payment separately, the same building blocks are exported directly:
+
+- `DeriveEIP3009Nonce(binding)` derives the interaction-bound EIP-3009 nonce,
+  locked to a normative vector the platform recomputes.
+- `ComputePaymentValidityWindow(input)` returns the `(validAfter, validBefore)`
+  window, hard-capped at 24h.
+- `SignInteractionPayment(input)` derives the bound nonce, assembles the
+  authorization, and signs it with your `Sign` callback. The key never leaves the
+  caller.
+- `BuildExactEvmPaymentPayload(network, authorization, signature)` assembles the
+  exact-EVM x402 wire payload.
+
+```go
+payer, err := primitive.NewPrivateKeySigner(os.Getenv("PAYER_KEY"))
+if err != nil {
+	log.Fatal(err)
+}
+pr := challenge.PaymentRequirements
+expiresAt, _ := time.Parse(time.RFC3339Nano, challenge.ExpiresAt)
+
+validAfter, validBefore, err := primitive.ComputePaymentValidityWindow(primitive.ValidityWindowInput{
+	ChallengeExpiresAtSec: expiresAt.Unix(),
+	NowSec:                time.Now().Unix(),
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+amount, _ := new(big.Int).SetString(pr.MaxAmountRequired, 10)
+auth, signature, err := primitive.SignInteractionPayment(primitive.SignInteractionPaymentInput{
+	Sign:  payer.SignTypedData,
+	Payer: payer.Address(),
+	Domain: primitive.TokenDomain{
+		Name:              pr.Extra.Name,
+		Version:           pr.Extra.Version,
+		ChainID:           84532, // base-sepolia
+		VerifyingContract: pr.Asset,
+	},
+	PayTo:  pr.PayTo,
+	Amount: amount,
+	NonceBinding: primitive.NonceBinding{
+		InteractionID:   challenge.NonceBinding.InteractionID,
+		ChallengeStepID: challenge.NonceBinding.ChallengeStepID,
+		ChallengeNonce:  challenge.NonceBinding.ChallengeNonce,
+	},
+	ValidAfter:  validAfter,
+	ValidBefore: validBefore,
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+payment, err := primitive.BuildExactEvmPaymentPayload(challenge.Network, auth, signature)
+if err != nil {
+	log.Fatal(err)
+}
+// submit `payment` to /v1/x402/challenges/{id}/pay
+```
+
 ### Read and set the spend policy
 
 The spend policy guards outbound payments: a `Paused` kill-switch, per-payment

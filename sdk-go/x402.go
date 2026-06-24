@@ -250,6 +250,124 @@ func toPaymentPayload(network string, auth TransferAuthorization, signature stri
 	return p
 }
 
+// DefaultMaxWindowSec is the absolute ceiling on the total signed window
+// (validBefore - validAfter). A signed EIP-3009 authorization stays settleable
+// on-chain until validBefore regardless of the interaction state, so an
+// unbounded window is a standing "funds committed" risk. The real window is
+// minutes; this 24h cap is the hard safety ceiling, enforced so a
+// caller-supplied window cannot bypass it.
+const DefaultMaxWindowSec int64 = 24 * 60 * 60
+
+// ValidityWindowInput configures ComputePaymentValidityWindow. The optional
+// fields default when left zero: SettlementMarginSec and ClockSkewSec to 5
+// minutes, MaxWindowSec to DefaultMaxWindowSec.
+type ValidityWindowInput struct {
+	ChallengeExpiresAtSec int64
+	NowSec                int64
+	SettlementMarginSec   int64
+	ClockSkewSec          int64
+	MaxWindowSec          int64
+}
+
+// ComputePaymentValidityWindow computes the EIP-3009 (validAfter, validBefore)
+// window for a payment. validBefore governs on-chain validity, so it MUST cover
+// the challenge's expires_at plus a settlement margin; validAfter is set
+// generously in the past for clock skew. The total window is hard-capped at
+// MaxWindowSec so neither a far-future expiry nor a widened margin can produce a
+// window the platform verifier would later reject.
+func ComputePaymentValidityWindow(input ValidityWindowInput) (validAfter, validBefore *big.Int, err error) {
+	margin := input.SettlementMarginSec
+	if margin == 0 {
+		margin = x402SettlementMarginSec
+	}
+	skew := input.ClockSkewSec
+	if skew == 0 {
+		skew = x402ClockSkewSec
+	}
+	maxWindow := input.MaxWindowSec
+	if maxWindow == 0 {
+		maxWindow = DefaultMaxWindowSec
+	}
+	vb := big.NewInt(input.ChallengeExpiresAtSec + margin)
+	va := big.NewInt(input.NowSec - skew)
+	if vb.Cmp(va) <= 0 {
+		return nil, nil, fmt.Errorf(
+			"invalid validity window: validBefore must be after validAfter (challenge already expired?)")
+	}
+	if new(big.Int).Sub(vb, va).Cmp(big.NewInt(maxWindow)) > 0 {
+		return nil, nil, fmt.Errorf(
+			"invalid validity window: total window exceeds the %ds cap (challenge expiry too far out?)", maxWindow)
+	}
+	return va, vb, nil
+}
+
+// SignInteractionPaymentInput configures SignInteractionPayment.
+type SignInteractionPaymentInput struct {
+	// Sign signs the EIP-712 typed data with the caller's own key and returns a
+	// 0x hex signature (e.g. PrivateKeySigner.SignTypedData).
+	Sign func(typedData apitypes.TypedData) (string, error)
+	// Payer is the from address.
+	Payer  string
+	Domain TokenDomain
+	// PayTo is the recipient (the challenger's payTo).
+	PayTo string
+	// Amount is in token base units.
+	Amount       *big.Int
+	NonceBinding NonceBinding
+	ValidAfter   *big.Int
+	ValidBefore  *big.Int
+}
+
+// SignInteractionPayment derives the bound nonce, assembles the authorization,
+// and signs it. This is the one piece a stock x402 signer cannot do (it
+// generates the nonce internally with no injection point). The key never leaves
+// the caller.
+func SignInteractionPayment(input SignInteractionPaymentInput) (TransferAuthorization, string, error) {
+	nonce, err := DeriveEIP3009Nonce(input.NonceBinding)
+	if err != nil {
+		return TransferAuthorization{}, "", err
+	}
+	auth := TransferAuthorization{
+		From:        input.Payer,
+		To:          input.PayTo,
+		Value:       input.Amount,
+		ValidAfter:  input.ValidAfter,
+		ValidBefore: input.ValidBefore,
+		Nonce:       nonce,
+	}
+	signature, err := input.Sign(transferWithAuthorizationTypedData(input.Domain, auth))
+	if err != nil {
+		return TransferAuthorization{}, "", err
+	}
+	return auth, signature, nil
+}
+
+// A shape-valid EIP signature is 65 bytes (r,s,v) rendered as 130 hex chars.
+var x402SignatureRe = regexp.MustCompile(`^0x[0-9a-fA-F]{130}$`)
+
+// An EIP-3009 nonce is 32 bytes rendered as 64 hex chars.
+var x402NonceRe = regexp.MustCompile(`^0x[0-9a-fA-F]{64}$`)
+
+// BuildExactEvmPaymentPayload assembles (and validates) the exact-EVM x402 wire
+// payload. The numeric authorization fields are decimal strings in the wire
+// schema, so the big.Ints are stringified; the nonce passes through as hex.
+// Validation rejects a malformed nonce or signature loudly rather than emitting
+// a payload the platform will reject.
+func BuildExactEvmPaymentPayload(network string, auth TransferAuthorization, signature string) (X402PaymentPayload, error) {
+	if network != "base" && network != "base-sepolia" {
+		return X402PaymentPayload{}, fmt.Errorf("BuildExactEvmPaymentPayload: unsupported network %s", network)
+	}
+	if !x402SignatureRe.MatchString(signature) {
+		return X402PaymentPayload{}, fmt.Errorf(
+			"BuildExactEvmPaymentPayload: signature must be a 0x-prefixed 65-byte (130 hex char) EIP signature")
+	}
+	if !x402NonceRe.MatchString(auth.Nonce) {
+		return X402PaymentPayload{}, fmt.Errorf(
+			"BuildExactEvmPaymentPayload: authorization nonce must be a 0x-prefixed 32-byte (64 hex char) value")
+	}
+	return toPaymentPayload(network, auth, signature), nil
+}
+
 // ---------------------------------------------------------------------------
 // Signer
 // ---------------------------------------------------------------------------
@@ -823,15 +941,6 @@ func (c *X402Client) Pay(ctx context.Context, challenge *X402Challenge, signer X
 		return nil, newX402Error("unsupported payment scheme: "+pr.Scheme, 0)
 	}
 
-	nonce, err := DeriveEIP3009Nonce(NonceBinding{
-		InteractionID:   challenge.NonceBinding.InteractionID,
-		ChallengeStepID: challenge.NonceBinding.ChallengeStepID,
-		ChallengeNonce:  challenge.NonceBinding.ChallengeNonce,
-	})
-	if err != nil {
-		return nil, newX402Error("failed to derive nonce: "+err.Error(), 0)
-	}
-
 	nowSec := time.Now().Unix()
 	// The server sends millisecond-precision ISO-8601 (e.g. "...T00:00:00.000Z"),
 	// so parse with RFC3339Nano to make the fractional-second intent explicit.
@@ -852,32 +961,42 @@ func (c *X402Client) Pay(ctx context.Context, challenge *X402Challenge, signer X
 	if !ok {
 		return nil, newX402Error("payment_requirements.maxAmountRequired is not an integer: "+pr.MaxAmountRequired, 0)
 	}
-	validAfter := big.NewInt(nowSec - x402ClockSkewSec)
-	validBefore := big.NewInt(expiresAtSec + x402SettlementMarginSec)
-
-	auth := TransferAuthorization{
-		From:        signer.Address(),
-		To:          pr.PayTo,
-		Value:       value,
-		ValidAfter:  validAfter,
-		ValidBefore: validBefore,
-		Nonce:       nonce,
+	validAfter, validBefore, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: expiresAtSec,
+		NowSec:                nowSec,
+	})
+	if err != nil {
+		return nil, newX402Error(err.Error(), 0)
 	}
 
-	signature, err := signer.SignTypedData(transferWithAuthorizationTypedData(
-		TokenDomain{
+	auth, signature, err := SignInteractionPayment(SignInteractionPaymentInput{
+		Sign:  signer.SignTypedData,
+		Payer: signer.Address(),
+		Domain: TokenDomain{
 			Name:              pr.Extra.Name,
 			Version:           pr.Extra.Version,
 			ChainID:           chainID,
 			VerifyingContract: pr.Asset,
 		},
-		auth,
-	))
+		PayTo:  pr.PayTo,
+		Amount: value,
+		NonceBinding: NonceBinding{
+			InteractionID:   challenge.NonceBinding.InteractionID,
+			ChallengeStepID: challenge.NonceBinding.ChallengeStepID,
+			ChallengeNonce:  challenge.NonceBinding.ChallengeNonce,
+		},
+		ValidAfter:  validAfter,
+		ValidBefore: validBefore,
+	})
 	if err != nil {
 		return nil, newX402Error("failed to sign authorization: "+err.Error(), 0)
 	}
 
-	body := map[string]any{"payment": toPaymentPayload(challenge.Network, auth, signature)}
+	payment, err := BuildExactEvmPaymentPayload(challenge.Network, auth, signature)
+	if err != nil {
+		return nil, newX402Error("failed to build payment payload: "+err.Error(), 0)
+	}
+	body := map[string]any{"payment": payment}
 	var receipt X402Receipt
 	if err := c.request(ctx, http.MethodPost, "/v1/x402/challenges/"+challenge.ID+"/pay", body, &receipt, nil); err != nil {
 		return nil, err
