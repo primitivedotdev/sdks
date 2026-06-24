@@ -61,6 +61,26 @@ export {
   WebhookVerificationError,
   type WebhookVerificationErrorCode,
 } from "./errors.js";
+// Event catalog, typed payment/interaction events, and type guards
+export {
+  EMAIL_EVENT_TYPES,
+  INTERACTION_EVENT_TYPES,
+  type InteractionEvent,
+  type InteractionX402Event,
+  type InteractionX402Suffix,
+  isEmailReceivedEvent,
+  isInteractionX402Event,
+  isKnownWebhookEventType,
+  isPaymentEvent,
+  isPaymentFailedEvent,
+  isPaymentSettledEvent,
+  PAYMENT_EVENT_TYPES,
+  type PaymentEvent,
+  type PaymentFailedEvent,
+  type PaymentSettledEvent,
+  WEBHOOK_EVENT_TYPES,
+  type WebhookEventType,
+} from "./events.js";
 export {
   buildForwardSubject,
   buildReplySubject,
@@ -173,6 +193,7 @@ import {
   WebhookPayloadError,
   WebhookVerificationError,
 } from "./errors.js";
+import { isKnownWebhookEventType } from "./events.js";
 import { parseJsonBody } from "./parsing.js";
 import {
   normalizeReceivedEmail,
@@ -213,7 +234,10 @@ import {
  * }
  * ```
  */
-export function parseWebhookEvent(input: unknown): WebhookEvent {
+export function parseWebhookEvent(
+  input: unknown,
+  eventType?: string | null,
+): WebhookEvent {
   // Basic structure validation
   if (input === null) {
     throw new WebhookPayloadError(
@@ -249,54 +273,47 @@ export function parseWebhookEvent(input: unknown): WebhookEvent {
 
   const obj = input as Record<string, unknown>;
 
-  if (!("event" in obj) || typeof obj.event !== "string") {
+  // The event name is carried in the `X-Webhook-Event` HEADER for every event
+  // family. The stored body is sent verbatim with no envelope: email.* bodies
+  // carry `event`, payment.* bodies carry the name in `type`, and interaction.*
+  // bodies are just `{ interaction: { ... } }` with no event/type field. So the
+  // header is the PRIMARY discriminator; we fall back to a top-level `event`
+  // string in the body only for backward-compat with any sender that embeds it.
+  const resolvedEvent =
+    (typeof eventType === "string" && eventType) ||
+    (typeof obj.event === "string" ? obj.event : undefined);
+
+  if (!resolvedEvent) {
+    // No `X-Webhook-Event` header AND no in-body `event` field: we cannot
+    // classify this payload at all. Preserve the legacy contract and throw,
+    // so a genuinely malformed call is still surfaced. The real sender always
+    // sets the header, so the handle* entry points never hit this.
     throw new WebhookPayloadError(
       "PAYLOAD_MISSING_EVENT",
-      "Missing 'event' field in payload",
-      "This doesn't look like a Primitive webhook payload.",
+      "Missing event discriminator: no X-Webhook-Event header and no 'event' field in payload",
+      "Pass the X-Webhook-Event header (the canonical discriminator) or call handleWebhookEvent, which reads it for you.",
     );
   }
 
-  // Route to specific handler for known events
-  switch (obj.event) {
+  // Route to specific handler for known events.
+  switch (resolvedEvent) {
     case "email.received":
       return validateEmailReceivedEvent(input);
 
+    case "payment.settled":
+    case "payment.failed":
+      // Payment bodies carry the name in `type`; overlay a canonical `event`
+      // (mirrored from the header) so consumers branch on a single field.
+      return { ...obj, event: resolvedEvent } as WebhookEvent;
+
     default:
-      // Return as UnknownEvent - user can handle it
-      return input as UnknownEvent;
-  }
-}
-
-/**
- * Type guard to check if a webhook event is an EmailReceivedEvent.
- *
- * @example
- * ```typescript
- * const event = parseWebhookEvent(payload);
- * if (isEmailReceivedEvent(event)) {
- *   // TypeScript knows event is EmailReceivedEvent
- *   console.log(event.email.headers.subject);
- * }
- * ```
- */
-export function isEmailReceivedEvent(
-  event: WebhookEvent | unknown,
-): event is EmailReceivedEvent {
-  if (
-    typeof event !== "object" ||
-    event === null ||
-    !("event" in event) ||
-    (event as { event: unknown }).event !== "email.received"
-  ) {
-    return false;
-  }
-
-  try {
-    validateEmailReceivedEvent(event);
-    return true;
-  } catch {
-    return false;
+      if (isKnownWebhookEventType(resolvedEvent)) {
+        // Known interaction.* (and any other catalog) event: the body has no
+        // event/type field, so overlay the canonical name from the header.
+        return { ...obj, event: resolvedEvent } as WebhookEvent;
+      }
+      // Unknown event type: return as UnknownEvent for forward compatibility.
+      return { ...obj, event: resolvedEvent } as unknown as UnknownEvent;
   }
 }
 
@@ -347,7 +364,32 @@ export interface HandleWebhookOptions {
   toleranceSeconds?: number;
 }
 
+/**
+ * The header that names the webhook event for ALL event families
+ * (`email.*`, `payment.*`, `interaction.*`). It is the primary discriminator
+ * the parser keys on, because the stored body is sent verbatim with no envelope.
+ */
+export const WEBHOOK_EVENT_HEADER = "X-Webhook-Event";
+
 const SIGNATURE_HEADER_NAMES = ["primitive-signature", "mymx-signature"];
+
+/**
+ * Read the `X-Webhook-Event` header value (case-insensitive). Returns null when
+ * the header is absent.
+ */
+export function getEventHeader(headers: WebhookHeaders): string | null {
+  if (headers instanceof Headers) {
+    return headers.get("x-webhook-event");
+  }
+  const obj = headers as Record<string, string | string[] | undefined>;
+  const key = Object.keys(obj).find(
+    (k) => k.toLowerCase() === "x-webhook-event",
+  );
+  if (!key) return null;
+  const value = obj[key];
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
 const STANDARD_WEBHOOKS_HEADER_NAMES = [
   "webhook-signature",
   "webhook-id",
@@ -486,12 +528,12 @@ function getStandardWebhooksHeaders(
  * });
  * ```
  */
-export function handleWebhook(
-  options: HandleWebhookOptions,
-): EmailReceivedEvent {
+function verifyWebhookRequest(options: HandleWebhookOptions): void {
   const { body, headers, secret, toleranceSeconds } = options;
 
-  // Step 1: Verify signature (Standard Webhooks or Primitive format)
+  // Verify signature (Standard Webhooks or Primitive format). This runs on the
+  // RAW body and is independent of the event type, so it works identically for
+  // email.*, payment.*, and interaction.* bodies.
   const swHeaders = getStandardWebhooksHeaders(headers);
   if (swHeaders) {
     verifyStandardWebhooksSignature({
@@ -511,11 +553,48 @@ export function handleWebhook(
       toleranceSeconds,
     });
   }
+}
 
-  // Step 2: Parse JSON (shared helper handles UTF-8 validation, BOM stripping, etc.)
-  const parsed = parseJsonBody(body);
+/**
+ * Verify, then parse any webhook event into a typed value.
+ *
+ * Unlike {@link handleWebhook}, this returns the full {@link WebhookEvent}
+ * union, so it handles `payment.*` and `interaction.x402.*` events in addition
+ * to `email.*`. The flow is:
+ *
+ * 1. Verify the signature over the RAW body (works for every event family).
+ * 2. Parse the JSON body.
+ * 3. Classify on the `X-Webhook-Event` HEADER (the primary discriminator),
+ *    returning a typed event for known types and an UnknownEvent for the rest.
+ *
+ * @example
+ * ```typescript
+ * const event = handleWebhookEvent({ body, headers, secret });
+ * if (isPaymentSettledEvent(event)) {
+ *   // typed PaymentSettledEvent
+ * } else if (isInteractionX402Event(event)) {
+ *   // typed interaction.x402.* event
+ * }
+ * ```
+ */
+export function handleWebhookEvent(
+  options: HandleWebhookOptions,
+): WebhookEvent {
+  verifyWebhookRequest(options);
+  const parsed = parseJsonBody(options.body);
+  return parseWebhookEvent(parsed, getEventHeader(options.headers));
+}
 
-  // Step 3: Validate against JSON Schema
+export function handleWebhook(
+  options: HandleWebhookOptions,
+): EmailReceivedEvent {
+  verifyWebhookRequest(options);
+
+  // Parse JSON (shared helper handles UTF-8 validation, BOM stripping, etc.).
+  const parsed = parseJsonBody(options.body);
+
+  // handleWebhook is hard-typed to the email.received payload for backward
+  // compatibility. Use handleWebhookEvent for payment/interaction events.
   return validateEmailReceivedEvent(parsed);
 }
 

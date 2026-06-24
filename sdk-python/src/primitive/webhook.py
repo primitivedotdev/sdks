@@ -17,6 +17,7 @@ from .errors import (
     WebhookPayloadError,
     WebhookVerificationError,
 )
+from .events import is_known_webhook_event_type
 from .types import (
     AuthVerdict,
     EmailAuth,
@@ -36,6 +37,9 @@ LEGACY_SIGNATURE_HEADER = "MyMX-Signature"
 PRIMITIVE_CONFIRMED_HEADER = "X-Primitive-Confirmed"
 LEGACY_CONFIRMED_HEADER = "X-MyMX-Confirmed"
 _SIGNATURE_HEADER_NAMES = ("primitive-signature", "mymx-signature")
+#: The header that names the webhook event for ALL event families (email.*,
+#: payment.*, interaction.*). It is the primary discriminator the parser keys on.
+WEBHOOK_EVENT_HEADER = "X-Webhook-Event"
 STANDARD_WEBHOOK_ID_HEADER = "webhook-id"
 STANDARD_WEBHOOK_TIMESTAMP_HEADER = "webhook-timestamp"
 STANDARD_WEBHOOK_SIGNATURE_HEADER = "webhook-signature"
@@ -492,7 +496,10 @@ def _detect_standard_webhooks_headers(
     return msg_id, timestamp, signature
 
 
-def parse_webhook_event(input: Any = _UNDEFINED) -> WebhookEvent:
+def parse_webhook_event(
+    input: Any = _UNDEFINED,
+    event_type: str | None = None,
+) -> WebhookEvent:
     if input is _UNDEFINED:
         raise WebhookPayloadError(
             "PAYLOAD_UNDEFINED",
@@ -517,15 +524,44 @@ def parse_webhook_event(input: Any = _UNDEFINED) -> WebhookEvent:
             f"Received {type(input).__name__} instead of webhook payload object",
             "Webhook payloads must be objects.",
         )
-    if not isinstance(input.get("event"), str):
+
+    # The event name is carried in the `X-Webhook-Event` HEADER for every event
+    # family. The stored body is sent verbatim with no envelope: email.* bodies
+    # carry `event`, payment.* bodies carry the name in `type`, and interaction.*
+    # bodies are just {"interaction": {...}} with no event/type field. So the
+    # header is the PRIMARY discriminator; fall back to a top-level `event`
+    # string in the body only for backward-compat with any sender that embeds it.
+    body_event = input.get("event")
+    resolved_event = event_type or (
+        body_event if isinstance(body_event, str) else None
+    )
+
+    if not resolved_event:
+        # No `X-Webhook-Event` header AND no in-body `event` field: we cannot
+        # classify this payload. Preserve the legacy contract and raise. The
+        # real sender always sets the header, so handle_webhook_event never
+        # hits this.
         raise WebhookPayloadError(
             "PAYLOAD_MISSING_EVENT",
-            "Missing 'event' field in payload",
-            "This doesn't look like a Primitive webhook payload.",
+            "Missing event discriminator: no X-Webhook-Event header and "
+            "no 'event' field in payload",
+            "Pass the X-Webhook-Event header (the canonical discriminator) or "
+            "call handle_webhook_event, which reads it for you.",
         )
-    if input["event"] == "email.received":
+
+    if resolved_event == "email.received":
         return validate_email_received_event(input)
-    return cast(UnknownEvent, input)
+
+    if resolved_event in ("payment.settled", "payment.failed") or (
+        is_known_webhook_event_type(resolved_event)
+    ):
+        # Payment bodies carry the name in `type`; interaction bodies carry no
+        # event/type field. Overlay a canonical `event` (from the header) so
+        # consumers branch on a single field.
+        return cast(WebhookEvent, {**input, "event": resolved_event})
+
+    # Unknown event type: return as UnknownEvent for forward compatibility.
+    return cast(UnknownEvent, {**input, "event": resolved_event})
 
 
 def is_email_received_event(event: object) -> TypeGuard[EmailReceivedEvent]:
@@ -550,18 +586,36 @@ def _get_signature_header(headers: Mapping[str, Any]) -> str:
     return ""
 
 
-def handle_webhook(
+def _get_event_header(headers: Mapping[str, Any]) -> str | None:
+    """Read the ``X-Webhook-Event`` header value (case-insensitive)."""
+    for key, value in headers.items():
+        if key.lower() != "x-webhook-event":
+            continue
+        if isinstance(value, Sequence) and not isinstance(
+            value, (bytes, bytearray, str)
+        ):
+            first = value[0] if value else ""
+            result = _header_value_to_string(first)
+        else:
+            result = _header_value_to_string(value)
+        return result or None
+    return None
+
+
+def _verify_webhook_request(
     *,
     body: str | bytes | bytearray | memoryview,
     headers: Mapping[str, Any],
     secret: str,
-    tolerance_seconds: int | None = None,
-) -> EmailReceivedEvent:
+    tolerance_seconds: int | None,
+) -> None:
     tol = (
         tolerance_seconds
         if tolerance_seconds is not None
         else DEFAULT_TOLERANCE_SECONDS
     )
+    # Verify the signature over the RAW body. This is independent of the event
+    # type, so it works identically for email.*, payment.*, interaction.* bodies.
     sw_headers = _detect_standard_webhooks_headers(headers)
     if sw_headers:
         msg_id, timestamp, signature = sw_headers
@@ -580,6 +634,49 @@ def handle_webhook(
             secret=secret,
             tolerance_seconds=tol,
         )
+
+
+def handle_webhook_event(
+    *,
+    body: str | bytes | bytearray | memoryview,
+    headers: Mapping[str, Any],
+    secret: str,
+    tolerance_seconds: int | None = None,
+) -> WebhookEvent:
+    """Verify, then parse any webhook event into a typed value.
+
+    Unlike :func:`handle_webhook`, this returns the full ``WebhookEvent`` union,
+    so it handles ``payment.*`` and ``interaction.x402.*`` events in addition to
+    ``email.*``. It verifies the signature over the raw body, parses the JSON,
+    then classifies on the ``X-Webhook-Event`` header (the primary
+    discriminator), returning a typed event for known types and an
+    ``UnknownEvent`` for the rest.
+    """
+    _verify_webhook_request(
+        body=body,
+        headers=headers,
+        secret=secret,
+        tolerance_seconds=tolerance_seconds,
+    )
+    parsed = parse_json_body(body)
+    return parse_webhook_event(parsed, _get_event_header(headers))
+
+
+def handle_webhook(
+    *,
+    body: str | bytes | bytearray | memoryview,
+    headers: Mapping[str, Any],
+    secret: str,
+    tolerance_seconds: int | None = None,
+) -> EmailReceivedEvent:
+    _verify_webhook_request(
+        body=body,
+        headers=headers,
+        secret=secret,
+        tolerance_seconds=tolerance_seconds,
+    )
+    # handle_webhook is hard-typed to the email.received payload for backward
+    # compatibility. Use handle_webhook_event for payment/interaction events.
     parsed = parse_json_body(body)
     return validate_email_received_event(parsed)
 
