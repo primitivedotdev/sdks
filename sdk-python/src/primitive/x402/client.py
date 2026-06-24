@@ -13,20 +13,24 @@ from __future__ import annotations
 import math
 import os
 import re
+import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, NoReturn
 from urllib.parse import quote
 
 import httpx
 from dateutil.parser import isoparse
 
 from .sign import (
+    BuiltPaymentStep,
     NonceBinding,
     PayoutRegistrationMessageInput,
     TokenDomain,
     X402Signer,
     build_exact_evm_payment_payload,
+    build_payment_step_envelope,
     build_payout_registration_message,
     compute_payment_validity_window,
     sign_interaction_payment,
@@ -144,6 +148,65 @@ class X402Challenge:
         )
 
 
+def _payment_requirements_from_dict(
+    pr: dict[str, Any] | None,
+) -> X402PaymentRequirements | None:
+    if pr is None:
+        return None
+    return X402PaymentRequirements(
+        scheme=pr.get("scheme", ""),
+        network=pr.get("network", ""),
+        max_amount_required=pr.get("maxAmountRequired", ""),
+        pay_to=pr.get("payTo", ""),
+        asset=pr.get("asset", ""),
+        extra=pr.get("extra") or {},
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class X402EmailChallengeDetails:
+    """The challenge the payer signs and pays, inside an email-native response."""
+
+    payment_requirements: X402PaymentRequirements
+    nonce_binding: dict[str, str]
+    expires_at: str
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> X402EmailChallengeDetails:
+        return cls(
+            payment_requirements=_payment_requirements_from_dict(
+                data.get("payment_requirements")
+            ),  # type: ignore[arg-type]
+            nonce_binding=data.get("nonce_binding") or {},
+            expires_at=data.get("expires_at", ""),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class X402EmailChallenge:
+    """The result of issuing an email-native challenge.
+
+    ``interaction_id`` is the real email thread id (``uuid@domain``) the payment
+    is bound to. Hand the whole object to the payer, who calls
+    :meth:`X402Client.pay_email_challenge` with it to build the signed payment
+    step.
+    """
+
+    interaction_id: str
+    challenge_id: str
+    challenge: X402EmailChallengeDetails
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> X402EmailChallenge:
+        return cls(
+            interaction_id=data.get("interaction_id", ""),
+            challenge_id=data.get("challenge_id", ""),
+            challenge=X402EmailChallengeDetails.from_dict(
+                data.get("challenge") or {}
+            ),
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class X402Receipt:
     id: str
@@ -237,7 +300,7 @@ def _validate_challenge(c: X402Challenge | None) -> None:
     crypto error mid-sign.
     """
 
-    def bad(field: str) -> None:
+    def bad(field: str) -> NoReturn:
         raise X402Error(f"challenge is missing or malformed: {field}", 0)
 
     if not c or not isinstance(c, X402Challenge):
@@ -257,11 +320,19 @@ def _validate_challenge(c: X402Challenge | None) -> None:
         or not nb.get("challenge_nonce")
     ):
         bad("nonce_binding")
-    pr = c.payment_requirements
+    _validate_payment_requirements(c.payment_requirements, bad)
+
+
+def _validate_payment_requirements(
+    pr: X402PaymentRequirements | None,
+    bad: Callable[[str], NoReturn],
+) -> None:
+    """Validate the x402 PaymentRequirements shared by both challenge shapes."""
     if not pr:
         bad("payment_requirements")
+    assert pr is not None
     # Require a positive integer base-units string so the later int()
-    # conversion in pay() cannot raise a raw ValueError on a malformed value.
+    # conversion cannot raise a raw ValueError on a malformed value.
     if not _AMOUNT_RE.fullmatch(pr.max_amount_required or ""):
         bad(
             "payment_requirements.maxAmountRequired (expected a positive "
@@ -273,6 +344,42 @@ def _validate_challenge(c: X402Challenge | None) -> None:
         bad("payment_requirements.asset (expected a 0x address)")
     if not pr.extra or not pr.extra.get("name") or not pr.extra.get("version"):
         bad("payment_requirements.extra (name/version)")
+
+
+def _validate_email_challenge(c: X402EmailChallenge | None) -> None:
+    """Assert an email-native challenge is fully hydrated before signing."""
+
+    def bad(field: str) -> NoReturn:
+        raise X402Error(
+            f"email challenge is missing or malformed: {field}", 0
+        )
+
+    if not c or not isinstance(c, X402EmailChallenge):
+        bad("email challenge")
+    assert c is not None
+    if not c.interaction_id:
+        bad("interaction_id")
+    ch = c.challenge
+    if not ch:
+        bad("challenge")
+    if not ch.expires_at:
+        bad("challenge.expires_at")
+    nb = ch.nonce_binding
+    if (
+        not nb
+        or not nb.get("interaction_id")
+        or not nb.get("challenge_step_id")
+        or not nb.get("challenge_nonce")
+    ):
+        bad("challenge.nonce_binding")
+    # The envelope's interaction_id must agree with the binding's, or the
+    # platform would re-derive a nonce that doesn't match what we signed.
+    if nb.get("interaction_id") != c.interaction_id:
+        bad(
+            "interaction_id (mismatch with "
+            "challenge.nonce_binding.interaction_id)"
+        )
+    _validate_payment_requirements(ch.payment_requirements, bad)
 
 
 class X402Client:
@@ -460,6 +567,170 @@ class X402Client:
             "POST", "/v1/x402/challenges", body, extra_headers=extra_headers
         )
         return X402Challenge.from_dict(data)
+
+    def create_email_challenge(
+        self,
+        *,
+        from_: str,
+        to: str,
+        amount: str | None = None,
+        amount_usdc: str | None = None,
+        network: str | None = None,
+        description: str | None = None,
+        resource: str | None = None,
+        expires_in: int | None = None,
+        idempotency_key: str | None = None,
+    ) -> X402EmailChallenge:
+        """Issue a payment challenge over an email thread (payee side).
+
+        Sends the challenge as an email from ``from_`` to ``to`` and binds the
+        payment to that thread. Returns the challenge (including the real
+        ``interaction_id``); deliver it to the payer, who calls
+        :meth:`pay_email_challenge` to build the signed payment step.
+
+        Provide exactly one of ``amount`` (base units) or ``amount_usdc`` (human
+        USDC). Pass ``idempotency_key`` to make the request idempotent: a retry
+        with the same key returns the original challenge without sending a
+        second email.
+        """
+        if not from_:
+            raise X402Error("create_email_challenge() requires `from_`", 0)
+        if not to:
+            raise X402Error("create_email_challenge() requires `to`", 0)
+        if amount is not None and amount_usdc is not None:
+            raise X402Error(
+                "create_email_challenge() takes exactly one of `amount` (base "
+                "units) or `amount_usdc` (human USDC), not both",
+                0,
+            )
+        resolved = (
+            _usdc_to_base_units(amount_usdc)
+            if amount_usdc is not None
+            else amount
+        )
+        if not resolved or not _AMOUNT_RE.fullmatch(resolved):
+            raise X402Error(
+                "create_email_challenge() requires `amount` as a positive "
+                'integer string in token base units (e.g. "10000"), or '
+                "`amount_usdc` as a positive USDC amount with at most 6 "
+                'decimals (e.g. "0.01")',
+                0,
+            )
+        body: dict[str, Any] = {
+            "from": from_,
+            "to": to,
+            "amount": resolved,
+            "network": network or "base-sepolia",
+        }
+        if description:
+            body["description"] = description
+        if resource:
+            body["resource"] = resource
+        if expires_in is not None:
+            body["expires_in"] = expires_in
+        extra_headers = (
+            {"idempotency-key": idempotency_key} if idempotency_key else None
+        )
+        data = self._request(
+            "POST",
+            "/v1/x402/email-challenges",
+            body,
+            extra_headers=extra_headers,
+        )
+        return X402EmailChallenge.from_dict(data)
+
+    def pay_email_challenge(
+        self, challenge: X402EmailChallenge, *, signer: X402Signer
+    ) -> BuiltPaymentStep:
+        """Build the signed payment step for an email-native challenge (payer).
+
+        Given a received :class:`X402EmailChallenge` and the caller's signer,
+        this derives the interaction-bound authorization, signs it locally, and
+        returns the signed ``interaction.json`` payment-step envelope plus its
+        canonical JSON bytes. It does NOT send anything.
+
+        The caller sends ``result.json`` back as an ``interaction.json``
+        attachment on a reply to the challenge email; the platform reads the
+        envelope from those exact bytes, re-derives the bound nonce, and
+        settles.
+        """
+        if (
+            signer is None
+            or not getattr(signer, "address", None)
+            or not callable(getattr(signer, "sign_typed_data", None))
+        ):
+            raise X402Error(
+                "pay_email_challenge() requires a signer with { address, "
+                "sign_typed_data } (e.g. a PrivateKeySigner)",
+                0,
+            )
+        _validate_email_challenge(challenge)
+        details = challenge.challenge
+        pr = details.payment_requirements
+        network = pr.network
+        chain_id = _CHAIN_IDS.get(network)
+        if chain_id is None:
+            raise X402Error(f"unsupported network: {network}", 0)
+        if pr.scheme != "exact":
+            raise X402Error(f"unsupported payment scheme: {pr.scheme}", 0)
+
+        now_sec = math.floor(datetime.now(timezone.utc).timestamp())
+        try:
+            expires_at_sec = math.floor(
+                isoparse(details.expires_at).timestamp()
+            )
+        except (ValueError, OverflowError) as cause:
+            raise X402Error(
+                f"challenge has an invalid expires_at: {details.expires_at}",
+                0,
+            ) from cause
+        if expires_at_sec <= now_sec:
+            raise X402Error(
+                f"challenge has already expired (expires_at "
+                f"{details.expires_at}); not signing",
+                0,
+            )
+        try:
+            valid_after, valid_before = compute_payment_validity_window(
+                challenge_expires_at_sec=expires_at_sec,
+                now_sec=now_sec,
+            )
+        except ValueError as cause:
+            raise X402Error(str(cause), 0) from cause
+
+        auth, signature = sign_interaction_payment(
+            sign=signer.sign_typed_data,
+            payer=signer.address,
+            domain=TokenDomain(
+                name=pr.extra["name"],
+                version=pr.extra["version"],
+                chain_id=chain_id,
+                verifying_contract=pr.asset,
+            ),
+            pay_to=pr.pay_to,
+            amount=int(pr.max_amount_required),
+            nonce_binding=NonceBinding(
+                interaction_id=details.nonce_binding["interaction_id"],
+                challenge_step_id=details.nonce_binding["challenge_step_id"],
+                challenge_nonce=details.nonce_binding["challenge_nonce"],
+            ),
+            valid_after=valid_after,
+            valid_before=valid_before,
+        )
+
+        payment = build_exact_evm_payment_payload(
+            network=network,
+            authorization=auth,
+            signature=signature,
+        )
+        # A fresh UUID identifies the payment step; prev_step_id binds it to the
+        # challenge step so the platform threads the interaction correctly.
+        return build_payment_step_envelope(
+            interaction_id=challenge.interaction_id,
+            step_id=str(uuid.uuid4()),
+            prev_step_id=details.nonce_binding["challenge_step_id"],
+            payment=payment,
+        )
 
     def pay(self, challenge: X402Challenge, *, signer: X402Signer) -> X402Receipt:
         """Pay a challenge (payer side).

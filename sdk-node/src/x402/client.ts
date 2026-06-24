@@ -7,13 +7,17 @@
  * every signed field against its own records, and enforces the spend policy, so
  * the SDK's job is just: derive the bound authorization, sign, and submit.
  */
+import { randomUUID } from "node:crypto";
 import type { Address } from "viem";
 import {
+  type BuiltPaymentStep,
   buildExactEvmPaymentPayload,
+  buildPaymentStepEnvelope,
   buildPayoutRegistrationMessage,
   computePaymentValidityWindow,
   signInteractionPayment,
   type X402Network,
+  type X402PaymentPayload,
   type X402Signer,
 } from "./sign.js";
 
@@ -46,6 +50,36 @@ export interface X402Challenge {
   };
   payment_requirements: X402PaymentRequirements;
   expires_at: string;
+}
+
+/** The nonce binding the payer hashes into the EIP-3009 nonce. */
+export interface X402NonceBinding {
+  interaction_id: string;
+  challenge_step_id: string;
+  challenge_nonce: string;
+}
+
+/**
+ * The challenge details carried inside an email-native challenge: what the
+ * payer needs to sign and pay. Distinct from the synthetic `X402Challenge` in
+ * that it has no top-level `id`/`amount`; everything is in the nested objects.
+ */
+export interface X402EmailChallengeDetails {
+  payment_requirements: X402PaymentRequirements;
+  nonce_binding: X402NonceBinding;
+  expires_at: string;
+}
+
+/**
+ * The result of issuing an email-native challenge (`createEmailChallenge`).
+ * `interaction_id` is the real email thread id (`uuid@domain`) the payment is
+ * bound to. Hand the whole object to the payer; the payer calls
+ * `payEmailChallenge` with it to build the signed payment step.
+ */
+export interface X402EmailChallenge {
+  interaction_id: string;
+  challenge_id: string;
+  challenge: X402EmailChallengeDetails;
 }
 
 export interface X402Receipt {
@@ -128,6 +162,47 @@ const CHARGE_INPUT_KEYS = {
   idempotencyKey: true,
 } satisfies Record<keyof X402ChargeInput, true>;
 
+export interface X402EmailChargeInput {
+  /** Your sending address (the payee / funds receiver). */
+  from: string;
+  /** The payer's email address the challenge is sent to. */
+  to: string;
+  /**
+   * Amount in token base units (USDC has 6 decimals, so "10000" = 0.01).
+   * Provide exactly one of `amount` or `amountUsdc`.
+   */
+  amount?: string;
+  /**
+   * Amount as human USDC (e.g. "0.01"), converted to base units for you.
+   * Provide exactly one of `amount` or `amountUsdc`.
+   */
+  amountUsdc?: string;
+  /** Defaults to "base-sepolia". */
+  network?: string;
+  description?: string;
+  /** A URL identifying the thing being paid for. */
+  resource?: string;
+  /** Seconds until the challenge expires (default 1h). */
+  expiresIn?: number;
+  /**
+   * Optional idempotency key. Retrying `createEmailChallenge()` with the same
+   * key returns the original challenge without sending a second email.
+   */
+  idempotencyKey?: string;
+}
+
+const EMAIL_CHARGE_INPUT_KEYS = {
+  from: true,
+  to: true,
+  amount: true,
+  amountUsdc: true,
+  network: true,
+  description: true,
+  resource: true,
+  expiresIn: true,
+  idempotencyKey: true,
+} satisfies Record<keyof X402EmailChargeInput, true>;
+
 // USDC has 6 decimals. Convert a human amount ("0.01") to base units ("10000")
 // with string/BigInt math so there is no float rounding. Returns null on a
 // non-positive, malformed, or over-precise (>6 decimals) value.
@@ -179,10 +254,19 @@ function validateChallenge(c: X402Challenge): void {
   if (!nb?.interaction_id || !nb.challenge_step_id || !nb.challenge_nonce) {
     bad("nonce_binding");
   }
-  const pr = c.payment_requirements;
+  validatePaymentRequirements(c.payment_requirements, bad);
+}
+
+type BadFn = (field: string) => never;
+
+/** Validate the x402 PaymentRequirements shared by both challenge shapes. */
+function validatePaymentRequirements(
+  pr: X402PaymentRequirements | undefined,
+  bad: BadFn,
+): void {
   if (!pr) bad("payment_requirements");
   // Require a positive integer base-units string so the later BigInt()
-  // conversion in pay() cannot throw a raw SyntaxError on a malformed value.
+  // conversion cannot throw a raw SyntaxError on a malformed value.
   if (!/^[1-9][0-9]{0,38}$/.test(pr.maxAmountRequired ?? "")) {
     bad(
       "payment_requirements.maxAmountRequired (expected a positive integer string in token base units)",
@@ -197,6 +281,36 @@ function validateChallenge(c: X402Challenge): void {
   if (!pr.extra?.name || !pr.extra.version) {
     bad("payment_requirements.extra (name/version)");
   }
+}
+
+/**
+ * Assert an email-native challenge is fully hydrated before signing, so a
+ * missing field fails with a named X402Error instead of an opaque error
+ * mid-sign. The interaction_id and the challenge step id (the nonce binding's
+ * fields) drive both the bound nonce and the payment-step envelope, so they are
+ * checked here.
+ */
+function validateEmailChallenge(c: X402EmailChallenge): void {
+  const bad = (field: string): never => {
+    throw new X402Error(`email challenge is missing or malformed: ${field}`, 0);
+  };
+  if (!c || typeof c !== "object") bad("email challenge");
+  if (!c.interaction_id) bad("interaction_id");
+  const ch = c.challenge;
+  if (!ch || typeof ch !== "object") bad("challenge");
+  if (!ch.expires_at) bad("challenge.expires_at");
+  const nb = ch.nonce_binding;
+  if (!nb?.interaction_id || !nb.challenge_step_id || !nb.challenge_nonce) {
+    bad("challenge.nonce_binding");
+  }
+  // The envelope's interaction_id must agree with the binding's, or the platform
+  // would re-derive a nonce that doesn't match the one we signed.
+  if (nb.interaction_id !== c.interaction_id) {
+    bad(
+      "interaction_id (mismatch with challenge.nonce_binding.interaction_id)",
+    );
+  }
+  validatePaymentRequirements(ch.payment_requirements, bad);
 }
 
 export interface X402ClientOptions {
@@ -348,6 +462,172 @@ export class X402Client {
       headers: input.idempotencyKey
         ? { "idempotency-key": input.idempotencyKey }
         : undefined,
+    });
+  }
+
+  /**
+   * Issue a payment challenge over an email thread (payee side). Sends the
+   * challenge as an email from `from` to `to` and binds the payment to that
+   * thread. Returns the challenge (including the real `interaction_id`); deliver
+   * it to the payer, who calls `payEmailChallenge` to build the signed payment.
+   *
+   * Provide exactly one of `amount` (base units) or `amountUsdc` (human USDC).
+   */
+  async createEmailChallenge(
+    input: X402EmailChargeInput,
+  ): Promise<X402EmailChallenge> {
+    for (const key of Object.keys(input)) {
+      if (!(key in EMAIL_CHARGE_INPUT_KEYS)) {
+        throw new X402Error(
+          `unknown createEmailChallenge() option "${key}"; expected one of: ${Object.keys(EMAIL_CHARGE_INPUT_KEYS).join(", ")}`,
+          0,
+        );
+      }
+    }
+    if (!input.from) {
+      throw new X402Error("createEmailChallenge() requires `from`", 0);
+    }
+    if (!input.to) {
+      throw new X402Error("createEmailChallenge() requires `to`", 0);
+    }
+    if (input.amount !== undefined && input.amountUsdc !== undefined) {
+      throw new X402Error(
+        "createEmailChallenge() takes exactly one of `amount` (base units) or `amountUsdc` (human USDC), not both",
+        0,
+      );
+    }
+    const amount =
+      input.amountUsdc !== undefined
+        ? usdcToBaseUnits(input.amountUsdc)
+        : (input.amount ?? null);
+    if (!amount || !/^[1-9][0-9]{0,38}$/.test(amount)) {
+      throw new X402Error(
+        'createEmailChallenge() requires `amount` as a positive integer string in token base units (e.g. "10000"), or `amountUsdc` as a positive USDC amount with at most 6 decimals (e.g. "0.01")',
+        0,
+      );
+    }
+    const body: Record<string, unknown> = {
+      from: input.from,
+      to: input.to,
+      amount,
+      network: input.network ?? "base-sepolia",
+    };
+    if (input.description) body.description = input.description;
+    if (input.resource) body.resource = input.resource;
+    if (input.expiresIn !== undefined) body.expires_in = input.expiresIn;
+    return this.#request<X402EmailChallenge>(
+      "POST",
+      "/v1/x402/email-challenges",
+      body,
+      {
+        headers: input.idempotencyKey
+          ? { "idempotency-key": input.idempotencyKey }
+          : undefined,
+      },
+    );
+  }
+
+  /**
+   * Build the signed payment step for an email-native challenge (payer side).
+   * Given a received `X402EmailChallenge` and the caller's signer, this derives
+   * the interaction-bound authorization, signs it locally, and returns the
+   * signed `interaction.json` payment-step envelope plus its canonical JSON
+   * bytes. It does NOT send anything.
+   *
+   * The caller sends `result.json` back as an `interaction.json` attachment on a
+   * reply to the challenge email (e.g. via the SDK's `send` / `reply`); the
+   * platform reads the envelope from those exact bytes, re-derives the bound
+   * nonce, and settles.
+   */
+  async payEmailChallenge(
+    challenge: X402EmailChallenge,
+    options: { signer: X402Signer },
+  ): Promise<BuiltPaymentStep> {
+    if (
+      !options?.signer?.address ||
+      typeof options.signer.signTypedData !== "function"
+    ) {
+      throw new X402Error(
+        "payEmailChallenge() requires options.signer with { address, signTypedData } (e.g. a viem LocalAccount)",
+        0,
+      );
+    }
+    validateEmailChallenge(challenge);
+    const details = challenge.challenge;
+    const pr = details.payment_requirements;
+    const network = pr.network;
+    const chainId = CHAIN_IDS[network];
+    if (chainId === undefined) {
+      throw new X402Error(`unsupported network: ${network}`, 0);
+    }
+    if (pr.scheme !== "exact") {
+      throw new X402Error(`unsupported payment scheme: ${pr.scheme}`, 0);
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const expiresAtMs = Date.parse(details.expires_at);
+    if (Number.isNaN(expiresAtMs)) {
+      throw new X402Error(
+        `challenge has an invalid expires_at: ${details.expires_at}`,
+        0,
+      );
+    }
+    const expiresAtSec = Math.floor(expiresAtMs / 1000);
+    if (expiresAtSec <= nowSec) {
+      throw new X402Error(
+        `challenge has already expired (expires_at ${details.expires_at}); not signing`,
+        0,
+      );
+    }
+    let validAfter: bigint;
+    let validBefore: bigint;
+    try {
+      ({ validAfter, validBefore } = computePaymentValidityWindow({
+        challengeExpiresAtSec: expiresAtSec,
+        nowSec,
+      }));
+    } catch (cause) {
+      throw new X402Error(
+        cause instanceof Error ? cause.message : String(cause),
+        0,
+        undefined,
+        { cause },
+      );
+    }
+
+    const { authorization, signature } = await signInteractionPayment({
+      sign: (typedData) => options.signer.signTypedData(typedData),
+      payer: options.signer.address,
+      domain: {
+        name: pr.extra.name,
+        version: pr.extra.version,
+        chainId,
+        verifyingContract: pr.asset as Address,
+      },
+      payTo: pr.payTo as Address,
+      amount: BigInt(pr.maxAmountRequired),
+      nonceBinding: {
+        interactionId: details.nonce_binding.interaction_id,
+        challengeStepId: details.nonce_binding.challenge_step_id,
+        challengeNonce: details.nonce_binding.challenge_nonce,
+      },
+      validAfter,
+      validBefore,
+    });
+
+    const payment: X402PaymentPayload = buildExactEvmPaymentPayload({
+      network: network as X402Network,
+      authorization,
+      signature,
+    });
+
+    // A fresh UUID identifies the payment step; prev_step_id binds it to the
+    // challenge step so the platform threads the interaction correctly.
+    return buildPaymentStepEnvelope({
+      interactionId: challenge.interaction_id,
+      stepId: randomUUID(),
+      prevStepId: details.nonce_binding.challenge_step_id,
+      payment,
     });
   }
 

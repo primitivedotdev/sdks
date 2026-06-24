@@ -79,6 +79,22 @@ type Invoker interface {
 	//
 	// POST /x402/challenges
 	CreateChallenge(ctx context.Context, request *CreateChallengeInput) (CreateChallengeRes, error)
+	// CreateEmailChallenge invokes createEmailChallenge operation.
+	//
+	// Issue an x402 payment challenge over a real email thread (the payee
+	// side). Unlike `createChallenge` (which mints a synthetic challenge id),
+	// this sends the challenge as an email from `from` to `to` and binds the
+	// payment to that DKIM-authenticated thread. The `pay_to` address and the
+	// token asset are resolved server-side from your registered default payout
+	// address for the network, never from the request. The response carries
+	// the thread's `interaction_id` plus the `challenge` (the
+	// `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
+	// needs to sign; the payer replies with a signed `payment` interaction
+	// step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
+	// is 0.01 USDC).
+	//
+	// POST /x402/email-challenges
+	CreateEmailChallenge(ctx context.Context, request *CreateEmailChallengeInput, params CreateEmailChallengeParams) (CreateEmailChallengeRes, error)
 	// CreateEndpoint invokes createEndpoint operation.
 	//
 	// Creates a new webhook endpoint. If a deactivated endpoint
@@ -1515,6 +1531,143 @@ func (c *Client) sendCreateChallenge(ctx context.Context, request *CreateChallen
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateChallengeResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateEmailChallenge invokes createEmailChallenge operation.
+//
+// Issue an x402 payment challenge over a real email thread (the payee
+// side). Unlike `createChallenge` (which mints a synthetic challenge id),
+// this sends the challenge as an email from `from` to `to` and binds the
+// payment to that DKIM-authenticated thread. The `pay_to` address and the
+// token asset are resolved server-side from your registered default payout
+// address for the network, never from the request. The response carries
+// the thread's `interaction_id` plus the `challenge` (the
+// `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
+// needs to sign; the payer replies with a signed `payment` interaction
+// step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
+// is 0.01 USDC).
+//
+// POST /x402/email-challenges
+func (c *Client) CreateEmailChallenge(ctx context.Context, request *CreateEmailChallengeInput, params CreateEmailChallengeParams) (CreateEmailChallengeRes, error) {
+	res, err := c.sendCreateEmailChallenge(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendCreateEmailChallenge(ctx context.Context, request *CreateEmailChallengeInput, params CreateEmailChallengeParams) (res CreateEmailChallengeRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createEmailChallenge"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/x402/email-challenges"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateEmailChallengeOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/x402/email-challenges"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateEmailChallengeRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "idempotency-key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateEmailChallengeOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateEmailChallengeResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

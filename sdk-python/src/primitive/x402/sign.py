@@ -10,6 +10,7 @@ the server recomputes.
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -266,6 +267,78 @@ def to_payment_payload(
                 "nonce": auth.nonce,
             },
         },
+    )
+
+
+# The protocol the email-native payment interaction runs (``x402.payment/1``).
+# The payer's reply carries the ``payment`` step of this protocol.
+X402_INTERACTION_PROTOCOL = "x402.payment"
+X402_INTERACTION_PROTOCOL_VERSION = 1
+
+# A UUID (used for the interaction id's local part and the step ids).
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+# An interaction id is ``uuid@domain``.
+_WIRE_ID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@[^\s@]+$",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class BuiltPaymentStep:
+    """A built, signed payment-step envelope plus its canonical JSON bytes.
+
+    The caller attaches ``json`` as the ``interaction.json`` part of the reply
+    email; the platform reads ``envelope`` back from those exact bytes.
+    """
+
+    envelope: dict[str, Any]
+    json: str
+    """The canonical interaction.json body (what to attach to the reply)."""
+
+
+def build_payment_step_envelope(
+    *,
+    interaction_id: str,
+    step_id: str,
+    prev_step_id: str,
+    payment: X402PaymentPayload,
+    expires_at: str | None = None,
+) -> BuiltPaymentStep:
+    """Build the section-2.3 interaction.json envelope for a ``payment`` step.
+
+    Pure: no I/O. ``payment`` is the signed exact-EVM payload (from
+    :func:`build_exact_evm_payment_payload`); ``prev_step_id`` is the challenge
+    step id this payment answers, and ``step_id`` is a fresh UUID for the payment
+    step. Returns the envelope and its canonical JSON, so the bytes the platform
+    reads back are exactly the ones produced here.
+    """
+    if not _WIRE_ID_RE.fullmatch(interaction_id):
+        raise ValueError(
+            "build_payment_step_envelope: interaction_id must be uuid@domain"
+        )
+    if not _UUID_RE.fullmatch(step_id):
+        raise ValueError("build_payment_step_envelope: step_id must be a uuid")
+    if not _UUID_RE.fullmatch(prev_step_id):
+        raise ValueError(
+            "build_payment_step_envelope: prev_step_id must be a uuid"
+        )
+    envelope: dict[str, Any] = {
+        "interaction_version": 1,
+        "interaction_id": interaction_id,
+        "protocol": X402_INTERACTION_PROTOCOL,
+        "protocol_version": X402_INTERACTION_PROTOCOL_VERSION,
+        "step": "payment",
+        "step_id": step_id,
+        "prev_step_id": prev_step_id,
+        "expires_at": expires_at,
+        "payload": {"payment": payment.to_dict()},
+    }
+    return BuiltPaymentStep(
+        envelope=envelope, json=json.dumps(envelope, separators=(",", ":"))
     )
 
 

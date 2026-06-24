@@ -89,6 +89,9 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" describe domains:zone-file >/dev/null && \
 	"$$bin" domains zone-file --help | grep -q -- "--outbound-only" && \
 	"$$bin" inbox status --help | grep -q -- "readiness" && \
+	"$$bin" payments pay-email-step --help | grep -q -- "interaction.json" && \
+	"$$bin" payments pay-email-step --help | grep -q -- "--challenge-file" && \
+	"$$bin" payments create-email-challenge --help | grep -q -- "--from" && \
 	"$$bin" whoami --help | grep -q -- "--json" && \
 	"$$bin" signin --help | grep -q -- "signin <email>" && \
 	"$$bin" signin --help | grep -q -- "signin confirm" && \

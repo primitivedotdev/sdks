@@ -42,6 +42,7 @@ var operationRolesBearerAuth = map[string][]string{
 	CliLogoutOperation:               []string{},
 	CreateAgentClaimLinkOperation:    []string{},
 	CreateChallengeOperation:         []string{},
+	CreateEmailChallengeOperation:    []string{},
 	CreateEndpointOperation:          []string{},
 	CreateFilterOperation:            []string{},
 	CreateFunctionOperation:          []string{},

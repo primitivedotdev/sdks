@@ -2360,6 +2360,217 @@ type CreateChallengeUnprocessableEntity ErrorResponse
 
 func (*CreateChallengeUnprocessableEntity) createChallengeRes() {}
 
+type CreateEmailChallengeBadRequest ErrorResponse
+
+func (*CreateEmailChallengeBadRequest) createEmailChallengeRes() {}
+
+type CreateEmailChallengeConflict ErrorResponse
+
+func (*CreateEmailChallengeConflict) createEmailChallengeRes() {}
+
+// Merged schema.
+type CreateEmailChallengeCreated struct {
+	Success bool               `json:"success"`
+	Data    X402EmailChallenge `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateEmailChallengeCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateEmailChallengeCreated) GetData() X402EmailChallenge {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateEmailChallengeCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateEmailChallengeCreated) SetData(val X402EmailChallenge) {
+	s.Data = val
+}
+
+func (*CreateEmailChallengeCreated) createEmailChallengeRes() {}
+
+type CreateEmailChallengeForbidden ErrorResponse
+
+func (*CreateEmailChallengeForbidden) createEmailChallengeRes() {}
+
+// Issue a payment challenge over an email thread. `from` is your sending
+// address (the funds receiver; ownership is enforced at send, exactly as
+// for outbound mail) and `to` is the payer's address. The `pay_to` payout
+// wallet and the token asset are resolved server-side, never taken from
+// the request.
+// Ref: #/components/schemas/CreateEmailChallengeInput
+type CreateEmailChallengeInput struct {
+	// Your sending address (the payee / funds receiver). Must be an
+	// address your org is allowed to send from.
+	From string `json:"from"`
+	// The payer's email address the challenge is sent to.
+	To string `json:"to"`
+	// Amount to collect, in token base units. USDC has 6 decimals, so
+	// `"10000"` is 0.01 USDC.
+	Amount  string                           `json:"amount"`
+	Network CreateEmailChallengeInputNetwork `json:"network"`
+	// Seconds until the challenge expires. Defaults to 3600.
+	ExpiresIn OptInt `json:"expires_in"`
+	// Optional URL identifying what is being paid for.
+	Resource OptURI `json:"resource"`
+	// Optional human-readable description of the payment.
+	Description OptString `json:"description"`
+}
+
+// GetFrom returns the value of From.
+func (s *CreateEmailChallengeInput) GetFrom() string {
+	return s.From
+}
+
+// GetTo returns the value of To.
+func (s *CreateEmailChallengeInput) GetTo() string {
+	return s.To
+}
+
+// GetAmount returns the value of Amount.
+func (s *CreateEmailChallengeInput) GetAmount() string {
+	return s.Amount
+}
+
+// GetNetwork returns the value of Network.
+func (s *CreateEmailChallengeInput) GetNetwork() CreateEmailChallengeInputNetwork {
+	return s.Network
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *CreateEmailChallengeInput) GetExpiresIn() OptInt {
+	return s.ExpiresIn
+}
+
+// GetResource returns the value of Resource.
+func (s *CreateEmailChallengeInput) GetResource() OptURI {
+	return s.Resource
+}
+
+// GetDescription returns the value of Description.
+func (s *CreateEmailChallengeInput) GetDescription() OptString {
+	return s.Description
+}
+
+// SetFrom sets the value of From.
+func (s *CreateEmailChallengeInput) SetFrom(val string) {
+	s.From = val
+}
+
+// SetTo sets the value of To.
+func (s *CreateEmailChallengeInput) SetTo(val string) {
+	s.To = val
+}
+
+// SetAmount sets the value of Amount.
+func (s *CreateEmailChallengeInput) SetAmount(val string) {
+	s.Amount = val
+}
+
+// SetNetwork sets the value of Network.
+func (s *CreateEmailChallengeInput) SetNetwork(val CreateEmailChallengeInputNetwork) {
+	s.Network = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *CreateEmailChallengeInput) SetExpiresIn(val OptInt) {
+	s.ExpiresIn = val
+}
+
+// SetResource sets the value of Resource.
+func (s *CreateEmailChallengeInput) SetResource(val OptURI) {
+	s.Resource = val
+}
+
+// SetDescription sets the value of Description.
+func (s *CreateEmailChallengeInput) SetDescription(val OptString) {
+	s.Description = val
+}
+
+type CreateEmailChallengeInputNetwork string
+
+const (
+	CreateEmailChallengeInputNetworkBase        CreateEmailChallengeInputNetwork = "base"
+	CreateEmailChallengeInputNetworkBaseSepolia CreateEmailChallengeInputNetwork = "base-sepolia"
+)
+
+// AllValues returns all CreateEmailChallengeInputNetwork values.
+func (CreateEmailChallengeInputNetwork) AllValues() []CreateEmailChallengeInputNetwork {
+	return []CreateEmailChallengeInputNetwork{
+		CreateEmailChallengeInputNetworkBase,
+		CreateEmailChallengeInputNetworkBaseSepolia,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateEmailChallengeInputNetwork) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateEmailChallengeInputNetworkBase:
+		return []byte(s), nil
+	case CreateEmailChallengeInputNetworkBaseSepolia:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateEmailChallengeInputNetwork) UnmarshalText(data []byte) error {
+	switch CreateEmailChallengeInputNetwork(data) {
+	case CreateEmailChallengeInputNetworkBase:
+		*s = CreateEmailChallengeInputNetworkBase
+		return nil
+	case CreateEmailChallengeInputNetworkBaseSepolia:
+		*s = CreateEmailChallengeInputNetworkBaseSepolia
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Merged schema.
+type CreateEmailChallengeOK struct {
+	Success bool               `json:"success"`
+	Data    X402EmailChallenge `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateEmailChallengeOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateEmailChallengeOK) GetData() X402EmailChallenge {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateEmailChallengeOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateEmailChallengeOK) SetData(val X402EmailChallenge) {
+	s.Data = val
+}
+
+func (*CreateEmailChallengeOK) createEmailChallengeRes() {}
+
+type CreateEmailChallengeUnauthorized ErrorResponse
+
+func (*CreateEmailChallengeUnauthorized) createEmailChallengeRes() {}
+
+type CreateEmailChallengeUnprocessableEntity ErrorResponse
+
+func (*CreateEmailChallengeUnprocessableEntity) createEmailChallengeRes() {}
+
 type CreateEndpointBadRequest ErrorResponse
 
 func (*CreateEndpointBadRequest) createEndpointRes() {}
@@ -14323,6 +14534,7 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 func (*RateLimitedHeaders) createAgentAccountRes()     {}
 func (*RateLimitedHeaders) createAgentClaimLinkRes()   {}
 func (*RateLimitedHeaders) createChallengeRes()        {}
+func (*RateLimitedHeaders) createEmailChallengeRes()   {}
 func (*RateLimitedHeaders) discardEmailContentRes()    {}
 func (*RateLimitedHeaders) downloadDomainZoneFileRes() {}
 func (*RateLimitedHeaders) getChallengeRes()           {}
@@ -20717,6 +20929,90 @@ func (s *X402DeclinedPaymentNetwork) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// The result of issuing an email-native payment challenge. `interaction_id`
+// is the real email thread id (`uuid@domain`) the payment is bound to;
+// `challenge_id` is the underlying challenge record. Hand the `challenge`
+// to the payer, who replies with a signed `payment` interaction step (the
+// SDK `payEmailChallenge` helper builds it).
+// Ref: #/components/schemas/X402EmailChallenge
+type X402EmailChallenge struct {
+	// The email thread id (`uuid@domain`) the payment is bound to.
+	InteractionID string `json:"interaction_id"`
+	// The underlying challenge record id.
+	ChallengeID uuid.UUID                 `json:"challenge_id"`
+	Challenge   X402EmailChallengeDetails `json:"challenge"`
+}
+
+// GetInteractionID returns the value of InteractionID.
+func (s *X402EmailChallenge) GetInteractionID() string {
+	return s.InteractionID
+}
+
+// GetChallengeID returns the value of ChallengeID.
+func (s *X402EmailChallenge) GetChallengeID() uuid.UUID {
+	return s.ChallengeID
+}
+
+// GetChallenge returns the value of Challenge.
+func (s *X402EmailChallenge) GetChallenge() X402EmailChallengeDetails {
+	return s.Challenge
+}
+
+// SetInteractionID sets the value of InteractionID.
+func (s *X402EmailChallenge) SetInteractionID(val string) {
+	s.InteractionID = val
+}
+
+// SetChallengeID sets the value of ChallengeID.
+func (s *X402EmailChallenge) SetChallengeID(val uuid.UUID) {
+	s.ChallengeID = val
+}
+
+// SetChallenge sets the value of Challenge.
+func (s *X402EmailChallenge) SetChallenge(val X402EmailChallengeDetails) {
+	s.Challenge = val
+}
+
+// The challenge the payer needs to sign and pay, carried inside an
+// email-native challenge response.
+// Ref: #/components/schemas/X402EmailChallengeDetails
+type X402EmailChallengeDetails struct {
+	PaymentRequirements X402PaymentRequirements `json:"payment_requirements"`
+	NonceBinding        X402NonceBinding        `json:"nonce_binding"`
+	// ISO-8601 expiry of the challenge.
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// GetPaymentRequirements returns the value of PaymentRequirements.
+func (s *X402EmailChallengeDetails) GetPaymentRequirements() X402PaymentRequirements {
+	return s.PaymentRequirements
+}
+
+// GetNonceBinding returns the value of NonceBinding.
+func (s *X402EmailChallengeDetails) GetNonceBinding() X402NonceBinding {
+	return s.NonceBinding
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *X402EmailChallengeDetails) GetExpiresAt() time.Time {
+	return s.ExpiresAt
+}
+
+// SetPaymentRequirements sets the value of PaymentRequirements.
+func (s *X402EmailChallengeDetails) SetPaymentRequirements(val X402PaymentRequirements) {
+	s.PaymentRequirements = val
+}
+
+// SetNonceBinding sets the value of NonceBinding.
+func (s *X402EmailChallengeDetails) SetNonceBinding(val X402NonceBinding) {
+	s.NonceBinding = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *X402EmailChallengeDetails) SetExpiresAt(val time.Time) {
+	s.ExpiresAt = val
 }
 
 // The interaction binding the payer hashes into the EIP-3009 nonce

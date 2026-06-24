@@ -292,6 +292,53 @@ receipt = x402.pay(challenge, signer=payer)
 print(receipt.status, receipt.settle_tx)  # settled, on-chain tx hash
 ```
 
+### Email-native payments
+
+The challenge can also ride a real email thread instead of a synthetic id. The
+payee issues it as an email; the payer signs it into an ``interaction.json``
+payment step and sends it back attached to the reply.
+
+The payee issues the challenge with ``create_email_challenge``. The ``pay_to``
+payout wallet and the token asset are resolved server-side; you only supply the
+addresses, amount, and network:
+
+```python
+issued = x402.create_email_challenge(
+    from_="payee@your-domain.example",  # your sending address (funds receiver)
+    to="payer@their-domain.example",    # the payer's address
+    amount_usdc="0.01",
+    network="base-sepolia",
+)
+# issued.interaction_id is the email thread the payment is bound to;
+# issued.challenge carries the payment_requirements + nonce_binding to sign.
+```
+
+The payer, on receiving the challenge, signs it locally with
+``pay_email_challenge`` and replies with the resulting envelope attached.
+``pay_email_challenge`` does not send anything; it returns the signed
+payment-step envelope and its canonical JSON bytes:
+
+```python
+import base64
+
+payer = primitive.PrivateKeySigner(os.environ["PAYER_KEY"])
+built = x402.pay_email_challenge(issued, signer=payer)
+
+# `built.json` is the interaction.json body. The payer received the challenge as
+# an inbound email; reply to it with the envelope attached as `interaction.json`
+# using the email client's `reply` method (see above). The platform reads the
+# envelope, re-derives the interaction-bound nonce, and settles on chain.
+attachment: primitive.SendAttachment = {
+    "filename": "interaction.json",
+    "content_type": "application/json",
+    "content_base64": base64.b64encode(built.json.encode("utf-8")).decode(),
+}
+client.reply(
+    challenge_email,
+    {"text": "Payment attached.", "attachments": [attachment]},
+)
+```
+
 ### Signing primitives (lower level)
 
 ``pay()`` builds and signs the payment for you. When you need to drive the

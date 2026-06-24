@@ -92,6 +92,13 @@ primitive payments charge --network base-sepolia --amount-usdc 0.01 --json > cha
 primitive payments pay --challenge-file challenge.json
 cat challenge.json | primitive payments pay
 
+# Email-native flow: the payee issues a challenge over an email thread.
+primitive payments create-email-challenge --from payee@your-domain.example \
+  --to payer@their-domain.example --amount 10000 --network base-sepolia
+# Payer: sign a received email challenge into an interaction.json payment step.
+# This does NOT send; attach the output to your reply (e.g. with `primitive reply`).
+primitive payments pay-email-step --challenge-file challenge.json > interaction.json
+
 # Inspect a challenge by id, or list your registered payout addresses.
 primitive payments get-challenge --id <challenge-id>
 primitive payments list-payout-addresses

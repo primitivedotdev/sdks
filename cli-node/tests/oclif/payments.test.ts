@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { X402Error } from "@primitivedotdev/sdk/x402";
 import { describe, expect, it, vi } from "vitest";
 import { readChallenge } from "../../src/oclif/commands/payments-pay.js";
+import { readEmailChallenge } from "../../src/oclif/commands/payments-pay-email-step.js";
 import {
   explorerTxUrl,
   formatUsdc,
@@ -26,10 +27,12 @@ describe("payments command registration", () => {
     expect(COMMANDS["payments:register-payout"]).toBeDefined();
     expect(COMMANDS["payments:pay-challenge"]).toBeDefined();
     expect(COMMANDS["payments:pay"]).toBeDefined();
+    expect(COMMANDS["payments:pay-email-step"]).toBeDefined();
   });
 
   it("keeps the non-signing operations as auto-generated commands", () => {
     expect(COMMANDS["payments:create-challenge"]).toBeDefined();
+    expect(COMMANDS["payments:create-email-challenge"]).toBeDefined();
     expect(COMMANDS["payments:get-challenge"]).toBeDefined();
     expect(COMMANDS["payments:list-payout-addresses"]).toBeDefined();
     expect(COMMANDS["payments:get-spend-policy"]).toBeDefined();
@@ -149,6 +152,49 @@ describe("readChallenge", () => {
 
   it("rejects empty input", () => {
     expect(() => readChallenge({ inline: "   " })).toThrow(/no challenge/);
+  });
+});
+
+describe("readEmailChallenge", () => {
+  const emailChallenge = {
+    interaction_id: "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+    challenge_id: "22222222-2222-4222-8222-222222222222",
+    challenge: { expires_at: "2099-01-01T00:00:00.000Z" },
+  };
+
+  it("parses an inline bare email-challenge object", () => {
+    expect(
+      readEmailChallenge({ inline: JSON.stringify(emailChallenge) }),
+    ).toEqual(emailChallenge);
+  });
+
+  it("unwraps a { data: ... } envelope so create-email-challenge output pipes in", () => {
+    expect(
+      readEmailChallenge({ inline: JSON.stringify({ data: emailChallenge }) }),
+    ).toEqual(emailChallenge);
+  });
+
+  it("reads from a file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "x402-email-"));
+    const file = join(dir, "challenge.json");
+    writeFileSync(file, JSON.stringify(emailChallenge));
+    expect(readEmailChallenge({ file })).toEqual(emailChallenge);
+  });
+
+  it("rejects invalid JSON", () => {
+    expect(() => readEmailChallenge({ inline: "{not json" })).toThrow(
+      /not valid JSON/,
+    );
+  });
+
+  it("rejects empty input", () => {
+    expect(() => readEmailChallenge({ inline: "   " })).toThrow(/no challenge/);
+  });
+
+  it("rejects a { data: null } envelope instead of returning null", () => {
+    expect(() =>
+      readEmailChallenge({ inline: JSON.stringify({ data: null }) }),
+    ).toThrow(/no `data` object/);
   });
 });
 

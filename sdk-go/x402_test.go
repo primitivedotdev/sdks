@@ -977,3 +977,182 @@ func TestX402SpendPolicyUpdate_ClearCap(t *testing.T) {
 		t.Fatalf("ClearMaxPerPayment should send explicit null, got present=%v val=%v", ok, v)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Email-native challenge tests
+// ---------------------------------------------------------------------------
+
+// sampleEmailChallenge uses the canonical binding so the signed payment's nonce
+// is the NORMATIVE vector the platform recomputes.
+func sampleEmailChallenge() *X402EmailChallenge {
+	ch := &X402EmailChallenge{
+		InteractionID: canonicalInteractionID,
+		ChallengeID:   "22222222-2222-4222-8222-222222222222",
+	}
+	ch.Challenge.NonceBinding = X402NonceBinding{
+		InteractionID:   canonicalInteractionID,
+		ChallengeStepID: canonicalChallengeStepID,
+		ChallengeNonce:  canonicalChallengeNonce,
+	}
+	ch.Challenge.ExpiresAt = time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+	ch.Challenge.PaymentRequirements.Scheme = "exact"
+	ch.Challenge.PaymentRequirements.Network = "base-sepolia"
+	ch.Challenge.PaymentRequirements.MaxAmountRequired = "10000"
+	ch.Challenge.PaymentRequirements.PayTo = "0x1111111111111111111111111111111111111111"
+	ch.Challenge.PaymentRequirements.Asset = "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+	ch.Challenge.PaymentRequirements.Extra.Name = "USDC"
+	ch.Challenge.PaymentRequirements.Extra.Version = "2"
+	return ch
+}
+
+func TestBuildPaymentStepEnvelope(t *testing.T) {
+	payment := X402PaymentPayload{X402Version: 1, Scheme: "exact", Network: "base-sepolia"}
+	built, err := BuildPaymentStepEnvelope(BuildPaymentStepEnvelopeInput{
+		InteractionID: canonicalInteractionID,
+		StepID:        "11111111-1111-4111-8111-111111111111",
+		PrevStepID:    canonicalChallengeStepID,
+		Payment:       payment,
+	})
+	if err != nil {
+		t.Fatalf("BuildPaymentStepEnvelope failed: %v", err)
+	}
+	env := built.Envelope
+	if env.InteractionVersion != 1 || env.InteractionID != canonicalInteractionID {
+		t.Fatalf("bad envelope header: %+v", env)
+	}
+	if env.Protocol != "x402.payment" || env.ProtocolVersion != 1 || env.Step != "payment" {
+		t.Fatalf("bad protocol fields: %+v", env)
+	}
+	if env.PrevStepID == nil || *env.PrevStepID != canonicalChallengeStepID {
+		t.Fatalf("prev_step_id should bind to the challenge step: %+v", env.PrevStepID)
+	}
+	// The canonical JSON round-trips to the same envelope (the attached bytes).
+	var roundTrip InteractionEnvelope
+	if err := json.Unmarshal([]byte(built.JSON), &roundTrip); err != nil {
+		t.Fatalf("JSON does not round-trip: %v", err)
+	}
+	if roundTrip.InteractionID != env.InteractionID || roundTrip.Step != "payment" {
+		t.Fatalf("round-trip mismatch: %+v", roundTrip)
+	}
+}
+
+func TestBuildPaymentStepEnvelope_RejectsBadIDs(t *testing.T) {
+	payment := X402PaymentPayload{X402Version: 1, Scheme: "exact", Network: "base-sepolia"}
+	if _, err := BuildPaymentStepEnvelope(BuildPaymentStepEnvelopeInput{
+		InteractionID: "not-a-wire-id",
+		StepID:        "11111111-1111-4111-8111-111111111111",
+		PrevStepID:    canonicalChallengeStepID,
+		Payment:       payment,
+	}); err == nil {
+		t.Fatal("expected error for non-uuid@domain interaction id")
+	}
+	if _, err := BuildPaymentStepEnvelope(BuildPaymentStepEnvelopeInput{
+		InteractionID: canonicalInteractionID,
+		StepID:        "nope",
+		PrevStepID:    canonicalChallengeStepID,
+		Payment:       payment,
+	}); err == nil {
+		t.Fatal("expected error for non-uuid step id")
+	}
+}
+
+func TestX402Client_CreateEmailChallenge(t *testing.T) {
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/x402/email-challenges" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("Idempotency-Key"); got != "idem-1" {
+			t.Errorf("missing idempotency key header: %q", got)
+		}
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		w.WriteHeader(http.StatusCreated)
+		w.Write(envelope(t, sampleEmailChallenge()))
+	}))
+	defer srv.Close()
+
+	client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: srv.URL})
+	res, err := client.CreateEmailChallenge(context.Background(), X402EmailChargeInput{
+		From:           "payee@seller.example",
+		To:             "payer@buyer.example",
+		Amount:         "10000",
+		Network:        "base-sepolia",
+		IdempotencyKey: "idem-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateEmailChallenge failed: %v", err)
+	}
+	if res.InteractionID != canonicalInteractionID {
+		t.Fatalf("bad interaction id: %s", res.InteractionID)
+	}
+	if gotBody["from"] != "payee@seller.example" || gotBody["to"] != "payer@buyer.example" ||
+		gotBody["amount"] != "10000" || gotBody["network"] != "base-sepolia" {
+		t.Fatalf("unexpected request body: %v", gotBody)
+	}
+}
+
+func TestX402Client_CreateEmailChallenge_RequiresFromAndTo(t *testing.T) {
+	client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: "https://api.example"})
+	if _, err := client.CreateEmailChallenge(context.Background(), X402EmailChargeInput{To: "x@y.example", Amount: "10000"}); err == nil {
+		t.Fatal("expected error when From is empty")
+	}
+	if _, err := client.CreateEmailChallenge(context.Background(), X402EmailChargeInput{From: "x@y.example", Amount: "10000"}); err == nil {
+		t.Fatal("expected error when To is empty")
+	}
+}
+
+func TestX402Client_PayEmailChallenge_BindsNormativeNonce(t *testing.T) {
+	client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: "https://api.example"})
+	signer := newTestSigner(t)
+	built, err := client.PayEmailChallenge(sampleEmailChallenge(), signer)
+	if err != nil {
+		t.Fatalf("PayEmailChallenge failed: %v", err)
+	}
+	env := built.Envelope
+	if env.Protocol != "x402.payment" || env.Step != "payment" {
+		t.Fatalf("bad envelope protocol/step: %+v", env)
+	}
+	if env.PrevStepID == nil || *env.PrevStepID != canonicalChallengeStepID {
+		t.Fatalf("payment step must thread after the challenge step: %+v", env.PrevStepID)
+	}
+	// CRITICAL: the signed authorization carries the interaction-bound nonce,
+	// byte-identical to the normative vector the platform recomputes.
+	authz := env.Payload.Payment.Payload.Authorization
+	if authz.Nonce != normativeNonce {
+		t.Fatalf("nonce mismatch:\n got  %s\n want %s", authz.Nonce, normativeNonce)
+	}
+	if !strings.EqualFold(authz.From, signer.Address()) {
+		t.Fatalf("from should be the signer: got %s want %s", authz.From, signer.Address())
+	}
+	if authz.To != "0x1111111111111111111111111111111111111111" || authz.Value != "10000" {
+		t.Fatalf("unexpected authorization: %+v", authz)
+	}
+	if !strings.HasPrefix(env.Payload.Payment.Payload.Signature, "0x") {
+		t.Fatalf("missing signature: %q", env.Payload.Payment.Payload.Signature)
+	}
+}
+
+func TestX402Client_PayEmailChallenge_RejectsExpired(t *testing.T) {
+	client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: "https://api.example"})
+	ch := sampleEmailChallenge()
+	ch.Challenge.ExpiresAt = time.Now().Add(-time.Hour).UTC().Format(time.RFC3339)
+	if _, err := client.PayEmailChallenge(ch, newTestSigner(t)); err == nil {
+		t.Fatal("expected error for an already-expired challenge")
+	}
+}
+
+func TestX402Client_PayEmailChallenge_RejectsInteractionIDMismatch(t *testing.T) {
+	client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: "https://api.example"})
+	ch := sampleEmailChallenge()
+	ch.InteractionID = "deadbeef-0000-0000-0000-000000000099@payer.example"
+	if _, err := client.PayEmailChallenge(ch, newTestSigner(t)); err == nil {
+		t.Fatal("expected error for interaction_id mismatch")
+	}
+}
+
+func TestX402Client_PayEmailChallenge_RejectsMissingSigner(t *testing.T) {
+	client := NewX402Client(X402ClientOptions{APIKey: "k", BaseURL: "https://api.example"})
+	if _, err := client.PayEmailChallenge(sampleEmailChallenge(), nil); err == nil {
+		t.Fatal("expected error for a nil signer")
+	}
+}
