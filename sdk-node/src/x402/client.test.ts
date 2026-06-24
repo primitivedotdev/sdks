@@ -1,6 +1,12 @@
+import { getAddress } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { type X402Challenge, X402Client, X402Error } from "./client.js";
+import {
+  type X402Challenge,
+  X402Client,
+  type X402EmailChallenge,
+  X402Error,
+} from "./client.js";
 import type { TransferWithAuthorizationTypedData } from "./sign.js";
 
 const account = privateKeyToAccount(generatePrivateKey());
@@ -557,5 +563,246 @@ describe("X402Client completeness methods", () => {
     ];
     expect(url).toBe("https://api.example/v1/x402/declined-payments");
     expect(init.method).toBe("GET");
+  });
+});
+
+// The canonical binding locks to the normative nonce vector the platform
+// recomputes. interaction_id + challenge_step_id + challenge_nonce here are the
+// exact inputs from the cross-implementation vector; the bound nonce MUST be
+// 0xc955...6c6e, or every email payment fails verification.
+const NORMATIVE_NONCE =
+  "0xc955a08812ab83f9e25c92e5162267b913957c3cc8678de1cf1449f77b516c6e";
+const INTERACTION_ID = "a1b2c3d4-0000-0000-0000-000000000001@payer.example";
+const CHALLENGE_STEP_ID = "f00dface-0000-0000-0000-0000000000aa";
+
+const EMAIL_CHALLENGE: X402EmailChallenge = {
+  interaction_id: INTERACTION_ID,
+  challenge_id: "22222222-2222-4222-8222-222222222222",
+  challenge: {
+    payment_requirements: {
+      scheme: "exact",
+      network: "base-sepolia",
+      maxAmountRequired: "10000",
+      payTo: "0x1111111111111111111111111111111111111111",
+      asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      extra: { name: "USDC", version: "2" },
+    },
+    nonce_binding: {
+      interaction_id: INTERACTION_ID,
+      challenge_step_id: CHALLENGE_STEP_ID,
+      challenge_nonce:
+        "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
+    },
+    expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+  },
+};
+
+describe("X402Client.createEmailChallenge", () => {
+  it("POSTs from/to/amount/network to /v1/x402/email-challenges", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: EMAIL_CHALLENGE }, 201),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example/",
+      fetch: fetchMock,
+    });
+    const res = await client.createEmailChallenge({
+      from: "payee@seller.example",
+      to: "payer@buyer.example",
+      amount: "10000",
+      network: "base-sepolia",
+      idempotencyKey: "idem-1",
+    });
+    expect(res.interaction_id).toBe(INTERACTION_ID);
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("https://api.example/v1/x402/email-challenges");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      from: "payee@seller.example",
+      to: "payer@buyer.example",
+      amount: "10000",
+      network: "base-sepolia",
+    });
+    expect((init.headers as Record<string, string>)["idempotency-key"]).toBe(
+      "idem-1",
+    );
+  });
+
+  it("converts a human amountUsdc to base units", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: { body?: string }) => {
+      const body = JSON.parse(init?.body ?? "{}");
+      expect(body.amount).toBe("10000");
+      return jsonResponse({ success: true, data: EMAIL_CHALLENGE }, 201);
+    });
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    await client.createEmailChallenge({
+      from: "payee@seller.example",
+      to: "payer@buyer.example",
+      amountUsdc: "0.01",
+    });
+  });
+
+  it("requires from and to", async () => {
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () => jsonResponse({ success: true, data: {} })),
+    });
+    await expect(
+      client.createEmailChallenge({
+        from: "",
+        to: "payer@buyer.example",
+        amount: "10000",
+      }),
+    ).rejects.toThrow(/requires `from`/);
+    await expect(
+      client.createEmailChallenge({
+        from: "payee@seller.example",
+        to: "",
+        amount: "10000",
+      }),
+    ).rejects.toThrow(/requires `to`/);
+  });
+
+  it("rejects an unknown option", async () => {
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () => jsonResponse({ success: true, data: {} })),
+    });
+    await expect(
+      client.createEmailChallenge({
+        from: "payee@seller.example",
+        to: "payer@buyer.example",
+        amount: "10000",
+        // @ts-expect-error intentionally unknown
+        payer_org: "x",
+      }),
+    ).rejects.toThrow(/unknown createEmailChallenge\(\) option "payer_org"/);
+  });
+});
+
+describe("X402Client.payEmailChallenge", () => {
+  it("builds the signed payment-step envelope with the bound normative nonce", async () => {
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () => jsonResponse({ success: true, data: {} })),
+    });
+    const built = await client.payEmailChallenge(EMAIL_CHALLENGE, { signer });
+
+    // The envelope is an x402.payment payment step bound to the email thread.
+    expect(built.envelope.interaction_version).toBe(1);
+    expect(built.envelope.interaction_id).toBe(INTERACTION_ID);
+    expect(built.envelope.protocol).toBe("x402.payment");
+    expect(built.envelope.protocol_version).toBe(1);
+    expect(built.envelope.step).toBe("payment");
+    // The payment step is threaded after the challenge step.
+    expect(built.envelope.prev_step_id).toBe(CHALLENGE_STEP_ID);
+    expect(built.envelope.step_id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    );
+
+    // CRITICAL: the signed authorization carries the interaction-bound nonce,
+    // byte-identical to the normative vector the platform recomputes.
+    const auth = built.envelope.payload.payment.payload.authorization;
+    expect(auth.nonce).toBe(NORMATIVE_NONCE);
+    expect(getAddress(auth.from)).toBe(getAddress(account.address));
+    expect(auth.to).toBe(EMAIL_CHALLENGE.challenge.payment_requirements.payTo);
+    expect(auth.value).toBe("10000");
+    expect(built.envelope.payload.payment.payload.signature).toMatch(
+      /^0x[0-9a-f]{130}$/i,
+    );
+
+    // The canonical JSON round-trips to the same envelope (the attached bytes).
+    expect(JSON.parse(built.json)).toEqual(built.envelope);
+  });
+
+  it("does NOT send anything (no network call)", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({ success: true, data: {} }),
+    );
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: fetchMock,
+    });
+    await client.payEmailChallenge(EMAIL_CHALLENGE, { signer });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a missing/invalid signer", async () => {
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () => jsonResponse({ success: true, data: {} })),
+    });
+    await expect(
+      // @ts-expect-error no signer
+      client.payEmailChallenge(EMAIL_CHALLENGE, {}),
+    ).rejects.toThrow(/requires options.signer/);
+  });
+
+  it("rejects an already-expired challenge before signing", async () => {
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () => jsonResponse({ success: true, data: {} })),
+    });
+    const expired: X402EmailChallenge = {
+      ...EMAIL_CHALLENGE,
+      challenge: {
+        ...EMAIL_CHALLENGE.challenge,
+        expires_at: new Date(Date.now() - 3_600_000).toISOString(),
+      },
+    };
+    await expect(client.payEmailChallenge(expired, { signer })).rejects.toThrow(
+      /already expired/,
+    );
+  });
+
+  it("rejects an interaction_id that disagrees with the nonce binding", async () => {
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () => jsonResponse({ success: true, data: {} })),
+    });
+    const mismatched: X402EmailChallenge = {
+      ...EMAIL_CHALLENGE,
+      interaction_id: "deadbeef-0000-0000-0000-000000000099@payer.example",
+    };
+    await expect(
+      client.payEmailChallenge(mismatched, { signer }),
+    ).rejects.toThrow(/interaction_id/);
+  });
+
+  it("rejects malformed payment_requirements before signing", async () => {
+    const client = new X402Client({
+      apiKey: "k",
+      baseUrl: "https://api.example",
+      fetch: vi.fn(async () => jsonResponse({ success: true, data: {} })),
+    });
+    const bad = {
+      ...EMAIL_CHALLENGE,
+      challenge: {
+        ...EMAIL_CHALLENGE.challenge,
+        payment_requirements: {
+          ...EMAIL_CHALLENGE.challenge.payment_requirements,
+          maxAmountRequired: "not-a-number",
+        },
+      },
+    } as unknown as X402EmailChallenge;
+    await expect(client.payEmailChallenge(bad, { signer })).rejects.toThrow(
+      /maxAmountRequired/,
+    );
   });
 });

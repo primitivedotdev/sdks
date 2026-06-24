@@ -35,6 +35,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
+	"github.com/google/uuid"
 )
 
 // DefaultX402BaseURL is the production API host for x402 operations. Mirrors the
@@ -248,6 +249,107 @@ func toPaymentPayload(network string, auth TransferAuthorization, signature stri
 	p.Payload.Authorization.ValidBefore = auth.ValidBefore.String()
 	p.Payload.Authorization.Nonce = auth.Nonce
 	return p
+}
+
+// X402InteractionProtocol / X402InteractionProtocolVersion identify the protocol
+// the email-native payment interaction runs (x402.payment/1). The payer's reply
+// carries the payment step of this protocol.
+const (
+	X402InteractionProtocol        = "x402.payment"
+	X402InteractionProtocolVersion = 1
+)
+
+// A UUID (used for the interaction id's local part and the step ids).
+var x402UUIDRe = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// An interaction id is uuid@domain.
+var x402WireIDRe = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}@[^\s@]+$`)
+
+// InteractionEnvelope is the interaction.json envelope for one step of an
+// email-carried interaction. The payer's payment step is sent as an
+// interaction.json MIME attachment in the reply; the platform parses this
+// envelope, validates the step against the x402.payment protocol, and
+// re-verifies the embedded payment.
+type InteractionEnvelope struct {
+	InteractionVersion int    `json:"interaction_version"`
+	InteractionID      string `json:"interaction_id"`
+	Protocol           string `json:"protocol"`
+	ProtocolVersion    int    `json:"protocol_version"`
+	Step               string `json:"step"`
+	StepID             string `json:"step_id"`
+	// PrevStepID is the id of the step this one answers (the challenge step), or
+	// null. A pointer so it serializes to JSON null when unset.
+	PrevStepID *string `json:"prev_step_id"`
+	// ExpiresAt is an optional ISO-8601 step expiry; null when unset.
+	ExpiresAt *string                `json:"expires_at"`
+	Payload   X402PaymentStepPayload `json:"payload"`
+}
+
+// X402PaymentStepPayload is the payload of an x402.payment payment step: the
+// signed x402 payload.
+type X402PaymentStepPayload struct {
+	Payment X402PaymentPayload `json:"payment"`
+}
+
+// BuiltPaymentStep is a built, signed payment-step envelope plus its canonical
+// JSON bytes. The caller attaches JSON as the interaction.json part of the reply
+// email; the platform reads Envelope back from those exact bytes.
+type BuiltPaymentStep struct {
+	Envelope InteractionEnvelope
+	// JSON is the canonical interaction.json body (what to attach to the reply).
+	JSON string
+}
+
+// BuildPaymentStepEnvelopeInput configures BuildPaymentStepEnvelope.
+type BuildPaymentStepEnvelopeInput struct {
+	// InteractionID is the thread id (uuid@domain).
+	InteractionID string
+	// StepID is a fresh UUID identifying this payment step.
+	StepID string
+	// PrevStepID is the challenge step id this payment answers.
+	PrevStepID string
+	Payment    X402PaymentPayload
+	// ExpiresAt is an optional ISO-8601 step expiry.
+	ExpiresAt string
+}
+
+// BuildPaymentStepEnvelope builds the section-2.3 interaction.json envelope for a
+// payment step. Pure: no I/O. Payment is the signed exact-EVM payload (from
+// BuildExactEvmPaymentPayload); PrevStepID is the challenge step id this payment
+// answers, and StepID is a fresh UUID for the payment step. Returns the envelope
+// and its canonical JSON, so the bytes the platform reads back are exactly the
+// ones produced here.
+func BuildPaymentStepEnvelope(input BuildPaymentStepEnvelopeInput) (BuiltPaymentStep, error) {
+	if !x402WireIDRe.MatchString(input.InteractionID) {
+		return BuiltPaymentStep{}, errors.New("BuildPaymentStepEnvelope: InteractionID must be uuid@domain")
+	}
+	if !x402UUIDRe.MatchString(input.StepID) {
+		return BuiltPaymentStep{}, errors.New("BuildPaymentStepEnvelope: StepID must be a uuid")
+	}
+	if !x402UUIDRe.MatchString(input.PrevStepID) {
+		return BuiltPaymentStep{}, errors.New("BuildPaymentStepEnvelope: PrevStepID must be a uuid")
+	}
+	prev := input.PrevStepID
+	var expires *string
+	if input.ExpiresAt != "" {
+		expires = &input.ExpiresAt
+	}
+	envelope := InteractionEnvelope{
+		InteractionVersion: 1,
+		InteractionID:      input.InteractionID,
+		Protocol:           X402InteractionProtocol,
+		ProtocolVersion:    X402InteractionProtocolVersion,
+		Step:               "payment",
+		StepID:             input.StepID,
+		PrevStepID:         &prev,
+		ExpiresAt:          expires,
+		Payload:            X402PaymentStepPayload{Payment: input.Payment},
+	}
+	encoded, err := json.Marshal(envelope)
+	if err != nil {
+		return BuiltPaymentStep{}, fmt.Errorf("BuildPaymentStepEnvelope: failed to encode envelope: %w", err)
+	}
+	return BuiltPaymentStep{Envelope: envelope, JSON: string(encoded)}, nil
 }
 
 // DefaultMaxWindowSec is the absolute ceiling on the total signed window
@@ -476,6 +578,24 @@ type X402Challenge struct {
 	ExpiresAt           string                  `json:"expires_at"`
 }
 
+// X402EmailChallengeDetails is the challenge the payer signs and pays, carried
+// inside an email-native challenge response.
+type X402EmailChallengeDetails struct {
+	PaymentRequirements X402PaymentRequirements `json:"payment_requirements"`
+	NonceBinding        X402NonceBinding        `json:"nonce_binding"`
+	ExpiresAt           string                  `json:"expires_at"`
+}
+
+// X402EmailChallenge is the result of issuing an email-native payment challenge.
+// InteractionID is the real email thread id (uuid@domain) the payment is bound
+// to. Hand the whole object to the payer, who calls PayEmailChallenge with it to
+// build the signed payment step.
+type X402EmailChallenge struct {
+	InteractionID string                    `json:"interaction_id"`
+	ChallengeID   string                    `json:"challenge_id"`
+	Challenge     X402EmailChallengeDetails `json:"challenge"`
+}
+
 // X402Receipt is the result of paying a challenge.
 type X402Receipt struct {
 	ID       string  `json:"id"`
@@ -540,6 +660,32 @@ type X402ChargeInput struct {
 	// IdempotencyKey, when set, is sent as the Idempotency-Key HTTP header on the
 	// create-challenge request. Retrying Charge with the same key returns the
 	// original challenge instead of creating a duplicate. Mirrors the Node SDK.
+	IdempotencyKey string
+}
+
+// X402EmailChargeInput is the input shape for [X402Client.CreateEmailChallenge].
+type X402EmailChargeInput struct {
+	// From is your sending address (the payee / funds receiver).
+	From string
+	// To is the payer's email address the challenge is sent to.
+	To string
+	// Amount in token base units (USDC has 6 decimals, so "10000" = 0.01).
+	// Provide exactly one of Amount or AmountUsdc.
+	Amount string
+	// AmountUsdc is the amount as human USDC (e.g. "0.01"), converted to base
+	// units for you. Provide exactly one of Amount or AmountUsdc.
+	AmountUsdc string
+	// Network defaults to "base-sepolia".
+	Network     string
+	Description string
+	// Resource is a URL identifying the thing being paid for.
+	Resource string
+	// ExpiresIn is seconds until the challenge expires (default 1h server-side).
+	// A pointer so 0 is distinguishable from unset.
+	ExpiresIn *int
+	// IdempotencyKey, when set, is sent as the Idempotency-Key HTTP header.
+	// Retrying with the same key returns the original challenge without sending a
+	// second email.
 	IdempotencyKey string
 }
 
@@ -876,6 +1022,90 @@ func (c *X402Client) Charge(ctx context.Context, input X402ChargeInput) (*X402Ch
 	return &challenge, nil
 }
 
+// CreateEmailChallenge issues a payment challenge over an email thread (payee
+// side). Sends the challenge as an email from From to To and binds the payment
+// to that thread. Returns the challenge (including the real InteractionID);
+// deliver it to the payer, who calls PayEmailChallenge to build the signed
+// payment step. Provide exactly one of Amount (base units) or AmountUsdc (human
+// USDC). POST /v1/x402/email-challenges.
+func (c *X402Client) CreateEmailChallenge(ctx context.Context, input X402EmailChargeInput) (*X402EmailChallenge, error) {
+	if input.From == "" {
+		return nil, newX402Error("createEmailChallenge requires From", 0)
+	}
+	if input.To == "" {
+		return nil, newX402Error("createEmailChallenge requires To", 0)
+	}
+	if input.Amount != "" && input.AmountUsdc != "" {
+		return nil, newX402Error("createEmailChallenge takes exactly one of Amount (base units) or AmountUsdc (human USDC), not both", 0)
+	}
+	if input.Amount == "" && input.AmountUsdc == "" {
+		return nil, newX402Error(`createEmailChallenge requires Amount as a positive integer string in token base units (e.g. "10000"), or AmountUsdc as a positive USDC amount with at most 6 decimals (e.g. "0.01")`, 0)
+	}
+	amount := input.Amount
+	if input.AmountUsdc != "" {
+		converted, err := usdcToBaseUnits(input.AmountUsdc)
+		if err != nil {
+			return nil, newX402Error("createEmailChallenge: "+err.Error(), 0)
+		}
+		amount = converted
+	}
+	if !x402AmountRe.MatchString(amount) {
+		return nil, newX402Error(`createEmailChallenge requires Amount as a positive integer string in token base units, e.g. "10000"`, 0)
+	}
+	network := input.Network
+	if network == "" {
+		network = "base-sepolia"
+	}
+	body := map[string]any{
+		"from":    input.From,
+		"to":      input.To,
+		"amount":  amount,
+		"network": network,
+	}
+	if input.Description != "" {
+		body["description"] = input.Description
+	}
+	if input.Resource != "" {
+		body["resource"] = input.Resource
+	}
+	if input.ExpiresIn != nil {
+		body["expires_in"] = *input.ExpiresIn
+	}
+
+	var headers map[string]string
+	if input.IdempotencyKey != "" {
+		headers = map[string]string{"Idempotency-Key": input.IdempotencyKey}
+	}
+
+	var challenge X402EmailChallenge
+	if err := c.request(ctx, http.MethodPost, "/v1/x402/email-challenges", body, &challenge, headers); err != nil {
+		return nil, err
+	}
+	return &challenge, nil
+}
+
+// validatePaymentRequirements asserts the x402 PaymentRequirements shared by
+// both challenge shapes is fully hydrated. bad wraps the field name into a named
+// X402Error.
+func validatePaymentRequirements(pr X402PaymentRequirements, bad func(string) error) error {
+	if pr.MaxAmountRequired == "" {
+		return bad("payment_requirements.maxAmountRequired")
+	}
+	if !x402AmountRe.MatchString(pr.MaxAmountRequired) {
+		return bad("payment_requirements.maxAmountRequired (expected a positive integer string in token base units)")
+	}
+	if !x402AddressRe.MatchString(pr.PayTo) {
+		return bad("payment_requirements.payTo (expected a 0x address)")
+	}
+	if !x402AddressRe.MatchString(pr.Asset) {
+		return bad("payment_requirements.asset (expected a 0x address)")
+	}
+	if pr.Extra.Name == "" || pr.Extra.Version == "" {
+		return bad("payment_requirements.extra (name/version)")
+	}
+	return nil
+}
+
 // validateChallenge asserts a challenge is fully hydrated before signing, so a
 // missing field fails with a named X402Error instead of an opaque crypto error
 // mid-sign. Mirrors the Node SDK's validateChallenge.
@@ -899,20 +1129,128 @@ func validateChallenge(ch *X402Challenge) error {
 	if nb.InteractionID == "" || nb.ChallengeStepID == "" || nb.ChallengeNonce == "" {
 		return bad("nonce_binding")
 	}
-	pr := ch.PaymentRequirements
-	if pr.MaxAmountRequired == "" {
-		return bad("payment_requirements.maxAmountRequired")
+	return validatePaymentRequirements(ch.PaymentRequirements, bad)
+}
+
+// validateEmailChallenge asserts an email-native challenge is fully hydrated
+// before signing, so a missing field fails with a named X402Error instead of an
+// opaque crypto error mid-sign.
+func validateEmailChallenge(ch *X402EmailChallenge) error {
+	bad := func(field string) error {
+		return newX402Error("email challenge is missing or malformed: "+field, 0)
 	}
-	if !x402AddressRe.MatchString(pr.PayTo) {
-		return bad("payment_requirements.payTo (expected a 0x address)")
+	if ch == nil {
+		return bad("email challenge")
 	}
-	if !x402AddressRe.MatchString(pr.Asset) {
-		return bad("payment_requirements.asset (expected a 0x address)")
+	if ch.InteractionID == "" {
+		return bad("interaction_id")
 	}
-	if pr.Extra.Name == "" || pr.Extra.Version == "" {
-		return bad("payment_requirements.extra (name/version)")
+	d := ch.Challenge
+	if d.ExpiresAt == "" {
+		return bad("challenge.expires_at")
 	}
-	return nil
+	nb := d.NonceBinding
+	if nb.InteractionID == "" || nb.ChallengeStepID == "" || nb.ChallengeNonce == "" {
+		return bad("challenge.nonce_binding")
+	}
+	// The envelope's interaction_id must agree with the binding's, or the
+	// platform would re-derive a nonce that doesn't match what we signed.
+	if nb.InteractionID != ch.InteractionID {
+		return bad("interaction_id (mismatch with challenge.nonce_binding.interaction_id)")
+	}
+	return validatePaymentRequirements(d.PaymentRequirements, bad)
+}
+
+// PayEmailChallenge builds the signed payment step for an email-native challenge
+// (payer side). Given a received X402EmailChallenge and the caller's signer, it
+// derives the interaction-bound authorization, signs it locally, and returns the
+// signed interaction.json payment-step envelope plus its canonical JSON bytes.
+// It does NOT send anything.
+//
+// The caller sends BuiltPaymentStep.JSON back as an interaction.json attachment
+// on a reply to the challenge email; the platform reads the envelope from those
+// exact bytes, re-derives the bound nonce, and settles.
+func (c *X402Client) PayEmailChallenge(challenge *X402EmailChallenge, signer X402Signer) (*BuiltPaymentStep, error) {
+	if signer == nil || signer.Address() == "" {
+		return nil, newX402Error("payEmailChallenge requires a signer with a non-empty Address (e.g. a PrivateKeySigner)", 0)
+	}
+	if err := validateEmailChallenge(challenge); err != nil {
+		return nil, err
+	}
+	d := challenge.Challenge
+	pr := d.PaymentRequirements
+	network := pr.Network
+	chainID, ok := x402ChainIDs[network]
+	if !ok {
+		return nil, newX402Error("unsupported network: "+network, 0)
+	}
+	if pr.Scheme != "exact" {
+		return nil, newX402Error("unsupported payment scheme: "+pr.Scheme, 0)
+	}
+
+	nowSec := time.Now().Unix()
+	expiresAt, err := time.Parse(time.RFC3339Nano, d.ExpiresAt)
+	if err != nil {
+		return nil, newX402Error("challenge has an invalid expires_at: "+d.ExpiresAt, 0)
+	}
+	expiresAtSec := expiresAt.Unix()
+	if expiresAtSec <= nowSec {
+		return nil, newX402Error(
+			"challenge has already expired (expires_at "+d.ExpiresAt+"); not signing", 0)
+	}
+
+	value, ok := new(big.Int).SetString(pr.MaxAmountRequired, 10)
+	if !ok {
+		return nil, newX402Error("payment_requirements.maxAmountRequired is not an integer: "+pr.MaxAmountRequired, 0)
+	}
+	validAfter, validBefore, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: expiresAtSec,
+		NowSec:                nowSec,
+	})
+	if err != nil {
+		return nil, newX402Error(err.Error(), 0)
+	}
+
+	auth, signature, err := SignInteractionPayment(SignInteractionPaymentInput{
+		Sign:  signer.SignTypedData,
+		Payer: signer.Address(),
+		Domain: TokenDomain{
+			Name:              pr.Extra.Name,
+			Version:           pr.Extra.Version,
+			ChainID:           chainID,
+			VerifyingContract: pr.Asset,
+		},
+		PayTo:  pr.PayTo,
+		Amount: value,
+		NonceBinding: NonceBinding{
+			InteractionID:   d.NonceBinding.InteractionID,
+			ChallengeStepID: d.NonceBinding.ChallengeStepID,
+			ChallengeNonce:  d.NonceBinding.ChallengeNonce,
+		},
+		ValidAfter:  validAfter,
+		ValidBefore: validBefore,
+	})
+	if err != nil {
+		return nil, newX402Error("failed to sign authorization: "+err.Error(), 0)
+	}
+
+	payment, err := BuildExactEvmPaymentPayload(network, auth, signature)
+	if err != nil {
+		return nil, newX402Error("failed to build payment payload: "+err.Error(), 0)
+	}
+
+	// A fresh UUID identifies the payment step; PrevStepID binds it to the
+	// challenge step so the platform threads the interaction correctly.
+	built, err := BuildPaymentStepEnvelope(BuildPaymentStepEnvelopeInput{
+		InteractionID: challenge.InteractionID,
+		StepID:        uuid.NewString(),
+		PrevStepID:    d.NonceBinding.ChallengeStepID,
+		Payment:       payment,
+	})
+	if err != nil {
+		return nil, newX402Error("failed to build payment step envelope: "+err.Error(), 0)
+	}
+	return &built, nil
 }
 
 // Pay pays a challenge (payer side). Derives the interaction-bound

@@ -3,6 +3,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 import {
   buildExactEvmPaymentPayload,
+  buildPaymentStepEnvelope,
   buildPayoutRegistrationMessage,
   computePaymentValidityWindow,
   deriveEip3009Nonce,
@@ -12,6 +13,8 @@ import {
   type TransferAuthorization,
   toPaymentPayload,
   transferWithAuthorizationTypedData,
+  X402_INTERACTION_PROTOCOL,
+  X402_INTERACTION_PROTOCOL_VERSION,
 } from "./sign.js";
 
 // Canonical binding + the NORMATIVE nonce the platform verifier recomputes. This
@@ -300,5 +303,100 @@ describe("buildExactEvmPaymentPayload", () => {
         signature: SIG,
       }),
     ).toThrow(/nonce/);
+  });
+});
+
+describe("buildPaymentStepEnvelope", () => {
+  const SIG = ("0x" + "ab".repeat(65)) as Hex;
+  const payment = buildExactEvmPaymentPayload({
+    network: "base-sepolia",
+    authorization: {
+      from: "0x2222222222222222222222222222222222222222",
+      to: PAY_TO,
+      value: 10000n,
+      validAfter: 1n,
+      validBefore: 99_999n,
+      nonce: NORMATIVE_NONCE,
+    },
+    signature: SIG,
+  });
+  const INTERACTION_ID = "a1b2c3d4-0000-0000-0000-000000000001@payer.example";
+  const STEP_ID = "11111111-1111-4111-8111-111111111111";
+  const PREV_STEP_ID = "f00dface-0000-0000-0000-0000000000aa";
+
+  it("builds the x402.payment payment-step envelope", () => {
+    const { envelope, json } = buildPaymentStepEnvelope({
+      interactionId: INTERACTION_ID,
+      stepId: STEP_ID,
+      prevStepId: PREV_STEP_ID,
+      payment,
+    });
+    expect(envelope).toEqual({
+      interaction_version: 1,
+      interaction_id: INTERACTION_ID,
+      protocol: X402_INTERACTION_PROTOCOL,
+      protocol_version: X402_INTERACTION_PROTOCOL_VERSION,
+      step: "payment",
+      step_id: STEP_ID,
+      prev_step_id: PREV_STEP_ID,
+      expires_at: null,
+      payload: { payment },
+    });
+    // The JSON is the canonical bytes the platform reads back.
+    expect(JSON.parse(json)).toEqual(envelope);
+  });
+
+  it("carries the exact signed payment payload unchanged", () => {
+    const { envelope } = buildPaymentStepEnvelope({
+      interactionId: INTERACTION_ID,
+      stepId: STEP_ID,
+      prevStepId: PREV_STEP_ID,
+      payment,
+    });
+    expect(envelope.payload.payment.payload.authorization.nonce).toBe(
+      NORMATIVE_NONCE,
+    );
+    expect(envelope.payload.payment.payload.signature).toBe(SIG);
+  });
+
+  it("threads the payment step after the challenge step", () => {
+    const { envelope } = buildPaymentStepEnvelope({
+      interactionId: INTERACTION_ID,
+      stepId: STEP_ID,
+      prevStepId: PREV_STEP_ID,
+      payment,
+    });
+    expect(envelope.prev_step_id).toBe(PREV_STEP_ID);
+    expect(envelope.step_id).toBe(STEP_ID);
+  });
+
+  it("rejects a non-uuid@domain interaction id", () => {
+    expect(() =>
+      buildPaymentStepEnvelope({
+        interactionId: "not-a-wire-id",
+        stepId: STEP_ID,
+        prevStepId: PREV_STEP_ID,
+        payment,
+      }),
+    ).toThrow(/uuid@domain/);
+  });
+
+  it("rejects non-uuid step ids", () => {
+    expect(() =>
+      buildPaymentStepEnvelope({
+        interactionId: INTERACTION_ID,
+        stepId: "nope",
+        prevStepId: PREV_STEP_ID,
+        payment,
+      }),
+    ).toThrow(/stepId/);
+    expect(() =>
+      buildPaymentStepEnvelope({
+        interactionId: INTERACTION_ID,
+        stepId: STEP_ID,
+        prevStepId: "nope",
+        payment,
+      }),
+    ).toThrow(/prevStepId/);
   });
 });

@@ -59,6 +59,22 @@ type Handler interface {
 	//
 	// POST /x402/challenges
 	CreateChallenge(ctx context.Context, req *CreateChallengeInput) (CreateChallengeRes, error)
+	// CreateEmailChallenge implements createEmailChallenge operation.
+	//
+	// Issue an x402 payment challenge over a real email thread (the payee
+	// side). Unlike `createChallenge` (which mints a synthetic challenge id),
+	// this sends the challenge as an email from `from` to `to` and binds the
+	// payment to that DKIM-authenticated thread. The `pay_to` address and the
+	// token asset are resolved server-side from your registered default payout
+	// address for the network, never from the request. The response carries
+	// the thread's `interaction_id` plus the `challenge` (the
+	// `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
+	// needs to sign; the payer replies with a signed `payment` interaction
+	// step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
+	// is 0.01 USDC).
+	//
+	// POST /x402/email-challenges
+	CreateEmailChallenge(ctx context.Context, req *CreateEmailChallengeInput, params CreateEmailChallengeParams) (CreateEmailChallengeRes, error)
 	// CreateEndpoint implements createEndpoint operation.
 	//
 	// Creates a new webhook endpoint. If a deactivated endpoint

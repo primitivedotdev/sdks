@@ -194,6 +194,101 @@ export interface X402PaymentPayload {
   };
 }
 
+/**
+ * The protocol the email-native payment interaction runs (`x402.payment/1`).
+ * The payer's reply carries the `payment` step of this protocol.
+ */
+export const X402_INTERACTION_PROTOCOL = "x402.payment";
+export const X402_INTERACTION_PROTOCOL_VERSION = 1;
+
+/** A UUID (used for `interaction_id`'s local part and the step ids). */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** An interaction id is `uuid@domain`. */
+const WIRE_ID_RE = new RegExp(`^${UUID_RE.source.slice(1, -1)}@[^\\s@]+$`, "i");
+
+/**
+ * The interaction.json envelope for one step of an email-carried interaction.
+ * The payer's `payment` step is sent as an `interaction.json` MIME attachment
+ * in the reply; the platform parses this envelope, validates the step against
+ * the `x402.payment` protocol, and re-verifies the embedded payment.
+ */
+export interface InteractionEnvelope<P = unknown> {
+  interaction_version: 1;
+  /** The thread id (`uuid@domain`) the step belongs to. */
+  interaction_id: string;
+  protocol: string;
+  protocol_version: number;
+  /** The protocol step name (e.g. `"payment"`). */
+  step: string;
+  /** This step's id (a fresh UUID). */
+  step_id: string;
+  /** The id of the step this one answers (the challenge step), or null. */
+  prev_step_id: string | null;
+  expires_at: string | null;
+  payload: P;
+}
+
+/** The `payload` of an `x402.payment` `payment` step: the signed x402 payload. */
+export interface X402PaymentStepPayload {
+  payment: X402PaymentPayload;
+}
+
+/**
+ * A built, signed payment-step envelope plus its canonical JSON bytes. The
+ * caller attaches `json` as the `interaction.json` part of the reply email; the
+ * platform reads `envelope` back from those exact bytes.
+ */
+export interface BuiltPaymentStep {
+  envelope: InteractionEnvelope<X402PaymentStepPayload>;
+  /** The canonical interaction.json body (what to attach to the reply). */
+  json: string;
+}
+
+/**
+ * Build the section-2.3 interaction.json envelope for a `payment` step. Pure: no
+ * I/O. `payment` is the signed exact-EVM payload (from
+ * `buildExactEvmPaymentPayload`); `prevStepId` is the challenge step id this
+ * payment answers, and `stepId` is a fresh UUID for the payment step. Returns
+ * the envelope and its canonical JSON, so the bytes the platform reads back are
+ * exactly the ones produced here.
+ */
+export function buildPaymentStepEnvelope(params: {
+  /** The thread id (`uuid@domain`). */
+  interactionId: string;
+  /** A fresh UUID identifying this payment step. */
+  stepId: string;
+  /** The challenge step id this payment answers. */
+  prevStepId: string;
+  payment: X402PaymentPayload;
+  /** Optional ISO-8601 step expiry. */
+  expiresAt?: string | null;
+}): BuiltPaymentStep {
+  if (!WIRE_ID_RE.test(params.interactionId)) {
+    throw new Error(
+      "buildPaymentStepEnvelope: interactionId must be uuid@domain",
+    );
+  }
+  if (!UUID_RE.test(params.stepId)) {
+    throw new Error("buildPaymentStepEnvelope: stepId must be a uuid");
+  }
+  if (!UUID_RE.test(params.prevStepId)) {
+    throw new Error("buildPaymentStepEnvelope: prevStepId must be a uuid");
+  }
+  const envelope: InteractionEnvelope<X402PaymentStepPayload> = {
+    interaction_version: 1,
+    interaction_id: params.interactionId,
+    protocol: X402_INTERACTION_PROTOCOL,
+    protocol_version: X402_INTERACTION_PROTOCOL_VERSION,
+    step: "payment",
+    step_id: params.stepId,
+    prev_step_id: params.prevStepId,
+    expires_at: params.expiresAt ?? null,
+    payload: { payment: params.payment },
+  };
+  return { envelope, json: JSON.stringify(envelope) };
+}
+
 /** Assemble the wire payload from a signed authorization. */
 export function toPaymentPayload(
   network: string,

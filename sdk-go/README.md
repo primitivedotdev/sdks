@@ -289,6 +289,64 @@ if err != nil {
 log.Println(receipt.Status, receipt.SettleTx) // settled, on-chain tx hash
 ```
 
+### Email-native payments
+
+The challenge can also ride a real email thread instead of a synthetic id. The
+payee issues it as an email; the payer signs it into an `interaction.json`
+payment step and sends it back attached to the reply.
+
+The payee issues the challenge with `CreateEmailChallenge`. The `pay_to` payout
+wallet and the token asset are resolved server-side; you only supply the
+addresses, amount, and network:
+
+```go
+issued, err := client.CreateEmailChallenge(ctx, primitive.X402EmailChargeInput{
+	From:       "payee@your-domain.example", // your sending address (funds receiver)
+	To:         "payer@their-domain.example", // the payer's address
+	AmountUsdc: "0.01",
+	Network:    "base-sepolia",
+})
+if err != nil {
+	log.Fatal(err)
+}
+// issued.InteractionID is the email thread the payment is bound to;
+// issued.Challenge carries the payment_requirements + nonce_binding to sign.
+```
+
+The payer, on receiving the challenge, signs it locally with `PayEmailChallenge`
+and replies with the resulting envelope attached. `PayEmailChallenge` does not
+send anything; it returns the signed payment-step envelope and its canonical
+JSON bytes:
+
+```go
+payer, err := primitive.NewPrivateKeySigner(os.Getenv("PAYER_KEY"))
+if err != nil {
+	log.Fatal(err)
+}
+
+built, err := client.PayEmailChallenge(issued, payer)
+if err != nil {
+	log.Fatal(err)
+}
+
+// built.JSON is the interaction.json body. The payer received the challenge as
+// an inbound email; reply to it with the envelope attached as `interaction.json`
+// using the email client's Reply method (see above). The platform reads the
+// envelope, re-derives the interaction-bound nonce, and settles on chain.
+_, err = client.Reply(ctx, challengeEmail, primitive.ReplyParams{
+	BodyText: "Payment attached.",
+	Attachments: []primitive.SendAttachment{
+		{
+			Filename:      "interaction.json",
+			ContentBase64: base64.StdEncoding.EncodeToString([]byte(built.JSON)),
+		},
+	},
+})
+if err != nil {
+	log.Fatal(err)
+}
+```
+
 ### Signing primitives (lower level)
 
 `Pay` builds and signs the payment for you. When you need to drive the signing

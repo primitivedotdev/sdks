@@ -6954,6 +6954,197 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "create-email-challenge",
+    "description": "Issue an x402 payment challenge over a real email thread (the payee\nside). Unlike `createChallenge` (which mints a synthetic challenge id),\nthis sends the challenge as an email from `from` to `to` and binds the\npayment to that DKIM-authenticated thread. The `pay_to` address and the\ntoken asset are resolved server-side from your registered default payout\naddress for the network, never from the request. The response carries\nthe thread's `interaction_id` plus the `challenge` (the\n`payment_requirements`, the `nonce_binding`, and `expires_at`) the payer\nneeds to sign; the payer replies with a signed `payment` interaction\nstep. Amounts are in token base units (USDC has 6 decimals, so `\"10000\"`\nis 0.01 USDC).\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createEmailChallenge",
+    "path": "/x402/email-challenges",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Issue a payment challenge over an email thread. `from` is your sending\naddress (the funds receiver; ownership is enforced at send, exactly as\nfor outbound mail) and `to` is the payer's address. The `pay_to` payout\nwallet and the token asset are resolved server-side, never taken from\nthe request.\n",
+      "properties": {
+        "from": {
+          "type": "string",
+          "format": "email",
+          "description": "Your sending address (the payee / funds receiver). Must be an\naddress your org is allowed to send from.\n"
+        },
+        "to": {
+          "type": "string",
+          "format": "email",
+          "description": "The payer's email address the challenge is sent to."
+        },
+        "amount": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,38}$",
+          "description": "Amount to collect, in token base units. USDC has 6 decimals, so\n`\"10000\"` is 0.01 USDC.\n"
+        },
+        "network": {
+          "type": "string",
+          "enum": [
+            "base",
+            "base-sepolia"
+          ]
+        },
+        "expires_in": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Seconds until the challenge expires. Defaults to 3600."
+        },
+        "resource": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048,
+          "description": "Optional URL identifying what is being paid for."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Optional human-readable description of the payment."
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "amount",
+        "network"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "The result of issuing an email-native payment challenge. `interaction_id`\nis the real email thread id (`uuid@domain`) the payment is bound to;\n`challenge_id` is the underlying challenge record. Hand the `challenge`\nto the payer, who replies with a signed `payment` interaction step (the\nSDK `payEmailChallenge` helper builds it).\n",
+      "properties": {
+        "interaction_id": {
+          "type": "string",
+          "description": "The email thread id (`uuid@domain`) the payment is bound to."
+        },
+        "challenge_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The underlying challenge record id."
+        },
+        "challenge": {
+          "type": "object",
+          "description": "The challenge the payer needs to sign and pay, carried inside an\nemail-native challenge response.\n",
+          "properties": {
+            "payment_requirements": {
+              "type": "object",
+              "description": "The x402 `PaymentRequirements` the payer signs over. Field names are\nx402's native camelCase, preserved byte-for-byte.\n",
+              "properties": {
+                "scheme": {
+                  "type": "string",
+                  "description": "The x402 settlement scheme. Always `exact` for v1.",
+                  "example": "exact"
+                },
+                "network": {
+                  "type": "string",
+                  "enum": [
+                    "base",
+                    "base-sepolia"
+                  ]
+                },
+                "maxAmountRequired": {
+                  "type": "string",
+                  "description": "Amount in token base units."
+                },
+                "payTo": {
+                  "type": "string",
+                  "description": "The payee's resolved payout address (checksummed)."
+                },
+                "asset": {
+                  "type": "string",
+                  "description": "The token contract address (checksummed). USDC."
+                },
+                "resource": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "maxTimeoutSeconds": {
+                  "type": "integer"
+                },
+                "extra": {
+                  "type": "object",
+                  "description": "The token's load-bearing EIP-712 domain params. `name` differs by\nchain (Base mainnet USDC is `USD Coin`, Base Sepolia is `USDC`); a\nwrong value produces a signature the verifier rejects.\n",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "version"
+                  ]
+                }
+              },
+              "required": [
+                "scheme",
+                "network",
+                "maxAmountRequired",
+                "payTo",
+                "asset",
+                "extra"
+              ]
+            },
+            "nonce_binding": {
+              "type": "object",
+              "description": "The interaction binding the payer hashes into the EIP-3009 nonce\n(`deriveEip3009Nonce`). Pinning the nonce to this binding is what lets an\nx402 payment ride asynchronous transports safely: a replayed challenge\ncan't redirect funds and a signed payment can't settle twice.\n",
+              "properties": {
+                "interaction_id": {
+                  "type": "string",
+                  "description": "Interaction id, including its `@domain` part."
+                },
+                "challenge_step_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "challenge_nonce": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$",
+                  "description": "32 random bytes as 64 lowercase hex chars."
+                }
+              },
+              "required": [
+                "interaction_id",
+                "challenge_step_id",
+                "challenge_nonce"
+              ]
+            },
+            "expires_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO-8601 expiry of the challenge."
+            }
+          },
+          "required": [
+            "payment_requirements",
+            "nonce_binding",
+            "expires_at"
+          ]
+        }
+      },
+      "required": [
+        "interaction_id",
+        "challenge_id",
+        "challenge"
+      ]
+    },
+    "sdkName": "createEmailChallenge",
+    "summary": "Create an email-native payment challenge",
+    "tag": "Payments",
+    "tagCommand": "payments"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-challenge",
     "description": "Fetch a challenge you created, to poll its `status` and settlement\nreceipt (`settle_tx`). Scoped to the challenger org that created it.\n",

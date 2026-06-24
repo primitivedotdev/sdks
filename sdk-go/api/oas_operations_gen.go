@@ -11,6 +11,7 @@ const (
 	CreateAgentAccountOperation            OperationName = "CreateAgentAccount"
 	CreateAgentClaimLinkOperation          OperationName = "CreateAgentClaimLink"
 	CreateChallengeOperation               OperationName = "CreateChallenge"
+	CreateEmailChallengeOperation          OperationName = "CreateEmailChallenge"
 	CreateEndpointOperation                OperationName = "CreateEndpoint"
 	CreateFilterOperation                  OperationName = "CreateFilter"
 	CreateFunctionOperation                OperationName = "CreateFunction"
