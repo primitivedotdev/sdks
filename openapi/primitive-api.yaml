@@ -3861,6 +3861,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /registries/{slug}:
     parameters:
@@ -3913,8 +3915,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /registries/{slug}/agents:
     parameters:
@@ -3939,7 +3941,7 @@ paths:
           description: The address of the last agent from the previous page.
       responses:
         '200':
-          description: Approved, reachable agents in the registry
+          description: Approved, reachable agents. Empty for an unknown or private registry.
           content:
             application/json:
               schema:
@@ -3981,8 +3983,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /registries/{slug}/agents/{handle}:
     parameters:
@@ -4087,10 +4093,12 @@ paths:
                         required: [status]
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /agents:
     post:
@@ -4415,6 +4423,7 @@ components:
       properties:
         slug:
           type: string
+          pattern: '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
           description: Lowercase slug, unique across registries.
         name: { type: string, minLength: 1, maxLength: 120 }
         description: { type: [string, 'null'], maxLength: 2000 }

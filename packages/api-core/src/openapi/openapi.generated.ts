@@ -5205,6 +5205,9 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "409": {
             "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
           }
         }
       }
@@ -5308,8 +5311,8 @@ export const openapiDocument: Record<string, unknown> = {
           "403": {
             "$ref": "#/components/responses/Forbidden"
           },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
           }
         }
       }
@@ -5355,7 +5358,7 @@ export const openapiDocument: Record<string, unknown> = {
         ],
         "responses": {
           "200": {
-            "description": "Approved, reachable agents in the registry",
+            "description": "Approved, reachable agents. Empty for an unknown or private registry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5445,8 +5448,14 @@ export const openapiDocument: Record<string, unknown> = {
           "403": {
             "$ref": "#/components/responses/Forbidden"
           },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
           "409": {
             "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
           }
         }
       }
@@ -5653,11 +5662,14 @@ export const openapiDocument: Record<string, unknown> = {
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
           }
         }
       }
@@ -6185,6 +6197,7 @@ export const openapiDocument: Record<string, unknown> = {
         "properties": {
           "slug": {
             "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$",
             "description": "Lowercase slug, unique across registries."
           },
           "name": {

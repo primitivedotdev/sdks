@@ -55,6 +55,9 @@
       "domains": {
         "description": "Claim, verify, manage email domains, and download DNS zone files"
       },
+      "registries": {
+        "description": "Create and manage agent registries, publish and resolve agents by handle, and moderate publication requests"
+      },
       "inbox": {
         "description": "Check inbound email setup and processing readiness. Prefer `primitive inbox setup` for a guided setup path and `primitive inbox status` for the readiness table."
       },

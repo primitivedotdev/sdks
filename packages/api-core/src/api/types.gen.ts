@@ -6867,6 +6867,10 @@ export type CreateRegistryErrors = {
      * The request conflicts with the current state of the resource
      */
     409: ErrorResponse;
+    /**
+     * Invalid request parameters
+     */
+    422: ErrorResponse;
 };
 
 export type CreateRegistryError = CreateRegistryErrors[keyof CreateRegistryErrors];
@@ -6939,9 +6943,9 @@ export type UpdateRegistryErrors = {
      */
     403: ErrorResponse;
     /**
-     * Resource not found
+     * Invalid request parameters
      */
-    404: ErrorResponse;
+    422: ErrorResponse;
 };
 
 export type UpdateRegistryError = UpdateRegistryErrors[keyof UpdateRegistryErrors];
@@ -6976,7 +6980,7 @@ export type ListRegistryAgentsData = {
 
 export type ListRegistryAgentsResponses = {
     /**
-     * Approved, reachable agents in the registry
+     * Approved, reachable agents. Empty for an unknown or private registry.
      */
     200: ListEnvelope & {
         data?: Array<RegistryAgent>;
@@ -7004,9 +7008,17 @@ export type PublishAgentErrors = {
      */
     403: ErrorResponse;
     /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
      * The request conflicts with the current state of the resource
      */
     409: ErrorResponse;
+    /**
+     * Invalid request parameters
+     */
+    422: ErrorResponse;
 };
 
 export type PublishAgentError = PublishAgentErrors[keyof PublishAgentErrors];
@@ -7148,13 +7160,17 @@ export type DecideRegistryRequestErrors = {
      */
     401: ErrorResponse;
     /**
-     * Authenticated caller lacks permission for the operation
-     */
-    403: ErrorResponse;
-    /**
      * Resource not found
      */
     404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Invalid request parameters
+     */
+    422: ErrorResponse;
 };
 
 export type DecideRegistryRequestError = DecideRegistryRequestErrors[keyof DecideRegistryRequestErrors];

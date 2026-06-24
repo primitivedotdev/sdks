@@ -1888,6 +1888,29 @@ func (s *CreateRegistryInput) Validate() error {
 	var failures []validate.FieldError
 	if err := func() error {
 		if err := (validate.String{
+			MinLength:     0,
+			MinLengthSet:  false,
+			MaxLength:     0,
+			MaxLengthSet:  false,
+			Email:         false,
+			Hostname:      false,
+			Regex:         regexMap["^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"],
+			MinNumeric:    0,
+			MinNumericSet: false,
+			MaxNumeric:    0,
+			MaxNumericSet: false,
+		}).Validate(string(s.Slug)); err != nil {
+			return errors.Wrap(err, "string")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "slug",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := (validate.String{
 			MinLength:     1,
 			MinLengthSet:  true,
 			MaxLength:     120,
@@ -1971,7 +1994,15 @@ func (s *CreateRegistryUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *DecideRegistryRequestForbidden) Validate() error {
+func (s *CreateRegistryUnprocessableEntity) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DecideRegistryRequestConflict) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -2079,6 +2110,14 @@ func (s DecideRegistryRequestOKDataStatus) Validate() error {
 }
 
 func (s *DecideRegistryRequestUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DecideRegistryRequestUnprocessableEntity) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -6103,6 +6142,14 @@ func (s *PublishAgentForbidden) Validate() error {
 	return nil
 }
 
+func (s *PublishAgentNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *PublishAgentOK) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -6161,6 +6208,14 @@ func (s PublishAgentResultStatus) Validate() error {
 }
 
 func (s *PublishAgentUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *PublishAgentUnprocessableEntity) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -9816,7 +9871,7 @@ func (s *UpdateRegistryInput) Validate() error {
 	return nil
 }
 
-func (s *UpdateRegistryNotFound) Validate() error {
+func (s *UpdateRegistryUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -9824,7 +9879,7 @@ func (s *UpdateRegistryNotFound) Validate() error {
 	return nil
 }
 
-func (s *UpdateRegistryUnauthorized) Validate() error {
+func (s *UpdateRegistryUnprocessableEntity) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err

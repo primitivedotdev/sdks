@@ -3276,9 +3276,13 @@ type CreateRegistryUnauthorized ErrorResponse
 
 func (*CreateRegistryUnauthorized) createRegistryRes() {}
 
-type DecideRegistryRequestForbidden ErrorResponse
+type CreateRegistryUnprocessableEntity ErrorResponse
 
-func (*DecideRegistryRequestForbidden) decideRegistryRequestRes() {}
+func (*CreateRegistryUnprocessableEntity) createRegistryRes() {}
+
+type DecideRegistryRequestConflict ErrorResponse
+
+func (*DecideRegistryRequestConflict) decideRegistryRequestRes() {}
 
 // Ref: #/components/schemas/DecideRegistryRequestInput
 type DecideRegistryRequestInput struct {
@@ -3426,6 +3430,10 @@ func (s *DecideRegistryRequestOKDataStatus) UnmarshalText(data []byte) error {
 type DecideRegistryRequestUnauthorized ErrorResponse
 
 func (*DecideRegistryRequestUnauthorized) decideRegistryRequestRes() {}
+
+type DecideRegistryRequestUnprocessableEntity ErrorResponse
+
+func (*DecideRegistryRequestUnprocessableEntity) decideRegistryRequestRes() {}
 
 type DefineAgentConflict ErrorResponse
 
@@ -15188,6 +15196,10 @@ func (s *PublishAgentInput) SetHandle(val string) {
 	s.Handle = val
 }
 
+type PublishAgentNotFound ErrorResponse
+
+func (*PublishAgentNotFound) publishAgentRes() {}
+
 // Merged schema.
 type PublishAgentOK struct {
 	Success bool               `json:"success"`
@@ -15300,6 +15312,10 @@ func (s *PublishAgentResultStatus) UnmarshalText(data []byte) error {
 type PublishAgentUnauthorized ErrorResponse
 
 func (*PublishAgentUnauthorized) publishAgentRes() {}
+
+type PublishAgentUnprocessableEntity ErrorResponse
+
+func (*PublishAgentUnprocessableEntity) publishAgentRes() {}
 
 // Who may publish into a registry. owner_only: only the registry owner.
 // request: anyone may request and the owner approves. open: anyone may
@@ -21128,10 +21144,6 @@ func (s *UpdateRegistryInput) SetPublishPolicy(val OptPublishPolicy) {
 	s.PublishPolicy = val
 }
 
-type UpdateRegistryNotFound ErrorResponse
-
-func (*UpdateRegistryNotFound) updateRegistryRes() {}
-
 // Merged schema.
 type UpdateRegistryOK struct {
 	Success bool                 `json:"success"`
@@ -21177,6 +21189,10 @@ func (s *UpdateRegistryOKData) SetID(val uuid.UUID) {
 type UpdateRegistryUnauthorized ErrorResponse
 
 func (*UpdateRegistryUnauthorized) updateRegistryRes() {}
+
+type UpdateRegistryUnprocessableEntity ErrorResponse
+
+func (*UpdateRegistryUnprocessableEntity) updateRegistryRes() {}
 
 type UpdateSpendPolicyBadRequest ErrorResponse
 

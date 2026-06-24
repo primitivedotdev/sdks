@@ -7896,6 +7896,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "properties": {
         "slug": {
           "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$",
           "description": "Lowercase slug, unique across registries."
         },
         "name": {

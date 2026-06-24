@@ -60,19 +60,26 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_401
 
-    if response.status_code == 403:
-        response_403 = ErrorResponse.from_dict(response.json())
-
-
-
-        return response_403
-
     if response.status_code == 404:
         response_404 = ErrorResponse.from_dict(response.json())
 
 
 
         return response_404
+
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 422:
+        response_422 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_422
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
