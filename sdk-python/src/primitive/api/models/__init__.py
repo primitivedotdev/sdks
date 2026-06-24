@@ -61,6 +61,17 @@ from .create_function_secret_response_201 import CreateFunctionSecretResponse201
 from .create_org_secret_input import CreateOrgSecretInput
 from .create_org_secret_response_200 import CreateOrgSecretResponse200
 from .create_org_secret_response_201 import CreateOrgSecretResponse201
+from .create_registry_input import CreateRegistryInput
+from .create_registry_response_201 import CreateRegistryResponse201
+from .create_registry_response_201_data import CreateRegistryResponse201Data
+from .decide_registry_request_input import DecideRegistryRequestInput
+from .decide_registry_request_input_decision import DecideRegistryRequestInputDecision
+from .decide_registry_request_response_200 import DecideRegistryRequestResponse200
+from .decide_registry_request_response_200_data import DecideRegistryRequestResponse200Data
+from .decide_registry_request_response_200_data_status import DecideRegistryRequestResponse200DataStatus
+from .define_agent_input import DefineAgentInput
+from .define_agent_response_201 import DefineAgentResponse201
+from .define_agent_response_201_data import DefineAgentResponse201Data
 from .delete_domain_response_200 import DeleteDomainResponse200
 from .delete_domain_response_200_data import DeleteDomainResponse200Data
 from .delete_email_response_200 import DeleteEmailResponse200
@@ -145,6 +156,7 @@ from .gate_denial_reason import GateDenialReason
 from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
+from .get_agent_response_200 import GetAgentResponse200
 from .get_challenge_response_200 import GetChallengeResponse200
 from .get_conversation_response_200 import GetConversationResponse200
 from .get_email_response_200 import GetEmailResponse200
@@ -153,6 +165,7 @@ from .get_function_routing_response_200 import GetFunctionRoutingResponse200
 from .get_function_test_run_trace_response_200 import GetFunctionTestRunTraceResponse200
 from .get_inbox_status_response_200 import GetInboxStatusResponse200
 from .get_org_routing_topology_response_200 import GetOrgRoutingTopologyResponse200
+from .get_registry_response_200 import GetRegistryResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
 from .get_spend_policy_response_200 import GetSpendPolicyResponse200
@@ -183,6 +196,9 @@ from .list_functions_response_200 import ListFunctionsResponse200
 from .list_org_secrets_response_200 import ListOrgSecretsResponse200
 from .list_org_secrets_response_200_data import ListOrgSecretsResponse200Data
 from .list_payout_addresses_response_200 import ListPayoutAddressesResponse200
+from .list_registries_response_200 import ListRegistriesResponse200
+from .list_registry_agents_response_200 import ListRegistryAgentsResponse200
+from .list_registry_requests_response_200 import ListRegistryRequestsResponse200
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
 from .org_secret_list_item import OrgSecretListItem
 from .org_secret_write_result import OrgSecretWriteResult
@@ -195,9 +211,18 @@ from .pay_challenge_response_200 import PayChallengeResponse200
 from .plan_limits import PlanLimits
 from .poll_cli_login_input import PollCliLoginInput
 from .poll_cli_login_response_200 import PollCliLoginResponse200
+from .publish_agent_input import PublishAgentInput
+from .publish_agent_response_200 import PublishAgentResponse200
+from .publish_agent_response_201 import PublishAgentResponse201
+from .publish_agent_result import PublishAgentResult
+from .publish_agent_result_status import PublishAgentResultStatus
+from .publish_policy import PublishPolicy
 from .register_payout_address_input import RegisterPayoutAddressInput
 from .register_payout_address_input_network import RegisterPayoutAddressInputNetwork
 from .register_payout_address_response_201 import RegisterPayoutAddressResponse201
+from .registry import Registry
+from .registry_agent import RegistryAgent
+from .registry_request import RegistryRequest
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
 from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
@@ -207,6 +232,7 @@ from .resend_agent_signup_verification_input import ResendAgentSignupVerificatio
 from .resend_agent_signup_verification_response_200 import ResendAgentSignupVerificationResponse200
 from .resend_cli_signup_verification_input import ResendCliSignupVerificationInput
 from .resend_cli_signup_verification_response_200 import ResendCliSignupVerificationResponse200
+from .resolve_registry_handle_response_200 import ResolveRegistryHandleResponse200
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
 from .routing_topology import RoutingTopology
 from .routing_topology_domains_item import RoutingTopologyDomainsItem
@@ -275,6 +301,8 @@ from .test_result import TestResult
 from .thread import Thread
 from .thread_message import ThreadMessage
 from .thread_message_direction import ThreadMessageDirection
+from .unpublish_agent_response_200 import UnpublishAgentResponse200
+from .unpublish_agent_response_200_data import UnpublishAgentResponse200Data
 from .unset_function_route_response_200 import UnsetFunctionRouteResponse200
 from .unset_function_route_response_200_data import UnsetFunctionRouteResponse200Data
 from .unverified_domain import UnverifiedDomain
@@ -290,6 +318,9 @@ from .update_filter_response_200 import UpdateFilterResponse200
 from .update_function_input import UpdateFunctionInput
 from .update_function_input_files import UpdateFunctionInputFiles
 from .update_function_response_200 import UpdateFunctionResponse200
+from .update_registry_input import UpdateRegistryInput
+from .update_registry_response_200 import UpdateRegistryResponse200
+from .update_registry_response_200_data import UpdateRegistryResponse200Data
 from .update_spend_policy_input import UpdateSpendPolicyInput
 from .update_spend_policy_response_200 import UpdateSpendPolicyResponse200
 from .verified_domain import VerifiedDomain
@@ -384,6 +415,17 @@ __all__ = (
     "CreateOrgSecretInput",
     "CreateOrgSecretResponse200",
     "CreateOrgSecretResponse201",
+    "CreateRegistryInput",
+    "CreateRegistryResponse201",
+    "CreateRegistryResponse201Data",
+    "DecideRegistryRequestInput",
+    "DecideRegistryRequestInputDecision",
+    "DecideRegistryRequestResponse200",
+    "DecideRegistryRequestResponse200Data",
+    "DecideRegistryRequestResponse200DataStatus",
+    "DefineAgentInput",
+    "DefineAgentResponse201",
+    "DefineAgentResponse201Data",
     "DeleteDomainResponse200",
     "DeleteDomainResponse200Data",
     "DeleteEmailResponse200",
@@ -468,6 +510,7 @@ __all__ = (
     "GateFix",
     "GateFixAction",
     "GetAccountResponse200",
+    "GetAgentResponse200",
     "GetChallengeResponse200",
     "GetConversationResponse200",
     "GetEmailResponse200",
@@ -476,6 +519,7 @@ __all__ = (
     "GetFunctionTestRunTraceResponse200",
     "GetInboxStatusResponse200",
     "GetOrgRoutingTopologyResponse200",
+    "GetRegistryResponse200",
     "GetSendPermissionsResponse200",
     "GetSentEmailResponse200",
     "GetSpendPolicyResponse200",
@@ -506,6 +550,9 @@ __all__ = (
     "ListOrgSecretsResponse200",
     "ListOrgSecretsResponse200Data",
     "ListPayoutAddressesResponse200",
+    "ListRegistriesResponse200",
+    "ListRegistryAgentsResponse200",
+    "ListRegistryRequestsResponse200",
     "ListSentEmailsResponse200",
     "OrgSecretListItem",
     "OrgSecretWriteResult",
@@ -518,9 +565,18 @@ __all__ = (
     "PlanLimits",
     "PollCliLoginInput",
     "PollCliLoginResponse200",
+    "PublishAgentInput",
+    "PublishAgentResponse200",
+    "PublishAgentResponse201",
+    "PublishAgentResult",
+    "PublishAgentResultStatus",
+    "PublishPolicy",
     "RegisterPayoutAddressInput",
     "RegisterPayoutAddressInputNetwork",
     "RegisterPayoutAddressResponse201",
+    "Registry",
+    "RegistryAgent",
+    "RegistryRequest",
     "ReplayDeliveryResponse200",
     "ReplayEmailWebhooksResponse200",
     "ReplayResult",
@@ -530,6 +586,7 @@ __all__ = (
     "ResendAgentSignupVerificationResponse200",
     "ResendCliSignupVerificationInput",
     "ResendCliSignupVerificationResponse200",
+    "ResolveRegistryHandleResponse200",
     "RotateWebhookSecretResponse200",
     "RoutingTopology",
     "RoutingTopologyDomainsItem",
@@ -598,6 +655,8 @@ __all__ = (
     "Thread",
     "ThreadMessage",
     "ThreadMessageDirection",
+    "UnpublishAgentResponse200",
+    "UnpublishAgentResponse200Data",
     "UnsetFunctionRouteResponse200",
     "UnsetFunctionRouteResponse200Data",
     "UnverifiedDomain",
@@ -613,6 +672,9 @@ __all__ = (
     "UpdateFunctionInput",
     "UpdateFunctionInputFiles",
     "UpdateFunctionResponse200",
+    "UpdateRegistryInput",
+    "UpdateRegistryResponse200",
+    "UpdateRegistryResponse200Data",
     "UpdateSpendPolicyInput",
     "UpdateSpendPolicyResponse200",
     "VerifiedDomain",

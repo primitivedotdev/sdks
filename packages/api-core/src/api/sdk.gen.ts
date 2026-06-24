@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateChallengeData, CreateChallengeErrors, CreateChallengeResponses, CreateEmailChallengeData, CreateEmailChallengeErrors, CreateEmailChallengeResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetChallengeData, GetChallengeErrors, GetChallengeResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetSpendPolicyData, GetSpendPolicyErrors, GetSpendPolicyResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeclinedPaymentsData, ListDeclinedPaymentsErrors, ListDeclinedPaymentsResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListPayoutAddressesData, ListPayoutAddressesErrors, ListPayoutAddressesResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PayChallengeData, PayChallengeErrors, PayChallengeResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, RegisterPayoutAddressData, RegisterPayoutAddressErrors, RegisterPayoutAddressResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, UpdateSpendPolicyData, UpdateSpendPolicyErrors, UpdateSpendPolicyResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateChallengeData, CreateChallengeErrors, CreateChallengeResponses, CreateEmailChallengeData, CreateEmailChallengeErrors, CreateEmailChallengeResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, CreateRegistryData, CreateRegistryErrors, CreateRegistryResponses, DecideRegistryRequestData, DecideRegistryRequestErrors, DecideRegistryRequestResponses, DefineAgentData, DefineAgentErrors, DefineAgentResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetAgentData, GetAgentErrors, GetAgentResponses, GetChallengeData, GetChallengeErrors, GetChallengeResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetRegistryData, GetRegistryErrors, GetRegistryResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetSpendPolicyData, GetSpendPolicyErrors, GetSpendPolicyResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeclinedPaymentsData, ListDeclinedPaymentsErrors, ListDeclinedPaymentsResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListPayoutAddressesData, ListPayoutAddressesErrors, ListPayoutAddressesResponses, ListRegistriesData, ListRegistriesErrors, ListRegistriesResponses, ListRegistryAgentsData, ListRegistryAgentsResponses, ListRegistryRequestsData, ListRegistryRequestsErrors, ListRegistryRequestsResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PayChallengeData, PayChallengeErrors, PayChallengeResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, PublishAgentData, PublishAgentErrors, PublishAgentResponses, RegisterPayoutAddressData, RegisterPayoutAddressErrors, RegisterPayoutAddressResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, ResolveRegistryHandleData, ResolveRegistryHandleErrors, ResolveRegistryHandleResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnpublishAgentData, UnpublishAgentErrors, UnpublishAgentResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, UpdateRegistryData, UpdateRegistryErrors, UpdateRegistryResponses, UpdateSpendPolicyData, UpdateSpendPolicyErrors, UpdateSpendPolicyResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -1593,3 +1593,115 @@ export const listDeclinedPayments = <ThrowOnError extends boolean = false>(optio
     url: '/x402/declined-payments',
     ...options
 });
+
+/**
+ * List the registries you own
+ */
+export const listRegistries = <ThrowOnError extends boolean = false>(options?: Options<ListRegistriesData, ThrowOnError>) => (options?.client ?? client).get<ListRegistriesResponses, ListRegistriesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/registries',
+    ...options
+});
+
+/**
+ * Create a registry
+ */
+export const createRegistry = <ThrowOnError extends boolean = false>(options: Options<CreateRegistryData, ThrowOnError>) => (options.client ?? client).post<CreateRegistryResponses, CreateRegistryErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/registries',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Get a public registry's metadata
+ */
+export const getRegistry = <ThrowOnError extends boolean = false>(options: Options<GetRegistryData, ThrowOnError>) => (options.client ?? client).get<GetRegistryResponses, GetRegistryErrors, ThrowOnError>({ url: '/registries/{slug}', ...options });
+
+/**
+ * Update a registry you own
+ */
+export const updateRegistry = <ThrowOnError extends boolean = false>(options: Options<UpdateRegistryData, ThrowOnError>) => (options.client ?? client).patch<UpdateRegistryResponses, UpdateRegistryErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/registries/{slug}',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * List agents in a registry
+ */
+export const listRegistryAgents = <ThrowOnError extends boolean = false>(options: Options<ListRegistryAgentsData, ThrowOnError>) => (options.client ?? client).get<ListRegistryAgentsResponses, unknown, ThrowOnError>({ url: '/registries/{slug}/agents', ...options });
+
+/**
+ * Publish an agent into a registry
+ */
+export const publishAgent = <ThrowOnError extends boolean = false>(options: Options<PublishAgentData, ThrowOnError>) => (options.client ?? client).post<PublishAgentResponses, PublishAgentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/registries/{slug}/agents',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Unpublish an agent from a registry
+ */
+export const unpublishAgent = <ThrowOnError extends boolean = false>(options: Options<UnpublishAgentData, ThrowOnError>) => (options.client ?? client).delete<UnpublishAgentResponses, UnpublishAgentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/registries/{slug}/agents/{handle}',
+    ...options
+});
+
+/**
+ * Resolve a registry handle to its agent
+ */
+export const resolveRegistryHandle = <ThrowOnError extends boolean = false>(options: Options<ResolveRegistryHandleData, ThrowOnError>) => (options.client ?? client).get<ResolveRegistryHandleResponses, ResolveRegistryHandleErrors, ThrowOnError>({ url: '/registries/{slug}/agents/{handle}', ...options });
+
+/**
+ * List pending publication requests
+ */
+export const listRegistryRequests = <ThrowOnError extends boolean = false>(options: Options<ListRegistryRequestsData, ThrowOnError>) => (options.client ?? client).get<ListRegistryRequestsResponses, ListRegistryRequestsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/registries/{slug}/requests',
+    ...options
+});
+
+/**
+ * Approve or reject a publication request
+ */
+export const decideRegistryRequest = <ThrowOnError extends boolean = false>(options: Options<DecideRegistryRequestData, ThrowOnError>) => (options.client ?? client).post<DecideRegistryRequestResponses, DecideRegistryRequestErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/registries/{slug}/requests/{id}',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Define an agent identity
+ */
+export const defineAgent = <ThrowOnError extends boolean = false>(options: Options<DefineAgentData, ThrowOnError>) => (options.client ?? client).post<DefineAgentResponses, DefineAgentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agents',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Get an agent's public profile by address
+ */
+export const getAgent = <ThrowOnError extends boolean = false>(options: Options<GetAgentData, ThrowOnError>) => (options.client ?? client).get<GetAgentResponses, GetAgentErrors, ThrowOnError>({ url: '/agents/{address}', ...options });

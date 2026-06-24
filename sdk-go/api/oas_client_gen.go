@@ -181,6 +181,24 @@ type Invoker interface {
 	//
 	// POST /org/secrets
 	CreateOrgSecret(ctx context.Context, request *CreateOrgSecretInput) (CreateOrgSecretRes, error)
+	// CreateRegistry invokes createRegistry operation.
+	//
+	// Create a registry.
+	//
+	// POST /registries
+	CreateRegistry(ctx context.Context, request *CreateRegistryInput) (CreateRegistryRes, error)
+	// DecideRegistryRequest invokes decideRegistryRequest operation.
+	//
+	// Approve or reject a publication request.
+	//
+	// POST /registries/{slug}/requests/{id}
+	DecideRegistryRequest(ctx context.Context, request *DecideRegistryRequestInput, params DecideRegistryRequestParams) (DecideRegistryRequestRes, error)
+	// DefineAgent invokes defineAgent operation.
+	//
+	// Define an agent identity.
+	//
+	// POST /agents
+	DefineAgent(ctx context.Context, request *DefineAgentInput) (DefineAgentRes, error)
 	// DeleteDomain invokes deleteDomain operation.
 	//
 	// Deletes a verified or unverified domain claim.
@@ -283,6 +301,12 @@ type Invoker interface {
 	//
 	// GET /account
 	GetAccount(ctx context.Context) (GetAccountRes, error)
+	// GetAgent invokes getAgent operation.
+	//
+	// Get an agent's public profile by address.
+	//
+	// GET /agents/{address}
+	GetAgent(ctx context.Context, params GetAgentParams) (GetAgentRes, error)
 	// GetChallenge invokes getChallenge operation.
 	//
 	// Fetch a challenge you created, to poll its `status` and settlement
@@ -385,6 +409,12 @@ type Invoker interface {
 	//
 	// GET /functions/routing-topology
 	GetOrgRoutingTopology(ctx context.Context) (GetOrgRoutingTopologyRes, error)
+	// GetRegistry invokes getRegistry operation.
+	//
+	// Get a public registry's metadata.
+	//
+	// GET /registries/{slug}
+	GetRegistry(ctx context.Context, params GetRegistryParams) (GetRegistryRes, error)
 	// GetSendPermissions invokes getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -583,6 +613,24 @@ type Invoker interface {
 	//
 	// GET /x402/payout-addresses
 	ListPayoutAddresses(ctx context.Context) (ListPayoutAddressesRes, error)
+	// ListRegistries invokes listRegistries operation.
+	//
+	// List the registries you own.
+	//
+	// GET /registries
+	ListRegistries(ctx context.Context) (ListRegistriesRes, error)
+	// ListRegistryAgents invokes listRegistryAgents operation.
+	//
+	// List agents in a registry.
+	//
+	// GET /registries/{slug}/agents
+	ListRegistryAgents(ctx context.Context, params ListRegistryAgentsParams) (*ListRegistryAgentsOK, error)
+	// ListRegistryRequests invokes listRegistryRequests operation.
+	//
+	// List pending publication requests.
+	//
+	// GET /registries/{slug}/requests
+	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
 	// ListSentEmails invokes listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -626,6 +674,12 @@ type Invoker interface {
 	//
 	// POST /cli/login/poll
 	PollCliLogin(ctx context.Context, request *PollCliLoginInput) (PollCliLoginRes, error)
+	// PublishAgent invokes publishAgent operation.
+	//
+	// Publish an agent into a registry.
+	//
+	// POST /registries/{slug}/agents
+	PublishAgent(ctx context.Context, request *PublishAgentInput, params PublishAgentParams) (PublishAgentRes, error)
 	// RegisterPayoutAddress invokes registerPayoutAddress operation.
 	//
 	// Register (or update) the default payout address your org receives x402
@@ -690,6 +744,12 @@ type Invoker interface {
 	//
 	// POST /cli/signup/resend
 	ResendCliSignupVerification(ctx context.Context, request *ResendCliSignupVerificationInput) (ResendCliSignupVerificationRes, error)
+	// ResolveRegistryHandle invokes resolveRegistryHandle operation.
+	//
+	// Resolve a registry handle to its agent.
+	//
+	// GET /registries/{slug}/agents/{handle}
+	ResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (ResolveRegistryHandleRes, error)
 	// RotateWebhookSecret invokes rotateWebhookSecret operation.
 	//
 	// Generates a new webhook signing secret, replacing the current one.
@@ -851,6 +911,12 @@ type Invoker interface {
 	//
 	// POST /functions/{id}/test
 	TestFunction(ctx context.Context, request OptTestFunctionReq, params TestFunctionParams) (TestFunctionRes, error)
+	// UnpublishAgent invokes unpublishAgent operation.
+	//
+	// Unpublish an agent from a registry.
+	//
+	// DELETE /registries/{slug}/agents/{handle}
+	UnpublishAgent(ctx context.Context, params UnpublishAgentParams) (UnpublishAgentRes, error)
 	// UnsetFunctionRoute invokes unsetFunctionRoute operation.
 	//
 	// Deactivates every active endpoint bound to this function. The
@@ -900,6 +966,12 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}
 	UpdateFunction(ctx context.Context, request *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
+	// UpdateRegistry invokes updateRegistry operation.
+	//
+	// Update a registry you own.
+	//
+	// PATCH /registries/{slug}
+	UpdateRegistry(ctx context.Context, request *UpdateRegistryInput, params UpdateRegistryParams) (UpdateRegistryRes, error)
 	// UpdateSpendPolicy invokes updateSpendPolicy operation.
 	//
 	// Update your org's spend policy. Applied as a merge: only the fields you
@@ -2293,6 +2365,373 @@ func (c *Client) sendCreateOrgSecret(ctx context.Context, request *CreateOrgSecr
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateOrgSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateRegistry invokes createRegistry operation.
+//
+// Create a registry.
+//
+// POST /registries
+func (c *Client) CreateRegistry(ctx context.Context, request *CreateRegistryInput) (CreateRegistryRes, error) {
+	res, err := c.sendCreateRegistry(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateRegistry(ctx context.Context, request *CreateRegistryInput) (res CreateRegistryRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createRegistry"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/registries"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateRegistryOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/registries"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateRegistryRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateRegistryOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateRegistryResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DecideRegistryRequest invokes decideRegistryRequest operation.
+//
+// Approve or reject a publication request.
+//
+// POST /registries/{slug}/requests/{id}
+func (c *Client) DecideRegistryRequest(ctx context.Context, request *DecideRegistryRequestInput, params DecideRegistryRequestParams) (DecideRegistryRequestRes, error) {
+	res, err := c.sendDecideRegistryRequest(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendDecideRegistryRequest(ctx context.Context, request *DecideRegistryRequestInput, params DecideRegistryRequestParams) (res DecideRegistryRequestRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("decideRegistryRequest"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/registries/{slug}/requests/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DecideRegistryRequestOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/registries/"
+	{
+		// Encode "slug" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "slug",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Slug))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/requests/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeDecideRegistryRequestRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DecideRegistryRequestOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDecideRegistryRequestResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DefineAgent invokes defineAgent operation.
+//
+// Define an agent identity.
+//
+// POST /agents
+func (c *Client) DefineAgent(ctx context.Context, request *DefineAgentInput) (DefineAgentRes, error) {
+	res, err := c.sendDefineAgent(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendDefineAgent(ctx context.Context, request *DefineAgentInput) (res DefineAgentRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("defineAgent"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agents"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DefineAgentOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agents"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeDefineAgentRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DefineAgentOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDefineAgentResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -3922,6 +4361,98 @@ func (c *Client) sendGetAccount(ctx context.Context) (res GetAccountRes, err err
 	return result, nil
 }
 
+// GetAgent invokes getAgent operation.
+//
+// Get an agent's public profile by address.
+//
+// GET /agents/{address}
+func (c *Client) GetAgent(ctx context.Context, params GetAgentParams) (GetAgentRes, error) {
+	res, err := c.sendGetAgent(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetAgent(ctx context.Context, params GetAgentParams) (res GetAgentRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getAgent"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agents/{address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetAgentOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agents/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetAgentResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetChallenge invokes getChallenge operation.
 //
 // Fetch a challenge you created, to poll its `status` and settlement
@@ -4955,6 +5486,98 @@ func (c *Client) sendGetOrgRoutingTopology(ctx context.Context) (res GetOrgRouti
 
 	stage = "DecodeResponse"
 	result, err := decodeGetOrgRoutingTopologyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetRegistry invokes getRegistry operation.
+//
+// Get a public registry's metadata.
+//
+// GET /registries/{slug}
+func (c *Client) GetRegistry(ctx context.Context, params GetRegistryParams) (GetRegistryRes, error) {
+	res, err := c.sendGetRegistry(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetRegistry(ctx context.Context, params GetRegistryParams) (res GetRegistryRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getRegistry"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/registries/{slug}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetRegistryOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/registries/"
+	{
+		// Encode "slug" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "slug",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Slug))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetRegistryResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -7252,6 +7875,391 @@ func (c *Client) sendListPayoutAddresses(ctx context.Context) (res ListPayoutAdd
 	return result, nil
 }
 
+// ListRegistries invokes listRegistries operation.
+//
+// List the registries you own.
+//
+// GET /registries
+func (c *Client) ListRegistries(ctx context.Context) (ListRegistriesRes, error) {
+	res, err := c.sendListRegistries(ctx)
+	return res, err
+}
+
+func (c *Client) sendListRegistries(ctx context.Context) (res ListRegistriesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listRegistries"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/registries"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListRegistriesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/registries"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListRegistriesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListRegistriesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListRegistryAgents invokes listRegistryAgents operation.
+//
+// List agents in a registry.
+//
+// GET /registries/{slug}/agents
+func (c *Client) ListRegistryAgents(ctx context.Context, params ListRegistryAgentsParams) (*ListRegistryAgentsOK, error) {
+	res, err := c.sendListRegistryAgents(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListRegistryAgents(ctx context.Context, params ListRegistryAgentsParams) (res *ListRegistryAgentsOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listRegistryAgents"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/registries/{slug}/agents"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListRegistryAgentsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/registries/"
+	{
+		// Encode "slug" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "slug",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Slug))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/agents"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListRegistryAgentsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListRegistryRequests invokes listRegistryRequests operation.
+//
+// List pending publication requests.
+//
+// GET /registries/{slug}/requests
+func (c *Client) ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error) {
+	res, err := c.sendListRegistryRequests(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (res ListRegistryRequestsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listRegistryRequests"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/registries/{slug}/requests"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListRegistryRequestsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/registries/"
+	{
+		// Encode "slug" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "slug",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Slug))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/requests"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListRegistryRequestsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListRegistryRequestsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListSentEmails invokes listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -7706,6 +8714,135 @@ func (c *Client) sendPollCliLogin(ctx context.Context, request *PollCliLoginInpu
 
 	stage = "DecodeResponse"
 	result, err := decodePollCliLoginResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// PublishAgent invokes publishAgent operation.
+//
+// Publish an agent into a registry.
+//
+// POST /registries/{slug}/agents
+func (c *Client) PublishAgent(ctx context.Context, request *PublishAgentInput, params PublishAgentParams) (PublishAgentRes, error) {
+	res, err := c.sendPublishAgent(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendPublishAgent(ctx context.Context, request *PublishAgentInput, params PublishAgentParams) (res PublishAgentRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("publishAgent"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/registries/{slug}/agents"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PublishAgentOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/registries/"
+	{
+		// Encode "slug" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "slug",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Slug))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/agents"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePublishAgentRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PublishAgentOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePublishAgentResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -8379,6 +9516,117 @@ func (c *Client) sendResendCliSignupVerification(ctx context.Context, request *R
 
 	stage = "DecodeResponse"
 	result, err := decodeResendCliSignupVerificationResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ResolveRegistryHandle invokes resolveRegistryHandle operation.
+//
+// Resolve a registry handle to its agent.
+//
+// GET /registries/{slug}/agents/{handle}
+func (c *Client) ResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (ResolveRegistryHandleRes, error) {
+	res, err := c.sendResolveRegistryHandle(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (res ResolveRegistryHandleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("resolveRegistryHandle"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/registries/{slug}/agents/{handle}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ResolveRegistryHandleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/registries/"
+	{
+		// Encode "slug" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "slug",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Slug))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/agents/"
+	{
+		// Encode "handle" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "handle",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Handle))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeResolveRegistryHandleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -10230,6 +11478,150 @@ func (c *Client) sendTestFunction(ctx context.Context, request OptTestFunctionRe
 	return result, nil
 }
 
+// UnpublishAgent invokes unpublishAgent operation.
+//
+// Unpublish an agent from a registry.
+//
+// DELETE /registries/{slug}/agents/{handle}
+func (c *Client) UnpublishAgent(ctx context.Context, params UnpublishAgentParams) (UnpublishAgentRes, error) {
+	res, err := c.sendUnpublishAgent(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendUnpublishAgent(ctx context.Context, params UnpublishAgentParams) (res UnpublishAgentRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("unpublishAgent"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/registries/{slug}/agents/{handle}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UnpublishAgentOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/registries/"
+	{
+		// Encode "slug" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "slug",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Slug))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/agents/"
+	{
+		// Encode "handle" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "handle",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Handle))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UnpublishAgentOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUnpublishAgentResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // UnsetFunctionRoute invokes unsetFunctionRoute operation.
 //
 // Deactivates every active endpoint bound to this function. The
@@ -10984,6 +12376,134 @@ func (c *Client) sendUpdateFunction(ctx context.Context, request *UpdateFunction
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateFunctionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateRegistry invokes updateRegistry operation.
+//
+// Update a registry you own.
+//
+// PATCH /registries/{slug}
+func (c *Client) UpdateRegistry(ctx context.Context, request *UpdateRegistryInput, params UpdateRegistryParams) (UpdateRegistryRes, error) {
+	res, err := c.sendUpdateRegistry(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateRegistry(ctx context.Context, request *UpdateRegistryInput, params UpdateRegistryParams) (res UpdateRegistryRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateRegistry"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.URLTemplateKey.String("/registries/{slug}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateRegistryOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/registries/"
+	{
+		// Encode "slug" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "slug",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Slug))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateRegistryRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateRegistryOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateRegistryResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

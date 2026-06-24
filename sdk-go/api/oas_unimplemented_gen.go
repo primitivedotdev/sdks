@@ -199,6 +199,33 @@ func (UnimplementedHandler) CreateOrgSecret(ctx context.Context, req *CreateOrgS
 	return r, ht.ErrNotImplemented
 }
 
+// CreateRegistry implements createRegistry operation.
+//
+// Create a registry.
+//
+// POST /registries
+func (UnimplementedHandler) CreateRegistry(ctx context.Context, req *CreateRegistryInput) (r CreateRegistryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DecideRegistryRequest implements decideRegistryRequest operation.
+//
+// Approve or reject a publication request.
+//
+// POST /registries/{slug}/requests/{id}
+func (UnimplementedHandler) DecideRegistryRequest(ctx context.Context, req *DecideRegistryRequestInput, params DecideRegistryRequestParams) (r DecideRegistryRequestRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DefineAgent implements defineAgent operation.
+//
+// Define an agent identity.
+//
+// POST /agents
+func (UnimplementedHandler) DefineAgent(ctx context.Context, req *DefineAgentInput) (r DefineAgentRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteDomain implements deleteDomain operation.
 //
 // Deletes a verified or unverified domain claim.
@@ -337,6 +364,15 @@ func (UnimplementedHandler) GetAccount(ctx context.Context) (r GetAccountRes, _ 
 	return r, ht.ErrNotImplemented
 }
 
+// GetAgent implements getAgent operation.
+//
+// Get an agent's public profile by address.
+//
+// GET /agents/{address}
+func (UnimplementedHandler) GetAgent(ctx context.Context, params GetAgentParams) (r GetAgentRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetChallenge implements getChallenge operation.
 //
 // Fetch a challenge you created, to poll its `status` and settlement
@@ -460,6 +496,15 @@ func (UnimplementedHandler) GetInboxStatus(ctx context.Context) (r GetInboxStatu
 //
 // GET /functions/routing-topology
 func (UnimplementedHandler) GetOrgRoutingTopology(ctx context.Context) (r GetOrgRoutingTopologyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetRegistry implements getRegistry operation.
+//
+// Get a public registry's metadata.
+//
+// GET /registries/{slug}
+func (UnimplementedHandler) GetRegistry(ctx context.Context, params GetRegistryParams) (r GetRegistryRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -712,6 +757,33 @@ func (UnimplementedHandler) ListPayoutAddresses(ctx context.Context) (r ListPayo
 	return r, ht.ErrNotImplemented
 }
 
+// ListRegistries implements listRegistries operation.
+//
+// List the registries you own.
+//
+// GET /registries
+func (UnimplementedHandler) ListRegistries(ctx context.Context) (r ListRegistriesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListRegistryAgents implements listRegistryAgents operation.
+//
+// List agents in a registry.
+//
+// GET /registries/{slug}/agents
+func (UnimplementedHandler) ListRegistryAgents(ctx context.Context, params ListRegistryAgentsParams) (r *ListRegistryAgentsOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListRegistryRequests implements listRegistryRequests operation.
+//
+// List pending publication requests.
+//
+// GET /registries/{slug}/requests
+func (UnimplementedHandler) ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (r ListRegistryRequestsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListSentEmails implements listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -761,6 +833,15 @@ func (UnimplementedHandler) PayChallenge(ctx context.Context, req *PayChallengeI
 //
 // POST /cli/login/poll
 func (UnimplementedHandler) PollCliLogin(ctx context.Context, req *PollCliLoginInput) (r PollCliLoginRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// PublishAgent implements publishAgent operation.
+//
+// Publish an agent into a registry.
+//
+// POST /registries/{slug}/agents
+func (UnimplementedHandler) PublishAgent(ctx context.Context, req *PublishAgentInput, params PublishAgentParams) (r PublishAgentRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -843,6 +924,15 @@ func (UnimplementedHandler) ResendAgentSignupVerification(ctx context.Context, r
 //
 // POST /cli/signup/resend
 func (UnimplementedHandler) ResendCliSignupVerification(ctx context.Context, req *ResendCliSignupVerificationInput) (r ResendCliSignupVerificationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ResolveRegistryHandle implements resolveRegistryHandle operation.
+//
+// Resolve a registry handle to its agent.
+//
+// GET /registries/{slug}/agents/{handle}
+func (UnimplementedHandler) ResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (r ResolveRegistryHandleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1046,6 +1136,15 @@ func (UnimplementedHandler) TestFunction(ctx context.Context, req OptTestFunctio
 	return r, ht.ErrNotImplemented
 }
 
+// UnpublishAgent implements unpublishAgent operation.
+//
+// Unpublish an agent from a registry.
+//
+// DELETE /registries/{slug}/agents/{handle}
+func (UnimplementedHandler) UnpublishAgent(ctx context.Context, params UnpublishAgentParams) (r UnpublishAgentRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // UnsetFunctionRoute implements unsetFunctionRoute operation.
 //
 // Deactivates every active endpoint bound to this function. The
@@ -1110,6 +1209,15 @@ func (UnimplementedHandler) UpdateFilter(ctx context.Context, req *UpdateFilterI
 //
 // PUT /functions/{id}
 func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (r UpdateFunctionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateRegistry implements updateRegistry operation.
+//
+// Update a registry you own.
+//
+// PATCH /registries/{slug}
+func (UnimplementedHandler) UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (r UpdateRegistryRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

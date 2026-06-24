@@ -3151,6 +3151,426 @@ type CreateOrgSecretUnauthorized ErrorResponse
 
 func (*CreateOrgSecretUnauthorized) createOrgSecretRes() {}
 
+type CreateRegistryConflict ErrorResponse
+
+func (*CreateRegistryConflict) createRegistryRes() {}
+
+// Merged schema.
+type CreateRegistryCreated struct {
+	Success bool                      `json:"success"`
+	Data    CreateRegistryCreatedData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateRegistryCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateRegistryCreated) GetData() CreateRegistryCreatedData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateRegistryCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateRegistryCreated) SetData(val CreateRegistryCreatedData) {
+	s.Data = val
+}
+
+func (*CreateRegistryCreated) createRegistryRes() {}
+
+type CreateRegistryCreatedData struct {
+	ID   uuid.UUID `json:"id"`
+	Slug string    `json:"slug"`
+}
+
+// GetID returns the value of ID.
+func (s *CreateRegistryCreatedData) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetSlug returns the value of Slug.
+func (s *CreateRegistryCreatedData) GetSlug() string {
+	return s.Slug
+}
+
+// SetID sets the value of ID.
+func (s *CreateRegistryCreatedData) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetSlug sets the value of Slug.
+func (s *CreateRegistryCreatedData) SetSlug(val string) {
+	s.Slug = val
+}
+
+type CreateRegistryForbidden ErrorResponse
+
+func (*CreateRegistryForbidden) createRegistryRes() {}
+
+// Ref: #/components/schemas/CreateRegistryInput
+type CreateRegistryInput struct {
+	// Lowercase slug, unique across registries.
+	Slug          string           `json:"slug"`
+	Name          string           `json:"name"`
+	Description   OptNilString     `json:"description"`
+	IsPublic      OptBool          `json:"is_public"`
+	PublishPolicy OptPublishPolicy `json:"publish_policy"`
+}
+
+// GetSlug returns the value of Slug.
+func (s *CreateRegistryInput) GetSlug() string {
+	return s.Slug
+}
+
+// GetName returns the value of Name.
+func (s *CreateRegistryInput) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *CreateRegistryInput) GetDescription() OptNilString {
+	return s.Description
+}
+
+// GetIsPublic returns the value of IsPublic.
+func (s *CreateRegistryInput) GetIsPublic() OptBool {
+	return s.IsPublic
+}
+
+// GetPublishPolicy returns the value of PublishPolicy.
+func (s *CreateRegistryInput) GetPublishPolicy() OptPublishPolicy {
+	return s.PublishPolicy
+}
+
+// SetSlug sets the value of Slug.
+func (s *CreateRegistryInput) SetSlug(val string) {
+	s.Slug = val
+}
+
+// SetName sets the value of Name.
+func (s *CreateRegistryInput) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *CreateRegistryInput) SetDescription(val OptNilString) {
+	s.Description = val
+}
+
+// SetIsPublic sets the value of IsPublic.
+func (s *CreateRegistryInput) SetIsPublic(val OptBool) {
+	s.IsPublic = val
+}
+
+// SetPublishPolicy sets the value of PublishPolicy.
+func (s *CreateRegistryInput) SetPublishPolicy(val OptPublishPolicy) {
+	s.PublishPolicy = val
+}
+
+type CreateRegistryUnauthorized ErrorResponse
+
+func (*CreateRegistryUnauthorized) createRegistryRes() {}
+
+type CreateRegistryUnprocessableEntity ErrorResponse
+
+func (*CreateRegistryUnprocessableEntity) createRegistryRes() {}
+
+type DecideRegistryRequestConflict ErrorResponse
+
+func (*DecideRegistryRequestConflict) decideRegistryRequestRes() {}
+
+// Ref: #/components/schemas/DecideRegistryRequestInput
+type DecideRegistryRequestInput struct {
+	Decision DecideRegistryRequestInputDecision `json:"decision"`
+}
+
+// GetDecision returns the value of Decision.
+func (s *DecideRegistryRequestInput) GetDecision() DecideRegistryRequestInputDecision {
+	return s.Decision
+}
+
+// SetDecision sets the value of Decision.
+func (s *DecideRegistryRequestInput) SetDecision(val DecideRegistryRequestInputDecision) {
+	s.Decision = val
+}
+
+type DecideRegistryRequestInputDecision string
+
+const (
+	DecideRegistryRequestInputDecisionApproved DecideRegistryRequestInputDecision = "approved"
+	DecideRegistryRequestInputDecisionRejected DecideRegistryRequestInputDecision = "rejected"
+)
+
+// AllValues returns all DecideRegistryRequestInputDecision values.
+func (DecideRegistryRequestInputDecision) AllValues() []DecideRegistryRequestInputDecision {
+	return []DecideRegistryRequestInputDecision{
+		DecideRegistryRequestInputDecisionApproved,
+		DecideRegistryRequestInputDecisionRejected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s DecideRegistryRequestInputDecision) MarshalText() ([]byte, error) {
+	switch s {
+	case DecideRegistryRequestInputDecisionApproved:
+		return []byte(s), nil
+	case DecideRegistryRequestInputDecisionRejected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *DecideRegistryRequestInputDecision) UnmarshalText(data []byte) error {
+	switch DecideRegistryRequestInputDecision(data) {
+	case DecideRegistryRequestInputDecisionApproved:
+		*s = DecideRegistryRequestInputDecisionApproved
+		return nil
+	case DecideRegistryRequestInputDecisionRejected:
+		*s = DecideRegistryRequestInputDecisionRejected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type DecideRegistryRequestNotFound ErrorResponse
+
+func (*DecideRegistryRequestNotFound) decideRegistryRequestRes() {}
+
+// Merged schema.
+type DecideRegistryRequestOK struct {
+	Success bool                        `json:"success"`
+	Data    DecideRegistryRequestOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *DecideRegistryRequestOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *DecideRegistryRequestOK) GetData() DecideRegistryRequestOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *DecideRegistryRequestOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *DecideRegistryRequestOK) SetData(val DecideRegistryRequestOKData) {
+	s.Data = val
+}
+
+func (*DecideRegistryRequestOK) decideRegistryRequestRes() {}
+
+type DecideRegistryRequestOKData struct {
+	Status DecideRegistryRequestOKDataStatus `json:"status"`
+}
+
+// GetStatus returns the value of Status.
+func (s *DecideRegistryRequestOKData) GetStatus() DecideRegistryRequestOKDataStatus {
+	return s.Status
+}
+
+// SetStatus sets the value of Status.
+func (s *DecideRegistryRequestOKData) SetStatus(val DecideRegistryRequestOKDataStatus) {
+	s.Status = val
+}
+
+type DecideRegistryRequestOKDataStatus string
+
+const (
+	DecideRegistryRequestOKDataStatusApproved DecideRegistryRequestOKDataStatus = "approved"
+	DecideRegistryRequestOKDataStatusRejected DecideRegistryRequestOKDataStatus = "rejected"
+)
+
+// AllValues returns all DecideRegistryRequestOKDataStatus values.
+func (DecideRegistryRequestOKDataStatus) AllValues() []DecideRegistryRequestOKDataStatus {
+	return []DecideRegistryRequestOKDataStatus{
+		DecideRegistryRequestOKDataStatusApproved,
+		DecideRegistryRequestOKDataStatusRejected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s DecideRegistryRequestOKDataStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case DecideRegistryRequestOKDataStatusApproved:
+		return []byte(s), nil
+	case DecideRegistryRequestOKDataStatusRejected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *DecideRegistryRequestOKDataStatus) UnmarshalText(data []byte) error {
+	switch DecideRegistryRequestOKDataStatus(data) {
+	case DecideRegistryRequestOKDataStatusApproved:
+		*s = DecideRegistryRequestOKDataStatusApproved
+		return nil
+	case DecideRegistryRequestOKDataStatusRejected:
+		*s = DecideRegistryRequestOKDataStatusRejected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type DecideRegistryRequestUnauthorized ErrorResponse
+
+func (*DecideRegistryRequestUnauthorized) decideRegistryRequestRes() {}
+
+type DecideRegistryRequestUnprocessableEntity ErrorResponse
+
+func (*DecideRegistryRequestUnprocessableEntity) decideRegistryRequestRes() {}
+
+type DefineAgentConflict ErrorResponse
+
+func (*DefineAgentConflict) defineAgentRes() {}
+
+// Merged schema.
+type DefineAgentCreated struct {
+	Success bool                   `json:"success"`
+	Data    DefineAgentCreatedData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *DefineAgentCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *DefineAgentCreated) GetData() DefineAgentCreatedData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *DefineAgentCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *DefineAgentCreated) SetData(val DefineAgentCreatedData) {
+	s.Data = val
+}
+
+func (*DefineAgentCreated) defineAgentRes() {}
+
+type DefineAgentCreatedData struct {
+	ID      uuid.UUID `json:"id"`
+	Address string    `json:"address"`
+}
+
+// GetID returns the value of ID.
+func (s *DefineAgentCreatedData) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetAddress returns the value of Address.
+func (s *DefineAgentCreatedData) GetAddress() string {
+	return s.Address
+}
+
+// SetID sets the value of ID.
+func (s *DefineAgentCreatedData) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetAddress sets the value of Address.
+func (s *DefineAgentCreatedData) SetAddress(val string) {
+	s.Address = val
+}
+
+// Ref: #/components/schemas/DefineAgentInput
+type DefineAgentInput struct {
+	// The agent's globally unique email address; must route to the endpoint.
+	Address     string       `json:"address"`
+	EndpointID  uuid.UUID    `json:"endpoint_id"`
+	DisplayName string       `json:"display_name"`
+	Title       OptNilString `json:"title"`
+	Description OptNilString `json:"description"`
+	Tags        []string     `json:"tags"`
+}
+
+// GetAddress returns the value of Address.
+func (s *DefineAgentInput) GetAddress() string {
+	return s.Address
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *DefineAgentInput) GetEndpointID() uuid.UUID {
+	return s.EndpointID
+}
+
+// GetDisplayName returns the value of DisplayName.
+func (s *DefineAgentInput) GetDisplayName() string {
+	return s.DisplayName
+}
+
+// GetTitle returns the value of Title.
+func (s *DefineAgentInput) GetTitle() OptNilString {
+	return s.Title
+}
+
+// GetDescription returns the value of Description.
+func (s *DefineAgentInput) GetDescription() OptNilString {
+	return s.Description
+}
+
+// GetTags returns the value of Tags.
+func (s *DefineAgentInput) GetTags() []string {
+	return s.Tags
+}
+
+// SetAddress sets the value of Address.
+func (s *DefineAgentInput) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *DefineAgentInput) SetEndpointID(val uuid.UUID) {
+	s.EndpointID = val
+}
+
+// SetDisplayName sets the value of DisplayName.
+func (s *DefineAgentInput) SetDisplayName(val string) {
+	s.DisplayName = val
+}
+
+// SetTitle sets the value of Title.
+func (s *DefineAgentInput) SetTitle(val OptNilString) {
+	s.Title = val
+}
+
+// SetDescription sets the value of Description.
+func (s *DefineAgentInput) SetDescription(val OptNilString) {
+	s.Description = val
+}
+
+// SetTags sets the value of Tags.
+func (s *DefineAgentInput) SetTags(val []string) {
+	s.Tags = val
+}
+
+type DefineAgentUnauthorized ErrorResponse
+
+func (*DefineAgentUnauthorized) defineAgentRes() {}
+
+type DefineAgentUnprocessableEntity ErrorResponse
+
+func (*DefineAgentUnprocessableEntity) defineAgentRes() {}
+
 type DeleteDomainBadRequest ErrorResponse
 
 func (*DeleteDomainBadRequest) deleteDomainRes() {}
@@ -3276,6 +3696,7 @@ func (*Deleted) deleteEmailRes()    {}
 func (*Deleted) deleteEndpointRes() {}
 func (*Deleted) deleteFilterRes()   {}
 func (*Deleted) deleteFunctionRes() {}
+func (*Deleted) unpublishAgentRes() {}
 
 type DeletedData struct {
 	Deleted bool `json:"deleted"`
@@ -6331,16 +6752,20 @@ func (s *ErrorResponse) SetError(val ErrorResponseError) {
 }
 
 func (*ErrorResponse) createAgentAccountRes()            {}
+func (*ErrorResponse) getAgentRes()                      {}
 func (*ErrorResponse) getInboxStatusRes()                {}
+func (*ErrorResponse) getRegistryRes()                   {}
 func (*ErrorResponse) getSendPermissionsRes()            {}
 func (*ErrorResponse) listDomainsRes()                   {}
 func (*ErrorResponse) listEndpointsRes()                 {}
 func (*ErrorResponse) listFiltersRes()                   {}
 func (*ErrorResponse) listFunctionsRes()                 {}
 func (*ErrorResponse) listOrgSecretsRes()                {}
+func (*ErrorResponse) listRegistriesRes()                {}
 func (*ErrorResponse) pollCliLoginRes()                  {}
 func (*ErrorResponse) resendAgentSignupVerificationRes() {}
 func (*ErrorResponse) resendCliSignupVerificationRes()   {}
+func (*ErrorResponse) resolveRegistryHandleRes()         {}
 func (*ErrorResponse) startAgentSignupRes()              {}
 func (*ErrorResponse) startCliLoginRes()                 {}
 func (*ErrorResponse) startCliSignupRes()                {}
@@ -9218,6 +9643,34 @@ type GetAccountUnauthorized ErrorResponse
 
 func (*GetAccountUnauthorized) getAccountRes() {}
 
+// Merged schema.
+type GetAgentOK struct {
+	Success bool          `json:"success"`
+	Data    RegistryAgent `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetAgentOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetAgentOK) GetData() RegistryAgent {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetAgentOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetAgentOK) SetData(val RegistryAgent) {
+	s.Data = val
+}
+
+func (*GetAgentOK) getAgentRes() {}
+
 type GetChallengeBadRequest ErrorResponse
 
 func (*GetChallengeBadRequest) getChallengeRes() {}
@@ -9521,6 +9974,34 @@ func (*GetOrgRoutingTopologyOK) getOrgRoutingTopologyRes() {}
 type GetOrgRoutingTopologyUnauthorized ErrorResponse
 
 func (*GetOrgRoutingTopologyUnauthorized) getOrgRoutingTopologyRes() {}
+
+// Merged schema.
+type GetRegistryOK struct {
+	Success bool     `json:"success"`
+	Data    Registry `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetRegistryOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetRegistryOK) GetData() Registry {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetRegistryOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetRegistryOK) SetData(val Registry) {
+	s.Data = val
+}
+
+func (*GetRegistryOK) getRegistryRes() {}
 
 // Merged schema.
 type GetSendPermissionsOK struct {
@@ -10825,6 +11306,107 @@ func (*ListPayoutAddressesOK) listPayoutAddressesRes() {}
 type ListPayoutAddressesUnauthorized ErrorResponse
 
 func (*ListPayoutAddressesUnauthorized) listPayoutAddressesRes() {}
+
+// Merged schema.
+type ListRegistriesOK struct {
+	Success bool       `json:"success"`
+	Data    []Registry `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListRegistriesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListRegistriesOK) GetData() []Registry {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListRegistriesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListRegistriesOK) SetData(val []Registry) {
+	s.Data = val
+}
+
+func (*ListRegistriesOK) listRegistriesRes() {}
+
+// Merged schema.
+type ListRegistryAgentsOK struct {
+	Success bool            `json:"success"`
+	Meta    PaginationMeta  `json:"meta"`
+	Data    []RegistryAgent `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListRegistryAgentsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListRegistryAgentsOK) GetMeta() PaginationMeta {
+	return s.Meta
+}
+
+// GetData returns the value of Data.
+func (s *ListRegistryAgentsOK) GetData() []RegistryAgent {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListRegistryAgentsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListRegistryAgentsOK) SetMeta(val PaginationMeta) {
+	s.Meta = val
+}
+
+// SetData sets the value of Data.
+func (s *ListRegistryAgentsOK) SetData(val []RegistryAgent) {
+	s.Data = val
+}
+
+type ListRegistryRequestsNotFound ErrorResponse
+
+func (*ListRegistryRequestsNotFound) listRegistryRequestsRes() {}
+
+// Merged schema.
+type ListRegistryRequestsOK struct {
+	Success bool              `json:"success"`
+	Data    []RegistryRequest `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListRegistryRequestsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListRegistryRequestsOK) GetData() []RegistryRequest {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListRegistryRequestsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListRegistryRequestsOK) SetData(val []RegistryRequest) {
+	s.Data = val
+}
+
+func (*ListRegistryRequestsOK) listRegistryRequestsRes() {}
+
+type ListRegistryRequestsUnauthorized ErrorResponse
+
+func (*ListRegistryRequestsUnauthorized) listRegistryRequestsRes() {}
 
 type ListSentEmailsBadRequest ErrorResponse
 
@@ -13183,6 +13765,52 @@ func (o OptNilUUIDArray) Or(d []uuid.UUID) []uuid.UUID {
 	return d
 }
 
+// NewOptPublishPolicy returns new OptPublishPolicy with value set to v.
+func NewOptPublishPolicy(v PublishPolicy) OptPublishPolicy {
+	return OptPublishPolicy{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptPublishPolicy is optional PublishPolicy.
+type OptPublishPolicy struct {
+	Value PublishPolicy
+	Set   bool
+}
+
+// IsSet returns true if OptPublishPolicy was set.
+func (o OptPublishPolicy) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptPublishPolicy) Reset() {
+	var v PublishPolicy
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptPublishPolicy) SetTo(v PublishPolicy) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptPublishPolicy) Get() (v PublishPolicy, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptPublishPolicy) Or(d PublishPolicy) PublishPolicy {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSearchEmailsHasAttachment returns new OptSearchEmailsHasAttachment with value set to v.
 func NewOptSearchEmailsHasAttachment(v SearchEmailsHasAttachment) OptSearchEmailsHasAttachment {
 	return OptSearchEmailsHasAttachment{
@@ -14505,6 +15133,242 @@ func (s *PollCliLoginOKHeaders) SetResponse(val PollCliLoginOK) {
 
 func (*PollCliLoginOKHeaders) pollCliLoginRes() {}
 
+type PublishAgentConflict ErrorResponse
+
+func (*PublishAgentConflict) publishAgentRes() {}
+
+// Merged schema.
+type PublishAgentCreated struct {
+	Success bool               `json:"success"`
+	Data    PublishAgentResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *PublishAgentCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *PublishAgentCreated) GetData() PublishAgentResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *PublishAgentCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *PublishAgentCreated) SetData(val PublishAgentResult) {
+	s.Data = val
+}
+
+func (*PublishAgentCreated) publishAgentRes() {}
+
+type PublishAgentForbidden ErrorResponse
+
+func (*PublishAgentForbidden) publishAgentRes() {}
+
+// Ref: #/components/schemas/PublishAgentInput
+type PublishAgentInput struct {
+	Address string `json:"address"`
+	// The registry-scoped name to list the agent under.
+	Handle string `json:"handle"`
+}
+
+// GetAddress returns the value of Address.
+func (s *PublishAgentInput) GetAddress() string {
+	return s.Address
+}
+
+// GetHandle returns the value of Handle.
+func (s *PublishAgentInput) GetHandle() string {
+	return s.Handle
+}
+
+// SetAddress sets the value of Address.
+func (s *PublishAgentInput) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetHandle sets the value of Handle.
+func (s *PublishAgentInput) SetHandle(val string) {
+	s.Handle = val
+}
+
+type PublishAgentNotFound ErrorResponse
+
+func (*PublishAgentNotFound) publishAgentRes() {}
+
+// Merged schema.
+type PublishAgentOK struct {
+	Success bool               `json:"success"`
+	Data    PublishAgentResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *PublishAgentOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *PublishAgentOK) GetData() PublishAgentResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *PublishAgentOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *PublishAgentOK) SetData(val PublishAgentResult) {
+	s.Data = val
+}
+
+func (*PublishAgentOK) publishAgentRes() {}
+
+// Ref: #/components/schemas/PublishAgentResult
+type PublishAgentResult struct {
+	// Approved lists immediately; requested pends owner approval.
+	Status PublishAgentResultStatus `json:"status"`
+	Handle string                   `json:"handle"`
+	// True when the publish matched an existing identical publication.
+	IdempotentReplay bool `json:"idempotent_replay"`
+}
+
+// GetStatus returns the value of Status.
+func (s *PublishAgentResult) GetStatus() PublishAgentResultStatus {
+	return s.Status
+}
+
+// GetHandle returns the value of Handle.
+func (s *PublishAgentResult) GetHandle() string {
+	return s.Handle
+}
+
+// GetIdempotentReplay returns the value of IdempotentReplay.
+func (s *PublishAgentResult) GetIdempotentReplay() bool {
+	return s.IdempotentReplay
+}
+
+// SetStatus sets the value of Status.
+func (s *PublishAgentResult) SetStatus(val PublishAgentResultStatus) {
+	s.Status = val
+}
+
+// SetHandle sets the value of Handle.
+func (s *PublishAgentResult) SetHandle(val string) {
+	s.Handle = val
+}
+
+// SetIdempotentReplay sets the value of IdempotentReplay.
+func (s *PublishAgentResult) SetIdempotentReplay(val bool) {
+	s.IdempotentReplay = val
+}
+
+// Approved lists immediately; requested pends owner approval.
+type PublishAgentResultStatus string
+
+const (
+	PublishAgentResultStatusApproved  PublishAgentResultStatus = "approved"
+	PublishAgentResultStatusRequested PublishAgentResultStatus = "requested"
+)
+
+// AllValues returns all PublishAgentResultStatus values.
+func (PublishAgentResultStatus) AllValues() []PublishAgentResultStatus {
+	return []PublishAgentResultStatus{
+		PublishAgentResultStatusApproved,
+		PublishAgentResultStatusRequested,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s PublishAgentResultStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case PublishAgentResultStatusApproved:
+		return []byte(s), nil
+	case PublishAgentResultStatusRequested:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *PublishAgentResultStatus) UnmarshalText(data []byte) error {
+	switch PublishAgentResultStatus(data) {
+	case PublishAgentResultStatusApproved:
+		*s = PublishAgentResultStatusApproved
+		return nil
+	case PublishAgentResultStatusRequested:
+		*s = PublishAgentResultStatusRequested
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type PublishAgentUnauthorized ErrorResponse
+
+func (*PublishAgentUnauthorized) publishAgentRes() {}
+
+type PublishAgentUnprocessableEntity ErrorResponse
+
+func (*PublishAgentUnprocessableEntity) publishAgentRes() {}
+
+// Who may publish into a registry. owner_only: only the registry owner.
+// request: anyone may request and the owner approves. open: anyone may
+// publish and it lists immediately (no approval step).
+// Ref: #/components/schemas/PublishPolicy
+type PublishPolicy string
+
+const (
+	PublishPolicyOwnerOnly PublishPolicy = "owner_only"
+	PublishPolicyRequest   PublishPolicy = "request"
+	PublishPolicyOpen      PublishPolicy = "open"
+)
+
+// AllValues returns all PublishPolicy values.
+func (PublishPolicy) AllValues() []PublishPolicy {
+	return []PublishPolicy{
+		PublishPolicyOwnerOnly,
+		PublishPolicyRequest,
+		PublishPolicyOpen,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s PublishPolicy) MarshalText() ([]byte, error) {
+	switch s {
+	case PublishPolicyOwnerOnly:
+		return []byte(s), nil
+	case PublishPolicyRequest:
+		return []byte(s), nil
+	case PublishPolicyOpen:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *PublishPolicy) UnmarshalText(data []byte) error {
+	switch PublishPolicy(data) {
+	case PublishPolicyOwnerOnly:
+		*s = PublishPolicyOwnerOnly
+		return nil
+	case PublishPolicyRequest:
+		*s = PublishPolicyRequest
+		return nil
+	case PublishPolicyOpen:
+		*s = PublishPolicyOpen
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // RateLimitedHeaders wraps ErrorResponse with response headers.
 type RateLimitedHeaders struct {
 	RetryAfter OptInt
@@ -14712,6 +15576,208 @@ func (*RegisterPayoutAddressUnauthorized) registerPayoutAddressRes() {}
 type RegisterPayoutAddressUnprocessableEntity ErrorResponse
 
 func (*RegisterPayoutAddressUnprocessableEntity) registerPayoutAddressRes() {}
+
+// Ref: #/components/schemas/Registry
+type Registry struct {
+	ID            uuid.UUID     `json:"id"`
+	Slug          string        `json:"slug"`
+	Name          string        `json:"name"`
+	Description   NilString     `json:"description"`
+	IsPublic      bool          `json:"is_public"`
+	PublishPolicy PublishPolicy `json:"publish_policy"`
+}
+
+// GetID returns the value of ID.
+func (s *Registry) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetSlug returns the value of Slug.
+func (s *Registry) GetSlug() string {
+	return s.Slug
+}
+
+// GetName returns the value of Name.
+func (s *Registry) GetName() string {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *Registry) GetDescription() NilString {
+	return s.Description
+}
+
+// GetIsPublic returns the value of IsPublic.
+func (s *Registry) GetIsPublic() bool {
+	return s.IsPublic
+}
+
+// GetPublishPolicy returns the value of PublishPolicy.
+func (s *Registry) GetPublishPolicy() PublishPolicy {
+	return s.PublishPolicy
+}
+
+// SetID sets the value of ID.
+func (s *Registry) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetSlug sets the value of Slug.
+func (s *Registry) SetSlug(val string) {
+	s.Slug = val
+}
+
+// SetName sets the value of Name.
+func (s *Registry) SetName(val string) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *Registry) SetDescription(val NilString) {
+	s.Description = val
+}
+
+// SetIsPublic sets the value of IsPublic.
+func (s *Registry) SetIsPublic(val bool) {
+	s.IsPublic = val
+}
+
+// SetPublishPolicy sets the value of PublishPolicy.
+func (s *Registry) SetPublishPolicy(val PublishPolicy) {
+	s.PublishPolicy = val
+}
+
+// An agent's public directory profile.
+// Ref: #/components/schemas/RegistryAgent
+type RegistryAgent struct {
+	Address     string    `json:"address"`
+	DisplayName string    `json:"display_name"`
+	Title       NilString `json:"title"`
+	Description NilString `json:"description"`
+	Tags        []string  `json:"tags"`
+	// The registry-scoped name. Null on the global by-address read.
+	Handle NilString `json:"handle"`
+}
+
+// GetAddress returns the value of Address.
+func (s *RegistryAgent) GetAddress() string {
+	return s.Address
+}
+
+// GetDisplayName returns the value of DisplayName.
+func (s *RegistryAgent) GetDisplayName() string {
+	return s.DisplayName
+}
+
+// GetTitle returns the value of Title.
+func (s *RegistryAgent) GetTitle() NilString {
+	return s.Title
+}
+
+// GetDescription returns the value of Description.
+func (s *RegistryAgent) GetDescription() NilString {
+	return s.Description
+}
+
+// GetTags returns the value of Tags.
+func (s *RegistryAgent) GetTags() []string {
+	return s.Tags
+}
+
+// GetHandle returns the value of Handle.
+func (s *RegistryAgent) GetHandle() NilString {
+	return s.Handle
+}
+
+// SetAddress sets the value of Address.
+func (s *RegistryAgent) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetDisplayName sets the value of DisplayName.
+func (s *RegistryAgent) SetDisplayName(val string) {
+	s.DisplayName = val
+}
+
+// SetTitle sets the value of Title.
+func (s *RegistryAgent) SetTitle(val NilString) {
+	s.Title = val
+}
+
+// SetDescription sets the value of Description.
+func (s *RegistryAgent) SetDescription(val NilString) {
+	s.Description = val
+}
+
+// SetTags sets the value of Tags.
+func (s *RegistryAgent) SetTags(val []string) {
+	s.Tags = val
+}
+
+// SetHandle sets the value of Handle.
+func (s *RegistryAgent) SetHandle(val NilString) {
+	s.Handle = val
+}
+
+// A pending publication request, as the registry owner sees it.
+// Ref: #/components/schemas/RegistryRequest
+type RegistryRequest struct {
+	ID          uuid.UUID `json:"id"`
+	Address     string    `json:"address"`
+	DisplayName string    `json:"display_name"`
+	Handle      NilString `json:"handle"`
+	RequestedAt time.Time `json:"requested_at"`
+}
+
+// GetID returns the value of ID.
+func (s *RegistryRequest) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetAddress returns the value of Address.
+func (s *RegistryRequest) GetAddress() string {
+	return s.Address
+}
+
+// GetDisplayName returns the value of DisplayName.
+func (s *RegistryRequest) GetDisplayName() string {
+	return s.DisplayName
+}
+
+// GetHandle returns the value of Handle.
+func (s *RegistryRequest) GetHandle() NilString {
+	return s.Handle
+}
+
+// GetRequestedAt returns the value of RequestedAt.
+func (s *RegistryRequest) GetRequestedAt() time.Time {
+	return s.RequestedAt
+}
+
+// SetID sets the value of ID.
+func (s *RegistryRequest) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetAddress sets the value of Address.
+func (s *RegistryRequest) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetDisplayName sets the value of DisplayName.
+func (s *RegistryRequest) SetDisplayName(val string) {
+	s.DisplayName = val
+}
+
+// SetHandle sets the value of Handle.
+func (s *RegistryRequest) SetHandle(val NilString) {
+	s.Handle = val
+}
+
+// SetRequestedAt sets the value of RequestedAt.
+func (s *RegistryRequest) SetRequestedAt(val time.Time) {
+	s.RequestedAt = val
+}
 
 type ReplayDeliveryBadRequest ErrorResponse
 
@@ -15100,6 +16166,34 @@ func (s *ResendCliSignupVerificationOKHeaders) SetResponse(val ResendCliSignupVe
 }
 
 func (*ResendCliSignupVerificationOKHeaders) resendCliSignupVerificationRes() {}
+
+// Merged schema.
+type ResolveRegistryHandleOK struct {
+	Success bool          `json:"success"`
+	Data    RegistryAgent `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ResolveRegistryHandleOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ResolveRegistryHandleOK) GetData() RegistryAgent {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ResolveRegistryHandleOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ResolveRegistryHandleOK) SetData(val RegistryAgent) {
+	s.Data = val
+}
+
+func (*ResolveRegistryHandleOK) resolveRegistryHandleRes() {}
 
 type RotateWebhookSecretBadRequest ErrorResponse
 
@@ -19454,6 +20548,14 @@ func (s *ThreadMessageDirection) UnmarshalText(data []byte) error {
 	}
 }
 
+type UnpublishAgentNotFound ErrorResponse
+
+func (*UnpublishAgentNotFound) unpublishAgentRes() {}
+
+type UnpublishAgentUnauthorized ErrorResponse
+
+func (*UnpublishAgentUnauthorized) unpublishAgentRes() {}
+
 type UnsetFunctionRouteNotFound ErrorResponse
 
 func (*UnsetFunctionRouteNotFound) unsetFunctionRouteRes() {}
@@ -19989,6 +21091,112 @@ func (*UpdateFunctionTooManyRequests) updateFunctionRes() {}
 type UpdateFunctionUnauthorized ErrorResponse
 
 func (*UpdateFunctionUnauthorized) updateFunctionRes() {}
+
+type UpdateRegistryForbidden ErrorResponse
+
+func (*UpdateRegistryForbidden) updateRegistryRes() {}
+
+// Ref: #/components/schemas/UpdateRegistryInput
+type UpdateRegistryInput struct {
+	Name          OptString        `json:"name"`
+	Description   OptNilString     `json:"description"`
+	IsPublic      OptBool          `json:"is_public"`
+	PublishPolicy OptPublishPolicy `json:"publish_policy"`
+}
+
+// GetName returns the value of Name.
+func (s *UpdateRegistryInput) GetName() OptString {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *UpdateRegistryInput) GetDescription() OptNilString {
+	return s.Description
+}
+
+// GetIsPublic returns the value of IsPublic.
+func (s *UpdateRegistryInput) GetIsPublic() OptBool {
+	return s.IsPublic
+}
+
+// GetPublishPolicy returns the value of PublishPolicy.
+func (s *UpdateRegistryInput) GetPublishPolicy() OptPublishPolicy {
+	return s.PublishPolicy
+}
+
+// SetName sets the value of Name.
+func (s *UpdateRegistryInput) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *UpdateRegistryInput) SetDescription(val OptNilString) {
+	s.Description = val
+}
+
+// SetIsPublic sets the value of IsPublic.
+func (s *UpdateRegistryInput) SetIsPublic(val OptBool) {
+	s.IsPublic = val
+}
+
+// SetPublishPolicy sets the value of PublishPolicy.
+func (s *UpdateRegistryInput) SetPublishPolicy(val OptPublishPolicy) {
+	s.PublishPolicy = val
+}
+
+type UpdateRegistryNotFound ErrorResponse
+
+func (*UpdateRegistryNotFound) updateRegistryRes() {}
+
+// Merged schema.
+type UpdateRegistryOK struct {
+	Success bool                 `json:"success"`
+	Data    UpdateRegistryOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateRegistryOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateRegistryOK) GetData() UpdateRegistryOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateRegistryOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateRegistryOK) SetData(val UpdateRegistryOKData) {
+	s.Data = val
+}
+
+func (*UpdateRegistryOK) updateRegistryRes() {}
+
+type UpdateRegistryOKData struct {
+	ID uuid.UUID `json:"id"`
+}
+
+// GetID returns the value of ID.
+func (s *UpdateRegistryOKData) GetID() uuid.UUID {
+	return s.ID
+}
+
+// SetID sets the value of ID.
+func (s *UpdateRegistryOKData) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+type UpdateRegistryUnauthorized ErrorResponse
+
+func (*UpdateRegistryUnauthorized) updateRegistryRes() {}
+
+type UpdateRegistryUnprocessableEntity ErrorResponse
+
+func (*UpdateRegistryUnprocessableEntity) updateRegistryRes() {}
 
 type UpdateSpendPolicyBadRequest ErrorResponse
 

@@ -186,6 +186,17 @@ tags:
       Secrets land in `env` as encrypted bindings and are refreshed on
       every redeploy.
 
+  - name: Registries
+    description: |
+      The Agent Registry: ownable directories of agents, addressable by a
+      registry-scoped handle. A registry's publish policy (owner_only, request,
+      or open) decides whether a publish lists immediately or pends owner
+      approval. An agent is defined once with a globally unique,
+      reachability-verified address, then published into any registry under a
+      handle. Discovery reads (list, resolve, get) are public for public
+      registries; managing a registry and moderating requests use the owner's
+      API key.
+
 paths:
   # ---------------------------------------------------------------------------
   # CLI
@@ -3798,6 +3809,356 @@ paths:
         '429':
           $ref: '#/components/responses/RateLimited'
 
+  # ---------------------------------------------------------------------------
+  # Registries (Agent Registry)
+  # ---------------------------------------------------------------------------
+  /registries:
+    get:
+      operationId: listRegistries
+      summary: List the registries you own
+      tags: [Registries]
+      responses:
+        '200':
+          description: Registries owned by the caller
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Registry' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      operationId: createRegistry
+      summary: Create a registry
+      tags: [Registries]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRegistryInput' }
+      responses:
+        '201':
+          description: Registry created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: string, format: uuid }
+                          slug: { type: string }
+                        required: [id, slug]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /registries/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: { type: string }
+        description: The registry slug
+    get:
+      operationId: getRegistry
+      summary: Get a public registry's metadata
+      tags: [Registries]
+      security: []
+      responses:
+        '200':
+          description: Registry metadata
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/Registry' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateRegistry
+      summary: Update a registry you own
+      tags: [Registries]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRegistryInput' }
+      responses:
+        '200':
+          description: Registry updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: string, format: uuid }
+                        required: [id]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /registries/{slug}/agents:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: listRegistryAgents
+      summary: List agents in a registry
+      tags: [Registries]
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200 }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+          description: The address of the last agent from the previous page.
+      responses:
+        '200':
+          description: Approved, reachable agents. Empty for an unknown or private registry.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/RegistryAgent' }
+    post:
+      operationId: publishAgent
+      summary: Publish an agent into a registry
+      tags: [Registries]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PublishAgentInput' }
+      responses:
+        '201':
+          description: Published (approved) or request created (requested)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/PublishAgentResult' }
+        '200':
+          description: Idempotent replay of an existing publication
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/PublishAgentResult' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /registries/{slug}/agents/{handle}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: { type: string }
+      - name: handle
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: resolveRegistryHandle
+      summary: Resolve a registry handle to its agent
+      tags: [Registries]
+      security: []
+      responses:
+        '200':
+          description: The agent listing under the handle
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/RegistryAgent' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: unpublishAgent
+      summary: Unpublish an agent from a registry
+      tags: [Registries]
+      responses:
+        '200':
+          $ref: '#/components/responses/Deleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /registries/{slug}/requests:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: listRegistryRequests
+      summary: List pending publication requests
+      tags: [Registries]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200 }
+      responses:
+        '200':
+          description: Pending requests for a registry you own
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/RegistryRequest' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /registries/{slug}/requests/{id}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: '#/components/parameters/ResourceId'
+    post:
+      operationId: decideRegistryRequest
+      summary: Approve or reject a publication request
+      tags: [Registries]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecideRegistryRequestInput' }
+      responses:
+        '200':
+          description: Decision applied
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          status: { type: string, enum: [approved, rejected] }
+                        required: [status]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /agents:
+    post:
+      operationId: defineAgent
+      summary: Define an agent identity
+      tags: [Registries]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DefineAgentInput' }
+      responses:
+        '201':
+          description: Agent defined
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: string, format: uuid }
+                          address: { type: string }
+                        required: [id, address]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /agents/{address}:
+    parameters:
+      - name: address
+        in: path
+        required: true
+        schema: { type: string }
+        description: The agent's email address (URL-encoded).
+    get:
+      operationId: getAgent
+      summary: Get an agent's public profile by address
+      tags: [Registries]
+      security: []
+      responses:
+        '200':
+          description: The agent's public profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/RegistryAgent' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 # =============================================================================
 # Components
 # =============================================================================
@@ -4015,6 +4376,116 @@ components:
                     required: [deleted]
 
   schemas:
+    PublishPolicy:
+      type: string
+      enum: [owner_only, request, open]
+      description: |
+        Who may publish into a registry. owner_only: only the registry owner.
+        request: anyone may request and the owner approves. open: anyone may
+        publish and it lists immediately (no approval step).
+
+    Registry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        is_public: { type: boolean }
+        publish_policy: { $ref: '#/components/schemas/PublishPolicy' }
+      required: [id, slug, name, description, is_public, publish_policy]
+
+    RegistryAgent:
+      type: object
+      description: An agent's public directory profile.
+      properties:
+        address: { type: string }
+        display_name: { type: string }
+        title: { type: [string, 'null'] }
+        description: { type: [string, 'null'] }
+        tags: { type: array, items: { type: string } }
+        handle:
+          type: [string, 'null']
+          description: The registry-scoped name. Null on the global by-address read.
+      required: [address, display_name, title, description, tags, handle]
+
+    RegistryRequest:
+      type: object
+      description: A pending publication request, as the registry owner sees it.
+      properties:
+        id: { type: string, format: uuid }
+        address: { type: string }
+        display_name: { type: string }
+        handle: { type: [string, 'null'] }
+        requested_at: { type: string, format: date-time }
+      required: [id, address, display_name, handle, requested_at]
+
+    CreateRegistryInput:
+      type: object
+      properties:
+        slug:
+          type: string
+          pattern: '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'
+          description: Lowercase slug, unique across registries.
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        is_public: { type: boolean }
+        publish_policy: { $ref: '#/components/schemas/PublishPolicy' }
+      required: [slug, name]
+
+    UpdateRegistryInput:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        is_public: { type: boolean }
+        publish_policy: { $ref: '#/components/schemas/PublishPolicy' }
+
+    DefineAgentInput:
+      type: object
+      properties:
+        address:
+          type: string
+          description: The agent's globally unique email address; must route to the endpoint.
+        endpoint_id: { type: string, format: uuid }
+        display_name: { type: string, minLength: 1, maxLength: 120 }
+        title: { type: [string, 'null'], maxLength: 120 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        tags:
+          type: array
+          items: { type: string, maxLength: 40 }
+          maxItems: 20
+      required: [address, endpoint_id, display_name]
+
+    PublishAgentInput:
+      type: object
+      properties:
+        address: { type: string }
+        handle:
+          type: string
+          description: The registry-scoped name to list the agent under.
+      required: [address, handle]
+
+    PublishAgentResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, requested]
+          description: approved lists immediately; requested pends owner approval.
+        handle: { type: string }
+        idempotent_replay:
+          type: boolean
+          description: True when the publish matched an existing identical publication.
+      required: [status, handle, idempotent_replay]
+
+    DecideRegistryRequestInput:
+      type: object
+      properties:
+        decision: { type: string, enum: [approved, rejected] }
+      required: [decision]
+
     # -------------------------------------------------------------------------
     # Payments (x402)
     #

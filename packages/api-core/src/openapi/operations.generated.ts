@@ -7883,6 +7883,813 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": true,
+    "command": "create-registry",
+    "description": null,
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createRegistry",
+    "path": "/registries",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$",
+          "description": "Lowercase slug, unique across registries."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "is_public": {
+          "type": "boolean"
+        },
+        "publish_policy": {
+          "type": "string",
+          "enum": [
+            "owner_only",
+            "request",
+            "open"
+          ],
+          "description": "Who may publish into a registry. owner_only: only the registry owner.\nrequest: anyone may request and the owner approves. open: anyone may\npublish and it lists immediately (no approval step).\n"
+        }
+      },
+      "required": [
+        "slug",
+        "name"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "slug": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "slug"
+      ]
+    },
+    "sdkName": "createRegistry",
+    "summary": "Create a registry",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "decide-registry-request",
+    "description": null,
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "decideRegistryRequest",
+    "path": "/registries/{slug}/requests/{id}",
+    "pathParams": [
+      {
+        "description": null,
+        "enum": null,
+        "name": "slug",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "rejected"
+          ]
+        }
+      },
+      "required": [
+        "decision"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "rejected"
+          ]
+        }
+      },
+      "required": [
+        "status"
+      ]
+    },
+    "sdkName": "decideRegistryRequest",
+    "summary": "Approve or reject a publication request",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "define-agent",
+    "description": null,
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "defineAgent",
+    "path": "/agents",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "description": "The agent's globally unique email address; must route to the endpoint."
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 120
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "address",
+        "endpoint_id",
+        "display_name"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "address": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "address"
+      ]
+    },
+    "sdkName": "defineAgent",
+    "summary": "Define an agent identity",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-agent",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getAgent",
+    "path": "/agents/{address}",
+    "pathParams": [
+      {
+        "description": "The agent's email address (URL-encoded).",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "An agent's public directory profile.",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "handle": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The registry-scoped name. Null on the global by-address read."
+        }
+      },
+      "required": [
+        "address",
+        "display_name",
+        "title",
+        "description",
+        "tags",
+        "handle"
+      ]
+    },
+    "sdkName": "getAgent",
+    "summary": "Get an agent's public profile by address",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-registry",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getRegistry",
+    "path": "/registries/{slug}",
+    "pathParams": [
+      {
+        "description": "The registry slug",
+        "enum": null,
+        "name": "slug",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_public": {
+          "type": "boolean"
+        },
+        "publish_policy": {
+          "type": "string",
+          "enum": [
+            "owner_only",
+            "request",
+            "open"
+          ],
+          "description": "Who may publish into a registry. owner_only: only the registry owner.\nrequest: anyone may request and the owner approves. open: anyone may\npublish and it lists immediately (no approval step).\n"
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "name",
+        "description",
+        "is_public",
+        "publish_policy"
+      ]
+    },
+    "sdkName": "getRegistry",
+    "summary": "Get a public registry's metadata",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-registries",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listRegistries",
+    "path": "/registries",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_public": {
+            "type": "boolean"
+          },
+          "publish_policy": {
+            "type": "string",
+            "enum": [
+              "owner_only",
+              "request",
+              "open"
+            ],
+            "description": "Who may publish into a registry. owner_only: only the registry owner.\nrequest: anyone may request and the owner approves. open: anyone may\npublish and it lists immediately (no approval step).\n"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "description",
+          "is_public",
+          "publish_policy"
+        ]
+      }
+    },
+    "sdkName": "listRegistries",
+    "summary": "List the registries you own",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-registry-agents",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listRegistryAgents",
+    "path": "/registries/{slug}/agents",
+    "pathParams": [
+      {
+        "description": null,
+        "enum": null,
+        "name": "slug",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": null,
+        "enum": null,
+        "maximum": 200,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "The address of the last agent from the previous page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "An agent's public directory profile.",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "handle": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The registry-scoped name. Null on the global by-address read."
+          }
+        },
+        "required": [
+          "address",
+          "display_name",
+          "title",
+          "description",
+          "tags",
+          "handle"
+        ]
+      }
+    },
+    "sdkName": "listRegistryAgents",
+    "summary": "List agents in a registry",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-registry-requests",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listRegistryRequests",
+    "path": "/registries/{slug}/requests",
+    "pathParams": [
+      {
+        "description": null,
+        "enum": null,
+        "name": "slug",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": null,
+        "enum": null,
+        "maximum": 200,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "A pending publication request, as the registry owner sees it.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "address": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "handle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "address",
+          "display_name",
+          "handle",
+          "requested_at"
+        ]
+      }
+    },
+    "sdkName": "listRegistryRequests",
+    "summary": "List pending publication requests",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "publish-agent",
+    "description": null,
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "publishAgent",
+    "path": "/registries/{slug}/agents",
+    "pathParams": [
+      {
+        "description": null,
+        "enum": null,
+        "name": "slug",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "handle": {
+          "type": "string",
+          "description": "The registry-scoped name to list the agent under."
+        }
+      },
+      "required": [
+        "address",
+        "handle"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "requested"
+          ],
+          "description": "approved lists immediately; requested pends owner approval."
+        },
+        "handle": {
+          "type": "string"
+        },
+        "idempotent_replay": {
+          "type": "boolean",
+          "description": "True when the publish matched an existing identical publication."
+        }
+      },
+      "required": [
+        "status",
+        "handle",
+        "idempotent_replay"
+      ]
+    },
+    "sdkName": "publishAgent",
+    "summary": "Publish an agent into a registry",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "resolve-registry-handle",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "resolveRegistryHandle",
+    "path": "/registries/{slug}/agents/{handle}",
+    "pathParams": [
+      {
+        "description": null,
+        "enum": null,
+        "name": "slug",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": null,
+        "enum": null,
+        "name": "handle",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "An agent's public directory profile.",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "handle": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The registry-scoped name. Null on the global by-address read."
+        }
+      },
+      "required": [
+        "address",
+        "display_name",
+        "title",
+        "description",
+        "tags",
+        "handle"
+      ]
+    },
+    "sdkName": "resolveRegistryHandle",
+    "summary": "Resolve a registry handle to its agent",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "unpublish-agent",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "unpublishAgent",
+    "path": "/registries/{slug}/agents/{handle}",
+    "pathParams": [
+      {
+        "description": null,
+        "enum": null,
+        "name": "slug",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": null,
+        "enum": null,
+        "name": "handle",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "unpublishAgent",
+    "summary": "Unpublish an agent from a registry",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-registry",
+    "description": null,
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "updateRegistry",
+    "path": "/registries/{slug}",
+    "pathParams": [
+      {
+        "description": "The registry slug",
+        "enum": null,
+        "name": "slug",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "is_public": {
+          "type": "boolean"
+        },
+        "publish_policy": {
+          "type": "string",
+          "enum": [
+            "owner_only",
+            "request",
+            "open"
+          ],
+          "description": "Who may publish into a registry. owner_only: only the registry owner.\nrequest: anyone may request and the owner approves. open: anyone may\npublish and it lists immediately (no approval step).\n"
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "sdkName": "updateRegistry",
+    "summary": "Update a registry you own",
+    "tag": "Registries",
+    "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
     "command": "semantic-search",
     "description": "Ranked search across both received and sent mail. The `mode`\nfield selects the ranking strategy:\n\n- `keyword`: lexical full-text matching only (no embeddings).\n- `semantic`: meaning-based matching using vector embeddings.\n- `hybrid` (default): blends the semantic and keyword signals.\n\nResults are ordered by a relevance `score`. Every row reports the\nfields it matched (`matched_fields`), a match-centered excerpt per\nfield (`snippets`), and a `score_breakdown` whose components account\nfor the `score`. Page through results by passing the prior\nresponse's `meta.cursor` back as `cursor`.\n\nRequires the Pro plan and the `semantic_search_enabled`\nentitlement; callers without them receive `403`.\n\nHost routing: this operation is served only by the search host\n(`https://api.primitive.dev/v1`). The typed SDKs route it there\nautomatically.\n",
     "hasJsonBody": true,

@@ -45,6 +45,18 @@ type CreateOrgSecretRes interface {
 	createOrgSecretRes()
 }
 
+type CreateRegistryRes interface {
+	createRegistryRes()
+}
+
+type DecideRegistryRequestRes interface {
+	decideRegistryRequestRes()
+}
+
+type DefineAgentRes interface {
+	defineAgentRes()
+}
+
 type DeleteDomainRes interface {
 	deleteDomainRes()
 }
@@ -93,6 +105,10 @@ type GetAccountRes interface {
 	getAccountRes()
 }
 
+type GetAgentRes interface {
+	getAgentRes()
+}
+
 type GetChallengeRes interface {
 	getChallengeRes()
 }
@@ -123,6 +139,10 @@ type GetInboxStatusRes interface {
 
 type GetOrgRoutingTopologyRes interface {
 	getOrgRoutingTopologyRes()
+}
+
+type GetRegistryRes interface {
+	getRegistryRes()
 }
 
 type GetSendPermissionsRes interface {
@@ -193,6 +213,14 @@ type ListPayoutAddressesRes interface {
 	listPayoutAddressesRes()
 }
 
+type ListRegistriesRes interface {
+	listRegistriesRes()
+}
+
+type ListRegistryRequestsRes interface {
+	listRegistryRequestsRes()
+}
+
 type ListSentEmailsRes interface {
 	listSentEmailsRes()
 }
@@ -203,6 +231,10 @@ type PayChallengeRes interface {
 
 type PollCliLoginRes interface {
 	pollCliLoginRes()
+}
+
+type PublishAgentRes interface {
+	publishAgentRes()
 }
 
 type RegisterPayoutAddressRes interface {
@@ -227,6 +259,10 @@ type ResendAgentSignupVerificationRes interface {
 
 type ResendCliSignupVerificationRes interface {
 	resendCliSignupVerificationRes()
+}
+
+type ResolveRegistryHandleRes interface {
+	resolveRegistryHandleRes()
 }
 
 type RotateWebhookSecretRes interface {
@@ -281,6 +317,10 @@ type TestFunctionRes interface {
 	testFunctionRes()
 }
 
+type UnpublishAgentRes interface {
+	unpublishAgentRes()
+}
+
 type UnsetFunctionRouteRes interface {
 	unsetFunctionRouteRes()
 }
@@ -303,6 +343,10 @@ type UpdateFilterRes interface {
 
 type UpdateFunctionRes interface {
 	updateFunctionRes()
+}
+
+type UpdateRegistryRes interface {
+	updateRegistryRes()
 }
 
 type UpdateSpendPolicyRes interface {
