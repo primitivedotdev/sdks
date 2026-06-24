@@ -303,7 +303,7 @@ export async function signInteractionPayment(params: {
   return { authorization, signature };
 }
 
-/** A challenge nonce is 32 bytes rendered as 64 lowercase hex chars, no 0x. */
+/** The authorization nonce is 32 bytes rendered as a 0x-prefixed 64-char hex string. */
 const NONCE_HEX_RE = /^0x[0-9a-fA-F]{64}$/;
 
 /** A shape-valid EIP signature is 65 bytes (r,s,v) rendered as 130 hex chars. */

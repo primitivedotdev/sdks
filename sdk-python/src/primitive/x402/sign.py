@@ -11,6 +11,7 @@ the server recomputes.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
@@ -309,7 +310,7 @@ def compute_payment_validity_window(
 
 def sign_interaction_payment(
     *,
-    sign: Any,
+    sign: Callable[[dict[str, Any]], str],
     payer: str,
     domain: TokenDomain,
     pay_to: str,
