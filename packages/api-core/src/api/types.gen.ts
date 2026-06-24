@@ -4,6 +4,103 @@ export type ClientOptions = {
     baseUrl: 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | (string & {});
 };
 
+/**
+ * Who may publish into a registry. owner_only: only the registry owner.
+ * request: anyone may request and the owner approves. open: anyone may
+ * publish and it lists immediately (no approval step).
+ *
+ */
+export type PublishPolicy = 'owner_only' | 'request' | 'open';
+
+export type Registry = {
+    id: string;
+    slug: string;
+    name: string;
+    description: string | null;
+    is_public: boolean;
+    publish_policy: PublishPolicy;
+};
+
+/**
+ * An agent's public directory profile.
+ */
+export type RegistryAgent = {
+    address: string;
+    display_name: string;
+    title: string | null;
+    description: string | null;
+    tags: Array<string>;
+    /**
+     * The registry-scoped name. Null on the global by-address read.
+     */
+    handle: string | null;
+};
+
+/**
+ * A pending publication request, as the registry owner sees it.
+ */
+export type RegistryRequest = {
+    id: string;
+    address: string;
+    display_name: string;
+    handle: string | null;
+    requested_at: string;
+};
+
+export type CreateRegistryInput = {
+    /**
+     * Lowercase slug, unique across registries.
+     */
+    slug: string;
+    name: string;
+    description?: string | null;
+    is_public?: boolean;
+    publish_policy?: PublishPolicy;
+};
+
+export type UpdateRegistryInput = {
+    name?: string;
+    description?: string | null;
+    is_public?: boolean;
+    publish_policy?: PublishPolicy;
+};
+
+export type DefineAgentInput = {
+    /**
+     * The agent's globally unique email address; must route to the endpoint.
+     */
+    address: string;
+    endpoint_id: string;
+    display_name: string;
+    title?: string | null;
+    description?: string | null;
+    tags?: Array<string>;
+};
+
+export type PublishAgentInput = {
+    address: string;
+    /**
+     * The registry-scoped name to list the agent under.
+     */
+    handle: string;
+};
+
+export type PublishAgentResult = {
+    /**
+     * approved lists immediately; requested pends owner approval.
+     */
+    status: 'approved' | 'requested';
+    handle: string;
+    /**
+     * True when the publish matched an existing identical publication.
+     */
+    idempotent_replay: boolean;
+};
+
+export type DecideRegistryRequestInput = {
+    decision: 'approved' | 'rejected';
+};
+
 export type RegisterPayoutAddressInput = {
     /**
      * The payout address (your signer's own EVM address), 0x-prefixed.
@@ -6722,3 +6819,425 @@ export type ListDeclinedPaymentsResponses = {
 };
 
 export type ListDeclinedPaymentsResponse = ListDeclinedPaymentsResponses[keyof ListDeclinedPaymentsResponses];
+
+export type ListRegistriesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/registries';
+};
+
+export type ListRegistriesErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type ListRegistriesError = ListRegistriesErrors[keyof ListRegistriesErrors];
+
+export type ListRegistriesResponses = {
+    /**
+     * Registries owned by the caller
+     */
+    200: SuccessEnvelope & {
+        data?: Array<Registry>;
+    };
+};
+
+export type ListRegistriesResponse = ListRegistriesResponses[keyof ListRegistriesResponses];
+
+export type CreateRegistryData = {
+    body: CreateRegistryInput;
+    path?: never;
+    query?: never;
+    url: '/registries';
+};
+
+export type CreateRegistryErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+};
+
+export type CreateRegistryError = CreateRegistryErrors[keyof CreateRegistryErrors];
+
+export type CreateRegistryResponses = {
+    /**
+     * Registry created
+     */
+    201: SuccessEnvelope & {
+        data?: {
+            id: string;
+            slug: string;
+        };
+    };
+};
+
+export type CreateRegistryResponse = CreateRegistryResponses[keyof CreateRegistryResponses];
+
+export type GetRegistryData = {
+    body?: never;
+    path: {
+        /**
+         * The registry slug
+         */
+        slug: string;
+    };
+    query?: never;
+    url: '/registries/{slug}';
+};
+
+export type GetRegistryErrors = {
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetRegistryError = GetRegistryErrors[keyof GetRegistryErrors];
+
+export type GetRegistryResponses = {
+    /**
+     * Registry metadata
+     */
+    200: SuccessEnvelope & {
+        data?: Registry;
+    };
+};
+
+export type GetRegistryResponse = GetRegistryResponses[keyof GetRegistryResponses];
+
+export type UpdateRegistryData = {
+    body: UpdateRegistryInput;
+    path: {
+        /**
+         * The registry slug
+         */
+        slug: string;
+    };
+    query?: never;
+    url: '/registries/{slug}';
+};
+
+export type UpdateRegistryErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type UpdateRegistryError = UpdateRegistryErrors[keyof UpdateRegistryErrors];
+
+export type UpdateRegistryResponses = {
+    /**
+     * Registry updated
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            id: string;
+        };
+    };
+};
+
+export type UpdateRegistryResponse = UpdateRegistryResponses[keyof UpdateRegistryResponses];
+
+export type ListRegistryAgentsData = {
+    body?: never;
+    path: {
+        slug: string;
+    };
+    query?: {
+        limit?: number;
+        /**
+         * The address of the last agent from the previous page.
+         */
+        cursor?: string;
+    };
+    url: '/registries/{slug}/agents';
+};
+
+export type ListRegistryAgentsResponses = {
+    /**
+     * Approved, reachable agents in the registry
+     */
+    200: ListEnvelope & {
+        data?: Array<RegistryAgent>;
+    };
+};
+
+export type ListRegistryAgentsResponse = ListRegistryAgentsResponses[keyof ListRegistryAgentsResponses];
+
+export type PublishAgentData = {
+    body: PublishAgentInput;
+    path: {
+        slug: string;
+    };
+    query?: never;
+    url: '/registries/{slug}/agents';
+};
+
+export type PublishAgentErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+};
+
+export type PublishAgentError = PublishAgentErrors[keyof PublishAgentErrors];
+
+export type PublishAgentResponses = {
+    /**
+     * Idempotent replay of an existing publication
+     */
+    200: SuccessEnvelope & {
+        data?: PublishAgentResult;
+    };
+    /**
+     * Published (approved) or request created (requested)
+     */
+    201: SuccessEnvelope & {
+        data?: PublishAgentResult;
+    };
+};
+
+export type PublishAgentResponse = PublishAgentResponses[keyof PublishAgentResponses];
+
+export type UnpublishAgentData = {
+    body?: never;
+    path: {
+        slug: string;
+        handle: string;
+    };
+    query?: never;
+    url: '/registries/{slug}/agents/{handle}';
+};
+
+export type UnpublishAgentErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type UnpublishAgentError = UnpublishAgentErrors[keyof UnpublishAgentErrors];
+
+export type UnpublishAgentResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type UnpublishAgentResponse = UnpublishAgentResponses[keyof UnpublishAgentResponses];
+
+export type ResolveRegistryHandleData = {
+    body?: never;
+    path: {
+        slug: string;
+        handle: string;
+    };
+    query?: never;
+    url: '/registries/{slug}/agents/{handle}';
+};
+
+export type ResolveRegistryHandleErrors = {
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type ResolveRegistryHandleError = ResolveRegistryHandleErrors[keyof ResolveRegistryHandleErrors];
+
+export type ResolveRegistryHandleResponses = {
+    /**
+     * The agent listing under the handle
+     */
+    200: SuccessEnvelope & {
+        data?: RegistryAgent;
+    };
+};
+
+export type ResolveRegistryHandleResponse = ResolveRegistryHandleResponses[keyof ResolveRegistryHandleResponses];
+
+export type ListRegistryRequestsData = {
+    body?: never;
+    path: {
+        slug: string;
+    };
+    query?: {
+        limit?: number;
+    };
+    url: '/registries/{slug}/requests';
+};
+
+export type ListRegistryRequestsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type ListRegistryRequestsError = ListRegistryRequestsErrors[keyof ListRegistryRequestsErrors];
+
+export type ListRegistryRequestsResponses = {
+    /**
+     * Pending requests for a registry you own
+     */
+    200: SuccessEnvelope & {
+        data?: Array<RegistryRequest>;
+    };
+};
+
+export type ListRegistryRequestsResponse = ListRegistryRequestsResponses[keyof ListRegistryRequestsResponses];
+
+export type DecideRegistryRequestData = {
+    body: DecideRegistryRequestInput;
+    path: {
+        slug: string;
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/registries/{slug}/requests/{id}';
+};
+
+export type DecideRegistryRequestErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DecideRegistryRequestError = DecideRegistryRequestErrors[keyof DecideRegistryRequestErrors];
+
+export type DecideRegistryRequestResponses = {
+    /**
+     * Decision applied
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            status: 'approved' | 'rejected';
+        };
+    };
+};
+
+export type DecideRegistryRequestResponse = DecideRegistryRequestResponses[keyof DecideRegistryRequestResponses];
+
+export type DefineAgentData = {
+    body: DefineAgentInput;
+    path?: never;
+    query?: never;
+    url: '/agents';
+};
+
+export type DefineAgentErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Invalid request parameters
+     */
+    422: ErrorResponse;
+};
+
+export type DefineAgentError = DefineAgentErrors[keyof DefineAgentErrors];
+
+export type DefineAgentResponses = {
+    /**
+     * Agent defined
+     */
+    201: SuccessEnvelope & {
+        data?: {
+            id: string;
+            address: string;
+        };
+    };
+};
+
+export type DefineAgentResponse = DefineAgentResponses[keyof DefineAgentResponses];
+
+export type GetAgentData = {
+    body?: never;
+    path: {
+        /**
+         * The agent's email address (URL-encoded).
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agents/{address}';
+};
+
+export type GetAgentErrors = {
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetAgentError = GetAgentErrors[keyof GetAgentErrors];
+
+export type GetAgentResponses = {
+    /**
+     * The agent's public profile
+     */
+    200: SuccessEnvelope & {
+        data?: RegistryAgent;
+    };
+};
+
+export type GetAgentResponse = GetAgentResponses[keyof GetAgentResponses];

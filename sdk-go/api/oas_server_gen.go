@@ -161,6 +161,24 @@ type Handler interface {
 	//
 	// POST /org/secrets
 	CreateOrgSecret(ctx context.Context, req *CreateOrgSecretInput) (CreateOrgSecretRes, error)
+	// CreateRegistry implements createRegistry operation.
+	//
+	// Create a registry.
+	//
+	// POST /registries
+	CreateRegistry(ctx context.Context, req *CreateRegistryInput) (CreateRegistryRes, error)
+	// DecideRegistryRequest implements decideRegistryRequest operation.
+	//
+	// Approve or reject a publication request.
+	//
+	// POST /registries/{slug}/requests/{id}
+	DecideRegistryRequest(ctx context.Context, req *DecideRegistryRequestInput, params DecideRegistryRequestParams) (DecideRegistryRequestRes, error)
+	// DefineAgent implements defineAgent operation.
+	//
+	// Define an agent identity.
+	//
+	// POST /agents
+	DefineAgent(ctx context.Context, req *DefineAgentInput) (DefineAgentRes, error)
 	// DeleteDomain implements deleteDomain operation.
 	//
 	// Deletes a verified or unverified domain claim.
@@ -263,6 +281,12 @@ type Handler interface {
 	//
 	// GET /account
 	GetAccount(ctx context.Context) (GetAccountRes, error)
+	// GetAgent implements getAgent operation.
+	//
+	// Get an agent's public profile by address.
+	//
+	// GET /agents/{address}
+	GetAgent(ctx context.Context, params GetAgentParams) (GetAgentRes, error)
 	// GetChallenge implements getChallenge operation.
 	//
 	// Fetch a challenge you created, to poll its `status` and settlement
@@ -365,6 +389,12 @@ type Handler interface {
 	//
 	// GET /functions/routing-topology
 	GetOrgRoutingTopology(ctx context.Context) (GetOrgRoutingTopologyRes, error)
+	// GetRegistry implements getRegistry operation.
+	//
+	// Get a public registry's metadata.
+	//
+	// GET /registries/{slug}
+	GetRegistry(ctx context.Context, params GetRegistryParams) (GetRegistryRes, error)
 	// GetSendPermissions implements getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -563,6 +593,24 @@ type Handler interface {
 	//
 	// GET /x402/payout-addresses
 	ListPayoutAddresses(ctx context.Context) (ListPayoutAddressesRes, error)
+	// ListRegistries implements listRegistries operation.
+	//
+	// List the registries you own.
+	//
+	// GET /registries
+	ListRegistries(ctx context.Context) (ListRegistriesRes, error)
+	// ListRegistryAgents implements listRegistryAgents operation.
+	//
+	// List agents in a registry.
+	//
+	// GET /registries/{slug}/agents
+	ListRegistryAgents(ctx context.Context, params ListRegistryAgentsParams) (*ListRegistryAgentsOK, error)
+	// ListRegistryRequests implements listRegistryRequests operation.
+	//
+	// List pending publication requests.
+	//
+	// GET /registries/{slug}/requests
+	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
 	// ListSentEmails implements listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -606,6 +654,12 @@ type Handler interface {
 	//
 	// POST /cli/login/poll
 	PollCliLogin(ctx context.Context, req *PollCliLoginInput) (PollCliLoginRes, error)
+	// PublishAgent implements publishAgent operation.
+	//
+	// Publish an agent into a registry.
+	//
+	// POST /registries/{slug}/agents
+	PublishAgent(ctx context.Context, req *PublishAgentInput, params PublishAgentParams) (PublishAgentRes, error)
 	// RegisterPayoutAddress implements registerPayoutAddress operation.
 	//
 	// Register (or update) the default payout address your org receives x402
@@ -670,6 +724,12 @@ type Handler interface {
 	//
 	// POST /cli/signup/resend
 	ResendCliSignupVerification(ctx context.Context, req *ResendCliSignupVerificationInput) (ResendCliSignupVerificationRes, error)
+	// ResolveRegistryHandle implements resolveRegistryHandle operation.
+	//
+	// Resolve a registry handle to its agent.
+	//
+	// GET /registries/{slug}/agents/{handle}
+	ResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (ResolveRegistryHandleRes, error)
 	// RotateWebhookSecret implements rotateWebhookSecret operation.
 	//
 	// Generates a new webhook signing secret, replacing the current one.
@@ -831,6 +891,12 @@ type Handler interface {
 	//
 	// POST /functions/{id}/test
 	TestFunction(ctx context.Context, req OptTestFunctionReq, params TestFunctionParams) (TestFunctionRes, error)
+	// UnpublishAgent implements unpublishAgent operation.
+	//
+	// Unpublish an agent from a registry.
+	//
+	// DELETE /registries/{slug}/agents/{handle}
+	UnpublishAgent(ctx context.Context, params UnpublishAgentParams) (UnpublishAgentRes, error)
 	// UnsetFunctionRoute implements unsetFunctionRoute operation.
 	//
 	// Deactivates every active endpoint bound to this function. The
@@ -880,6 +946,12 @@ type Handler interface {
 	//
 	// PUT /functions/{id}
 	UpdateFunction(ctx context.Context, req *UpdateFunctionInput, params UpdateFunctionParams) (UpdateFunctionRes, error)
+	// UpdateRegistry implements updateRegistry operation.
+	//
+	// Update a registry you own.
+	//
+	// PATCH /registries/{slug}
+	UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (UpdateRegistryRes, error)
 	// UpdateSpendPolicy implements updateSpendPolicy operation.
 	//
 	// Update your org's spend policy. Applied as a merge: only the fields you
