@@ -6943,6 +6943,10 @@ export type UpdateRegistryErrors = {
      */
     403: ErrorResponse;
     /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
      * Invalid request parameters
      */
     422: ErrorResponse;

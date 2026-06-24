@@ -9871,6 +9871,14 @@ func (s *UpdateRegistryInput) Validate() error {
 	return nil
 }
 
+func (s *UpdateRegistryNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *UpdateRegistryUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {

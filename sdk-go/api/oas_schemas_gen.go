@@ -21144,6 +21144,10 @@ func (s *UpdateRegistryInput) SetPublishPolicy(val OptPublishPolicy) {
 	s.PublishPolicy = val
 }
 
+type UpdateRegistryNotFound ErrorResponse
+
+func (*UpdateRegistryNotFound) updateRegistryRes() {}
+
 // Merged schema.
 type UpdateRegistryOK struct {
 	Success bool                 `json:"success"`
