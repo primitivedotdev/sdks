@@ -1,9 +1,6 @@
 import { readFileSync } from "node:fs";
 import { Command, Flags } from "@oclif/core";
-import {
-  createX402Client,
-  type X402EmailChallenge,
-} from "@primitivedotdev/sdk/x402";
+import type { X402EmailChallenge } from "@primitivedotdev/sdk/x402";
 import { resolveCliApiRequestConfig } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
@@ -15,8 +12,7 @@ import {
   PRIVATE_KEY_ENV,
   PRIVATE_KEY_FLAG_DESCRIPTION,
   reportX402Error,
-  signerFromPrivateKey,
-  x402BaseUrl,
+  signEmailChallenge,
 } from "./payments-shared.js";
 
 // `primitive payments pay-email-step` is the payer side of an email-native
@@ -164,18 +160,17 @@ class PaymentsPayEmailStepCommand extends Command {
     };
 
     await runWithTiming(flags.time, async () => {
-      const client = createX402Client({
-        apiKey: flags["api-key"] || undefined,
-        baseUrl: x402BaseUrl(requestConfig.resolvedApiBaseUrl),
-      });
-
       try {
         const challenge = readEmailChallenge({
           inline: flags.challenge,
           file: flags["challenge-file"],
         });
-        const signer = signerFromPrivateKey(flags["private-key"] ?? "");
-        const built = await client.payEmailChallenge(challenge, { signer });
+        const built = await signEmailChallenge({
+          challenge,
+          privateKey: flags["private-key"] ?? "",
+          resolvedApiBaseUrl: requestConfig.resolvedApiBaseUrl,
+          apiKey: flags["api-key"],
+        });
         if (flags.json) {
           this.log(JSON.stringify(built.envelope, null, 2));
         } else {

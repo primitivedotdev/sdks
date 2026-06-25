@@ -37,6 +37,7 @@ import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
 import PaymentsChargeCommand from "./commands/payments-charge.js";
 import PaymentsPayCommand from "./commands/payments-pay.js";
+import PaymentsPayEmailCommand from "./commands/payments-pay-email.js";
 import PaymentsPayEmailStepCommand from "./commands/payments-pay-email-step.js";
 import PaymentsRegisterPayoutAddressCommand from "./commands/payments-register-payout-address.js";
 import ReplyCommand from "./commands/reply.js";
@@ -614,9 +615,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   "payments:charge": PaymentsChargeCommand,
   "payments:pay-challenge": PaymentsPayCommand,
   "payments:pay": PaymentsPayCommand,
-  // Email-native payer flow: sign a received email challenge into a portable
-  // `interaction.json` payment-step envelope (printed, not sent). Hand-rolled
-  // because it signs locally with the caller's wallet key and emits an artifact
-  // the user attaches to their reply, which no auto-generated wrapper can do.
+  // Email-native payer flow. `pay-email` is the recommended one-shot: it signs
+  // the received challenge locally with the caller's wallet key AND sends the
+  // signed `interaction.json` as an in-thread reply, in a single command.
+  // `pay-email-step` is the sign-only primitive that emits the portable
+  // `interaction.json` artifact without sending, for advanced use. Both are
+  // hand-rolled because they sign locally, which no auto-generated wrapper can
+  // do; both share the exact signing path via `signEmailChallenge`.
+  "payments:pay-email": PaymentsPayEmailCommand,
   "payments:pay-email-step": PaymentsPayEmailStepCommand,
 };
