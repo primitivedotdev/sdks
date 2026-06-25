@@ -283,7 +283,17 @@ const issued = await x402.createEmailChallenge({
 // issued.challenge carries the payment_requirements + nonce_binding the payer signs.
 ```
 
-The payer, on receiving the challenge, signs it locally with `payEmailChallenge` and sends the resulting envelope back as an `interaction.json` attachment. `payEmailChallenge` does not send anything; it returns the signed payment-step envelope and its canonical JSON bytes:
+The payer receives the challenge as an `interaction.json` MIME part on an inbound email. Rather than hand-parsing it, pass the part bytes to `parseEmailChallengeFromPart`, which validates the envelope and returns the typed `X402EmailChallenge`:
+
+```ts
+import { parseEmailChallengeFromPart } from "@primitivedotdev/sdk/x402";
+
+// `interactionPart` is the body of the inbound email's `interaction.json`
+// attachment (a string, a Buffer/Uint8Array, or an already-parsed object).
+const issued = parseEmailChallengeFromPart(interactionPart);
+```
+
+The payer then signs the challenge locally with `payEmailChallenge` and sends the resulting envelope back as an `interaction.json` attachment. `payEmailChallenge` does not send anything; it returns the signed payment-step envelope and its canonical JSON bytes. The validity window is computed and clamped into the accepted band for you, so you never hand-set `validBefore`:
 
 ```ts
 import { privateKeyToAccount } from "viem/accounts";
@@ -317,7 +327,8 @@ await mail.reply(challengeEmail, {
 `pay()` builds and signs the payment for you. When you need to drive the signing yourself, for example to sign a challenge carried in an email reply and submit the payment separately, the same building blocks are exported directly:
 
 - `deriveEip3009Nonce(binding)` derives the interaction-bound EIP-3009 nonce. The byte layout (`keccak256` over the lowercased `interaction_id`, a `0x00` separator, the lowercased `challenge_step_id`, a `0x00` separator, and the 32 raw bytes of the challenge nonce) is locked to a normative vector the platform recomputes.
-- `computePaymentValidityWindow({ challengeExpiresAtSec, nowSec })` returns the `{ validAfter, validBefore }` window. `validBefore` covers the challenge expiry plus a settlement margin; the total window is hard-capped (24h) so an over-wide authorization can never be produced.
+- `parseEmailChallengeFromPart(part)` validates an inbound `interaction.json` challenge part (string, bytes, or a parsed object) and returns the typed `X402EmailChallenge` ready for `payEmailChallenge`, so you never hand-parse the envelope.
+- `computePaymentValidityWindow({ challengeExpiresAtSec, nowSec })` returns the `{ validAfter, validBefore }` window. By default it lands the window inside the band the platform accepts: `validBefore` keeps at least a minimum settlement headroom (60s) so a near-expired challenge is not signed into a guaranteed rejection, and the total window is clamped to the 24h cap so a far-future expiry never produces an "authorization window too wide" rejection. Pass an explicit `validBeforeSec`/`validAfterSec` to pin a bound; with `clamp: false` an out-of-band pinned value throws a specific error naming which bound was violated instead of silently signing a doomed authorization.
 - `signInteractionPayment({ sign, payer, domain, payTo, amount, nonceBinding, validAfter, validBefore })` derives the bound nonce, assembles the authorization, and signs it with your `sign` callback. Returns `{ authorization, signature }`. The key never leaves the caller.
 - `buildExactEvmPaymentPayload({ network, authorization, signature })` assembles the exact-EVM x402 wire payload, validating the nonce and signature shape.
 

@@ -313,10 +313,25 @@ if err != nil {
 // issued.Challenge carries the payment_requirements + nonce_binding to sign.
 ```
 
-The payer, on receiving the challenge, signs it locally with `PayEmailChallenge`
-and replies with the resulting envelope attached. `PayEmailChallenge` does not
-send anything; it returns the signed payment-step envelope and its canonical
-JSON bytes:
+The payer receives the challenge as an `interaction.json` MIME part on an
+inbound email. Rather than hand-parsing it, pass the part bytes to
+`ExtractEmailChallenge`, which validates the envelope and returns the typed
+`*X402EmailChallenge`:
+
+```go
+// interactionPart is the body of the inbound email's `interaction.json`
+// attachment.
+issued, err := primitive.ExtractEmailChallenge(interactionPart)
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+The payer then signs the challenge locally with `PayEmailChallenge` and replies
+with the resulting envelope attached. `PayEmailChallenge` does not send
+anything; it returns the signed payment-step envelope and its canonical JSON
+bytes. The validity window is computed and clamped into the accepted band for
+you, so you never hand-set `ValidBefore`:
 
 ```go
 payer, err := primitive.NewPrivateKeySigner(os.Getenv("PAYER_KEY"))
@@ -355,8 +370,18 @@ the payment separately, the same building blocks are exported directly:
 
 - `DeriveEIP3009Nonce(binding)` derives the interaction-bound EIP-3009 nonce,
   locked to a normative vector the platform recomputes.
+- `ExtractEmailChallenge(part)` validates an inbound `interaction.json` challenge
+  part (its raw bytes) and returns the typed `*X402EmailChallenge` ready for
+  `PayEmailChallenge`, so you never hand-parse the envelope.
 - `ComputePaymentValidityWindow(input)` returns the `(validAfter, validBefore)`
-  window, hard-capped at 24h.
+  window, landed inside the band the platform accepts by default: `validBefore`
+  keeps at least a minimum settlement headroom (60s) so a near-expired challenge
+  is not signed into a guaranteed rejection, and the total window is clamped to
+  the 24h cap so a far-future expiry never produces an "authorization window too
+  wide" rejection. Pin `ValidBeforeSec`/`ValidAfterSec` to set a bound; with
+  `Clamp` pointing to false an out-of-band pinned value returns a specific error
+  naming which bound was violated instead of silently signing a doomed
+  authorization.
 - `SignInteractionPayment(input)` derives the bound nonce, assembles the
   authorization, and signs it with your `Sign` callback. The key never leaves the
   caller.

@@ -5,6 +5,8 @@ from eth_account import Account
 from eth_account.messages import encode_defunct, encode_typed_data
 
 from primitive import (
+    DEFAULT_MAX_WINDOW_SEC,
+    DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC,
     NonceBinding,
     PayoutRegistrationMessageInput,
     PrivateKeySigner,
@@ -232,21 +234,73 @@ class TestComputePaymentValidityWindow:
         assert valid_before == 2000 + 300
         assert valid_after == 1000 - 300
 
-    def test_raises_when_the_window_is_degenerate(self) -> None:
-        with pytest.raises(ValueError, match="invalid validity window"):
+    def test_clamps_a_too_tight_window_up_to_the_headroom_floor(self) -> None:
+        # The challenge already expired, so expiry + margin lands in the past:
+        # the raw valid_before is below now. The default path clamps it up to
+        # now + min_headroom rather than raising, so the payer gets a signable
+        # window instead of a guaranteed rejection.
+        now = 100000
+        valid_after, valid_before = compute_payment_validity_window(
+            challenge_expires_at_sec=1000,
+            now_sec=now,
+            settlement_margin_sec=60,
+            clock_skew_sec=60,
+        )
+        assert valid_before == now + DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC
+        assert valid_before > valid_after
+        assert valid_before - valid_after <= DEFAULT_MAX_WINDOW_SEC
+
+    def test_clamps_a_too_wide_window_down_to_the_cap(self) -> None:
+        now = 1000
+        valid_after, valid_before = compute_payment_validity_window(
+            challenge_expires_at_sec=now + 48 * 60 * 60,  # 48h out, past the cap
+            now_sec=now,
+        )
+        assert valid_before - valid_after == DEFAULT_MAX_WINDOW_SEC
+        assert valid_before >= now + DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC
+
+    def test_rejects_a_pinned_too_tight_valid_before_when_clamp_off(self) -> None:
+        with pytest.raises(ValueError, match="settlement headroom"):
             compute_payment_validity_window(
-                challenge_expires_at_sec=1000,
-                now_sec=100000,
-                settlement_margin_sec=60,
-                clock_skew_sec=60,
+                challenge_expires_at_sec=1600,
+                now_sec=1000,
+                valid_before_sec=1005,  # only 5s headroom, below the 60s floor
+                clamp=False,
             )
 
-    def test_raises_when_the_total_window_exceeds_the_cap(self) -> None:
-        with pytest.raises(ValueError, match="exceeds the .* cap"):
+    def test_rejects_a_pinned_too_wide_valid_before_when_clamp_off(self) -> None:
+        with pytest.raises(ValueError, match="window is too wide"):
             compute_payment_validity_window(
-                challenge_expires_at_sec=1000 + 48 * 60 * 60,
+                challenge_expires_at_sec=1600,
                 now_sec=1000,
+                valid_before_sec=1000 + 48 * 60 * 60,
+                clamp=False,
             )
+
+    def test_clamps_a_pinned_out_of_band_valid_before_when_clamp_on(self) -> None:
+        now = 1000
+        _, tight = compute_payment_validity_window(
+            challenge_expires_at_sec=now + 600,
+            now_sec=now,
+            valid_before_sec=now + 5,
+        )
+        assert tight == now + DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC
+        after, wide = compute_payment_validity_window(
+            challenge_expires_at_sec=now + 600,
+            now_sec=now,
+            valid_before_sec=now + 48 * 60 * 60,
+        )
+        assert wide - after == DEFAULT_MAX_WINDOW_SEC
+
+    def test_accepts_a_pinned_in_band_valid_before_under_clamp_false(self) -> None:
+        now = 1000
+        _, valid_before = compute_payment_validity_window(
+            challenge_expires_at_sec=now + 600,
+            now_sec=now,
+            valid_before_sec=now + 900,
+            clamp=False,
+        )
+        assert valid_before == now + 900
 
 
 class TestSignInteractionPayment:

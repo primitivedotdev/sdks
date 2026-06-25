@@ -313,10 +313,24 @@ issued = x402.create_email_challenge(
 # issued.challenge carries the payment_requirements + nonce_binding to sign.
 ```
 
-The payer, on receiving the challenge, signs it locally with
-``pay_email_challenge`` and replies with the resulting envelope attached.
-``pay_email_challenge`` does not send anything; it returns the signed
-payment-step envelope and its canonical JSON bytes:
+The payer receives the challenge as an ``interaction.json`` MIME part on an
+inbound email. Rather than hand-parsing it, pass the part bytes to
+``extract_email_challenge``, which validates the envelope and returns the typed
+``X402EmailChallenge``:
+
+```python
+from primitive import extract_email_challenge
+
+# `interaction_part` is the body of the inbound email's `interaction.json`
+# attachment (str, bytes, or an already-parsed dict).
+issued = extract_email_challenge(interaction_part)
+```
+
+The payer then signs the challenge locally with ``pay_email_challenge`` and
+replies with the resulting envelope attached. ``pay_email_challenge`` does not
+send anything; it returns the signed payment-step envelope and its canonical
+JSON bytes. The validity window is computed and clamped into the accepted band
+for you, so you never hand-set ``valid_before``:
 
 ```python
 import base64
@@ -347,8 +361,19 @@ submit the payment separately, the same building blocks are exported directly:
 
 - ``derive_eip3009_nonce(binding)`` derives the interaction-bound EIP-3009
   nonce, locked to a normative vector the platform recomputes.
+- ``extract_email_challenge(part)`` validates an inbound ``interaction.json``
+  challenge part (str, bytes, or a parsed dict) and returns the typed
+  ``X402EmailChallenge`` ready for ``pay_email_challenge``, so you never
+  hand-parse the envelope.
 - ``compute_payment_validity_window(challenge_expires_at_sec=..., now_sec=...)``
-  returns the ``(valid_after, valid_before)`` window, hard-capped at 24h.
+  returns the ``(valid_after, valid_before)`` window, landed inside the band the
+  platform accepts by default: ``valid_before`` keeps at least a minimum
+  settlement headroom (60s) so a near-expired challenge is not signed into a
+  guaranteed rejection, and the total window is clamped to the 24h cap so a
+  far-future expiry never produces an "authorization window too wide" rejection.
+  Pass an explicit ``valid_before_sec``/``valid_after_sec`` to pin a bound; with
+  ``clamp=False`` an out-of-band pinned value raises a specific error naming
+  which bound was violated instead of silently signing a doomed authorization.
 - ``sign_interaction_payment(sign=..., payer=..., domain=..., pay_to=...,
   amount=..., nonce_binding=..., valid_after=..., valid_before=...)`` derives the
   bound nonce, assembles the authorization, and signs it. The key never leaves

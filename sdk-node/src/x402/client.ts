@@ -16,6 +16,8 @@ import {
   buildPayoutRegistrationMessage,
   computePaymentValidityWindow,
   signInteractionPayment,
+  X402_INTERACTION_PROTOCOL,
+  X402_INTERACTION_PROTOCOL_VERSION,
   type X402Network,
   type X402PaymentPayload,
   type X402Signer,
@@ -236,6 +238,145 @@ export class X402Error extends Error {
     this.body = body;
     this.retryAfter = options?.retryAfter ?? null;
   }
+}
+
+/** A UUID, as carried by `interaction_id`'s local part and the step ids. */
+const EXTRACT_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** An interaction id is `uuid@domain`. */
+const EXTRACT_WIRE_ID_RE = new RegExp(
+  `^${EXTRACT_UUID_RE.source.slice(1, -1)}@[^\\s@]+$`,
+  "i",
+);
+
+/**
+ * Parse the bytes of an inbound `interaction.json` MIME part into a typed
+ * {@link X402EmailChallenge} ready for {@link X402Client.payEmailChallenge}.
+ *
+ * A payer receives the x402 challenge as an `interaction.json` attachment on an
+ * inbound email (filename `interaction.json`, content type `application/json`).
+ * This validates the envelope (the strict snake_case wire shape, that it is the
+ * `x402.payment` `challenge` step, and that the embedded payload carries the
+ * fields a payer signs over) and re-assembles the nonce binding from the
+ * envelope's `interaction_id` + `step_id` + the payload's `challenge_nonce`, so
+ * the caller never has to hand-parse the part.
+ *
+ * Accepts the part body as a UTF-8 string, a `Uint8Array`/`Buffer`, or an
+ * already-parsed envelope object. Throws {@link X402Error} (status 0) on any
+ * malformed or non-challenge part.
+ *
+ * The resulting `challenge_id` is empty: the platform's private challenge id is
+ * not carried on the wire, and `payEmailChallenge` does not need it (it binds to
+ * the `interaction_id` and the challenge step id).
+ */
+export function parseEmailChallengeFromPart(
+  part: string | Uint8Array | Record<string, unknown>,
+): X402EmailChallenge {
+  const bad = (field: string): never => {
+    throw new X402Error(
+      `interaction.json part is not a valid x402 challenge: ${field}`,
+      0,
+    );
+  };
+
+  let envelope: Record<string, unknown>;
+  if (typeof part === "string" || part instanceof Uint8Array) {
+    const text =
+      typeof part === "string" ? part : new TextDecoder().decode(part);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch (cause) {
+      throw new X402Error(
+        `interaction.json part is not valid JSON: ${cause instanceof Error ? cause.message : String(cause)}`,
+        0,
+        undefined,
+        { cause },
+      );
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      bad("envelope (expected a JSON object)");
+    }
+    envelope = parsed as Record<string, unknown>;
+  } else if (
+    part &&
+    typeof part === "object" &&
+    !Array.isArray(part) &&
+    !(part instanceof Uint8Array)
+  ) {
+    envelope = part;
+  } else {
+    return bad("envelope (expected JSON bytes, a string, or an object)");
+  }
+
+  if (envelope.interaction_version !== 1) {
+    bad("interaction_version (expected 1)");
+  }
+  const interactionId = envelope.interaction_id;
+  if (
+    typeof interactionId !== "string" ||
+    !EXTRACT_WIRE_ID_RE.test(interactionId)
+  ) {
+    bad("interaction_id (expected uuid@domain)");
+  }
+  if (envelope.protocol !== X402_INTERACTION_PROTOCOL) {
+    bad(`protocol (expected "${X402_INTERACTION_PROTOCOL}")`);
+  }
+  if (envelope.protocol_version !== X402_INTERACTION_PROTOCOL_VERSION) {
+    bad(`protocol_version (expected ${X402_INTERACTION_PROTOCOL_VERSION})`);
+  }
+  if (envelope.step !== "challenge") {
+    bad(`step (expected "challenge", got "${String(envelope.step)}")`);
+  }
+  const stepId = envelope.step_id;
+  if (typeof stepId !== "string" || !EXTRACT_UUID_RE.test(stepId)) {
+    bad("step_id (expected a uuid)");
+  }
+  const expiresAt = envelope.expires_at;
+  if (typeof expiresAt !== "string" || !expiresAt) {
+    bad("expires_at (expected an ISO-8601 timestamp on the challenge step)");
+  }
+  const payload = envelope.payload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    bad("payload (expected an object)");
+  }
+  const p = payload as Record<string, unknown>;
+  const challengeNonce = p.challenge_nonce;
+  if (
+    typeof challengeNonce !== "string" ||
+    !/^[0-9a-f]{64}$/.test(challengeNonce)
+  ) {
+    bad("payload.challenge_nonce (expected 64 lowercase hex chars)");
+  }
+  const paymentRequirements = p.payment_requirements;
+  if (
+    !paymentRequirements ||
+    typeof paymentRequirements !== "object" ||
+    Array.isArray(paymentRequirements)
+  ) {
+    bad("payload.payment_requirements (expected an object)");
+  }
+
+  const challenge: X402EmailChallenge = {
+    interaction_id: interactionId as string,
+    // The platform's private challenge id is never serialized on the wire;
+    // payEmailChallenge binds to interaction_id + the challenge step id instead.
+    challenge_id: "",
+    challenge: {
+      payment_requirements: paymentRequirements as X402PaymentRequirements,
+      nonce_binding: {
+        interaction_id: interactionId as string,
+        challenge_step_id: stepId as string,
+        challenge_nonce: challengeNonce as string,
+      },
+      expires_at: expiresAt as string,
+    },
+  };
+  // Reuse the full hydration check (payment_requirements fields, etc.) so a part
+  // that passes the envelope shape but carries a malformed payment_requirements
+  // is still rejected here, not mid-sign.
+  validateEmailChallenge(challenge);
+  return challenge;
 }
 
 /**

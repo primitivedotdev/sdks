@@ -6,6 +6,8 @@ import {
   buildPaymentStepEnvelope,
   buildPayoutRegistrationMessage,
   computePaymentValidityWindow,
+  DEFAULT_MAX_WINDOW_SEC,
+  DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC,
   deriveEip3009Nonce,
   type NonceBinding,
   signInteractionPayment,
@@ -195,24 +197,93 @@ describe("computePaymentValidityWindow", () => {
     expect(w.validAfter).toBe(1000n - 300n);
   });
 
-  it("throws when the window is degenerate (challenge already long expired)", () => {
-    expect(() =>
-      computePaymentValidityWindow({
-        challengeExpiresAtSec: 1000,
-        nowSec: 100000,
-        settlementMarginSec: 60,
-        clockSkewSec: 60,
-      }),
-    ).toThrow(/invalid validity window/);
+  it("clamps a too-tight window up to the settlement-headroom floor", () => {
+    // The challenge already expired, so expiry + margin lands in the past: the
+    // raw validBefore is below now. The default path clamps it up to
+    // now + minHeadroom rather than throwing, so the payer gets a signable
+    // window instead of a guaranteed rejection.
+    const now = 100_000;
+    const w = computePaymentValidityWindow({
+      challengeExpiresAtSec: 1000,
+      nowSec: now,
+      settlementMarginSec: 60,
+      clockSkewSec: 60,
+    });
+    expect(w.validBefore).toBe(
+      BigInt(now + DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC),
+    );
+    expect(w.validBefore).toBeGreaterThan(w.validAfter);
+    expect(w.validBefore - w.validAfter).toBeLessThanOrEqual(
+      BigInt(DEFAULT_MAX_WINDOW_SEC),
+    );
   });
 
-  it("throws when the total window exceeds the cap (expiry too far out)", () => {
+  it("clamps a too-wide window down to the cap (expiry too far out)", () => {
+    const now = 1000;
+    const w = computePaymentValidityWindow({
+      challengeExpiresAtSec: now + 48 * 60 * 60, // 48h out, past the 24h cap
+      nowSec: now,
+    });
+    // validBefore is pulled down to validAfter + the 24h cap.
+    expect(w.validBefore - w.validAfter).toBe(BigInt(DEFAULT_MAX_WINDOW_SEC));
+    expect(w.validBefore).toBeGreaterThanOrEqual(
+      BigInt(now + DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC),
+    );
+  });
+
+  it("rejects a caller-pinned too-tight validBefore when clamp is off, naming the bound", () => {
+    const now = 1000;
     expect(() =>
       computePaymentValidityWindow({
-        challengeExpiresAtSec: 1000 + 48 * 60 * 60, // 48h out, past the 24h cap
-        nowSec: 1000,
+        challengeExpiresAtSec: now + 600,
+        nowSec: now,
+        validBeforeSec: now + 5, // only 5s headroom, below the 60s floor
+        clamp: false,
       }),
-    ).toThrow(/exceeds the .* cap/);
+    ).toThrow(/settlement headroom/);
+  });
+
+  it("rejects a caller-pinned too-wide validBefore when clamp is off, naming the bound", () => {
+    const now = 1000;
+    expect(() =>
+      computePaymentValidityWindow({
+        challengeExpiresAtSec: now + 600,
+        nowSec: now,
+        validBeforeSec: now + 48 * 60 * 60, // 48h out, past the 24h cap
+        clamp: false,
+      }),
+    ).toThrow(/window is too wide/);
+  });
+
+  it("clamps a caller-pinned out-of-band validBefore when clamp stays on", () => {
+    const now = 1000;
+    const tight = computePaymentValidityWindow({
+      challengeExpiresAtSec: now + 600,
+      nowSec: now,
+      validBeforeSec: now + 5,
+    });
+    expect(tight.validBefore).toBe(
+      BigInt(now + DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC),
+    );
+    const wide = computePaymentValidityWindow({
+      challengeExpiresAtSec: now + 600,
+      nowSec: now,
+      validBeforeSec: now + 48 * 60 * 60,
+    });
+    expect(wide.validBefore - wide.validAfter).toBe(
+      BigInt(DEFAULT_MAX_WINDOW_SEC),
+    );
+  });
+
+  it("accepts a caller-pinned in-band validBefore unchanged under clamp:false", () => {
+    const now = 1000;
+    const w = computePaymentValidityWindow({
+      challengeExpiresAtSec: now + 600,
+      nowSec: now,
+      validBeforeSec: now + 900,
+      clamp: false,
+    });
+    expect(w.validBefore).toBe(BigInt(now + 900));
   });
 });
 
