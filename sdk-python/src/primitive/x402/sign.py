@@ -349,6 +349,13 @@ def build_payment_step_envelope(
 # safety ceiling, enforced so a caller-supplied window cannot bypass it.
 DEFAULT_MAX_WINDOW_SEC = 24 * 60 * 60
 
+# Minimum headroom between now and valid_before. The platform rejects a payment
+# whose authorization is about to expire (it needs SMTP + DKIM + verify + settle
+# latency to clear), so a valid_before less than this far in the future is a
+# guaranteed-to-fail signature. The default window is minutes; this 60s floor is
+# the absolute minimum the band tolerates.
+DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC = 60
+
 
 def compute_payment_validity_window(
     *,
@@ -357,28 +364,94 @@ def compute_payment_validity_window(
     settlement_margin_sec: int = 5 * 60,
     clock_skew_sec: int = 5 * 60,
     max_window_sec: int = DEFAULT_MAX_WINDOW_SEC,
+    min_headroom_sec: int = DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC,
+    valid_before_sec: int | None = None,
+    valid_after_sec: int | None = None,
+    clamp: bool = True,
 ) -> tuple[int, int]:
     """Compute the EIP-3009 ``(valid_after, valid_before)`` window for a payment.
 
-    ``valid_before`` governs on-chain validity, so it MUST cover the challenge's
-    ``expires_at`` plus a settlement margin; ``valid_after`` is set generously in
-    the past for clock skew. The total window is hard-capped at ``max_window_sec``
-    so neither a far-future expiry nor a widened margin can produce a window the
-    platform verifier would later reject. Returns ``(valid_after, valid_before)``.
+    ``valid_before`` governs on-chain validity, so it MUST stay far enough in the
+    future to settle (>= ``min_headroom_sec``) yet not so far that the total
+    window exceeds the ``max_window_sec`` cap; ``valid_after`` is set generously
+    in the past for clock skew.
+
+    Both ends of that band are payer landmines: a too-tight ``valid_before``
+    (low headroom, e.g. a near-expired challenge) is rejected for being about to
+    expire, and a too-wide window (far-future expiry) is rejected as
+    "authorization window too wide". By default this clamps the computed window
+    into the band so a caller who does not override always gets a signable
+    window.
+
+    If the caller passes an explicit ``valid_before_sec`` or ``valid_after_sec``,
+    that is an intent to pin the bound: when it falls outside the band this
+    raises a :class:`ValueError` naming which bound was violated (rather than
+    silently signing a doomed authorization), unless ``clamp`` is left enabled,
+    in which case the pinned value is clamped into the band like the computed
+    one. Returns ``(valid_after, valid_before)``.
     """
-    valid_before = challenge_expires_at_sec + settlement_margin_sec
-    valid_after = now_sec - clock_skew_sec
-    if valid_before <= valid_after:
+    if max_window_sec < min_headroom_sec:
+        raise ValueError(
+            f"invalid validity window config: max_window_sec ({max_window_sec}) "
+            f"is smaller than min_headroom_sec ({min_headroom_sec})"
+        )
+
+    # valid_after is pinned when overridden, else derived for clock skew.
+    valid_after = (
+        valid_after_sec if valid_after_sec is not None else now_sec - clock_skew_sec
+    )
+    # The raw valid_before before banding: the pinned value or expiry + margin.
+    raw_valid_before = (
+        valid_before_sec
+        if valid_before_sec is not None
+        else challenge_expires_at_sec + settlement_margin_sec
+    )
+
+    # The accepted band for valid_before: at least min_headroom past now (so the
+    # signature can settle), and at most valid_after + max_window (so the total
+    # window cannot exceed the cap). min_headroom << max_window, so the floor is
+    # always below the ceiling and a clamp can satisfy both.
+    floor = now_sec + min_headroom_sec
+    ceiling = valid_after + max_window_sec
+
+    too_tight = raw_valid_before < floor
+    too_wide = raw_valid_before > ceiling
+
+    # A caller-pinned valid_before that is out of band is a no-clamp hard error
+    # so it never silently signs a window other than the one requested.
+    if not clamp and valid_before_sec is not None:
+        if too_tight:
+            raise ValueError(
+                f"invalid validity window: valid_before ({raw_valid_before}) is "
+                f"below the minimum settlement headroom (must be >= now + "
+                f"{min_headroom_sec}s = {floor}); the authorization would be "
+                "rejected as about to expire"
+            )
+        if too_wide:
+            raise ValueError(
+                f"invalid validity window: valid_before ({raw_valid_before}) "
+                f"exceeds the {max_window_sec}s window cap (must be <= valid_after "
+                f"+ {max_window_sec}s = {ceiling}); the authorization window is "
+                "too wide"
+            )
+
+    # Default path (or clamp enabled): land valid_before inside [floor, ceiling].
+    if too_tight:
+        banded_valid_before = floor
+    elif too_wide:
+        banded_valid_before = ceiling
+    else:
+        banded_valid_before = raw_valid_before
+
+    if banded_valid_before <= valid_after:
+        # Only reachable when a pinned valid_after sits at/after the floor; the
+        # window is unrecoverable without moving the caller's pinned valid_after.
         raise ValueError(
             "invalid validity window: valid_before must be after valid_after "
-            "(challenge already expired?)"
+            "(challenge already expired or valid_after pinned too late?)"
         )
-    if valid_before - valid_after > max_window_sec:
-        raise ValueError(
-            f"invalid validity window: total window exceeds the {max_window_sec}s "
-            "cap (challenge expiry too far out?)"
-        )
-    return valid_after, valid_before
+
+    return valid_after, banded_valid_before
 
 
 def sign_interaction_payment(

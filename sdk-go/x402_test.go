@@ -259,31 +259,120 @@ func TestComputePaymentValidityWindow_Defaults(t *testing.T) {
 	}
 }
 
-func TestComputePaymentValidityWindow_Degenerate(t *testing.T) {
-	_, _, err := ComputePaymentValidityWindow(ValidityWindowInput{
+func TestComputePaymentValidityWindow_ClampsTooTightUpToFloor(t *testing.T) {
+	// The challenge already expired, so expiry + margin lands in the past: the
+	// raw validBefore is below now. The default path clamps it up to
+	// now + minHeadroom rather than erroring, so the payer gets a signable
+	// window instead of a guaranteed rejection.
+	const now = int64(100000)
+	va, vb, err := ComputePaymentValidityWindow(ValidityWindowInput{
 		ChallengeExpiresAtSec: 1000,
-		NowSec:                100000,
+		NowSec:                now,
 		SettlementMarginSec:   60,
 		ClockSkewSec:          60,
 	})
-	if err == nil {
-		t.Fatal("expected an error for a degenerate window")
-	}
-	if !strings.Contains(err.Error(), "invalid validity window") {
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if vb.Int64() != now+DefaultMinSettlementHeadroomSec {
+		t.Fatalf("validBefore = %d, want %d", vb.Int64(), now+DefaultMinSettlementHeadroomSec)
+	}
+	if vb.Cmp(va) <= 0 {
+		t.Fatalf("validBefore %d must be after validAfter %d", vb.Int64(), va.Int64())
+	}
+	if vb.Int64()-va.Int64() > DefaultMaxWindowSec {
+		t.Fatalf("window %d exceeds the cap", vb.Int64()-va.Int64())
 	}
 }
 
-func TestComputePaymentValidityWindow_ExceedsCap(t *testing.T) {
-	_, _, err := ComputePaymentValidityWindow(ValidityWindowInput{
-		ChallengeExpiresAtSec: 1000 + 48*60*60,
-		NowSec:                1000,
+func TestComputePaymentValidityWindow_ClampsTooWideDownToCap(t *testing.T) {
+	const now = int64(1000)
+	va, vb, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: now + 48*60*60, // 48h out, past the cap
+		NowSec:                now,
 	})
-	if err == nil {
-		t.Fatal("expected an error for an over-cap window")
-	}
-	if !strings.Contains(err.Error(), "exceeds the") {
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if vb.Int64()-va.Int64() != DefaultMaxWindowSec {
+		t.Fatalf("window = %d, want exactly the cap %d", vb.Int64()-va.Int64(), DefaultMaxWindowSec)
+	}
+	if vb.Int64() < now+DefaultMinSettlementHeadroomSec {
+		t.Fatalf("validBefore %d fell below the headroom floor", vb.Int64())
+	}
+}
+
+func TestComputePaymentValidityWindow_RejectsPinnedTooTightWhenClampOff(t *testing.T) {
+	clamp := false
+	vbPin := int64(1005) // only 5s headroom, below the 60s floor
+	_, _, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: 1600,
+		NowSec:                1000,
+		ValidBeforeSec:        &vbPin,
+		Clamp:                 &clamp,
+	})
+	if err == nil || !strings.Contains(err.Error(), "settlement headroom") {
+		t.Fatalf("expected a settlement-headroom error, got %v", err)
+	}
+}
+
+func TestComputePaymentValidityWindow_RejectsPinnedTooWideWhenClampOff(t *testing.T) {
+	clamp := false
+	vbPin := int64(1000 + 48*60*60)
+	_, _, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: 1600,
+		NowSec:                1000,
+		ValidBeforeSec:        &vbPin,
+		Clamp:                 &clamp,
+	})
+	if err == nil || !strings.Contains(err.Error(), "window is too wide") {
+		t.Fatalf("expected a window-too-wide error, got %v", err)
+	}
+}
+
+func TestComputePaymentValidityWindow_ClampsPinnedOutOfBandWhenClampOn(t *testing.T) {
+	const now = int64(1000)
+	tightPin := now + 5
+	_, tightVB, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: now + 600,
+		NowSec:                now,
+		ValidBeforeSec:        &tightPin,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if tightVB.Int64() != now+DefaultMinSettlementHeadroomSec {
+		t.Fatalf("tight validBefore = %d, want clamped to %d", tightVB.Int64(), now+DefaultMinSettlementHeadroomSec)
+	}
+	widePin := now + 48*60*60
+	wideVA, wideVB, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: now + 600,
+		NowSec:                now,
+		ValidBeforeSec:        &widePin,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if wideVB.Int64()-wideVA.Int64() != DefaultMaxWindowSec {
+		t.Fatalf("wide window = %d, want clamped to the cap %d", wideVB.Int64()-wideVA.Int64(), DefaultMaxWindowSec)
+	}
+}
+
+func TestComputePaymentValidityWindow_AcceptsPinnedInBandUnderClampFalse(t *testing.T) {
+	const now = int64(1000)
+	clamp := false
+	vbPin := now + 900
+	_, vb, err := ComputePaymentValidityWindow(ValidityWindowInput{
+		ChallengeExpiresAtSec: now + 600,
+		NowSec:                now,
+		ValidBeforeSec:        &vbPin,
+		Clamp:                 &clamp,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if vb.Int64() != now+900 {
+		t.Fatalf("validBefore = %d, want the pinned %d unchanged", vb.Int64(), now+900)
 	}
 }
 
@@ -1003,6 +1092,113 @@ func sampleEmailChallenge() *X402EmailChallenge {
 	ch.Challenge.PaymentRequirements.Extra.Name = "USDC"
 	ch.Challenge.PaymentRequirements.Extra.Version = "2"
 	return ch
+}
+
+// validChallengePart returns the bytes of a well-formed inbound interaction.json
+// challenge part. Its step_id is the challenge step id (a nonce-binding input);
+// the payload carries challenge_nonce + payment_requirements.
+func validChallengePart(t *testing.T) []byte {
+	t.Helper()
+	env := map[string]any{
+		"interaction_version": 1,
+		"interaction_id":      canonicalInteractionID,
+		"protocol":            "x402.payment",
+		"protocol_version":    1,
+		"step":                "challenge",
+		"step_id":             canonicalChallengeStepID,
+		"prev_step_id":        nil,
+		"expires_at":          "2030-01-01T00:00:00.000Z",
+		"payload": map[string]any{
+			"challenge_nonce": canonicalChallengeNonce,
+			"payment_requirements": map[string]any{
+				"scheme":            "exact",
+				"network":           "base-sepolia",
+				"maxAmountRequired": "10000",
+				"payTo":             "0x1111111111111111111111111111111111111111",
+				"asset":             "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+				"extra":             map[string]any{"name": "USDC", "version": "2"},
+			},
+		},
+	}
+	b, err := json.Marshal(env)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	return b
+}
+
+func TestExtractEmailChallenge_RoundTrips(t *testing.T) {
+	ch, err := ExtractEmailChallenge(validChallengePart(t))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ch.InteractionID != canonicalInteractionID {
+		t.Fatalf("interaction_id = %q", ch.InteractionID)
+	}
+	// The challenge id is not carried on the wire; PayEmailChallenge does not need
+	// it (it binds to interaction_id + the challenge step id).
+	if ch.ChallengeID != "" {
+		t.Fatalf("challenge_id = %q, want empty", ch.ChallengeID)
+	}
+	if ch.Challenge.ExpiresAt != "2030-01-01T00:00:00.000Z" {
+		t.Fatalf("expires_at = %q", ch.Challenge.ExpiresAt)
+	}
+	if ch.Challenge.NonceBinding.ChallengeStepID != canonicalChallengeStepID ||
+		ch.Challenge.NonceBinding.ChallengeNonce != canonicalChallengeNonce ||
+		ch.Challenge.NonceBinding.InteractionID != canonicalInteractionID {
+		t.Fatalf("nonce binding = %+v", ch.Challenge.NonceBinding)
+	}
+	if ch.Challenge.PaymentRequirements.MaxAmountRequired != "10000" {
+		t.Fatalf("maxAmountRequired = %q", ch.Challenge.PaymentRequirements.MaxAmountRequired)
+	}
+	// The extracted challenge must be signable end to end.
+	signer, err := NewPrivateKeySigner(testPrivateKey)
+	if err != nil {
+		t.Fatalf("signer: %v", err)
+	}
+	if _, err := (&X402Client{}).PayEmailChallenge(ch, signer); err != nil {
+		t.Fatalf("PayEmailChallenge on extracted challenge: %v", err)
+	}
+}
+
+func TestExtractEmailChallenge_RejectsMalformed(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"non-challenge step", func(m map[string]any) { m["step"] = "payment" }, `step (expected "challenge"`},
+		{"wrong protocol", func(m map[string]any) { m["protocol"] = "something.else" }, "protocol"},
+		{"bad interaction_id", func(m map[string]any) { m["interaction_id"] = "not-a-wire-id" }, "interaction_id"},
+		{"bad nonce", func(m map[string]any) {
+			m["payload"].(map[string]any)["challenge_nonce"] = "tooshort"
+		}, "challenge_nonce"},
+		{"bad maxAmountRequired", func(m map[string]any) {
+			m["payload"].(map[string]any)["payment_requirements"].(map[string]any)["maxAmountRequired"] = "0"
+		}, "maxAmountRequired"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var env map[string]any
+			if err := json.Unmarshal(validChallengePart(t), &env); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			tc.mutate(env)
+			b, err := json.Marshal(env)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			if _, err := ExtractEmailChallenge(b); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("expected error containing %q, got %v", tc.want, err)
+			}
+		})
+	}
+}
+
+func TestExtractEmailChallenge_RejectsNonJSON(t *testing.T) {
+	if _, err := ExtractEmailChallenge([]byte("not json {")); err == nil || !strings.Contains(err.Error(), "not valid JSON") {
+		t.Fatalf("expected a JSON error, got %v", err)
+	}
 }
 
 func TestBuildPaymentStepEnvelope(t *testing.T) {

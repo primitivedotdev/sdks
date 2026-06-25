@@ -10,6 +10,7 @@ authorization, sign, and submit.
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import re
@@ -24,6 +25,8 @@ import httpx
 from dateutil.parser import isoparse
 
 from .sign import (
+    X402_INTERACTION_PROTOCOL,
+    X402_INTERACTION_PROTOCOL_VERSION,
     BuiltPaymentStep,
     NonceBinding,
     PayoutRegistrationMessageInput,
@@ -46,6 +49,19 @@ _DEFAULT_TIMEOUT_SEC = 30.0
 
 _ADDRESS_RE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 _AMOUNT_RE = re.compile(r"^[1-9][0-9]{0,38}$")
+
+# A UUID (used for interaction_id's local part and the step ids).
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+# An interaction id is uuid@domain.
+_WIRE_ID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@[^\s@]+$",
+    re.IGNORECASE,
+)
+# A challenge nonce is 32 bytes rendered as 64 lowercase hex chars.
+_CHALLENGE_NONCE_RE = re.compile(r"^[0-9a-f]{64}$")
 
 _CHARGE_INPUT_KEYS = frozenset(
     {
@@ -380,6 +396,108 @@ def _validate_email_challenge(c: X402EmailChallenge | None) -> None:
             "challenge.nonce_binding.interaction_id)"
         )
     _validate_payment_requirements(ch.payment_requirements, bad)
+
+
+def extract_email_challenge(
+    part: str | bytes | bytearray | dict[str, Any],
+) -> X402EmailChallenge:
+    """Parse an inbound ``interaction.json`` part into a typed challenge.
+
+    A payer receives the x402 challenge as an ``interaction.json`` attachment on
+    an inbound email (filename ``interaction.json``, content type
+    ``application/json``). This validates the envelope (the strict snake_case
+    wire shape, that it is the ``x402.payment`` ``challenge`` step, and that the
+    embedded payload carries the fields a payer signs over) and re-assembles the
+    nonce binding from the envelope's ``interaction_id`` + ``step_id`` + the
+    payload's ``challenge_nonce``, so the caller never has to hand-parse the
+    part. The result is ready for :meth:`X402Client.pay_email_challenge`.
+
+    ``part`` may be a UTF-8 ``str``, raw ``bytes``/``bytearray``, or an
+    already-parsed envelope ``dict``. Raises :class:`X402Error` (status 0) on any
+    malformed or non-challenge part.
+
+    The resulting ``challenge_id`` is empty: the platform's private challenge id
+    is not carried on the wire, and ``pay_email_challenge`` does not need it (it
+    binds to the ``interaction_id`` and the challenge step id).
+    """
+
+    def bad(field: str) -> NoReturn:
+        raise X402Error(
+            f"interaction.json part is not a valid x402 challenge: {field}", 0
+        )
+
+    if isinstance(part, dict):
+        envelope: dict[str, Any] = part
+    else:
+        # Decode + parse together so a bytes input with invalid UTF-8 surfaces as
+        # X402Error (the documented contract), not a raw UnicodeDecodeError.
+        try:
+            if isinstance(part, (bytes, bytearray)):
+                text = bytes(part).decode("utf-8", errors="strict")
+            else:
+                text = part
+            parsed = json.loads(text)
+        except (ValueError, UnicodeDecodeError) as cause:
+            raise X402Error(
+                f"interaction.json part is not valid JSON: {cause}", 0
+            ) from cause
+        if not isinstance(parsed, dict):
+            bad("envelope (expected a JSON object)")
+        envelope = parsed
+
+    if envelope.get("interaction_version") != 1:
+        bad("interaction_version (expected 1)")
+    interaction_id = envelope.get("interaction_id")
+    if not isinstance(interaction_id, str) or not _WIRE_ID_RE.fullmatch(
+        interaction_id
+    ):
+        bad("interaction_id (expected uuid@domain)")
+    if envelope.get("protocol") != X402_INTERACTION_PROTOCOL:
+        bad(f'protocol (expected "{X402_INTERACTION_PROTOCOL}")')
+    if envelope.get("protocol_version") != X402_INTERACTION_PROTOCOL_VERSION:
+        bad(f"protocol_version (expected {X402_INTERACTION_PROTOCOL_VERSION})")
+    if envelope.get("step") != "challenge":
+        bad(f'step (expected "challenge", got "{envelope.get("step")}")')
+    step_id = envelope.get("step_id")
+    if not isinstance(step_id, str) or not _UUID_RE.fullmatch(step_id):
+        bad("step_id (expected a uuid)")
+    expires_at = envelope.get("expires_at")
+    if not isinstance(expires_at, str) or not expires_at:
+        bad("expires_at (expected an ISO-8601 timestamp on the challenge step)")
+    payload = envelope.get("payload")
+    if not isinstance(payload, dict):
+        bad("payload (expected an object)")
+    challenge_nonce = payload.get("challenge_nonce")
+    if not isinstance(challenge_nonce, str) or not _CHALLENGE_NONCE_RE.fullmatch(
+        challenge_nonce
+    ):
+        bad("payload.challenge_nonce (expected 64 lowercase hex chars)")
+    payment_requirements = payload.get("payment_requirements")
+    if not isinstance(payment_requirements, dict):
+        bad("payload.payment_requirements (expected an object)")
+
+    challenge = X402EmailChallenge(
+        interaction_id=interaction_id,
+        # The platform's private challenge id is never serialized on the wire;
+        # pay_email_challenge binds to interaction_id + the challenge step id.
+        challenge_id="",
+        challenge=X402EmailChallengeDetails(
+            payment_requirements=_payment_requirements_from_dict(
+                payment_requirements
+            ),  # type: ignore[arg-type]
+            nonce_binding={
+                "interaction_id": interaction_id,
+                "challenge_step_id": step_id,
+                "challenge_nonce": challenge_nonce,
+            },
+            expires_at=expires_at,
+        ),
+    )
+    # Reuse the full hydration check (payment_requirements fields, etc.) so a part
+    # that passes the envelope shape but carries malformed payment_requirements is
+    # still rejected here, not mid-sign.
+    _validate_email_challenge(challenge)
+    return challenge
 
 
 class X402Client:

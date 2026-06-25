@@ -18,9 +18,11 @@ from .client import (
     X402Receipt,
     X402SpendPolicy,
     create_x402_client,
+    extract_email_challenge,
 )
 from .sign import (
     DEFAULT_MAX_WINDOW_SEC,
+    DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC,
     TRANSFER_WITH_AUTHORIZATION_TYPES,
     X402_INTERACTION_PROTOCOL,
     X402_INTERACTION_PROTOCOL_VERSION,
@@ -44,6 +46,7 @@ from .sign import (
 
 __all__ = [
     "DEFAULT_MAX_WINDOW_SEC",
+    "DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC",
     "TRANSFER_WITH_AUTHORIZATION_TYPES",
     "X402_INTERACTION_PROTOCOL",
     "X402_INTERACTION_PROTOCOL_VERSION",
@@ -71,6 +74,7 @@ __all__ = [
     "compute_payment_validity_window",
     "create_x402_client",
     "derive_eip3009_nonce",
+    "extract_email_challenge",
     "sign_interaction_payment",
     "to_payment_payload",
     "transfer_with_authorization_typed_data",

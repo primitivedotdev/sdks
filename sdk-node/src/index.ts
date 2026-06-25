@@ -59,6 +59,7 @@ export {
   deriveEip3009Nonce,
   type NonceBinding,
   type PayoutRegistrationMessageInput,
+  parseEmailChallengeFromPart,
   type TokenDomain,
   type TransferAuthorization,
   type X402Challenge,

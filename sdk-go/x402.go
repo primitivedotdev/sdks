@@ -360,23 +360,56 @@ func BuildPaymentStepEnvelope(input BuildPaymentStepEnvelopeInput) (BuiltPayment
 // caller-supplied window cannot bypass it.
 const DefaultMaxWindowSec int64 = 24 * 60 * 60
 
+// DefaultMinSettlementHeadroomSec is the minimum headroom between now and
+// validBefore. The platform rejects a payment whose authorization is about to
+// expire (it needs SMTP + DKIM + verify + settle latency to clear), so a
+// validBefore less than this far in the future is a guaranteed-to-fail
+// signature. The default window is minutes; this 60s floor is the absolute
+// minimum the band tolerates.
+const DefaultMinSettlementHeadroomSec int64 = 60
+
 // ValidityWindowInput configures ComputePaymentValidityWindow. The optional
 // fields default when left zero: SettlementMarginSec and ClockSkewSec to 5
-// minutes, MaxWindowSec to DefaultMaxWindowSec.
+// minutes, MaxWindowSec to DefaultMaxWindowSec, MinHeadroomSec to
+// DefaultMinSettlementHeadroomSec.
 type ValidityWindowInput struct {
 	ChallengeExpiresAtSec int64
 	NowSec                int64
 	SettlementMarginSec   int64
 	ClockSkewSec          int64
 	MaxWindowSec          int64
+	// MinHeadroomSec is the minimum validBefore - NowSec. Defaults to
+	// DefaultMinSettlementHeadroomSec when zero.
+	MinHeadroomSec int64
+	// ValidBeforeSec / ValidAfterSec pin validBefore / validAfter (unix seconds).
+	// Pointers so a zero value is distinguishable from unset; when nil the value
+	// is derived (expiry + margin / now - skew).
+	ValidBeforeSec *int64
+	ValidAfterSec  *int64
+	// Clamp, when nil or true, lands an out-of-band window inside the accepted
+	// band instead of erroring. Set it to a pointer to false to reject a
+	// caller-pinned override that is out of band with a specific error.
+	Clamp *bool
 }
 
 // ComputePaymentValidityWindow computes the EIP-3009 (validAfter, validBefore)
-// window for a payment. validBefore governs on-chain validity, so it MUST cover
-// the challenge's expires_at plus a settlement margin; validAfter is set
-// generously in the past for clock skew. The total window is hard-capped at
-// MaxWindowSec so neither a far-future expiry nor a widened margin can produce a
-// window the platform verifier would later reject.
+// window for a payment, landing inside the band the platform accepts.
+// validBefore governs on-chain validity, so it MUST stay far enough in the
+// future to settle (>= MinHeadroomSec) yet not so far that the total window
+// exceeds the MaxWindowSec cap; validAfter is set generously in the past for
+// clock skew.
+//
+// Both ends of that band are payer landmines: a too-tight validBefore (low
+// headroom, e.g. a near-expired challenge) is rejected for being about to
+// expire, and a too-wide window (far-future expiry) is rejected as
+// "authorization window too wide". By default this clamps the computed window
+// into the band so a caller who does not override always gets a signable window.
+//
+// If the caller pins ValidBeforeSec / ValidAfterSec, that is an intent to pin
+// the bound: when it falls outside the band this returns an error naming which
+// bound was violated (rather than signing a doomed authorization), unless Clamp
+// is left enabled, in which case the pinned value is clamped like the computed
+// one.
 func ComputePaymentValidityWindow(input ValidityWindowInput) (validAfter, validBefore *big.Int, err error) {
 	margin := input.SettlementMarginSec
 	if margin == 0 {
@@ -390,17 +423,69 @@ func ComputePaymentValidityWindow(input ValidityWindowInput) (validAfter, validB
 	if maxWindow == 0 {
 		maxWindow = DefaultMaxWindowSec
 	}
-	vb := big.NewInt(input.ChallengeExpiresAtSec + margin)
-	va := big.NewInt(input.NowSec - skew)
-	if vb.Cmp(va) <= 0 {
-		return nil, nil, fmt.Errorf(
-			"invalid validity window: validBefore must be after validAfter (challenge already expired?)")
+	minHeadroom := input.MinHeadroomSec
+	if minHeadroom == 0 {
+		minHeadroom = DefaultMinSettlementHeadroomSec
 	}
-	if new(big.Int).Sub(vb, va).Cmp(big.NewInt(maxWindow)) > 0 {
+	clamp := input.Clamp == nil || *input.Clamp
+
+	if maxWindow < minHeadroom {
 		return nil, nil, fmt.Errorf(
-			"invalid validity window: total window exceeds the %ds cap (challenge expiry too far out?)", maxWindow)
+			"invalid validity window config: maxWindowSec (%d) is smaller than minHeadroomSec (%d)", maxWindow, minHeadroom)
 	}
-	return va, vb, nil
+
+	// validAfter is pinned when overridden, else derived for clock skew.
+	va := input.NowSec - skew
+	if input.ValidAfterSec != nil {
+		va = *input.ValidAfterSec
+	}
+	// The raw validBefore before banding: the pinned value or expiry + margin.
+	rawVB := input.ChallengeExpiresAtSec + margin
+	if input.ValidBeforeSec != nil {
+		rawVB = *input.ValidBeforeSec
+	}
+
+	// The accepted band for validBefore: at least minHeadroom past now (so the
+	// signature can settle), and at most validAfter + maxWindow (so the total
+	// window cannot exceed the cap). minHeadroom << maxWindow, so the floor is
+	// always below the ceiling and a clamp can satisfy both.
+	floor := input.NowSec + minHeadroom
+	ceiling := va + maxWindow
+
+	tooTight := rawVB < floor
+	tooWide := rawVB > ceiling
+
+	// A caller-pinned validBefore that is out of band is a no-clamp hard error so
+	// it never silently signs a window other than the one requested.
+	if !clamp && input.ValidBeforeSec != nil {
+		if tooTight {
+			return nil, nil, fmt.Errorf(
+				"invalid validity window: validBefore (%d) is below the minimum settlement headroom (must be >= now + %ds = %d); the authorization would be rejected as about to expire",
+				rawVB, minHeadroom, floor)
+		}
+		if tooWide {
+			return nil, nil, fmt.Errorf(
+				"invalid validity window: validBefore (%d) exceeds the %ds window cap (must be <= validAfter + %ds = %d); the authorization window is too wide",
+				rawVB, maxWindow, maxWindow, ceiling)
+		}
+	}
+
+	// Default path (or clamp enabled): land validBefore inside [floor, ceiling].
+	bandedVB := rawVB
+	if tooTight {
+		bandedVB = floor
+	} else if tooWide {
+		bandedVB = ceiling
+	}
+
+	if bandedVB <= va {
+		// Only reachable when a pinned validAfter sits at/after the floor; the
+		// window is unrecoverable without moving the caller's pinned validAfter.
+		return nil, nil, fmt.Errorf(
+			"invalid validity window: validBefore must be after validAfter (challenge already expired or validAfter pinned too late?)")
+	}
+
+	return big.NewInt(va), big.NewInt(bandedVB), nil
 }
 
 // SignInteractionPaymentInput configures SignInteractionPayment.
@@ -1159,6 +1244,99 @@ func validateEmailChallenge(ch *X402EmailChallenge) error {
 		return bad("interaction_id (mismatch with challenge.nonce_binding.interaction_id)")
 	}
 	return validatePaymentRequirements(d.PaymentRequirements, bad)
+}
+
+// x402ChallengeEnvelope is the interaction.json challenge an inbound payer email
+// carries: the strict snake_case envelope plus the challenge-step payload. Used
+// only by ExtractEmailChallenge to parse the wire part.
+type x402ChallengeEnvelope struct {
+	InteractionVersion int    `json:"interaction_version"`
+	InteractionID      string `json:"interaction_id"`
+	Protocol           string `json:"protocol"`
+	ProtocolVersion    int    `json:"protocol_version"`
+	Step               string `json:"step"`
+	StepID             string `json:"step_id"`
+	ExpiresAt          string `json:"expires_at"`
+	Payload            struct {
+		ChallengeNonce      string                  `json:"challenge_nonce"`
+		PaymentRequirements X402PaymentRequirements `json:"payment_requirements"`
+	} `json:"payload"`
+}
+
+// ExtractEmailChallenge parses the bytes of an inbound interaction.json MIME part
+// into a typed *X402EmailChallenge ready for PayEmailChallenge.
+//
+// A payer receives the x402 challenge as an interaction.json attachment on an
+// inbound email (filename interaction.json, content type application/json). This
+// validates the envelope (the strict snake_case wire shape, that it is the
+// x402.payment challenge step, and that the embedded payload carries the fields
+// a payer signs over) and re-assembles the nonce binding from the envelope's
+// interaction_id + step_id + the payload's challenge_nonce, so the caller never
+// has to hand-parse the part. Returns an *X402Error (Status 0) on any malformed
+// or non-challenge part.
+//
+// The resulting ChallengeID is empty: the platform's private challenge id is not
+// carried on the wire, and PayEmailChallenge does not need it (it binds to the
+// InteractionID and the challenge step id).
+func ExtractEmailChallenge(part []byte) (*X402EmailChallenge, error) {
+	bad := func(field string) error {
+		return newX402Error("interaction.json part is not a valid x402 challenge: "+field, 0)
+	}
+	if len(bytes.TrimSpace(part)) == 0 {
+		return nil, bad("empty part")
+	}
+	var env x402ChallengeEnvelope
+	if err := json.Unmarshal(part, &env); err != nil {
+		return nil, newX402Error("interaction.json part is not valid JSON: "+err.Error(), 0)
+	}
+
+	if env.InteractionVersion != 1 {
+		return nil, bad("interaction_version (expected 1)")
+	}
+	if !x402WireIDRe.MatchString(env.InteractionID) {
+		return nil, bad("interaction_id (expected uuid@domain)")
+	}
+	if env.Protocol != X402InteractionProtocol {
+		return nil, bad(`protocol (expected "` + X402InteractionProtocol + `")`)
+	}
+	if env.ProtocolVersion != X402InteractionProtocolVersion {
+		return nil, bad(fmt.Sprintf("protocol_version (expected %d)", X402InteractionProtocolVersion))
+	}
+	if env.Step != "challenge" {
+		return nil, bad(`step (expected "challenge", got "` + env.Step + `")`)
+	}
+	if !x402UUIDRe.MatchString(env.StepID) {
+		return nil, bad("step_id (expected a uuid)")
+	}
+	if env.ExpiresAt == "" {
+		return nil, bad("expires_at (expected an ISO-8601 timestamp on the challenge step)")
+	}
+	if !x402ChallengeNonceRe.MatchString(env.Payload.ChallengeNonce) {
+		return nil, bad("payload.challenge_nonce (expected 64 lowercase hex chars)")
+	}
+
+	challenge := &X402EmailChallenge{
+		InteractionID: env.InteractionID,
+		// The platform's private challenge id is never serialized on the wire;
+		// PayEmailChallenge binds to InteractionID + the challenge step id.
+		ChallengeID: "",
+		Challenge: X402EmailChallengeDetails{
+			PaymentRequirements: env.Payload.PaymentRequirements,
+			NonceBinding: X402NonceBinding{
+				InteractionID:   env.InteractionID,
+				ChallengeStepID: env.StepID,
+				ChallengeNonce:  env.Payload.ChallengeNonce,
+			},
+			ExpiresAt: env.ExpiresAt,
+		},
+	}
+	// Reuse the full hydration check (payment_requirements fields, etc.) so a part
+	// that passes the envelope shape but carries malformed payment_requirements is
+	// still rejected here, not mid-sign.
+	if err := validateEmailChallenge(challenge); err != nil {
+		return nil, err
+	}
+	return challenge, nil
 }
 
 // PayEmailChallenge builds the signed payment step for an email-native challenge

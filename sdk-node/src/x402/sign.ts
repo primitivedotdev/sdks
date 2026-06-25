@@ -323,12 +323,33 @@ export function toPaymentPayload(
 export const DEFAULT_MAX_WINDOW_SEC = 24 * 60 * 60;
 
 /**
- * Compute the EIP-3009 validity window for a payment. `validBefore` is the
- * value that governs on-chain validity, so it MUST cover the challenge's
- * `expires_at` plus a settlement margin; `validAfter` is set generously in the
- * past for clock skew. The total window is hard-capped at `maxWindowSec` so
- * neither a far-future `challengeExpiresAtSec` nor a widened margin can produce
- * a window the platform verifier would later reject.
+ * Minimum headroom between now and `validBefore`. The platform rejects a
+ * payment whose authorization is about to expire (it needs SMTP + DKIM + verify
+ * + settle latency to clear), so a `validBefore` less than this far in the
+ * future is a guaranteed-to-fail signature. The default window is minutes; this
+ * 60s floor is the absolute minimum the band tolerates.
+ */
+export const DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC = 60;
+
+/**
+ * Compute the EIP-3009 validity window for a payment, landing inside the band
+ * the platform accepts. `validBefore` governs on-chain validity, so it MUST
+ * stay far enough in the future to settle (>= `minHeadroomSec`) yet not so far
+ * that the total window exceeds the `maxWindowSec` cap; `validAfter` is set
+ * generously in the past for clock skew.
+ *
+ * Both ends of that band are payer landmines: a too-tight `validBefore` (low
+ * headroom, e.g. a near-expired challenge) is rejected for being about to
+ * expire, and a too-wide window (far-future expiry) is rejected as
+ * "authorization window too wide". By default this clamps the computed window
+ * into the band so a caller who does not override always gets a signable
+ * window.
+ *
+ * If the caller passes an explicit `validBeforeSec` or `validAfterSec`, that is
+ * an intent to pin the bound: when it falls outside the band this throws a
+ * specific error naming which bound was violated (rather than silently signing
+ * a doomed authorization), unless `clamp` is left enabled, in which case the
+ * pinned value is clamped into the band like the computed one.
  */
 export function computePaymentValidityWindow(params: {
   /** The challenge's expires_at, unix seconds. */
@@ -341,23 +362,96 @@ export function computePaymentValidityWindow(params: {
   clockSkewSec?: number;
   /** Hard ceiling on validBefore - validAfter. Default 24h. */
   maxWindowSec?: number;
+  /**
+   * Minimum `validBefore - nowSec`. Default 60s. A signature with less headroom
+   * cannot clear the SMTP+DKIM+settle latency and the platform rejects it.
+   */
+  minHeadroomSec?: number;
+  /**
+   * Explicit override for `validBefore` (unix seconds). When omitted it is
+   * derived from `challengeExpiresAtSec + settlementMarginSec`.
+   */
+  validBeforeSec?: number;
+  /**
+   * Explicit override for `validAfter` (unix seconds). When omitted it is
+   * derived from `nowSec - clockSkewSec`.
+   */
+  validAfterSec?: number;
+  /**
+   * When true (the default), an out-of-band window is clamped into the accepted
+   * band instead of throwing. Set `false` to reject a caller-pinned override
+   * that is out of band with a specific error rather than silently moving it.
+   */
+  clamp?: boolean;
 }): { validAfter: bigint; validBefore: bigint } {
   const margin = params.settlementMarginSec ?? 5 * 60;
   const skew = params.clockSkewSec ?? 5 * 60;
-  const validBefore = BigInt(params.challengeExpiresAtSec + margin);
-  const validAfter = BigInt(params.nowSec - skew);
-  if (validBefore <= validAfter) {
+  const maxWindow = params.maxWindowSec ?? DEFAULT_MAX_WINDOW_SEC;
+  const minHeadroom =
+    params.minHeadroomSec ?? DEFAULT_MIN_SETTLEMENT_HEADROOM_SEC;
+  const clamp = params.clamp ?? true;
+
+  if (maxWindow < minHeadroom) {
     throw new Error(
-      "invalid validity window: validBefore must be after validAfter (challenge already expired?)",
+      `invalid validity window config: maxWindowSec (${maxWindow}) is smaller than minHeadroomSec (${minHeadroom})`,
     );
   }
-  const maxWindow = BigInt(params.maxWindowSec ?? DEFAULT_MAX_WINDOW_SEC);
-  if (validBefore - validAfter > maxWindow) {
+
+  // `validAfter` is pinned when overridden, else derived for clock skew.
+  const validAfter =
+    params.validAfterSec !== undefined
+      ? params.validAfterSec
+      : params.nowSec - skew;
+  // The raw `validBefore` before banding: the pinned value or expiry + margin.
+  const rawValidBefore =
+    params.validBeforeSec !== undefined
+      ? params.validBeforeSec
+      : params.challengeExpiresAtSec + margin;
+
+  // The accepted band for validBefore: at least minHeadroom past now (so the
+  // signature can settle), and at most validAfter + maxWindow (so the total
+  // window cannot exceed the cap). minHeadroom << maxWindow, so the floor is
+  // always below the ceiling and a clamp can satisfy both.
+  const floor = params.nowSec + minHeadroom;
+  const ceiling = validAfter + maxWindow;
+
+  const tooTight = rawValidBefore < floor;
+  const tooWide = rawValidBefore > ceiling;
+
+  // A caller-pinned validBefore that is out of band is a no-clamp hard error so
+  // it never silently signs a window other than the one requested.
+  if (!clamp && params.validBeforeSec !== undefined) {
+    if (tooTight) {
+      throw new Error(
+        `invalid validity window: validBefore (${rawValidBefore}) is below the minimum settlement headroom (must be >= now + ${minHeadroom}s = ${floor}); the authorization would be rejected as about to expire`,
+      );
+    }
+    if (tooWide) {
+      throw new Error(
+        `invalid validity window: validBefore (${rawValidBefore}) exceeds the ${maxWindow}s window cap (must be <= validAfter + ${maxWindow}s = ${ceiling}); the authorization window is too wide`,
+      );
+    }
+  }
+
+  // Default path (or clamp enabled): land validBefore inside [floor, ceiling].
+  const bandedValidBefore = tooTight
+    ? floor
+    : tooWide
+      ? ceiling
+      : rawValidBefore;
+
+  if (bandedValidBefore <= validAfter) {
+    // Only reachable when a pinned validAfter sits at/after the floor; the
+    // window is unrecoverable without moving the caller's pinned validAfter.
     throw new Error(
-      `invalid validity window: total window exceeds the ${maxWindow}s cap (challenge expiry too far out?)`,
+      "invalid validity window: validBefore must be after validAfter (challenge already expired or validAfter pinned too late?)",
     );
   }
-  return { validAfter, validBefore };
+
+  return {
+    validAfter: BigInt(validAfter),
+    validBefore: BigInt(bandedValidBefore),
+  };
 }
 
 /** The x402 named networks supported in v1 (testnet first). */
