@@ -6981,7 +6981,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "amount": {
           "type": "string",
           "pattern": "^[1-9][0-9]{0,38}$",
-          "description": "Amount to collect, in token base units (this command takes base\nunits only, unlike `charge` which also accepts `--amount-usdc`).\nUSDC has 6 decimals, so `\"10000\"` is 0.01 USDC: multiply a human\nUSDC amount by 1,000,000 (0.01 USDC -> `\"10000\"`).\n"
+          "description": "Amount to collect, in token base units (unlike the `charge` CLI\ncommand, which also accepts `--amount-usdc`, this field takes base\nunits only). USDC has 6 decimals, so `\"10000\"` is 0.01 USDC:\nmultiply a human USDC amount by 1,000,000 (0.01 USDC -> `\"10000\"`).\n"
         },
         "network": {
           "type": "string",
