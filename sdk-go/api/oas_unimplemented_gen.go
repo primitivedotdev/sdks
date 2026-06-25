@@ -208,6 +208,19 @@ func (UnimplementedHandler) CreateRegistry(ctx context.Context, req *CreateRegis
 	return r, ht.ErrNotImplemented
 }
 
+// CreateRoute implements createRoute operation.
+//
+// Binds a recipient pattern to a destination. Provide exactly one of
+// `endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,
+// a dedicated route-target endpoint is minted for that function in the same
+// transaction, enabling per-address function routing (e.g.
+// `alice@acme.com -> functionA`).
+//
+// POST /routes
+func (UnimplementedHandler) CreateRoute(ctx context.Context, req *CreateRouteInput) (r CreateRouteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DecideRegistryRequest implements decideRegistryRequest operation.
 //
 // Approve or reject a publication request.
@@ -298,6 +311,15 @@ func (UnimplementedHandler) DeleteFunctionSecret(ctx context.Context, params Del
 //
 // DELETE /org/secrets/{key}
 func (UnimplementedHandler) DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (r DeleteOrgSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteRoute implements deleteRoute operation.
+//
+// Delete a recipient route.
+//
+// DELETE /routes/{id}
+func (UnimplementedHandler) DeleteRoute(ctx context.Context, params DeleteRouteParams) (r DeleteRouteRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -784,6 +806,17 @@ func (UnimplementedHandler) ListRegistryRequests(ctx context.Context, params Lis
 	return r, ht.ErrNotImplemented
 }
 
+// ListRoutes implements listRoutes operation.
+//
+// Returns the org's recipient routing rules in evaluation order. Each rule
+// binds a recipient address pattern to one endpoint; inbound mail resolves
+// to a single destination at delivery time.
+//
+// GET /routes
+func (UnimplementedHandler) ListRoutes(ctx context.Context) (r ListRoutesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListSentEmails implements listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -859,6 +892,15 @@ func (UnimplementedHandler) PublishAgent(ctx context.Context, req *PublishAgentI
 //
 // POST /x402/payout-addresses
 func (UnimplementedHandler) RegisterPayoutAddress(ctx context.Context, req *RegisterPayoutAddressInput) (r RegisterPayoutAddressRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ReorderRoutes implements reorderRoutes operation.
+//
+// Update the priority of one or more routes in a single call.
+//
+// POST /routes/reorder
+func (UnimplementedHandler) ReorderRoutes(ctx context.Context, req *ReorderRoutesInput) (r ReorderRoutesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1043,6 +1085,16 @@ func (UnimplementedHandler) SetOrgSecret(ctx context.Context, req *SetOrgSecretI
 	return r, ht.ErrNotImplemented
 }
 
+// SimulateRoute implements simulateRoute operation.
+//
+// Resolves where an inbound email to `recipient` would be delivered, with a
+// trace of every rule evaluated and why. Read-only; creates nothing.
+//
+// POST /routes/simulate
+func (UnimplementedHandler) SimulateRoute(ctx context.Context, req *SimulateRouteInput) (r SimulateRouteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // StartAgentClaim implements startAgentClaim operation.
 //
 // Begins upgrading an emailless `agent` account into a full `developer`
@@ -1218,6 +1270,15 @@ func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunct
 //
 // PATCH /registries/{slug}
 func (UnimplementedHandler) UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (r UpdateRegistryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateRoute implements updateRoute operation.
+//
+// Update a recipient route.
+//
+// PATCH /routes/{id}
+func (UnimplementedHandler) UpdateRoute(ctx context.Context, req *UpdateRouteInput, params UpdateRouteParams) (r UpdateRouteRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

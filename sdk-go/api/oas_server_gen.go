@@ -167,6 +167,16 @@ type Handler interface {
 	//
 	// POST /registries
 	CreateRegistry(ctx context.Context, req *CreateRegistryInput) (CreateRegistryRes, error)
+	// CreateRoute implements createRoute operation.
+	//
+	// Binds a recipient pattern to a destination. Provide exactly one of
+	// `endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,
+	// a dedicated route-target endpoint is minted for that function in the same
+	// transaction, enabling per-address function routing (e.g.
+	// `alice@acme.com -> functionA`).
+	//
+	// POST /routes
+	CreateRoute(ctx context.Context, req *CreateRouteInput) (CreateRouteRes, error)
 	// DecideRegistryRequest implements decideRegistryRequest operation.
 	//
 	// Approve or reject a publication request.
@@ -233,6 +243,12 @@ type Handler interface {
 	//
 	// DELETE /org/secrets/{key}
 	DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (DeleteOrgSecretRes, error)
+	// DeleteRoute implements deleteRoute operation.
+	//
+	// Delete a recipient route.
+	//
+	// DELETE /routes/{id}
+	DeleteRoute(ctx context.Context, params DeleteRouteParams) (DeleteRouteRes, error)
 	// DiscardEmailContent implements discardEmailContent operation.
 	//
 	// Permanently deletes the email's raw bytes, parsed body (text + HTML),
@@ -611,6 +627,14 @@ type Handler interface {
 	//
 	// GET /registries/{slug}/requests
 	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
+	// ListRoutes implements listRoutes operation.
+	//
+	// Returns the org's recipient routing rules in evaluation order. Each rule
+	// binds a recipient address pattern to one endpoint; inbound mail resolves
+	// to a single destination at delivery time.
+	//
+	// GET /routes
+	ListRoutes(ctx context.Context) (ListRoutesRes, error)
 	// ListSentEmails implements listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -674,6 +698,12 @@ type Handler interface {
 	//
 	// POST /x402/payout-addresses
 	RegisterPayoutAddress(ctx context.Context, req *RegisterPayoutAddressInput) (RegisterPayoutAddressRes, error)
+	// ReorderRoutes implements reorderRoutes operation.
+	//
+	// Update the priority of one or more routes in a single call.
+	//
+	// POST /routes/reorder
+	ReorderRoutes(ctx context.Context, req *ReorderRoutesInput) (ReorderRoutesRes, error)
 	// ReplayDelivery implements replayDelivery operation.
 	//
 	// Re-sends the stored webhook payload from a previous delivery attempt.
@@ -816,6 +846,13 @@ type Handler interface {
 	//
 	// PUT /org/secrets/{key}
 	SetOrgSecret(ctx context.Context, req *SetOrgSecretInput, params SetOrgSecretParams) (SetOrgSecretRes, error)
+	// SimulateRoute implements simulateRoute operation.
+	//
+	// Resolves where an inbound email to `recipient` would be delivered, with a
+	// trace of every rule evaluated and why. Read-only; creates nothing.
+	//
+	// POST /routes/simulate
+	SimulateRoute(ctx context.Context, req *SimulateRouteInput) (SimulateRouteRes, error)
 	// StartAgentClaim implements startAgentClaim operation.
 	//
 	// Begins upgrading an emailless `agent` account into a full `developer`
@@ -952,6 +989,12 @@ type Handler interface {
 	//
 	// PATCH /registries/{slug}
 	UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (UpdateRegistryRes, error)
+	// UpdateRoute implements updateRoute operation.
+	//
+	// Update a recipient route.
+	//
+	// PATCH /routes/{id}
+	UpdateRoute(ctx context.Context, req *UpdateRouteInput, params UpdateRouteParams) (UpdateRouteRes, error)
 	// UpdateSpendPolicy implements updateSpendPolicy operation.
 	//
 	// Update your org's spend policy. Applied as a merge: only the fields you

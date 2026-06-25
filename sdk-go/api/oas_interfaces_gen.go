@@ -49,6 +49,10 @@ type CreateRegistryRes interface {
 	createRegistryRes()
 }
 
+type CreateRouteRes interface {
+	createRouteRes()
+}
+
 type DecideRegistryRequestRes interface {
 	decideRegistryRequestRes()
 }
@@ -83,6 +87,10 @@ type DeleteFunctionSecretRes interface {
 
 type DeleteOrgSecretRes interface {
 	deleteOrgSecretRes()
+}
+
+type DeleteRouteRes interface {
+	deleteRouteRes()
 }
 
 type DiscardEmailContentRes interface {
@@ -221,6 +229,10 @@ type ListRegistryRequestsRes interface {
 	listRegistryRequestsRes()
 }
 
+type ListRoutesRes interface {
+	listRoutesRes()
+}
+
 type ListSentEmailsRes interface {
 	listSentEmailsRes()
 }
@@ -239,6 +251,10 @@ type PublishAgentRes interface {
 
 type RegisterPayoutAddressRes interface {
 	registerPayoutAddressRes()
+}
+
+type ReorderRoutesRes interface {
+	reorderRoutesRes()
 }
 
 type ReplayDeliveryRes interface {
@@ -291,6 +307,10 @@ type SetFunctionSecretRes interface {
 
 type SetOrgSecretRes interface {
 	setOrgSecretRes()
+}
+
+type SimulateRouteRes interface {
+	simulateRouteRes()
 }
 
 type StartAgentClaimRes interface {
@@ -347,6 +367,10 @@ type UpdateFunctionRes interface {
 
 type UpdateRegistryRes interface {
 	updateRegistryRes()
+}
+
+type UpdateRouteRes interface {
+	updateRouteRes()
 }
 
 type UpdateSpendPolicyRes interface {
