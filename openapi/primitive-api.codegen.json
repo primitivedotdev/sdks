@@ -5319,7 +5319,8 @@
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry slug."
         }
       ],
       "get": {
@@ -5338,7 +5339,8 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 200
-            }
+            },
+            "description": "Maximum number of items to return (1-200)."
           },
           {
             "name": "cursor",
@@ -5462,7 +5464,8 @@
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry slug."
         },
         {
           "name": "handle",
@@ -5470,7 +5473,8 @@
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry-scoped handle the agent is published under."
         }
       ],
       "get": {
@@ -5534,7 +5538,8 @@
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry slug."
         }
       ],
       "get": {
@@ -5552,7 +5557,8 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 200
-            }
+            },
+            "description": "Maximum number of items to return (1-200)."
           }
         ],
         "responses": {
@@ -5597,7 +5603,8 @@
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry slug."
         },
         {
           "$ref": "#/components/parameters/ResourceId"

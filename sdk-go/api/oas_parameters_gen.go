@@ -176,6 +176,7 @@ func decodeCreateFunctionSecretParams(args [1]string, argsEscaped bool, r *http.
 
 // DecideRegistryRequestParams is parameters of decideRegistryRequest operation.
 type DecideRegistryRequestParams struct {
+	// The registry slug.
 	Slug string
 	// Resource UUID.
 	ID uuid.UUID
@@ -3251,10 +3252,12 @@ func decodeListFunctionSecretsParams(args [1]string, argsEscaped bool, r *http.R
 
 // ListRegistryAgentsParams is parameters of listRegistryAgents operation.
 type ListRegistryAgentsParams struct {
+	// Maximum number of items to return (1-200).
 	Limit OptInt `json:",omitempty,omitzero"`
 	// The address of the last agent from the previous page.
 	Cursor OptString `json:",omitempty,omitzero"`
-	Slug   string
+	// The registry slug.
+	Slug string
 }
 
 func unpackListRegistryAgentsParams(packed middleware.Parameters) (params ListRegistryAgentsParams) {
@@ -3445,8 +3448,10 @@ func decodeListRegistryAgentsParams(args [1]string, argsEscaped bool, r *http.Re
 
 // ListRegistryRequestsParams is parameters of listRegistryRequests operation.
 type ListRegistryRequestsParams struct {
+	// Maximum number of items to return (1-200).
 	Limit OptInt `json:",omitempty,omitzero"`
-	Slug  string
+	// The registry slug.
+	Slug string
 }
 
 func unpackListRegistryRequestsParams(packed middleware.Parameters) (params ListRegistryRequestsParams) {
@@ -4115,6 +4120,7 @@ func decodePayChallengeParams(args [1]string, argsEscaped bool, r *http.Request)
 
 // PublishAgentParams is parameters of publishAgent operation.
 type PublishAgentParams struct {
+	// The registry slug.
 	Slug string
 }
 
@@ -4398,7 +4404,9 @@ func decodeReplyToEmailParams(args [1]string, argsEscaped bool, r *http.Request)
 
 // ResolveRegistryHandleParams is parameters of resolveRegistryHandle operation.
 type ResolveRegistryHandleParams struct {
-	Slug   string
+	// The registry slug.
+	Slug string
+	// The registry-scoped handle the agent is published under.
 	Handle string
 }
 
@@ -6299,7 +6307,9 @@ func decodeTestFunctionParams(args [1]string, argsEscaped bool, r *http.Request)
 
 // UnpublishAgentParams is parameters of unpublishAgent operation.
 type UnpublishAgentParams struct {
-	Slug   string
+	// The registry slug.
+	Slug string
+	// The registry-scoped handle the agent is published under.
 	Handle string
 }
 

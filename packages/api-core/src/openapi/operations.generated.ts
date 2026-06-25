@@ -7961,7 +7961,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/registries/{slug}/requests/{id}",
     "pathParams": [
       {
-        "description": null,
+        "description": "The registry slug.",
         "enum": null,
         "name": "slug",
         "required": true,
@@ -8296,7 +8296,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/registries/{slug}/agents",
     "pathParams": [
       {
-        "description": null,
+        "description": "The registry slug.",
         "enum": null,
         "name": "slug",
         "required": true,
@@ -8305,7 +8305,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [
       {
-        "description": null,
+        "description": "Maximum number of items to return (1-200).",
         "enum": null,
         "maximum": 200,
         "minimum": 1,
@@ -8386,7 +8386,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/registries/{slug}/requests",
     "pathParams": [
       {
-        "description": null,
+        "description": "The registry slug.",
         "enum": null,
         "name": "slug",
         "required": true,
@@ -8395,7 +8395,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [
       {
-        "description": null,
+        "description": "Maximum number of items to return (1-200).",
         "enum": null,
         "maximum": 200,
         "minimum": 1,
@@ -8457,7 +8457,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/registries/{slug}/agents",
     "pathParams": [
       {
-        "description": null,
+        "description": "The registry slug.",
         "enum": null,
         "name": "slug",
         "required": true,
@@ -8522,14 +8522,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/registries/{slug}/agents/{handle}",
     "pathParams": [
       {
-        "description": null,
+        "description": "The registry slug.",
         "enum": null,
         "name": "slug",
         "required": true,
         "type": "string"
       },
       {
-        "description": null,
+        "description": "The registry-scoped handle the agent is published under.",
         "enum": null,
         "name": "handle",
         "required": true,
@@ -8599,14 +8599,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/registries/{slug}/agents/{handle}",
     "pathParams": [
       {
-        "description": null,
+        "description": "The registry slug.",
         "enum": null,
         "name": "slug",
         "required": true,
         "type": "string"
       },
       {
-        "description": null,
+        "description": "The registry-scoped handle the agent is published under.",
         "enum": null,
         "name": "handle",
         "required": true,
