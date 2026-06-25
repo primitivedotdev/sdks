@@ -2688,7 +2688,7 @@ export const openapiDocument: Record<string, unknown> = {
                         "data": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/Route"
+                            "$ref": "#/components/schemas/RecipientRoute"
                           }
                         }
                       }
@@ -2734,7 +2734,7 @@ export const openapiDocument: Record<string, unknown> = {
                       "type": "object",
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/Route"
+                          "$ref": "#/components/schemas/RecipientRoute"
                         }
                       }
                     }
@@ -2789,7 +2789,7 @@ export const openapiDocument: Record<string, unknown> = {
                       "type": "object",
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/Route"
+                          "$ref": "#/components/schemas/RecipientRoute"
                         }
                       }
                     }
@@ -2863,7 +2863,7 @@ export const openapiDocument: Record<string, unknown> = {
                         "data": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/Route"
+                            "$ref": "#/components/schemas/RecipientRoute"
                           }
                         }
                       }
@@ -11293,7 +11293,7 @@ export const openapiDocument: Record<string, unknown> = {
         ],
         "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
       },
-      "Route": {
+      "RecipientRoute": {
         "type": "object",
         "additionalProperties": true,
         "properties": {
@@ -11327,20 +11327,6 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "enabled": {
             "type": "boolean"
-          },
-          "match_count": {
-            "type": [
-              "integer",
-              "string"
-            ],
-            "description": "Times this route has matched (may be a string for large counts)."
-          },
-          "last_matched_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
           },
           "created_at": {
             "type": "string",

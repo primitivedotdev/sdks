@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.endpoint_kind import EndpointKind
 from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
@@ -44,6 +45,11 @@ class Endpoint:
             last_success_at (datetime.datetime | None | Unset):
             last_failure_at (datetime.datetime | None | Unset):
             deactivated_at (datetime.datetime | None | Unset):
+            kind (EndpointKind | Unset): http: deliver to the webhook URL. function: invoke a Primitive Function.
+            function_id (None | Unset | UUID): The Function this endpoint invokes, when kind is function.
+            is_route_target (bool | Unset): When true, this endpoint is reachable only via an explicit recipient
+                route, never as a domain's default destination, and is exempt from
+                the one-endpoint-per-domain rule (so many can share a domain).
      """
 
     id: UUID
@@ -62,6 +68,9 @@ class Endpoint:
     last_success_at: datetime.datetime | None | Unset = UNSET
     last_failure_at: datetime.datetime | None | Unset = UNSET
     deactivated_at: datetime.datetime | None | Unset = UNSET
+    kind: EndpointKind | Unset = UNSET
+    function_id: None | Unset | UUID = UNSET
+    is_route_target: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -136,6 +145,21 @@ class Endpoint:
         else:
             deactivated_at = self.deactivated_at
 
+        kind: str | Unset = UNSET
+        if not isinstance(self.kind, Unset):
+            kind = self.kind.value
+
+
+        function_id: None | str | Unset
+        if isinstance(self.function_id, Unset):
+            function_id = UNSET
+        elif isinstance(self.function_id, UUID):
+            function_id = str(self.function_id)
+        else:
+            function_id = self.function_id
+
+        is_route_target = self.is_route_target
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -163,6 +187,12 @@ class Endpoint:
             field_dict["last_failure_at"] = last_failure_at
         if deactivated_at is not UNSET:
             field_dict["deactivated_at"] = deactivated_at
+        if kind is not UNSET:
+            field_dict["kind"] = kind
+        if function_id is not UNSET:
+            field_dict["function_id"] = function_id
+        if is_route_target is not UNSET:
+            field_dict["is_route_target"] = is_route_target
 
         return field_dict
 
@@ -317,6 +347,38 @@ class Endpoint:
         deactivated_at = _parse_deactivated_at(d.pop("deactivated_at", UNSET))
 
 
+        _kind = d.pop("kind", UNSET)
+        kind: EndpointKind | Unset
+        if isinstance(_kind,  Unset):
+            kind = UNSET
+        else:
+            kind = EndpointKind(_kind)
+
+
+
+
+        def _parse_function_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                function_id_type_0 = UUID(data)
+
+
+
+                return function_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        function_id = _parse_function_id(d.pop("function_id", UNSET))
+
+
+        is_route_target = d.pop("is_route_target", UNSET)
+
         endpoint = cls(
             id=id,
             org_id=org_id,
@@ -334,6 +396,9 @@ class Endpoint:
             last_success_at=last_success_at,
             last_failure_at=last_failure_at,
             deactivated_at=deactivated_at,
+            kind=kind,
+            function_id=function_id,
+            is_route_target=is_route_target,
         )
 
 

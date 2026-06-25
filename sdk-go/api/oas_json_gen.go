@@ -6444,8 +6444,10 @@ func (s *CreateEndpointInput) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *CreateEndpointInput) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("url")
-		e.Str(s.URL)
+		if s.URL.Set {
+			e.FieldStart("url")
+			s.URL.Encode(e)
+		}
 	}
 	{
 		if s.Enabled.Set {
@@ -6465,13 +6467,34 @@ func (s *CreateEndpointInput) encodeFields(e *jx.Encoder) {
 			s.Rules.Encode(e)
 		}
 	}
+	{
+		if s.Kind.Set {
+			e.FieldStart("kind")
+			s.Kind.Encode(e)
+		}
+	}
+	{
+		if s.FunctionID.Set {
+			e.FieldStart("function_id")
+			s.FunctionID.Encode(e)
+		}
+	}
+	{
+		if s.IsRouteTarget.Set {
+			e.FieldStart("is_route_target")
+			s.IsRouteTarget.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfCreateEndpointInput = [4]string{
+var jsonFieldsNameOfCreateEndpointInput = [7]string{
 	0: "url",
 	1: "enabled",
 	2: "domain_id",
 	3: "rules",
+	4: "kind",
+	5: "function_id",
+	6: "is_route_target",
 }
 
 // Decode decodes CreateEndpointInput from json.
@@ -6479,17 +6502,14 @@ func (s *CreateEndpointInput) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode CreateEndpointInput to nil")
 	}
-	var requiredBitSet [1]uint8
 	s.setDefaults()
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
 		case "url":
-			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				v, err := d.Str()
-				s.URL = string(v)
-				if err != nil {
+				s.URL.Reset()
+				if err := s.URL.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -6528,44 +6548,42 @@ func (s *CreateEndpointInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"rules\"")
 			}
+		case "kind":
+			if err := func() error {
+				s.Kind.Reset()
+				if err := s.Kind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "function_id":
+			if err := func() error {
+				s.FunctionID.Reset()
+				if err := s.FunctionID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"function_id\"")
+			}
+		case "is_route_target":
+			if err := func() error {
+				s.IsRouteTarget.Reset()
+				if err := s.IsRouteTarget.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"is_route_target\"")
+			}
 		default:
 			return errors.Errorf("unexpected field %q", k)
 		}
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode CreateEndpointInput")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00000001,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfCreateEndpointInput) {
-					name = jsonFieldsNameOfCreateEndpointInput[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
 	}
 
 	return nil
@@ -6580,6 +6598,46 @@ func (s *CreateEndpointInput) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CreateEndpointInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CreateEndpointInputKind as json.
+func (s CreateEndpointInputKind) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes CreateEndpointInputKind from json.
+func (s *CreateEndpointInputKind) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateEndpointInputKind to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch CreateEndpointInputKind(v) {
+	case CreateEndpointInputKindHTTP:
+		*s = CreateEndpointInputKindHTTP
+	case CreateEndpointInputKindFunction:
+		*s = CreateEndpointInputKindFunction
+	default:
+		*s = CreateEndpointInputKind(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CreateEndpointInputKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateEndpointInputKind) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -9129,6 +9187,389 @@ func (s *CreateRegistryUnprocessableEntity) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes CreateRouteBadRequest as json.
+func (s *CreateRouteBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes CreateRouteBadRequest from json.
+func (s *CreateRouteBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateRouteBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = CreateRouteBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CreateRouteBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateRouteBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *CreateRouteCreated) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *CreateRouteCreated) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfCreateRouteCreated = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes CreateRouteCreated from json.
+func (s *CreateRouteCreated) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateRouteCreated to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode CreateRouteCreated")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfCreateRouteCreated) {
+					name = jsonFieldsNameOfCreateRouteCreated[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CreateRouteCreated) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateRouteCreated) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *CreateRouteInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *CreateRouteInput) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("match_type")
+		s.MatchType.Encode(e)
+	}
+	{
+		e.FieldStart("pattern")
+		e.Str(s.Pattern)
+	}
+	{
+		if s.EndpointID.Set {
+			e.FieldStart("endpoint_id")
+			s.EndpointID.Encode(e)
+		}
+	}
+	{
+		if s.FunctionID.Set {
+			e.FieldStart("function_id")
+			s.FunctionID.Encode(e)
+		}
+	}
+	{
+		if s.DomainID.Set {
+			e.FieldStart("domain_id")
+			s.DomainID.Encode(e)
+		}
+	}
+	{
+		if s.Priority.Set {
+			e.FieldStart("priority")
+			s.Priority.Encode(e)
+		}
+	}
+	{
+		if s.Enabled.Set {
+			e.FieldStart("enabled")
+			s.Enabled.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfCreateRouteInput = [7]string{
+	0: "match_type",
+	1: "pattern",
+	2: "endpoint_id",
+	3: "function_id",
+	4: "domain_id",
+	5: "priority",
+	6: "enabled",
+}
+
+// Decode decodes CreateRouteInput from json.
+func (s *CreateRouteInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateRouteInput to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "match_type":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.MatchType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"match_type\"")
+			}
+		case "pattern":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Pattern = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pattern\"")
+			}
+		case "endpoint_id":
+			if err := func() error {
+				s.EndpointID.Reset()
+				if err := s.EndpointID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"endpoint_id\"")
+			}
+		case "function_id":
+			if err := func() error {
+				s.FunctionID.Reset()
+				if err := s.FunctionID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"function_id\"")
+			}
+		case "domain_id":
+			if err := func() error {
+				s.DomainID.Reset()
+				if err := s.DomainID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain_id\"")
+			}
+		case "priority":
+			if err := func() error {
+				s.Priority.Reset()
+				if err := s.Priority.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"priority\"")
+			}
+		case "enabled":
+			if err := func() error {
+				s.Enabled.Reset()
+				if err := s.Enabled.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"enabled\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode CreateRouteInput")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfCreateRouteInput) {
+					name = jsonFieldsNameOfCreateRouteInput[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CreateRouteInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateRouteInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CreateRouteUnauthorized as json.
+func (s *CreateRouteUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes CreateRouteUnauthorized from json.
+func (s *CreateRouteUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateRouteUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = CreateRouteUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CreateRouteUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateRouteUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes DecideRegistryRequestConflict as json.
 func (s *DecideRegistryRequestConflict) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -10986,6 +11427,82 @@ func (s *DeleteOrgSecretUnauthorized) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *DeleteOrgSecretUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeleteRouteNotFound as json.
+func (s *DeleteRouteNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeleteRouteNotFound from json.
+func (s *DeleteRouteNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeleteRouteNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeleteRouteNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeleteRouteNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeleteRouteNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeleteRouteUnauthorized as json.
+func (s *DeleteRouteUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeleteRouteUnauthorized from json.
+func (s *DeleteRouteUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeleteRouteUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeleteRouteUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeleteRouteUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeleteRouteUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -16746,9 +17263,27 @@ func (s *Endpoint) encodeFields(e *jx.Encoder) {
 			s.DeactivatedAt.Encode(e, json.EncodeDateTime)
 		}
 	}
+	{
+		if s.Kind.Set {
+			e.FieldStart("kind")
+			s.Kind.Encode(e)
+		}
+	}
+	{
+		if s.FunctionID.Set {
+			e.FieldStart("function_id")
+			s.FunctionID.Encode(e)
+		}
+	}
+	{
+		if s.IsRouteTarget.Set {
+			e.FieldStart("is_route_target")
+			s.IsRouteTarget.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEndpoint = [16]string{
+var jsonFieldsNameOfEndpoint = [19]string{
 	0:  "id",
 	1:  "org_id",
 	2:  "url",
@@ -16765,6 +17300,9 @@ var jsonFieldsNameOfEndpoint = [16]string{
 	13: "last_success_at",
 	14: "last_failure_at",
 	15: "deactivated_at",
+	16: "kind",
+	17: "function_id",
+	18: "is_route_target",
 }
 
 // Decode decodes Endpoint from json.
@@ -16772,7 +17310,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode Endpoint to nil")
 	}
-	var requiredBitSet [2]uint8
+	var requiredBitSet [3]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -16954,6 +17492,36 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"deactivated_at\"")
 			}
+		case "kind":
+			if err := func() error {
+				s.Kind.Reset()
+				if err := s.Kind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "function_id":
+			if err := func() error {
+				s.FunctionID.Reset()
+				if err := s.FunctionID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"function_id\"")
+			}
+		case "is_route_target":
+			if err := func() error {
+				s.IsRouteTarget.Reset()
+				if err := s.IsRouteTarget.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"is_route_target\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -16963,9 +17531,10 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [2]uint8{
+	for i, mask := range [3]uint8{
 		0b11101011,
 		0b00001111,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -17007,6 +17576,46 @@ func (s *Endpoint) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *Endpoint) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EndpointKind as json.
+func (s EndpointKind) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EndpointKind from json.
+func (s *EndpointKind) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EndpointKind to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EndpointKind(v) {
+	case EndpointKindHTTP:
+		*s = EndpointKindHTTP
+	case EndpointKindFunction:
+		*s = EndpointKindFunction
+	default:
+		*s = EndpointKind(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EndpointKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EndpointKind) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -29693,6 +30302,129 @@ func (s *ListRegistryRequestsUnauthorized) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode implements json.Marshaler.
+func (s *ListRoutesOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ListRoutesOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		e.ArrStart()
+		for _, elem := range s.Data {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfListRoutesOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes ListRoutesOK from json.
+func (s *ListRoutesOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListRoutesOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				s.Data = make([]RecipientRoute, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem RecipientRoute
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Data = append(s.Data, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListRoutesOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListRoutesOK) {
+					name = jsonFieldsNameOfListRoutesOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListRoutesOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListRoutesOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes ListSentEmailsBadRequest as json.
 func (s *ListSentEmailsBadRequest) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -29903,6 +30635,48 @@ func (s *ListSentEmailsUnauthorized) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ListSentEmailsUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes MatchType as json.
+func (s MatchType) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes MatchType from json.
+func (s *MatchType) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode MatchType to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch MatchType(v) {
+	case MatchTypeExact:
+		*s = MatchTypeExact
+	case MatchTypeWildcard:
+		*s = MatchTypeWildcard
+	case MatchTypeRegex:
+		*s = MatchTypeRegex
+	default:
+		*s = MatchType(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s MatchType) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *MatchType) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -30355,6 +31129,50 @@ func (s *NilInt) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes MatchType as json.
+func (o NilMatchType) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes MatchType from json.
+func (o *NilMatchType) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilMatchType to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v MatchType
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilMatchType) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilMatchType) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes RoutingTopologyDomainsItemRoutedFunction as json.
 func (o NilRoutingTopologyDomainsItemRoutedFunction) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -30483,6 +31301,50 @@ func (s NilSemanticSearchCoverage) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *NilSemanticSearchCoverage) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SimulateRouteResultDefaultScope as json.
+func (o NilSimulateRouteResultDefaultScope) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes SimulateRouteResultDefaultScope from json.
+func (o *NilSimulateRouteResultDefaultScope) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilSimulateRouteResultDefaultScope to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v SimulateRouteResultDefaultScope
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilSimulateRouteResultDefaultScope) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilSimulateRouteResultDefaultScope) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -30643,6 +31505,39 @@ func (s OptCliLogoutInput) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptCliLogoutInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CreateEndpointInputKind as json.
+func (o OptCreateEndpointInputKind) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes CreateEndpointInputKind from json.
+func (o *OptCreateEndpointInputKind) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptCreateEndpointInputKind to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptCreateEndpointInputKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptCreateEndpointInputKind) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -30848,6 +31743,39 @@ func (s *OptEmailStatus) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes EndpointKind as json.
+func (o OptEndpointKind) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes EndpointKind from json.
+func (o *OptEndpointKind) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptEndpointKind to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptEndpointKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptEndpointKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes ErrorResponseErrorDetails as json.
 func (o OptErrorResponseErrorDetails) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -31046,6 +31974,39 @@ func (s OptInt) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptInt) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes MatchType as json.
+func (o OptMatchType) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes MatchType from json.
+func (o *OptMatchType) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptMatchType to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptMatchType) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptMatchType) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -34766,6 +35727,298 @@ func (s *PublishPolicy) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode implements json.Marshaler.
+func (s *RecipientRoute) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *RecipientRoute) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		if s.MatchType.Set {
+			e.FieldStart("match_type")
+			s.MatchType.Encode(e)
+		}
+	}
+	{
+		if s.Pattern.Set {
+			e.FieldStart("pattern")
+			s.Pattern.Encode(e)
+		}
+	}
+	{
+		if s.EndpointID.Set {
+			e.FieldStart("endpoint_id")
+			s.EndpointID.Encode(e)
+		}
+	}
+	{
+		if s.DomainID.Set {
+			e.FieldStart("domain_id")
+			s.DomainID.Encode(e)
+		}
+	}
+	{
+		if s.Priority.Set {
+			e.FieldStart("priority")
+			s.Priority.Encode(e)
+		}
+	}
+	{
+		if s.Enabled.Set {
+			e.FieldStart("enabled")
+			s.Enabled.Encode(e)
+		}
+	}
+	{
+		if s.CreatedAt.Set {
+			e.FieldStart("created_at")
+			s.CreatedAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+	for k, elem := range s.AdditionalProps {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+var jsonFieldsNameOfRecipientRoute = [8]string{
+	0: "id",
+	1: "match_type",
+	2: "pattern",
+	3: "endpoint_id",
+	4: "domain_id",
+	5: "priority",
+	6: "enabled",
+	7: "created_at",
+}
+
+// Decode decodes RecipientRoute from json.
+func (s *RecipientRoute) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RecipientRoute to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.AdditionalProps = map[string]jx.Raw{}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "match_type":
+			if err := func() error {
+				s.MatchType.Reset()
+				if err := s.MatchType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"match_type\"")
+			}
+		case "pattern":
+			if err := func() error {
+				s.Pattern.Reset()
+				if err := s.Pattern.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pattern\"")
+			}
+		case "endpoint_id":
+			if err := func() error {
+				s.EndpointID.Reset()
+				if err := s.EndpointID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"endpoint_id\"")
+			}
+		case "domain_id":
+			if err := func() error {
+				s.DomainID.Reset()
+				if err := s.DomainID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain_id\"")
+			}
+		case "priority":
+			if err := func() error {
+				s.Priority.Reset()
+				if err := s.Priority.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"priority\"")
+			}
+		case "enabled":
+			if err := func() error {
+				s.Enabled.Reset()
+				if err := s.Enabled.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"enabled\"")
+			}
+		case "created_at":
+			if err := func() error {
+				s.CreatedAt.Reset()
+				if err := s.CreatedAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"created_at\"")
+			}
+		default:
+			var elem jx.Raw
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				elem = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrapf(err, "decode field %q", k)
+			}
+			s.AdditionalProps[string(k)] = elem
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RecipientRoute")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfRecipientRoute) {
+					name = jsonFieldsNameOfRecipientRoute[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *RecipientRoute) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RecipientRoute) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s RecipientRouteAdditional) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s RecipientRouteAdditional) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes RecipientRouteAdditional from json.
+func (s *RecipientRouteAdditional) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RecipientRouteAdditional to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RecipientRouteAdditional")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s RecipientRouteAdditional) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RecipientRouteAdditional) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes RegisterPayoutAddressBadRequest as json.
 func (s *RegisterPayoutAddressBadRequest) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -35753,6 +37006,424 @@ func (s *RegistryRequest) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *RegistryRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ReorderRoutesBadRequest as json.
+func (s *ReorderRoutesBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ReorderRoutesBadRequest from json.
+func (s *ReorderRoutesBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReorderRoutesBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ReorderRoutesBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ReorderRoutesBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReorderRoutesBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ReorderRoutesInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ReorderRoutesInput) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("updates")
+		e.ArrStart()
+		for _, elem := range s.Updates {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfReorderRoutesInput = [1]string{
+	0: "updates",
+}
+
+// Decode decodes ReorderRoutesInput from json.
+func (s *ReorderRoutesInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReorderRoutesInput to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "updates":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				s.Updates = make([]ReorderRoutesInputUpdatesItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem ReorderRoutesInputUpdatesItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Updates = append(s.Updates, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"updates\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ReorderRoutesInput")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfReorderRoutesInput) {
+					name = jsonFieldsNameOfReorderRoutesInput[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ReorderRoutesInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReorderRoutesInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ReorderRoutesInputUpdatesItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ReorderRoutesInputUpdatesItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		e.FieldStart("priority")
+		e.Int(s.Priority)
+	}
+}
+
+var jsonFieldsNameOfReorderRoutesInputUpdatesItem = [2]string{
+	0: "id",
+	1: "priority",
+}
+
+// Decode decodes ReorderRoutesInputUpdatesItem from json.
+func (s *ReorderRoutesInputUpdatesItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReorderRoutesInputUpdatesItem to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "priority":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Priority = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"priority\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ReorderRoutesInputUpdatesItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfReorderRoutesInputUpdatesItem) {
+					name = jsonFieldsNameOfReorderRoutesInputUpdatesItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ReorderRoutesInputUpdatesItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReorderRoutesInputUpdatesItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ReorderRoutesOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ReorderRoutesOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		e.ArrStart()
+		for _, elem := range s.Data {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfReorderRoutesOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes ReorderRoutesOK from json.
+func (s *ReorderRoutesOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReorderRoutesOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				s.Data = make([]RecipientRoute, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem RecipientRoute
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Data = append(s.Data, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ReorderRoutesOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfReorderRoutesOK) {
+					name = jsonFieldsNameOfReorderRoutesOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ReorderRoutesOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReorderRoutesOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ReorderRoutesUnauthorized as json.
+func (s *ReorderRoutesUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ReorderRoutesUnauthorized from json.
+func (s *ReorderRoutesUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ReorderRoutesUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ReorderRoutesUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ReorderRoutesUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ReorderRoutesUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -37623,6 +39294,287 @@ func (s *RotateWebhookSecretUnauthorized) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *RotateWebhookSecretUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *RouteEvaluation) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *RouteEvaluation) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("route_id")
+		e.Str(s.RouteID)
+	}
+	{
+		e.FieldStart("tier")
+		s.Tier.Encode(e)
+	}
+	{
+		e.FieldStart("pattern")
+		e.Str(s.Pattern)
+	}
+	{
+		e.FieldStart("result")
+		s.Result.Encode(e)
+	}
+	{
+		if s.Reason.Set {
+			e.FieldStart("reason")
+			s.Reason.Encode(e)
+		}
+	}
+	for k, elem := range s.AdditionalProps {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+var jsonFieldsNameOfRouteEvaluation = [5]string{
+	0: "route_id",
+	1: "tier",
+	2: "pattern",
+	3: "result",
+	4: "reason",
+}
+
+// Decode decodes RouteEvaluation from json.
+func (s *RouteEvaluation) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RouteEvaluation to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.AdditionalProps = map[string]jx.Raw{}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "route_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.RouteID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"route_id\"")
+			}
+		case "tier":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Tier.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"tier\"")
+			}
+		case "pattern":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.Pattern = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pattern\"")
+			}
+		case "result":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Result.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"result\"")
+			}
+		case "reason":
+			if err := func() error {
+				s.Reason.Reset()
+				if err := s.Reason.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reason\"")
+			}
+		default:
+			var elem jx.Raw
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				elem = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrapf(err, "decode field %q", k)
+			}
+			s.AdditionalProps[string(k)] = elem
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RouteEvaluation")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfRouteEvaluation) {
+					name = jsonFieldsNameOfRouteEvaluation[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *RouteEvaluation) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RouteEvaluation) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s RouteEvaluationAdditional) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s RouteEvaluationAdditional) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes RouteEvaluationAdditional from json.
+func (s *RouteEvaluationAdditional) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RouteEvaluationAdditional to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RouteEvaluationAdditional")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s RouteEvaluationAdditional) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RouteEvaluationAdditional) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes RouteEvaluationResult as json.
+func (s RouteEvaluationResult) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes RouteEvaluationResult from json.
+func (s *RouteEvaluationResult) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RouteEvaluationResult to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch RouteEvaluationResult(v) {
+	case RouteEvaluationResultHit:
+		*s = RouteEvaluationResultHit
+	case RouteEvaluationResultMiss:
+		*s = RouteEvaluationResultMiss
+	case RouteEvaluationResultSkipped:
+		*s = RouteEvaluationResultSkipped
+	case RouteEvaluationResultError:
+		*s = RouteEvaluationResultError
+	default:
+		*s = RouteEvaluationResult(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s RouteEvaluationResult) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RouteEvaluationResult) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -44575,6 +46527,696 @@ func (s *SetOrgSecretUnauthorized) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes SimulateRouteBadRequest as json.
+func (s *SimulateRouteBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes SimulateRouteBadRequest from json.
+func (s *SimulateRouteBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SimulateRouteBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = SimulateRouteBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SimulateRouteBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SimulateRouteBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SimulateRouteInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SimulateRouteInput) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("recipient")
+		e.Str(s.Recipient)
+	}
+	{
+		if s.EventType.Set {
+			e.FieldStart("event_type")
+			s.EventType.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfSimulateRouteInput = [2]string{
+	0: "recipient",
+	1: "event_type",
+}
+
+// Decode decodes SimulateRouteInput from json.
+func (s *SimulateRouteInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SimulateRouteInput to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "recipient":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Recipient = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"recipient\"")
+			}
+		case "event_type":
+			if err := func() error {
+				s.EventType.Reset()
+				if err := s.EventType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"event_type\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SimulateRouteInput")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSimulateRouteInput) {
+					name = jsonFieldsNameOfSimulateRouteInput[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SimulateRouteInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SimulateRouteInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SimulateRouteOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SimulateRouteOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfSimulateRouteOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes SimulateRouteOK from json.
+func (s *SimulateRouteOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SimulateRouteOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SimulateRouteOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSimulateRouteOK) {
+					name = jsonFieldsNameOfSimulateRouteOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SimulateRouteOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SimulateRouteOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SimulateRouteResult) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SimulateRouteResult) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("outcome")
+		s.Outcome.Encode(e)
+	}
+	{
+		e.FieldStart("recipient")
+		e.Str(s.Recipient)
+	}
+	{
+		e.FieldStart("endpoint_id")
+		s.EndpointID.Encode(e)
+	}
+	{
+		e.FieldStart("matched_route_id")
+		s.MatchedRouteID.Encode(e)
+	}
+	{
+		e.FieldStart("matched_tier")
+		s.MatchedTier.Encode(e)
+	}
+	{
+		e.FieldStart("matched_pattern")
+		s.MatchedPattern.Encode(e)
+	}
+	{
+		e.FieldStart("default_scope")
+		s.DefaultScope.Encode(e)
+	}
+	{
+		e.FieldStart("evaluated")
+		e.ArrStart()
+		for _, elem := range s.Evaluated {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("truncated")
+		e.Bool(s.Truncated)
+	}
+	for k, elem := range s.AdditionalProps {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+var jsonFieldsNameOfSimulateRouteResult = [9]string{
+	0: "outcome",
+	1: "recipient",
+	2: "endpoint_id",
+	3: "matched_route_id",
+	4: "matched_tier",
+	5: "matched_pattern",
+	6: "default_scope",
+	7: "evaluated",
+	8: "truncated",
+}
+
+// Decode decodes SimulateRouteResult from json.
+func (s *SimulateRouteResult) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SimulateRouteResult to nil")
+	}
+	var requiredBitSet [2]uint8
+	s.AdditionalProps = map[string]jx.Raw{}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "outcome":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Outcome.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"outcome\"")
+			}
+		case "recipient":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Recipient = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"recipient\"")
+			}
+		case "endpoint_id":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.EndpointID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"endpoint_id\"")
+			}
+		case "matched_route_id":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.MatchedRouteID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"matched_route_id\"")
+			}
+		case "matched_tier":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				if err := s.MatchedTier.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"matched_tier\"")
+			}
+		case "matched_pattern":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				if err := s.MatchedPattern.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"matched_pattern\"")
+			}
+		case "default_scope":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				if err := s.DefaultScope.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"default_scope\"")
+			}
+		case "evaluated":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				s.Evaluated = make([]RouteEvaluation, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem RouteEvaluation
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Evaluated = append(s.Evaluated, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"evaluated\"")
+			}
+		case "truncated":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Truncated = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"truncated\"")
+			}
+		default:
+			var elem jx.Raw
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				elem = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrapf(err, "decode field %q", k)
+			}
+			s.AdditionalProps[string(k)] = elem
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SimulateRouteResult")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSimulateRouteResult) {
+					name = jsonFieldsNameOfSimulateRouteResult[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SimulateRouteResult) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SimulateRouteResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s SimulateRouteResultAdditional) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s SimulateRouteResultAdditional) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes SimulateRouteResultAdditional from json.
+func (s *SimulateRouteResultAdditional) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SimulateRouteResultAdditional to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SimulateRouteResultAdditional")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SimulateRouteResultAdditional) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SimulateRouteResultAdditional) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SimulateRouteResultDefaultScope as json.
+func (s SimulateRouteResultDefaultScope) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes SimulateRouteResultDefaultScope from json.
+func (s *SimulateRouteResultDefaultScope) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SimulateRouteResultDefaultScope to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch SimulateRouteResultDefaultScope(v) {
+	case SimulateRouteResultDefaultScopeDomain:
+		*s = SimulateRouteResultDefaultScopeDomain
+	case SimulateRouteResultDefaultScopeOrg:
+		*s = SimulateRouteResultDefaultScopeOrg
+	default:
+		*s = SimulateRouteResultDefaultScope(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SimulateRouteResultDefaultScope) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SimulateRouteResultDefaultScope) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SimulateRouteResultOutcome as json.
+func (s SimulateRouteResultOutcome) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes SimulateRouteResultOutcome from json.
+func (s *SimulateRouteResultOutcome) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SimulateRouteResultOutcome to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch SimulateRouteResultOutcome(v) {
+	case SimulateRouteResultOutcomeMatched:
+		*s = SimulateRouteResultOutcomeMatched
+	case SimulateRouteResultOutcomeDefaulted:
+		*s = SimulateRouteResultOutcomeDefaulted
+	case SimulateRouteResultOutcomeNone:
+		*s = SimulateRouteResultOutcomeNone
+	default:
+		*s = SimulateRouteResultOutcome(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SimulateRouteResultOutcome) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SimulateRouteResultOutcome) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SimulateRouteUnauthorized as json.
+func (s *SimulateRouteUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes SimulateRouteUnauthorized from json.
+func (s *SimulateRouteUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SimulateRouteUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = SimulateRouteUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SimulateRouteUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SimulateRouteUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes StartAgentClaimBadRequest as json.
 func (s *StartAgentClaimBadRequest) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -50417,6 +53059,390 @@ func (s *UpdateRegistryUnprocessableEntity) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *UpdateRegistryUnprocessableEntity) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateRouteBadRequest as json.
+func (s *UpdateRouteBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateRouteBadRequest from json.
+func (s *UpdateRouteBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRouteBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateRouteBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRouteBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRouteBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *UpdateRouteInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *UpdateRouteInput) encodeFields(e *jx.Encoder) {
+	{
+		if s.MatchType.Set {
+			e.FieldStart("match_type")
+			s.MatchType.Encode(e)
+		}
+	}
+	{
+		if s.Pattern.Set {
+			e.FieldStart("pattern")
+			s.Pattern.Encode(e)
+		}
+	}
+	{
+		if s.EndpointID.Set {
+			e.FieldStart("endpoint_id")
+			s.EndpointID.Encode(e)
+		}
+	}
+	{
+		if s.DomainID.Set {
+			e.FieldStart("domain_id")
+			s.DomainID.Encode(e)
+		}
+	}
+	{
+		if s.Priority.Set {
+			e.FieldStart("priority")
+			s.Priority.Encode(e)
+		}
+	}
+	{
+		if s.Enabled.Set {
+			e.FieldStart("enabled")
+			s.Enabled.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfUpdateRouteInput = [6]string{
+	0: "match_type",
+	1: "pattern",
+	2: "endpoint_id",
+	3: "domain_id",
+	4: "priority",
+	5: "enabled",
+}
+
+// Decode decodes UpdateRouteInput from json.
+func (s *UpdateRouteInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRouteInput to nil")
+	}
+	var propertiesCount int
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		propertiesCount++
+		switch string(k) {
+		case "match_type":
+			if err := func() error {
+				s.MatchType.Reset()
+				if err := s.MatchType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"match_type\"")
+			}
+		case "pattern":
+			if err := func() error {
+				s.Pattern.Reset()
+				if err := s.Pattern.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pattern\"")
+			}
+		case "endpoint_id":
+			if err := func() error {
+				s.EndpointID.Reset()
+				if err := s.EndpointID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"endpoint_id\"")
+			}
+		case "domain_id":
+			if err := func() error {
+				s.DomainID.Reset()
+				if err := s.DomainID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain_id\"")
+			}
+		case "priority":
+			if err := func() error {
+				s.Priority.Reset()
+				if err := s.Priority.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"priority\"")
+			}
+		case "enabled":
+			if err := func() error {
+				s.Enabled.Reset()
+				if err := s.Enabled.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"enabled\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode UpdateRouteInput")
+	}
+	// Validate properties count.
+	if err := (validate.Object{
+		MinProperties:    1,
+		MinPropertiesSet: true,
+		MaxProperties:    0,
+		MaxPropertiesSet: false,
+	}).ValidateProperties(propertiesCount); err != nil {
+		return errors.Wrap(err, "object")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRouteInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRouteInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateRouteNotFound as json.
+func (s *UpdateRouteNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateRouteNotFound from json.
+func (s *UpdateRouteNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRouteNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateRouteNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRouteNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRouteNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *UpdateRouteOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *UpdateRouteOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfUpdateRouteOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes UpdateRouteOK from json.
+func (s *UpdateRouteOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRouteOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode UpdateRouteOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfUpdateRouteOK) {
+					name = jsonFieldsNameOfUpdateRouteOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRouteOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRouteOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateRouteUnauthorized as json.
+func (s *UpdateRouteUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateRouteUnauthorized from json.
+func (s *UpdateRouteUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRouteUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateRouteUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRouteUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRouteUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

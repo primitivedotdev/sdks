@@ -2730,7 +2730,7 @@ export type TestResult = {
  */
 export type MatchType = 'exact' | 'wildcard' | 'regex';
 
-export type Route = {
+export type RecipientRoute = {
     id: string;
     match_type?: MatchType;
     /**
@@ -2750,11 +2750,6 @@ export type Route = {
      */
     priority?: number;
     enabled?: boolean;
-    /**
-     * Times this route has matched (may be a string for large counts).
-     */
-    match_count?: unknown;
-    last_matched_at?: string | null;
     created_at?: string;
     [key: string]: unknown;
 };
@@ -5192,7 +5187,7 @@ export type ListRoutesResponses = {
      * List of routes
      */
     200: SuccessEnvelope & {
-        data?: Array<Route>;
+        data?: Array<RecipientRoute>;
     };
 };
 
@@ -5223,7 +5218,7 @@ export type CreateRouteResponses = {
      * Route created
      */
     201: SuccessEnvelope & {
-        data?: Route;
+        data?: RecipientRoute;
     };
 };
 
@@ -5301,7 +5296,7 @@ export type UpdateRouteResponses = {
      * Updated route
      */
     200: SuccessEnvelope & {
-        data?: Route;
+        data?: RecipientRoute;
     };
 };
 
@@ -5332,7 +5327,7 @@ export type ReorderRoutesResponses = {
      * The updated routes, in evaluation order
      */
     200: SuccessEnvelope & {
-        data?: Array<Route>;
+        data?: Array<RecipientRoute>;
     };
 };
 

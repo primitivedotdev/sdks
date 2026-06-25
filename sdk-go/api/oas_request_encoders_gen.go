@@ -186,6 +186,20 @@ func encodeCreateRegistryRequest(
 	return nil
 }
 
+func encodeCreateRouteRequest(
+	req *CreateRouteInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeDecideRegistryRequestRequest(
 	req *DecideRegistryRequestInput,
 	r *http.Request,
@@ -258,6 +272,20 @@ func encodePublishAgentRequest(
 
 func encodeRegisterPayoutAddressRequest(
 	req *RegisterPayoutAddressInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeReorderRoutesRequest(
+	req *ReorderRoutesInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -370,6 +398,20 @@ func encodeSetFunctionSecretRequest(
 
 func encodeSetOrgSecretRequest(
 	req *SetOrgSecretInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeSimulateRouteRequest(
+	req *SimulateRouteInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -536,6 +578,20 @@ func encodeUpdateFunctionRequest(
 
 func encodeUpdateRegistryRequest(
 	req *UpdateRegistryInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateRouteRequest(
+	req *UpdateRouteInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

@@ -208,6 +208,20 @@ func (UnimplementedHandler) CreateRegistry(ctx context.Context, req *CreateRegis
 	return r, ht.ErrNotImplemented
 }
 
+// CreateRoute implements createRoute operation.
+//
+// Creates a recipient route that binds a pattern to a destination.
+// Provide exactly one of `endpoint_id` (an existing endpoint) or
+// `function_id`. When `function_id` is given, a dedicated route-target
+// endpoint is minted for that function and bound to the route in the same
+// transaction, so per-address function routing (for example
+// `alice@example.com` to one function) is a single call.
+//
+// POST /routes
+func (UnimplementedHandler) CreateRoute(ctx context.Context, req *CreateRouteInput) (r CreateRouteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DecideRegistryRequest implements decideRegistryRequest operation.
 //
 // Approve or reject a publication request.
@@ -298,6 +312,16 @@ func (UnimplementedHandler) DeleteFunctionSecret(ctx context.Context, params Del
 //
 // DELETE /org/secrets/{key}
 func (UnimplementedHandler) DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (r DeleteOrgSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteRoute implements deleteRoute operation.
+//
+// Soft-deletes a recipient route. Mail that previously matched it falls through to the remaining
+// routes and the default destination.
+//
+// DELETE /routes/{id}
+func (UnimplementedHandler) DeleteRoute(ctx context.Context, params DeleteRouteParams) (r DeleteRouteRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -784,6 +808,15 @@ func (UnimplementedHandler) ListRegistryRequests(ctx context.Context, params Lis
 	return r, ht.ErrNotImplemented
 }
 
+// ListRoutes implements listRoutes operation.
+//
+// Returns all active recipient routes for the organization, in evaluation order.
+//
+// GET /routes
+func (UnimplementedHandler) ListRoutes(ctx context.Context) (r ListRoutesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListSentEmails implements listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -859,6 +892,16 @@ func (UnimplementedHandler) PublishAgent(ctx context.Context, req *PublishAgentI
 //
 // POST /x402/payout-addresses
 func (UnimplementedHandler) RegisterPayoutAddress(ctx context.Context, req *RegisterPayoutAddressInput) (r RegisterPayoutAddressRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ReorderRoutes implements reorderRoutes operation.
+//
+// Sets the evaluation priority of multiple routes in one call. Lower priority numbers are evaluated
+// first.
+//
+// POST /routes/reorder
+func (UnimplementedHandler) ReorderRoutes(ctx context.Context, req *ReorderRoutesInput) (r ReorderRoutesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1043,6 +1086,18 @@ func (UnimplementedHandler) SetOrgSecret(ctx context.Context, req *SetOrgSecretI
 	return r, ht.ErrNotImplemented
 }
 
+// SimulateRoute implements simulateRoute operation.
+//
+// Resolves a recipient address against the current routes and default
+// destination without delivering anything, returning the destination it
+// would reach plus a per-route evaluation trace. Useful for verifying a
+// pattern before relying on it.
+//
+// POST /routes/simulate
+func (UnimplementedHandler) SimulateRoute(ctx context.Context, req *SimulateRouteInput) (r SimulateRouteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // StartAgentClaim implements startAgentClaim operation.
 //
 // Begins upgrading an emailless `agent` account into a full `developer`
@@ -1218,6 +1273,15 @@ func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunct
 //
 // PATCH /registries/{slug}
 func (UnimplementedHandler) UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (r UpdateRegistryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateRoute implements updateRoute operation.
+//
+// Updates fields of an existing recipient route.
+//
+// PATCH /routes/{id}
+func (UnimplementedHandler) UpdateRoute(ctx context.Context, req *UpdateRouteInput, params UpdateRouteParams) (r UpdateRouteRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

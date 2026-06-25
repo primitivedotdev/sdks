@@ -2059,7 +2059,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Route'
+                          $ref: '#/components/schemas/RecipientRoute'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -2091,7 +2091,7 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Route'
+                        $ref: '#/components/schemas/RecipientRoute'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -2123,7 +2123,7 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Route'
+                        $ref: '#/components/schemas/RecipientRoute'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -2169,7 +2169,7 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Route'
+                          $ref: '#/components/schemas/RecipientRoute'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -7984,7 +7984,7 @@ components:
       description: |
         How a route's pattern is matched against the recipient. exact: the full
         address. wildcard: a glob with * and ? that never crosses the @.
-    Route:
+    RecipientRoute:
       type: object
       additionalProperties: true
       properties:
@@ -8009,15 +8009,11 @@ components:
           description: Evaluation order; lower is evaluated first.
         enabled:
           type: boolean
-        match_count:
-          type: [integer, string]
-          description: Times this route has matched (may be a string for large counts).
-        last_matched_at:
-          type: [string, 'null']
-          format: date-time
         created_at:
           type: string
           format: date-time
+      # Match statistics (match_count, last_matched_at) are also returned and
+      # flow through as additional properties.
       required: [id]
 
     CreateRouteInput:

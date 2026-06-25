@@ -46,6 +46,7 @@ from .create_email_challenge_input_network import CreateEmailChallengeInputNetwo
 from .create_email_challenge_response_200 import CreateEmailChallengeResponse200
 from .create_email_challenge_response_201 import CreateEmailChallengeResponse201
 from .create_endpoint_input import CreateEndpointInput
+from .create_endpoint_input_kind import CreateEndpointInputKind
 from .create_endpoint_input_rules import CreateEndpointInputRules
 from .create_endpoint_response_201 import CreateEndpointResponse201
 from .create_filter_input import CreateFilterInput
@@ -64,6 +65,8 @@ from .create_org_secret_response_201 import CreateOrgSecretResponse201
 from .create_registry_input import CreateRegistryInput
 from .create_registry_response_201 import CreateRegistryResponse201
 from .create_registry_response_201_data import CreateRegistryResponse201Data
+from .create_route_input import CreateRouteInput
+from .create_route_response_201 import CreateRouteResponse201
 from .decide_registry_request_input import DecideRegistryRequestInput
 from .decide_registry_request_input_decision import DecideRegistryRequestInputDecision
 from .decide_registry_request_response_200 import DecideRegistryRequestResponse200
@@ -82,6 +85,8 @@ from .delete_filter_response_200 import DeleteFilterResponse200
 from .delete_filter_response_200_data import DeleteFilterResponse200Data
 from .delete_function_response_200 import DeleteFunctionResponse200
 from .delete_function_response_200_data import DeleteFunctionResponse200Data
+from .delete_route_response_200 import DeleteRouteResponse200
+from .delete_route_response_200_data import DeleteRouteResponse200Data
 from .delivery_status import DeliveryStatus
 from .delivery_summary import DeliverySummary
 from .delivery_summary_email_type_0 import DeliverySummaryEmailType0
@@ -113,6 +118,7 @@ from .email_webhook_status_type_1 import EmailWebhookStatusType1
 from .email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from .email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
 from .endpoint import Endpoint
+from .endpoint_kind import EndpointKind
 from .endpoint_rules import EndpointRules
 from .error_response import ErrorResponse
 from .error_response_error import ErrorResponseError
@@ -199,7 +205,9 @@ from .list_payout_addresses_response_200 import ListPayoutAddressesResponse200
 from .list_registries_response_200 import ListRegistriesResponse200
 from .list_registry_agents_response_200 import ListRegistryAgentsResponse200
 from .list_registry_requests_response_200 import ListRegistryRequestsResponse200
+from .list_routes_response_200 import ListRoutesResponse200
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
+from .match_type import MatchType
 from .org_secret_list_item import OrgSecretListItem
 from .org_secret_write_result import OrgSecretWriteResult
 from .pagination_meta import PaginationMeta
@@ -217,12 +225,16 @@ from .publish_agent_response_201 import PublishAgentResponse201
 from .publish_agent_result import PublishAgentResult
 from .publish_agent_result_status import PublishAgentResultStatus
 from .publish_policy import PublishPolicy
+from .recipient_route import RecipientRoute
 from .register_payout_address_input import RegisterPayoutAddressInput
 from .register_payout_address_input_network import RegisterPayoutAddressInputNetwork
 from .register_payout_address_response_201 import RegisterPayoutAddressResponse201
 from .registry import Registry
 from .registry_agent import RegistryAgent
 from .registry_request import RegistryRequest
+from .reorder_routes_input import ReorderRoutesInput
+from .reorder_routes_input_updates_item import ReorderRoutesInputUpdatesItem
+from .reorder_routes_response_200 import ReorderRoutesResponse200
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
 from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
@@ -234,6 +246,8 @@ from .resend_cli_signup_verification_input import ResendCliSignupVerificationInp
 from .resend_cli_signup_verification_response_200 import ResendCliSignupVerificationResponse200
 from .resolve_registry_handle_response_200 import ResolveRegistryHandleResponse200
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
+from .route_evaluation import RouteEvaluation
+from .route_evaluation_result import RouteEvaluationResult
 from .routing_topology import RoutingTopology
 from .routing_topology_domains_item import RoutingTopologyDomainsItem
 from .routing_topology_domains_item_routed_function_type_0 import RoutingTopologyDomainsItemRoutedFunctionType0
@@ -280,6 +294,13 @@ from .set_function_secret_response_201 import SetFunctionSecretResponse201
 from .set_org_secret_input import SetOrgSecretInput
 from .set_org_secret_response_200 import SetOrgSecretResponse200
 from .set_org_secret_response_201 import SetOrgSecretResponse201
+from .simulate_route_input import SimulateRouteInput
+from .simulate_route_response_200 import SimulateRouteResponse200
+from .simulate_route_result import SimulateRouteResult
+from .simulate_route_result_default_scope_type_1 import SimulateRouteResultDefaultScopeType1
+from .simulate_route_result_default_scope_type_2_type_1 import SimulateRouteResultDefaultScopeType2Type1
+from .simulate_route_result_default_scope_type_3_type_1 import SimulateRouteResultDefaultScopeType3Type1
+from .simulate_route_result_outcome import SimulateRouteResultOutcome
 from .start_agent_claim_input import StartAgentClaimInput
 from .start_agent_claim_response_200 import StartAgentClaimResponse200
 from .start_agent_signup_input import StartAgentSignupInput
@@ -321,6 +342,8 @@ from .update_function_response_200 import UpdateFunctionResponse200
 from .update_registry_input import UpdateRegistryInput
 from .update_registry_response_200 import UpdateRegistryResponse200
 from .update_registry_response_200_data import UpdateRegistryResponse200Data
+from .update_route_input import UpdateRouteInput
+from .update_route_response_200 import UpdateRouteResponse200
 from .update_spend_policy_input import UpdateSpendPolicyInput
 from .update_spend_policy_response_200 import UpdateSpendPolicyResponse200
 from .verified_domain import VerifiedDomain
@@ -400,6 +423,7 @@ __all__ = (
     "CreateEmailChallengeResponse200",
     "CreateEmailChallengeResponse201",
     "CreateEndpointInput",
+    "CreateEndpointInputKind",
     "CreateEndpointInputRules",
     "CreateEndpointResponse201",
     "CreateFilterInput",
@@ -418,6 +442,8 @@ __all__ = (
     "CreateRegistryInput",
     "CreateRegistryResponse201",
     "CreateRegistryResponse201Data",
+    "CreateRouteInput",
+    "CreateRouteResponse201",
     "DecideRegistryRequestInput",
     "DecideRegistryRequestInputDecision",
     "DecideRegistryRequestResponse200",
@@ -436,6 +462,8 @@ __all__ = (
     "DeleteFilterResponse200Data",
     "DeleteFunctionResponse200",
     "DeleteFunctionResponse200Data",
+    "DeleteRouteResponse200",
+    "DeleteRouteResponse200Data",
     "DeliveryStatus",
     "DeliverySummary",
     "DeliverySummaryEmailType0",
@@ -467,6 +495,7 @@ __all__ = (
     "EmailWebhookStatusType2Type1",
     "EmailWebhookStatusType3Type1",
     "Endpoint",
+    "EndpointKind",
     "EndpointRules",
     "ErrorResponse",
     "ErrorResponseError",
@@ -553,7 +582,9 @@ __all__ = (
     "ListRegistriesResponse200",
     "ListRegistryAgentsResponse200",
     "ListRegistryRequestsResponse200",
+    "ListRoutesResponse200",
     "ListSentEmailsResponse200",
+    "MatchType",
     "OrgSecretListItem",
     "OrgSecretWriteResult",
     "PaginationMeta",
@@ -571,12 +602,16 @@ __all__ = (
     "PublishAgentResult",
     "PublishAgentResultStatus",
     "PublishPolicy",
+    "RecipientRoute",
     "RegisterPayoutAddressInput",
     "RegisterPayoutAddressInputNetwork",
     "RegisterPayoutAddressResponse201",
     "Registry",
     "RegistryAgent",
     "RegistryRequest",
+    "ReorderRoutesInput",
+    "ReorderRoutesInputUpdatesItem",
+    "ReorderRoutesResponse200",
     "ReplayDeliveryResponse200",
     "ReplayEmailWebhooksResponse200",
     "ReplayResult",
@@ -588,6 +623,8 @@ __all__ = (
     "ResendCliSignupVerificationResponse200",
     "ResolveRegistryHandleResponse200",
     "RotateWebhookSecretResponse200",
+    "RouteEvaluation",
+    "RouteEvaluationResult",
     "RoutingTopology",
     "RoutingTopologyDomainsItem",
     "RoutingTopologyDomainsItemRoutedFunctionType0",
@@ -634,6 +671,13 @@ __all__ = (
     "SetOrgSecretInput",
     "SetOrgSecretResponse200",
     "SetOrgSecretResponse201",
+    "SimulateRouteInput",
+    "SimulateRouteResponse200",
+    "SimulateRouteResult",
+    "SimulateRouteResultDefaultScopeType1",
+    "SimulateRouteResultDefaultScopeType2Type1",
+    "SimulateRouteResultDefaultScopeType3Type1",
+    "SimulateRouteResultOutcome",
     "StartAgentClaimInput",
     "StartAgentClaimResponse200",
     "StartAgentSignupInput",
@@ -675,6 +719,8 @@ __all__ = (
     "UpdateRegistryInput",
     "UpdateRegistryResponse200",
     "UpdateRegistryResponse200Data",
+    "UpdateRouteInput",
+    "UpdateRouteResponse200",
     "UpdateSpendPolicyInput",
     "UpdateSpendPolicyResponse200",
     "VerifiedDomain",

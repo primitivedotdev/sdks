@@ -8867,20 +8867,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "enabled": {
           "type": "boolean"
         },
-        "match_count": {
-          "type": [
-            "integer",
-            "string"
-          ],
-          "description": "Times this route has matched (may be a string for large counts)."
-        },
-        "last_matched_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
         "created_at": {
           "type": "string",
           "format": "date-time"
@@ -8975,20 +8961,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "enabled": {
             "type": "boolean"
-          },
-          "match_count": {
-            "type": [
-              "integer",
-              "string"
-            ],
-            "description": "Times this route has matched (may be a string for large counts)."
-          },
-          "last_matched_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
           },
           "created_at": {
             "type": "string",
@@ -9091,20 +9063,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "enabled": {
             "type": "boolean"
-          },
-          "match_count": {
-            "type": [
-              "integer",
-              "string"
-            ],
-            "description": "Times this route has matched (may be a string for large counts)."
-          },
-          "last_matched_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
           },
           "created_at": {
             "type": "string",
@@ -9379,20 +9337,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "enabled": {
           "type": "boolean"
-        },
-        "match_count": {
-          "type": [
-            "integer",
-            "string"
-          ],
-          "description": "Times this route has matched (may be a string for large counts)."
-        },
-        "last_matched_at": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
         },
         "created_at": {
           "type": "string",

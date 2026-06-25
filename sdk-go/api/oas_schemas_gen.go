@@ -2607,18 +2607,27 @@ func (*CreateEndpointCreated) createEndpointRes() {}
 
 // Ref: #/components/schemas/CreateEndpointInput
 type CreateEndpointInput struct {
-	// The webhook URL to deliver events to.
-	URL string `json:"url"`
+	// The webhook URL to deliver events to. Required when kind is http; omit for function endpoints.
+	URL OptString `json:"url"`
 	// Whether the endpoint is active.
 	Enabled OptBool `json:"enabled"`
 	// Restrict to emails from a specific domain.
 	DomainID OptNilUUID `json:"domain_id"`
 	// Endpoint-specific filtering rules.
 	Rules *CreateEndpointInputRules `json:"rules"`
+	// Http: deliver to a webhook URL. function: invoke a Primitive Function (provide function_id, omit
+	// url).
+	Kind OptCreateEndpointInputKind `json:"kind"`
+	// The Function to invoke. Required when kind is function.
+	FunctionID OptUUID `json:"function_id"`
+	// Create this endpoint as a route-target: reachable only via an
+	// explicit recipient route, never a domain's default destination, and
+	// exempt from the one-endpoint-per-domain rule.
+	IsRouteTarget OptBool `json:"is_route_target"`
 }
 
 // GetURL returns the value of URL.
-func (s *CreateEndpointInput) GetURL() string {
+func (s *CreateEndpointInput) GetURL() OptString {
 	return s.URL
 }
 
@@ -2637,8 +2646,23 @@ func (s *CreateEndpointInput) GetRules() *CreateEndpointInputRules {
 	return s.Rules
 }
 
+// GetKind returns the value of Kind.
+func (s *CreateEndpointInput) GetKind() OptCreateEndpointInputKind {
+	return s.Kind
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *CreateEndpointInput) GetFunctionID() OptUUID {
+	return s.FunctionID
+}
+
+// GetIsRouteTarget returns the value of IsRouteTarget.
+func (s *CreateEndpointInput) GetIsRouteTarget() OptBool {
+	return s.IsRouteTarget
+}
+
 // SetURL sets the value of URL.
-func (s *CreateEndpointInput) SetURL(val string) {
+func (s *CreateEndpointInput) SetURL(val OptString) {
 	s.URL = val
 }
 
@@ -2655,6 +2679,64 @@ func (s *CreateEndpointInput) SetDomainID(val OptNilUUID) {
 // SetRules sets the value of Rules.
 func (s *CreateEndpointInput) SetRules(val *CreateEndpointInputRules) {
 	s.Rules = val
+}
+
+// SetKind sets the value of Kind.
+func (s *CreateEndpointInput) SetKind(val OptCreateEndpointInputKind) {
+	s.Kind = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *CreateEndpointInput) SetFunctionID(val OptUUID) {
+	s.FunctionID = val
+}
+
+// SetIsRouteTarget sets the value of IsRouteTarget.
+func (s *CreateEndpointInput) SetIsRouteTarget(val OptBool) {
+	s.IsRouteTarget = val
+}
+
+// Http: deliver to a webhook URL. function: invoke a Primitive Function (provide function_id, omit
+// url).
+type CreateEndpointInputKind string
+
+const (
+	CreateEndpointInputKindHTTP     CreateEndpointInputKind = "http"
+	CreateEndpointInputKindFunction CreateEndpointInputKind = "function"
+)
+
+// AllValues returns all CreateEndpointInputKind values.
+func (CreateEndpointInputKind) AllValues() []CreateEndpointInputKind {
+	return []CreateEndpointInputKind{
+		CreateEndpointInputKindHTTP,
+		CreateEndpointInputKindFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateEndpointInputKind) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateEndpointInputKindHTTP:
+		return []byte(s), nil
+	case CreateEndpointInputKindFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateEndpointInputKind) UnmarshalText(data []byte) error {
+	switch CreateEndpointInputKind(data) {
+	case CreateEndpointInputKindHTTP:
+		*s = CreateEndpointInputKindHTTP
+		return nil
+	case CreateEndpointInputKindFunction:
+		*s = CreateEndpointInputKindFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Endpoint-specific filtering rules.
@@ -3282,6 +3364,129 @@ type CreateRegistryUnprocessableEntity ErrorResponse
 
 func (*CreateRegistryUnprocessableEntity) createRegistryRes() {}
 
+type CreateRouteBadRequest ErrorResponse
+
+func (*CreateRouteBadRequest) createRouteRes() {}
+
+// Merged schema.
+type CreateRouteCreated struct {
+	Success bool           `json:"success"`
+	Data    RecipientRoute `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateRouteCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateRouteCreated) GetData() RecipientRoute {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateRouteCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateRouteCreated) SetData(val RecipientRoute) {
+	s.Data = val
+}
+
+func (*CreateRouteCreated) createRouteRes() {}
+
+// Ref: #/components/schemas/CreateRouteInput
+type CreateRouteInput struct {
+	MatchType MatchType `json:"match_type"`
+	// The recipient pattern to match (interpreted per match_type).
+	Pattern string `json:"pattern"`
+	// Target an existing endpoint. Provide this OR function_id, not both.
+	EndpointID OptUUID `json:"endpoint_id"`
+	// Mint a dedicated route-target endpoint for this Function and bind the
+	// route to it in one transaction. Provide this OR endpoint_id, not both.
+	FunctionID OptUUID `json:"function_id"`
+	// Scope the route to one domain; null applies it org-wide.
+	DomainID OptNilUUID `json:"domain_id"`
+	// Evaluation order; lower is evaluated first.
+	Priority OptInt  `json:"priority"`
+	Enabled  OptBool `json:"enabled"`
+}
+
+// GetMatchType returns the value of MatchType.
+func (s *CreateRouteInput) GetMatchType() MatchType {
+	return s.MatchType
+}
+
+// GetPattern returns the value of Pattern.
+func (s *CreateRouteInput) GetPattern() string {
+	return s.Pattern
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *CreateRouteInput) GetEndpointID() OptUUID {
+	return s.EndpointID
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *CreateRouteInput) GetFunctionID() OptUUID {
+	return s.FunctionID
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *CreateRouteInput) GetDomainID() OptNilUUID {
+	return s.DomainID
+}
+
+// GetPriority returns the value of Priority.
+func (s *CreateRouteInput) GetPriority() OptInt {
+	return s.Priority
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *CreateRouteInput) GetEnabled() OptBool {
+	return s.Enabled
+}
+
+// SetMatchType sets the value of MatchType.
+func (s *CreateRouteInput) SetMatchType(val MatchType) {
+	s.MatchType = val
+}
+
+// SetPattern sets the value of Pattern.
+func (s *CreateRouteInput) SetPattern(val string) {
+	s.Pattern = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *CreateRouteInput) SetEndpointID(val OptUUID) {
+	s.EndpointID = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *CreateRouteInput) SetFunctionID(val OptUUID) {
+	s.FunctionID = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *CreateRouteInput) SetDomainID(val OptNilUUID) {
+	s.DomainID = val
+}
+
+// SetPriority sets the value of Priority.
+func (s *CreateRouteInput) SetPriority(val OptInt) {
+	s.Priority = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *CreateRouteInput) SetEnabled(val OptBool) {
+	s.Enabled = val
+}
+
+type CreateRouteUnauthorized ErrorResponse
+
+func (*CreateRouteUnauthorized) createRouteRes() {}
+
 type DecideRegistryRequestConflict ErrorResponse
 
 func (*DecideRegistryRequestConflict) decideRegistryRequestRes() {}
@@ -3667,6 +3872,14 @@ type DeleteOrgSecretUnauthorized ErrorResponse
 
 func (*DeleteOrgSecretUnauthorized) deleteOrgSecretRes() {}
 
+type DeleteRouteNotFound ErrorResponse
+
+func (*DeleteRouteNotFound) deleteRouteRes() {}
+
+type DeleteRouteUnauthorized ErrorResponse
+
+func (*DeleteRouteUnauthorized) deleteRouteRes() {}
+
 // Merged schema.
 type Deleted struct {
 	Success bool        `json:"success"`
@@ -3698,6 +3911,7 @@ func (*Deleted) deleteEmailRes()    {}
 func (*Deleted) deleteEndpointRes() {}
 func (*Deleted) deleteFilterRes()   {}
 func (*Deleted) deleteFunctionRes() {}
+func (*Deleted) deleteRouteRes()    {}
 func (*Deleted) unpublishAgentRes() {}
 
 type DeletedData struct {
@@ -6562,6 +6776,14 @@ type Endpoint struct {
 	LastSuccessAt    OptNilDateTime `json:"last_success_at"`
 	LastFailureAt    OptNilDateTime `json:"last_failure_at"`
 	DeactivatedAt    OptNilDateTime `json:"deactivated_at"`
+	// Http: deliver to the webhook URL. function: invoke a Primitive Function.
+	Kind OptEndpointKind `json:"kind"`
+	// The Function this endpoint invokes, when kind is function.
+	FunctionID OptNilUUID `json:"function_id"`
+	// When true, this endpoint is reachable only via an explicit recipient
+	// route, never as a domain's default destination, and is exempt from
+	// the one-endpoint-per-domain rule (so many can share a domain).
+	IsRouteTarget OptBool `json:"is_route_target"`
 }
 
 // GetID returns the value of ID.
@@ -6644,6 +6866,21 @@ func (s *Endpoint) GetDeactivatedAt() OptNilDateTime {
 	return s.DeactivatedAt
 }
 
+// GetKind returns the value of Kind.
+func (s *Endpoint) GetKind() OptEndpointKind {
+	return s.Kind
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *Endpoint) GetFunctionID() OptNilUUID {
+	return s.FunctionID
+}
+
+// GetIsRouteTarget returns the value of IsRouteTarget.
+func (s *Endpoint) GetIsRouteTarget() OptBool {
+	return s.IsRouteTarget
+}
+
 // SetID sets the value of ID.
 func (s *Endpoint) SetID(val uuid.UUID) {
 	s.ID = val
@@ -6724,6 +6961,63 @@ func (s *Endpoint) SetDeactivatedAt(val OptNilDateTime) {
 	s.DeactivatedAt = val
 }
 
+// SetKind sets the value of Kind.
+func (s *Endpoint) SetKind(val OptEndpointKind) {
+	s.Kind = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *Endpoint) SetFunctionID(val OptNilUUID) {
+	s.FunctionID = val
+}
+
+// SetIsRouteTarget sets the value of IsRouteTarget.
+func (s *Endpoint) SetIsRouteTarget(val OptBool) {
+	s.IsRouteTarget = val
+}
+
+// Http: deliver to the webhook URL. function: invoke a Primitive Function.
+type EndpointKind string
+
+const (
+	EndpointKindHTTP     EndpointKind = "http"
+	EndpointKindFunction EndpointKind = "function"
+)
+
+// AllValues returns all EndpointKind values.
+func (EndpointKind) AllValues() []EndpointKind {
+	return []EndpointKind{
+		EndpointKindHTTP,
+		EndpointKindFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EndpointKind) MarshalText() ([]byte, error) {
+	switch s {
+	case EndpointKindHTTP:
+		return []byte(s), nil
+	case EndpointKindFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EndpointKind) UnmarshalText(data []byte) error {
+	switch EndpointKind(data) {
+	case EndpointKindHTTP:
+		*s = EndpointKindHTTP
+		return nil
+	case EndpointKindFunction:
+		*s = EndpointKindFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Endpoint-specific filtering rules.
 type EndpointRules struct{}
 
@@ -6764,6 +7058,7 @@ func (*ErrorResponse) listFiltersRes()                   {}
 func (*ErrorResponse) listFunctionsRes()                 {}
 func (*ErrorResponse) listOrgSecretsRes()                {}
 func (*ErrorResponse) listRegistriesRes()                {}
+func (*ErrorResponse) listRoutesRes()                    {}
 func (*ErrorResponse) pollCliLoginRes()                  {}
 func (*ErrorResponse) resendAgentSignupVerificationRes() {}
 func (*ErrorResponse) resendCliSignupVerificationRes()   {}
@@ -11410,6 +11705,34 @@ type ListRegistryRequestsUnauthorized ErrorResponse
 
 func (*ListRegistryRequestsUnauthorized) listRegistryRequestsRes() {}
 
+// Merged schema.
+type ListRoutesOK struct {
+	Success bool             `json:"success"`
+	Data    []RecipientRoute `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListRoutesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListRoutesOK) GetData() []RecipientRoute {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListRoutesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListRoutesOK) SetData(val []RecipientRoute) {
+	s.Data = val
+}
+
+func (*ListRoutesOK) listRoutesRes() {}
+
 type ListSentEmailsBadRequest ErrorResponse
 
 func (*ListSentEmailsBadRequest) listSentEmailsRes() {}
@@ -11456,6 +11779,57 @@ func (*ListSentEmailsOK) listSentEmailsRes() {}
 type ListSentEmailsUnauthorized ErrorResponse
 
 func (*ListSentEmailsUnauthorized) listSentEmailsRes() {}
+
+// How a route's pattern is matched against the recipient. exact: the full
+// address. wildcard: a glob with * and ? that never crosses the @.
+// Ref: #/components/schemas/MatchType
+type MatchType string
+
+const (
+	MatchTypeExact    MatchType = "exact"
+	MatchTypeWildcard MatchType = "wildcard"
+	MatchTypeRegex    MatchType = "regex"
+)
+
+// AllValues returns all MatchType values.
+func (MatchType) AllValues() []MatchType {
+	return []MatchType{
+		MatchTypeExact,
+		MatchTypeWildcard,
+		MatchTypeRegex,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MatchType) MarshalText() ([]byte, error) {
+	switch s {
+	case MatchTypeExact:
+		return []byte(s), nil
+	case MatchTypeWildcard:
+		return []byte(s), nil
+	case MatchTypeRegex:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MatchType) UnmarshalText(data []byte) error {
+	switch MatchType(data) {
+	case MatchTypeExact:
+		*s = MatchTypeExact
+		return nil
+	case MatchTypeWildcard:
+		*s = MatchTypeWildcard
+		return nil
+	case MatchTypeRegex:
+		*s = MatchTypeRegex
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // NewNilBool returns new NilBool with value set to v.
 func NewNilBool(v bool) NilBool {
@@ -11907,6 +12281,51 @@ func (o NilInt) Or(d int) int {
 	return d
 }
 
+// NewNilMatchType returns new NilMatchType with value set to v.
+func NewNilMatchType(v MatchType) NilMatchType {
+	return NilMatchType{
+		Value: v,
+	}
+}
+
+// NilMatchType is nullable MatchType.
+type NilMatchType struct {
+	Value MatchType
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilMatchType) SetTo(v MatchType) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilMatchType) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilMatchType) SetToNull() {
+	o.Null = true
+	var v MatchType
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilMatchType) Get() (v MatchType, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilMatchType) Or(d MatchType) MatchType {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilRoutingTopologyDomainsItemRoutedFunction returns new NilRoutingTopologyDomainsItemRoutedFunction with value set to v.
 func NewNilRoutingTopologyDomainsItemRoutedFunction(v RoutingTopologyDomainsItemRoutedFunction) NilRoutingTopologyDomainsItemRoutedFunction {
 	return NilRoutingTopologyDomainsItemRoutedFunction{
@@ -12036,6 +12455,51 @@ func (o NilSemanticSearchCoverage) Get() (v SemanticSearchCoverage, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilSemanticSearchCoverage) Or(d SemanticSearchCoverage) SemanticSearchCoverage {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewNilSimulateRouteResultDefaultScope returns new NilSimulateRouteResultDefaultScope with value set to v.
+func NewNilSimulateRouteResultDefaultScope(v SimulateRouteResultDefaultScope) NilSimulateRouteResultDefaultScope {
+	return NilSimulateRouteResultDefaultScope{
+		Value: v,
+	}
+}
+
+// NilSimulateRouteResultDefaultScope is nullable SimulateRouteResultDefaultScope.
+type NilSimulateRouteResultDefaultScope struct {
+	Value SimulateRouteResultDefaultScope
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilSimulateRouteResultDefaultScope) SetTo(v SimulateRouteResultDefaultScope) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilSimulateRouteResultDefaultScope) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilSimulateRouteResultDefaultScope) SetToNull() {
+	o.Null = true
+	var v SimulateRouteResultDefaultScope
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilSimulateRouteResultDefaultScope) Get() (v SimulateRouteResultDefaultScope, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilSimulateRouteResultDefaultScope) Or(d SimulateRouteResultDefaultScope) SimulateRouteResultDefaultScope {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -12218,6 +12682,52 @@ func (o OptCliLogoutInput) Get() (v CliLogoutInput, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCliLogoutInput) Or(d CliLogoutInput) CliLogoutInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCreateEndpointInputKind returns new OptCreateEndpointInputKind with value set to v.
+func NewOptCreateEndpointInputKind(v CreateEndpointInputKind) OptCreateEndpointInputKind {
+	return OptCreateEndpointInputKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateEndpointInputKind is optional CreateEndpointInputKind.
+type OptCreateEndpointInputKind struct {
+	Value CreateEndpointInputKind
+	Set   bool
+}
+
+// IsSet returns true if OptCreateEndpointInputKind was set.
+func (o OptCreateEndpointInputKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateEndpointInputKind) Reset() {
+	var v CreateEndpointInputKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateEndpointInputKind) SetTo(v CreateEndpointInputKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateEndpointInputKind) Get() (v CreateEndpointInputKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateEndpointInputKind) Or(d CreateEndpointInputKind) CreateEndpointInputKind {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -12494,6 +13004,52 @@ func (o OptEmailStatus) Get() (v EmailStatus, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptEmailStatus) Or(d EmailStatus) EmailStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptEndpointKind returns new OptEndpointKind with value set to v.
+func NewOptEndpointKind(v EndpointKind) OptEndpointKind {
+	return OptEndpointKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEndpointKind is optional EndpointKind.
+type OptEndpointKind struct {
+	Value EndpointKind
+	Set   bool
+}
+
+// IsSet returns true if OptEndpointKind was set.
+func (o OptEndpointKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEndpointKind) Reset() {
+	var v EndpointKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEndpointKind) SetTo(v EndpointKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEndpointKind) Get() (v EndpointKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEndpointKind) Or(d EndpointKind) EndpointKind {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -12816,6 +13372,52 @@ func (o OptListDeliveriesStatus) Get() (v ListDeliveriesStatus, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListDeliveriesStatus) Or(d ListDeliveriesStatus) ListDeliveriesStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptMatchType returns new OptMatchType with value set to v.
+func NewOptMatchType(v MatchType) OptMatchType {
+	return OptMatchType{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptMatchType is optional MatchType.
+type OptMatchType struct {
+	Value MatchType
+	Set   bool
+}
+
+// IsSet returns true if OptMatchType was set.
+func (o OptMatchType) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptMatchType) Reset() {
+	var v MatchType
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptMatchType) SetTo(v MatchType) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptMatchType) Get() (v MatchType, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptMatchType) Or(d MatchType) MatchType {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -15426,6 +16028,124 @@ func (*RateLimitedHeaders) verifyAgentClaimRes()       {}
 func (*RateLimitedHeaders) verifyAgentSignupRes()      {}
 func (*RateLimitedHeaders) verifyCliSignupRes()        {}
 
+// Ref: #/components/schemas/RecipientRoute
+type RecipientRoute struct {
+	ID        uuid.UUID    `json:"id"`
+	MatchType OptMatchType `json:"match_type"`
+	// The recipient pattern this route matches.
+	Pattern OptString `json:"pattern"`
+	// The endpoint mail matching this route is delivered to.
+	EndpointID OptUUID `json:"endpoint_id"`
+	// Scopes the route to one domain; null applies it org-wide.
+	DomainID OptNilUUID `json:"domain_id"`
+	// Evaluation order; lower is evaluated first.
+	Priority        OptInt      `json:"priority"`
+	Enabled         OptBool     `json:"enabled"`
+	CreatedAt       OptDateTime `json:"created_at"`
+	AdditionalProps RecipientRouteAdditional
+}
+
+// GetID returns the value of ID.
+func (s *RecipientRoute) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetMatchType returns the value of MatchType.
+func (s *RecipientRoute) GetMatchType() OptMatchType {
+	return s.MatchType
+}
+
+// GetPattern returns the value of Pattern.
+func (s *RecipientRoute) GetPattern() OptString {
+	return s.Pattern
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *RecipientRoute) GetEndpointID() OptUUID {
+	return s.EndpointID
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *RecipientRoute) GetDomainID() OptNilUUID {
+	return s.DomainID
+}
+
+// GetPriority returns the value of Priority.
+func (s *RecipientRoute) GetPriority() OptInt {
+	return s.Priority
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *RecipientRoute) GetEnabled() OptBool {
+	return s.Enabled
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *RecipientRoute) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *RecipientRoute) GetAdditionalProps() RecipientRouteAdditional {
+	return s.AdditionalProps
+}
+
+// SetID sets the value of ID.
+func (s *RecipientRoute) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetMatchType sets the value of MatchType.
+func (s *RecipientRoute) SetMatchType(val OptMatchType) {
+	s.MatchType = val
+}
+
+// SetPattern sets the value of Pattern.
+func (s *RecipientRoute) SetPattern(val OptString) {
+	s.Pattern = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *RecipientRoute) SetEndpointID(val OptUUID) {
+	s.EndpointID = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *RecipientRoute) SetDomainID(val OptNilUUID) {
+	s.DomainID = val
+}
+
+// SetPriority sets the value of Priority.
+func (s *RecipientRoute) SetPriority(val OptInt) {
+	s.Priority = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *RecipientRoute) SetEnabled(val OptBool) {
+	s.Enabled = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *RecipientRoute) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *RecipientRoute) SetAdditionalProps(val RecipientRouteAdditional) {
+	s.AdditionalProps = val
+}
+
+type RecipientRouteAdditional map[string]jx.Raw
+
+func (s *RecipientRouteAdditional) init() RecipientRouteAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
 type RegisterPayoutAddressBadRequest ErrorResponse
 
 func (*RegisterPayoutAddressBadRequest) registerPayoutAddressRes() {}
@@ -15780,6 +16500,82 @@ func (s *RegistryRequest) SetHandle(val NilString) {
 func (s *RegistryRequest) SetRequestedAt(val time.Time) {
 	s.RequestedAt = val
 }
+
+type ReorderRoutesBadRequest ErrorResponse
+
+func (*ReorderRoutesBadRequest) reorderRoutesRes() {}
+
+// Ref: #/components/schemas/ReorderRoutesInput
+type ReorderRoutesInput struct {
+	Updates []ReorderRoutesInputUpdatesItem `json:"updates"`
+}
+
+// GetUpdates returns the value of Updates.
+func (s *ReorderRoutesInput) GetUpdates() []ReorderRoutesInputUpdatesItem {
+	return s.Updates
+}
+
+// SetUpdates sets the value of Updates.
+func (s *ReorderRoutesInput) SetUpdates(val []ReorderRoutesInputUpdatesItem) {
+	s.Updates = val
+}
+
+type ReorderRoutesInputUpdatesItem struct {
+	ID       uuid.UUID `json:"id"`
+	Priority int       `json:"priority"`
+}
+
+// GetID returns the value of ID.
+func (s *ReorderRoutesInputUpdatesItem) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetPriority returns the value of Priority.
+func (s *ReorderRoutesInputUpdatesItem) GetPriority() int {
+	return s.Priority
+}
+
+// SetID sets the value of ID.
+func (s *ReorderRoutesInputUpdatesItem) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetPriority sets the value of Priority.
+func (s *ReorderRoutesInputUpdatesItem) SetPriority(val int) {
+	s.Priority = val
+}
+
+// Merged schema.
+type ReorderRoutesOK struct {
+	Success bool             `json:"success"`
+	Data    []RecipientRoute `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ReorderRoutesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ReorderRoutesOK) GetData() []RecipientRoute {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ReorderRoutesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ReorderRoutesOK) SetData(val []RecipientRoute) {
+	s.Data = val
+}
+
+func (*ReorderRoutesOK) reorderRoutesRes() {}
+
+type ReorderRoutesUnauthorized ErrorResponse
+
+func (*ReorderRoutesUnauthorized) reorderRoutesRes() {}
 
 type ReplayDeliveryBadRequest ErrorResponse
 
@@ -16236,6 +17032,142 @@ func (*RotateWebhookSecretOK) rotateWebhookSecretRes() {}
 type RotateWebhookSecretUnauthorized ErrorResponse
 
 func (*RotateWebhookSecretUnauthorized) rotateWebhookSecretRes() {}
+
+// Ref: #/components/schemas/RouteEvaluation
+type RouteEvaluation struct {
+	RouteID         string                `json:"route_id"`
+	Tier            MatchType             `json:"tier"`
+	Pattern         string                `json:"pattern"`
+	Result          RouteEvaluationResult `json:"result"`
+	Reason          OptString             `json:"reason"`
+	AdditionalProps RouteEvaluationAdditional
+}
+
+// GetRouteID returns the value of RouteID.
+func (s *RouteEvaluation) GetRouteID() string {
+	return s.RouteID
+}
+
+// GetTier returns the value of Tier.
+func (s *RouteEvaluation) GetTier() MatchType {
+	return s.Tier
+}
+
+// GetPattern returns the value of Pattern.
+func (s *RouteEvaluation) GetPattern() string {
+	return s.Pattern
+}
+
+// GetResult returns the value of Result.
+func (s *RouteEvaluation) GetResult() RouteEvaluationResult {
+	return s.Result
+}
+
+// GetReason returns the value of Reason.
+func (s *RouteEvaluation) GetReason() OptString {
+	return s.Reason
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *RouteEvaluation) GetAdditionalProps() RouteEvaluationAdditional {
+	return s.AdditionalProps
+}
+
+// SetRouteID sets the value of RouteID.
+func (s *RouteEvaluation) SetRouteID(val string) {
+	s.RouteID = val
+}
+
+// SetTier sets the value of Tier.
+func (s *RouteEvaluation) SetTier(val MatchType) {
+	s.Tier = val
+}
+
+// SetPattern sets the value of Pattern.
+func (s *RouteEvaluation) SetPattern(val string) {
+	s.Pattern = val
+}
+
+// SetResult sets the value of Result.
+func (s *RouteEvaluation) SetResult(val RouteEvaluationResult) {
+	s.Result = val
+}
+
+// SetReason sets the value of Reason.
+func (s *RouteEvaluation) SetReason(val OptString) {
+	s.Reason = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *RouteEvaluation) SetAdditionalProps(val RouteEvaluationAdditional) {
+	s.AdditionalProps = val
+}
+
+type RouteEvaluationAdditional map[string]jx.Raw
+
+func (s *RouteEvaluationAdditional) init() RouteEvaluationAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type RouteEvaluationResult string
+
+const (
+	RouteEvaluationResultHit     RouteEvaluationResult = "hit"
+	RouteEvaluationResultMiss    RouteEvaluationResult = "miss"
+	RouteEvaluationResultSkipped RouteEvaluationResult = "skipped"
+	RouteEvaluationResultError   RouteEvaluationResult = "error"
+)
+
+// AllValues returns all RouteEvaluationResult values.
+func (RouteEvaluationResult) AllValues() []RouteEvaluationResult {
+	return []RouteEvaluationResult{
+		RouteEvaluationResultHit,
+		RouteEvaluationResultMiss,
+		RouteEvaluationResultSkipped,
+		RouteEvaluationResultError,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RouteEvaluationResult) MarshalText() ([]byte, error) {
+	switch s {
+	case RouteEvaluationResultHit:
+		return []byte(s), nil
+	case RouteEvaluationResultMiss:
+		return []byte(s), nil
+	case RouteEvaluationResultSkipped:
+		return []byte(s), nil
+	case RouteEvaluationResultError:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RouteEvaluationResult) UnmarshalText(data []byte) error {
+	switch RouteEvaluationResult(data) {
+	case RouteEvaluationResultHit:
+		*s = RouteEvaluationResultHit
+		return nil
+	case RouteEvaluationResultMiss:
+		*s = RouteEvaluationResultMiss
+		return nil
+	case RouteEvaluationResultSkipped:
+		*s = RouteEvaluationResultSkipped
+		return nil
+	case RouteEvaluationResultError:
+		*s = RouteEvaluationResultError
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // Org-wide map of function routing: which domain points at which
 // function, the org's fallback binding (if any), and every
@@ -19513,6 +20445,290 @@ type SetOrgSecretUnauthorized ErrorResponse
 
 func (*SetOrgSecretUnauthorized) setOrgSecretRes() {}
 
+type SimulateRouteBadRequest ErrorResponse
+
+func (*SimulateRouteBadRequest) simulateRouteRes() {}
+
+// Ref: #/components/schemas/SimulateRouteInput
+type SimulateRouteInput struct {
+	// The recipient address to resolve.
+	Recipient string `json:"recipient"`
+	// Which event type to model. Defaults to email.received.
+	EventType OptString `json:"event_type"`
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *SimulateRouteInput) GetRecipient() string {
+	return s.Recipient
+}
+
+// GetEventType returns the value of EventType.
+func (s *SimulateRouteInput) GetEventType() OptString {
+	return s.EventType
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *SimulateRouteInput) SetRecipient(val string) {
+	s.Recipient = val
+}
+
+// SetEventType sets the value of EventType.
+func (s *SimulateRouteInput) SetEventType(val OptString) {
+	s.EventType = val
+}
+
+// Merged schema.
+type SimulateRouteOK struct {
+	Success bool                `json:"success"`
+	Data    SimulateRouteResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SimulateRouteOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SimulateRouteOK) GetData() SimulateRouteResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SimulateRouteOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SimulateRouteOK) SetData(val SimulateRouteResult) {
+	s.Data = val
+}
+
+func (*SimulateRouteOK) simulateRouteRes() {}
+
+// Ref: #/components/schemas/SimulateRouteResult
+type SimulateRouteResult struct {
+	// Matched: a route matched. defaulted: fell to the default destination. none: nowhere.
+	Outcome   SimulateRouteResultOutcome `json:"outcome"`
+	Recipient string                     `json:"recipient"`
+	// The endpoint mail would reach, or null when none.
+	EndpointID     NilString    `json:"endpoint_id"`
+	MatchedRouteID NilString    `json:"matched_route_id"`
+	MatchedTier    NilMatchType `json:"matched_tier"`
+	MatchedPattern NilString    `json:"matched_pattern"`
+	// Which default destination was used, when outcome is defaulted.
+	DefaultScope NilSimulateRouteResultDefaultScope `json:"default_scope"`
+	Evaluated    []RouteEvaluation                  `json:"evaluated"`
+	// True when the evaluation trace was capped.
+	Truncated       bool `json:"truncated"`
+	AdditionalProps SimulateRouteResultAdditional
+}
+
+// GetOutcome returns the value of Outcome.
+func (s *SimulateRouteResult) GetOutcome() SimulateRouteResultOutcome {
+	return s.Outcome
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *SimulateRouteResult) GetRecipient() string {
+	return s.Recipient
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *SimulateRouteResult) GetEndpointID() NilString {
+	return s.EndpointID
+}
+
+// GetMatchedRouteID returns the value of MatchedRouteID.
+func (s *SimulateRouteResult) GetMatchedRouteID() NilString {
+	return s.MatchedRouteID
+}
+
+// GetMatchedTier returns the value of MatchedTier.
+func (s *SimulateRouteResult) GetMatchedTier() NilMatchType {
+	return s.MatchedTier
+}
+
+// GetMatchedPattern returns the value of MatchedPattern.
+func (s *SimulateRouteResult) GetMatchedPattern() NilString {
+	return s.MatchedPattern
+}
+
+// GetDefaultScope returns the value of DefaultScope.
+func (s *SimulateRouteResult) GetDefaultScope() NilSimulateRouteResultDefaultScope {
+	return s.DefaultScope
+}
+
+// GetEvaluated returns the value of Evaluated.
+func (s *SimulateRouteResult) GetEvaluated() []RouteEvaluation {
+	return s.Evaluated
+}
+
+// GetTruncated returns the value of Truncated.
+func (s *SimulateRouteResult) GetTruncated() bool {
+	return s.Truncated
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *SimulateRouteResult) GetAdditionalProps() SimulateRouteResultAdditional {
+	return s.AdditionalProps
+}
+
+// SetOutcome sets the value of Outcome.
+func (s *SimulateRouteResult) SetOutcome(val SimulateRouteResultOutcome) {
+	s.Outcome = val
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *SimulateRouteResult) SetRecipient(val string) {
+	s.Recipient = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *SimulateRouteResult) SetEndpointID(val NilString) {
+	s.EndpointID = val
+}
+
+// SetMatchedRouteID sets the value of MatchedRouteID.
+func (s *SimulateRouteResult) SetMatchedRouteID(val NilString) {
+	s.MatchedRouteID = val
+}
+
+// SetMatchedTier sets the value of MatchedTier.
+func (s *SimulateRouteResult) SetMatchedTier(val NilMatchType) {
+	s.MatchedTier = val
+}
+
+// SetMatchedPattern sets the value of MatchedPattern.
+func (s *SimulateRouteResult) SetMatchedPattern(val NilString) {
+	s.MatchedPattern = val
+}
+
+// SetDefaultScope sets the value of DefaultScope.
+func (s *SimulateRouteResult) SetDefaultScope(val NilSimulateRouteResultDefaultScope) {
+	s.DefaultScope = val
+}
+
+// SetEvaluated sets the value of Evaluated.
+func (s *SimulateRouteResult) SetEvaluated(val []RouteEvaluation) {
+	s.Evaluated = val
+}
+
+// SetTruncated sets the value of Truncated.
+func (s *SimulateRouteResult) SetTruncated(val bool) {
+	s.Truncated = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *SimulateRouteResult) SetAdditionalProps(val SimulateRouteResultAdditional) {
+	s.AdditionalProps = val
+}
+
+type SimulateRouteResultAdditional map[string]jx.Raw
+
+func (s *SimulateRouteResultAdditional) init() SimulateRouteResultAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Which default destination was used, when outcome is defaulted.
+type SimulateRouteResultDefaultScope string
+
+const (
+	SimulateRouteResultDefaultScopeDomain SimulateRouteResultDefaultScope = "domain"
+	SimulateRouteResultDefaultScopeOrg    SimulateRouteResultDefaultScope = "org"
+)
+
+// AllValues returns all SimulateRouteResultDefaultScope values.
+func (SimulateRouteResultDefaultScope) AllValues() []SimulateRouteResultDefaultScope {
+	return []SimulateRouteResultDefaultScope{
+		SimulateRouteResultDefaultScopeDomain,
+		SimulateRouteResultDefaultScopeOrg,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SimulateRouteResultDefaultScope) MarshalText() ([]byte, error) {
+	switch s {
+	case SimulateRouteResultDefaultScopeDomain:
+		return []byte(s), nil
+	case SimulateRouteResultDefaultScopeOrg:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SimulateRouteResultDefaultScope) UnmarshalText(data []byte) error {
+	switch SimulateRouteResultDefaultScope(data) {
+	case SimulateRouteResultDefaultScopeDomain:
+		*s = SimulateRouteResultDefaultScopeDomain
+		return nil
+	case SimulateRouteResultDefaultScopeOrg:
+		*s = SimulateRouteResultDefaultScopeOrg
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Matched: a route matched. defaulted: fell to the default destination. none: nowhere.
+type SimulateRouteResultOutcome string
+
+const (
+	SimulateRouteResultOutcomeMatched   SimulateRouteResultOutcome = "matched"
+	SimulateRouteResultOutcomeDefaulted SimulateRouteResultOutcome = "defaulted"
+	SimulateRouteResultOutcomeNone      SimulateRouteResultOutcome = "none"
+)
+
+// AllValues returns all SimulateRouteResultOutcome values.
+func (SimulateRouteResultOutcome) AllValues() []SimulateRouteResultOutcome {
+	return []SimulateRouteResultOutcome{
+		SimulateRouteResultOutcomeMatched,
+		SimulateRouteResultOutcomeDefaulted,
+		SimulateRouteResultOutcomeNone,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SimulateRouteResultOutcome) MarshalText() ([]byte, error) {
+	switch s {
+	case SimulateRouteResultOutcomeMatched:
+		return []byte(s), nil
+	case SimulateRouteResultOutcomeDefaulted:
+		return []byte(s), nil
+	case SimulateRouteResultOutcomeNone:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SimulateRouteResultOutcome) UnmarshalText(data []byte) error {
+	switch SimulateRouteResultOutcome(data) {
+	case SimulateRouteResultOutcomeMatched:
+		*s = SimulateRouteResultOutcomeMatched
+		return nil
+	case SimulateRouteResultOutcomeDefaulted:
+		*s = SimulateRouteResultOutcomeDefaulted
+		return nil
+	case SimulateRouteResultOutcomeNone:
+		*s = SimulateRouteResultOutcomeNone
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SimulateRouteUnauthorized ErrorResponse
+
+func (*SimulateRouteUnauthorized) simulateRouteRes() {}
+
 type StartAgentClaimBadRequest ErrorResponse
 
 func (*StartAgentClaimBadRequest) startAgentClaimRes() {}
@@ -21199,6 +22415,116 @@ func (*UpdateRegistryUnauthorized) updateRegistryRes() {}
 type UpdateRegistryUnprocessableEntity ErrorResponse
 
 func (*UpdateRegistryUnprocessableEntity) updateRegistryRes() {}
+
+type UpdateRouteBadRequest ErrorResponse
+
+func (*UpdateRouteBadRequest) updateRouteRes() {}
+
+// Ref: #/components/schemas/UpdateRouteInput
+type UpdateRouteInput struct {
+	MatchType  OptMatchType `json:"match_type"`
+	Pattern    OptString    `json:"pattern"`
+	EndpointID OptUUID      `json:"endpoint_id"`
+	DomainID   OptNilUUID   `json:"domain_id"`
+	Priority   OptInt       `json:"priority"`
+	Enabled    OptBool      `json:"enabled"`
+}
+
+// GetMatchType returns the value of MatchType.
+func (s *UpdateRouteInput) GetMatchType() OptMatchType {
+	return s.MatchType
+}
+
+// GetPattern returns the value of Pattern.
+func (s *UpdateRouteInput) GetPattern() OptString {
+	return s.Pattern
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *UpdateRouteInput) GetEndpointID() OptUUID {
+	return s.EndpointID
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *UpdateRouteInput) GetDomainID() OptNilUUID {
+	return s.DomainID
+}
+
+// GetPriority returns the value of Priority.
+func (s *UpdateRouteInput) GetPriority() OptInt {
+	return s.Priority
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *UpdateRouteInput) GetEnabled() OptBool {
+	return s.Enabled
+}
+
+// SetMatchType sets the value of MatchType.
+func (s *UpdateRouteInput) SetMatchType(val OptMatchType) {
+	s.MatchType = val
+}
+
+// SetPattern sets the value of Pattern.
+func (s *UpdateRouteInput) SetPattern(val OptString) {
+	s.Pattern = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *UpdateRouteInput) SetEndpointID(val OptUUID) {
+	s.EndpointID = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *UpdateRouteInput) SetDomainID(val OptNilUUID) {
+	s.DomainID = val
+}
+
+// SetPriority sets the value of Priority.
+func (s *UpdateRouteInput) SetPriority(val OptInt) {
+	s.Priority = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *UpdateRouteInput) SetEnabled(val OptBool) {
+	s.Enabled = val
+}
+
+type UpdateRouteNotFound ErrorResponse
+
+func (*UpdateRouteNotFound) updateRouteRes() {}
+
+// Merged schema.
+type UpdateRouteOK struct {
+	Success bool           `json:"success"`
+	Data    RecipientRoute `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateRouteOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateRouteOK) GetData() RecipientRoute {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateRouteOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateRouteOK) SetData(val RecipientRoute) {
+	s.Data = val
+}
+
+func (*UpdateRouteOK) updateRouteRes() {}
+
+type UpdateRouteUnauthorized ErrorResponse
+
+func (*UpdateRouteUnauthorized) updateRouteRes() {}
 
 type UpdateSpendPolicyBadRequest ErrorResponse
 
