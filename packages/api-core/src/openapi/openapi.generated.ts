@@ -5328,7 +5328,8 @@ export const openapiDocument: Record<string, unknown> = {
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry slug."
         }
       ],
       "get": {
@@ -5347,7 +5348,8 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "integer",
               "minimum": 1,
               "maximum": 200
-            }
+            },
+            "description": "Maximum number of items to return (1-200)."
           },
           {
             "name": "cursor",
@@ -5471,7 +5473,8 @@ export const openapiDocument: Record<string, unknown> = {
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry slug."
         },
         {
           "name": "handle",
@@ -5479,7 +5482,8 @@ export const openapiDocument: Record<string, unknown> = {
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry-scoped handle the agent is published under."
         }
       ],
       "get": {
@@ -5543,7 +5547,8 @@ export const openapiDocument: Record<string, unknown> = {
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry slug."
         }
       ],
       "get": {
@@ -5561,7 +5566,8 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "integer",
               "minimum": 1,
               "maximum": 200
-            }
+            },
+            "description": "Maximum number of items to return (1-200)."
           }
         ],
         "responses": {
@@ -5606,7 +5612,8 @@ export const openapiDocument: Record<string, unknown> = {
           "required": true,
           "schema": {
             "type": "string"
-          }
+          },
+          "description": "The registry slug."
         },
         {
           "$ref": "#/components/parameters/ResourceId"

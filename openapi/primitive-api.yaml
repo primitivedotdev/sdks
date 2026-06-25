@@ -3926,6 +3926,7 @@ paths:
         in: path
         required: true
         schema: { type: string }
+        description: The registry slug.
     get:
       operationId: listRegistryAgents
       summary: List agents in a registry
@@ -3936,6 +3937,7 @@ paths:
           in: query
           required: false
           schema: { type: integer, minimum: 1, maximum: 200 }
+          description: Maximum number of items to return (1-200).
         - name: cursor
           in: query
           required: false
@@ -3998,10 +4000,12 @@ paths:
         in: path
         required: true
         schema: { type: string }
+        description: The registry slug.
       - name: handle
         in: path
         required: true
         schema: { type: string }
+        description: The registry-scoped handle the agent is published under.
     get:
       operationId: resolveRegistryHandle
       summary: Resolve a registry handle to its agent
@@ -4037,6 +4041,7 @@ paths:
         in: path
         required: true
         schema: { type: string }
+        description: The registry slug.
     get:
       operationId: listRegistryRequests
       summary: List pending publication requests
@@ -4046,6 +4051,7 @@ paths:
           in: query
           required: false
           schema: { type: integer, minimum: 1, maximum: 200 }
+          description: Maximum number of items to return (1-200).
       responses:
         '200':
           description: Pending requests for a registry you own
@@ -4069,6 +4075,7 @@ paths:
         in: path
         required: true
         schema: { type: string }
+        description: The registry slug.
       - $ref: '#/components/parameters/ResourceId'
     post:
       operationId: decideRegistryRequest

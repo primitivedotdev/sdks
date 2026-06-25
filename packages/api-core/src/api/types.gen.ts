@@ -6972,9 +6972,15 @@ export type UpdateRegistryResponse = UpdateRegistryResponses[keyof UpdateRegistr
 export type ListRegistryAgentsData = {
     body?: never;
     path: {
+        /**
+         * The registry slug.
+         */
         slug: string;
     };
     query?: {
+        /**
+         * Maximum number of items to return (1-200).
+         */
         limit?: number;
         /**
          * The address of the last agent from the previous page.
@@ -6998,6 +7004,9 @@ export type ListRegistryAgentsResponse = ListRegistryAgentsResponses[keyof ListR
 export type PublishAgentData = {
     body: PublishAgentInput;
     path: {
+        /**
+         * The registry slug.
+         */
         slug: string;
     };
     query?: never;
@@ -7049,7 +7058,13 @@ export type PublishAgentResponse = PublishAgentResponses[keyof PublishAgentRespo
 export type UnpublishAgentData = {
     body?: never;
     path: {
+        /**
+         * The registry slug.
+         */
         slug: string;
+        /**
+         * The registry-scoped handle the agent is published under.
+         */
         handle: string;
     };
     query?: never;
@@ -7085,7 +7100,13 @@ export type UnpublishAgentResponse = UnpublishAgentResponses[keyof UnpublishAgen
 export type ResolveRegistryHandleData = {
     body?: never;
     path: {
+        /**
+         * The registry slug.
+         */
         slug: string;
+        /**
+         * The registry-scoped handle the agent is published under.
+         */
         handle: string;
     };
     query?: never;
@@ -7115,9 +7136,15 @@ export type ResolveRegistryHandleResponse = ResolveRegistryHandleResponses[keyof
 export type ListRegistryRequestsData = {
     body?: never;
     path: {
+        /**
+         * The registry slug.
+         */
         slug: string;
     };
     query?: {
+        /**
+         * Maximum number of items to return (1-200).
+         */
         limit?: number;
     };
     url: '/registries/{slug}/requests';
@@ -7150,6 +7177,9 @@ export type ListRegistryRequestsResponse = ListRegistryRequestsResponses[keyof L
 export type DecideRegistryRequestData = {
     body: DecideRegistryRequestInput;
     path: {
+        /**
+         * The registry slug.
+         */
         slug: string;
         /**
          * Resource UUID
