@@ -11,6 +11,7 @@ import {
   isPaymentFailedEvent,
   isPaymentSettledEvent,
   PAYMENT_EVENT_TYPES,
+  type PaymentFailedEvent,
   type PaymentSettledEvent,
   parseWebhookEvent,
   WEBHOOK_EVENT_TYPES,
@@ -24,12 +25,18 @@ function sign(body: string): string {
 }
 
 describe("header-keyed event parsing", () => {
-  it("parses a payment.settled body (name only in the header) to a typed event", () => {
-    // The stored payment body carries the name in `type`, not `event`.
+  it("parses a flat payment.settled body (name only in the header) to typed fields", () => {
+    // The real stored payment body is FLAT and carries the name in `type`, not
+    // `event`: challenge_id/network/amount/asset/payer_org plus settle_tx, with
+    // no id and no nested payment object.
     const body = {
       type: "payment.settled",
-      id: "pay_1",
-      payment: { amount: "100" },
+      challenge_id: "chl_1",
+      network: "base-sepolia",
+      amount: "10000",
+      asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      payer_org: "org_1",
+      settle_tx: "0xdeadbeef",
     };
 
     const event = parseWebhookEvent(body, "payment.settled");
@@ -38,9 +45,39 @@ describe("header-keyed event parsing", () => {
     expect(isPaymentSettledEvent(event)).toBe(true);
     expect(isPaymentFailedEvent(event)).toBe(false);
     if (isPaymentSettledEvent(event)) {
+      // The typed fields must be accessible (autocomplete) without an index cast.
       const settled: PaymentSettledEvent = event;
-      expect(settled.id).toBe("pay_1");
       expect(settled.type).toBe("payment.settled");
+      expect(settled.challenge_id).toBe("chl_1");
+      expect(settled.amount).toBe("10000");
+      expect(settled.network).toBe("base-sepolia");
+      expect(settled.asset).toBe("0x036CbD53842c5426634e7929541eC2318f3dCF7e");
+      expect(settled.payer_org).toBe("org_1");
+      expect(settled.settle_tx).toBe("0xdeadbeef");
+    }
+  });
+
+  it("parses a flat payment.failed body to typed fields including failure_reason", () => {
+    const body = {
+      type: "payment.failed",
+      challenge_id: "chl_2",
+      network: "base",
+      amount: "250",
+      asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      payer_org: null,
+      failure_reason: "insufficient funds",
+    };
+
+    const event = parseWebhookEvent(body, "payment.failed");
+
+    expect(event.event).toBe("payment.failed");
+    expect(isPaymentFailedEvent(event)).toBe(true);
+    expect(isPaymentSettledEvent(event)).toBe(false);
+    if (isPaymentFailedEvent(event)) {
+      const failed: PaymentFailedEvent = event;
+      expect(failed.challenge_id).toBe("chl_2");
+      expect(failed.failure_reason).toBe("insufficient funds");
+      expect(failed.payer_org).toBeNull();
     }
   });
 

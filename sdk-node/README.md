@@ -454,8 +454,8 @@ const event = handleWebhookEvent({
 });
 
 if (isPaymentSettledEvent(event)) {
-  // typed PaymentSettledEvent; settlement details are under event.payment
-  console.log("settled", event.id);
+  // typed PaymentSettledEvent: flat fields, amount in token base units
+  console.log("settled", event.challenge_id, event.amount, event.settle_tx);
 } else if (isInteractionX402Event(event)) {
   // typed interaction.x402.* event (challenge/payment/settled/...)
   console.log(event.event, event.interaction);

@@ -223,14 +223,36 @@ func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
 	}
 
 	if resolvedEvent == "payment.settled" || resolvedEvent == "payment.failed" {
-		// Payment bodies carry the name in "type"; overlay a canonical Event
-		// (from the header) so consumers branch on a single field.
+		// Payment bodies are FLAT and carry the name in "type"; overlay a
+		// canonical Event (from the header) so consumers branch on a single
+		// field, and surface the on-the-wire fields as typed struct members.
 		payment := PaymentEvent{Event: resolvedEvent, Payload: preserved}
 		if t, ok := preserved["type"].(string); ok {
 			payment.Type = t
 		}
-		if id, ok := preserved["id"].(string); ok {
-			payment.ID = &id
+		if v, ok := preserved["challenge_id"].(string); ok {
+			payment.ChallengeID = v
+		}
+		if v, ok := preserved["network"].(string); ok {
+			payment.Network = v
+		}
+		if v, ok := preserved["amount"].(string); ok {
+			payment.Amount = v
+		}
+		if v, ok := preserved["asset"].(string); ok {
+			payment.Asset = v
+		}
+		// payer_org is string|null on the wire; a present null leaves PayerOrg
+		// nil (not on-net), a present string sets it.
+		if v, ok := preserved["payer_org"].(string); ok {
+			payment.PayerOrg = &v
+		}
+		if resolvedEvent == "payment.settled" {
+			if v, ok := preserved["settle_tx"].(string); ok {
+				payment.SettleTx = v
+			}
+		} else if v, ok := preserved["failure_reason"].(string); ok {
+			payment.FailureReason = v
 		}
 		return payment, nil
 	}

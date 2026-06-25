@@ -32,8 +32,18 @@ def _event_name(event: object) -> object:
 
 
 def test_payment_settled_body_parses_to_typed_event() -> None:
-    # The stored payment body carries the name in `type`, not `event`.
-    body = {"type": "payment.settled", "id": "pay_1", "payment": {"amount": "100"}}
+    # The real stored payment body is FLAT and carries the name in `type`, not
+    # `event`: challenge_id/network/amount/asset/payer_org plus settle_tx, with
+    # no id and no nested payment object.
+    body = {
+        "type": "payment.settled",
+        "challenge_id": "chl_1",
+        "network": "base-sepolia",
+        "amount": "10000",
+        "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        "payer_org": "org_1",
+        "settle_tx": "0xdeadbeef",
+    }
 
     event = parse_webhook_event(body, "payment.settled")
 
@@ -41,7 +51,35 @@ def test_payment_settled_body_parses_to_typed_event() -> None:
     assert is_payment_settled_event(event)
     assert not is_payment_failed_event(event)
     assert isinstance(event, dict)
-    assert event.get("id") == "pay_1"
+    # The on-the-wire flat fields must be accessible by their typed keys.
+    assert event.get("type") == "payment.settled"
+    assert event.get("challenge_id") == "chl_1"
+    assert event.get("amount") == "10000"
+    assert event.get("network") == "base-sepolia"
+    assert event.get("settle_tx") == "0xdeadbeef"
+    assert event.get("payer_org") == "org_1"
+
+
+def test_payment_failed_body_parses_to_typed_event() -> None:
+    body = {
+        "type": "payment.failed",
+        "challenge_id": "chl_2",
+        "network": "base",
+        "amount": "250",
+        "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        "payer_org": None,
+        "failure_reason": "insufficient funds",
+    }
+
+    event = parse_webhook_event(body, "payment.failed")
+
+    assert _event_name(event) == "payment.failed"
+    assert is_payment_failed_event(event)
+    assert not is_payment_settled_event(event)
+    assert isinstance(event, dict)
+    assert event.get("challenge_id") == "chl_2"
+    assert event.get("failure_reason") == "insufficient funds"
+    assert event.get("payer_org") is None
 
 
 def test_interaction_x402_settled_body_parses_to_typed_event() -> None:

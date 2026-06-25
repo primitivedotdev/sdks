@@ -464,8 +464,8 @@ event = handle_webhook_event(
 )
 
 if is_payment_settled_event(event):
-    # settlement details are under event["payment"]
-    ...
+    # flat fields; amount is in token base units
+    print(event["challenge_id"], event["amount"], event["settle_tx"])
 elif is_interaction_x402_event(event):
     # interaction.x402.* event (challenge/payment/settled/...)
     ...

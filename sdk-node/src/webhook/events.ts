@@ -88,30 +88,44 @@ export function isKnownWebhookEventType(
 // -----------------------------------------------------------------------------
 
 /**
- * Common shape of a `payment.*` webhook body. The stored payload carries the
- * event name in `type` (not `event`); the parser overlays a canonical `event`
- * from the header so consumers can branch on a single field.
+ * Common shape of a `payment.*` webhook body. The stored payload is FLAT (no
+ * envelope, no nested `payment` object): it carries the event name in `type`,
+ * and the parser overlays a canonical `event` mirrored from the
+ * `X-Webhook-Event` header so consumers can branch on a single field. All
+ * amounts are token base units (USDC has 6 decimals, so `"10000"` is 0.01).
  */
 export interface PaymentEvent {
   /** Canonical event name, mirrored from the `X-Webhook-Event` header. */
   event: "payment.settled" | "payment.failed";
   /** The event name as carried in the raw stored body. */
-  type?: string;
-  id?: string;
-  created_at?: string;
-  /** The settlement payload as stored; shape is payment-flow specific. */
-  payment?: Record<string, unknown>;
+  type: "payment.settled" | "payment.failed";
+  /** The challenge this payment settles or fails. */
+  challenge_id: string;
+  /** The settlement network (e.g. `"base"`, `"base-sepolia"`). */
+  network: string;
+  /** Amount in token base units (USDC has 6 decimals, so `"10000"` is 0.01). */
+  amount: string;
+  /** The checksummed token contract address. */
+  asset: string;
+  /** The paying organization id, or null when not on-net. */
+  payer_org: string | null;
   [key: string]: unknown;
 }
 
 /** A `payment.settled` webhook event. */
 export interface PaymentSettledEvent extends PaymentEvent {
   event: "payment.settled";
+  type: "payment.settled";
+  /** The on-chain settlement transaction hash. */
+  settle_tx: string;
 }
 
 /** A `payment.failed` webhook event. */
 export interface PaymentFailedEvent extends PaymentEvent {
   event: "payment.failed";
+  type: "payment.failed";
+  /** Human-readable reason the payment failed. */
+  failure_reason: string;
 }
 
 // -----------------------------------------------------------------------------

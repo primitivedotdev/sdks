@@ -680,8 +680,8 @@ type X402EmailChargeInput struct {
 	Description string
 	// Resource is a URL identifying the thing being paid for.
 	Resource string
-	// ExpiresIn is seconds until the challenge expires (default 1h server-side).
-	// A pointer so 0 is distinguishable from unset.
+	// ExpiresIn is seconds until the challenge expires (defaults to 300s /
+	// 5 minutes server-side). A pointer so 0 is distinguishable from unset.
 	ExpiresIn *int
 	// IdempotencyKey, when set, is sent as the Idempotency-Key HTTP header.
 	// Retrying with the same key returns the original challenge without sending a

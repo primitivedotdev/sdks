@@ -471,8 +471,8 @@ if err != nil {
 
 switch {
 case primitive.IsPaymentSettledEvent(event):
-	settled := event.(primitive.PaymentEvent) // settlement body under settled.Payload
-	_ = settled
+	settled := event.(primitive.PaymentEvent) // flat fields; amount in base units
+	log.Println(settled.ChallengeID, settled.Amount, settled.SettleTx)
 case primitive.IsInteractionX402Event(event):
 	x402 := event.(primitive.InteractionEvent) // interaction.x402.* lifecycle
 	_ = x402
