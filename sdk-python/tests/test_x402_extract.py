@@ -71,6 +71,12 @@ class TestExtractEmailChallenge:
         with pytest.raises(X402Error, match="not valid JSON"):
             extract_email_challenge("not json {")
 
+    def test_rejects_invalid_utf8_bytes_as_x402_error(self) -> None:
+        # Invalid UTF-8 must surface as the documented X402Error, not a raw
+        # UnicodeDecodeError, so callers guarding `except X402Error` catch it.
+        with pytest.raises(X402Error, match="not valid JSON"):
+            extract_email_challenge(b"\xff\xfe\x00bad")
+
     def test_rejects_a_non_challenge_step(self) -> None:
         env = _valid_envelope()
         env["step"] = "payment"

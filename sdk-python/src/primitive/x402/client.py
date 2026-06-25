@@ -429,11 +429,13 @@ def extract_email_challenge(
     if isinstance(part, dict):
         envelope: dict[str, Any] = part
     else:
-        if isinstance(part, (bytes, bytearray)):
-            text = bytes(part).decode("utf-8", errors="strict")
-        else:
-            text = part
+        # Decode + parse together so a bytes input with invalid UTF-8 surfaces as
+        # X402Error (the documented contract), not a raw UnicodeDecodeError.
         try:
+            if isinstance(part, (bytes, bytearray)):
+                text = bytes(part).decode("utf-8", errors="strict")
+            else:
+                text = part
             parsed = json.loads(text)
         except (ValueError, UnicodeDecodeError) as cause:
             raise X402Error(
