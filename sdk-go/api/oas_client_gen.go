@@ -187,6 +187,16 @@ type Invoker interface {
 	//
 	// POST /registries
 	CreateRegistry(ctx context.Context, request *CreateRegistryInput) (CreateRegistryRes, error)
+	// CreateRoute invokes createRoute operation.
+	//
+	// Binds a recipient pattern to a destination. Provide exactly one of
+	// `endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,
+	// a dedicated route-target endpoint is minted for that function in the same
+	// transaction, enabling per-address function routing (e.g.
+	// `alice@acme.com -> functionA`).
+	//
+	// POST /routes
+	CreateRoute(ctx context.Context, request *CreateRouteInput) (CreateRouteRes, error)
 	// DecideRegistryRequest invokes decideRegistryRequest operation.
 	//
 	// Approve or reject a publication request.
@@ -253,6 +263,12 @@ type Invoker interface {
 	//
 	// DELETE /org/secrets/{key}
 	DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (DeleteOrgSecretRes, error)
+	// DeleteRoute invokes deleteRoute operation.
+	//
+	// Delete a recipient route.
+	//
+	// DELETE /routes/{id}
+	DeleteRoute(ctx context.Context, params DeleteRouteParams) (DeleteRouteRes, error)
 	// DiscardEmailContent invokes discardEmailContent operation.
 	//
 	// Permanently deletes the email's raw bytes, parsed body (text + HTML),
@@ -631,6 +647,14 @@ type Invoker interface {
 	//
 	// GET /registries/{slug}/requests
 	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
+	// ListRoutes invokes listRoutes operation.
+	//
+	// Returns the org's recipient routing rules in evaluation order. Each rule
+	// binds a recipient address pattern to one endpoint; inbound mail resolves
+	// to a single destination at delivery time.
+	//
+	// GET /routes
+	ListRoutes(ctx context.Context) (ListRoutesRes, error)
 	// ListSentEmails invokes listSentEmails operation.
 	//
 	// Returns a paginated list of OUTBOUND emails the caller's
@@ -694,6 +718,12 @@ type Invoker interface {
 	//
 	// POST /x402/payout-addresses
 	RegisterPayoutAddress(ctx context.Context, request *RegisterPayoutAddressInput) (RegisterPayoutAddressRes, error)
+	// ReorderRoutes invokes reorderRoutes operation.
+	//
+	// Update the priority of one or more routes in a single call.
+	//
+	// POST /routes/reorder
+	ReorderRoutes(ctx context.Context, request *ReorderRoutesInput) (ReorderRoutesRes, error)
 	// ReplayDelivery invokes replayDelivery operation.
 	//
 	// Re-sends the stored webhook payload from a previous delivery attempt.
@@ -836,6 +866,13 @@ type Invoker interface {
 	//
 	// PUT /org/secrets/{key}
 	SetOrgSecret(ctx context.Context, request *SetOrgSecretInput, params SetOrgSecretParams) (SetOrgSecretRes, error)
+	// SimulateRoute invokes simulateRoute operation.
+	//
+	// Resolves where an inbound email to `recipient` would be delivered, with a
+	// trace of every rule evaluated and why. Read-only; creates nothing.
+	//
+	// POST /routes/simulate
+	SimulateRoute(ctx context.Context, request *SimulateRouteInput) (SimulateRouteRes, error)
 	// StartAgentClaim invokes startAgentClaim operation.
 	//
 	// Begins upgrading an emailless `agent` account into a full `developer`
@@ -972,6 +1009,12 @@ type Invoker interface {
 	//
 	// PATCH /registries/{slug}
 	UpdateRegistry(ctx context.Context, request *UpdateRegistryInput, params UpdateRegistryParams) (UpdateRegistryRes, error)
+	// UpdateRoute invokes updateRoute operation.
+	//
+	// Update a recipient route.
+	//
+	// PATCH /routes/{id}
+	UpdateRoute(ctx context.Context, request *UpdateRouteInput, params UpdateRouteParams) (UpdateRouteRes, error)
 	// UpdateSpendPolicy invokes updateSpendPolicy operation.
 	//
 	// Update your org's spend policy. Applied as a merge: only the fields you
@@ -2482,6 +2525,120 @@ func (c *Client) sendCreateRegistry(ctx context.Context, request *CreateRegistry
 	return result, nil
 }
 
+// CreateRoute invokes createRoute operation.
+//
+// Binds a recipient pattern to a destination. Provide exactly one of
+// `endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,
+// a dedicated route-target endpoint is minted for that function in the same
+// transaction, enabling per-address function routing (e.g.
+// `alice@acme.com -> functionA`).
+//
+// POST /routes
+func (c *Client) CreateRoute(ctx context.Context, request *CreateRouteInput) (CreateRouteRes, error) {
+	res, err := c.sendCreateRoute(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateRoute(ctx context.Context, request *CreateRouteInput) (res CreateRouteRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createRoute"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/routes"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateRouteOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/routes"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateRouteRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateRouteOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateRouteResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DecideRegistryRequest invokes decideRegistryRequest operation.
 //
 // Approve or reject a publication request.
@@ -3638,6 +3795,131 @@ func (c *Client) sendDeleteOrgSecret(ctx context.Context, params DeleteOrgSecret
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteOrgSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteRoute invokes deleteRoute operation.
+//
+// Delete a recipient route.
+//
+// DELETE /routes/{id}
+func (c *Client) DeleteRoute(ctx context.Context, params DeleteRouteParams) (DeleteRouteRes, error) {
+	res, err := c.sendDeleteRoute(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteRoute(ctx context.Context, params DeleteRouteParams) (res DeleteRouteRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteRoute"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/routes/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteRouteOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/routes/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteRouteOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteRouteResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -8260,6 +8542,115 @@ func (c *Client) sendListRegistryRequests(ctx context.Context, params ListRegist
 	return result, nil
 }
 
+// ListRoutes invokes listRoutes operation.
+//
+// Returns the org's recipient routing rules in evaluation order. Each rule
+// binds a recipient address pattern to one endpoint; inbound mail resolves
+// to a single destination at delivery time.
+//
+// GET /routes
+func (c *Client) ListRoutes(ctx context.Context) (ListRoutesRes, error) {
+	res, err := c.sendListRoutes(ctx)
+	return res, err
+}
+
+func (c *Client) sendListRoutes(ctx context.Context) (res ListRoutesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listRoutes"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/routes"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListRoutesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/routes"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListRoutesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListRoutesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListSentEmails invokes listSentEmails operation.
 //
 // Returns a paginated list of OUTBOUND emails the caller's
@@ -8961,6 +9352,116 @@ func (c *Client) sendRegisterPayoutAddress(ctx context.Context, request *Registe
 
 	stage = "DecodeResponse"
 	result, err := decodeRegisterPayoutAddressResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ReorderRoutes invokes reorderRoutes operation.
+//
+// Update the priority of one or more routes in a single call.
+//
+// POST /routes/reorder
+func (c *Client) ReorderRoutes(ctx context.Context, request *ReorderRoutesInput) (ReorderRoutesRes, error) {
+	res, err := c.sendReorderRoutes(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendReorderRoutes(ctx context.Context, request *ReorderRoutesInput) (res ReorderRoutesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("reorderRoutes"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/routes/reorder"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ReorderRoutesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/routes/reorder"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeReorderRoutesRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ReorderRoutesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeReorderRoutesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -10843,6 +11344,117 @@ func (c *Client) sendSetOrgSecret(ctx context.Context, request *SetOrgSecretInpu
 	return result, nil
 }
 
+// SimulateRoute invokes simulateRoute operation.
+//
+// Resolves where an inbound email to `recipient` would be delivered, with a
+// trace of every rule evaluated and why. Read-only; creates nothing.
+//
+// POST /routes/simulate
+func (c *Client) SimulateRoute(ctx context.Context, request *SimulateRouteInput) (SimulateRouteRes, error) {
+	res, err := c.sendSimulateRoute(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendSimulateRoute(ctx context.Context, request *SimulateRouteInput) (res SimulateRouteRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("simulateRoute"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/routes/simulate"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, SimulateRouteOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/routes/simulate"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeSimulateRouteRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, SimulateRouteOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSimulateRouteResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // StartAgentClaim invokes startAgentClaim operation.
 //
 // Begins upgrading an emailless `agent` account into a full `developer`
@@ -12504,6 +13116,134 @@ func (c *Client) sendUpdateRegistry(ctx context.Context, request *UpdateRegistry
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateRegistryResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateRoute invokes updateRoute operation.
+//
+// Update a recipient route.
+//
+// PATCH /routes/{id}
+func (c *Client) UpdateRoute(ctx context.Context, request *UpdateRouteInput, params UpdateRouteParams) (UpdateRouteRes, error) {
+	res, err := c.sendUpdateRoute(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateRoute(ctx context.Context, request *UpdateRouteInput, params UpdateRouteParams) (res UpdateRouteRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateRoute"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.URLTemplateKey.String("/routes/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateRouteOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/routes/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateRouteRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateRouteOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateRouteResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

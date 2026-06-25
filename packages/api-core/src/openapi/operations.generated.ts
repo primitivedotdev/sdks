@@ -8690,6 +8690,664 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": true,
+    "command": "create-route",
+    "description": "Binds a recipient pattern to a destination. Provide exactly one of\n`endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,\na dedicated route-target endpoint is minted for that function in the same\ntransaction, enabling per-address function routing (e.g.\n`alice@acme.com -> functionA`).\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createRoute",
+    "path": "/routes",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Provide exactly one of `endpoint_id` or `function_id`. With `function_id`,\na route-target endpoint is minted for that function and the route is bound\nto it in one transaction.\n",
+      "properties": {
+        "match_type": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex"
+          ]
+        },
+        "pattern": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "An existing endpoint to route to. Mutually exclusive with function_id."
+        },
+        "function_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Route to this function, minting its route-target endpoint if needed. Mutually exclusive with endpoint_id."
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Scope the route to a domain; defaults to the pattern's domain."
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "match_type",
+        "pattern"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "A recipient routing rule binding an address pattern to one endpoint.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Domain the route is scoped to; null = org-wide."
+        },
+        "match_type": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex"
+          ]
+        },
+        "pattern": {
+          "type": "string",
+          "description": "The recipient address pattern (an exact address or a wildcard)."
+        },
+        "pattern_norm": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Normalized pattern used for matching."
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The endpoint inbound mail matching this rule is delivered to."
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Evaluation order within a scope; lower is checked first."
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "match_count": {
+          "type": "string",
+          "description": "How many emails have matched this rule (a bigint, returned as a string)."
+        },
+        "last_matched_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "sdkName": "createRoute",
+    "summary": "Create a recipient route",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-route",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteRoute",
+    "path": "/routes/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "deleteRoute",
+    "summary": "Delete a recipient route",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-routes",
+    "description": "Returns the org's recipient routing rules in evaluation order. Each rule\nbinds a recipient address pattern to one endpoint; inbound mail resolves\nto a single destination at delivery time.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listRoutes",
+    "path": "/routes",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "A recipient routing rule binding an address pattern to one endpoint.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Domain the route is scoped to; null = org-wide."
+          },
+          "match_type": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "wildcard",
+              "regex"
+            ]
+          },
+          "pattern": {
+            "type": "string",
+            "description": "The recipient address pattern (an exact address or a wildcard)."
+          },
+          "pattern_norm": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Normalized pattern used for matching."
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The endpoint inbound mail matching this rule is delivered to."
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Evaluation order within a scope; lower is checked first."
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "match_count": {
+            "type": "string",
+            "description": "How many emails have matched this rule (a bigint, returned as a string)."
+          },
+          "last_matched_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    "sdkName": "listRoutes",
+    "summary": "List recipient routes",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "reorder-routes",
+    "description": "Update the priority of one or more routes in a single call.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "reorderRoutes",
+    "path": "/routes/reorder",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "updates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "priority"
+            ]
+          }
+        }
+      },
+      "required": [
+        "updates"
+      ]
+    },
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "A recipient routing rule binding an address pattern to one endpoint.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Domain the route is scoped to; null = org-wide."
+          },
+          "match_type": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "wildcard",
+              "regex"
+            ]
+          },
+          "pattern": {
+            "type": "string",
+            "description": "The recipient address pattern (an exact address or a wildcard)."
+          },
+          "pattern_norm": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Normalized pattern used for matching."
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The endpoint inbound mail matching this rule is delivered to."
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Evaluation order within a scope; lower is checked first."
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "match_count": {
+            "type": "string",
+            "description": "How many emails have matched this rule (a bigint, returned as a string)."
+          },
+          "last_matched_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    "sdkName": "reorderRoutes",
+    "summary": "Reorder recipient routes",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "simulate-route",
+    "description": "Resolves where an inbound email to `recipient` would be delivered, with a\ntrace of every rule evaluated and why. Read-only; creates nothing.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "simulateRoute",
+    "path": "/routes/simulate",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recipient": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 320
+        },
+        "event_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Event type to model; defaults to email.received."
+        }
+      },
+      "required": [
+        "recipient"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "Where an inbound email to the recipient would be delivered, and why.",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "matched",
+            "defaulted",
+            "none"
+          ]
+        },
+        "recipient": {
+          "type": "string"
+        },
+        "endpoint_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matched_route_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matched_tier": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex",
+            null
+          ]
+        },
+        "matched_pattern": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "default_scope": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "domain",
+            "org",
+            null
+          ]
+        },
+        "evaluated": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "route_id": {
+                "type": "string"
+              },
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "exact",
+                  "wildcard",
+                  "regex"
+                ]
+              },
+              "pattern": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string",
+                "enum": [
+                  "hit",
+                  "miss",
+                  "skipped",
+                  "error"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "route_id",
+              "tier",
+              "pattern",
+              "result"
+            ]
+          }
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "outcome",
+        "recipient",
+        "endpoint_id",
+        "matched_route_id",
+        "matched_tier",
+        "matched_pattern",
+        "default_scope",
+        "evaluated",
+        "truncated"
+      ]
+    },
+    "sdkName": "simulateRoute",
+    "summary": "Simulate routing for a recipient",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-route",
+    "description": null,
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "updateRoute",
+    "path": "/routes/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "match_type": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex"
+          ]
+        },
+        "pattern": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "A recipient routing rule binding an address pattern to one endpoint.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "org_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Domain the route is scoped to; null = org-wide."
+        },
+        "match_type": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex"
+          ]
+        },
+        "pattern": {
+          "type": "string",
+          "description": "The recipient address pattern (an exact address or a wildcard)."
+        },
+        "pattern_norm": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Normalized pattern used for matching."
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The endpoint inbound mail matching this rule is delivered to."
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Evaluation order within a scope; lower is checked first."
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "match_count": {
+          "type": "string",
+          "description": "How many emails have matched this rule (a bigint, returned as a string)."
+        },
+        "last_matched_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "sdkName": "updateRoute",
+    "summary": "Update a recipient route",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
     "command": "semantic-search",
     "description": "Ranked search across both received and sent mail. The `mode`\nfield selects the ranking strategy:\n\n- `keyword`: lexical full-text matching only (no embeddings).\n- `semantic`: meaning-based matching using vector embeddings.\n- `hybrid` (default): blends the semantic and keyword signals.\n\nResults are ordered by a relevance `score`. Every row reports the\nfields it matched (`matched_fields`), a match-centered excerpt per\nfield (`snippets`), and a `score_breakdown` whose components account\nfor the `score`. Page through results by passing the prior\nresponse's `meta.cursor` back as `cursor`.\n\nRequires the Pro plan and the `semantic_search_enabled`\nentitlement; callers without them receive `403`.\n\nHost routing: this operation is served only by the search host\n(`https://api.primitive.dev/v1`). The typed SDKs route it there\nautomatically.\n",
     "hasJsonBody": true,

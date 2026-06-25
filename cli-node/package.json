@@ -109,6 +109,9 @@
       },
       "payments": {
         "description": "Collect and pay x402 stablecoin (USDC) payments. Start with `primitive payments register-payout-address`, then `primitive payments create-challenge` to request a payment and `primitive payments pay` to settle one. Settlement is non-custodial; signing happens locally with your wallet key. Manage caps with `primitive payments get-policy|update-spend-policy`."
+      },
+      "routes": {
+        "description": "Manage recipient routes. Bind an address pattern to an endpoint or function: `primitive routes add alice@d --function <id>`, `primitive routes list`, `primitive routes test <recipient>`, `primitive routes remove <id>`."
       }
     },
     "topicSeparator": " "
