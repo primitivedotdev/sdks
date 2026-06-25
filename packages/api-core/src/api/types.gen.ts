@@ -294,14 +294,16 @@ export type CreateEmailChallengeInput = {
      */
     to: string;
     /**
-     * Amount to collect, in token base units. USDC has 6 decimals, so
-     * `"10000"` is 0.01 USDC.
+     * Amount to collect, in token base units (this command takes base
+     * units only, unlike `charge` which also accepts `--amount-usdc`).
+     * USDC has 6 decimals, so `"10000"` is 0.01 USDC: multiply a human
+     * USDC amount by 1,000,000 (0.01 USDC -> `"10000"`).
      *
      */
     amount: string;
     network: 'base' | 'base-sepolia';
     /**
-     * Seconds until the challenge expires. Defaults to 3600.
+     * Seconds until the challenge expires. Defaults to 300.
      */
     expires_in?: number;
     /**

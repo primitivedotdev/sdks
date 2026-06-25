@@ -9,8 +9,18 @@ import (
 const eventsTestSecret = "whsec_test_secret_for_events"
 
 func TestParsePaymentSettledFromHeader(t *testing.T) {
-	// The stored payment body carries the name in "type", not "event".
-	body := map[string]any{"type": "payment.settled", "id": "pay_1", "payment": map[string]any{"amount": "100"}}
+	// The stored payment body is FLAT and carries the name in "type", not
+	// "event": challenge_id/network/amount/asset/payer_org plus settle_tx, with
+	// no id and no nested payment object.
+	body := map[string]any{
+		"type":         "payment.settled",
+		"challenge_id": "chl_1",
+		"network":      "base-sepolia",
+		"amount":       "10000",
+		"asset":        "0xToken",
+		"payer_org":    "org_1",
+		"settle_tx":    "0xdeadbeef",
+	}
 
 	event, err := ParseWebhookEvent(body, "payment.settled")
 	if err != nil {
@@ -29,8 +39,60 @@ func TestParsePaymentSettledFromHeader(t *testing.T) {
 	if payment.Type != "payment.settled" {
 		t.Fatalf("expected Type payment.settled, got %q", payment.Type)
 	}
-	if payment.ID == nil || *payment.ID != "pay_1" {
-		t.Fatalf("expected ID pay_1")
+	if payment.ChallengeID != "chl_1" {
+		t.Fatalf("expected ChallengeID chl_1, got %q", payment.ChallengeID)
+	}
+	if payment.Amount != "10000" {
+		t.Fatalf("expected Amount 10000, got %q", payment.Amount)
+	}
+	if payment.Network != "base-sepolia" {
+		t.Fatalf("expected Network base-sepolia, got %q", payment.Network)
+	}
+	if payment.Asset != "0xToken" {
+		t.Fatalf("expected Asset 0xToken, got %q", payment.Asset)
+	}
+	if payment.PayerOrg == nil || *payment.PayerOrg != "org_1" {
+		t.Fatalf("expected PayerOrg org_1")
+	}
+	if payment.SettleTx != "0xdeadbeef" {
+		t.Fatalf("expected SettleTx 0xdeadbeef, got %q", payment.SettleTx)
+	}
+}
+
+func TestParsePaymentFailedFromHeader(t *testing.T) {
+	// payment.failed carries failure_reason (and no settle_tx), payer_org null.
+	body := map[string]any{
+		"type":           "payment.failed",
+		"challenge_id":   "chl_2",
+		"network":        "base",
+		"amount":         "250",
+		"asset":          "0xToken",
+		"payer_org":      nil,
+		"failure_reason": "insufficient funds",
+	}
+
+	event, err := ParseWebhookEvent(body, "payment.failed")
+	if err != nil {
+		t.Fatalf("ParseWebhookEvent returned error: %v", err)
+	}
+	if !IsPaymentFailedEvent(event) {
+		t.Fatalf("expected payment.failed, got %q", event.GetEvent())
+	}
+	payment, ok := event.(PaymentEvent)
+	if !ok {
+		t.Fatalf("expected PaymentEvent, got %T", event)
+	}
+	if payment.ChallengeID != "chl_2" {
+		t.Fatalf("expected ChallengeID chl_2, got %q", payment.ChallengeID)
+	}
+	if payment.FailureReason != "insufficient funds" {
+		t.Fatalf("expected FailureReason, got %q", payment.FailureReason)
+	}
+	if payment.PayerOrg != nil {
+		t.Fatalf("expected nil PayerOrg for null payer_org, got %q", *payment.PayerOrg)
+	}
+	if payment.SettleTx != "" {
+		t.Fatalf("expected empty SettleTx on failed, got %q", payment.SettleTx)
 	}
 }
 

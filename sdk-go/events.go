@@ -71,14 +71,23 @@ func IsKnownWebhookEventType(eventType string) bool {
 
 // PaymentEvent is a payment.* webhook body.
 //
-// The stored payload carries the event name in Type (not Event); the parser
-// overlays a canonical Event from the header so consumers can branch on a
-// single field. Payload preserves the raw stored body verbatim.
+// The stored payload is FLAT (no envelope, no nested payment object): it carries
+// the event name in Type, and the parser overlays a canonical Event mirrored
+// from the header so consumers can branch on a single field. All amounts are
+// token base units (USDC has 6 decimals, so "10000" is 0.01). Payload preserves
+// the raw stored body verbatim. SettleTx is set on payment.settled;
+// FailureReason is set on payment.failed.
 type PaymentEvent struct {
-	Event   string         `json:"event"`
-	Type    string         `json:"type,omitempty"`
-	ID      *string        `json:"id,omitempty"`
-	Payload map[string]any `json:"-"`
+	Event         string         `json:"event"`
+	Type          string         `json:"type,omitempty"`
+	ChallengeID   string         `json:"challenge_id,omitempty"`
+	Network       string         `json:"network,omitempty"`
+	Amount        string         `json:"amount,omitempty"`
+	Asset         string         `json:"asset,omitempty"`
+	PayerOrg      *string        `json:"payer_org,omitempty"`
+	SettleTx      string         `json:"settle_tx,omitempty"`
+	FailureReason string         `json:"failure_reason,omitempty"`
+	Payload       map[string]any `json:"-"`
 }
 
 // GetEvent returns the canonical event name (mirrored from the header).

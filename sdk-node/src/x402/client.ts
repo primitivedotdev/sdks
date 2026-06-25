@@ -182,7 +182,7 @@ export interface X402EmailChargeInput {
   description?: string;
   /** A URL identifying the thing being paid for. */
   resource?: string;
-  /** Seconds until the challenge expires (default 1h). */
+  /** Seconds until the challenge expires (defaults to 300s / 5 minutes). */
   expiresIn?: number;
   /**
    * Optional idempotency key. Retrying `createEmailChallenge()` with the same

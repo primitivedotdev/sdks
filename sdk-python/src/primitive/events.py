@@ -71,18 +71,28 @@ def is_known_webhook_event_type(event_type: str | None) -> bool:
 class PaymentEvent(TypedDict, total=False):
     """A ``payment.*`` webhook body.
 
-    The stored payload carries the event name in ``type`` (not ``event``); the
-    parser overlays a canonical ``event`` from the header so consumers can branch
-    on a single field.
+    The stored payload is FLAT (no envelope, no nested ``payment`` object): it
+    carries the event name in ``type``, and the parser overlays a canonical
+    ``event`` mirrored from the header so consumers can branch on a single
+    field. All amounts are token base units (USDC has 6 decimals, so ``"10000"``
+    is 0.01).
     """
 
     # ReadOnly so subclasses may narrow this Literal (PEP 705); a mutable
     # TypedDict field is invariant and could not be narrowed in a subclass.
     event: ReadOnly[Literal["payment.settled", "payment.failed"]]
-    type: str
-    id: str
-    created_at: str
-    payment: dict[str, Any]
+    #: The event name as carried in the raw stored body.
+    type: ReadOnly[Literal["payment.settled", "payment.failed"]]
+    #: The challenge this payment settles or fails.
+    challenge_id: str
+    #: The settlement network (e.g. ``"base"``, ``"base-sepolia"``).
+    network: str
+    #: Amount in token base units (USDC has 6 decimals, so ``"10000"`` is 0.01).
+    amount: str
+    #: The checksummed token contract address.
+    asset: str
+    #: The paying organization id, or None when not on-net.
+    payer_org: str | None
 
 
 class PaymentSettledEvent(PaymentEvent, total=False):
@@ -94,6 +104,9 @@ class PaymentSettledEvent(PaymentEvent, total=False):
     """
 
     event: ReadOnly[Literal["payment.settled"]]
+    type: ReadOnly[Literal["payment.settled"]]
+    #: The on-chain settlement transaction hash.
+    settle_tx: str
 
 
 class PaymentFailedEvent(PaymentEvent, total=False):
@@ -105,6 +118,9 @@ class PaymentFailedEvent(PaymentEvent, total=False):
     """
 
     event: ReadOnly[Literal["payment.failed"]]
+    type: ReadOnly[Literal["payment.failed"]]
+    #: Human-readable reason the payment failed.
+    failure_reason: str
 
 
 class InteractionEvent(TypedDict, total=False):

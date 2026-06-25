@@ -6981,7 +6981,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "amount": {
           "type": "string",
           "pattern": "^[1-9][0-9]{0,38}$",
-          "description": "Amount to collect, in token base units. USDC has 6 decimals, so\n`\"10000\"` is 0.01 USDC.\n"
+          "description": "Amount to collect, in token base units (this command takes base\nunits only, unlike `charge` which also accepts `--amount-usdc`).\nUSDC has 6 decimals, so `\"10000\"` is 0.01 USDC: multiply a human\nUSDC amount by 1,000,000 (0.01 USDC -> `\"10000\"`).\n"
         },
         "network": {
           "type": "string",
@@ -6994,7 +6994,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "integer",
           "minimum": 60,
           "maximum": 86400,
-          "description": "Seconds until the challenge expires. Defaults to 3600."
+          "description": "Seconds until the challenge expires. Defaults to 300."
         },
         "resource": {
           "type": "string",

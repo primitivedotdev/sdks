@@ -2412,11 +2412,13 @@ type CreateEmailChallengeInput struct {
 	From string `json:"from"`
 	// The payer's email address the challenge is sent to.
 	To string `json:"to"`
-	// Amount to collect, in token base units. USDC has 6 decimals, so
-	// `"10000"` is 0.01 USDC.
+	// Amount to collect, in token base units (this command takes base
+	// units only, unlike `charge` which also accepts `--amount-usdc`).
+	// USDC has 6 decimals, so `"10000"` is 0.01 USDC: multiply a human
+	// USDC amount by 1,000,000 (0.01 USDC -> `"10000"`).
 	Amount  string                           `json:"amount"`
 	Network CreateEmailChallengeInputNetwork `json:"network"`
-	// Seconds until the challenge expires. Defaults to 3600.
+	// Seconds until the challenge expires. Defaults to 300.
 	ExpiresIn OptInt `json:"expires_in"`
 	// Optional URL identifying what is being paid for.
 	Resource OptURI `json:"resource"`

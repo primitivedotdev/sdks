@@ -93,6 +93,9 @@ primitive payments pay --challenge-file challenge.json
 cat challenge.json | primitive payments pay
 
 # Email-native flow: the payee issues a challenge over an email thread.
+# Note: create-email-challenge takes --amount in token base units only (no
+# --amount-usdc). USDC has 6 decimals, so multiply by 1,000,000: 0.01 USDC is
+# --amount 10000.
 primitive payments create-email-challenge --from payee@your-domain.example \
   --to payer@their-domain.example --amount 10000 --network base-sepolia
 # Payer: sign a received email challenge into an interaction.json payment step.
