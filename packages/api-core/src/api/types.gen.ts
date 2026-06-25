@@ -2828,12 +2828,15 @@ export type SimulateRouteResult = {
      */
     endpoint_id: string | null;
     matched_route_id: string | null;
-    matched_tier: MatchType | unknown;
+    /**
+     * The matched route's tier (exact, wildcard, or regex); null when no route matched.
+     */
+    matched_tier: string | null;
     matched_pattern: string | null;
     /**
-     * Which default destination was used, when outcome is defaulted.
+     * Which default destination was used (domain or org); null unless outcome is defaulted.
      */
-    default_scope: 'domain' | 'org' | null;
+    default_scope: string | null;
     evaluated: Array<RouteEvaluation>;
     /**
      * True when the evaluation trace was capped.

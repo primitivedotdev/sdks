@@ -11203,14 +11203,9 @@
             "nullable": true
           },
           "matched_tier": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/MatchType"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "string",
+            "description": "The matched route's tier (exact, wildcard, or regex); null when no route matched.",
+            "nullable": true
           },
           "matched_pattern": {
             "type": "string",
@@ -11218,12 +11213,7 @@
           },
           "default_scope": {
             "type": "string",
-            "enum": [
-              "domain",
-              "org",
-              null
-            ],
-            "description": "Which default destination was used, when outcome is defaulted.",
+            "description": "Which default destination was used (domain or org); null unless outcome is defaulted.",
             "nullable": true
           },
           "evaluated": {

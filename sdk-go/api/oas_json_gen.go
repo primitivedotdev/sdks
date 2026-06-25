@@ -31129,50 +31129,6 @@ func (s *NilInt) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes MatchType as json.
-func (o NilMatchType) Encode(e *jx.Encoder) {
-	if o.Null {
-		e.Null()
-		return
-	}
-	e.Str(string(o.Value))
-}
-
-// Decode decodes MatchType from json.
-func (o *NilMatchType) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode NilMatchType to nil")
-	}
-	if d.Next() == jx.Null {
-		if err := d.Null(); err != nil {
-			return err
-		}
-
-		var v MatchType
-		o.Value = v
-		o.Null = true
-		return nil
-	}
-	o.Null = false
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s NilMatchType) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *NilMatchType) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes RoutingTopologyDomainsItemRoutedFunction as json.
 func (o NilRoutingTopologyDomainsItemRoutedFunction) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -31301,50 +31257,6 @@ func (s NilSemanticSearchCoverage) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *NilSemanticSearchCoverage) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes SimulateRouteResultDefaultScope as json.
-func (o NilSimulateRouteResultDefaultScope) Encode(e *jx.Encoder) {
-	if o.Null {
-		e.Null()
-		return
-	}
-	e.Str(string(o.Value))
-}
-
-// Decode decodes SimulateRouteResultDefaultScope from json.
-func (o *NilSimulateRouteResultDefaultScope) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode NilSimulateRouteResultDefaultScope to nil")
-	}
-	if d.Next() == jx.Null {
-		if err := d.Null(); err != nil {
-			return err
-		}
-
-		var v SimulateRouteResultDefaultScope
-		o.Value = v
-		o.Null = true
-		return nil
-	}
-	o.Null = false
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s NilSimulateRouteResultDefaultScope) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *NilSimulateRouteResultDefaultScope) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -47093,46 +47005,6 @@ func (s SimulateRouteResultAdditional) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SimulateRouteResultAdditional) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes SimulateRouteResultDefaultScope as json.
-func (s SimulateRouteResultDefaultScope) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes SimulateRouteResultDefaultScope from json.
-func (s *SimulateRouteResultDefaultScope) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode SimulateRouteResultDefaultScope to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch SimulateRouteResultDefaultScope(v) {
-	case SimulateRouteResultDefaultScopeDomain:
-		*s = SimulateRouteResultDefaultScopeDomain
-	case SimulateRouteResultDefaultScopeOrg:
-		*s = SimulateRouteResultDefaultScopeOrg
-	default:
-		*s = SimulateRouteResultDefaultScope(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s SimulateRouteResultDefaultScope) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *SimulateRouteResultDefaultScope) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

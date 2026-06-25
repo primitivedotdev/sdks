@@ -297,9 +297,6 @@ from .set_org_secret_response_201 import SetOrgSecretResponse201
 from .simulate_route_input import SimulateRouteInput
 from .simulate_route_response_200 import SimulateRouteResponse200
 from .simulate_route_result import SimulateRouteResult
-from .simulate_route_result_default_scope_type_1 import SimulateRouteResultDefaultScopeType1
-from .simulate_route_result_default_scope_type_2_type_1 import SimulateRouteResultDefaultScopeType2Type1
-from .simulate_route_result_default_scope_type_3_type_1 import SimulateRouteResultDefaultScopeType3Type1
 from .simulate_route_result_outcome import SimulateRouteResultOutcome
 from .start_agent_claim_input import StartAgentClaimInput
 from .start_agent_claim_response_200 import StartAgentClaimResponse200
@@ -674,9 +671,6 @@ __all__ = (
     "SimulateRouteInput",
     "SimulateRouteResponse200",
     "SimulateRouteResult",
-    "SimulateRouteResultDefaultScopeType1",
-    "SimulateRouteResultDefaultScopeType2Type1",
-    "SimulateRouteResultDefaultScopeType3Type1",
     "SimulateRouteResultOutcome",
     "StartAgentClaimInput",
     "StartAgentClaimResponse200",

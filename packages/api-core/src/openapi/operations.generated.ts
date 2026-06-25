@@ -9141,20 +9141,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ]
         },
         "matched_tier": {
-          "oneOf": [
-            {
-              "type": "string",
-              "enum": [
-                "exact",
-                "wildcard",
-                "regex"
-              ],
-              "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The matched route's tier (exact, wildcard, or regex); null when no route matched."
         },
         "matched_pattern": {
           "type": [
@@ -9167,12 +9158,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "string",
             "null"
           ],
-          "enum": [
-            "domain",
-            "org",
-            null
-          ],
-          "description": "Which default destination was used, when outcome is defaulted."
+          "description": "Which default destination was used (domain or org); null unless outcome is defaulted."
         },
         "evaluated": {
           "type": "array",

@@ -12281,51 +12281,6 @@ func (o NilInt) Or(d int) int {
 	return d
 }
 
-// NewNilMatchType returns new NilMatchType with value set to v.
-func NewNilMatchType(v MatchType) NilMatchType {
-	return NilMatchType{
-		Value: v,
-	}
-}
-
-// NilMatchType is nullable MatchType.
-type NilMatchType struct {
-	Value MatchType
-	Null  bool
-}
-
-// SetTo sets value to v.
-func (o *NilMatchType) SetTo(v MatchType) {
-	o.Null = false
-	o.Value = v
-}
-
-// IsNull returns true if value is Null.
-func (o NilMatchType) IsNull() bool { return o.Null }
-
-// SetToNull sets value to null.
-func (o *NilMatchType) SetToNull() {
-	o.Null = true
-	var v MatchType
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o NilMatchType) Get() (v MatchType, ok bool) {
-	if o.Null {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o NilMatchType) Or(d MatchType) MatchType {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewNilRoutingTopologyDomainsItemRoutedFunction returns new NilRoutingTopologyDomainsItemRoutedFunction with value set to v.
 func NewNilRoutingTopologyDomainsItemRoutedFunction(v RoutingTopologyDomainsItemRoutedFunction) NilRoutingTopologyDomainsItemRoutedFunction {
 	return NilRoutingTopologyDomainsItemRoutedFunction{
@@ -12455,51 +12410,6 @@ func (o NilSemanticSearchCoverage) Get() (v SemanticSearchCoverage, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o NilSemanticSearchCoverage) Or(d SemanticSearchCoverage) SemanticSearchCoverage {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewNilSimulateRouteResultDefaultScope returns new NilSimulateRouteResultDefaultScope with value set to v.
-func NewNilSimulateRouteResultDefaultScope(v SimulateRouteResultDefaultScope) NilSimulateRouteResultDefaultScope {
-	return NilSimulateRouteResultDefaultScope{
-		Value: v,
-	}
-}
-
-// NilSimulateRouteResultDefaultScope is nullable SimulateRouteResultDefaultScope.
-type NilSimulateRouteResultDefaultScope struct {
-	Value SimulateRouteResultDefaultScope
-	Null  bool
-}
-
-// SetTo sets value to v.
-func (o *NilSimulateRouteResultDefaultScope) SetTo(v SimulateRouteResultDefaultScope) {
-	o.Null = false
-	o.Value = v
-}
-
-// IsNull returns true if value is Null.
-func (o NilSimulateRouteResultDefaultScope) IsNull() bool { return o.Null }
-
-// SetToNull sets value to null.
-func (o *NilSimulateRouteResultDefaultScope) SetToNull() {
-	o.Null = true
-	var v SimulateRouteResultDefaultScope
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o NilSimulateRouteResultDefaultScope) Get() (v SimulateRouteResultDefaultScope, ok bool) {
-	if o.Null {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o NilSimulateRouteResultDefaultScope) Or(d SimulateRouteResultDefaultScope) SimulateRouteResultDefaultScope {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -20511,13 +20421,14 @@ type SimulateRouteResult struct {
 	Outcome   SimulateRouteResultOutcome `json:"outcome"`
 	Recipient string                     `json:"recipient"`
 	// The endpoint mail would reach, or null when none.
-	EndpointID     NilString    `json:"endpoint_id"`
-	MatchedRouteID NilString    `json:"matched_route_id"`
-	MatchedTier    NilMatchType `json:"matched_tier"`
-	MatchedPattern NilString    `json:"matched_pattern"`
-	// Which default destination was used, when outcome is defaulted.
-	DefaultScope NilSimulateRouteResultDefaultScope `json:"default_scope"`
-	Evaluated    []RouteEvaluation                  `json:"evaluated"`
+	EndpointID     NilString `json:"endpoint_id"`
+	MatchedRouteID NilString `json:"matched_route_id"`
+	// The matched route's tier (exact, wildcard, or regex); null when no route matched.
+	MatchedTier    NilString `json:"matched_tier"`
+	MatchedPattern NilString `json:"matched_pattern"`
+	// Which default destination was used (domain or org); null unless outcome is defaulted.
+	DefaultScope NilString         `json:"default_scope"`
+	Evaluated    []RouteEvaluation `json:"evaluated"`
 	// True when the evaluation trace was capped.
 	Truncated       bool `json:"truncated"`
 	AdditionalProps SimulateRouteResultAdditional
@@ -20544,7 +20455,7 @@ func (s *SimulateRouteResult) GetMatchedRouteID() NilString {
 }
 
 // GetMatchedTier returns the value of MatchedTier.
-func (s *SimulateRouteResult) GetMatchedTier() NilMatchType {
+func (s *SimulateRouteResult) GetMatchedTier() NilString {
 	return s.MatchedTier
 }
 
@@ -20554,7 +20465,7 @@ func (s *SimulateRouteResult) GetMatchedPattern() NilString {
 }
 
 // GetDefaultScope returns the value of DefaultScope.
-func (s *SimulateRouteResult) GetDefaultScope() NilSimulateRouteResultDefaultScope {
+func (s *SimulateRouteResult) GetDefaultScope() NilString {
 	return s.DefaultScope
 }
 
@@ -20594,7 +20505,7 @@ func (s *SimulateRouteResult) SetMatchedRouteID(val NilString) {
 }
 
 // SetMatchedTier sets the value of MatchedTier.
-func (s *SimulateRouteResult) SetMatchedTier(val NilMatchType) {
+func (s *SimulateRouteResult) SetMatchedTier(val NilString) {
 	s.MatchedTier = val
 }
 
@@ -20604,7 +20515,7 @@ func (s *SimulateRouteResult) SetMatchedPattern(val NilString) {
 }
 
 // SetDefaultScope sets the value of DefaultScope.
-func (s *SimulateRouteResult) SetDefaultScope(val NilSimulateRouteResultDefaultScope) {
+func (s *SimulateRouteResult) SetDefaultScope(val NilString) {
 	s.DefaultScope = val
 }
 
@@ -20632,48 +20543,6 @@ func (s *SimulateRouteResultAdditional) init() SimulateRouteResultAdditional {
 		*s = m
 	}
 	return m
-}
-
-// Which default destination was used, when outcome is defaulted.
-type SimulateRouteResultDefaultScope string
-
-const (
-	SimulateRouteResultDefaultScopeDomain SimulateRouteResultDefaultScope = "domain"
-	SimulateRouteResultDefaultScopeOrg    SimulateRouteResultDefaultScope = "org"
-)
-
-// AllValues returns all SimulateRouteResultDefaultScope values.
-func (SimulateRouteResultDefaultScope) AllValues() []SimulateRouteResultDefaultScope {
-	return []SimulateRouteResultDefaultScope{
-		SimulateRouteResultDefaultScopeDomain,
-		SimulateRouteResultDefaultScopeOrg,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s SimulateRouteResultDefaultScope) MarshalText() ([]byte, error) {
-	switch s {
-	case SimulateRouteResultDefaultScopeDomain:
-		return []byte(s), nil
-	case SimulateRouteResultDefaultScopeOrg:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *SimulateRouteResultDefaultScope) UnmarshalText(data []byte) error {
-	switch SimulateRouteResultDefaultScope(data) {
-	case SimulateRouteResultDefaultScopeDomain:
-		*s = SimulateRouteResultDefaultScopeDomain
-		return nil
-	case SimulateRouteResultDefaultScopeOrg:
-		*s = SimulateRouteResultDefaultScopeOrg
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
 }
 
 // Matched: a route matched. defaulted: fell to the default destination. none: nowhere.

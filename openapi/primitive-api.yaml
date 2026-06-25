@@ -8145,15 +8145,13 @@ components:
         matched_route_id:
           type: [string, 'null']
         matched_tier:
-          oneOf:
-            - $ref: '#/components/schemas/MatchType'
-            - type: 'null'
+          type: [string, 'null']
+          description: The matched route's tier (exact, wildcard, or regex); null when no route matched.
         matched_pattern:
           type: [string, 'null']
         default_scope:
           type: [string, 'null']
-          enum: [domain, org, null]
-          description: Which default destination was used, when outcome is defaulted.
+          description: Which default destination was used (domain or org); null unless outcome is defaulted.
         evaluated:
           type: array
           items:
