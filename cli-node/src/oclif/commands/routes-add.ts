@@ -64,8 +64,9 @@ class RoutesAddCommand extends Command {
       exclusive: ["function"],
     }),
     match: Flags.string({
-      description: "Match type for the pattern.",
-      options: ["exact", "wildcard"],
+      description:
+        "Match type for the pattern. regex requires the Power plan and may be rejected if not enabled.",
+      options: ["exact", "wildcard", "regex"],
       default: "exact",
     }),
     domain: Flags.string({
@@ -100,7 +101,7 @@ class RoutesAddCommand extends Command {
       const result = await createRoute({
         client: apiClient.client,
         body: {
-          match_type: flags.match as "exact" | "wildcard",
+          match_type: flags.match as "exact" | "wildcard" | "regex",
           pattern: args.pattern,
           ...(flags.function
             ? { function_id: flags.function }

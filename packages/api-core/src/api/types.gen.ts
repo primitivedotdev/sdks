@@ -2826,9 +2826,9 @@ export type SimulateRouteResult = {
     recipient: string;
     endpoint_id: string | null;
     matched_route_id: string | null;
-    matched_tier: 'exact' | 'wildcard' | 'regex';
+    matched_tier: 'exact' | 'wildcard' | 'regex' | null;
     matched_pattern: string | null;
-    default_scope: 'domain' | 'org';
+    default_scope: 'domain' | 'org' | null;
     evaluated: Array<RouteEvaluatedEntry>;
     truncated: boolean;
 };

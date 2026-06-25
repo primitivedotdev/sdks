@@ -1,6 +1,6 @@
 from enum import Enum
 
-class SimulateRouteResultDefaultScope(str, Enum):
+class SimulateRouteResultDefaultScopeType1(str, Enum):
     DOMAIN = "domain"
     ORG = "org"
 

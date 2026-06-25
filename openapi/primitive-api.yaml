@@ -8177,12 +8177,12 @@ components:
           type: [string, 'null']
         matched_tier:
           type: [string, 'null']
-          enum: [exact, wildcard, regex]
+          enum: [exact, wildcard, regex, null]
         matched_pattern:
           type: [string, 'null']
         default_scope:
           type: [string, 'null']
-          enum: [domain, org]
+          enum: [domain, org, null]
         evaluated:
           type: array
           items:

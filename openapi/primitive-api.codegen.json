@@ -11286,7 +11286,8 @@
             "enum": [
               "exact",
               "wildcard",
-              "regex"
+              "regex",
+              null
             ],
             "nullable": true
           },
@@ -11298,7 +11299,8 @@
             "type": "string",
             "enum": [
               "domain",
-              "org"
+              "org",
+              null
             ],
             "nullable": true
           },

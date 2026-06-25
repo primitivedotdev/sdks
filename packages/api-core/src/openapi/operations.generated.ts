@@ -9130,7 +9130,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "enum": [
             "exact",
             "wildcard",
-            "regex"
+            "regex",
+            null
           ]
         },
         "matched_pattern": {
@@ -9146,7 +9147,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "enum": [
             "domain",
-            "org"
+            "org",
+            null
           ]
         },
         "evaluated": {

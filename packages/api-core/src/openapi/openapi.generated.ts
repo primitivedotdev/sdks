@@ -11626,7 +11626,8 @@ export const openapiDocument: Record<string, unknown> = {
             "enum": [
               "exact",
               "wildcard",
-              "regex"
+              "regex",
+              null
             ]
           },
           "matched_pattern": {
@@ -11642,7 +11643,8 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "enum": [
               "domain",
-              "org"
+              "org",
+              null
             ]
           },
           "evaluated": {

@@ -8,8 +8,12 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.simulate_route_result_default_scope import SimulateRouteResultDefaultScope
-from ..models.simulate_route_result_matched_tier import SimulateRouteResultMatchedTier
+from ..models.simulate_route_result_default_scope_type_1 import SimulateRouteResultDefaultScopeType1
+from ..models.simulate_route_result_default_scope_type_2_type_1 import SimulateRouteResultDefaultScopeType2Type1
+from ..models.simulate_route_result_default_scope_type_3_type_1 import SimulateRouteResultDefaultScopeType3Type1
+from ..models.simulate_route_result_matched_tier_type_1 import SimulateRouteResultMatchedTierType1
+from ..models.simulate_route_result_matched_tier_type_2_type_1 import SimulateRouteResultMatchedTierType2Type1
+from ..models.simulate_route_result_matched_tier_type_3_type_1 import SimulateRouteResultMatchedTierType3Type1
 from ..models.simulate_route_result_outcome import SimulateRouteResultOutcome
 from typing import cast
 
@@ -33,9 +37,11 @@ class SimulateRouteResult:
             recipient (str):
             endpoint_id (None | str):
             matched_route_id (None | str):
-            matched_tier (SimulateRouteResultMatchedTier):
+            matched_tier (None | SimulateRouteResultMatchedTierType1 | SimulateRouteResultMatchedTierType2Type1 |
+                SimulateRouteResultMatchedTierType3Type1):
             matched_pattern (None | str):
-            default_scope (SimulateRouteResultDefaultScope):
+            default_scope (None | SimulateRouteResultDefaultScopeType1 | SimulateRouteResultDefaultScopeType2Type1 |
+                SimulateRouteResultDefaultScopeType3Type1):
             evaluated (list[RouteEvaluatedEntry]):
             truncated (bool):
      """
@@ -44,9 +50,9 @@ class SimulateRouteResult:
     recipient: str
     endpoint_id: None | str
     matched_route_id: None | str
-    matched_tier: SimulateRouteResultMatchedTier
+    matched_tier: None | SimulateRouteResultMatchedTierType1 | SimulateRouteResultMatchedTierType2Type1 | SimulateRouteResultMatchedTierType3Type1
     matched_pattern: None | str
-    default_scope: SimulateRouteResultDefaultScope
+    default_scope: None | SimulateRouteResultDefaultScopeType1 | SimulateRouteResultDefaultScopeType2Type1 | SimulateRouteResultDefaultScopeType3Type1
     evaluated: list[RouteEvaluatedEntry]
     truncated: bool
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -67,12 +73,28 @@ class SimulateRouteResult:
         matched_route_id: None | str
         matched_route_id = self.matched_route_id
 
-        matched_tier = self.matched_tier.value
+        matched_tier: None | str
+        if isinstance(self.matched_tier, SimulateRouteResultMatchedTierType1):
+            matched_tier = self.matched_tier.value
+        elif isinstance(self.matched_tier, SimulateRouteResultMatchedTierType2Type1):
+            matched_tier = self.matched_tier.value
+        elif isinstance(self.matched_tier, SimulateRouteResultMatchedTierType3Type1):
+            matched_tier = self.matched_tier.value
+        else:
+            matched_tier = self.matched_tier
 
         matched_pattern: None | str
         matched_pattern = self.matched_pattern
 
-        default_scope = self.default_scope.value
+        default_scope: None | str
+        if isinstance(self.default_scope, SimulateRouteResultDefaultScopeType1):
+            default_scope = self.default_scope.value
+        elif isinstance(self.default_scope, SimulateRouteResultDefaultScopeType2Type1):
+            default_scope = self.default_scope.value
+        elif isinstance(self.default_scope, SimulateRouteResultDefaultScopeType3Type1):
+            default_scope = self.default_scope.value
+        else:
+            default_scope = self.default_scope
 
         evaluated = []
         for evaluated_item_data in self.evaluated:
@@ -129,9 +151,42 @@ class SimulateRouteResult:
         matched_route_id = _parse_matched_route_id(d.pop("matched_route_id"))
 
 
-        matched_tier = SimulateRouteResultMatchedTier(d.pop("matched_tier"))
+        def _parse_matched_tier(data: object) -> None | SimulateRouteResultMatchedTierType1 | SimulateRouteResultMatchedTierType2Type1 | SimulateRouteResultMatchedTierType3Type1:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                matched_tier_type_1 = SimulateRouteResultMatchedTierType1(data)
 
 
+
+                return matched_tier_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                matched_tier_type_2_type_1 = SimulateRouteResultMatchedTierType2Type1(data)
+
+
+
+                return matched_tier_type_2_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                matched_tier_type_3_type_1 = SimulateRouteResultMatchedTierType3Type1(data)
+
+
+
+                return matched_tier_type_3_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SimulateRouteResultMatchedTierType1 | SimulateRouteResultMatchedTierType2Type1 | SimulateRouteResultMatchedTierType3Type1, data)
+
+        matched_tier = _parse_matched_tier(d.pop("matched_tier"))
 
 
         def _parse_matched_pattern(data: object) -> None | str:
@@ -142,9 +197,42 @@ class SimulateRouteResult:
         matched_pattern = _parse_matched_pattern(d.pop("matched_pattern"))
 
 
-        default_scope = SimulateRouteResultDefaultScope(d.pop("default_scope"))
+        def _parse_default_scope(data: object) -> None | SimulateRouteResultDefaultScopeType1 | SimulateRouteResultDefaultScopeType2Type1 | SimulateRouteResultDefaultScopeType3Type1:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                default_scope_type_1 = SimulateRouteResultDefaultScopeType1(data)
 
 
+
+                return default_scope_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                default_scope_type_2_type_1 = SimulateRouteResultDefaultScopeType2Type1(data)
+
+
+
+                return default_scope_type_2_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                default_scope_type_3_type_1 = SimulateRouteResultDefaultScopeType3Type1(data)
+
+
+
+                return default_scope_type_3_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SimulateRouteResultDefaultScopeType1 | SimulateRouteResultDefaultScopeType2Type1 | SimulateRouteResultDefaultScopeType3Type1, data)
+
+        default_scope = _parse_default_scope(d.pop("default_scope"))
 
 
         evaluated = []
