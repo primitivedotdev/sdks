@@ -1,0 +1,306 @@
+import { resolve } from "node:path";
+import type { SendMailResult } from "@primitivedotdev/api-core";
+import {
+  createX402Client,
+  type X402EmailChallenge,
+} from "@primitivedotdev/sdk/x402";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// A well-known deterministic test key (viem's documented example key). The
+// interaction-bound nonce derivation is deterministic, so signing the same
+// challenge with the same key is byte-identical every time.
+const TEST_KEY =
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+// A valid email-native challenge the payee would have issued. Mirrors the SDK's
+// own client test fixture so `payEmailChallenge` accepts it.
+function emailChallenge(): X402EmailChallenge {
+  return {
+    interaction_id: "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+    challenge_id: "22222222-2222-4222-8222-222222222222",
+    challenge: {
+      payment_requirements: {
+        scheme: "exact",
+        network: "base-sepolia",
+        maxAmountRequired: "10000",
+        payTo: "0x1111111111111111111111111111111111111111",
+        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        extra: { name: "USDC", version: "2" },
+      },
+      nonce_binding: {
+        interaction_id: "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+        challenge_step_id: "f00dface-0000-0000-0000-0000000000aa",
+        challenge_nonce:
+          "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
+      },
+      expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+    },
+  };
+}
+
+describe("signEmailChallenge shared helper", () => {
+  it("produces a byte-identical signed payment to pay-email-step's SDK path", async () => {
+    // The validity window is derived from the wall clock, so freeze time to make
+    // two independent signings comparable; the signature, nonce, and window are
+    // then fully deterministic for a fixed challenge + key.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-01-01T00:00:00.000Z"));
+    try {
+      const { signEmailChallenge, signerFromPrivateKey } = await import(
+        "../../src/oclif/commands/payments-shared.js"
+      );
+      const challenge = emailChallenge();
+
+      // The shared helper used by both pay-email and pay-email-step.
+      const viaHelper = await signEmailChallenge({
+        challenge,
+        privateKey: TEST_KEY,
+        resolvedApiBaseUrl: "https://api.example/v1",
+      });
+
+      // The exact SDK call pay-email-step makes directly, for the same challenge
+      // and key.
+      const client = createX402Client({ baseUrl: "https://api.example" });
+      const signer = signerFromPrivateKey(TEST_KEY);
+      const viaSdk = await client.payEmailChallenge(challenge, { signer });
+
+      // The signed payment (signature + interaction-bound authorization,
+      // including the derived nonce + validity window) must be byte-identical:
+      // the two commands cannot produce divergent settleable payloads for the
+      // same input. Only the freshly-minted envelope `step_id` differs by design
+      // (a new UUID per build), so normalize that one field out of the envelope.
+      expect(viaHelper.envelope.payload).toEqual(viaSdk.envelope.payload);
+      expect({ ...viaHelper.envelope, step_id: "X" }).toEqual({
+        ...viaSdk.envelope,
+        step_id: "X",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("binds the locked normative nonce (vector unchanged)", async () => {
+    const { signEmailChallenge } = await import(
+      "../../src/oclif/commands/payments-shared.js"
+    );
+    const built = await signEmailChallenge({
+      challenge: emailChallenge(),
+      privateKey: TEST_KEY,
+      resolvedApiBaseUrl: "https://api.example/v1",
+    });
+    expect(built.envelope.payload.payment.payload.authorization.nonce).toBe(
+      "0xc955a08812ab83f9e25c92e5162267b913957c3cc8678de1cf1449f77b516c6e",
+    );
+  });
+});
+
+describe("interactionAttachment", () => {
+  it("names the part interaction.json with application/json and the canonical bytes", async () => {
+    const { interactionAttachment } = await import(
+      "../../src/oclif/commands/payments-pay-email.js"
+    );
+    const built = { json: '{"hello":"world"}', envelope: {} } as never;
+    const attachment = interactionAttachment(built);
+    expect(attachment.filename).toBe("interaction.json");
+    expect(attachment.content_type).toBe("application/json");
+    expect(
+      Buffer.from(attachment.content_base64, "base64").toString("utf8"),
+    ).toBe('{"hello":"world"}');
+  });
+});
+
+const mocks = vi.hoisted(() => ({
+  createAuthenticatedCliApiClient: vi.fn(),
+  replyToEmail: vi.fn(),
+}));
+
+vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@primitivedotdev/api-core")>();
+  return {
+    ...actual,
+    replyToEmail: mocks.replyToEmail,
+  };
+});
+
+vi.mock("../../src/oclif/api-client.js", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/oclif/api-client.js")>();
+  return {
+    ...actual,
+    createAuthenticatedCliApiClient: mocks.createAuthenticatedCliApiClient,
+  };
+});
+
+const CLI_ROOT = resolve(import.meta.dirname, "../..");
+
+function sendResult(): SendMailResult {
+  return {
+    accepted: ["payee@payee.example"],
+    client_idempotency_key: "pay-email-test",
+    content_hash: "sha256:test",
+    delivery_status: "delivered",
+    id: "sent-pay-email-1",
+    idempotent_replay: false,
+    from: "payer@payer.example",
+    queue_id: "queue-1",
+    rejected: [],
+    request_id: "req-1",
+    status: "delivered",
+  };
+}
+
+async function runPayEmailCommand(argv: string[]): Promise<{
+  exitCode: NodeJS.Process["exitCode"];
+  stdout: string;
+}> {
+  const { default: PaymentsPayEmailCommand } = await import(
+    "../../src/oclif/commands/payments-pay-email.js"
+  );
+  const stdoutChunks: string[] = [];
+  const previousExitCode = process.exitCode;
+  process.exitCode = undefined;
+  const logSpy = vi.spyOn(console, "log").mockImplementation((message = "") => {
+    stdoutChunks.push(`${String(message)}\n`);
+  });
+  const stderrSpy = vi
+    .spyOn(process.stderr, "write")
+    .mockImplementation(() => true);
+  try {
+    await PaymentsPayEmailCommand.run(argv, { root: CLI_ROOT });
+    return { exitCode: process.exitCode, stdout: stdoutChunks.join("") };
+  } finally {
+    logSpy.mockRestore();
+    stderrSpy.mockRestore();
+    process.exitCode = previousExitCode;
+  }
+}
+
+describe("payments pay-email (one-shot sign + send)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { client: { host: "api" } },
+      auth: {
+        source: "flag-or-env",
+        apiKey: "k",
+        apiBaseUrl: "https://api.example/v1",
+        credentials: null,
+      },
+      baseUrlOverridden: false,
+    });
+    mocks.replyToEmail.mockResolvedValue({ data: { data: sendResult() } });
+  });
+
+  afterEach(() => {
+    process.exitCode = undefined;
+  });
+
+  it("signs and sends interaction.json as an in-thread reply", async () => {
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
+
+    const call = mocks.replyToEmail.mock.calls[0][0];
+    // Threaded against the inbound challenge email (the reply endpoint derives
+    // the payee recipient + In-Reply-To/References from it, and From defaults
+    // to the inbound's recipient = the payer).
+    expect(call.path).toEqual({ id: "inbound-challenge-1" });
+    expect(call.client).toEqual({ host: "api" });
+    expect(call.responseStyle).toBe("fields");
+    // No --from override given: the endpoint defaults From to the payer.
+    expect(call.body.from).toBeUndefined();
+
+    // Exactly one attachment, named interaction.json, application/json, with the
+    // canonical signed bytes (the inbound matcher requires exactly that).
+    expect(call.body.attachments).toHaveLength(1);
+    const att = call.body.attachments[0];
+    expect(att.filename).toBe("interaction.json");
+    expect(att.content_type).toBe("application/json");
+
+    // The attached bytes are the signed x402.payment envelope: the right
+    // protocol, the right interaction id, and the interaction-bound nonce (the
+    // locked normative vector for this challenge). The signature + validity
+    // window are time-derived, so the nonce is the stable settlement-critical
+    // field to pin here.
+    const attachedEnvelope = JSON.parse(
+      Buffer.from(att.content_base64, "base64").toString("utf8"),
+    );
+    expect(attachedEnvelope.protocol).toBe("x402.payment");
+    expect(attachedEnvelope.step).toBe("payment");
+    expect(attachedEnvelope.interaction_id).toBe(
+      "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+    );
+    expect(attachedEnvelope.payload.payment.payload.authorization.nonce).toBe(
+      "0xc955a08812ab83f9e25c92e5162267b913957c3cc8678de1cf1449f77b516c6e",
+    );
+
+    expect(result.stdout).toContain('"id": "sent-pay-email-1"');
+  });
+
+  it("passes a --from override through to the reply", async () => {
+    await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+      "--from",
+      "Payer <payer@payer.example>",
+    ]);
+    const call = mocks.replyToEmail.mock.calls[0][0];
+    expect(call.body.from).toBe("Payer <payer@payer.example>");
+  });
+
+  it("--json emits both the interaction step and the send result", async () => {
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+      "--json",
+    ]);
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.interaction.protocol).toBeDefined();
+    expect(parsed.sent.id).toBe("sent-pay-email-1");
+  });
+
+  it("does not send when signing fails (invalid challenge)", async () => {
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify({ interaction_id: "x", challenge_id: "y" }),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(mocks.replyToEmail).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a reply send error and sets a non-zero exit code", async () => {
+    mocks.replyToEmail.mockResolvedValueOnce({
+      error: { error: { code: "boom", message: "delivery failed" } },
+    });
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+    expect(result.exitCode).toBe(1);
+  });
+});

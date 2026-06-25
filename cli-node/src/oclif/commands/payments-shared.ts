@@ -1,4 +1,9 @@
-import { createX402Client, X402Error } from "@primitivedotdev/sdk/x402";
+import {
+  type BuiltPaymentStep,
+  createX402Client,
+  type X402EmailChallenge,
+  X402Error,
+} from "@primitivedotdev/sdk/x402";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   surfaceUnauthorizedHint,
@@ -99,6 +104,31 @@ const X402_ERROR_HINTS: Record<string, string> = {
   ownership_proof_failed:
     "The signature did not prove control of the address. Make sure the wallet key matches the address you are registering.",
 };
+
+/**
+ * Sign an email-native x402 challenge into a payment-step `interaction.json`
+ * envelope, locally and with no network call. This is the exact signing path
+ * shared by `payments pay-email-step` (sign only) and `payments pay-email`
+ * (sign and send), so both produce byte-identical `interaction.json` bytes for
+ * the same challenge + key. The EIP-3009 / nonce derivation lives in the SDK's
+ * `payEmailChallenge`; this helper just wires the CLI's key handling to it.
+ */
+export async function signEmailChallenge(params: {
+  challenge: X402EmailChallenge;
+  privateKey: string;
+  resolvedApiBaseUrl: string;
+  apiKey?: string;
+}): Promise<BuiltPaymentStep> {
+  // The signing client makes no request for `payEmailChallenge` (it is fully
+  // local), so the base URL and API key are only carried for parity with the
+  // rest of the payments surface; the key never leaves the machine.
+  const client = createX402Client({
+    apiKey: params.apiKey || undefined,
+    baseUrl: x402BaseUrl(params.resolvedApiBaseUrl),
+  });
+  const signer = signerFromPrivateKey(params.privateKey);
+  return client.payEmailChallenge(params.challenge, { signer });
+}
 
 /** Turn a hex private key into a viem account (a valid X402Signer). */
 export function signerFromPrivateKey(rawKey: string) {

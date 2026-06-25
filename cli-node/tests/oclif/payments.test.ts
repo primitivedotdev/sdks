@@ -28,6 +28,7 @@ describe("payments command registration", () => {
     expect(COMMANDS["payments:pay-challenge"]).toBeDefined();
     expect(COMMANDS["payments:pay"]).toBeDefined();
     expect(COMMANDS["payments:pay-email-step"]).toBeDefined();
+    expect(COMMANDS["payments:pay-email"]).toBeDefined();
   });
 
   it("keeps the non-signing operations as auto-generated commands", () => {
