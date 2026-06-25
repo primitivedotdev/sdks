@@ -89,6 +89,9 @@
       "endpoints": {
         "description": "Manage webhook endpoints that receive email events"
       },
+      "routes": {
+        "description": "Create and manage recipient routes that bind addresses to endpoints or functions, reorder them, and simulate routing."
+      },
       "filters": {
         "description": "Manage whitelist and blocklist filter rules"
       },
