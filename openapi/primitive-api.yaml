@@ -158,6 +158,12 @@ tags:
     description: Conversation threads spanning received and sent emails
   - name: Endpoints
     description: Manage webhook endpoints that receive email events
+  - name: Routes
+    description: |
+      Recipient routing rules. Each route binds a recipient pattern (an exact
+      address, or a wildcard) to one endpoint; inbound mail resolves to a single
+      destination at delivery time. Routes let different addresses on the same
+      domain reach different endpoints.
   - name: Filters
     description: Manage whitelist and blocklist filter rules
   - name: Payments
@@ -2030,6 +2036,177 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/RateLimited'
+
+  # ---------------------------------------------------------------------------
+  # Routes
+  # ---------------------------------------------------------------------------
+  /routes:
+    get:
+      operationId: listRoutes
+      summary: List recipient routes
+      description: Returns all active recipient routes for the organization, in evaluation order.
+      tags: [Routes]
+      responses:
+        '200':
+          description: List of routes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Route'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createRoute
+      summary: Create a recipient route
+      description: |
+        Creates a recipient route that binds a pattern to a destination.
+        Provide exactly one of `endpoint_id` (an existing endpoint) or
+        `function_id`. When `function_id` is given, a dedicated route-target
+        endpoint is minted for that function and bound to the route in the same
+        transaction, so per-address function routing (for example
+        `alice@example.com` to one function) is a single call.
+      tags: [Routes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRouteInput'
+      responses:
+        '201':
+          description: Route created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Route'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /routes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    patch:
+      operationId: updateRoute
+      summary: Update a recipient route
+      description: Updates fields of an existing recipient route.
+      tags: [Routes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRouteInput'
+      responses:
+        '200':
+          description: Updated route
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Route'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteRoute
+      summary: Delete a recipient route
+      description: Soft-deletes a recipient route. Mail that previously matched it falls through to the remaining routes and the default destination.
+      tags: [Routes]
+      responses:
+        '200':
+          $ref: '#/components/responses/Deleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /routes/reorder:
+    post:
+      operationId: reorderRoutes
+      summary: Reorder recipient routes
+      description: Sets the evaluation priority of multiple routes in one call. Lower priority numbers are evaluated first.
+      tags: [Routes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderRoutesInput'
+      responses:
+        '200':
+          description: The updated routes, in evaluation order
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Route'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /routes/simulate:
+    post:
+      operationId: simulateRoute
+      summary: Simulate routing for a recipient
+      description: |
+        Resolves a recipient address against the current routes and default
+        destination without delivering anything, returning the destination it
+        would reach plus a per-route evaluation trace. Useful for verifying a
+        pattern before relying on it.
+      tags: [Routes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulateRouteInput'
+      responses:
+        '200':
+          description: Routing decision
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SimulateRouteResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   # ---------------------------------------------------------------------------
   # Filters
@@ -7705,6 +7882,20 @@ components:
         deactivated_at:
           type: [string, 'null']
           format: date-time
+        kind:
+          type: string
+          enum: [http, function]
+          description: 'http: deliver to the webhook URL. function: invoke a Primitive Function.'
+        function_id:
+          type: [string, 'null']
+          format: uuid
+          description: The Function this endpoint invokes, when kind is function.
+        is_route_target:
+          type: boolean
+          description: |
+            When true, this endpoint is reachable only via an explicit recipient
+            route, never as a domain's default destination, and is exempt from
+            the one-endpoint-per-domain rule (so many can share a domain).
       required:
         - id
         - org_id
@@ -7724,7 +7915,7 @@ components:
         url:
           type: string
           minLength: 1
-          description: The webhook URL to deliver events to
+          description: The webhook URL to deliver events to. Required when kind is http; omit for function endpoints.
         enabled:
           type: boolean
           default: true
@@ -7736,7 +7927,22 @@ components:
         rules:
           type: object
           description: Endpoint-specific filtering rules
-      required: [url]
+        kind:
+          type: string
+          enum: [http, function]
+          default: http
+          description: 'http: deliver to a webhook URL. function: invoke a Primitive Function (provide function_id, omit url).'
+        function_id:
+          type: string
+          format: uuid
+          description: The Function to invoke. Required when kind is function.
+        is_route_target:
+          type: boolean
+          default: false
+          description: |
+            Create this endpoint as a route-target: reachable only via an
+            explicit recipient route, never a domain's default destination, and
+            exempt from the one-endpoint-per-domain rule.
 
     UpdateEndpointInput:
       type: object
@@ -7768,6 +7974,198 @@ components:
           type: string
           description: The signature header value sent (if webhook secret is configured)
       required: [status, body]
+
+    # -------------------------------------------------------------------------
+    # Routes
+    # -------------------------------------------------------------------------
+    MatchType:
+      type: string
+      enum: [exact, wildcard, regex]
+      description: |
+        How a route's pattern is matched against the recipient. exact: the full
+        address. wildcard: a glob with * and ? that never crosses the @.
+    Route:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+          format: uuid
+        match_type:
+          $ref: '#/components/schemas/MatchType'
+        pattern:
+          type: string
+          description: The recipient pattern this route matches.
+        endpoint_id:
+          type: string
+          format: uuid
+          description: The endpoint mail matching this route is delivered to.
+        domain_id:
+          type: [string, 'null']
+          format: uuid
+          description: Scopes the route to one domain; null applies it org-wide.
+        priority:
+          type: integer
+          description: Evaluation order; lower is evaluated first.
+        enabled:
+          type: boolean
+        match_count:
+          type: [integer, string]
+          description: Times this route has matched (may be a string for large counts).
+        last_matched_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+      required: [id]
+
+    CreateRouteInput:
+      type: object
+      additionalProperties: false
+      properties:
+        match_type:
+          $ref: '#/components/schemas/MatchType'
+        pattern:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: The recipient pattern to match (interpreted per match_type).
+        endpoint_id:
+          type: string
+          format: uuid
+          description: Target an existing endpoint. Provide this OR function_id, not both.
+        function_id:
+          type: string
+          format: uuid
+          description: |
+            Mint a dedicated route-target endpoint for this Function and bind the
+            route to it in one transaction. Provide this OR endpoint_id, not both.
+        domain_id:
+          type: [string, 'null']
+          format: uuid
+          description: Scope the route to one domain; null applies it org-wide.
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+          description: Evaluation order; lower is evaluated first.
+        enabled:
+          type: boolean
+      required: [match_type, pattern]
+
+    UpdateRouteInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        match_type:
+          $ref: '#/components/schemas/MatchType'
+        pattern:
+          type: string
+          minLength: 1
+          maxLength: 512
+        endpoint_id:
+          type: string
+          format: uuid
+        domain_id:
+          type: [string, 'null']
+          format: uuid
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 1000000
+        enabled:
+          type: boolean
+
+    ReorderRoutesInput:
+      type: object
+      additionalProperties: false
+      properties:
+        updates:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id:
+                type: string
+                format: uuid
+              priority:
+                type: integer
+                minimum: 0
+                maximum: 1000000
+            required: [id, priority]
+      required: [updates]
+
+    SimulateRouteInput:
+      type: object
+      additionalProperties: false
+      properties:
+        recipient:
+          type: string
+          minLength: 1
+          maxLength: 320
+          description: The recipient address to resolve.
+        event_type:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Which event type to model. Defaults to email.received.
+      required: [recipient]
+
+    RouteEvaluation:
+      type: object
+      additionalProperties: true
+      properties:
+        route_id:
+          type: string
+        tier:
+          $ref: '#/components/schemas/MatchType'
+        pattern:
+          type: string
+        result:
+          type: string
+          enum: [hit, miss, skipped, error]
+        reason:
+          type: string
+      required: [route_id, tier, pattern, result]
+
+    SimulateRouteResult:
+      type: object
+      additionalProperties: true
+      properties:
+        outcome:
+          type: string
+          enum: [matched, defaulted, none]
+          description: 'matched: a route matched. defaulted: fell to the default destination. none: nowhere.'
+        recipient:
+          type: string
+        endpoint_id:
+          type: [string, 'null']
+          description: The endpoint mail would reach, or null when none.
+        matched_route_id:
+          type: [string, 'null']
+        matched_tier:
+          oneOf:
+            - $ref: '#/components/schemas/MatchType'
+            - type: 'null'
+        matched_pattern:
+          type: [string, 'null']
+        default_scope:
+          type: [string, 'null']
+          enum: [domain, org, null]
+          description: Which default destination was used, when outcome is defaulted.
+        evaluated:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteEvaluation'
+        truncated:
+          type: boolean
+          description: True when the evaluation trace was capped.
+      required: [outcome, recipient, endpoint_id, matched_route_id, matched_tier, matched_pattern, default_scope, evaluated, truncated]
 
     # -------------------------------------------------------------------------
     # Filters

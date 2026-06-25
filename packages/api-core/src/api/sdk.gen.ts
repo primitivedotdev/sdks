@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateChallengeData, CreateChallengeErrors, CreateChallengeResponses, CreateEmailChallengeData, CreateEmailChallengeErrors, CreateEmailChallengeResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, CreateRegistryData, CreateRegistryErrors, CreateRegistryResponses, DecideRegistryRequestData, DecideRegistryRequestErrors, DecideRegistryRequestResponses, DefineAgentData, DefineAgentErrors, DefineAgentResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetAgentData, GetAgentErrors, GetAgentResponses, GetChallengeData, GetChallengeErrors, GetChallengeResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetRegistryData, GetRegistryErrors, GetRegistryResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetSpendPolicyData, GetSpendPolicyErrors, GetSpendPolicyResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeclinedPaymentsData, ListDeclinedPaymentsErrors, ListDeclinedPaymentsResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListPayoutAddressesData, ListPayoutAddressesErrors, ListPayoutAddressesResponses, ListRegistriesData, ListRegistriesErrors, ListRegistriesResponses, ListRegistryAgentsData, ListRegistryAgentsResponses, ListRegistryRequestsData, ListRegistryRequestsErrors, ListRegistryRequestsResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PayChallengeData, PayChallengeErrors, PayChallengeResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, PublishAgentData, PublishAgentErrors, PublishAgentResponses, RegisterPayoutAddressData, RegisterPayoutAddressErrors, RegisterPayoutAddressResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, ResolveRegistryHandleData, ResolveRegistryHandleErrors, ResolveRegistryHandleResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnpublishAgentData, UnpublishAgentErrors, UnpublishAgentResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, UpdateRegistryData, UpdateRegistryErrors, UpdateRegistryResponses, UpdateSpendPolicyData, UpdateSpendPolicyErrors, UpdateSpendPolicyResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateChallengeData, CreateChallengeErrors, CreateChallengeResponses, CreateEmailChallengeData, CreateEmailChallengeErrors, CreateEmailChallengeResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, CreateRegistryData, CreateRegistryErrors, CreateRegistryResponses, CreateRouteData, CreateRouteErrors, CreateRouteResponses, DecideRegistryRequestData, DecideRegistryRequestErrors, DecideRegistryRequestResponses, DefineAgentData, DefineAgentErrors, DefineAgentResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DeleteRouteData, DeleteRouteErrors, DeleteRouteResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetAgentData, GetAgentErrors, GetAgentResponses, GetChallengeData, GetChallengeErrors, GetChallengeResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetRegistryData, GetRegistryErrors, GetRegistryResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetSpendPolicyData, GetSpendPolicyErrors, GetSpendPolicyResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, ListDeclinedPaymentsData, ListDeclinedPaymentsErrors, ListDeclinedPaymentsResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListPayoutAddressesData, ListPayoutAddressesErrors, ListPayoutAddressesResponses, ListRegistriesData, ListRegistriesErrors, ListRegistriesResponses, ListRegistryAgentsData, ListRegistryAgentsResponses, ListRegistryRequestsData, ListRegistryRequestsErrors, ListRegistryRequestsResponses, ListRoutesData, ListRoutesErrors, ListRoutesResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, PayChallengeData, PayChallengeErrors, PayChallengeResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, PublishAgentData, PublishAgentErrors, PublishAgentResponses, RegisterPayoutAddressData, RegisterPayoutAddressErrors, RegisterPayoutAddressResponses, ReorderRoutesData, ReorderRoutesErrors, ReorderRoutesResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, ResolveRegistryHandleData, ResolveRegistryHandleErrors, ResolveRegistryHandleResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, SimulateRouteData, SimulateRouteErrors, SimulateRouteResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnpublishAgentData, UnpublishAgentErrors, UnpublishAgentResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, UpdateRegistryData, UpdateRegistryErrors, UpdateRegistryResponses, UpdateRouteData, UpdateRouteErrors, UpdateRouteResponses, UpdateSpendPolicyData, UpdateSpendPolicyErrors, UpdateSpendPolicyResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -763,6 +763,98 @@ export const testEndpoint = <ThrowOnError extends boolean = false>(options: Opti
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/endpoints/{id}/test',
     ...options
+});
+
+/**
+ * List recipient routes
+ *
+ * Returns all active recipient routes for the organization, in evaluation order.
+ */
+export const listRoutes = <ThrowOnError extends boolean = false>(options?: Options<ListRoutesData, ThrowOnError>) => (options?.client ?? client).get<ListRoutesResponses, ListRoutesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/routes',
+    ...options
+});
+
+/**
+ * Create a recipient route
+ *
+ * Creates a recipient route that binds a pattern to a destination.
+ * Provide exactly one of `endpoint_id` (an existing endpoint) or
+ * `function_id`. When `function_id` is given, a dedicated route-target
+ * endpoint is minted for that function and bound to the route in the same
+ * transaction, so per-address function routing (for example
+ * `alice@example.com` to one function) is a single call.
+ *
+ */
+export const createRoute = <ThrowOnError extends boolean = false>(options: Options<CreateRouteData, ThrowOnError>) => (options.client ?? client).post<CreateRouteResponses, CreateRouteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/routes',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a recipient route
+ *
+ * Soft-deletes a recipient route. Mail that previously matched it falls through to the remaining routes and the default destination.
+ */
+export const deleteRoute = <ThrowOnError extends boolean = false>(options: Options<DeleteRouteData, ThrowOnError>) => (options.client ?? client).delete<DeleteRouteResponses, DeleteRouteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/routes/{id}',
+    ...options
+});
+
+/**
+ * Update a recipient route
+ *
+ * Updates fields of an existing recipient route.
+ */
+export const updateRoute = <ThrowOnError extends boolean = false>(options: Options<UpdateRouteData, ThrowOnError>) => (options.client ?? client).patch<UpdateRouteResponses, UpdateRouteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/routes/{id}',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Reorder recipient routes
+ *
+ * Sets the evaluation priority of multiple routes in one call. Lower priority numbers are evaluated first.
+ */
+export const reorderRoutes = <ThrowOnError extends boolean = false>(options: Options<ReorderRoutesData, ThrowOnError>) => (options.client ?? client).post<ReorderRoutesResponses, ReorderRoutesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/routes/reorder',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Simulate routing for a recipient
+ *
+ * Resolves a recipient address against the current routes and default
+ * destination without delivering anything, returning the destination it
+ * would reach plus a per-route evaluation trace. Useful for verifying a
+ * pattern before relying on it.
+ *
+ */
+export const simulateRoute = <ThrowOnError extends boolean = false>(options: Options<SimulateRouteData, ThrowOnError>) => (options.client ?? client).post<SimulateRouteResponses, SimulateRouteErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/routes/simulate',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
 });
 
 /**

@@ -3669,7 +3669,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "url": {
           "type": "string",
           "minLength": 1,
-          "description": "The webhook URL to deliver events to"
+          "description": "The webhook URL to deliver events to. Required when kind is http; omit for function endpoints."
         },
         "enabled": {
           "type": "boolean",
@@ -3687,11 +3687,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "rules": {
           "type": "object",
           "description": "Endpoint-specific filtering rules"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "http",
+            "function"
+          ],
+          "default": "http",
+          "description": "http: deliver to a webhook URL. function: invoke a Primitive Function (provide function_id, omit url)."
+        },
+        "function_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The Function to invoke. Required when kind is function."
+        },
+        "is_route_target": {
+          "type": "boolean",
+          "default": false,
+          "description": "Create this endpoint as a route-target: reachable only via an\nexplicit recipient route, never a domain's default destination, and\nexempt from the one-endpoint-per-domain rule.\n"
         }
-      },
-      "required": [
-        "url"
-      ]
+      }
     },
     "responseSchema": {
       "type": "object",
@@ -3776,6 +3792,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ],
           "format": "date-time"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "http",
+            "function"
+          ],
+          "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
+        },
+        "function_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "The Function this endpoint invokes, when kind is function."
+        },
+        "is_route_target": {
+          "type": "boolean",
+          "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
         }
       },
       "required": [
@@ -3919,6 +3955,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "null"
             ],
             "format": "date-time"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "http",
+              "function"
+            ],
+            "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
+          },
+          "function_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The Function this endpoint invokes, when kind is function."
+          },
+          "is_route_target": {
+            "type": "boolean",
+            "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
           }
         },
         "required": [
@@ -4113,6 +4169,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ],
           "format": "date-time"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "http",
+            "function"
+          ],
+          "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
+        },
+        "function_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "The Function this endpoint invokes, when kind is function."
+        },
+        "is_route_target": {
+          "type": "boolean",
+          "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
         }
       },
       "required": [
@@ -8686,6 +8762,651 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "summary": "Update a registry you own",
     "tag": "Registries",
     "tagCommand": "registries"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "create-route",
+    "description": "Creates a recipient route that binds a pattern to a destination.\nProvide exactly one of `endpoint_id` (an existing endpoint) or\n`function_id`. When `function_id` is given, a dedicated route-target\nendpoint is minted for that function and bound to the route in the same\ntransaction, so per-address function routing (for example\n`alice@example.com` to one function) is a single call.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createRoute",
+    "path": "/routes",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "match_type": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex"
+          ],
+          "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
+        },
+        "pattern": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "The recipient pattern to match (interpreted per match_type)."
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Target an existing endpoint. Provide this OR function_id, not both."
+        },
+        "function_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Mint a dedicated route-target endpoint for this Function and bind the\nroute to it in one transaction. Provide this OR endpoint_id, not both.\n"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Scope the route to one domain; null applies it org-wide."
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "description": "Evaluation order; lower is evaluated first."
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "match_type",
+        "pattern"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "match_type": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex"
+          ],
+          "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "The recipient pattern this route matches."
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The endpoint mail matching this route is delivered to."
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Scopes the route to one domain; null applies it org-wide."
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Evaluation order; lower is evaluated first."
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "match_count": {
+          "type": [
+            "integer",
+            "string"
+          ],
+          "description": "Times this route has matched (may be a string for large counts)."
+        },
+        "last_matched_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "sdkName": "createRoute",
+    "summary": "Create a recipient route",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-route",
+    "description": "Soft-deletes a recipient route. Mail that previously matched it falls through to the remaining routes and the default destination.",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteRoute",
+    "path": "/routes/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "deleteRoute",
+    "summary": "Delete a recipient route",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-routes",
+    "description": "Returns all active recipient routes for the organization, in evaluation order.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listRoutes",
+    "path": "/routes",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "match_type": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "wildcard",
+              "regex"
+            ],
+            "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
+          },
+          "pattern": {
+            "type": "string",
+            "description": "The recipient pattern this route matches."
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The endpoint mail matching this route is delivered to."
+          },
+          "domain_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Scopes the route to one domain; null applies it org-wide."
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Evaluation order; lower is evaluated first."
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "match_count": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Times this route has matched (may be a string for large counts)."
+          },
+          "last_matched_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    "sdkName": "listRoutes",
+    "summary": "List recipient routes",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "reorder-routes",
+    "description": "Sets the evaluation priority of multiple routes in one call. Lower priority numbers are evaluated first.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "reorderRoutes",
+    "path": "/routes/reorder",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "updates": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              }
+            },
+            "required": [
+              "id",
+              "priority"
+            ]
+          }
+        }
+      },
+      "required": [
+        "updates"
+      ]
+    },
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "match_type": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "wildcard",
+              "regex"
+            ],
+            "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
+          },
+          "pattern": {
+            "type": "string",
+            "description": "The recipient pattern this route matches."
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The endpoint mail matching this route is delivered to."
+          },
+          "domain_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Scopes the route to one domain; null applies it org-wide."
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Evaluation order; lower is evaluated first."
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "match_count": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Times this route has matched (may be a string for large counts)."
+          },
+          "last_matched_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    "sdkName": "reorderRoutes",
+    "summary": "Reorder recipient routes",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "simulate-route",
+    "description": "Resolves a recipient address against the current routes and default\ndestination without delivering anything, returning the destination it\nwould reach plus a per-route evaluation trace. Useful for verifying a\npattern before relying on it.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "simulateRoute",
+    "path": "/routes/simulate",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recipient": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 320,
+          "description": "The recipient address to resolve."
+        },
+        "event_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Which event type to model. Defaults to email.received."
+        }
+      },
+      "required": [
+        "recipient"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "matched",
+            "defaulted",
+            "none"
+          ],
+          "description": "matched: a route matched. defaulted: fell to the default destination. none: nowhere."
+        },
+        "recipient": {
+          "type": "string"
+        },
+        "endpoint_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The endpoint mail would reach, or null when none."
+        },
+        "matched_route_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "matched_tier": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "exact",
+                "wildcard",
+                "regex"
+              ],
+              "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "matched_pattern": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "default_scope": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "domain",
+            "org",
+            null
+          ],
+          "description": "Which default destination was used, when outcome is defaulted."
+        },
+        "evaluated": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "route_id": {
+                "type": "string"
+              },
+              "tier": {
+                "type": "string",
+                "enum": [
+                  "exact",
+                  "wildcard",
+                  "regex"
+                ],
+                "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
+              },
+              "pattern": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string",
+                "enum": [
+                  "hit",
+                  "miss",
+                  "skipped",
+                  "error"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "route_id",
+              "tier",
+              "pattern",
+              "result"
+            ]
+          }
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "True when the evaluation trace was capped."
+        }
+      },
+      "required": [
+        "outcome",
+        "recipient",
+        "endpoint_id",
+        "matched_route_id",
+        "matched_tier",
+        "matched_pattern",
+        "default_scope",
+        "evaluated",
+        "truncated"
+      ]
+    },
+    "sdkName": "simulateRoute",
+    "summary": "Simulate routing for a recipient",
+    "tag": "Routes",
+    "tagCommand": "routes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-route",
+    "description": "Updates fields of an existing recipient route.",
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "updateRoute",
+    "path": "/routes/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "match_type": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex"
+          ],
+          "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
+        },
+        "pattern": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "match_type": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex"
+          ],
+          "description": "How a route's pattern is matched against the recipient. exact: the full\naddress. wildcard: a glob with * and ? that never crosses the @.\n"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "The recipient pattern this route matches."
+        },
+        "endpoint_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The endpoint mail matching this route is delivered to."
+        },
+        "domain_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Scopes the route to one domain; null applies it org-wide."
+        },
+        "priority": {
+          "type": "integer",
+          "description": "Evaluation order; lower is evaluated first."
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "match_count": {
+          "type": [
+            "integer",
+            "string"
+          ],
+          "description": "Times this route has matched (may be a string for large counts)."
+        },
+        "last_matched_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "sdkName": "updateRoute",
+    "summary": "Update a recipient route",
+    "tag": "Routes",
+    "tagCommand": "routes"
   },
   {
     "binaryResponse": false,

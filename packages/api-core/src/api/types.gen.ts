@@ -2643,13 +2643,28 @@ export type Endpoint = {
     last_success_at?: string | null;
     last_failure_at?: string | null;
     deactivated_at?: string | null;
+    /**
+     * http: deliver to the webhook URL. function: invoke a Primitive Function.
+     */
+    kind?: 'http' | 'function';
+    /**
+     * The Function this endpoint invokes, when kind is function.
+     */
+    function_id?: string | null;
+    /**
+     * When true, this endpoint is reachable only via an explicit recipient
+     * route, never as a domain's default destination, and is exempt from
+     * the one-endpoint-per-domain rule (so many can share a domain).
+     *
+     */
+    is_route_target?: boolean;
 };
 
 export type CreateEndpointInput = {
     /**
-     * The webhook URL to deliver events to
+     * The webhook URL to deliver events to. Required when kind is http; omit for function endpoints.
      */
-    url: string;
+    url?: string;
     /**
      * Whether the endpoint is active
      */
@@ -2664,6 +2679,21 @@ export type CreateEndpointInput = {
     rules?: {
         [key: string]: unknown;
     };
+    /**
+     * http: deliver to a webhook URL. function: invoke a Primitive Function (provide function_id, omit url).
+     */
+    kind?: 'http' | 'function';
+    /**
+     * The Function to invoke. Required when kind is function.
+     */
+    function_id?: string;
+    /**
+     * Create this endpoint as a route-target: reachable only via an
+     * explicit recipient route, never a domain's default destination, and
+     * exempt from the one-endpoint-per-domain rule.
+     *
+     */
+    is_route_target?: boolean;
 };
 
 export type UpdateEndpointInput = {
@@ -2691,6 +2721,130 @@ export type TestResult = {
      * The signature header value sent (if webhook secret is configured)
      */
     signature?: string;
+};
+
+/**
+ * How a route's pattern is matched against the recipient. exact: the full
+ * address. wildcard: a glob with * and ? that never crosses the @.
+ *
+ */
+export type MatchType = 'exact' | 'wildcard' | 'regex';
+
+export type Route = {
+    id: string;
+    match_type?: MatchType;
+    /**
+     * The recipient pattern this route matches.
+     */
+    pattern?: string;
+    /**
+     * The endpoint mail matching this route is delivered to.
+     */
+    endpoint_id?: string;
+    /**
+     * Scopes the route to one domain; null applies it org-wide.
+     */
+    domain_id?: string | null;
+    /**
+     * Evaluation order; lower is evaluated first.
+     */
+    priority?: number;
+    enabled?: boolean;
+    /**
+     * Times this route has matched (may be a string for large counts).
+     */
+    match_count?: unknown;
+    last_matched_at?: string | null;
+    created_at?: string;
+    [key: string]: unknown;
+};
+
+export type CreateRouteInput = {
+    match_type: MatchType;
+    /**
+     * The recipient pattern to match (interpreted per match_type).
+     */
+    pattern: string;
+    /**
+     * Target an existing endpoint. Provide this OR function_id, not both.
+     */
+    endpoint_id?: string;
+    /**
+     * Mint a dedicated route-target endpoint for this Function and bind the
+     * route to it in one transaction. Provide this OR endpoint_id, not both.
+     *
+     */
+    function_id?: string;
+    /**
+     * Scope the route to one domain; null applies it org-wide.
+     */
+    domain_id?: string | null;
+    /**
+     * Evaluation order; lower is evaluated first.
+     */
+    priority?: number;
+    enabled?: boolean;
+};
+
+export type UpdateRouteInput = {
+    match_type?: MatchType;
+    pattern?: string;
+    endpoint_id?: string;
+    domain_id?: string | null;
+    priority?: number;
+    enabled?: boolean;
+};
+
+export type ReorderRoutesInput = {
+    updates: Array<{
+        id: string;
+        priority: number;
+    }>;
+};
+
+export type SimulateRouteInput = {
+    /**
+     * The recipient address to resolve.
+     */
+    recipient: string;
+    /**
+     * Which event type to model. Defaults to email.received.
+     */
+    event_type?: string;
+};
+
+export type RouteEvaluation = {
+    route_id: string;
+    tier: MatchType;
+    pattern: string;
+    result: 'hit' | 'miss' | 'skipped' | 'error';
+    reason?: string;
+    [key: string]: unknown;
+};
+
+export type SimulateRouteResult = {
+    /**
+     * matched: a route matched. defaulted: fell to the default destination. none: nowhere.
+     */
+    outcome: 'matched' | 'defaulted' | 'none';
+    recipient: string;
+    /**
+     * The endpoint mail would reach, or null when none.
+     */
+    endpoint_id: string | null;
+    matched_route_id: string | null;
+    matched_tier: MatchType | unknown;
+    matched_pattern: string | null;
+    /**
+     * Which default destination was used, when outcome is defaulted.
+     */
+    default_scope: 'domain' | 'org' | null;
+    evaluated: Array<RouteEvaluation>;
+    /**
+     * True when the evaluation trace was capped.
+     */
+    truncated: boolean;
+    [key: string]: unknown;
 };
 
 export type Filter = {
@@ -5016,6 +5170,204 @@ export type TestEndpointResponses = {
 };
 
 export type TestEndpointResponse = TestEndpointResponses[keyof TestEndpointResponses];
+
+export type ListRoutesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/routes';
+};
+
+export type ListRoutesErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type ListRoutesError = ListRoutesErrors[keyof ListRoutesErrors];
+
+export type ListRoutesResponses = {
+    /**
+     * List of routes
+     */
+    200: SuccessEnvelope & {
+        data?: Array<Route>;
+    };
+};
+
+export type ListRoutesResponse = ListRoutesResponses[keyof ListRoutesResponses];
+
+export type CreateRouteData = {
+    body: CreateRouteInput;
+    path?: never;
+    query?: never;
+    url: '/routes';
+};
+
+export type CreateRouteErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type CreateRouteError = CreateRouteErrors[keyof CreateRouteErrors];
+
+export type CreateRouteResponses = {
+    /**
+     * Route created
+     */
+    201: SuccessEnvelope & {
+        data?: Route;
+    };
+};
+
+export type CreateRouteResponse = CreateRouteResponses[keyof CreateRouteResponses];
+
+export type DeleteRouteData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/routes/{id}';
+};
+
+export type DeleteRouteErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteRouteError = DeleteRouteErrors[keyof DeleteRouteErrors];
+
+export type DeleteRouteResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteRouteResponse = DeleteRouteResponses[keyof DeleteRouteResponses];
+
+export type UpdateRouteData = {
+    body: UpdateRouteInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/routes/{id}';
+};
+
+export type UpdateRouteErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type UpdateRouteError = UpdateRouteErrors[keyof UpdateRouteErrors];
+
+export type UpdateRouteResponses = {
+    /**
+     * Updated route
+     */
+    200: SuccessEnvelope & {
+        data?: Route;
+    };
+};
+
+export type UpdateRouteResponse = UpdateRouteResponses[keyof UpdateRouteResponses];
+
+export type ReorderRoutesData = {
+    body: ReorderRoutesInput;
+    path?: never;
+    query?: never;
+    url: '/routes/reorder';
+};
+
+export type ReorderRoutesErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type ReorderRoutesError = ReorderRoutesErrors[keyof ReorderRoutesErrors];
+
+export type ReorderRoutesResponses = {
+    /**
+     * The updated routes, in evaluation order
+     */
+    200: SuccessEnvelope & {
+        data?: Array<Route>;
+    };
+};
+
+export type ReorderRoutesResponse = ReorderRoutesResponses[keyof ReorderRoutesResponses];
+
+export type SimulateRouteData = {
+    body: SimulateRouteInput;
+    path?: never;
+    query?: never;
+    url: '/routes/simulate';
+};
+
+export type SimulateRouteErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type SimulateRouteError = SimulateRouteErrors[keyof SimulateRouteErrors];
+
+export type SimulateRouteResponses = {
+    /**
+     * Routing decision
+     */
+    200: SuccessEnvelope & {
+        data?: SimulateRouteResult;
+    };
+};
+
+export type SimulateRouteResponse = SimulateRouteResponses[keyof SimulateRouteResponses];
 
 export type ListFiltersData = {
     body?: never;
