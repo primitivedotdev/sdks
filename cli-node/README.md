@@ -99,12 +99,12 @@ cat challenge.json | primitive payments pay
 primitive payments create-email-challenge --from payee@your-domain.example \
   --to payer@their-domain.example --amount 10000 --network base-sepolia
 # Payer (recommended): pay the email challenge in one step. Signs the challenge
-# locally with your wallet key AND sends the signed interaction.json in-thread,
-# so you skip the manual sign-then-send dance. --in-reply-to is the inbound
-# challenge email you received; it is fetched to address the payment to the
-# payee and thread it under the challenge, with From defaulting to the payer it
-# was sent to. The message carries a short default note alongside the
-# attachment; pass --body to customize it.
+# locally with your wallet key AND sends the signed interaction.json, so you
+# skip the manual sign-then-send dance. --in-reply-to is the inbound challenge
+# email you received; it is fetched to address the payment to the payee, with
+# From defaulting to the payer it was sent to. The send is not threaded under
+# the challenge (the payment associates by interaction_id). The message carries
+# a short default note alongside the attachment; pass --body to customize it.
 primitive payments pay-email --challenge-file challenge.json \
   --in-reply-to <inbound-challenge-email-id> --wait
 

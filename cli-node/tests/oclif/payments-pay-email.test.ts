@@ -137,9 +137,10 @@ vi.mock("../../src/oclif/api-client.js", async (importOriginal) => {
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 
 // The inbound challenge email the payer received. The payee issued it, so its
-// canonical sender (from_email) is the payee we must address the payment to,
-// its recipient (to_email) is the payer From, and its message_id threads the
-// authorization back under the challenge.
+// canonical sender (from_email) is the payee we must address the payment to and
+// its recipient (to_email) is the payer From. It carries a message_id, but the
+// one-shot deliberately does NOT thread the send under it (that would trigger
+// the send endpoint's parent-thread dedup and the payment would never settle).
 function inboundChallengeEmail() {
   return {
     data: {
@@ -227,7 +228,7 @@ describe("payments pay-email (one-shot sign + send)", () => {
     process.exitCode = undefined;
   });
 
-  it("signs and sends interaction.json on the send path, threaded to the challenge", async () => {
+  it("signs and sends interaction.json on the send path without threading the send", async () => {
     const result = await runPayEmailCommand([
       "--challenge",
       JSON.stringify(emailChallenge()),
@@ -252,10 +253,15 @@ describe("payments pay-email (one-shot sign + send)", () => {
     expect(call.responseStyle).toBe("fields");
     // To = the payee that issued the challenge (the inbound's sender). From =
     // the payer the challenge was addressed to (the inbound's recipient), with
-    // no --from override. In-Reply-To threads under the challenge Message-Id.
+    // no --from override.
     expect(call.body.to).toBe("payee@payee.example");
     expect(call.body.from).toBe("payer@payer.example");
-    expect(call.body.in_reply_to).toBe("<challenge-msgid@payee.example>");
+    // The send is NOT threaded under the challenge even though the inbound has a
+    // Message-Id: setting in_reply_to would trigger the send endpoint's
+    // parent-thread dedup (all x402 challenges to a payer thread together) and
+    // the payment would never settle. The interaction associates by
+    // interaction_id, so threading is unnecessary.
+    expect(call.body.in_reply_to).toBeUndefined();
     expect(typeof call.body.subject).toBe("string");
     expect(call.body.subject.length).toBeGreaterThan(0);
 
@@ -351,19 +357,11 @@ describe("payments pay-email (one-shot sign + send)", () => {
     );
   });
 
-  it("omits in_reply_to when the inbound challenge has no Message-Id", async () => {
-    mocks.getEmail.mockResolvedValueOnce({
-      data: {
-        data: {
-          id: "inbound-challenge-1",
-          message_id: null,
-          from_email: "payee@payee.example",
-          to_email: "payer@payer.example",
-          recipient: "payer@payer.example",
-          sender: "payee@payee.example",
-        },
-      },
-    });
+  it("never sets in_reply_to even when the inbound challenge has a Message-Id", async () => {
+    // The default inbound fixture carries a Message-Id. The send must still omit
+    // in_reply_to: threading under the challenge would re-trigger the send
+    // endpoint's parent-thread dedup and the payment would never settle.
+    // Addressing is still derived from the inbound, so To/From are unaffected.
     await runPayEmailCommand([
       "--challenge",
       JSON.stringify(emailChallenge()),
@@ -373,10 +371,9 @@ describe("payments pay-email (one-shot sign + send)", () => {
       TEST_KEY,
     ]);
     const call = mocks.sendEmail.mock.calls[0][0];
-    // Threading is best-effort; association is by the interaction_id, so a
-    // missing Message-Id must not block delivery.
     expect(call.body.in_reply_to).toBeUndefined();
     expect(call.body.to).toBe("payee@payee.example");
+    expect(call.body.from).toBe("payer@payer.example");
   });
 
   it("--json emits both the interaction step and the send result", async () => {
