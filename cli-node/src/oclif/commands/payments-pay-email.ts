@@ -39,6 +39,13 @@ import {
 const INTERACTION_PART_FILENAME = "interaction.json";
 const INTERACTION_PART_CONTENT_TYPE = "application/json";
 
+// The reply endpoint requires one of body_text or body_html, so the one-shot
+// must always carry a body even though the payload that matters travels in the
+// `interaction.json` attachment. Default to a short human-readable note so the
+// command works with no extra flags; `--body` overrides it.
+const DEFAULT_REPLY_BODY_TEXT =
+  "x402 payment authorization attached (interaction.json).";
+
 /** Build the `interaction.json` attachment from a signed payment step. */
 export function interactionAttachment(built: BuiltPaymentStep): {
   filename: string;
@@ -117,6 +124,9 @@ class PaymentsPayEmailCommand extends Command {
       description:
         "Optional From header override. Defaults to the inbound's recipient (the payer the challenge was addressed to).",
     }),
+    body: Flags.string({
+      description: `Plain-text reply body. The signed authorization travels in the interaction.json attachment; this is the human-readable accompanying note. Defaults to "${DEFAULT_REPLY_BODY_TEXT}".`,
+    }),
     wait: Flags.boolean({
       description:
         "Block until the receiving MTA returns an outcome. Without --wait, the call returns once Primitive has accepted the reply for delivery.",
@@ -171,9 +181,12 @@ class PaymentsPayEmailCommand extends Command {
 
       // Send the signed envelope as an in-thread reply. The inbound matcher
       // requires a part named exactly `interaction.json` with content type
-      // `application/json`; build it that way.
+      // `application/json`; build it that way. The reply endpoint also requires
+      // a body, so always include `body_text` (a sensible default, overridable
+      // with `--body`) even though the payload of record is the attachment.
       const result = await replyToEmail({
         body: {
+          body_text: flags.body ?? DEFAULT_REPLY_BODY_TEXT,
           attachments: [interactionAttachment(built)],
           ...(flags.from !== undefined ? { from: flags.from } : {}),
           ...(flags.wait !== undefined ? { wait: flags.wait } : {}),

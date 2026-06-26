@@ -219,6 +219,15 @@ describe("payments pay-email (one-shot sign + send)", () => {
     // No --from override given: the endpoint defaults From to the payer.
     expect(call.body.from).toBeUndefined();
 
+    // The reply endpoint requires one of body_text/body_html, so the one-shot
+    // must always carry a non-empty body even with no flags. With no --body the
+    // default human-readable note is sent.
+    expect(typeof call.body.body_text).toBe("string");
+    expect(call.body.body_text.length).toBeGreaterThan(0);
+    expect(call.body.body_text).toBe(
+      "x402 payment authorization attached (interaction.json).",
+    );
+
     // Exactly one attachment, named interaction.json, application/json, with the
     // canonical signed bytes (the inbound matcher requires exactly that).
     expect(call.body.attachments).toHaveLength(1);
@@ -259,6 +268,26 @@ describe("payments pay-email (one-shot sign + send)", () => {
     ]);
     const call = mocks.replyToEmail.mock.calls[0][0];
     expect(call.body.from).toBe("Payer <payer@payer.example>");
+  });
+
+  it("passes a --body override through as body_text", async () => {
+    await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+      "--body",
+      "Here is the signed authorization, thanks.",
+    ]);
+    const call = mocks.replyToEmail.mock.calls[0][0];
+    expect(call.body.body_text).toBe(
+      "Here is the signed authorization, thanks.",
+    );
+    // The attachment is still sent alongside the custom body.
+    expect(call.body.attachments).toHaveLength(1);
+    expect(call.body.attachments[0].filename).toBe("interaction.json");
   });
 
   it("--json emits both the interaction step and the send result", async () => {
