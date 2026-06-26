@@ -394,7 +394,7 @@ describe("payments pay-email (one-shot sign + send)", () => {
     expect(parsed.sent.id).toBe("sent-pay-email-1");
   });
 
-  it("warns on a replayed send so a deduped resend cannot look like a fresh delivery", async () => {
+  it("fails (non-zero exit + banner) on a replayed send so a deduped resend cannot look like a settlement", async () => {
     mocks.sendEmail.mockResolvedValueOnce({
       data: {
         data: { ...sendResult(), idempotent_replay: true },
@@ -408,12 +408,37 @@ describe("payments pay-email (one-shot sign + send)", () => {
       "--private-key",
       TEST_KEY,
     ]);
-    // The exit code stays success and stdout JSON is unchanged for scripts, but
-    // a loud stderr banner makes clear no fresh MX traffic was generated, so a
-    // replayed resend is not mistaken for a delivered settlement.
-    expect(result.exitCode).toBeUndefined();
+    // A deduped resend put no fresh MX traffic on the wire, so the
+    // interaction.json was not re-delivered for settlement. For a payment
+    // one-shot that is a hard failure, not advisory: exit non-zero so
+    // automation halts instead of continuing the payment flow on a no-op. The
+    // result is still printed (and a loud stderr banner explains the bypass).
+    expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("idempotent replay");
     expect(result.stdout).toContain('"id": "sent-pay-email-1"');
+  });
+
+  it("flags idempotent_replay in --json output on a replayed send", async () => {
+    mocks.sendEmail.mockResolvedValueOnce({
+      data: {
+        data: { ...sendResult(), idempotent_replay: true },
+      },
+    });
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+      "--json",
+    ]);
+    expect(result.exitCode).toBe(1);
+    const parsed = JSON.parse(result.stdout);
+    // Scripted consumers get an explicit top-level replay flag, so automation
+    // can detect the no-op without parsing the nested send result.
+    expect(parsed.idempotent_replay).toBe(true);
+    expect(parsed.sent.id).toBe("sent-pay-email-1");
   });
 
   it("does not fetch or send when signing fails (invalid challenge)", async () => {

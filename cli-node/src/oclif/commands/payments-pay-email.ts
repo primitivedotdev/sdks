@@ -294,23 +294,41 @@ class PaymentsPayEmailCommand extends Command {
 
       const envelope = result.data as { data?: SendMailResult } | undefined;
       const sent = envelope?.data ?? null;
-      // Loud stderr banner when the server replayed a cached row instead of
-      // putting fresh SMTP traffic on the wire. For an x402 one-shot this is
-      // settlement-critical: a deduped resend means the interaction.json was
-      // not re-delivered, so the payment will not reach the payee again even
-      // though the JSON looks like a successful send. Stdout JSON is unchanged
-      // so `... | jq ...` pipelines keep parsing.
-      writeIdempotentReplayBannerIfReplay(sent, {
-        write: (chunk) => {
-          process.stderr.write(chunk);
-        },
-      });
+
+      // A replayed send is a hard failure for a payment one-shot, not a soft
+      // warning. The server auto-derives an idempotency key from the message
+      // content, so a retried pay-email (same payer, payee, body, attachment)
+      // returns the cached row with `idempotent_replay: true` and puts no fresh
+      // SMTP traffic on the wire. The `interaction.json` is therefore NOT
+      // re-delivered for settlement, yet the row reads `status: "delivered"`.
+      // The plain `send` command treats this as advisory, but here a silent
+      // success would let an agent believe a settlement is in flight when
+      // nothing was sent. So we still print the result (and a loud stderr
+      // banner explaining the bypass), but exit non-zero so automation halts
+      // instead of continuing the payment flow on a no-op.
+      const replayed = sent?.idempotent_replay === true;
+      if (replayed) {
+        writeIdempotentReplayBannerIfReplay(sent, {
+          write: (chunk) => {
+            process.stderr.write(chunk);
+          },
+        });
+      }
+
       if (flags.json) {
         this.log(
-          JSON.stringify({ interaction: built.envelope, sent }, null, 2),
+          JSON.stringify(
+            { interaction: built.envelope, sent, idempotent_replay: replayed },
+            null,
+            2,
+          ),
         );
       } else {
         this.log(JSON.stringify(sent, null, 2));
+      }
+
+      if (replayed) {
+        process.exitCode = 1;
       }
     });
   }
