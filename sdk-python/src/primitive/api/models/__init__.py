@@ -45,12 +45,13 @@ from .create_email_challenge_input import CreateEmailChallengeInput
 from .create_email_challenge_input_network import CreateEmailChallengeInputNetwork
 from .create_email_challenge_response_200 import CreateEmailChallengeResponse200
 from .create_email_challenge_response_201 import CreateEmailChallengeResponse201
-from .create_endpoint_input import CreateEndpointInput
-from .create_endpoint_input_rules import CreateEndpointInputRules
 from .create_endpoint_response_201 import CreateEndpointResponse201
 from .create_filter_input import CreateFilterInput
 from .create_filter_input_type import CreateFilterInputType
 from .create_filter_response_201 import CreateFilterResponse201
+from .create_function_endpoint_input import CreateFunctionEndpointInput
+from .create_function_endpoint_input_kind import CreateFunctionEndpointInputKind
+from .create_function_endpoint_input_rules import CreateFunctionEndpointInputRules
 from .create_function_input import CreateFunctionInput
 from .create_function_input_files import CreateFunctionInputFiles
 from .create_function_response_201 import CreateFunctionResponse201
@@ -58,6 +59,9 @@ from .create_function_result import CreateFunctionResult
 from .create_function_secret_input import CreateFunctionSecretInput
 from .create_function_secret_response_200 import CreateFunctionSecretResponse200
 from .create_function_secret_response_201 import CreateFunctionSecretResponse201
+from .create_http_endpoint_input import CreateHttpEndpointInput
+from .create_http_endpoint_input_kind import CreateHttpEndpointInputKind
+from .create_http_endpoint_input_rules import CreateHttpEndpointInputRules
 from .create_org_secret_input import CreateOrgSecretInput
 from .create_org_secret_response_200 import CreateOrgSecretResponse200
 from .create_org_secret_response_201 import CreateOrgSecretResponse201
@@ -118,6 +122,7 @@ from .email_webhook_status_type_1 import EmailWebhookStatusType1
 from .email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from .email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
 from .endpoint import Endpoint
+from .endpoint_kind import EndpointKind
 from .endpoint_rules import EndpointRules
 from .error_response import ErrorResponse
 from .error_response_error import ErrorResponseError
@@ -426,12 +431,13 @@ __all__ = (
     "CreateEmailChallengeInputNetwork",
     "CreateEmailChallengeResponse200",
     "CreateEmailChallengeResponse201",
-    "CreateEndpointInput",
-    "CreateEndpointInputRules",
     "CreateEndpointResponse201",
     "CreateFilterInput",
     "CreateFilterInputType",
     "CreateFilterResponse201",
+    "CreateFunctionEndpointInput",
+    "CreateFunctionEndpointInputKind",
+    "CreateFunctionEndpointInputRules",
     "CreateFunctionInput",
     "CreateFunctionInputFiles",
     "CreateFunctionResponse201",
@@ -439,6 +445,9 @@ __all__ = (
     "CreateFunctionSecretInput",
     "CreateFunctionSecretResponse200",
     "CreateFunctionSecretResponse201",
+    "CreateHttpEndpointInput",
+    "CreateHttpEndpointInputKind",
+    "CreateHttpEndpointInputRules",
     "CreateOrgSecretInput",
     "CreateOrgSecretResponse200",
     "CreateOrgSecretResponse201",
@@ -499,6 +508,7 @@ __all__ = (
     "EmailWebhookStatusType2Type1",
     "EmailWebhookStatusType3Type1",
     "Endpoint",
+    "EndpointKind",
     "EndpointRules",
     "ErrorResponse",
     "ErrorResponseError",

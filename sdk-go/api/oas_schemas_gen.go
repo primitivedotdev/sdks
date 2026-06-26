@@ -2606,59 +2606,73 @@ func (s *CreateEndpointCreated) SetData(val Endpoint) {
 func (*CreateEndpointCreated) createEndpointRes() {}
 
 // Ref: #/components/schemas/CreateEndpointInput
+// CreateEndpointInput represents sum type.
 type CreateEndpointInput struct {
-	// The webhook URL to deliver events to.
-	URL string `json:"url"`
-	// Whether the endpoint is active.
-	Enabled OptBool `json:"enabled"`
-	// Restrict to emails from a specific domain.
-	DomainID OptNilUUID `json:"domain_id"`
-	// Endpoint-specific filtering rules.
-	Rules *CreateEndpointInputRules `json:"rules"`
+	Type                        CreateEndpointInputType // switch on this field
+	CreateHttpEndpointInput     CreateHttpEndpointInput
+	CreateFunctionEndpointInput CreateFunctionEndpointInput
 }
 
-// GetURL returns the value of URL.
-func (s *CreateEndpointInput) GetURL() string {
-	return s.URL
+// CreateEndpointInputType is oneOf type of CreateEndpointInput.
+type CreateEndpointInputType string
+
+// Possible values for CreateEndpointInputType.
+const (
+	CreateHttpEndpointInputCreateEndpointInput     CreateEndpointInputType = "http"
+	CreateFunctionEndpointInputCreateEndpointInput CreateEndpointInputType = "function"
+)
+
+// IsCreateHttpEndpointInput reports whether CreateEndpointInput is CreateHttpEndpointInput.
+func (s CreateEndpointInput) IsCreateHttpEndpointInput() bool {
+	return s.Type == CreateHttpEndpointInputCreateEndpointInput
 }
 
-// GetEnabled returns the value of Enabled.
-func (s *CreateEndpointInput) GetEnabled() OptBool {
-	return s.Enabled
+// IsCreateFunctionEndpointInput reports whether CreateEndpointInput is CreateFunctionEndpointInput.
+func (s CreateEndpointInput) IsCreateFunctionEndpointInput() bool {
+	return s.Type == CreateFunctionEndpointInputCreateEndpointInput
 }
 
-// GetDomainID returns the value of DomainID.
-func (s *CreateEndpointInput) GetDomainID() OptNilUUID {
-	return s.DomainID
+// SetCreateHttpEndpointInput sets CreateEndpointInput to CreateHttpEndpointInput.
+func (s *CreateEndpointInput) SetCreateHttpEndpointInput(v CreateHttpEndpointInput) {
+	s.Type = CreateHttpEndpointInputCreateEndpointInput
+	s.CreateHttpEndpointInput = v
 }
 
-// GetRules returns the value of Rules.
-func (s *CreateEndpointInput) GetRules() *CreateEndpointInputRules {
-	return s.Rules
+// GetCreateHttpEndpointInput returns CreateHttpEndpointInput and true boolean if CreateEndpointInput is CreateHttpEndpointInput.
+func (s CreateEndpointInput) GetCreateHttpEndpointInput() (v CreateHttpEndpointInput, ok bool) {
+	if !s.IsCreateHttpEndpointInput() {
+		return v, false
+	}
+	return s.CreateHttpEndpointInput, true
 }
 
-// SetURL sets the value of URL.
-func (s *CreateEndpointInput) SetURL(val string) {
-	s.URL = val
+// NewCreateHttpEndpointInputCreateEndpointInput returns new CreateEndpointInput from CreateHttpEndpointInput.
+func NewCreateHttpEndpointInputCreateEndpointInput(v CreateHttpEndpointInput) CreateEndpointInput {
+	var s CreateEndpointInput
+	s.SetCreateHttpEndpointInput(v)
+	return s
 }
 
-// SetEnabled sets the value of Enabled.
-func (s *CreateEndpointInput) SetEnabled(val OptBool) {
-	s.Enabled = val
+// SetCreateFunctionEndpointInput sets CreateEndpointInput to CreateFunctionEndpointInput.
+func (s *CreateEndpointInput) SetCreateFunctionEndpointInput(v CreateFunctionEndpointInput) {
+	s.Type = CreateFunctionEndpointInputCreateEndpointInput
+	s.CreateFunctionEndpointInput = v
 }
 
-// SetDomainID sets the value of DomainID.
-func (s *CreateEndpointInput) SetDomainID(val OptNilUUID) {
-	s.DomainID = val
+// GetCreateFunctionEndpointInput returns CreateFunctionEndpointInput and true boolean if CreateEndpointInput is CreateFunctionEndpointInput.
+func (s CreateEndpointInput) GetCreateFunctionEndpointInput() (v CreateFunctionEndpointInput, ok bool) {
+	if !s.IsCreateFunctionEndpointInput() {
+		return v, false
+	}
+	return s.CreateFunctionEndpointInput, true
 }
 
-// SetRules sets the value of Rules.
-func (s *CreateEndpointInput) SetRules(val *CreateEndpointInputRules) {
-	s.Rules = val
+// NewCreateFunctionEndpointInputCreateEndpointInput returns new CreateEndpointInput from CreateFunctionEndpointInput.
+func NewCreateFunctionEndpointInputCreateEndpointInput(v CreateFunctionEndpointInput) CreateEndpointInput {
+	var s CreateEndpointInput
+	s.SetCreateFunctionEndpointInput(v)
+	return s
 }
-
-// Endpoint-specific filtering rules.
-type CreateEndpointInputRules struct{}
 
 type CreateEndpointUnauthorized ErrorResponse
 
@@ -2819,6 +2833,122 @@ func (s *CreateFunctionCreated) SetData(val CreateFunctionResult) {
 }
 
 func (*CreateFunctionCreated) createFunctionRes() {}
+
+// Ref: #/components/schemas/CreateFunctionEndpointInput
+type CreateFunctionEndpointInput struct {
+	// Invoke a Primitive Function.
+	Kind CreateFunctionEndpointInputKind `json:"kind"`
+	// The Function to invoke.
+	FunctionID uuid.UUID `json:"function_id"`
+	// Whether the endpoint is active.
+	Enabled OptBool `json:"enabled"`
+	// Restrict to emails from a specific domain.
+	DomainID OptNilUUID `json:"domain_id"`
+	// Endpoint-specific filtering rules.
+	Rules *CreateFunctionEndpointInputRules `json:"rules"`
+	// Create this endpoint as a route-target: reachable only via an
+	// explicit recipient route, never a domain's default destination, and
+	// exempt from the one-endpoint-per-domain rule.
+	IsRouteTarget OptBool `json:"is_route_target"`
+}
+
+// GetKind returns the value of Kind.
+func (s *CreateFunctionEndpointInput) GetKind() CreateFunctionEndpointInputKind {
+	return s.Kind
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *CreateFunctionEndpointInput) GetFunctionID() uuid.UUID {
+	return s.FunctionID
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *CreateFunctionEndpointInput) GetEnabled() OptBool {
+	return s.Enabled
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *CreateFunctionEndpointInput) GetDomainID() OptNilUUID {
+	return s.DomainID
+}
+
+// GetRules returns the value of Rules.
+func (s *CreateFunctionEndpointInput) GetRules() *CreateFunctionEndpointInputRules {
+	return s.Rules
+}
+
+// GetIsRouteTarget returns the value of IsRouteTarget.
+func (s *CreateFunctionEndpointInput) GetIsRouteTarget() OptBool {
+	return s.IsRouteTarget
+}
+
+// SetKind sets the value of Kind.
+func (s *CreateFunctionEndpointInput) SetKind(val CreateFunctionEndpointInputKind) {
+	s.Kind = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *CreateFunctionEndpointInput) SetFunctionID(val uuid.UUID) {
+	s.FunctionID = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *CreateFunctionEndpointInput) SetEnabled(val OptBool) {
+	s.Enabled = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *CreateFunctionEndpointInput) SetDomainID(val OptNilUUID) {
+	s.DomainID = val
+}
+
+// SetRules sets the value of Rules.
+func (s *CreateFunctionEndpointInput) SetRules(val *CreateFunctionEndpointInputRules) {
+	s.Rules = val
+}
+
+// SetIsRouteTarget sets the value of IsRouteTarget.
+func (s *CreateFunctionEndpointInput) SetIsRouteTarget(val OptBool) {
+	s.IsRouteTarget = val
+}
+
+// Invoke a Primitive Function.
+type CreateFunctionEndpointInputKind string
+
+const (
+	CreateFunctionEndpointInputKindFunction CreateFunctionEndpointInputKind = "function"
+)
+
+// AllValues returns all CreateFunctionEndpointInputKind values.
+func (CreateFunctionEndpointInputKind) AllValues() []CreateFunctionEndpointInputKind {
+	return []CreateFunctionEndpointInputKind{
+		CreateFunctionEndpointInputKindFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateFunctionEndpointInputKind) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateFunctionEndpointInputKindFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateFunctionEndpointInputKind) UnmarshalText(data []byte) error {
+	switch CreateFunctionEndpointInputKind(data) {
+	case CreateFunctionEndpointInputKindFunction:
+		*s = CreateFunctionEndpointInputKindFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Endpoint-specific filtering rules.
+type CreateFunctionEndpointInputRules struct{}
 
 type CreateFunctionFailedDependency ErrorResponse
 
@@ -3057,6 +3187,122 @@ func (*CreateFunctionTooManyRequests) createFunctionRes() {}
 type CreateFunctionUnauthorized ErrorResponse
 
 func (*CreateFunctionUnauthorized) createFunctionRes() {}
+
+// Ref: #/components/schemas/CreateHttpEndpointInput
+type CreateHttpEndpointInput struct {
+	// Deliver to a webhook URL.
+	Kind OptCreateHttpEndpointInputKind `json:"kind"`
+	// The webhook URL to deliver events to.
+	URL string `json:"url"`
+	// Whether the endpoint is active.
+	Enabled OptBool `json:"enabled"`
+	// Restrict to emails from a specific domain.
+	DomainID OptNilUUID `json:"domain_id"`
+	// Endpoint-specific filtering rules.
+	Rules *CreateHttpEndpointInputRules `json:"rules"`
+	// Create this endpoint as a route-target: reachable only via an
+	// explicit recipient route, never a domain's default destination, and
+	// exempt from the one-endpoint-per-domain rule.
+	IsRouteTarget OptBool `json:"is_route_target"`
+}
+
+// GetKind returns the value of Kind.
+func (s *CreateHttpEndpointInput) GetKind() OptCreateHttpEndpointInputKind {
+	return s.Kind
+}
+
+// GetURL returns the value of URL.
+func (s *CreateHttpEndpointInput) GetURL() string {
+	return s.URL
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *CreateHttpEndpointInput) GetEnabled() OptBool {
+	return s.Enabled
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *CreateHttpEndpointInput) GetDomainID() OptNilUUID {
+	return s.DomainID
+}
+
+// GetRules returns the value of Rules.
+func (s *CreateHttpEndpointInput) GetRules() *CreateHttpEndpointInputRules {
+	return s.Rules
+}
+
+// GetIsRouteTarget returns the value of IsRouteTarget.
+func (s *CreateHttpEndpointInput) GetIsRouteTarget() OptBool {
+	return s.IsRouteTarget
+}
+
+// SetKind sets the value of Kind.
+func (s *CreateHttpEndpointInput) SetKind(val OptCreateHttpEndpointInputKind) {
+	s.Kind = val
+}
+
+// SetURL sets the value of URL.
+func (s *CreateHttpEndpointInput) SetURL(val string) {
+	s.URL = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *CreateHttpEndpointInput) SetEnabled(val OptBool) {
+	s.Enabled = val
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *CreateHttpEndpointInput) SetDomainID(val OptNilUUID) {
+	s.DomainID = val
+}
+
+// SetRules sets the value of Rules.
+func (s *CreateHttpEndpointInput) SetRules(val *CreateHttpEndpointInputRules) {
+	s.Rules = val
+}
+
+// SetIsRouteTarget sets the value of IsRouteTarget.
+func (s *CreateHttpEndpointInput) SetIsRouteTarget(val OptBool) {
+	s.IsRouteTarget = val
+}
+
+// Deliver to a webhook URL.
+type CreateHttpEndpointInputKind string
+
+const (
+	CreateHttpEndpointInputKindHTTP CreateHttpEndpointInputKind = "http"
+)
+
+// AllValues returns all CreateHttpEndpointInputKind values.
+func (CreateHttpEndpointInputKind) AllValues() []CreateHttpEndpointInputKind {
+	return []CreateHttpEndpointInputKind{
+		CreateHttpEndpointInputKindHTTP,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateHttpEndpointInputKind) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateHttpEndpointInputKindHTTP:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateHttpEndpointInputKind) UnmarshalText(data []byte) error {
+	switch CreateHttpEndpointInputKind(data) {
+	case CreateHttpEndpointInputKindHTTP:
+		*s = CreateHttpEndpointInputKindHTTP
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Endpoint-specific filtering rules.
+type CreateHttpEndpointInputRules struct{}
 
 type CreateOrgSecretBadRequest ErrorResponse
 
@@ -6747,6 +6993,14 @@ type Endpoint struct {
 	LastSuccessAt    OptNilDateTime `json:"last_success_at"`
 	LastFailureAt    OptNilDateTime `json:"last_failure_at"`
 	DeactivatedAt    OptNilDateTime `json:"deactivated_at"`
+	// Http: deliver to the webhook URL. function: invoke a Primitive Function.
+	Kind OptEndpointKind `json:"kind"`
+	// The Function this endpoint invokes, when kind is function.
+	FunctionID OptNilUUID `json:"function_id"`
+	// When true, this endpoint is reachable only via an explicit recipient
+	// route, never as a domain's default destination, and is exempt from
+	// the one-endpoint-per-domain rule (so many can share a domain).
+	IsRouteTarget OptBool `json:"is_route_target"`
 }
 
 // GetID returns the value of ID.
@@ -6829,6 +7083,21 @@ func (s *Endpoint) GetDeactivatedAt() OptNilDateTime {
 	return s.DeactivatedAt
 }
 
+// GetKind returns the value of Kind.
+func (s *Endpoint) GetKind() OptEndpointKind {
+	return s.Kind
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *Endpoint) GetFunctionID() OptNilUUID {
+	return s.FunctionID
+}
+
+// GetIsRouteTarget returns the value of IsRouteTarget.
+func (s *Endpoint) GetIsRouteTarget() OptBool {
+	return s.IsRouteTarget
+}
+
 // SetID sets the value of ID.
 func (s *Endpoint) SetID(val uuid.UUID) {
 	s.ID = val
@@ -6907,6 +7176,63 @@ func (s *Endpoint) SetLastFailureAt(val OptNilDateTime) {
 // SetDeactivatedAt sets the value of DeactivatedAt.
 func (s *Endpoint) SetDeactivatedAt(val OptNilDateTime) {
 	s.DeactivatedAt = val
+}
+
+// SetKind sets the value of Kind.
+func (s *Endpoint) SetKind(val OptEndpointKind) {
+	s.Kind = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *Endpoint) SetFunctionID(val OptNilUUID) {
+	s.FunctionID = val
+}
+
+// SetIsRouteTarget sets the value of IsRouteTarget.
+func (s *Endpoint) SetIsRouteTarget(val OptBool) {
+	s.IsRouteTarget = val
+}
+
+// Http: deliver to the webhook URL. function: invoke a Primitive Function.
+type EndpointKind string
+
+const (
+	EndpointKindHTTP     EndpointKind = "http"
+	EndpointKindFunction EndpointKind = "function"
+)
+
+// AllValues returns all EndpointKind values.
+func (EndpointKind) AllValues() []EndpointKind {
+	return []EndpointKind{
+		EndpointKindHTTP,
+		EndpointKindFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EndpointKind) MarshalText() ([]byte, error) {
+	switch s {
+	case EndpointKindHTTP:
+		return []byte(s), nil
+	case EndpointKindFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EndpointKind) UnmarshalText(data []byte) error {
+	switch EndpointKind(data) {
+	case EndpointKindHTTP:
+		*s = EndpointKindHTTP
+		return nil
+	case EndpointKindFunction:
+		*s = EndpointKindFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Endpoint-specific filtering rules.
@@ -12574,6 +12900,52 @@ func (o OptCreateFunctionInputFiles) Or(d CreateFunctionInputFiles) CreateFuncti
 	return d
 }
 
+// NewOptCreateHttpEndpointInputKind returns new OptCreateHttpEndpointInputKind with value set to v.
+func NewOptCreateHttpEndpointInputKind(v CreateHttpEndpointInputKind) OptCreateHttpEndpointInputKind {
+	return OptCreateHttpEndpointInputKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateHttpEndpointInputKind is optional CreateHttpEndpointInputKind.
+type OptCreateHttpEndpointInputKind struct {
+	Value CreateHttpEndpointInputKind
+	Set   bool
+}
+
+// IsSet returns true if OptCreateHttpEndpointInputKind was set.
+func (o OptCreateHttpEndpointInputKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateHttpEndpointInputKind) Reset() {
+	var v CreateHttpEndpointInputKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateHttpEndpointInputKind) SetTo(v CreateHttpEndpointInputKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateHttpEndpointInputKind) Get() (v CreateHttpEndpointInputKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateHttpEndpointInputKind) Or(d CreateHttpEndpointInputKind) CreateHttpEndpointInputKind {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptDateTime returns new OptDateTime with value set to v.
 func NewOptDateTime(v time.Time) OptDateTime {
 	return OptDateTime{
@@ -12798,6 +13170,52 @@ func (o OptEmailStatus) Get() (v EmailStatus, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptEmailStatus) Or(d EmailStatus) EmailStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptEndpointKind returns new OptEndpointKind with value set to v.
+func NewOptEndpointKind(v EndpointKind) OptEndpointKind {
+	return OptEndpointKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEndpointKind is optional EndpointKind.
+type OptEndpointKind struct {
+	Value EndpointKind
+	Set   bool
+}
+
+// IsSet returns true if OptEndpointKind was set.
+func (o OptEndpointKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEndpointKind) Reset() {
+	var v EndpointKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEndpointKind) SetTo(v EndpointKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEndpointKind) Get() (v EndpointKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEndpointKind) Or(d EndpointKind) EndpointKind {
 	if v, ok := o.Get(); ok {
 		return v
 	}

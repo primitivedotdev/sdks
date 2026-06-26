@@ -14,12 +14,12 @@ from ..types import UNSET, Unset
 
 
 
-T = TypeVar("T", bound="CreateEndpointInputRules")
+T = TypeVar("T", bound="CreateHttpEndpointInputRules")
 
 
 
 @_attrs_define
-class CreateEndpointInputRules:
+class CreateHttpEndpointInputRules:
     """ Endpoint-specific filtering rules
 
      """
@@ -42,12 +42,12 @@ class CreateEndpointInputRules:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        create_endpoint_input_rules = cls(
+        create_http_endpoint_input_rules = cls(
         )
 
 
-        create_endpoint_input_rules.additional_properties = d
-        return create_endpoint_input_rules
+        create_http_endpoint_input_rules.additional_properties = d
+        return create_http_endpoint_input_rules
 
     @property
     def additional_keys(self) -> list[str]:

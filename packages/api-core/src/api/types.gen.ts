@@ -2643,11 +2643,30 @@ export type Endpoint = {
     last_success_at?: string | null;
     last_failure_at?: string | null;
     deactivated_at?: string | null;
+    /**
+     * http: deliver to the webhook URL. function: invoke a Primitive Function.
+     */
+    kind?: 'http' | 'function';
+    /**
+     * The Function this endpoint invokes, when kind is function.
+     */
+    function_id?: string | null;
+    /**
+     * When true, this endpoint is reachable only via an explicit recipient
+     * route, never as a domain's default destination, and is exempt from
+     * the one-endpoint-per-domain rule (so many can share a domain).
+     *
+     */
+    is_route_target?: boolean;
 };
 
-export type CreateEndpointInput = {
+export type CreateHttpEndpointInput = {
     /**
-     * The webhook URL to deliver events to
+     * Deliver to a webhook URL.
+     */
+    kind?: 'http';
+    /**
+     * The webhook URL to deliver events to.
      */
     url: string;
     /**
@@ -2664,7 +2683,52 @@ export type CreateEndpointInput = {
     rules?: {
         [key: string]: unknown;
     };
+    /**
+     * Create this endpoint as a route-target: reachable only via an
+     * explicit recipient route, never a domain's default destination, and
+     * exempt from the one-endpoint-per-domain rule.
+     *
+     */
+    is_route_target?: boolean;
 };
+
+export type CreateFunctionEndpointInput = {
+    /**
+     * Invoke a Primitive Function.
+     */
+    kind: 'function';
+    /**
+     * The Function to invoke.
+     */
+    function_id: string;
+    /**
+     * Whether the endpoint is active
+     */
+    enabled?: boolean;
+    /**
+     * Restrict to emails from a specific domain
+     */
+    domain_id?: string | null;
+    /**
+     * Endpoint-specific filtering rules
+     */
+    rules?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Create this endpoint as a route-target: reachable only via an
+     * explicit recipient route, never a domain's default destination, and
+     * exempt from the one-endpoint-per-domain rule.
+     *
+     */
+    is_route_target?: boolean;
+};
+
+export type CreateEndpointInput = ({
+    kind: 'http';
+} & CreateHttpEndpointInput) | ({
+    kind: 'function';
+} & CreateFunctionEndpointInput);
 
 export type UpdateEndpointInput = {
     /**

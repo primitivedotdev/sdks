@@ -93,7 +93,7 @@ type Handler interface {
 	// accepts the signature.
 	//
 	// POST /endpoints
-	CreateEndpoint(ctx context.Context, req *CreateEndpointInput) (CreateEndpointRes, error)
+	CreateEndpoint(ctx context.Context, req CreateEndpointInput) (CreateEndpointRes, error)
 	// CreateFilter implements createFilter operation.
 	//
 	// Creates a new whitelist or blocklist filter. Per-domain filters
