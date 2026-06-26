@@ -174,11 +174,13 @@ function sendResult(): SendMailResult {
 async function runPayEmailCommand(argv: string[]): Promise<{
   exitCode: NodeJS.Process["exitCode"];
   stdout: string;
+  stderr: string;
 }> {
   const { default: PaymentsPayEmailCommand } = await import(
     "../../src/oclif/commands/payments-pay-email.js"
   );
   const stdoutChunks: string[] = [];
+  const stderrChunks: string[] = [];
   const previousExitCode = process.exitCode;
   process.exitCode = undefined;
   const logSpy = vi.spyOn(console, "log").mockImplementation((message = "") => {
@@ -186,10 +188,17 @@ async function runPayEmailCommand(argv: string[]): Promise<{
   });
   const stderrSpy = vi
     .spyOn(process.stderr, "write")
-    .mockImplementation(() => true);
+    .mockImplementation((chunk) => {
+      stderrChunks.push(String(chunk));
+      return true;
+    });
   try {
     await PaymentsPayEmailCommand.run(argv, { root: CLI_ROOT });
-    return { exitCode: process.exitCode, stdout: stdoutChunks.join("") };
+    return {
+      exitCode: process.exitCode,
+      stdout: stdoutChunks.join(""),
+      stderr: stderrChunks.join(""),
+    };
   } finally {
     logSpy.mockRestore();
     stderrSpy.mockRestore();
@@ -383,6 +392,28 @@ describe("payments pay-email (one-shot sign + send)", () => {
     const parsed = JSON.parse(result.stdout);
     expect(parsed.interaction.protocol).toBeDefined();
     expect(parsed.sent.id).toBe("sent-pay-email-1");
+  });
+
+  it("warns on a replayed send so a deduped resend cannot look like a fresh delivery", async () => {
+    mocks.sendEmail.mockResolvedValueOnce({
+      data: {
+        data: { ...sendResult(), idempotent_replay: true },
+      },
+    });
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+    // The exit code stays success and stdout JSON is unchanged for scripts, but
+    // a loud stderr banner makes clear no fresh MX traffic was generated, so a
+    // replayed resend is not mistaken for a delivered settlement.
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain("idempotent replay");
+    expect(result.stdout).toContain('"id": "sent-pay-email-1"');
   });
 
   it("does not fetch or send when signing fails (invalid challenge)", async () => {
