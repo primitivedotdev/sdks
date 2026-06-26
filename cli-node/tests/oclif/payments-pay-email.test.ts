@@ -111,7 +111,8 @@ describe("interactionAttachment", () => {
 
 const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
-  replyToEmail: vi.fn(),
+  getEmail: vi.fn(),
+  sendEmail: vi.fn(),
 }));
 
 vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
@@ -119,7 +120,8 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
     await importOriginal<typeof import("@primitivedotdev/api-core")>();
   return {
     ...actual,
-    replyToEmail: mocks.replyToEmail,
+    getEmail: mocks.getEmail,
+    sendEmail: mocks.sendEmail,
   };
 });
 
@@ -133,6 +135,25 @@ vi.mock("../../src/oclif/api-client.js", async (importOriginal) => {
 });
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
+
+// The inbound challenge email the payer received. The payee issued it, so its
+// canonical sender (from_email) is the payee we must address the payment to,
+// its recipient (to_email) is the payer From, and its message_id threads the
+// authorization back under the challenge.
+function inboundChallengeEmail() {
+  return {
+    data: {
+      data: {
+        id: "inbound-challenge-1",
+        message_id: "<challenge-msgid@payee.example>",
+        from_email: "payee@payee.example",
+        to_email: "payer@payer.example",
+        recipient: "payer@payer.example",
+        sender: "payee@payee.example",
+      },
+    },
+  };
+}
 
 function sendResult(): SendMailResult {
   return {
@@ -189,14 +210,15 @@ describe("payments pay-email (one-shot sign + send)", () => {
       },
       baseUrlOverridden: false,
     });
-    mocks.replyToEmail.mockResolvedValue({ data: { data: sendResult() } });
+    mocks.getEmail.mockResolvedValue(inboundChallengeEmail());
+    mocks.sendEmail.mockResolvedValue({ data: { data: sendResult() } });
   });
 
   afterEach(() => {
     process.exitCode = undefined;
   });
 
-  it("signs and sends interaction.json as an in-thread reply", async () => {
+  it("signs and sends interaction.json on the send path, threaded to the challenge", async () => {
     const result = await runPayEmailCommand([
       "--challenge",
       JSON.stringify(emailChallenge()),
@@ -207,20 +229,28 @@ describe("payments pay-email (one-shot sign + send)", () => {
     ]);
 
     expect(result.exitCode).toBeUndefined();
-    expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
+    // The inbound challenge email is fetched to derive addressing + threading.
+    expect(mocks.getEmail).toHaveBeenCalledTimes(1);
+    expect(mocks.getEmail.mock.calls[0][0].path).toEqual({
+      id: "inbound-challenge-1",
+    });
+    // Delivery goes via the send path (no reply-endpoint thread dedup), so the
+    // payment is never swallowed as an idempotent replay.
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
 
-    const call = mocks.replyToEmail.mock.calls[0][0];
-    // Threaded against the inbound challenge email (the reply endpoint derives
-    // the payee recipient + In-Reply-To/References from it, and From defaults
-    // to the inbound's recipient = the payer).
-    expect(call.path).toEqual({ id: "inbound-challenge-1" });
+    const call = mocks.sendEmail.mock.calls[0][0];
     expect(call.client).toEqual({ host: "api" });
     expect(call.responseStyle).toBe("fields");
-    // No --from override given: the endpoint defaults From to the payer.
-    expect(call.body.from).toBeUndefined();
+    // To = the payee that issued the challenge (the inbound's sender). From =
+    // the payer the challenge was addressed to (the inbound's recipient), with
+    // no --from override. In-Reply-To threads under the challenge Message-Id.
+    expect(call.body.to).toBe("payee@payee.example");
+    expect(call.body.from).toBe("payer@payer.example");
+    expect(call.body.in_reply_to).toBe("<challenge-msgid@payee.example>");
+    expect(typeof call.body.subject).toBe("string");
+    expect(call.body.subject.length).toBeGreaterThan(0);
 
-    // The reply endpoint requires one of body_text/body_html, so the one-shot
-    // must always carry a non-empty body even with no flags. With no --body the
+    // Always carry a non-empty body even with no flags. With no --body the
     // default human-readable note is sent.
     expect(typeof call.body.body_text).toBe("string");
     expect(call.body.body_text.length).toBeGreaterThan(0);
@@ -255,7 +285,7 @@ describe("payments pay-email (one-shot sign + send)", () => {
     expect(result.stdout).toContain('"id": "sent-pay-email-1"');
   });
 
-  it("passes a --from override through to the reply", async () => {
+  it("passes a --from override through to the send From", async () => {
     await runPayEmailCommand([
       "--challenge",
       JSON.stringify(emailChallenge()),
@@ -266,8 +296,11 @@ describe("payments pay-email (one-shot sign + send)", () => {
       "--from",
       "Payer <payer@payer.example>",
     ]);
-    const call = mocks.replyToEmail.mock.calls[0][0];
+    const call = mocks.sendEmail.mock.calls[0][0];
+    // --from overrides the payer From derived from the inbound's recipient.
     expect(call.body.from).toBe("Payer <payer@payer.example>");
+    // To is still the derived payee regardless of the From override.
+    expect(call.body.to).toBe("payee@payee.example");
   });
 
   it("passes a --body override through as body_text", async () => {
@@ -281,7 +314,7 @@ describe("payments pay-email (one-shot sign + send)", () => {
       "--body",
       "Here is the signed authorization, thanks.",
     ]);
-    const call = mocks.replyToEmail.mock.calls[0][0];
+    const call = mocks.sendEmail.mock.calls[0][0];
     expect(call.body.body_text).toBe(
       "Here is the signed authorization, thanks.",
     );
@@ -301,12 +334,40 @@ describe("payments pay-email (one-shot sign + send)", () => {
       "--body",
       "   ",
     ]);
-    const call = mocks.replyToEmail.mock.calls[0][0];
-    // A blank/whitespace override must not slip through and re-trigger the
-    // reply endpoint's "body required" validation; the default note is used.
+    const call = mocks.sendEmail.mock.calls[0][0];
+    // A blank/whitespace override must not slip through and produce an empty
+    // body; the default note is used.
     expect(call.body.body_text).toBe(
       "x402 payment authorization attached (interaction.json).",
     );
+  });
+
+  it("omits in_reply_to when the inbound challenge has no Message-Id", async () => {
+    mocks.getEmail.mockResolvedValueOnce({
+      data: {
+        data: {
+          id: "inbound-challenge-1",
+          message_id: null,
+          from_email: "payee@payee.example",
+          to_email: "payer@payer.example",
+          recipient: "payer@payer.example",
+          sender: "payee@payee.example",
+        },
+      },
+    });
+    await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+    const call = mocks.sendEmail.mock.calls[0][0];
+    // Threading is best-effort; association is by the interaction_id, so a
+    // missing Message-Id must not block delivery.
+    expect(call.body.in_reply_to).toBeUndefined();
+    expect(call.body.to).toBe("payee@payee.example");
   });
 
   it("--json emits both the interaction step and the send result", async () => {
@@ -324,7 +385,7 @@ describe("payments pay-email (one-shot sign + send)", () => {
     expect(parsed.sent.id).toBe("sent-pay-email-1");
   });
 
-  it("does not send when signing fails (invalid challenge)", async () => {
+  it("does not fetch or send when signing fails (invalid challenge)", async () => {
     const result = await runPayEmailCommand([
       "--challenge",
       JSON.stringify({ interaction_id: "x", challenge_id: "y" }),
@@ -334,11 +395,28 @@ describe("payments pay-email (one-shot sign + send)", () => {
       TEST_KEY,
     ]);
     expect(result.exitCode).toBe(1);
-    expect(mocks.replyToEmail).not.toHaveBeenCalled();
+    expect(mocks.getEmail).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
-  it("surfaces a reply send error and sets a non-zero exit code", async () => {
-    mocks.replyToEmail.mockResolvedValueOnce({
+  it("surfaces a get-email error and does not send", async () => {
+    mocks.getEmail.mockResolvedValueOnce({
+      error: { error: { code: "not_found", message: "no such email" } },
+    });
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a send error and sets a non-zero exit code", async () => {
+    mocks.sendEmail.mockResolvedValueOnce({
       error: { error: { code: "boom", message: "delivery failed" } },
     });
     const result = await runPayEmailCommand([

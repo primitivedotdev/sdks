@@ -99,17 +99,17 @@ cat challenge.json | primitive payments pay
 primitive payments create-email-challenge --from payee@your-domain.example \
   --to payer@their-domain.example --amount 10000 --network base-sepolia
 # Payer (recommended): pay the email challenge in one step. Signs the challenge
-# locally with your wallet key AND sends the signed interaction.json as an
-# in-thread reply, so you skip the manual sign-then-reply dance. --in-reply-to
-# is the inbound challenge email you received; the reply is threaded to it and
-# addressed to the payee, and From defaults to the payer it was sent to. The
-# reply carries a short default note alongside the attachment; pass --body to
-# customize it.
+# locally with your wallet key AND sends the signed interaction.json in-thread,
+# so you skip the manual sign-then-send dance. --in-reply-to is the inbound
+# challenge email you received; it is fetched to address the payment to the
+# payee and thread it under the challenge, with From defaulting to the payer it
+# was sent to. The message carries a short default note alongside the
+# attachment; pass --body to customize it.
 primitive payments pay-email --challenge-file challenge.json \
   --in-reply-to <inbound-challenge-email-id> --wait
 
 # Advanced: sign only, without sending. Emits the portable interaction.json
-# artifact you can attach to a reply yourself (e.g. with `primitive reply`).
+# artifact you can attach yourself (e.g. with `primitive send --attachment`).
 primitive payments pay-email-step --challenge-file challenge.json > interaction.json
 
 # Inspect a challenge by id, or list your registered payout addresses.
@@ -124,7 +124,7 @@ primitive payments update-spend-policy --max-per-payment 5000000
 
 `charge` is the friendly verb that matches the SDK `charge` and accepts `--amount-usdc`; `create-challenge` is the lower-level command that takes base-unit `--amount`. Either creates a challenge. The signing commands print a human-readable summary by default; pass `--json` for raw JSON suitable for piping.
 
-The signing commands (`register-payout-address`, `pay`, `pay-email`, and `pay-email-step`) need your wallet key. `pay-email` is the recommended payer path for the email-native flow: it signs and replies in one step. `pay-email-step` signs only and emits the `interaction.json` artifact for advanced use where you want to deliver it yourself. Set the key in `PRIMITIVE_X402_PRIVATE_KEY` (a `0x`-prefixed hex private key) so it never lands in shell history or the process list:
+The signing commands (`register-payout-address`, `pay`, `pay-email`, and `pay-email-step`) need your wallet key. `pay-email` is the recommended payer path for the email-native flow: it signs and sends in one step. `pay-email-step` signs only and emits the `interaction.json` artifact for advanced use where you want to deliver it yourself. Set the key in `PRIMITIVE_X402_PRIVATE_KEY` (a `0x`-prefixed hex private key) so it never lands in shell history or the process list:
 
 ```bash
 export PRIMITIVE_X402_PRIVATE_KEY=0x...
