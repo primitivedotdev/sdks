@@ -186,7 +186,10 @@ class PaymentsPayEmailCommand extends Command {
       // with `--body`) even though the payload of record is the attachment.
       const result = await replyToEmail({
         body: {
-          body_text: flags.body ?? DEFAULT_REPLY_BODY_TEXT,
+          // Fall back to the default note when --body is omitted OR blank /
+          // whitespace-only, so an empty override can't re-trigger the reply
+          // endpoint's "body required" validation this command guards against.
+          body_text: flags.body?.trim() ? flags.body : DEFAULT_REPLY_BODY_TEXT,
           attachments: [interactionAttachment(built)],
           ...(flags.from !== undefined ? { from: flags.from } : {}),
           ...(flags.wait !== undefined ? { wait: flags.wait } : {}),

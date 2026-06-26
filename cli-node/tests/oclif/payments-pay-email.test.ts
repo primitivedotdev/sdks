@@ -290,6 +290,25 @@ describe("payments pay-email (one-shot sign + send)", () => {
     expect(call.body.attachments[0].filename).toBe("interaction.json");
   });
 
+  it("falls back to the default body when --body is blank or whitespace", async () => {
+    await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+      "--body",
+      "   ",
+    ]);
+    const call = mocks.replyToEmail.mock.calls[0][0];
+    // A blank/whitespace override must not slip through and re-trigger the
+    // reply endpoint's "body required" validation; the default note is used.
+    expect(call.body.body_text).toBe(
+      "x402 payment authorization attached (interaction.json).",
+    );
+  });
+
   it("--json emits both the interaction step and the send result", async () => {
     const result = await runPayEmailCommand([
       "--challenge",
