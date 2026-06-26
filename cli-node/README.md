@@ -102,7 +102,9 @@ primitive payments create-email-challenge --from payee@your-domain.example \
 # locally with your wallet key AND sends the signed interaction.json as an
 # in-thread reply, so you skip the manual sign-then-reply dance. --in-reply-to
 # is the inbound challenge email you received; the reply is threaded to it and
-# addressed to the payee, and From defaults to the payer it was sent to.
+# addressed to the payee, and From defaults to the payer it was sent to. The
+# reply carries a short default note alongside the attachment; pass --body to
+# customize it.
 primitive payments pay-email --challenge-file challenge.json \
   --in-reply-to <inbound-challenge-email-id> --wait
 
