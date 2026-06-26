@@ -7917,7 +7917,7 @@ components:
         url:
           type: string
           minLength: 1
-          description: The webhook URL to deliver events to
+          description: The webhook URL to deliver events to. Required when kind is http; omit for function endpoints.
         enabled:
           type: boolean
           default: true
@@ -7929,7 +7929,22 @@ components:
         rules:
           type: object
           description: Endpoint-specific filtering rules
-      required: [url]
+        kind:
+          type: string
+          enum: [http, function]
+          default: http
+          description: 'http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide function_id, omit url).'
+        function_id:
+          type: string
+          format: uuid
+          description: The Function to invoke. Required when kind is function.
+        is_route_target:
+          type: boolean
+          default: false
+          description: |
+            Create this endpoint as a route-target: reachable only via an
+            explicit recipient route, never a domain's default destination, and
+            exempt from the one-endpoint-per-domain rule.
 
     UpdateEndpointInput:
       type: object

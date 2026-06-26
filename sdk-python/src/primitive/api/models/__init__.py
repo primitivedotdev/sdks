@@ -46,6 +46,7 @@ from .create_email_challenge_input_network import CreateEmailChallengeInputNetwo
 from .create_email_challenge_response_200 import CreateEmailChallengeResponse200
 from .create_email_challenge_response_201 import CreateEmailChallengeResponse201
 from .create_endpoint_input import CreateEndpointInput
+from .create_endpoint_input_kind import CreateEndpointInputKind
 from .create_endpoint_input_rules import CreateEndpointInputRules
 from .create_endpoint_response_201 import CreateEndpointResponse201
 from .create_filter_input import CreateFilterInput
@@ -428,6 +429,7 @@ __all__ = (
     "CreateEmailChallengeResponse200",
     "CreateEmailChallengeResponse201",
     "CreateEndpointInput",
+    "CreateEndpointInputKind",
     "CreateEndpointInputRules",
     "CreateEndpointResponse201",
     "CreateFilterInput",

@@ -11202,7 +11202,7 @@ export const openapiDocument: Record<string, unknown> = {
           "url": {
             "type": "string",
             "minLength": 1,
-            "description": "The webhook URL to deliver events to"
+            "description": "The webhook URL to deliver events to. Required when kind is http; omit for function endpoints."
           },
           "enabled": {
             "type": "boolean",
@@ -11220,11 +11220,27 @@ export const openapiDocument: Record<string, unknown> = {
           "rules": {
             "type": "object",
             "description": "Endpoint-specific filtering rules"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "http",
+              "function"
+            ],
+            "default": "http",
+            "description": "http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide function_id, omit url)."
+          },
+          "function_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The Function to invoke. Required when kind is function."
+          },
+          "is_route_target": {
+            "type": "boolean",
+            "default": false,
+            "description": "Create this endpoint as a route-target: reachable only via an\nexplicit recipient route, never a domain's default destination, and\nexempt from the one-endpoint-per-domain rule.\n"
           }
-        },
-        "required": [
-          "url"
-        ]
+        }
       },
       "UpdateEndpointInput": {
         "type": "object",

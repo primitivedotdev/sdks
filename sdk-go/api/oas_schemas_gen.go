@@ -2607,18 +2607,27 @@ func (*CreateEndpointCreated) createEndpointRes() {}
 
 // Ref: #/components/schemas/CreateEndpointInput
 type CreateEndpointInput struct {
-	// The webhook URL to deliver events to.
-	URL string `json:"url"`
+	// The webhook URL to deliver events to. Required when kind is http; omit for function endpoints.
+	URL OptString `json:"url"`
 	// Whether the endpoint is active.
 	Enabled OptBool `json:"enabled"`
 	// Restrict to emails from a specific domain.
 	DomainID OptNilUUID `json:"domain_id"`
 	// Endpoint-specific filtering rules.
 	Rules *CreateEndpointInputRules `json:"rules"`
+	// Http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide
+	// function_id, omit url).
+	Kind OptCreateEndpointInputKind `json:"kind"`
+	// The Function to invoke. Required when kind is function.
+	FunctionID OptUUID `json:"function_id"`
+	// Create this endpoint as a route-target: reachable only via an
+	// explicit recipient route, never a domain's default destination, and
+	// exempt from the one-endpoint-per-domain rule.
+	IsRouteTarget OptBool `json:"is_route_target"`
 }
 
 // GetURL returns the value of URL.
-func (s *CreateEndpointInput) GetURL() string {
+func (s *CreateEndpointInput) GetURL() OptString {
 	return s.URL
 }
 
@@ -2637,8 +2646,23 @@ func (s *CreateEndpointInput) GetRules() *CreateEndpointInputRules {
 	return s.Rules
 }
 
+// GetKind returns the value of Kind.
+func (s *CreateEndpointInput) GetKind() OptCreateEndpointInputKind {
+	return s.Kind
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *CreateEndpointInput) GetFunctionID() OptUUID {
+	return s.FunctionID
+}
+
+// GetIsRouteTarget returns the value of IsRouteTarget.
+func (s *CreateEndpointInput) GetIsRouteTarget() OptBool {
+	return s.IsRouteTarget
+}
+
 // SetURL sets the value of URL.
-func (s *CreateEndpointInput) SetURL(val string) {
+func (s *CreateEndpointInput) SetURL(val OptString) {
 	s.URL = val
 }
 
@@ -2655,6 +2679,64 @@ func (s *CreateEndpointInput) SetDomainID(val OptNilUUID) {
 // SetRules sets the value of Rules.
 func (s *CreateEndpointInput) SetRules(val *CreateEndpointInputRules) {
 	s.Rules = val
+}
+
+// SetKind sets the value of Kind.
+func (s *CreateEndpointInput) SetKind(val OptCreateEndpointInputKind) {
+	s.Kind = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *CreateEndpointInput) SetFunctionID(val OptUUID) {
+	s.FunctionID = val
+}
+
+// SetIsRouteTarget sets the value of IsRouteTarget.
+func (s *CreateEndpointInput) SetIsRouteTarget(val OptBool) {
+	s.IsRouteTarget = val
+}
+
+// Http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide
+// function_id, omit url).
+type CreateEndpointInputKind string
+
+const (
+	CreateEndpointInputKindHTTP     CreateEndpointInputKind = "http"
+	CreateEndpointInputKindFunction CreateEndpointInputKind = "function"
+)
+
+// AllValues returns all CreateEndpointInputKind values.
+func (CreateEndpointInputKind) AllValues() []CreateEndpointInputKind {
+	return []CreateEndpointInputKind{
+		CreateEndpointInputKindHTTP,
+		CreateEndpointInputKindFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateEndpointInputKind) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateEndpointInputKindHTTP:
+		return []byte(s), nil
+	case CreateEndpointInputKindFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateEndpointInputKind) UnmarshalText(data []byte) error {
+	switch CreateEndpointInputKind(data) {
+	case CreateEndpointInputKindHTTP:
+		*s = CreateEndpointInputKindHTTP
+		return nil
+	case CreateEndpointInputKindFunction:
+		*s = CreateEndpointInputKindFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Endpoint-specific filtering rules.
@@ -12602,6 +12684,52 @@ func (o OptCliLogoutInput) Get() (v CliLogoutInput, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCliLogoutInput) Or(d CliLogoutInput) CliLogoutInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCreateEndpointInputKind returns new OptCreateEndpointInputKind with value set to v.
+func NewOptCreateEndpointInputKind(v CreateEndpointInputKind) OptCreateEndpointInputKind {
+	return OptCreateEndpointInputKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateEndpointInputKind is optional CreateEndpointInputKind.
+type OptCreateEndpointInputKind struct {
+	Value CreateEndpointInputKind
+	Set   bool
+}
+
+// IsSet returns true if OptCreateEndpointInputKind was set.
+func (o OptCreateEndpointInputKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateEndpointInputKind) Reset() {
+	var v CreateEndpointInputKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateEndpointInputKind) SetTo(v CreateEndpointInputKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateEndpointInputKind) Get() (v CreateEndpointInputKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateEndpointInputKind) Or(d CreateEndpointInputKind) CreateEndpointInputKind {
 	if v, ok := o.Get(); ok {
 		return v
 	}
