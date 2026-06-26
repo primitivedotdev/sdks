@@ -116,7 +116,7 @@ func (UnimplementedHandler) CreateEmailChallenge(ctx context.Context, req *Creat
 // accepts the signature.
 //
 // POST /endpoints
-func (UnimplementedHandler) CreateEndpoint(ctx context.Context, req CreateEndpointInput) (r CreateEndpointRes, _ error) {
+func (UnimplementedHandler) CreateEndpoint(ctx context.Context, req *CreateEndpointInput) (r CreateEndpointRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

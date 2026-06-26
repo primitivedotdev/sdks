@@ -2660,47 +2660,19 @@ export type Endpoint = {
     is_route_target?: boolean;
 };
 
-export type CreateHttpEndpointInput = {
+export type CreateEndpointInput = {
     /**
-     * Deliver to a webhook URL.
+     * http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide function_id, omit url).
      */
-    kind?: 'http';
+    kind?: 'http' | 'function';
     /**
-     * The webhook URL to deliver events to.
+     * The webhook URL to deliver events to. Required when kind is http; omit for function endpoints.
      */
-    url: string;
+    url?: string;
     /**
-     * Whether the endpoint is active
+     * The Function to invoke. Required when kind is function.
      */
-    enabled?: boolean;
-    /**
-     * Restrict to emails from a specific domain
-     */
-    domain_id?: string | null;
-    /**
-     * Endpoint-specific filtering rules
-     */
-    rules?: {
-        [key: string]: unknown;
-    };
-    /**
-     * Create this endpoint as a route-target: reachable only via an
-     * explicit recipient route, never a domain's default destination, and
-     * exempt from the one-endpoint-per-domain rule.
-     *
-     */
-    is_route_target?: boolean;
-};
-
-export type CreateFunctionEndpointInput = {
-    /**
-     * Invoke a Primitive Function.
-     */
-    kind: 'function';
-    /**
-     * The Function to invoke.
-     */
-    function_id: string;
+    function_id?: string;
     /**
      * Whether the endpoint is active
      */
@@ -2723,12 +2695,6 @@ export type CreateFunctionEndpointInput = {
      */
     is_route_target?: boolean;
 };
-
-export type CreateEndpointInput = ({
-    kind: 'http';
-} & CreateHttpEndpointInput) | ({
-    kind: 'function';
-} & CreateFunctionEndpointInput);
 
 export type UpdateEndpointInput = {
     /**

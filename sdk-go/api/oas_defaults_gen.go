@@ -3,21 +3,9 @@
 package api
 
 // setDefaults set default value of fields.
-func (s *CreateFunctionEndpointInput) setDefaults() {
+func (s *CreateEndpointInput) setDefaults() {
 	{
-		val := bool(true)
-		s.Enabled.SetTo(val)
-	}
-	{
-		val := bool(false)
-		s.IsRouteTarget.SetTo(val)
-	}
-}
-
-// setDefaults set default value of fields.
-func (s *CreateHttpEndpointInput) setDefaults() {
-	{
-		val := CreateHttpEndpointInputKind("http")
+		val := CreateEndpointInputKind("http")
 		s.Kind.SetTo(val)
 	}
 	{
