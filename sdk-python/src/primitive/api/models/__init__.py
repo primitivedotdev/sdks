@@ -118,6 +118,7 @@ from .email_webhook_status_type_1 import EmailWebhookStatusType1
 from .email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from .email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
 from .endpoint import Endpoint
+from .endpoint_kind import EndpointKind
 from .endpoint_rules import EndpointRules
 from .error_response import ErrorResponse
 from .error_response_error import ErrorResponseError
@@ -499,6 +500,7 @@ __all__ = (
     "EmailWebhookStatusType2Type1",
     "EmailWebhookStatusType3Type1",
     "Endpoint",
+    "EndpointKind",
     "EndpointRules",
     "ErrorResponse",
     "ErrorResponseError",

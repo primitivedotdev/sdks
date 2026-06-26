@@ -3776,6 +3776,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ],
           "format": "date-time"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "http",
+            "function"
+          ],
+          "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
+        },
+        "function_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "The Function this endpoint invokes, when kind is function."
+        },
+        "is_route_target": {
+          "type": "boolean",
+          "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
         }
       },
       "required": [
@@ -3919,6 +3939,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "null"
             ],
             "format": "date-time"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "http",
+              "function"
+            ],
+            "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
+          },
+          "function_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The Function this endpoint invokes, when kind is function."
+          },
+          "is_route_target": {
+            "type": "boolean",
+            "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
           }
         },
         "required": [
@@ -4113,6 +4153,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "null"
           ],
           "format": "date-time"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "http",
+            "function"
+          ],
+          "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
+        },
+        "function_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "The Function this endpoint invokes, when kind is function."
+        },
+        "is_route_target": {
+          "type": "boolean",
+          "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
         }
       },
       "required": [

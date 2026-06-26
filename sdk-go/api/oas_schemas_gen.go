@@ -6747,6 +6747,14 @@ type Endpoint struct {
 	LastSuccessAt    OptNilDateTime `json:"last_success_at"`
 	LastFailureAt    OptNilDateTime `json:"last_failure_at"`
 	DeactivatedAt    OptNilDateTime `json:"deactivated_at"`
+	// Http: deliver to the webhook URL. function: invoke a Primitive Function.
+	Kind OptEndpointKind `json:"kind"`
+	// The Function this endpoint invokes, when kind is function.
+	FunctionID OptNilUUID `json:"function_id"`
+	// When true, this endpoint is reachable only via an explicit recipient
+	// route, never as a domain's default destination, and is exempt from
+	// the one-endpoint-per-domain rule (so many can share a domain).
+	IsRouteTarget OptBool `json:"is_route_target"`
 }
 
 // GetID returns the value of ID.
@@ -6829,6 +6837,21 @@ func (s *Endpoint) GetDeactivatedAt() OptNilDateTime {
 	return s.DeactivatedAt
 }
 
+// GetKind returns the value of Kind.
+func (s *Endpoint) GetKind() OptEndpointKind {
+	return s.Kind
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *Endpoint) GetFunctionID() OptNilUUID {
+	return s.FunctionID
+}
+
+// GetIsRouteTarget returns the value of IsRouteTarget.
+func (s *Endpoint) GetIsRouteTarget() OptBool {
+	return s.IsRouteTarget
+}
+
 // SetID sets the value of ID.
 func (s *Endpoint) SetID(val uuid.UUID) {
 	s.ID = val
@@ -6907,6 +6930,63 @@ func (s *Endpoint) SetLastFailureAt(val OptNilDateTime) {
 // SetDeactivatedAt sets the value of DeactivatedAt.
 func (s *Endpoint) SetDeactivatedAt(val OptNilDateTime) {
 	s.DeactivatedAt = val
+}
+
+// SetKind sets the value of Kind.
+func (s *Endpoint) SetKind(val OptEndpointKind) {
+	s.Kind = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *Endpoint) SetFunctionID(val OptNilUUID) {
+	s.FunctionID = val
+}
+
+// SetIsRouteTarget sets the value of IsRouteTarget.
+func (s *Endpoint) SetIsRouteTarget(val OptBool) {
+	s.IsRouteTarget = val
+}
+
+// Http: deliver to the webhook URL. function: invoke a Primitive Function.
+type EndpointKind string
+
+const (
+	EndpointKindHTTP     EndpointKind = "http"
+	EndpointKindFunction EndpointKind = "function"
+)
+
+// AllValues returns all EndpointKind values.
+func (EndpointKind) AllValues() []EndpointKind {
+	return []EndpointKind{
+		EndpointKindHTTP,
+		EndpointKindFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EndpointKind) MarshalText() ([]byte, error) {
+	switch s {
+	case EndpointKindHTTP:
+		return []byte(s), nil
+	case EndpointKindFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EndpointKind) UnmarshalText(data []byte) error {
+	switch EndpointKind(data) {
+	case EndpointKindHTTP:
+		*s = EndpointKindHTTP
+		return nil
+	case EndpointKindFunction:
+		*s = EndpointKindFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Endpoint-specific filtering rules.
@@ -12798,6 +12878,52 @@ func (o OptEmailStatus) Get() (v EmailStatus, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptEmailStatus) Or(d EmailStatus) EmailStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptEndpointKind returns new OptEndpointKind with value set to v.
+func NewOptEndpointKind(v EndpointKind) OptEndpointKind {
+	return OptEndpointKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEndpointKind is optional EndpointKind.
+type OptEndpointKind struct {
+	Value EndpointKind
+	Set   bool
+}
+
+// IsSet returns true if OptEndpointKind was set.
+func (o OptEndpointKind) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEndpointKind) Reset() {
+	var v EndpointKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEndpointKind) SetTo(v EndpointKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEndpointKind) Get() (v EndpointKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEndpointKind) Or(d EndpointKind) EndpointKind {
 	if v, ok := o.Get(); ok {
 		return v
 	}

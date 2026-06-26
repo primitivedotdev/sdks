@@ -17285,9 +17285,27 @@ func (s *Endpoint) encodeFields(e *jx.Encoder) {
 			s.DeactivatedAt.Encode(e, json.EncodeDateTime)
 		}
 	}
+	{
+		if s.Kind.Set {
+			e.FieldStart("kind")
+			s.Kind.Encode(e)
+		}
+	}
+	{
+		if s.FunctionID.Set {
+			e.FieldStart("function_id")
+			s.FunctionID.Encode(e)
+		}
+	}
+	{
+		if s.IsRouteTarget.Set {
+			e.FieldStart("is_route_target")
+			s.IsRouteTarget.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEndpoint = [16]string{
+var jsonFieldsNameOfEndpoint = [19]string{
 	0:  "id",
 	1:  "org_id",
 	2:  "url",
@@ -17304,6 +17322,9 @@ var jsonFieldsNameOfEndpoint = [16]string{
 	13: "last_success_at",
 	14: "last_failure_at",
 	15: "deactivated_at",
+	16: "kind",
+	17: "function_id",
+	18: "is_route_target",
 }
 
 // Decode decodes Endpoint from json.
@@ -17311,7 +17332,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode Endpoint to nil")
 	}
-	var requiredBitSet [2]uint8
+	var requiredBitSet [3]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -17493,6 +17514,36 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"deactivated_at\"")
 			}
+		case "kind":
+			if err := func() error {
+				s.Kind.Reset()
+				if err := s.Kind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "function_id":
+			if err := func() error {
+				s.FunctionID.Reset()
+				if err := s.FunctionID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"function_id\"")
+			}
+		case "is_route_target":
+			if err := func() error {
+				s.IsRouteTarget.Reset()
+				if err := s.IsRouteTarget.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"is_route_target\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -17502,9 +17553,10 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [2]uint8{
+	for i, mask := range [3]uint8{
 		0b11101011,
 		0b00001111,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -17546,6 +17598,46 @@ func (s *Endpoint) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *Endpoint) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EndpointKind as json.
+func (s EndpointKind) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EndpointKind from json.
+func (s *EndpointKind) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EndpointKind to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EndpointKind(v) {
+	case EndpointKindHTTP:
+		*s = EndpointKindHTTP
+	case EndpointKindFunction:
+		*s = EndpointKindFunction
+	default:
+		*s = EndpointKind(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EndpointKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EndpointKind) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -31594,6 +31686,39 @@ func (s OptEmailStatus) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptEmailStatus) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EndpointKind as json.
+func (o OptEndpointKind) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes EndpointKind from json.
+func (o *OptEndpointKind) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptEndpointKind to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptEndpointKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptEndpointKind) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
