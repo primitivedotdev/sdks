@@ -3663,49 +3663,101 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [],
     "requestSchema": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "url": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The webhook URL to deliver events to. Required when kind is http; omit for function endpoints."
-        },
-        "enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Whether the endpoint is active"
-        },
-        "domain_id": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uuid",
-          "description": "Restrict to emails from a specific domain"
-        },
-        "rules": {
+      "oneOf": [
+        {
           "type": "object",
-          "description": "Endpoint-specific filtering rules"
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "http"
+              ],
+              "default": "http",
+              "description": "Deliver to a webhook URL."
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The webhook URL to deliver events to."
+            },
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether the endpoint is active"
+            },
+            "domain_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Restrict to emails from a specific domain"
+            },
+            "rules": {
+              "type": "object",
+              "description": "Endpoint-specific filtering rules"
+            },
+            "is_route_target": {
+              "type": "boolean",
+              "default": false,
+              "description": "Create this endpoint as a route-target: reachable only via an\nexplicit recipient route, never a domain's default destination, and\nexempt from the one-endpoint-per-domain rule.\n"
+            }
+          },
+          "required": [
+            "url"
+          ]
         },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "http",
-            "function"
-          ],
-          "default": "http",
-          "description": "http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide function_id, omit url)."
-        },
-        "function_id": {
-          "type": "string",
-          "format": "uuid",
-          "description": "The Function to invoke. Required when kind is function."
-        },
-        "is_route_target": {
-          "type": "boolean",
-          "default": false,
-          "description": "Create this endpoint as a route-target: reachable only via an\nexplicit recipient route, never a domain's default destination, and\nexempt from the one-endpoint-per-domain rule.\n"
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "function"
+              ],
+              "description": "Invoke a Primitive Function."
+            },
+            "function_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The Function to invoke."
+            },
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether the endpoint is active"
+            },
+            "domain_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Restrict to emails from a specific domain"
+            },
+            "rules": {
+              "type": "object",
+              "description": "Endpoint-specific filtering rules"
+            },
+            "is_route_target": {
+              "type": "boolean",
+              "default": false,
+              "description": "Create this endpoint as a route-target: reachable only via an\nexplicit recipient route, never a domain's default destination, and\nexempt from the one-endpoint-per-domain rule.\n"
+            }
+          },
+          "required": [
+            "kind",
+            "function_id"
+          ]
+        }
+      ],
+      "discriminator": {
+        "propertyName": "kind",
+        "mapping": {
+          "http": "#/components/schemas/CreateHttpEndpointInput",
+          "function": "#/components/schemas/CreateFunctionEndpointInput"
         }
       }
     },

@@ -8,45 +8,41 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.create_endpoint_input_kind import CreateEndpointInputKind
+from ..models.create_function_endpoint_input_kind import CreateFunctionEndpointInputKind
 from typing import cast
 from uuid import UUID
 
 if TYPE_CHECKING:
-  from ..models.create_endpoint_input_rules import CreateEndpointInputRules
+  from ..models.create_function_endpoint_input_rules import CreateFunctionEndpointInputRules
 
 
 
 
 
-T = TypeVar("T", bound="CreateEndpointInput")
+T = TypeVar("T", bound="CreateFunctionEndpointInput")
 
 
 
 @_attrs_define
-class CreateEndpointInput:
+class CreateFunctionEndpointInput:
     """ 
         Attributes:
-            url (str | Unset): The webhook URL to deliver events to. Required when kind is http; omit for function
-                endpoints.
+            kind (CreateFunctionEndpointInputKind): Invoke a Primitive Function.
+            function_id (UUID): The Function to invoke.
             enabled (bool | Unset): Whether the endpoint is active Default: True.
             domain_id (None | Unset | UUID): Restrict to emails from a specific domain
-            rules (CreateEndpointInputRules | Unset): Endpoint-specific filtering rules
-            kind (CreateEndpointInputKind | Unset): http: deliver to a webhook URL (provide url). function: invoke a
-                Primitive Function (provide function_id, omit url). Default: CreateEndpointInputKind.HTTP.
-            function_id (UUID | Unset): The Function to invoke. Required when kind is function.
+            rules (CreateFunctionEndpointInputRules | Unset): Endpoint-specific filtering rules
             is_route_target (bool | Unset): Create this endpoint as a route-target: reachable only via an
                 explicit recipient route, never a domain's default destination, and
                 exempt from the one-endpoint-per-domain rule.
                  Default: False.
      """
 
-    url: str | Unset = UNSET
+    kind: CreateFunctionEndpointInputKind
+    function_id: UUID
     enabled: bool | Unset = True
     domain_id: None | Unset | UUID = UNSET
-    rules: CreateEndpointInputRules | Unset = UNSET
-    kind: CreateEndpointInputKind | Unset = CreateEndpointInputKind.HTTP
-    function_id: UUID | Unset = UNSET
+    rules: CreateFunctionEndpointInputRules | Unset = UNSET
     is_route_target: bool | Unset = False
 
 
@@ -54,8 +50,10 @@ class CreateEndpointInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_endpoint_input_rules import CreateEndpointInputRules
-        url = self.url
+        from ..models.create_function_endpoint_input_rules import CreateFunctionEndpointInputRules
+        kind = self.kind.value
+
+        function_id = str(self.function_id)
 
         enabled = self.enabled
 
@@ -71,34 +69,21 @@ class CreateEndpointInput:
         if not isinstance(self.rules, Unset):
             rules = self.rules.to_dict()
 
-        kind: str | Unset = UNSET
-        if not isinstance(self.kind, Unset):
-            kind = self.kind.value
-
-
-        function_id: str | Unset = UNSET
-        if not isinstance(self.function_id, Unset):
-            function_id = str(self.function_id)
-
         is_route_target = self.is_route_target
 
 
         field_dict: dict[str, Any] = {}
 
         field_dict.update({
+            "kind": kind,
+            "function_id": function_id,
         })
-        if url is not UNSET:
-            field_dict["url"] = url
         if enabled is not UNSET:
             field_dict["enabled"] = enabled
         if domain_id is not UNSET:
             field_dict["domain_id"] = domain_id
         if rules is not UNSET:
             field_dict["rules"] = rules
-        if kind is not UNSET:
-            field_dict["kind"] = kind
-        if function_id is not UNSET:
-            field_dict["function_id"] = function_id
         if is_route_target is not UNSET:
             field_dict["is_route_target"] = is_route_target
 
@@ -108,9 +93,17 @@ class CreateEndpointInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_endpoint_input_rules import CreateEndpointInputRules
+        from ..models.create_function_endpoint_input_rules import CreateFunctionEndpointInputRules
         d = dict(src_dict)
-        url = d.pop("url", UNSET)
+        kind = CreateFunctionEndpointInputKind(d.pop("kind"))
+
+
+
+
+        function_id = UUID(d.pop("function_id"))
+
+
+
 
         enabled = d.pop("enabled", UNSET)
 
@@ -135,46 +128,25 @@ class CreateEndpointInput:
 
 
         _rules = d.pop("rules", UNSET)
-        rules: CreateEndpointInputRules | Unset
+        rules: CreateFunctionEndpointInputRules | Unset
         if isinstance(_rules,  Unset):
             rules = UNSET
         else:
-            rules = CreateEndpointInputRules.from_dict(_rules)
-
-
-
-
-        _kind = d.pop("kind", UNSET)
-        kind: CreateEndpointInputKind | Unset
-        if isinstance(_kind,  Unset):
-            kind = UNSET
-        else:
-            kind = CreateEndpointInputKind(_kind)
-
-
-
-
-        _function_id = d.pop("function_id", UNSET)
-        function_id: UUID | Unset
-        if isinstance(_function_id,  Unset):
-            function_id = UNSET
-        else:
-            function_id = UUID(_function_id)
+            rules = CreateFunctionEndpointInputRules.from_dict(_rules)
 
 
 
 
         is_route_target = d.pop("is_route_target", UNSET)
 
-        create_endpoint_input = cls(
-            url=url,
+        create_function_endpoint_input = cls(
+            kind=kind,
+            function_id=function_id,
             enabled=enabled,
             domain_id=domain_id,
             rules=rules,
-            kind=kind,
-            function_id=function_id,
             is_route_target=is_route_target,
         )
 
-        return create_endpoint_input
+        return create_function_endpoint_input
 

@@ -2660,11 +2660,15 @@ export type Endpoint = {
     is_route_target?: boolean;
 };
 
-export type CreateEndpointInput = {
+export type CreateHttpEndpointInput = {
     /**
-     * The webhook URL to deliver events to. Required when kind is http; omit for function endpoints.
+     * Deliver to a webhook URL.
      */
-    url?: string;
+    kind?: 'http';
+    /**
+     * The webhook URL to deliver events to.
+     */
+    url: string;
     /**
      * Whether the endpoint is active
      */
@@ -2680,13 +2684,37 @@ export type CreateEndpointInput = {
         [key: string]: unknown;
     };
     /**
-     * http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide function_id, omit url).
+     * Create this endpoint as a route-target: reachable only via an
+     * explicit recipient route, never a domain's default destination, and
+     * exempt from the one-endpoint-per-domain rule.
+     *
      */
-    kind?: 'http' | 'function';
+    is_route_target?: boolean;
+};
+
+export type CreateFunctionEndpointInput = {
     /**
-     * The Function to invoke. Required when kind is function.
+     * Invoke a Primitive Function.
      */
-    function_id?: string;
+    kind: 'function';
+    /**
+     * The Function to invoke.
+     */
+    function_id: string;
+    /**
+     * Whether the endpoint is active
+     */
+    enabled?: boolean;
+    /**
+     * Restrict to emails from a specific domain
+     */
+    domain_id?: string | null;
+    /**
+     * Endpoint-specific filtering rules
+     */
+    rules?: {
+        [key: string]: unknown;
+    };
     /**
      * Create this endpoint as a route-target: reachable only via an
      * explicit recipient route, never a domain's default destination, and
@@ -2695,6 +2723,12 @@ export type CreateEndpointInput = {
      */
     is_route_target?: boolean;
 };
+
+export type CreateEndpointInput = ({
+    kind: 'http';
+} & CreateHttpEndpointInput) | ({
+    kind: 'function';
+} & CreateFunctionEndpointInput);
 
 export type UpdateEndpointInput = {
     /**

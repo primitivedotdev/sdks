@@ -113,7 +113,7 @@ type Invoker interface {
 	// accepts the signature.
 	//
 	// POST /endpoints
-	CreateEndpoint(ctx context.Context, request *CreateEndpointInput) (CreateEndpointRes, error)
+	CreateEndpoint(ctx context.Context, request CreateEndpointInput) (CreateEndpointRes, error)
 	// CreateFilter invokes createFilter operation.
 	//
 	// Creates a new whitelist or blocklist filter. Per-domain filters
@@ -1808,12 +1808,12 @@ func (c *Client) sendCreateEmailChallenge(ctx context.Context, request *CreateEm
 // accepts the signature.
 //
 // POST /endpoints
-func (c *Client) CreateEndpoint(ctx context.Context, request *CreateEndpointInput) (CreateEndpointRes, error) {
+func (c *Client) CreateEndpoint(ctx context.Context, request CreateEndpointInput) (CreateEndpointRes, error) {
 	res, err := c.sendCreateEndpoint(ctx, request)
 	return res, err
 }
 
-func (c *Client) sendCreateEndpoint(ctx context.Context, request *CreateEndpointInput) (res CreateEndpointRes, err error) {
+func (c *Client) sendCreateEndpoint(ctx context.Context, request CreateEndpointInput) (res CreateEndpointRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createEndpoint"),
 		semconv.HTTPRequestMethodKey.String("POST"),

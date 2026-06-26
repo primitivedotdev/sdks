@@ -8,8 +8,9 @@ from ...client import AuthenticatedClient, Client
 from ...types import Response, UNSET
 from ... import errors
 
-from ...models.create_endpoint_input import CreateEndpointInput
 from ...models.create_endpoint_response_201 import CreateEndpointResponse201
+from ...models.create_function_endpoint_input import CreateFunctionEndpointInput
+from ...models.create_http_endpoint_input import CreateHttpEndpointInput
 from ...models.error_response import ErrorResponse
 from typing import cast
 
@@ -17,7 +18,7 @@ from typing import cast
 
 def _get_kwargs(
     *,
-    body: CreateEndpointInput,
+    body: CreateFunctionEndpointInput | CreateHttpEndpointInput,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
@@ -32,7 +33,12 @@ def _get_kwargs(
         "url": "/endpoints",
     }
 
-    _kwargs["json"] = body.to_dict()
+    
+    if isinstance(body, CreateHttpEndpointInput):
+        _kwargs["json"] = body.to_dict()
+    else:
+        _kwargs["json"] = body.to_dict()
+
 
 
     headers["Content-Type"] = "application/json"
@@ -82,7 +88,7 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: CreateEndpointInput,
+    body: CreateFunctionEndpointInput | CreateHttpEndpointInput,
 
 ) -> Response[CreateEndpointResponse201 | ErrorResponse]:
     r""" Create a webhook endpoint
@@ -105,7 +111,7 @@ def sync_detailed(
     accepts the signature.
 
     Args:
-        body (CreateEndpointInput):
+        body (CreateFunctionEndpointInput | CreateHttpEndpointInput):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -130,7 +136,7 @@ def sync_detailed(
 def sync(
     *,
     client: AuthenticatedClient | Client,
-    body: CreateEndpointInput,
+    body: CreateFunctionEndpointInput | CreateHttpEndpointInput,
 
 ) -> CreateEndpointResponse201 | ErrorResponse | None:
     r""" Create a webhook endpoint
@@ -153,7 +159,7 @@ def sync(
     accepts the signature.
 
     Args:
-        body (CreateEndpointInput):
+        body (CreateFunctionEndpointInput | CreateHttpEndpointInput):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -173,7 +179,7 @@ body=body,
 async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
-    body: CreateEndpointInput,
+    body: CreateFunctionEndpointInput | CreateHttpEndpointInput,
 
 ) -> Response[CreateEndpointResponse201 | ErrorResponse]:
     r""" Create a webhook endpoint
@@ -196,7 +202,7 @@ async def asyncio_detailed(
     accepts the signature.
 
     Args:
-        body (CreateEndpointInput):
+        body (CreateFunctionEndpointInput | CreateHttpEndpointInput):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -221,7 +227,7 @@ async def asyncio_detailed(
 async def asyncio(
     *,
     client: AuthenticatedClient | Client,
-    body: CreateEndpointInput,
+    body: CreateFunctionEndpointInput | CreateHttpEndpointInput,
 
 ) -> CreateEndpointResponse201 | ErrorResponse | None:
     r""" Create a webhook endpoint
@@ -244,7 +250,7 @@ async def asyncio(
     accepts the signature.
 
     Args:
-        body (CreateEndpointInput):
+        body (CreateFunctionEndpointInput | CreateHttpEndpointInput):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
