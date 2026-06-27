@@ -139,7 +139,6 @@ export async function pollForSettlementInteraction(params: {
     if (page.ok) {
       for (const row of page.rows) {
         if (checked.has(row.id)) continue;
-        checked.add(row.id);
         let bytes: Uint8Array | null;
         try {
           bytes = await fetchInteractionJsonBytes({
@@ -150,10 +149,15 @@ export async function pollForSettlementInteraction(params: {
             fetchImpl: params.fetchImpl,
           });
         } catch {
-          // A candidate whose archive can't be read is not the receipt we want;
-          // skip it and keep polling rather than aborting the wait.
+          // The settlement email can be searchable before its attachment archive
+          // is ready, and a single fetch/gunzip can fail transiently. Do NOT mark
+          // it checked: leave it for a later poll so a transient miss within the
+          // timeout does not become a permanent skip.
           continue;
         }
+        // Only now is the email definitively read; record it so we don't refetch
+        // a no-interaction.json email every poll.
+        checked.add(row.id);
         if (!bytes) continue;
         const envelope = parseInteractionEnvelope(bytes);
         if (!envelope) continue;

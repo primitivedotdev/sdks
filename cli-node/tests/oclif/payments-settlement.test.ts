@@ -195,4 +195,54 @@ describe("pollForSettlementInteraction", () => {
     });
     expect(result).toBeNull();
   });
+
+  it("retries an email whose attachment fetch fails transiently (no permanent skip)", async () => {
+    // The settlement email is searchable on every poll, but its attachment
+    // archive 404s the first time (not yet ready) and succeeds the second. The
+    // poll must NOT mark it checked on the failed attempt, or it would never
+    // re-fetch it and would time out despite the receipt arriving in time.
+    mocks.searchEmails.mockResolvedValue({
+      data: {
+        data: [{ id: "settle-1", received_at: "2030-01-01T00:00:01.000Z" }],
+        meta: { cursor: null },
+      },
+    });
+    const receipt = gzippedArchive(
+      JSON.stringify({
+        interaction_id: INTERACTION_ID,
+        step: "settled",
+        settle_tx: "0xfeedface",
+      }),
+    );
+    let attempt = 0;
+    const fetchImpl = vi.fn(async () => {
+      attempt += 1;
+      if (attempt === 1) {
+        // First attempt: archive not ready yet.
+        return { ok: false, status: 404, text: async () => "not ready" };
+      }
+      return {
+        ok: true,
+        arrayBuffer: async () =>
+          receipt.buffer.slice(
+            receipt.byteOffset,
+            receipt.byteOffset + receipt.byteLength,
+          ),
+      };
+    }) as unknown as typeof fetch;
+
+    const result = await pollForSettlementInteraction({
+      apiClient,
+      baseUrl: "https://api.example/v1",
+      interactionId: INTERACTION_ID,
+      payeeFrom: "payee@payee.example",
+      since: "2030-01-01T00:00:00.000Z",
+      timeoutSeconds: 5,
+      intervalSeconds: 1,
+      fetchImpl,
+    });
+    expect(attempt).toBeGreaterThanOrEqual(2);
+    expect(result?.emailId).toBe("settle-1");
+    expect(result?.settleTx).toBe("0xfeedface");
+  });
 });

@@ -733,6 +733,31 @@ describe("payments pay-email (auto-derive challenge from inbound)", () => {
     expect(fetchMock.mock.calls).toHaveLength(0);
     expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
   });
+
+  it("derives in a non-interactive (non-TTY) process, the way CI / Docker run it", async () => {
+    // Regression guard: derivation must NOT depend on an interactive TTY. In CI /
+    // Docker stdin is not a TTY even though nothing is piped, so a TTY-gated
+    // derive would skip the attachment download and hang on / mis-parse stdin.
+    Object.defineProperty(process.stdin, "isTTY", {
+      value: false,
+      configurable: true,
+    });
+    const result = await runPayEmailCommand([
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    const fetchMock = globalThis.fetch as unknown as {
+      mock: { calls: unknown[][] };
+    };
+    // The attachment WAS downloaded (derivation ran) despite no TTY.
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://api.example/v1/emails/inbound-challenge-1/attachments.tar.gz",
+    );
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("payments pay-email --wait-settle", () => {

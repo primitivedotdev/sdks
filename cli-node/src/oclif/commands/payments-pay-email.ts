@@ -39,12 +39,16 @@ export function shouldDeriveChallenge(flags: {
   challenge?: string;
   "challenge-file"?: string;
 }): boolean {
-  if (flags.challenge !== undefined) return false;
-  if (flags["challenge-file"] !== undefined) return false;
-  // A piped stdin (not a TTY) means the caller is feeding a challenge in; honor
-  // it via readEmailChallenge. An interactive TTY means nothing is piped, so
-  // derive from --in-reply-to instead of hanging on stdin.
-  return process.stdin.isTTY === true;
+  // Auto-derive whenever no explicit challenge source is given. This is the
+  // headline one-command flow (`pay-email --in-reply-to <id>`) and it must work
+  // identically in an interactive terminal, in CI, and in Docker. We do NOT key
+  // this on `process.stdin.isTTY`: in CI / Docker / any non-interactive process
+  // stdin is not a TTY even though nothing is piped, so a TTY check would skip
+  // derivation there and then block on / mis-parse stdin. Unlike `pay-email-step`
+  // (a sign-only primitive that still reads a piped challenge from stdin),
+  // `pay-email` derives from --in-reply-to by default; pass --challenge /
+  // --challenge-file to override.
+  return flags.challenge === undefined && flags["challenge-file"] === undefined;
 }
 
 // `primitive payments pay-email` is the one-shot payer side of an email-native
