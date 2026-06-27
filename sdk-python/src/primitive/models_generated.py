@@ -173,6 +173,67 @@ class Download(BaseModel):
     ]
 
 
+class Outcome(Enum):
+    matched = "matched"
+    defaulted = "defaulted"
+    none = "none"
+
+
+class MatchedTier(Enum):
+    exact = "exact"
+    wildcard = "wildcard"
+    regex = "regex"
+    none_type_none = None
+
+
+class DefaultScope(Enum):
+    domain = "domain"
+    org = "org"
+    none_type_none = None
+
+
+class RoutingDecision(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    version: Annotated[
+        int | None,
+        Field(
+            description="Decision schema version, so consumers can detect shape changes."
+        ),
+    ] = None
+    outcome: Annotated[
+        Outcome,
+        Field(
+            description="How the destination was chosen: `matched` a recipient route, fell back to a `defaulted` destination (domain or org), or `none` (no destination resolved)."
+        ),
+    ]
+    endpoint_id: Annotated[
+        str | None,
+        Field(
+            description="The endpoint the email was delivered to, or null when no destination resolved."
+        ),
+    ] = None
+    matched_route_id: Annotated[
+        str | None,
+        Field(
+            description="The recipient route that matched, or null when the outcome was not `matched`."
+        ),
+    ] = None
+    matched_tier: Annotated[
+        MatchedTier | None,
+        Field(
+            description="The match tier of the route that matched, or null when the outcome was not `matched`."
+        ),
+    ] = None
+    default_scope: Annotated[
+        DefaultScope | None,
+        Field(
+            description="When the outcome was `defaulted`, whether the default came from the domain or the organization; null otherwise."
+        ),
+    ] = None
+
+
 class WebhookVersion(RootModel[str]):
     root: Annotated[
         str,
@@ -1128,6 +1189,12 @@ class EmailReceivedEvent(BaseModel):
             description="API version in date format (YYYY-MM-DD). Use this to detect version mismatches between webhook and SDK."
         ),
     ]
+    routing: Annotated[
+        RoutingDecision | None,
+        Field(
+            description="The recipient-routing decision for this email: where it was delivered and why. Present only when recipient routing ran for the organization; omitted otherwise. This is the compact decision also recorded on the email's routing metadata."
+        ),
+    ] = None
     delivery: Annotated[
         Delivery, Field(description="Metadata about this webhook delivery.")
     ]
