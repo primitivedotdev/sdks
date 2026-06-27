@@ -1,7 +1,10 @@
 import { Command, Flags } from "@oclif/core";
 import type { EmailDetail, SendMailResult } from "@primitivedotdev/api-core";
 import { getEmail, sendEmail } from "@primitivedotdev/api-core";
-import type { BuiltPaymentStep } from "@primitivedotdev/sdk/x402";
+import type {
+  BuiltPaymentStep,
+  X402EmailChallenge,
+} from "@primitivedotdev/sdk/x402";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
@@ -12,13 +15,37 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
+import { deriveEmailChallengeFromInbound } from "./payments-email-challenge.js";
 import { readEmailChallenge } from "./payments-pay-email-step.js";
+import {
+  pollForSettlementInteraction,
+  settlementWaitNotice,
+} from "./payments-settlement.js";
 import {
   PRIVATE_KEY_ENV,
   PRIVATE_KEY_FLAG_DESCRIPTION,
   reportX402Error,
   signEmailChallenge,
 } from "./payments-shared.js";
+
+/**
+ * True when none of the explicit challenge sources are present (no --challenge,
+ * no --challenge-file, and stdin is an interactive TTY rather than a pipe). In
+ * that case `pay-email` auto-derives the challenge from the inbound email's
+ * interaction.json attachment. We treat a TTY stdin as "no challenge piped" so
+ * the one-shot does not block on readFileSync(0) waiting for the user to paste.
+ */
+export function shouldDeriveChallenge(flags: {
+  challenge?: string;
+  "challenge-file"?: string;
+}): boolean {
+  if (flags.challenge !== undefined) return false;
+  if (flags["challenge-file"] !== undefined) return false;
+  // A piped stdin (not a TTY) means the caller is feeding a challenge in; honor
+  // it via readEmailChallenge. An interactive TTY means nothing is piped, so
+  // derive from --in-reply-to instead of hanging on stdin.
+  return process.stdin.isTTY === true;
+}
 
 // `primitive payments pay-email` is the one-shot payer side of an email-native
 // x402 payment: it SIGNs the challenge and SENDs the signed `interaction.json`
@@ -97,37 +124,67 @@ function emailDetailFromEnvelope(
 
 class PaymentsPayEmailCommand extends Command {
   static description =
-    `Pay an email-native x402 challenge in one step: sign it and send the signed interaction.json in-thread.
+    `Pay an email-native x402 challenge in one step: sign it and send the signed interaction.json.
 
-  Reads the email challenge the payee issued (the JSON from
-  \`payments create-email-challenge\`), derives and signs the interaction-bound
-  EIP-3009 authorization locally with your wallet key (read from
-  ${PRIVATE_KEY_ENV} by default), and sends the signed \`interaction.json\`
-  attached as an \`application/json\` part. The key never leaves your machine.
+  THE ONE-COMMAND PAYER FLOW. You received a payment-request email carrying an
+  \`interaction.json\` attachment. Run:
 
-  This is the recommended payer path. It replaces the two-step
-  \`pay-email-step\` + \`send --attachment interaction.json\` dance: no manual
-  address or threading wrangling. Use \`pay-email-step\` only when you need the
-  signed bytes as a portable artifact without sending.
+      ${"<%= config.bin %>"} payments pay-email --in-reply-to <inbound-email-id>
 
-  --in-reply-to is the id of the inbound challenge email you received. It is
-  fetched to derive the recipient (the payee, from the inbound's sender) and the
-  From (you, the payer, from the inbound's recipient). The outgoing send does
-  NOT thread under the challenge: threading would trigger the send endpoint's
-  parent-thread dedup and the payment would never settle. The interaction
-  associates by interaction_id instead. Pass --from only to override the derived
-  payer From.
+  with your wallet key in ${PRIVATE_KEY_ENV}, and this command auto-derives the
+  challenge from that inbound email's attachment, signs the interaction-bound
+  EIP-3009 authorization locally, and sends the signed \`interaction.json\` back
+  to the payee. The key never leaves your machine. You do NOT need --challenge or
+  --challenge-file: with just --in-reply-to the challenge is derived for you.
 
-  Provide the challenge inline with --challenge, from a file with
-  --challenge-file, or piped on stdin.`;
+  THE CHALLENGE OBJECT (only needed for the --challenge / --challenge-file
+  override). \`--challenge\` expects the object the PAYEE's
+  \`create-email-challenge\` API returns, NOT the inbound email's
+  \`interaction.json\` attachment (those are different shapes). Its fields are:
+
+      {
+        "interaction_id": "<uuid@domain>",     // the email thread id
+        "challenge": {
+          "payment_requirements": { ... },     // scheme, network, payTo, asset, ...
+          "nonce_binding": {
+            "interaction_id": "<uuid@domain>",  // must equal the outer interaction_id
+            "challenge_step_id": "<uuid>",      // the challenge step id
+            "challenge_nonce": "<64 hex chars>"
+          },
+          "expires_at": "<ISO-8601>"
+        }
+      }
+
+  As a real payer you usually have only the inbound email's attachment, whose
+  layout differs (top-level \`step\`, \`step_id\`, \`expires_at\`, and a nested
+  \`payload.payment_requirements\` / \`payload.challenge_nonce\`). You do NOT
+  reshape it by hand: omit --challenge and let --in-reply-to derive it, or run
+  \`payments challenge-from-email --id <inbound-id>\` to print the correctly
+  shaped challenge object. Pass --challenge / --challenge-file only when you have
+  the payee-side challenge from another source; it is used as-is and overrides
+  the auto-derive.
+
+  SETTLEMENT IS ASYNC. --wait only confirms the receiving MTA accepted the
+  message (SMTP 250); it does NOT confirm on-chain settlement. The \`settle_tx\`
+  hash arrives later in a follow-up inbound x402 settlement interaction email
+  from the payee. Use --wait-settle to poll for that settlement email after
+  sending and surface the receipt.
+
+  ADDRESSING. --in-reply-to is the inbound challenge email's id. It is fetched to
+  derive the recipient (the payee, from the inbound's sender) and the From (you,
+  the payer, from the inbound's recipient). The outgoing send does NOT thread
+  under the challenge: threading would trigger the send endpoint's parent-thread
+  dedup and the payment would never settle. The interaction associates by
+  interaction_id instead. Pass --from only to override the derived payer From.`;
 
   static summary =
-    "Sign an email x402 challenge and send the signed interaction.json in-thread (one step)";
+    "Sign an email x402 challenge and send the signed interaction.json (one step; derives the challenge from --in-reply-to)";
 
   static examples = [
+    "<%= config.bin %> payments pay-email --in-reply-to <inbound-email-id>",
+    "<%= config.bin %> payments pay-email --in-reply-to <inbound-email-id> --wait-settle",
     "<%= config.bin %> payments pay-email --challenge-file challenge.json --in-reply-to <inbound-email-id>",
-    "cat challenge.json | <%= config.bin %> payments pay-email --in-reply-to <inbound-email-id> --wait",
-    "<%= config.bin %> payments pay-email --challenge-file challenge.json --in-reply-to <inbound-email-id> --from 'Payer <payer@your-domain.example>'",
+    "<%= config.bin %> payments pay-email --in-reply-to <inbound-email-id> --from 'Payer <payer@your-domain.example>'",
   ];
 
   static flags = {
@@ -146,16 +203,18 @@ class PaymentsPayEmailCommand extends Command {
       env: PRIVATE_KEY_ENV,
     }),
     challenge: Flags.string({
-      description: "The email challenge object as a JSON string.",
+      description:
+        "OVERRIDE: the payee-side email challenge object (the create-email-challenge response shape, NOT the inbound interaction.json attachment) as a JSON string. Optional: omit it and the challenge is auto-derived from the --in-reply-to email's attachment.",
       exclusive: ["challenge-file"],
     }),
     "challenge-file": Flags.string({
-      description: "Path to a file containing the email challenge JSON.",
+      description:
+        "OVERRIDE: path to a file containing the payee-side email challenge JSON (the create-email-challenge response shape). Optional: omit it and the challenge is auto-derived from the --in-reply-to email's attachment.",
       exclusive: ["challenge"],
     }),
     "in-reply-to": Flags.string({
       description:
-        "Id of the inbound challenge email you received. It is fetched to derive the payee recipient and the payer From. The outgoing send is not threaded under the challenge; the payment associates by interaction_id.",
+        "Id of the inbound challenge email you received. With no --challenge / --challenge-file, its interaction.json attachment is downloaded and reshaped into the challenge to sign. It is also fetched to derive the payee recipient and the payer From. The outgoing send is not threaded under the challenge; the payment associates by interaction_id.",
       required: true,
     }),
     from: Flags.string({
@@ -167,7 +226,23 @@ class PaymentsPayEmailCommand extends Command {
     }),
     wait: Flags.boolean({
       description:
-        "Block until the receiving MTA returns an outcome. Without --wait, the call returns once Primitive has accepted the message for delivery.",
+        "Block until the receiving MTA returns a delivery outcome (SMTP 250). This confirms email DELIVERY only, NOT on-chain settlement. Without --wait, the call returns once Primitive has accepted the message for delivery.",
+    }),
+    "wait-settle": Flags.boolean({
+      description:
+        "After sending, poll the inbox for the follow-up x402 settlement interaction email from the payee and print the settlement receipt (including settle_tx when present). Settlement is async, so this can take a while; tune with --settle-timeout / --settle-interval.",
+    }),
+    "settle-timeout": Flags.integer({
+      default: 180,
+      description:
+        "With --wait-settle: seconds to wait for the settlement email before giving up (0 waits forever).",
+      min: 0,
+    }),
+    "settle-interval": Flags.integer({
+      default: 5,
+      description:
+        "With --wait-settle: seconds between settlement-email polls.",
+      min: 1,
     }),
     json: Flags.boolean({
       description:
@@ -184,7 +259,7 @@ class PaymentsPayEmailCommand extends Command {
     // Unlike `pay-email-step` (fully offline), this command sends, so it needs
     // an authenticated client. Build it first so a not-signed-in caller gets
     // the standard auth guidance before we do any signing work.
-    const { apiClient, auth, baseUrlOverridden } =
+    const { apiClient, auth, baseUrlOverridden, requestConfig } =
       await createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
         apiBaseUrl: flags["api-base-url"],
@@ -197,33 +272,15 @@ class PaymentsPayEmailCommand extends Command {
     };
 
     await runWithTiming(flags.time, async () => {
-      // Sign locally. Signing failures (bad key, expired/invalid challenge)
-      // surface through the x402 error reporter, the same as `pay-email-step`.
-      let built: BuiltPaymentStep;
-      try {
-        const challenge = readEmailChallenge({
-          inline: flags.challenge,
-          file: flags["challenge-file"],
-        });
-        built = await signEmailChallenge({
-          challenge,
-          privateKey: flags["private-key"] ?? "",
-          resolvedApiBaseUrl: auth.apiBaseUrl,
-          apiKey: flags["api-key"],
-        });
-      } catch (error) {
-        reportX402Error(error, authFailureContext);
-        process.exitCode = 1;
-        return;
-      }
-
-      // Fetch the inbound challenge email to derive addressing. The payer is the
-      // address the challenge was sent to (the inbound's recipient); the payee
-      // is the inbound's sender. We deliberately do NOT carry the inbound's
-      // Message-Id onto the send (see the file header): threading the send under
-      // the challenge re-triggers the parent-thread dedup that swallows the
-      // payment. We resolve addressing here and hand it to the send path
-      // explicitly; the interaction associates by interaction_id, not threading.
+      // Fetch the inbound challenge email FIRST. It serves two purposes now:
+      //   1. addressing (payee = its sender, payer = its recipient), and
+      //   2. the source of the challenge to sign when no --challenge override is
+      //      given (its interaction.json attachment is the wire envelope a real
+      //      payer actually receives).
+      // We deliberately do NOT carry the inbound's Message-Id onto the send (see
+      // the file header): threading the send under the challenge re-triggers the
+      // parent-thread dedup that swallows the payment. The interaction associates
+      // by interaction_id, not threading.
       const inboundResult = await getEmail({
         client: apiClient.client,
         path: { id: flags["in-reply-to"] },
@@ -250,6 +307,41 @@ class PaymentsPayEmailCommand extends Command {
         return;
       }
 
+      // Resolve the challenge. With an explicit --challenge / --challenge-file
+      // (or a piped stdin), use it as-is for back-compat. Otherwise auto-derive
+      // it from the inbound email's interaction.json attachment (the wire
+      // envelope) and reshape it via the SDK's canonical
+      // parseEmailChallengeFromPart. Then sign locally; signing failures (bad
+      // key, expired/invalid challenge, no interaction.json part) surface through
+      // the x402 error reporter, the same as `pay-email-step`.
+      let built: BuiltPaymentStep;
+      try {
+        let challenge: X402EmailChallenge;
+        if (shouldDeriveChallenge(flags)) {
+          challenge = await deriveEmailChallengeFromInbound({
+            baseUrl: auth.apiBaseUrl,
+            emailId: flags["in-reply-to"],
+            apiKey: auth.apiKey,
+            headers: requestConfig.headers,
+          });
+        } else {
+          challenge = readEmailChallenge({
+            inline: flags.challenge,
+            file: flags["challenge-file"],
+          });
+        }
+        built = await signEmailChallenge({
+          challenge,
+          privateKey: flags["private-key"] ?? "",
+          resolvedApiBaseUrl: auth.apiBaseUrl,
+          apiKey: flags["api-key"],
+        });
+      } catch (error) {
+        reportX402Error(error, authFailureContext);
+        process.exitCode = 1;
+        return;
+      }
+
       // To = the payee that issued the challenge (the inbound's canonical
       // sender). From = the payer the challenge was addressed to (the inbound's
       // recipient), overridable with --from. We require a payee To; if the
@@ -271,6 +363,10 @@ class PaymentsPayEmailCommand extends Command {
         process.exitCode = 1;
         return;
       }
+
+      // Capture the moment just before sending so --wait-settle only considers
+      // settlement emails that arrive AFTER this payment, not a stale prior one.
+      const sendStartedAt = new Date().toISOString();
 
       // Send the signed envelope. The inbound matcher requires a part named
       // exactly `interaction.json` with content type `application/json`; build
@@ -331,19 +427,80 @@ class PaymentsPayEmailCommand extends Command {
         });
       }
 
+      // Optionally wait for the async on-chain settlement. The payment is now on
+      // the wire, but settlement happens later and the settle_tx arrives in a
+      // follow-up x402 settlement interaction email from the payee. A replayed
+      // send put no fresh interaction.json on the wire, so polling for a
+      // settlement that will never come is pointless; skip the wait in that case.
+      let settlement: Awaited<ReturnType<typeof pollForSettlementInteraction>> =
+        null;
+      if (flags["wait-settle"] && !replayed && payeeTo) {
+        process.stderr.write(
+          "Payment sent. Waiting for the x402 settlement interaction email (settlement is async)...\n",
+        );
+        settlement = await pollForSettlementInteraction({
+          apiClient,
+          baseUrl: auth.apiBaseUrl,
+          apiKey: auth.apiKey,
+          headers: requestConfig.headers,
+          interactionId: built.envelope.interaction_id,
+          payeeFrom: payeeTo,
+          since: sendStartedAt,
+          timeoutSeconds: flags["settle-timeout"],
+          intervalSeconds: flags["settle-interval"],
+        });
+        if (settlement) {
+          process.stderr.write(
+            settlement.settleTx
+              ? `Settled. settle_tx: ${settlement.settleTx}\n`
+              : "Settlement interaction received (no settle_tx field present; full receipt below).\n",
+          );
+        } else {
+          process.stderr.write(
+            "Timed out waiting for the x402 settlement interaction email. The payment was sent; the settle_tx will arrive in a follow-up x402 settlement interaction email from the payee. Re-run with --wait-settle, or check your inbox for an x402 settlement message.\n",
+          );
+        }
+      }
+
       if (flags.json) {
         this.log(
           JSON.stringify(
-            { interaction: built.envelope, sent, idempotent_replay: replayed },
+            {
+              interaction: built.envelope,
+              sent,
+              idempotent_replay: replayed,
+              ...(flags["wait-settle"]
+                ? {
+                    settlement: settlement
+                      ? {
+                          email_id: settlement.emailId,
+                          settle_tx: settlement.settleTx,
+                          receipt: settlement.envelope,
+                        }
+                      : null,
+                  }
+                : {}),
+            },
             null,
             2,
           ),
         );
       } else {
         this.log(JSON.stringify(sent, null, 2));
+        // Without --wait-settle the user has no on-chain confirmation yet; say so
+        // plainly so a delivered send is not mistaken for a settled payment.
+        if (!flags["wait-settle"]) {
+          process.stderr.write(`${settlementWaitNotice}\n`);
+        } else if (settlement) {
+          this.log(JSON.stringify(settlement.envelope, null, 2));
+        }
       }
 
       if (replayed) {
+        process.exitCode = 1;
+      } else if (flags["wait-settle"] && !settlement) {
+        // --wait-settle was requested but no settlement arrived in time: exit
+        // non-zero so automation does not treat an unconfirmed payment as done.
         process.exitCode = 1;
       }
     });

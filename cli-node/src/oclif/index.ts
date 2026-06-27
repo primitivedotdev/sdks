@@ -35,6 +35,7 @@ import LogoutCommand from "./commands/logout.js";
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
+import PaymentsChallengeFromEmailCommand from "./commands/payments-challenge-from-email.js";
 import PaymentsChargeCommand from "./commands/payments-charge.js";
 import PaymentsPayCommand from "./commands/payments-pay.js";
 import PaymentsPayEmailCommand from "./commands/payments-pay-email.js";
@@ -624,4 +625,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // do; both share the exact signing path via `signEmailChallenge`.
   "payments:pay-email": PaymentsPayEmailCommand,
   "payments:pay-email-step": PaymentsPayEmailStepCommand,
+  // `challenge-from-email` reshapes an inbound payment-request email's
+  // interaction.json attachment (the wire envelope a payer actually receives)
+  // into the challenge object the signing commands consume. It exists so SDK and
+  // pay-email-step users can get the correctly-shaped challenge without
+  // hand-mapping the envelope; `pay-email --in-reply-to` derives it internally.
+  "payments:challenge-from-email": PaymentsChallengeFromEmailCommand,
 };
