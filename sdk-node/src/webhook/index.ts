@@ -153,6 +153,8 @@ export type {
   RawContent,
   RawContentDownloadOnly,
   RawContentInline,
+  // Recipient-routing decision
+  RoutingDecision,
   TlsReportAnalysis,
   UnknownEvent,
   ValidateEmailAuthResult,
