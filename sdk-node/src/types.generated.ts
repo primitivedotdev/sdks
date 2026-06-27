@@ -232,13 +232,13 @@ auth: EmailAuth
 }
 }
 /**
- * The recipient-routing decision for this email: where it was delivered and why. Present only when recipient routing ran for the organization; omitted otherwise. Mirrors the decision returned by the routes simulate endpoint.
+ * The recipient-routing decision for this email: where it was delivered and why. Present only when recipient routing ran for the organization; omitted otherwise. This is the compact decision also recorded on the email's routing metadata.
  */
 export interface RoutingDecision {
 /**
  * Decision schema version, so consumers can detect shape changes.
  */
-version: number
+version?: number
 /**
  * How the destination was chosen: `matched` a recipient route, fell back to a `defaulted` destination (domain or org), or `none` (no destination resolved).
  */
@@ -246,19 +246,19 @@ outcome: ("matched" | "defaulted" | "none")
 /**
  * The endpoint the email was delivered to, or null when no destination resolved.
  */
-endpoint_id: (string | null)
+endpoint_id?: (string | null)
 /**
  * The recipient route that matched, or null when the outcome was not `matched`.
  */
-matched_route_id: (string | null)
+matched_route_id?: (string | null)
 /**
  * The match tier of the route that matched, or null when the outcome was not `matched`.
  */
-matched_tier: ("exact" | "wildcard" | "regex" | null)
+matched_tier?: ("exact" | "wildcard" | "regex" | null)
 /**
  * When the outcome was `defaulted`, whether the default came from the domain or the organization; null otherwise.
  */
-default_scope: ("domain" | "org" | null)
+default_scope?: ("domain" | "org" | null)
 }
 /**
  * Raw email content included inline (base64 encoded).
@@ -1153,7 +1153,7 @@ export interface RoutingDecision1 {
 /**
  * Decision schema version, so consumers can detect shape changes.
  */
-version: number
+version?: number
 /**
  * How the destination was chosen: `matched` a recipient route, fell back to a `defaulted` destination (domain or org), or `none` (no destination resolved).
  */
@@ -1161,19 +1161,19 @@ outcome: ("matched" | "defaulted" | "none")
 /**
  * The endpoint the email was delivered to, or null when no destination resolved.
  */
-endpoint_id: (string | null)
+endpoint_id?: (string | null)
 /**
  * The recipient route that matched, or null when the outcome was not `matched`.
  */
-matched_route_id: (string | null)
+matched_route_id?: (string | null)
 /**
  * The match tier of the route that matched, or null when the outcome was not `matched`.
  */
-matched_tier: ("exact" | "wildcard" | "regex" | null)
+matched_tier?: ("exact" | "wildcard" | "regex" | null)
 /**
  * When the outcome was `defaulted`, whether the default came from the domain or the organization; null otherwise.
  */
-default_scope: ("domain" | "org" | null)
+default_scope?: ("domain" | "org" | null)
 }
 /**
  * Error details when email parsing fails.

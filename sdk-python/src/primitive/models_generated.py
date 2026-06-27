@@ -197,11 +197,11 @@ class RoutingDecision(BaseModel):
         extra="allow",
     )
     version: Annotated[
-        int,
+        int | None,
         Field(
             description="Decision schema version, so consumers can detect shape changes."
         ),
-    ]
+    ] = None
     outcome: Annotated[
         Outcome,
         Field(
@@ -213,25 +213,25 @@ class RoutingDecision(BaseModel):
         Field(
             description="The endpoint the email was delivered to, or null when no destination resolved."
         ),
-    ]
+    ] = None
     matched_route_id: Annotated[
         str | None,
         Field(
             description="The recipient route that matched, or null when the outcome was not `matched`."
         ),
-    ]
+    ] = None
     matched_tier: Annotated[
         MatchedTier | None,
         Field(
             description="The match tier of the route that matched, or null when the outcome was not `matched`."
         ),
-    ]
+    ] = None
     default_scope: Annotated[
         DefaultScope | None,
         Field(
             description="When the outcome was `defaulted`, whether the default came from the domain or the organization; null otherwise."
         ),
-    ]
+    ] = None
 
 
 class WebhookVersion(RootModel[str]):
@@ -1192,7 +1192,7 @@ class EmailReceivedEvent(BaseModel):
     routing: Annotated[
         RoutingDecision | None,
         Field(
-            description="The recipient-routing decision for this email: where it was delivered and why. Present only when recipient routing ran for the organization; omitted otherwise. Mirrors the decision returned by the routes simulate endpoint."
+            description="The recipient-routing decision for this email: where it was delivered and why. Present only when recipient routing ran for the organization; omitted otherwise. This is the compact decision also recorded on the email's routing metadata."
         ),
     ] = None
     delivery: Annotated[

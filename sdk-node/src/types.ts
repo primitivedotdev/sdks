@@ -45,6 +45,9 @@ export type WebhookAttachment = ParsedDataComplete["attachments"][number];
 
 export type EmailAnalysis = EmailReceivedEvent["email"]["analysis"];
 
+/** The recipient-routing decision carried on an email event, when routing ran. */
+export type RoutingDecision = NonNullable<EmailReceivedEvent["routing"]>;
+
 export type ForwardAnalysis = NonNullable<EmailAnalysis["forward"]>;
 
 export type ForwardResult = ForwardAnalysis["results"][number];

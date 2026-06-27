@@ -36,7 +36,7 @@ export const emailReceivedEventJsonSchema = {
         },
         "routing": {
           "$ref": "#/definitions/RoutingDecision",
-          "description": "The recipient-routing decision for this email: where it was delivered and why. Present only when recipient routing ran for the organization; omitted otherwise. Mirrors the decision returned by the routes simulate endpoint."
+          "description": "The recipient-routing decision for this email: where it was delivered and why. Present only when recipient routing ran for the organization; omitted otherwise. This is the compact decision also recorded on the email's routing metadata."
         },
         "delivery": {
           "type": "object",
@@ -290,12 +290,7 @@ export const emailReceivedEventJsonSchema = {
         }
       },
       "required": [
-        "version",
-        "outcome",
-        "endpoint_id",
-        "matched_route_id",
-        "matched_tier",
-        "default_scope"
+        "outcome"
       ]
     },
     "WebhookVersion": {
