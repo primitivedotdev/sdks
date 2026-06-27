@@ -165,6 +165,20 @@ describe("routes reorder: parseReorderUpdates", () => {
     }
   });
 
+  it("rejects the same UUID written in different casing (case-insensitive)", () => {
+    const result = parseReorderUpdates([
+      `${ID_A.toUpperCase()}=10`,
+      `${ID_A}=20`,
+    ]);
+    expect("error" in result).toBe(true);
+  });
+
+  it("normalizes the id to lowercase in the parsed update", () => {
+    expect(parseReorderUpdates([`${ID_A.toUpperCase()}=10`])).toEqual({
+      updates: [{ id: ID_A, priority: 10 }],
+    });
+  });
+
   it("requires the --set flag", () => {
     expect(RoutesReorderCommand.flags.set.required).toBe(true);
     expect(RoutesReorderCommand.flags.set.multiple).toBe(true);

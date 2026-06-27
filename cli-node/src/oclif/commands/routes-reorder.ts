@@ -23,7 +23,10 @@ export function parseReorderUpdates(
   const seen = new Set<string>();
   for (const pair of set) {
     const eq = pair.lastIndexOf("=");
-    const id = eq >= 0 ? pair.slice(0, eq).trim() : "";
+    // Route ids are UUIDs (case-insensitive, canonically lowercase), so
+    // normalize before deduping and sending so two casings of one id can't
+    // slip through as conflicting updates.
+    const id = (eq >= 0 ? pair.slice(0, eq).trim() : "").toLowerCase();
     const priority = eq >= 0 ? Number(pair.slice(eq + 1).trim()) : Number.NaN;
     if (!id || !Number.isInteger(priority) || priority < 0) {
       return {
