@@ -123,6 +123,7 @@ event: ("email.received" | "email.bounced" | "email.tls_report" | "email.dmarc_r
  * API version in date format (YYYY-MM-DD). Use this to detect version mismatches between webhook and SDK.
  */
 version: string
+routing?: RoutingDecision
 /**
  * Metadata about this webhook delivery.
  */
@@ -229,6 +230,35 @@ parsed: (ParsedDataComplete | ParsedDataFailed)
 analysis: EmailAnalysis
 auth: EmailAuth
 }
+}
+/**
+ * The recipient-routing decision for this email: where it was delivered and why. Present only when recipient routing ran for the organization; omitted otherwise. Mirrors the decision returned by the routes simulate endpoint.
+ */
+export interface RoutingDecision {
+/**
+ * Decision schema version, so consumers can detect shape changes.
+ */
+version: number
+/**
+ * How the destination was chosen: `matched` a recipient route, fell back to a `defaulted` destination (domain or org), or `none` (no destination resolved).
+ */
+outcome: ("matched" | "defaulted" | "none")
+/**
+ * The endpoint the email was delivered to, or null when no destination resolved.
+ */
+endpoint_id: (string | null)
+/**
+ * The recipient route that matched, or null when the outcome was not `matched`.
+ */
+matched_route_id: (string | null)
+/**
+ * The match tier of the route that matched, or null when the outcome was not `matched`.
+ */
+matched_tier: ("exact" | "wildcard" | "regex" | null)
+/**
+ * When the outcome was `defaulted`, whether the default came from the domain or the organization; null otherwise.
+ */
+default_scope: ("domain" | "org" | null)
 }
 /**
  * Raw email content included inline (base64 encoded).
@@ -1005,6 +1035,7 @@ event: ("email.received" | "email.bounced" | "email.tls_report" | "email.dmarc_r
  * API version in date format (YYYY-MM-DD). Use this to detect version mismatches between webhook and SDK.
  */
 version: string
+routing?: RoutingDecision
 /**
  * Metadata about this webhook delivery.
  */
@@ -1111,6 +1142,38 @@ parsed: (ParsedDataComplete | ParsedDataFailed)
 analysis: EmailAnalysis
 auth: EmailAuth
 }
+}
+/**
+ * The recipient-routing decision for an inbound email: which endpoint it resolved to and why. Present on the event only when recipient routing ran for the organization.
+ * 
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "RoutingDecision".
+ */
+export interface RoutingDecision1 {
+/**
+ * Decision schema version, so consumers can detect shape changes.
+ */
+version: number
+/**
+ * How the destination was chosen: `matched` a recipient route, fell back to a `defaulted` destination (domain or org), or `none` (no destination resolved).
+ */
+outcome: ("matched" | "defaulted" | "none")
+/**
+ * The endpoint the email was delivered to, or null when no destination resolved.
+ */
+endpoint_id: (string | null)
+/**
+ * The recipient route that matched, or null when the outcome was not `matched`.
+ */
+matched_route_id: (string | null)
+/**
+ * The match tier of the route that matched, or null when the outcome was not `matched`.
+ */
+matched_tier: ("exact" | "wildcard" | "regex" | null)
+/**
+ * When the outcome was `defaulted`, whether the default came from the domain or the organization; null otherwise.
+ */
+default_scope: ("domain" | "org" | null)
 }
 /**
  * Error details when email parsing fails.

@@ -25,6 +25,10 @@
           "$ref": "#/definitions/WebhookVersion",
           "description": "API version in date format (YYYY-MM-DD). Use this to detect version mismatches between webhook and SDK."
         },
+        "routing": {
+          "$ref": "#/definitions/RoutingDecision",
+          "description": "The recipient-routing decision for this email: where it was delivered and why. Present only when recipient routing ran for the organization; omitted otherwise. Mirrors the decision returned by the routes simulate endpoint."
+        },
         "delivery": {
           "type": "object",
           "properties": {
@@ -215,6 +219,60 @@
         "email"
       ],
       "description": "Webhook payload for the `email.received` event.\n\nThis is delivered to your webhook endpoint when Primitive receives an email matching your domain configuration."
+    },
+    "RoutingDecision": {
+      "type": "object",
+      "description": "The recipient-routing decision for an inbound email: which endpoint it resolved to and why. Present on the event only when recipient routing ran for the organization.",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "description": "Decision schema version, so consumers can detect shape changes."
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "matched",
+            "defaulted",
+            "none"
+          ],
+          "description": "How the destination was chosen: `matched` a recipient route, fell back to a `defaulted` destination (domain or org), or `none` (no destination resolved)."
+        },
+        "endpoint_id": {
+          "type": ["string", "null"],
+          "description": "The endpoint the email was delivered to, or null when no destination resolved."
+        },
+        "matched_route_id": {
+          "type": ["string", "null"],
+          "description": "The recipient route that matched, or null when the outcome was not `matched`."
+        },
+        "matched_tier": {
+          "type": ["string", "null"],
+          "enum": [
+            "exact",
+            "wildcard",
+            "regex",
+            null
+          ],
+          "description": "The match tier of the route that matched, or null when the outcome was not `matched`."
+        },
+        "default_scope": {
+          "type": ["string", "null"],
+          "enum": [
+            "domain",
+            "org",
+            null
+          ],
+          "description": "When the outcome was `defaulted`, whether the default came from the domain or the organization; null otherwise."
+        }
+      },
+      "required": [
+        "version",
+        "outcome",
+        "endpoint_id",
+        "matched_route_id",
+        "matched_tier",
+        "default_scope"
+      ]
     },
     "WebhookVersion": {
       "type": "string",
