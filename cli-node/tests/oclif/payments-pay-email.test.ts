@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { gzipSync } from "node:zlib";
 import type { SendMailResult } from "@primitivedotdev/api-core";
 import {
   createX402Client,
@@ -113,6 +114,7 @@ const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
   getEmail: vi.fn(),
   sendEmail: vi.fn(),
+  searchEmails: vi.fn(),
 }));
 
 vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
@@ -122,6 +124,7 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
     ...actual,
     getEmail: mocks.getEmail,
     sendEmail: mocks.sendEmail,
+    searchEmails: mocks.searchEmails,
   };
 });
 
@@ -151,6 +154,21 @@ function inboundChallengeEmail() {
         to_email: "payer@payer.example",
         recipient: "payer@payer.example",
         sender: "payee@payee.example",
+        // Real inbound attachment metadata: the challenge member's archive entry
+        // is `0_interaction.json` (the `<part_index>_<filename>` scheme), which
+        // the auto-derive uses to locate the part inside the tarball.
+        parsed: {
+          status: "complete",
+          attachments: [
+            {
+              filename: "interaction.json",
+              tar_path: "0_interaction.json",
+              part_index: 0,
+              size_bytes: 768,
+              content_type: "application/json",
+            },
+          ],
+        },
       },
     },
   };
@@ -219,6 +237,7 @@ describe("payments pay-email (one-shot sign + send)", () => {
         credentials: null,
       },
       baseUrlOverridden: false,
+      requestConfig: { headers: undefined },
     });
     mocks.getEmail.mockResolvedValue(inboundChallengeEmail());
     mocks.sendEmail.mockResolvedValue({ data: { data: sendResult() } });
@@ -438,7 +457,7 @@ describe("payments pay-email (one-shot sign + send)", () => {
     expect(parsed.sent.id).toBe("sent-pay-email-1");
   });
 
-  it("does not fetch or send when signing fails (invalid challenge)", async () => {
+  it("does not send when signing fails (invalid challenge)", async () => {
     const result = await runPayEmailCommand([
       "--challenge",
       JSON.stringify({ interaction_id: "x", challenge_id: "y" }),
@@ -448,7 +467,9 @@ describe("payments pay-email (one-shot sign + send)", () => {
       TEST_KEY,
     ]);
     expect(result.exitCode).toBe(1);
-    expect(mocks.getEmail).not.toHaveBeenCalled();
+    // The inbound email is now fetched first (it is the addressing source and,
+    // without an override, the challenge source), so getEmail may be called; but
+    // a signing failure must still short-circuit before any send goes out.
     expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
@@ -481,5 +502,407 @@ describe("payments pay-email (one-shot sign + send)", () => {
       TEST_KEY,
     ]);
     expect(result.exitCode).toBe(1);
+  });
+});
+
+// --- Auto-derive-from-inbound path (the headline fix): pay-email with ONLY
+// --in-reply-to, no --challenge / --challenge-file. ---
+
+// Shared constants so the wire envelope (what the inbound attachment carries)
+// and the equivalent --challenge object are byte-for-byte the same payment, and
+// both sign to the same locked normative nonce vector.
+const DERIVE_EXPIRES_AT = "2030-06-01T00:00:00.000Z";
+
+// The challenge-step interaction.json the payer's inbound email carries: the
+// WIRE ENVELOPE shape, with a different layout from the --challenge object.
+function wireChallengeEnvelope(): Record<string, unknown> {
+  return {
+    interaction_version: 1,
+    interaction_id: "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+    protocol: "x402.payment",
+    protocol_version: 1,
+    step: "challenge",
+    step_id: "f00dface-0000-0000-0000-0000000000aa",
+    prev_step_id: null,
+    expires_at: DERIVE_EXPIRES_AT,
+    payload: {
+      challenge_nonce:
+        "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
+      payment_requirements: {
+        scheme: "exact",
+        network: "base-sepolia",
+        maxAmountRequired: "10000",
+        payTo: "0x1111111111111111111111111111111111111111",
+        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        extra: { name: "USDC", version: "2" },
+      },
+    },
+  };
+}
+
+// The SAME payment expressed as the payee-side challenge object the --challenge
+// override accepts. Sharing every field with the wire envelope above is what
+// lets us assert the two paths produce the identical signed authorization.
+function equivalentChallengeObject(): X402EmailChallenge {
+  return {
+    interaction_id: "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+    challenge_id: "",
+    challenge: {
+      payment_requirements: {
+        scheme: "exact",
+        network: "base-sepolia",
+        maxAmountRequired: "10000",
+        payTo: "0x1111111111111111111111111111111111111111",
+        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+        extra: { name: "USDC", version: "2" },
+      },
+      nonce_binding: {
+        interaction_id: "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+        challenge_step_id: "f00dface-0000-0000-0000-0000000000aa",
+        challenge_nonce:
+          "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
+      },
+      expires_at: DERIVE_EXPIRES_AT,
+    },
+  };
+}
+
+// Minimal ustar tar writer (one regular-file entry) so the command's real tar
+// reader runs against genuine archive bytes.
+function gzippedArchiveWith(name: string, content: string): Uint8Array {
+  const enc = new TextEncoder();
+  const body = enc.encode(content);
+  const header = new Uint8Array(512);
+  const octal = (v: number, w: number) =>
+    `${v.toString(8).padStart(w - 1, "0")}\0`;
+  header.set(enc.encode(name).subarray(0, 100), 0);
+  header.set(enc.encode("0000644\0"), 100);
+  header.set(enc.encode("0000000\0"), 108);
+  header.set(enc.encode("0000000\0"), 116);
+  header.set(enc.encode(octal(body.length, 12)), 124);
+  header.set(enc.encode("00000000000\0"), 136);
+  header.set(enc.encode("ustar\0"), 257);
+  header.set(enc.encode("00"), 263);
+  header[156] = "0".charCodeAt(0);
+  for (let i = 148; i < 156; i++) header[i] = 0x20;
+  let sum = 0;
+  for (const b of header) sum += b;
+  header.set(enc.encode(`${octal(sum, 7)} `), 148);
+  const padded = new Uint8Array(Math.ceil(body.length / 512) * 512);
+  padded.set(body, 0);
+  const tar = new Uint8Array(header.length + padded.length + 1024);
+  tar.set(header, 0);
+  tar.set(padded, header.length);
+  return gzipSync(tar);
+}
+
+describe("payments pay-email (auto-derive challenge from inbound)", () => {
+  let originalFetch: typeof fetch;
+  let originalTTY: boolean | undefined;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { client: { host: "api" } },
+      auth: {
+        source: "flag-or-env",
+        apiKey: "k",
+        apiBaseUrl: "https://api.example/v1",
+        credentials: null,
+      },
+      baseUrlOverridden: false,
+      requestConfig: { headers: undefined },
+    });
+    mocks.getEmail.mockResolvedValue(inboundChallengeEmail());
+    mocks.sendEmail.mockResolvedValue({ data: { data: sendResult() } });
+
+    // The auto-derive path downloads the attachments tarball via the global
+    // fetch (the network boundary we mock here).
+    originalFetch = globalThis.fetch;
+    // The real archive names the entry `0_interaction.json`, not a bare
+    // `interaction.json`. Using the real name here is the regression guard: the
+    // pre-fix derive matched the unprefixed name and would miss this.
+    const gz = gzippedArchiveWith(
+      "0_interaction.json",
+      JSON.stringify(wireChallengeEnvelope()),
+    );
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () =>
+        gz.buffer.slice(gz.byteOffset, gz.byteOffset + gz.byteLength),
+    })) as unknown as typeof fetch;
+
+    // shouldDeriveChallenge() derives only when stdin is an interactive TTY (no
+    // piped challenge). Force it so the no-challenge path is exercised.
+    originalTTY = process.stdin.isTTY;
+    Object.defineProperty(process.stdin, "isTTY", {
+      value: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(process.stdin, "isTTY", {
+      value: originalTTY,
+      configurable: true,
+    });
+    process.exitCode = undefined;
+  });
+
+  it("derives the challenge from the inbound attachment with no --challenge and produces the locked normative nonce", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-01-01T00:00:00.000Z"));
+    try {
+      const result = await runPayEmailCommand([
+        "--in-reply-to",
+        "inbound-challenge-1",
+        "--private-key",
+        TEST_KEY,
+      ]);
+      expect(result.exitCode).toBeUndefined();
+      // The tarball was fetched from the inbound email's attachments endpoint.
+      const fetchMock = globalThis.fetch as unknown as {
+        mock: { calls: unknown[][] };
+      };
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "https://api.example/v1/emails/inbound-challenge-1/attachments.tar.gz",
+      );
+      // The signed attachment carries the locked normative nonce, proving the
+      // reshaped wire envelope drove the exact same signing path.
+      const call = mocks.sendEmail.mock.calls[0][0];
+      const attached = JSON.parse(
+        Buffer.from(call.body.attachments[0].content_base64, "base64").toString(
+          "utf8",
+        ),
+      );
+      expect(attached.payload.payment.payload.authorization.nonce).toBe(
+        "0xc955a08812ab83f9e25c92e5162267b913957c3cc8678de1cf1449f77b516c6e",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("produces the SAME signed authorization as passing the equivalent --challenge object", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2030-01-01T00:00:00.000Z"));
+    try {
+      // Auto-derived run (no --challenge).
+      await runPayEmailCommand([
+        "--in-reply-to",
+        "inbound-challenge-1",
+        "--private-key",
+        TEST_KEY,
+      ]);
+      const derivedAttachment = JSON.parse(
+        Buffer.from(
+          mocks.sendEmail.mock.calls[0][0].body.attachments[0].content_base64,
+          "base64",
+        ).toString("utf8"),
+      );
+
+      mocks.sendEmail.mockClear();
+
+      // Explicit --challenge run with the equivalent challenge object.
+      await runPayEmailCommand([
+        "--challenge",
+        JSON.stringify(equivalentChallengeObject()),
+        "--in-reply-to",
+        "inbound-challenge-1",
+        "--private-key",
+        TEST_KEY,
+      ]);
+      const overrideAttachment = JSON.parse(
+        Buffer.from(
+          mocks.sendEmail.mock.calls[0][0].body.attachments[0].content_base64,
+          "base64",
+        ).toString("utf8"),
+      );
+
+      // The signed payment payload (authorization + signature + derived nonce)
+      // must be byte-identical: deriving from the email attachment cannot produce
+      // a different settleable authorization than the hand-built challenge. Only
+      // the fresh per-build step_id differs by design.
+      expect(derivedAttachment.payload).toEqual(overrideAttachment.payload);
+      expect({ ...derivedAttachment, step_id: "X" }).toEqual({
+        ...overrideAttachment,
+        step_id: "X",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("the --challenge override skips the attachment download entirely", async () => {
+    await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(equivalentChallengeObject()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+    // With an explicit override the tarball is never fetched; only getEmail (for
+    // addressing) runs against the network.
+    const fetchMock = globalThis.fetch as unknown as {
+      mock: { calls: unknown[][] };
+    };
+    expect(fetchMock.mock.calls).toHaveLength(0);
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("derives in a non-interactive (non-TTY) process, the way CI / Docker run it", async () => {
+    // Regression guard: derivation must NOT depend on an interactive TTY. In CI /
+    // Docker stdin is not a TTY even though nothing is piped, so a TTY-gated
+    // derive would skip the attachment download and hang on / mis-parse stdin.
+    Object.defineProperty(process.stdin, "isTTY", {
+      value: false,
+      configurable: true,
+    });
+    const result = await runPayEmailCommand([
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    const fetchMock = globalThis.fetch as unknown as {
+      mock: { calls: unknown[][] };
+    };
+    // The attachment WAS downloaded (derivation ran) despite no TTY.
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://api.example/v1/emails/inbound-challenge-1/attachments.tar.gz",
+    );
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("payments pay-email --wait-settle", () => {
+  let originalFetch: typeof fetch;
+  let originalTTY: boolean | undefined;
+
+  // The settlement receipt the payee emails back: same interaction_id as the
+  // payment we sent, a settlement step, and a settle_tx.
+  function receiptEnvelope(): Record<string, unknown> {
+    return {
+      interaction_version: 1,
+      interaction_id: "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+      protocol: "x402.payment",
+      protocol_version: 1,
+      step: "settled",
+      step_id: "beadfeed-0000-0000-0000-0000000000bb",
+      settle_tx: "0xfeedface",
+      payload: { settle_tx: "0xfeedface" },
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { client: { host: "api" } },
+      auth: {
+        source: "flag-or-env",
+        apiKey: "k",
+        apiBaseUrl: "https://api.example/v1",
+        credentials: null,
+      },
+      baseUrlOverridden: false,
+      requestConfig: { headers: undefined },
+    });
+    mocks.getEmail.mockResolvedValue(inboundChallengeEmail());
+    mocks.sendEmail.mockResolvedValue({ data: { data: sendResult() } });
+    // The settlement poll finds one inbound email from the payee.
+    mocks.searchEmails.mockResolvedValue({
+      data: {
+        data: [
+          { id: "settlement-email-1", received_at: "2030-01-01T00:00:01.000Z" },
+        ],
+        meta: { cursor: null },
+      },
+    });
+
+    // fetch is used for BOTH the challenge attachment (on the inbound id) and the
+    // receipt attachment (on the settlement email id); branch on the URL.
+    originalFetch = globalThis.fetch;
+    // Both archives use the real `0_interaction.json` entry name. The settlement
+    // poll has no attachment metadata (it only has search rows), so it resolves
+    // the receipt via the prefix-stripping fallback; the challenge derive uses
+    // the email metadata's tar_path.
+    const challengeGz = gzippedArchiveWith(
+      "0_interaction.json",
+      JSON.stringify(wireChallengeEnvelope()),
+    );
+    const receiptGz = gzippedArchiveWith(
+      "0_interaction.json",
+      JSON.stringify(receiptEnvelope()),
+    );
+    const toAb = (u: Uint8Array) =>
+      u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength);
+    globalThis.fetch = vi.fn(async (url: string) => ({
+      ok: true,
+      arrayBuffer: async () =>
+        url.includes("settlement-email-1")
+          ? toAb(receiptGz)
+          : toAb(challengeGz),
+    })) as unknown as typeof fetch;
+
+    originalTTY = process.stdin.isTTY;
+    Object.defineProperty(process.stdin, "isTTY", {
+      value: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(process.stdin, "isTTY", {
+      value: originalTTY,
+      configurable: true,
+    });
+    process.exitCode = undefined;
+  });
+
+  it("polls for the settlement interaction and surfaces the settle_tx", async () => {
+    const result = await runPayEmailCommand([
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+      "--wait-settle",
+      "--settle-interval",
+      "1",
+      "--settle-timeout",
+      "30",
+      "--json",
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain("settle_tx: 0xfeedface");
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed.settlement.settle_tx).toBe("0xfeedface");
+    expect(parsed.settlement.email_id).toBe("settlement-email-1");
+  });
+
+  it("exits non-zero and explains the async settlement when no receipt arrives in time", async () => {
+    // No settlement email is ever found, so the poll times out. A 1s timeout
+    // keeps the test fast while still exercising the timeout branch.
+    mocks.searchEmails.mockResolvedValue({
+      data: { data: [], meta: { cursor: null } },
+    });
+    const result = await runPayEmailCommand([
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+      "--wait-settle",
+      "--settle-timeout",
+      "1",
+      "--settle-interval",
+      "1",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain(
+      "Timed out waiting for the x402 settlement interaction email",
+    );
   });
 });
