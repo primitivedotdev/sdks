@@ -6434,84 +6434,67 @@ func (s *CreateEndpointCreated) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes CreateEndpointInput as json.
-func (s CreateEndpointInput) Encode(e *jx.Encoder) {
+// Encode implements json.Marshaler.
+func (s *CreateEndpointInput) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
 	e.ObjEnd()
 }
 
-func (s CreateEndpointInput) encodeFields(e *jx.Encoder) {
-	switch s.Type {
-	case CreateHttpEndpointInputCreateEndpointInput:
-		e.FieldStart("kind")
-		e.Str("http")
-		{
-			s := s.CreateHttpEndpointInput
-			{
-				e.FieldStart("url")
-				e.Str(s.URL)
-			}
-			{
-				if s.Enabled.Set {
-					e.FieldStart("enabled")
-					s.Enabled.Encode(e)
-				}
-			}
-			{
-				if s.DomainID.Set {
-					e.FieldStart("domain_id")
-					s.DomainID.Encode(e)
-				}
-			}
-			{
-				if s.Rules != nil {
-					e.FieldStart("rules")
-					s.Rules.Encode(e)
-				}
-			}
-			{
-				if s.IsRouteTarget.Set {
-					e.FieldStart("is_route_target")
-					s.IsRouteTarget.Encode(e)
-				}
-			}
-		}
-	case CreateFunctionEndpointInputCreateEndpointInput:
-		e.FieldStart("kind")
-		e.Str("function")
-		{
-			s := s.CreateFunctionEndpointInput
-			{
-				e.FieldStart("function_id")
-				json.EncodeUUID(e, s.FunctionID)
-			}
-			{
-				if s.Enabled.Set {
-					e.FieldStart("enabled")
-					s.Enabled.Encode(e)
-				}
-			}
-			{
-				if s.DomainID.Set {
-					e.FieldStart("domain_id")
-					s.DomainID.Encode(e)
-				}
-			}
-			{
-				if s.Rules != nil {
-					e.FieldStart("rules")
-					s.Rules.Encode(e)
-				}
-			}
-			{
-				if s.IsRouteTarget.Set {
-					e.FieldStart("is_route_target")
-					s.IsRouteTarget.Encode(e)
-				}
-			}
+// encodeFields encodes fields.
+func (s *CreateEndpointInput) encodeFields(e *jx.Encoder) {
+	{
+		if s.Kind.Set {
+			e.FieldStart("kind")
+			s.Kind.Encode(e)
 		}
 	}
+	{
+		if s.URL.Set {
+			e.FieldStart("url")
+			s.URL.Encode(e)
+		}
+	}
+	{
+		if s.FunctionID.Set {
+			e.FieldStart("function_id")
+			s.FunctionID.Encode(e)
+		}
+	}
+	{
+		if s.Enabled.Set {
+			e.FieldStart("enabled")
+			s.Enabled.Encode(e)
+		}
+	}
+	{
+		if s.DomainID.Set {
+			e.FieldStart("domain_id")
+			s.DomainID.Encode(e)
+		}
+	}
+	{
+		if s.Rules != nil {
+			e.FieldStart("rules")
+			s.Rules.Encode(e)
+		}
+	}
+	{
+		if s.IsRouteTarget.Set {
+			e.FieldStart("is_route_target")
+			s.IsRouteTarget.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfCreateEndpointInput = [7]string{
+	0: "kind",
+	1: "url",
+	2: "function_id",
+	3: "enabled",
+	4: "domain_id",
+	5: "rules",
+	6: "is_route_target",
 }
 
 // Decode decodes CreateEndpointInput from json.
@@ -6519,60 +6502,95 @@ func (s *CreateEndpointInput) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode CreateEndpointInput to nil")
 	}
-	// Sum type discriminator.
-	if typ := d.Next(); typ != jx.Object {
-		return errors.Errorf("unexpected json type %q", typ)
-	}
+	s.setDefaults()
 
-	var found bool
-	if err := d.Capture(func(d *jx.Decoder) error {
-		return d.ObjBytes(func(d *jx.Decoder, key []byte) error {
-			if found {
-				return d.Skip()
-			}
-			switch string(key) {
-			case "kind":
-				typ, err := d.Str()
-				if err != nil {
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "kind":
+			if err := func() error {
+				s.Kind.Reset()
+				if err := s.Kind.Decode(d); err != nil {
 					return err
 				}
-				switch typ {
-				case "http":
-					s.Type = CreateHttpEndpointInputCreateEndpointInput
-					found = true
-				case "function":
-					s.Type = CreateFunctionEndpointInputCreateEndpointInput
-					found = true
-				default:
-					return errors.Errorf("unknown type %s", typ)
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "url":
+			if err := func() error {
+				s.URL.Reset()
+				if err := s.URL.Decode(d); err != nil {
+					return err
 				}
 				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"url\"")
 			}
-			return d.Skip()
-		})
+		case "function_id":
+			if err := func() error {
+				s.FunctionID.Reset()
+				if err := s.FunctionID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"function_id\"")
+			}
+		case "enabled":
+			if err := func() error {
+				s.Enabled.Reset()
+				if err := s.Enabled.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"enabled\"")
+			}
+		case "domain_id":
+			if err := func() error {
+				s.DomainID.Reset()
+				if err := s.DomainID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"domain_id\"")
+			}
+		case "rules":
+			if err := func() error {
+				s.Rules = nil
+				var elem CreateEndpointInputRules
+				if err := elem.Decode(d); err != nil {
+					return err
+				}
+				s.Rules = &elem
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rules\"")
+			}
+		case "is_route_target":
+			if err := func() error {
+				s.IsRouteTarget.Reset()
+				if err := s.IsRouteTarget.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"is_route_target\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
 	}); err != nil {
-		return errors.Wrap(err, "capture")
+		return errors.Wrap(err, "decode CreateEndpointInput")
 	}
-	if !found {
-		return errors.New("unable to detect sum type variant")
-	}
-	switch s.Type {
-	case CreateHttpEndpointInputCreateEndpointInput:
-		if err := s.CreateHttpEndpointInput.Decode(d); err != nil {
-			return err
-		}
-	case CreateFunctionEndpointInputCreateEndpointInput:
-		if err := s.CreateFunctionEndpointInput.Decode(d); err != nil {
-			return err
-		}
-	default:
-		return errors.Errorf("inferred invalid type: %s", s.Type)
-	}
+
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s CreateEndpointInput) MarshalJSON() ([]byte, error) {
+func (s *CreateEndpointInput) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
@@ -6580,6 +6598,90 @@ func (s CreateEndpointInput) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CreateEndpointInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CreateEndpointInputKind as json.
+func (s CreateEndpointInputKind) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes CreateEndpointInputKind from json.
+func (s *CreateEndpointInputKind) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateEndpointInputKind to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch CreateEndpointInputKind(v) {
+	case CreateEndpointInputKindHTTP:
+		*s = CreateEndpointInputKindHTTP
+	case CreateEndpointInputKindFunction:
+		*s = CreateEndpointInputKindFunction
+	default:
+		*s = CreateEndpointInputKind(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CreateEndpointInputKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateEndpointInputKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *CreateEndpointInputRules) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *CreateEndpointInputRules) encodeFields(e *jx.Encoder) {
+}
+
+var jsonFieldsNameOfCreateEndpointInputRules = [0]string{}
+
+// Decode decodes CreateEndpointInputRules from json.
+func (s *CreateEndpointInputRules) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CreateEndpointInputRules to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		default:
+			return d.Skip()
+		}
+	}); err != nil {
+		return errors.Wrap(err, "decode CreateEndpointInputRules")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CreateEndpointInputRules) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CreateEndpointInputRules) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -7198,270 +7300,6 @@ func (s *CreateFunctionCreated) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CreateFunctionCreated) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *CreateFunctionEndpointInput) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *CreateFunctionEndpointInput) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("kind")
-		s.Kind.Encode(e)
-	}
-	{
-		e.FieldStart("function_id")
-		json.EncodeUUID(e, s.FunctionID)
-	}
-	{
-		if s.Enabled.Set {
-			e.FieldStart("enabled")
-			s.Enabled.Encode(e)
-		}
-	}
-	{
-		if s.DomainID.Set {
-			e.FieldStart("domain_id")
-			s.DomainID.Encode(e)
-		}
-	}
-	{
-		if s.Rules != nil {
-			e.FieldStart("rules")
-			s.Rules.Encode(e)
-		}
-	}
-	{
-		if s.IsRouteTarget.Set {
-			e.FieldStart("is_route_target")
-			s.IsRouteTarget.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfCreateFunctionEndpointInput = [6]string{
-	0: "kind",
-	1: "function_id",
-	2: "enabled",
-	3: "domain_id",
-	4: "rules",
-	5: "is_route_target",
-}
-
-// Decode decodes CreateFunctionEndpointInput from json.
-func (s *CreateFunctionEndpointInput) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateFunctionEndpointInput to nil")
-	}
-	var requiredBitSet [1]uint8
-	s.setDefaults()
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "kind":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				if err := s.Kind.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"kind\"")
-			}
-		case "function_id":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.FunctionID = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"function_id\"")
-			}
-		case "enabled":
-			if err := func() error {
-				s.Enabled.Reset()
-				if err := s.Enabled.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"enabled\"")
-			}
-		case "domain_id":
-			if err := func() error {
-				s.DomainID.Reset()
-				if err := s.DomainID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"domain_id\"")
-			}
-		case "rules":
-			if err := func() error {
-				s.Rules = nil
-				var elem CreateFunctionEndpointInputRules
-				if err := elem.Decode(d); err != nil {
-					return err
-				}
-				s.Rules = &elem
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"rules\"")
-			}
-		case "is_route_target":
-			if err := func() error {
-				s.IsRouteTarget.Reset()
-				if err := s.IsRouteTarget.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"is_route_target\"")
-			}
-		default:
-			return errors.Errorf("unexpected field %q", k)
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode CreateFunctionEndpointInput")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00000011,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfCreateFunctionEndpointInput) {
-					name = jsonFieldsNameOfCreateFunctionEndpointInput[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateFunctionEndpointInput) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateFunctionEndpointInput) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes CreateFunctionEndpointInputKind as json.
-func (s CreateFunctionEndpointInputKind) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes CreateFunctionEndpointInputKind from json.
-func (s *CreateFunctionEndpointInputKind) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateFunctionEndpointInputKind to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch CreateFunctionEndpointInputKind(v) {
-	case CreateFunctionEndpointInputKindFunction:
-		*s = CreateFunctionEndpointInputKindFunction
-	default:
-		*s = CreateFunctionEndpointInputKind(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s CreateFunctionEndpointInputKind) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateFunctionEndpointInputKind) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *CreateFunctionEndpointInputRules) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *CreateFunctionEndpointInputRules) encodeFields(e *jx.Encoder) {
-}
-
-var jsonFieldsNameOfCreateFunctionEndpointInputRules = [0]string{}
-
-// Decode decodes CreateFunctionEndpointInputRules from json.
-func (s *CreateFunctionEndpointInputRules) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateFunctionEndpointInputRules to nil")
-	}
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		default:
-			return d.Skip()
-		}
-	}); err != nil {
-		return errors.Wrap(err, "decode CreateFunctionEndpointInputRules")
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateFunctionEndpointInputRules) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateFunctionEndpointInputRules) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -8394,272 +8232,6 @@ func (s *CreateFunctionUnauthorized) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CreateFunctionUnauthorized) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *CreateHttpEndpointInput) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *CreateHttpEndpointInput) encodeFields(e *jx.Encoder) {
-	{
-		if s.Kind.Set {
-			e.FieldStart("kind")
-			s.Kind.Encode(e)
-		}
-	}
-	{
-		e.FieldStart("url")
-		e.Str(s.URL)
-	}
-	{
-		if s.Enabled.Set {
-			e.FieldStart("enabled")
-			s.Enabled.Encode(e)
-		}
-	}
-	{
-		if s.DomainID.Set {
-			e.FieldStart("domain_id")
-			s.DomainID.Encode(e)
-		}
-	}
-	{
-		if s.Rules != nil {
-			e.FieldStart("rules")
-			s.Rules.Encode(e)
-		}
-	}
-	{
-		if s.IsRouteTarget.Set {
-			e.FieldStart("is_route_target")
-			s.IsRouteTarget.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfCreateHttpEndpointInput = [6]string{
-	0: "kind",
-	1: "url",
-	2: "enabled",
-	3: "domain_id",
-	4: "rules",
-	5: "is_route_target",
-}
-
-// Decode decodes CreateHttpEndpointInput from json.
-func (s *CreateHttpEndpointInput) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateHttpEndpointInput to nil")
-	}
-	var requiredBitSet [1]uint8
-	s.setDefaults()
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "kind":
-			if err := func() error {
-				s.Kind.Reset()
-				if err := s.Kind.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"kind\"")
-			}
-		case "url":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				v, err := d.Str()
-				s.URL = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"url\"")
-			}
-		case "enabled":
-			if err := func() error {
-				s.Enabled.Reset()
-				if err := s.Enabled.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"enabled\"")
-			}
-		case "domain_id":
-			if err := func() error {
-				s.DomainID.Reset()
-				if err := s.DomainID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"domain_id\"")
-			}
-		case "rules":
-			if err := func() error {
-				s.Rules = nil
-				var elem CreateHttpEndpointInputRules
-				if err := elem.Decode(d); err != nil {
-					return err
-				}
-				s.Rules = &elem
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"rules\"")
-			}
-		case "is_route_target":
-			if err := func() error {
-				s.IsRouteTarget.Reset()
-				if err := s.IsRouteTarget.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"is_route_target\"")
-			}
-		default:
-			return errors.Errorf("unexpected field %q", k)
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode CreateHttpEndpointInput")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00000010,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfCreateHttpEndpointInput) {
-					name = jsonFieldsNameOfCreateHttpEndpointInput[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateHttpEndpointInput) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateHttpEndpointInput) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes CreateHttpEndpointInputKind as json.
-func (s CreateHttpEndpointInputKind) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes CreateHttpEndpointInputKind from json.
-func (s *CreateHttpEndpointInputKind) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateHttpEndpointInputKind to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch CreateHttpEndpointInputKind(v) {
-	case CreateHttpEndpointInputKindHTTP:
-		*s = CreateHttpEndpointInputKindHTTP
-	default:
-		*s = CreateHttpEndpointInputKind(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s CreateHttpEndpointInputKind) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateHttpEndpointInputKind) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *CreateHttpEndpointInputRules) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *CreateHttpEndpointInputRules) encodeFields(e *jx.Encoder) {
-}
-
-var jsonFieldsNameOfCreateHttpEndpointInputRules = [0]string{}
-
-// Decode decodes CreateHttpEndpointInputRules from json.
-func (s *CreateHttpEndpointInputRules) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateHttpEndpointInputRules to nil")
-	}
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		default:
-			return d.Skip()
-		}
-	}); err != nil {
-		return errors.Wrap(err, "decode CreateHttpEndpointInputRules")
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateHttpEndpointInputRules) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateHttpEndpointInputRules) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -31975,6 +31547,39 @@ func (s *OptCliLogoutInput) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes CreateEndpointInputKind as json.
+func (o OptCreateEndpointInputKind) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes CreateEndpointInputKind from json.
+func (o *OptCreateEndpointInputKind) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptCreateEndpointInputKind to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptCreateEndpointInputKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptCreateEndpointInputKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes CreateFunctionInputFiles as json.
 func (o OptCreateFunctionInputFiles) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -32005,39 +31610,6 @@ func (s OptCreateFunctionInputFiles) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptCreateFunctionInputFiles) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes CreateHttpEndpointInputKind as json.
-func (o OptCreateHttpEndpointInputKind) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	e.Str(string(o.Value))
-}
-
-// Decode decodes CreateHttpEndpointInputKind from json.
-func (o *OptCreateHttpEndpointInputKind) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptCreateHttpEndpointInputKind to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptCreateHttpEndpointInputKind) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptCreateHttpEndpointInputKind) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

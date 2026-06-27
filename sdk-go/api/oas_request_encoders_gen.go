@@ -103,7 +103,7 @@ func encodeCreateEmailChallengeRequest(
 }
 
 func encodeCreateEndpointRequest(
-	req CreateEndpointInput,
+	req *CreateEndpointInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

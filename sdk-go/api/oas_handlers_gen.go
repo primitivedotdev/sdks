@@ -1322,7 +1322,7 @@ func (s *Server) handleCreateEndpointRequest(args [0]string, argsEscaped bool, w
 		}
 
 		type (
-			Request  = CreateEndpointInput
+			Request  = *CreateEndpointInput
 			Params   = struct{}
 			Response = CreateEndpointRes
 		)
