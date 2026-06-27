@@ -115,6 +115,9 @@ const mocks = vi.hoisted(() => ({
   getEmail: vi.fn(),
   sendEmail: vi.fn(),
   searchEmails: vi.fn(),
+  // Default: no saved login. Tests that exercise the payer-org precedence flip
+  // override this per case.
+  hasStoredCliLogin: vi.fn(() => false),
 }));
 
 vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
@@ -134,6 +137,15 @@ vi.mock("../../src/oclif/api-client.js", async (importOriginal) => {
   return {
     ...actual,
     createAuthenticatedCliApiClient: mocks.createAuthenticatedCliApiClient,
+  };
+});
+
+vi.mock("../../src/oclif/auth.js", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/oclif/auth.js")>();
+  return {
+    ...actual,
+    hasStoredCliLogin: mocks.hasStoredCliLogin,
   };
 });
 
@@ -903,6 +915,214 @@ describe("payments pay-email --wait-settle", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain(
       "Timed out waiting for the x402 settlement interaction email",
+    );
+  });
+});
+
+// --- Payer org context: a stray PRIMITIVE_API_KEY for an unrelated org must not
+// misscope the inbound-challenge lookup (the prod-testing bug). ---
+
+describe("resolvePayerInboxApiKey precedence", () => {
+  it("drops an env-only key when a saved login exists (payer inbox wins)", async () => {
+    const { resolvePayerInboxApiKey } = await import(
+      "../../src/oclif/commands/payments-pay-email.js"
+    );
+    const result = resolvePayerInboxApiKey({
+      apiKeyFlag: "issuer-org-key",
+      apiKeyFromEnvOnly: true,
+      hasStoredLogin: true,
+    });
+    // The env key is dropped so the authenticated client falls through to the
+    // payer's logged-in session, which owns the challenge inbox.
+    expect(result.apiKey).toBeUndefined();
+    expect(result.usedStoredLoginOverEnvKey).toBe(true);
+  });
+
+  it("keeps an explicit --api-key even when a login exists", async () => {
+    const { resolvePayerInboxApiKey } = await import(
+      "../../src/oclif/commands/payments-pay-email.js"
+    );
+    const result = resolvePayerInboxApiKey({
+      apiKeyFlag: "explicit-key",
+      apiKeyFromEnvOnly: false,
+      hasStoredLogin: true,
+    });
+    // The user asked for this org on purpose; honor it unchanged.
+    expect(result.apiKey).toBe("explicit-key");
+    expect(result.usedStoredLoginOverEnvKey).toBe(false);
+  });
+
+  it("keeps an env key when there is no login to fall back to", async () => {
+    const { resolvePayerInboxApiKey } = await import(
+      "../../src/oclif/commands/payments-pay-email.js"
+    );
+    const result = resolvePayerInboxApiKey({
+      apiKeyFlag: "only-key",
+      apiKeyFromEnvOnly: true,
+      hasStoredLogin: false,
+    });
+    // It is the only auth available, so keep it (and a wrong org then produces
+    // the clear hint rather than silently dropping the user's only key).
+    expect(result.apiKey).toBe("only-key");
+    expect(result.usedStoredLoginOverEnvKey).toBe(false);
+  });
+
+  it("passes through undefined when no key resolved at all", async () => {
+    const { resolvePayerInboxApiKey } = await import(
+      "../../src/oclif/commands/payments-pay-email.js"
+    );
+    const result = resolvePayerInboxApiKey({
+      apiKeyFlag: undefined,
+      apiKeyFromEnvOnly: false,
+      hasStoredLogin: true,
+    });
+    expect(result.apiKey).toBeUndefined();
+    expect(result.usedStoredLoginOverEnvKey).toBe(false);
+  });
+});
+
+describe("payments pay-email payer org context", () => {
+  const PREVIOUS_PRIMITIVE_API_KEY = process.env.PRIMITIVE_API_KEY;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.hasStoredCliLogin.mockReturnValue(false);
+    // The stored login the payer is signed in with: a DIFFERENT org than the
+    // stray PRIMITIVE_API_KEY in the env. The mocked authenticated client echoes
+    // back whichever apiKey it was given so we can assert which auth was chosen.
+    mocks.createAuthenticatedCliApiClient.mockImplementation(
+      async (params: { apiKey?: string }) => ({
+        apiClient: { client: { host: "api" } },
+        auth: {
+          // source mirrors what the real resolver would report: a key present
+          // means flag-or-env, otherwise the saved login (stored).
+          source: params.apiKey ? "flag-or-env" : "stored",
+          apiKey: params.apiKey ?? "payer-login-token",
+          apiBaseUrl: "https://api.example/v1",
+          credentials: null,
+        },
+        baseUrlOverridden: false,
+        requestConfig: { headers: undefined },
+      }),
+    );
+    mocks.getEmail.mockResolvedValue(inboundChallengeEmail());
+    mocks.sendEmail.mockResolvedValue({ data: { data: sendResult() } });
+  });
+
+  afterEach(() => {
+    if (PREVIOUS_PRIMITIVE_API_KEY === undefined) {
+      delete process.env.PRIMITIVE_API_KEY;
+    } else {
+      process.env.PRIMITIVE_API_KEY = PREVIOUS_PRIMITIVE_API_KEY;
+    }
+    process.exitCode = undefined;
+  });
+
+  it("uses the payer's logged-in session when PRIMITIVE_API_KEY is set to a different org and the inbound resolves", async () => {
+    // The bug: with PRIMITIVE_API_KEY set (an unrelated org's key) the inbound
+    // lookup was scoped to that org and returned "Email not found". With the
+    // fix, an env-only key is ignored in favor of the saved login (the org that
+    // owns the challenge inbox), so the lookup succeeds and the payment is
+    // derived + signed + sent.
+    process.env.PRIMITIVE_API_KEY = "issuer-org-key";
+    mocks.hasStoredCliLogin.mockReturnValue(true);
+
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    // The authenticated client was built WITHOUT the env key, so it falls
+    // through to the payer's saved login.
+    expect(mocks.createAuthenticatedCliApiClient).toHaveBeenCalledTimes(1);
+    expect(
+      mocks.createAuthenticatedCliApiClient.mock.calls[0][0].apiKey,
+    ).toBeUndefined();
+    // The precedence is announced so the payer understands the choice.
+    expect(result.stderr).toContain("using your saved login");
+    // The lookup succeeded and the payment was signed + sent.
+    expect(mocks.getEmail).toHaveBeenCalledTimes(1);
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+    expect(result.stdout).toContain('"id": "sent-pay-email-1"');
+  });
+
+  it("honors an explicit --api-key even when a saved login exists", async () => {
+    // An explicit flag is intentional org scoping; it must win over the login.
+    process.env.PRIMITIVE_API_KEY = "issuer-org-key";
+    mocks.hasStoredCliLogin.mockReturnValue(true);
+
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+      "--api-key",
+      "explicit-payer-key",
+    ]);
+
+    expect(result.exitCode).toBeUndefined();
+    // The explicit flag value is passed straight through; not dropped.
+    expect(mocks.createAuthenticatedCliApiClient.mock.calls[0][0].apiKey).toBe(
+      "explicit-payer-key",
+    );
+    // No precedence-swap notice when the user passed the flag on purpose.
+    expect(result.stderr).not.toContain("using your saved login");
+  });
+
+  it("emits a clear wrong-org hint on a not-found when a key (no login) authenticated the read", async () => {
+    // No saved login, so an env key is the only auth: it stays in force. If that
+    // key cannot see the challenge, the bare "Email not found" gets the
+    // actionable wrong-org hint instead.
+    process.env.PRIMITIVE_API_KEY = "issuer-org-key";
+    mocks.hasStoredCliLogin.mockReturnValue(false);
+    mocks.getEmail.mockResolvedValueOnce({
+      error: { error: { code: "not_found", message: "Email not found" } },
+    });
+
+    const result = await runPayEmailCommand([
+      "--challenge",
+      JSON.stringify(emailChallenge()),
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    // The key was authoritative (no login to swap to), so the hint fires.
+    expect(result.stderr).toContain(
+      "reads the challenge from the PAYER account's inbox",
+    );
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("does not add the wrong-org hint when the saved login itself hits not-found", async () => {
+    // With no env key and a saved login, auth.source is "stored": a not-found is
+    // a genuine missing-email, not a wrong-org misscope, so the key-specific
+    // hint must NOT fire (it would be misleading).
+    delete process.env.PRIMITIVE_API_KEY;
+    mocks.hasStoredCliLogin.mockReturnValue(true);
+    mocks.getEmail.mockResolvedValueOnce({
+      error: { error: { code: "not_found", message: "Email not found" } },
+    });
+
+    const result = await runPayEmailCommand([
+      "--in-reply-to",
+      "inbound-challenge-1",
+      "--private-key",
+      TEST_KEY,
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).not.toContain(
+      "reads the challenge from the PAYER account's inbox",
     );
   });
 });
