@@ -129,14 +129,26 @@ export async function pollForSettlementInteraction(params: {
   const checked = new Set<string>();
 
   while (deadline === null || Date.now() < deadline) {
-    const page = await fetchEmailSearchPage({
-      apiClient: params.apiClient,
-      filters: { from: params.payeeFrom, hasAttachment: true },
-      pageSize: 50,
-      since: params.since,
-    });
+    // Drain ALL pages each poll, not just the first 50. The search sorts
+    // received_at_asc, so a fresh receipt can land on a later page when many
+    // attachment-bearing emails from the payee arrive after `since`; reading only
+    // page one would loop over the same oldest rows and time out while the actual
+    // receipt sits beyond the page boundary. We re-scan from `since` each poll
+    // (rather than persisting the cursor) so a transiently-skipped email is
+    // retried; the `checked` set keeps already-read rows from being re-fetched.
+    let cursor: string | null = null;
+    let receipt: SettlementReceipt | null = null;
+    let drained = false;
+    while (!drained) {
+      const page = await fetchEmailSearchPage({
+        apiClient: params.apiClient,
+        cursor,
+        filters: { from: params.payeeFrom, hasAttachment: true },
+        pageSize: 50,
+        since: params.since,
+      });
+      if (!page.ok) break;
 
-    if (page.ok) {
       for (const row of page.rows) {
         if (checked.has(row.id)) continue;
         let bytes: Uint8Array | null;
@@ -162,15 +174,27 @@ export async function pollForSettlementInteraction(params: {
         const envelope = parseInteractionEnvelope(bytes);
         if (!envelope) continue;
         if (isSettlementReceiptFor(envelope, params.interactionId)) {
-          return {
+          receipt = {
             emailId: row.id,
             envelope,
             settleTx: extractSettleTx(envelope),
           };
+          break;
         }
+      }
+
+      if (receipt) break;
+      // Advance to the next page; stop when there is no further cursor or the
+      // page came back empty (no more results in this window).
+      const nextCursor = page.cursor;
+      if (!nextCursor || nextCursor === cursor || page.rows.length === 0) {
+        drained = true;
+      } else {
+        cursor = nextCursor;
       }
     }
 
+    if (receipt) return receipt;
     if (deadline !== null && Date.now() >= deadline) break;
     await sleep(params.intervalSeconds * 1000);
   }

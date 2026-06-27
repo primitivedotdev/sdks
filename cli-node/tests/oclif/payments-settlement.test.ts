@@ -1,6 +1,6 @@
 import { gzipSync } from "node:zlib";
 import type { PrimitiveApiClient } from "@primitivedotdev/api-core";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ searchEmails: vi.fn() }));
 
@@ -125,6 +125,12 @@ describe("pollForSettlementInteraction", () => {
     client: { host: "api" },
   } as unknown as PrimitiveApiClient;
 
+  beforeEach(() => {
+    // Reset the searchEmails mock between cases so a prior test's queued
+    // mockResolvedValueOnce / mockResolvedValue cannot leak into the next poll.
+    mocks.searchEmails.mockReset();
+  });
+
   it("finds the settlement email matching the interaction_id and returns the settle_tx", async () => {
     mocks.searchEmails.mockResolvedValue({
       data: {
@@ -242,6 +248,56 @@ describe("pollForSettlementInteraction", () => {
       fetchImpl,
     });
     expect(attempt).toBeGreaterThanOrEqual(2);
+    expect(result?.emailId).toBe("settle-1");
+    expect(result?.settleTx).toBe("0xfeedface");
+  });
+
+  it("follows the cursor to find a receipt that lands on a later search page", async () => {
+    // Page 1 (oldest-first) is full of non-receipt emails and returns a cursor;
+    // the receipt is on page 2. A first-page-only poll would never see it.
+    mocks.searchEmails
+      .mockResolvedValueOnce({
+        data: {
+          data: [{ id: "noise-1", received_at: "2030-01-01T00:00:01.000Z" }],
+          meta: { cursor: "CURSOR_PAGE_2" },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          data: [{ id: "settle-1", received_at: "2030-01-01T00:00:02.000Z" }],
+          meta: { cursor: null },
+        },
+      });
+    const noise = gzippedArchive(
+      JSON.stringify({ interaction_id: "different@x", step: "settled" }),
+    );
+    const receipt = gzippedArchive(
+      JSON.stringify({
+        interaction_id: INTERACTION_ID,
+        step: "settled",
+        settle_tx: "0xfeedface",
+      }),
+    );
+    const toAb = (u: Uint8Array) =>
+      u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength);
+    const fetchImpl = vi.fn(async (url: string) => ({
+      ok: true,
+      arrayBuffer: async () =>
+        url.includes("settle-1") ? toAb(receipt) : toAb(noise),
+    })) as unknown as typeof fetch;
+
+    const result = await pollForSettlementInteraction({
+      apiClient,
+      baseUrl: "https://api.example/v1",
+      interactionId: INTERACTION_ID,
+      payeeFrom: "payee@payee.example",
+      since: "2030-01-01T00:00:00.000Z",
+      timeoutSeconds: 5,
+      intervalSeconds: 1,
+      fetchImpl,
+    });
+    // Both pages were requested and the page-2 receipt was found.
+    expect(mocks.searchEmails).toHaveBeenCalledTimes(2);
     expect(result?.emailId).toBe("settle-1");
     expect(result?.settleTx).toBe("0xfeedface");
   });
