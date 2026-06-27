@@ -3400,6 +3400,10 @@ func (s *CreateRouteCreated) SetData(val RecipientRoute) {
 
 func (*CreateRouteCreated) createRouteRes() {}
 
+type CreateRouteForbidden ErrorResponse
+
+func (*CreateRouteForbidden) createRouteRes() {}
+
 // Provide exactly one of `endpoint_id` or `function_id`. With `function_id`,
 // a route-target endpoint is minted for that function and the route is bound
 // to it in one transaction.
@@ -22590,6 +22594,10 @@ func (*UpdateRouteBadRequest) updateRouteRes() {}
 type UpdateRouteConflict ErrorResponse
 
 func (*UpdateRouteConflict) updateRouteRes() {}
+
+type UpdateRouteForbidden ErrorResponse
+
+func (*UpdateRouteForbidden) updateRouteRes() {}
 
 // Ref: #/components/schemas/UpdateRouteInput
 type UpdateRouteInput struct {

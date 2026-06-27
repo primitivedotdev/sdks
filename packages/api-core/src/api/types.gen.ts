@@ -5343,6 +5343,10 @@ export type CreateRouteErrors = {
      */
     401: ErrorResponse;
     /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
      * The request conflicts with the current state of the resource
      */
     409: ErrorResponse;
@@ -5482,6 +5486,10 @@ export type UpdateRouteErrors = {
      * Invalid or missing API key
      */
     401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
     /**
      * Resource not found
      */
