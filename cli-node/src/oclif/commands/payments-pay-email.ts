@@ -22,7 +22,7 @@ import {
 
 // `primitive payments pay-email` is the one-shot payer side of an email-native
 // x402 payment: it SIGNs the challenge and SENDs the signed `interaction.json`
-// as an in-thread message in a single step, so the payer does not have to run
+// as a fresh message in a single step, so the payer does not have to run
 // `pay-email-step` and then a separate `send --attachment` by hand.
 //
 // Why send, not reply: the reply endpoint deduplicates by parent thread, and
@@ -34,11 +34,22 @@ import {
 // delivers reliably; the interaction is associated by the `interaction.json`'s
 // own `interaction_id`, not by thread-level reply matching.
 //
-// Threading and addressing are derived from the inbound challenge email the
-// payer received: --in-reply-to is that inbound email's id. We fetch it to
-// derive the payer (its recipient, used as the send From), the payee (its
-// sender, used as the send To), and its Message-Id (used as the send's
-// In-Reply-To so the authorization still threads under the challenge). Pass
+// CRITICAL: do NOT set `in_reply_to` (the inbound challenge's Message-Id) on
+// the outgoing send, and do not "restore threading" by adding it back. The
+// send endpoint applies the SAME parent-thread dedup as reply whenever
+// `in_reply_to` references a thread that already has a reply. Because every
+// x402 challenge to a given payer shares the "Payment request: x402.payment"
+// subject and threads together, setting the Message-Id makes the second and
+// later one-shots dedup to a no-op (`idempotent_replay: true`,
+// `dedup_reason: "parent_already_replied"`): no mail goes on the wire and the
+// payment never settles. Sending WITHOUT `in_reply_to` settles every time. The
+// payment associates by the interaction.json's `interaction_id`, so email
+// threading is unnecessary for correctness and only reintroduces the bug.
+//
+// Addressing is still derived from the inbound challenge email the payer
+// received: --in-reply-to is that inbound email's id. We fetch it to derive the
+// payer (its recipient, used as the send From) and the payee (its sender, used
+// as the send To). Its Message-Id is intentionally NOT used (see above). Pass
 // --from only to override the derived payer From (e.g. a display name or
 // alternate verified address).
 //
@@ -49,8 +60,9 @@ import {
 const INTERACTION_PART_FILENAME = "interaction.json";
 const INTERACTION_PART_CONTENT_TYPE = "application/json";
 
-// Send requires a subject; the payee threads on the In-Reply-To Message-Id, so
-// the visible subject only needs to be human-readable and non-empty.
+// Send requires a subject; the payment associates by the interaction.json's
+// interaction_id, so the visible subject only needs to be human-readable and
+// non-empty.
 const DEFAULT_SUBJECT = "x402 payment authorization";
 
 // Always carry a body even though the payload that matters travels in the
@@ -99,10 +111,12 @@ class PaymentsPayEmailCommand extends Command {
   signed bytes as a portable artifact without sending.
 
   --in-reply-to is the id of the inbound challenge email you received. It is
-  fetched to derive the recipient (the payee, from the inbound's sender), the
-  From (you, the payer, from the inbound's recipient), and the In-Reply-To
-  Message-Id used to thread the authorization under the challenge. Pass --from
-  only to override the derived payer From.
+  fetched to derive the recipient (the payee, from the inbound's sender) and the
+  From (you, the payer, from the inbound's recipient). The outgoing send does
+  NOT thread under the challenge: threading would trigger the send endpoint's
+  parent-thread dedup and the payment would never settle. The interaction
+  associates by interaction_id instead. Pass --from only to override the derived
+  payer From.
 
   Provide the challenge inline with --challenge, from a file with
   --challenge-file, or piped on stdin.`;
@@ -141,7 +155,7 @@ class PaymentsPayEmailCommand extends Command {
     }),
     "in-reply-to": Flags.string({
       description:
-        "Id of the inbound challenge email you received. It is fetched to derive the payee recipient, the payer From, and the Message-Id used to thread the authorization.",
+        "Id of the inbound challenge email you received. It is fetched to derive the payee recipient and the payer From. The outgoing send is not threaded under the challenge; the payment associates by interaction_id.",
       required: true,
     }),
     from: Flags.string({
@@ -203,12 +217,13 @@ class PaymentsPayEmailCommand extends Command {
         return;
       }
 
-      // Fetch the inbound challenge email to derive addressing + threading. The
-      // payer is the address the challenge was sent to (the inbound's
-      // recipient); the payee is the inbound's sender; the Message-Id threads
-      // the authorization under the challenge. We do not deliver via reply
-      // (its parent-thread dedup swallows repeat challenges to the same payer),
-      // so we resolve these here and hand them to the send path explicitly.
+      // Fetch the inbound challenge email to derive addressing. The payer is the
+      // address the challenge was sent to (the inbound's recipient); the payee
+      // is the inbound's sender. We deliberately do NOT carry the inbound's
+      // Message-Id onto the send (see the file header): threading the send under
+      // the challenge re-triggers the parent-thread dedup that swallows the
+      // payment. We resolve addressing here and hand it to the send path
+      // explicitly; the interaction associates by interaction_id, not threading.
       const inboundResult = await getEmail({
         client: apiClient.client,
         path: { id: flags["in-reply-to"] },
@@ -270,11 +285,12 @@ class PaymentsPayEmailCommand extends Command {
           // whitespace-only, so an empty override can't produce an empty body.
           body_text: flags.body?.trim() ? flags.body : DEFAULT_BODY_TEXT,
           attachments: [interactionAttachment(built)],
-          // Thread the authorization under the challenge via its Message-Id.
-          // Omitted when the inbound has no Message-Id; association is by the
-          // interaction.json's interaction_id regardless, so delivery is
-          // unaffected.
-          ...(inbound.message_id ? { in_reply_to: inbound.message_id } : {}),
+          // Intentionally NO in_reply_to / Message-Id. Setting it threads this
+          // send under the challenge, and the send endpoint then dedups it as a
+          // `parent_already_replied` no-op (no mail on the wire, payment never
+          // settles) because all x402 challenges to a payer share a subject and
+          // thread together. The interaction associates by the interaction.json's
+          // interaction_id, so threading is unnecessary. Do not add it back.
           ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
         },
         client: apiClient.client,
