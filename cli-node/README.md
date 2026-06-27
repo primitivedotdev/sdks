@@ -73,6 +73,26 @@ primitive deliveries replay --id <delivery-id>
 
 Generated API commands remain available for compatibility and full schema parity, for example `primitive emails:list-emails` and `primitive sending:reply-to-email`.
 
+## Recipient routing
+
+Bind a recipient address to a destination so inbound mail resolves to a single
+endpoint. Pass `--function` to route an address to a function (its route-target
+endpoint is created in the same call, enabling per-address routing like
+`alice@acme.com -> functionA`), or `--endpoint` for an existing endpoint.
+
+```bash
+primitive routes add alice@acme.com --function <function-id>
+primitive routes add 'support+*@acme.com' --match wildcard --endpoint <endpoint-id>
+primitive routes list
+primitive routes test alice@acme.com          # preview where an address resolves, with the rule trace
+primitive routes update <route-id> --priority 5
+primitive routes reorder --set <route-id>=10 --set <other-id>=20
+primitive routes remove <route-id>
+```
+
+Recipient routing is gated by an organization entitlement; routes are inert
+until it is enabled.
+
 ## x402 payments
 
 The `primitive payments` command group drives non-custodial x402 USDC payments. One agent registers a payout address and requests a payment; the paying agent signs locally with its own wallet key and settles. The key never leaves your machine. Networks are `base` and `base-sepolia`. Amounts take a human USDC value (`--amount-usdc 0.01`) or token base units (`--amount 10000`, since USDC has 6 decimals). Your org is resolved automatically from your API key, so payout registration takes no org flag.

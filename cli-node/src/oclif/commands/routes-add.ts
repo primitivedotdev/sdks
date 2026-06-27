@@ -16,6 +16,21 @@ import {
 // or --endpoint to target an existing endpoint. Inbound mail resolves to a
 // single destination at delivery time; see `routes test` to preview a recipient.
 
+// Resolve the create target from the mutually-exclusive --function / --endpoint
+// flags. oclif's `exclusive` already rejects passing BOTH; this enforces that
+// exactly one is present. Pure + exported so the rule is unit-testable.
+export function resolveCreateTarget(flags: {
+  function?: string;
+  endpoint?: string;
+}): { function_id: string } | { endpoint_id: string } | { error: string } {
+  if (flags.function) return { function_id: flags.function };
+  if (flags.endpoint) return { endpoint_id: flags.endpoint };
+  return {
+    error:
+      "Provide exactly one of --function (route to a function) or --endpoint (an existing endpoint).",
+  };
+}
+
 class RoutesAddCommand extends Command {
   static description =
     `Create a recipient route binding an address pattern to a destination.
@@ -82,10 +97,9 @@ class RoutesAddCommand extends Command {
   async run(): Promise<void> {
     const { args, flags } = await this.parse(RoutesAddCommand);
 
-    if (!flags.function && !flags.endpoint) {
-      process.stderr.write(
-        "Provide exactly one of --function (route to a function) or --endpoint (an existing endpoint).\n",
-      );
+    const target = resolveCreateTarget(flags);
+    if ("error" in target) {
+      process.stderr.write(`${target.error}\n`);
       process.exitCode = 1;
       return;
     }
@@ -103,9 +117,7 @@ class RoutesAddCommand extends Command {
         body: {
           match_type: flags.match as "exact" | "wildcard" | "regex",
           pattern: args.pattern,
-          ...(flags.function
-            ? { function_id: flags.function }
-            : { endpoint_id: flags.endpoint }),
+          ...target,
           ...(flags.domain ? { domain_id: flags.domain } : {}),
           ...(flags.priority != null ? { priority: flags.priority } : {}),
           ...(flags.disabled ? { enabled: false } : {}),

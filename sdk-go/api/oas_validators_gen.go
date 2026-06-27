@@ -2100,6 +2100,14 @@ func (s *CreateRouteCreated) Validate() error {
 	return nil
 }
 
+func (s *CreateRouteForbidden) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *CreateRouteInput) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -10704,6 +10712,14 @@ func (s *UpdateRouteBadRequest) Validate() error {
 }
 
 func (s *UpdateRouteConflict) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateRouteForbidden) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
