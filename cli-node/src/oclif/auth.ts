@@ -491,6 +491,25 @@ export function detectPrimitiveKeyEnvMisname(
   return null;
 }
 
+/**
+ * True when a usable OAuth login session is saved on disk. Used by `pay-email`
+ * to decide whether it can safely ignore an env-only `PRIMITIVE_API_KEY` in
+ * favor of the payer's logged-in account (which owns the inbound challenge
+ * inbox). Returns false when nothing is stored or the stored credential is
+ * unreadable/legacy, so the caller falls back to whatever key did resolve
+ * rather than silently dropping the user's only auth.
+ */
+export function hasStoredCliLogin(configDir: string): boolean {
+  try {
+    return loadCliCredentials(configDir) !== null;
+  } catch {
+    // A malformed/unreadable credential is not a usable login. Swallow here so
+    // the caller can keep its existing (env/flag) auth; the next auth-resolving
+    // command surfaces the malformed-credentials error on its own.
+    return false;
+  }
+}
+
 export function resolveCliAuth(params: {
   configDir: string;
   apiKey?: string;

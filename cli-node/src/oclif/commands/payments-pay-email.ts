@@ -8,12 +8,15 @@ import type {
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
+  API_ERROR_CODES,
+  extractErrorCode,
   extractErrorPayload,
   runWithTiming,
   surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { hasStoredCliLogin } from "../auth.js";
 import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
 import { deriveEmailChallengeFromInbound } from "./payments-email-challenge.js";
 import { readEmailChallenge } from "./payments-pay-email-step.js";
@@ -86,6 +89,61 @@ export function shouldDeriveChallenge(flags: {
 //
 // The signing path is shared byte-for-byte with `pay-email-step` via
 // `signEmailChallenge`; the only addition here is delivering the result.
+
+// PAYER ORG CONTEXT (the prod-testing bug this fixes).
+//
+// `pay-email` reads the payer's OWN inbox: it fetches the inbound challenge
+// email (--in-reply-to), downloads that email's interaction.json attachment, and
+// (with --wait-settle) polls the inbox for the settlement receipt. All three
+// reads must be scoped to the account that received the challenge: the payer's
+// logged-in account.
+//
+// The trap: the `--api-key` flag also reads `PRIMITIVE_API_KEY` from the env, so
+// a stray `PRIMITIVE_API_KEY` (commonly exported for OTHER CLI work, e.g. an
+// issuer/payee key) silently becomes the auth for the inbox reads. When that key
+// belongs to a DIFFERENT org than the payer's logged-in account, the challenge
+// email lives in the payer's org but the lookup runs in the key's org, so
+// getEmail returns "Email not found" and paying fails with a confusing error.
+// Payers very commonly have `PRIMITIVE_API_KEY` set, so this bites in practice.
+//
+// Precedence we choose (and why it is safe):
+//   1. An EXPLICIT `--api-key <value>` on the command line always wins. The user
+//      asked for that org on purpose; honor it unchanged.
+//   2. Otherwise, if `PRIMITIVE_API_KEY` is set ONLY via the environment AND a
+//      logged-in session exists on disk, ignore the env key and use the stored
+//      login. The inbox belongs to the logged-in account, so this is the org
+//      that can actually see the challenge.
+//   3. With no stored login, keep the env key (it is the only auth available);
+//      a wrong-org key then still produces the clear hint below rather than a
+//      bare "Email not found".
+//
+// This is scoped to `pay-email` only: it is the one command whose correctness
+// depends on reading the *payer's own* inbox. Other `payments`/`emails` commands
+// keep the existing flag/env-over-login precedence untouched.
+
+/**
+ * Decide the api-key `pay-email` should authenticate its inbox reads with, given
+ * the parsed flag value, whether `--api-key` was passed explicitly on the
+ * command line (vs sourced from `PRIMITIVE_API_KEY`), and whether a logged-in
+ * session exists. Returns the key to use, or `undefined` to fall through to the
+ * stored login. See the block comment above for the precedence rationale.
+ */
+export function resolvePayerInboxApiKey(params: {
+  apiKeyFlag: string | undefined;
+  apiKeyFromEnvOnly: boolean;
+  hasStoredLogin: boolean;
+}): { apiKey: string | undefined; usedStoredLoginOverEnvKey: boolean } {
+  // An env-only key with a stored login to fall back to: drop the env key so the
+  // payer's logged-in account (which owns the inbox) authenticates the reads.
+  if (
+    params.apiKeyFlag !== undefined &&
+    params.apiKeyFromEnvOnly &&
+    params.hasStoredLogin
+  ) {
+    return { apiKey: undefined, usedStoredLoginOverEnvKey: true };
+  }
+  return { apiKey: params.apiKeyFlag, usedStoredLoginOverEnvKey: false };
+}
 
 /** The exact part name + content type the inbound matcher requires. */
 const INTERACTION_PART_FILENAME = "interaction.json";
@@ -258,14 +316,39 @@ class PaymentsPayEmailCommand extends Command {
   };
 
   async run(): Promise<void> {
-    const { flags } = await this.parse(PaymentsPayEmailCommand);
+    const { flags, raw } = await this.parse(PaymentsPayEmailCommand);
+
+    // Was `--api-key` passed explicitly on the command line, or did its value
+    // come from `PRIMITIVE_API_KEY`? oclif records only CLI-passed flags in
+    // `raw` (env-sourced flags resolve through a separate path), so a flag token
+    // for `api-key` means the user typed it. We use this to keep an explicit
+    // `--api-key` authoritative while ignoring a stray env key (see
+    // resolvePayerInboxApiKey + the block comment above it).
+    const apiKeyFlagExplicit = raw.some(
+      (token) => token.type === "flag" && token.flag === "api-key",
+    );
+    const apiKeyFromEnvOnly =
+      flags["api-key"] !== undefined && !apiKeyFlagExplicit;
+    const { apiKey: effectiveApiKey, usedStoredLoginOverEnvKey } =
+      resolvePayerInboxApiKey({
+        apiKeyFlag: flags["api-key"],
+        apiKeyFromEnvOnly,
+        hasStoredLogin: hasStoredCliLogin(this.config.configDir),
+      });
+    if (usedStoredLoginOverEnvKey) {
+      // Make the precedence visible: a payer with an unrelated PRIMITIVE_API_KEY
+      // set should understand why pay-email read their logged-in inbox instead.
+      process.stderr.write(
+        "PRIMITIVE_API_KEY is set, but pay-email reads the inbound challenge from your logged-in account's inbox, so it is using your saved login for this command. Pass --api-key explicitly to override.\n",
+      );
+    }
 
     // Unlike `pay-email-step` (fully offline), this command sends, so it needs
     // an authenticated client. Build it first so a not-signed-in caller gets
     // the standard auth guidance before we do any signing work.
     const { apiClient, auth, baseUrlOverridden, requestConfig } =
       await createAuthenticatedCliApiClient({
-        apiKey: flags["api-key"],
+        apiKey: effectiveApiKey,
         apiBaseUrl: flags["api-base-url"],
         configDir: this.config.configDir,
       });
@@ -297,6 +380,21 @@ class PaymentsPayEmailCommand extends Command {
           ...authFailureContext,
           payload: errorPayload,
         });
+        // A not-found on the inbound challenge while an API KEY (not a saved
+        // login) authenticated the read is the classic wrong-org symptom: the
+        // challenge lives in the payer's inbox but the key scoped the lookup to
+        // a different org. Turn the bare "Email not found" into an actionable
+        // hint. We only add it when a key was authoritative (auth.source ===
+        // "flag-or-env"); the env-only-with-login case already swapped to the
+        // login above, so it never lands here for that reason.
+        if (
+          extractErrorCode(errorPayload) === API_ERROR_CODES.notFound &&
+          auth.source === "flag-or-env"
+        ) {
+          process.stderr.write(
+            "The inbound challenge email was not found for the org this API key belongs to. pay-email reads the challenge from the PAYER account's inbox: unset PRIMITIVE_API_KEY (or pass --api-key for the payer's org, or run `primitive signin` as the payer) and retry.\n",
+          );
+        }
         process.exitCode = 1;
         return;
       }
@@ -344,7 +442,9 @@ class PaymentsPayEmailCommand extends Command {
           challenge,
           privateKey: flags["private-key"] ?? "",
           resolvedApiBaseUrl: auth.apiBaseUrl,
-          apiKey: flags["api-key"],
+          // Cosmetic only: payEmailChallenge signs locally and makes no request.
+          // Use the same effective key the inbox reads use for consistency.
+          apiKey: effectiveApiKey,
         });
       } catch (error) {
         reportX402Error(error, authFailureContext);
