@@ -252,6 +252,51 @@ describe("pollForSettlementInteraction", () => {
     expect(result?.settleTx).toBe("0xfeedface");
   });
 
+  it("retries an email whose interaction.json is not readable yet, not a permanent skip", async () => {
+    // The email is searchable, but on the first poll its interaction.json is
+    // incomplete/empty (unparseable JSON), and on a later poll it carries the
+    // full receipt. An unparseable (or null) part must NOT mark the row checked,
+    // or the receipt that becomes readable later would be skipped forever.
+    mocks.searchEmails.mockResolvedValue({
+      data: {
+        data: [{ id: "settle-1", received_at: "2030-01-01T00:00:01.000Z" }],
+        meta: { cursor: null },
+      },
+    });
+    const notReady = gzippedArchive(""); // interaction.json present but empty -> unparseable
+    const receipt = gzippedArchive(
+      JSON.stringify({
+        interaction_id: INTERACTION_ID,
+        step: "settled",
+        settle_tx: "0xfeedface",
+      }),
+    );
+    const toAb = (u: Uint8Array) =>
+      u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength);
+    let attempt = 0;
+    const fetchImpl = vi.fn(async () => {
+      attempt += 1;
+      return {
+        ok: true,
+        arrayBuffer: async () =>
+          attempt === 1 ? toAb(notReady) : toAb(receipt),
+      };
+    }) as unknown as typeof fetch;
+
+    const result = await pollForSettlementInteraction({
+      apiClient,
+      baseUrl: "https://api.example/v1",
+      interactionId: INTERACTION_ID,
+      payeeFrom: "payee@payee.example",
+      since: "2030-01-01T00:00:00.000Z",
+      timeoutSeconds: 5,
+      intervalSeconds: 1,
+      fetchImpl,
+    });
+    expect(attempt).toBeGreaterThanOrEqual(2);
+    expect(result?.settleTx).toBe("0xfeedface");
+  });
+
   it("follows the cursor to find a receipt that lands on a later search page", async () => {
     // Page 1 (oldest-first) is full of non-receipt emails and returns a cursor;
     // the receipt is on page 2. A first-page-only poll would never see it.

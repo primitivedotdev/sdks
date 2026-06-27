@@ -167,12 +167,17 @@ export async function pollForSettlementInteraction(params: {
           // timeout does not become a permanent skip.
           continue;
         }
-        // Only now is the email definitively read; record it so we don't refetch
-        // a no-interaction.json email every poll.
-        checked.add(row.id);
+        // Likewise, a null part (archive present but interaction.json not written
+        // yet) or an unparseable part (incomplete/partial JSON) is a transient
+        // not-ready state. Do NOT mark the row checked in those cases, or a
+        // receipt that becomes readable on the next poll would be skipped
+        // forever.
         if (!bytes) continue;
         const envelope = parseInteractionEnvelope(bytes);
         if (!envelope) continue;
+        // A fully parsed envelope is the email's final, readable state, so record
+        // it now to avoid re-fetching a non-receipt interaction.json each poll.
+        checked.add(row.id);
         if (isSettlementReceiptFor(envelope, params.interactionId)) {
           receipt = {
             emailId: row.id,
