@@ -154,6 +154,21 @@ function inboundChallengeEmail() {
         to_email: "payer@payer.example",
         recipient: "payer@payer.example",
         sender: "payee@payee.example",
+        // Real inbound attachment metadata: the challenge member's archive entry
+        // is `0_interaction.json` (the `<part_index>_<filename>` scheme), which
+        // the auto-derive uses to locate the part inside the tarball.
+        parsed: {
+          status: "complete",
+          attachments: [
+            {
+              filename: "interaction.json",
+              tar_path: "0_interaction.json",
+              part_index: 0,
+              size_bytes: 768,
+              content_type: "application/json",
+            },
+          ],
+        },
       },
     },
   };
@@ -604,8 +619,11 @@ describe("payments pay-email (auto-derive challenge from inbound)", () => {
     // The auto-derive path downloads the attachments tarball via the global
     // fetch (the network boundary we mock here).
     originalFetch = globalThis.fetch;
+    // The real archive names the entry `0_interaction.json`, not a bare
+    // `interaction.json`. Using the real name here is the regression guard: the
+    // pre-fix derive matched the unprefixed name and would miss this.
     const gz = gzippedArchiveWith(
-      "interaction.json",
+      "0_interaction.json",
       JSON.stringify(wireChallengeEnvelope()),
     );
     globalThis.fetch = vi.fn(async () => ({
@@ -807,12 +825,16 @@ describe("payments pay-email --wait-settle", () => {
     // fetch is used for BOTH the challenge attachment (on the inbound id) and the
     // receipt attachment (on the settlement email id); branch on the URL.
     originalFetch = globalThis.fetch;
+    // Both archives use the real `0_interaction.json` entry name. The settlement
+    // poll has no attachment metadata (it only has search rows), so it resolves
+    // the receipt via the prefix-stripping fallback; the challenge derive uses
+    // the email metadata's tar_path.
     const challengeGz = gzippedArchiveWith(
-      "interaction.json",
+      "0_interaction.json",
       JSON.stringify(wireChallengeEnvelope()),
     );
     const receiptGz = gzippedArchiveWith(
-      "interaction.json",
+      "0_interaction.json",
       JSON.stringify(receiptEnvelope()),
     );
     const toAb = (u: Uint8Array) =>

@@ -5,8 +5,24 @@ import {
   deriveEmailChallengeFromInbound,
   fetchInteractionJsonBytes,
   interactionJsonFromArchive,
+  interactionTarPathFromMeta,
   readTarEntries,
 } from "../../src/oclif/commands/payments-email-challenge.js";
+
+// The real attachments archive names each member `<part_index>_<filename>`, so
+// the challenge attachment is `0_interaction.json`, NOT `interaction.json`. The
+// email's attachment metadata carries that exact entry name in `tar_path`. These
+// constants mirror the confirmed live shape so the tests fail if the derive ever
+// regresses to guessing the bare filename again.
+const TAR_ENTRY = "0_interaction.json";
+const ATTACHMENT_META = [
+  {
+    filename: "interaction.json",
+    tar_path: TAR_ENTRY,
+    part_index: 0,
+    content_type: "application/json",
+  },
+];
 
 // The challenge-step interaction.json a payer receives on the inbound payment-
 // request email. This is the WIRE ENVELOPE shape, byte-for-byte the fixture the
@@ -112,11 +128,56 @@ describe("readTarEntries", () => {
   });
 });
 
+describe("interactionTarPathFromMeta", () => {
+  it("resolves the archive entry name from the matching filename's tar_path", () => {
+    expect(interactionTarPathFromMeta(ATTACHMENT_META)).toBe(TAR_ENTRY);
+  });
+
+  it("falls back to an application/json part when filename is absent", () => {
+    expect(
+      interactionTarPathFromMeta([
+        { content_type: "text/plain", tar_path: "0_note.txt" },
+        { content_type: "application/json", tar_path: "1_payload.json" },
+      ]),
+    ).toBe("1_payload.json");
+  });
+
+  it("reconstructs <index>_<filename> when tar_path is missing", () => {
+    expect(
+      interactionTarPathFromMeta([
+        { filename: "interaction.json", part_index: 2 },
+      ]),
+    ).toBe("2_interaction.json");
+  });
+
+  it("returns null when no interaction.json attachment is described", () => {
+    expect(interactionTarPathFromMeta([])).toBeNull();
+    expect(interactionTarPathFromMeta(undefined)).toBeNull();
+    expect(
+      interactionTarPathFromMeta([
+        { filename: "note.txt", content_type: "text/plain" },
+      ]),
+    ).toBeNull();
+  });
+});
+
 describe("interactionJsonFromArchive", () => {
-  it("extracts interaction.json from a gzipped tar, matching by basename", () => {
+  it("extracts the entry named by tar_path (the real <index>_ prefix)", () => {
     const tar = buildTar([
-      { name: "attachments/note.txt", content: "ignore me" },
-      { name: "attachments/interaction.json", content: '{"hello":"world"}' },
+      { name: "0_note.txt", content: "ignore me" },
+      { name: TAR_ENTRY, content: '{"hello":"world"}' },
+    ]);
+    const bytes = interactionJsonFromArchive(gzipSync(tar), TAR_ENTRY);
+    expect(bytes).not.toBeNull();
+    expect(new TextDecoder().decode(bytes as Uint8Array)).toBe(
+      '{"hello":"world"}',
+    );
+  });
+
+  it("falls back to a <digits>_ prefixed entry when no tar_path is given", () => {
+    const tar = buildTar([
+      { name: "attachments/0_note.txt", content: "ignore me" },
+      { name: "attachments/0_interaction.json", content: '{"hello":"world"}' },
     ]);
     const bytes = interactionJsonFromArchive(gzipSync(tar));
     expect(bytes).not.toBeNull();
@@ -125,16 +186,36 @@ describe("interactionJsonFromArchive", () => {
     );
   });
 
+  it("still resolves a bare interaction.json entry via the fallback", () => {
+    const tar = buildTar([{ name: "interaction.json", content: '{"k":1}' }]);
+    const bytes = interactionJsonFromArchive(gzipSync(tar));
+    expect(new TextDecoder().decode(bytes as Uint8Array)).toBe('{"k":1}');
+  });
+
+  it("falls back to the prefix match when tar_path is absent from the archive", () => {
+    const tar = buildTar([{ name: "0_interaction.json", content: '{"k":2}' }]);
+    // Metadata claims an entry name the archive does not contain; the
+    // prefix-stripping fallback must still find the real member.
+    const bytes = interactionJsonFromArchive(
+      gzipSync(tar),
+      "9_interaction.json",
+    );
+    expect(new TextDecoder().decode(bytes as Uint8Array)).toBe('{"k":2}');
+  });
+
   it("returns null when there is no interaction.json member", () => {
-    const tar = buildTar([{ name: "note.txt", content: "x" }]);
+    const tar = buildTar([{ name: "0_note.txt", content: "x" }]);
     expect(interactionJsonFromArchive(gzipSync(tar))).toBeNull();
+    expect(
+      interactionJsonFromArchive(gzipSync(tar), "0_interaction.json"),
+    ).toBeNull();
   });
 });
 
 describe("fetchInteractionJsonBytes", () => {
-  it("fetches the tarball with a bearer token and returns the part bytes", async () => {
+  it("fetches the tarball with a bearer token and returns the part bytes by tar_path", async () => {
     const tar = buildTar([
-      { name: "interaction.json", content: JSON.stringify(wireEnvelope()) },
+      { name: TAR_ENTRY, content: JSON.stringify(wireEnvelope()) },
     ]);
     const gz = gzipSync(tar);
     const fetchImpl = vi.fn(async () => ({
@@ -148,6 +229,7 @@ describe("fetchInteractionJsonBytes", () => {
       emailId: "inbound-1",
       apiKey: "secret",
       fetchImpl,
+      attachments: ATTACHMENT_META,
     });
     expect(bytes).not.toBeNull();
     const call = (fetchImpl as unknown as { mock: { calls: unknown[][] } }).mock
@@ -177,9 +259,13 @@ describe("fetchInteractionJsonBytes", () => {
 });
 
 describe("deriveEmailChallengeFromInbound", () => {
-  it("reshapes the inbound wire envelope into the signable challenge object", async () => {
+  it("reshapes the inbound wire envelope into the signable challenge object (real 0_ prefixed entry + metadata)", async () => {
+    // Regression for the real archive naming: the entry is `0_interaction.json`
+    // and the email metadata's `tar_path` points at it. The pre-fix code looked
+    // for a bare `interaction.json` and missed this, failing a real payment.
     const tar = buildTar([
-      { name: "interaction.json", content: JSON.stringify(wireEnvelope()) },
+      { name: "0_note.txt", content: "an unrelated attachment" },
+      { name: TAR_ENTRY, content: JSON.stringify(wireEnvelope()) },
     ]);
     const gz = gzipSync(tar);
     const fetchImpl = vi.fn(async () => ({
@@ -192,6 +278,7 @@ describe("deriveEmailChallengeFromInbound", () => {
       baseUrl: "https://api.example/v1",
       emailId: "inbound-1",
       fetchImpl,
+      attachments: ATTACHMENT_META,
     });
 
     // The reshape maps every settlement-critical field exactly. This is the
@@ -211,8 +298,29 @@ describe("deriveEmailChallengeFromInbound", () => {
     );
   });
 
+  it("reshapes via the prefix fallback when no attachment metadata is passed", async () => {
+    // Callers that only have the email id (no fetched metadata) still resolve the
+    // `0_interaction.json` entry via the prefix-stripping fallback.
+    const tar = buildTar([
+      { name: TAR_ENTRY, content: JSON.stringify(wireEnvelope()) },
+    ]);
+    const gz = gzipSync(tar);
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      arrayBuffer: async () =>
+        gz.buffer.slice(gz.byteOffset, gz.byteOffset + gz.byteLength),
+    })) as unknown as typeof fetch;
+
+    const challenge = await deriveEmailChallengeFromInbound({
+      baseUrl: "https://api.example/v1",
+      emailId: "inbound-1",
+      fetchImpl,
+    });
+    expect(challenge.interaction_id).toBe(INTERACTION_ID);
+  });
+
   it("errors clearly when the inbound email has no interaction.json", async () => {
-    const tar = buildTar([{ name: "note.txt", content: "x" }]);
+    const tar = buildTar([{ name: "0_note.txt", content: "x" }]);
     const gz = gzipSync(tar);
     const fetchImpl = vi.fn(async () => ({
       ok: true,
@@ -224,6 +332,7 @@ describe("deriveEmailChallengeFromInbound", () => {
         baseUrl: "https://api.example/v1",
         emailId: "inbound-1",
         fetchImpl,
+        attachments: [{ filename: "note.txt", content_type: "text/plain" }],
       }),
     ).rejects.toThrow(/no interaction\.json attachment/);
   });

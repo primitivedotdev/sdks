@@ -327,6 +327,12 @@ class PaymentsPayEmailCommand extends Command {
             emailId: flags["in-reply-to"],
             apiKey: auth.apiKey,
             headers: requestConfig.headers,
+            // The attachments archive names each entry `<part_index>_<filename>`
+            // (e.g. `0_interaction.json`), so locate the challenge member by its
+            // metadata `tar_path` rather than guessing the entry name. The
+            // inbound email is already fetched above for from/to derivation, so
+            // the metadata is in hand.
+            attachments: inbound.parsed?.attachments,
           });
         } else {
           challenge = readEmailChallenge({

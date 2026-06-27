@@ -20,13 +20,16 @@ import {
 const INTERACTION_ID = "a1b2c3d4-0000-0000-0000-000000000001@payer.example";
 
 // A one-file ustar tar, gzipped, carrying the given interaction.json content.
+// The entry uses the real archive name `0_interaction.json` (the
+// `<part_index>_<filename>` scheme); the settlement poll has no attachment
+// metadata, so it must resolve this via the prefix-stripping fallback.
 function gzippedArchive(content: string): Uint8Array {
   const enc = new TextEncoder();
   const body = enc.encode(content);
   const header = new Uint8Array(512);
   const octal = (v: number, w: number) =>
     `${v.toString(8).padStart(w - 1, "0")}\0`;
-  header.set(enc.encode("interaction.json").subarray(0, 100), 0);
+  header.set(enc.encode("0_interaction.json").subarray(0, 100), 0);
   header.set(enc.encode("0000644\0"), 100);
   header.set(enc.encode("0000000\0"), 108);
   header.set(enc.encode("0000000\0"), 116);
