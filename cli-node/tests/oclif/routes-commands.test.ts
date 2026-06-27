@@ -9,9 +9,26 @@ import RoutesTestCommand from "../../src/oclif/commands/routes-test.js";
 import RoutesUpdateCommand, {
   buildUpdateBody,
 } from "../../src/oclif/commands/routes-update.js";
+import { COMMANDS } from "../../src/oclif/index.js";
 
 const ID_A = "11111111-1111-4111-8111-111111111111";
 const ID_B = "22222222-2222-4222-8222-222222222222";
+
+describe("routes commands: registration", () => {
+  // The CLI uses an explicit COMMANDS registry; a command file that is not
+  // listed there is unreachable ("command not found") despite existing. Guard
+  // every routes verb so an unregistered command can never ship again.
+  it.each([
+    "routes:add",
+    "routes:list",
+    "routes:test",
+    "routes:update",
+    "routes:reorder",
+    "routes:remove",
+  ])("registers %s in the COMMANDS map", (key) => {
+    expect(COMMANDS[key]).toBeDefined();
+  });
+});
 
 describe("routes add: resolveCreateTarget", () => {
   it("routes to a function when --function is set", () => {
@@ -138,6 +155,14 @@ describe("routes reorder: parseReorderUpdates", () => {
   it("rejects a negative priority", () => {
     const result = parseReorderUpdates([`${ID_A}=-5`]);
     expect("error" in result).toBe(true);
+  });
+
+  it("rejects the same route id appearing more than once", () => {
+    const result = parseReorderUpdates([`${ID_A}=10`, `${ID_A}=20`]);
+    expect("error" in result).toBe(true);
+    if ("error" in result) {
+      expect(result.error).toContain("more than once");
+    }
   });
 
   it("requires the --set flag", () => {

@@ -42,6 +42,12 @@ import PaymentsPayEmailCommand from "./commands/payments-pay-email.js";
 import PaymentsPayEmailStepCommand from "./commands/payments-pay-email-step.js";
 import PaymentsRegisterPayoutAddressCommand from "./commands/payments-register-payout-address.js";
 import ReplyCommand from "./commands/reply.js";
+import RoutesAddCommand from "./commands/routes-add.js";
+import RoutesListCommand from "./commands/routes-list.js";
+import RoutesRemoveCommand from "./commands/routes-remove.js";
+import RoutesReorderCommand from "./commands/routes-reorder.js";
+import RoutesTestCommand from "./commands/routes-test.js";
+import RoutesUpdateCommand from "./commands/routes-update.js";
 import SearchCommand from "./commands/search.js";
 import SemanticSearchCommand from "./commands/semantic-search.js";
 import SendCommand from "./commands/send.js";
@@ -600,6 +606,15 @@ export const COMMANDS: Record<string, typeof Command> = {
   "functions:route-unset": FunctionsRouteUnsetCommand,
   "functions:route-get": FunctionsRouteGetCommand,
   "functions:routing-topology": FunctionsRoutingTopologyCommand,
+  // Task-oriented recipient-routing verbs. The generated routes:*-route(s)
+  // wrappers stay available for full schema parity; these are the friendly
+  // forms (`routes add alice@d --function <id>`, `routes test <recipient>`).
+  "routes:add": RoutesAddCommand,
+  "routes:list": RoutesListCommand,
+  "routes:test": RoutesTestCommand,
+  "routes:update": RoutesUpdateCommand,
+  "routes:reorder": RoutesReorderCommand,
+  "routes:remove": RoutesRemoveCommand,
   ...generatedCommandAliases,
   ...generatedCommands,
   // `functions:logs` is the human/agent-friendly log viewer: compact

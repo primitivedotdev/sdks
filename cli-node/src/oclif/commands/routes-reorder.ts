@@ -20,6 +20,7 @@ export function parseReorderUpdates(
   set: string[],
 ): { updates: Array<{ id: string; priority: number }> } | { error: string } {
   const updates: Array<{ id: string; priority: number }> = [];
+  const seen = new Set<string>();
   for (const pair of set) {
     const eq = pair.lastIndexOf("=");
     const id = eq >= 0 ? pair.slice(0, eq).trim() : "";
@@ -29,6 +30,12 @@ export function parseReorderUpdates(
         error: `Invalid --set value "${pair}"; expected <route-id>=<priority> with a non-negative integer priority.`,
       };
     }
+    if (seen.has(id)) {
+      return {
+        error: `Route ${id} appears more than once in --set; specify each route at most once.`,
+      };
+    }
+    seen.add(id);
     updates.push({ id, priority });
   }
   return { updates };
