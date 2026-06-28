@@ -53,6 +53,14 @@ type CreateRouteRes interface {
 	createRouteRes()
 }
 
+type CreateWakeAuthorizationRes interface {
+	createWakeAuthorizationRes()
+}
+
+type CreateWakeScheduleRes interface {
+	createWakeScheduleRes()
+}
+
 type DecideRegistryRequestRes interface {
 	decideRegistryRequestRes()
 }
@@ -91,6 +99,14 @@ type DeleteOrgSecretRes interface {
 
 type DeleteRouteRes interface {
 	deleteRouteRes()
+}
+
+type DeleteWakeAuthorizationRes interface {
+	deleteWakeAuthorizationRes()
+}
+
+type DeleteWakeScheduleRes interface {
+	deleteWakeScheduleRes()
 }
 
 type DiscardEmailContentRes interface {
@@ -173,6 +189,10 @@ type GetThreadRes interface {
 	getThreadRes()
 }
 
+type GetWakeScheduleRes interface {
+	getWakeScheduleRes()
+}
+
 type GetWebhookSecretRes interface {
 	getWebhookSecretRes()
 }
@@ -237,6 +257,18 @@ type ListSentEmailsRes interface {
 	listSentEmailsRes()
 }
 
+type ListWakeAuthorizationsRes interface {
+	listWakeAuthorizationsRes()
+}
+
+type ListWakeDispatchesRes interface {
+	listWakeDispatchesRes()
+}
+
+type ListWakeSchedulesRes interface {
+	listWakeSchedulesRes()
+}
+
 type PayChallengeRes interface {
 	payChallengeRes()
 }
@@ -283,6 +315,10 @@ type ResolveRegistryHandleRes interface {
 
 type RotateWebhookSecretRes interface {
 	rotateWebhookSecretRes()
+}
+
+type RunWakeScheduleRes interface {
+	runWakeScheduleRes()
 }
 
 type SearchEmailsRes interface {
@@ -375,6 +411,14 @@ type UpdateRouteRes interface {
 
 type UpdateSpendPolicyRes interface {
 	updateSpendPolicyRes()
+}
+
+type UpdateWakeAuthorizationRes interface {
+	updateWakeAuthorizationRes()
+}
+
+type UpdateWakeScheduleRes interface {
+	updateWakeScheduleRes()
 }
 
 type VerifyAgentClaimRes interface {

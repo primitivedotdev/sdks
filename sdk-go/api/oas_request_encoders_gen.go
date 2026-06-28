@@ -200,6 +200,34 @@ func encodeCreateRouteRequest(
 	return nil
 }
 
+func encodeCreateWakeAuthorizationRequest(
+	req *CreateWakeAuthorizationInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeCreateWakeScheduleRequest(
+	req *CreateWakeScheduleInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeDecideRegistryRequestRequest(
 	req *DecideRegistryRequestInput,
 	r *http.Request,
@@ -606,6 +634,34 @@ func encodeUpdateRouteRequest(
 
 func encodeUpdateSpendPolicyRequest(
 	req *UpdateSpendPolicyInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateWakeAuthorizationRequest(
+	req *UpdateWakeAuthorizationInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateWakeScheduleRequest(
+	req *UpdateWakeScheduleInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

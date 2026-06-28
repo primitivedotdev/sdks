@@ -2756,6 +2756,125 @@ export type UpdateFilterInput = {
 };
 
 /**
+ * A cron schedule that sends a wake.dispatch command to a function.
+ */
+export type WakeSchedule = {
+    id: string;
+    /**
+     * The sending identity the wake is signed as.
+     */
+    from_address?: string | null;
+    /**
+     * The function address the wake is delivered to.
+     */
+    target_address: string;
+    command: string;
+    args?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 5-field cron expression.
+     */
+    cron_expr: string;
+    /**
+     * IANA timezone the cron is evaluated in.
+     */
+    timezone: string;
+    next_run_at: string;
+    last_run_at?: string | null;
+    enabled: boolean;
+    note?: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type CreateWakeScheduleInput = {
+    /**
+     * Sending identity (must be a domain the org can sign).
+     */
+    from_address: string;
+    /**
+     * Your function address (must differ from from_address).
+     */
+    target_address: string;
+    command: string;
+    /**
+     * Optional JSON object passed through to the woken function.
+     */
+    args?: {
+        [key: string]: unknown;
+    };
+    cron_expr: string;
+    timezone?: string;
+    note?: string;
+};
+
+export type UpdateWakeScheduleInput = {
+    enabled?: boolean;
+    command?: string;
+    args?: {
+        [key: string]: unknown;
+    };
+    cron_expr?: string;
+    timezone?: string;
+    from_address?: string;
+    target_address?: string;
+    note?: string | null;
+};
+
+/**
+ * A per-target allowlist grant authorizing a sender to wake a function.
+ */
+export type WakeAuthorization = {
+    id: string;
+    recipient_endpoint_id: string;
+    allowed_sender_domain: string;
+    allowed_sender_address?: string | null;
+    allowed_commands?: Array<string> | null;
+    enabled: boolean;
+    note?: string | null;
+    created_at: string;
+};
+
+export type CreateWakeAuthorizationInput = {
+    recipient_endpoint_id: string;
+    /**
+     * Fully-qualified sender domain (at least two labels).
+     */
+    allowed_sender_domain: string;
+    /**
+     * Optional specific sender address to pin the grant to.
+     */
+    allowed_sender_address?: string | null;
+    /**
+     * Optional command allowlist; null = any command.
+     */
+    allowed_commands?: Array<string> | null;
+    note?: string;
+};
+
+export type UpdateWakeAuthorizationInput = {
+    enabled: boolean;
+};
+
+/**
+ * A recorded wake.dispatch interaction (audit row).
+ */
+export type WakeDispatch = {
+    id: string;
+    wire_id: string;
+    role: string;
+    state: string;
+    outcome?: string | null;
+    awaiting?: string | null;
+    counterparty_address: string;
+    our_address: string;
+    step_count?: number;
+    created_at: string;
+    completed_at?: string | null;
+};
+
+/**
  * A recipient routing rule binding an address pattern to one endpoint.
  */
 export type RecipientRoute = {
@@ -5298,6 +5417,405 @@ export type UpdateFilterResponses = {
 };
 
 export type UpdateFilterResponse = UpdateFilterResponses[keyof UpdateFilterResponses];
+
+export type ListWakeSchedulesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/wake/schedules';
+};
+
+export type ListWakeSchedulesErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type ListWakeSchedulesError = ListWakeSchedulesErrors[keyof ListWakeSchedulesErrors];
+
+export type ListWakeSchedulesResponses = {
+    /**
+     * List of wake schedules
+     */
+    200: SuccessEnvelope & {
+        data?: Array<WakeSchedule>;
+    };
+};
+
+export type ListWakeSchedulesResponse = ListWakeSchedulesResponses[keyof ListWakeSchedulesResponses];
+
+export type CreateWakeScheduleData = {
+    body: CreateWakeScheduleInput;
+    path?: never;
+    query?: never;
+    url: '/wake/schedules';
+};
+
+export type CreateWakeScheduleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type CreateWakeScheduleError = CreateWakeScheduleErrors[keyof CreateWakeScheduleErrors];
+
+export type CreateWakeScheduleResponses = {
+    /**
+     * Wake schedule created
+     */
+    201: SuccessEnvelope & {
+        data?: WakeSchedule;
+    };
+};
+
+export type CreateWakeScheduleResponse = CreateWakeScheduleResponses[keyof CreateWakeScheduleResponses];
+
+export type DeleteWakeScheduleData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/wake/schedules/{id}';
+};
+
+export type DeleteWakeScheduleErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteWakeScheduleError = DeleteWakeScheduleErrors[keyof DeleteWakeScheduleErrors];
+
+export type DeleteWakeScheduleResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteWakeScheduleResponse = DeleteWakeScheduleResponses[keyof DeleteWakeScheduleResponses];
+
+export type GetWakeScheduleData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/wake/schedules/{id}';
+};
+
+export type GetWakeScheduleErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetWakeScheduleError = GetWakeScheduleErrors[keyof GetWakeScheduleErrors];
+
+export type GetWakeScheduleResponses = {
+    /**
+     * The wake schedule
+     */
+    200: SuccessEnvelope & {
+        data?: WakeSchedule;
+    };
+};
+
+export type GetWakeScheduleResponse = GetWakeScheduleResponses[keyof GetWakeScheduleResponses];
+
+export type UpdateWakeScheduleData = {
+    body: UpdateWakeScheduleInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/wake/schedules/{id}';
+};
+
+export type UpdateWakeScheduleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type UpdateWakeScheduleError = UpdateWakeScheduleErrors[keyof UpdateWakeScheduleErrors];
+
+export type UpdateWakeScheduleResponses = {
+    /**
+     * Updated wake schedule
+     */
+    200: SuccessEnvelope & {
+        data?: WakeSchedule;
+    };
+};
+
+export type UpdateWakeScheduleResponse = UpdateWakeScheduleResponses[keyof UpdateWakeScheduleResponses];
+
+export type RunWakeScheduleData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/wake/schedules/{id}/run';
+};
+
+export type RunWakeScheduleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type RunWakeScheduleError = RunWakeScheduleErrors[keyof RunWakeScheduleErrors];
+
+export type RunWakeScheduleResponses = {
+    /**
+     * The wake interaction that was emitted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type RunWakeScheduleResponse = RunWakeScheduleResponses[keyof RunWakeScheduleResponses];
+
+export type ListWakeAuthorizationsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only return grants for this target endpoint
+         */
+        recipient_endpoint_id?: string;
+    };
+    url: '/wake/authorizations';
+};
+
+export type ListWakeAuthorizationsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type ListWakeAuthorizationsError = ListWakeAuthorizationsErrors[keyof ListWakeAuthorizationsErrors];
+
+export type ListWakeAuthorizationsResponses = {
+    /**
+     * List of wake authorizations
+     */
+    200: SuccessEnvelope & {
+        data?: Array<WakeAuthorization>;
+    };
+};
+
+export type ListWakeAuthorizationsResponse = ListWakeAuthorizationsResponses[keyof ListWakeAuthorizationsResponses];
+
+export type CreateWakeAuthorizationData = {
+    body: CreateWakeAuthorizationInput;
+    path?: never;
+    query?: never;
+    url: '/wake/authorizations';
+};
+
+export type CreateWakeAuthorizationErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+};
+
+export type CreateWakeAuthorizationError = CreateWakeAuthorizationErrors[keyof CreateWakeAuthorizationErrors];
+
+export type CreateWakeAuthorizationResponses = {
+    /**
+     * Wake authorization created
+     */
+    201: SuccessEnvelope & {
+        data?: WakeAuthorization;
+    };
+};
+
+export type CreateWakeAuthorizationResponse = CreateWakeAuthorizationResponses[keyof CreateWakeAuthorizationResponses];
+
+export type DeleteWakeAuthorizationData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/wake/authorizations/{id}';
+};
+
+export type DeleteWakeAuthorizationErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteWakeAuthorizationError = DeleteWakeAuthorizationErrors[keyof DeleteWakeAuthorizationErrors];
+
+export type DeleteWakeAuthorizationResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteWakeAuthorizationResponse = DeleteWakeAuthorizationResponses[keyof DeleteWakeAuthorizationResponses];
+
+export type UpdateWakeAuthorizationData = {
+    body: UpdateWakeAuthorizationInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/wake/authorizations/{id}';
+};
+
+export type UpdateWakeAuthorizationErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type UpdateWakeAuthorizationError = UpdateWakeAuthorizationErrors[keyof UpdateWakeAuthorizationErrors];
+
+export type UpdateWakeAuthorizationResponses = {
+    /**
+     * Updated wake authorization
+     */
+    200: SuccessEnvelope & {
+        data?: WakeAuthorization;
+    };
+};
+
+export type UpdateWakeAuthorizationResponse = UpdateWakeAuthorizationResponses[keyof UpdateWakeAuthorizationResponses];
+
+export type ListWakeDispatchesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Maximum number of rows to return (1-200, default 50)
+         */
+        limit?: number;
+    };
+    url: '/wake/dispatches';
+};
+
+export type ListWakeDispatchesErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type ListWakeDispatchesError = ListWakeDispatchesErrors[keyof ListWakeDispatchesErrors];
+
+export type ListWakeDispatchesResponses = {
+    /**
+     * List of recent wake dispatches
+     */
+    200: SuccessEnvelope & {
+        data?: Array<WakeDispatch>;
+    };
+};
+
+export type ListWakeDispatchesResponse = ListWakeDispatchesResponses[keyof ListWakeDispatchesResponses];
 
 export type ListRoutesData = {
     body?: never;
