@@ -34,12 +34,17 @@ class WakeSchedulesCreateCommand extends Command {
     time: Flags.boolean({ description: TIME_FLAG_DESCRIPTION }),
     from: Flags.string({
       description: "Sending identity address (must differ from --to)",
+      required: true,
     }),
     to: Flags.string({
       description: "Target function address the wake is delivered to",
+      required: true,
     }),
-    command: Flags.string({ description: "Wake command name" }),
-    cron: Flags.string({ description: "5-field cron expression" }),
+    command: Flags.string({ description: "Wake command name", required: true }),
+    cron: Flags.string({
+      description: "5-field cron expression",
+      required: true,
+    }),
     timezone: Flags.string({ description: "IANA timezone (default UTC)" }),
     args: Flags.string({ description: "Args as a JSON object" }),
     note: Flags.string({ description: "Optional note" }),
@@ -75,10 +80,10 @@ class WakeSchedulesCreateCommand extends Command {
       const result = await createWakeSchedule({
         client: apiClient.client,
         body: {
-          from_address: flags.from ?? "",
-          target_address: flags.to ?? "",
-          command: flags.command ?? "",
-          cron_expr: flags.cron ?? "",
+          from_address: flags.from,
+          target_address: flags.to,
+          command: flags.command,
+          cron_expr: flags.cron,
           ...(flags.timezone ? { timezone: flags.timezone } : {}),
           ...(argsObj ? { args: argsObj } : {}),
           ...(flags.note ? { note: flags.note } : {}),

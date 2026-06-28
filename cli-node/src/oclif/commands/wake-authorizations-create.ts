@@ -34,9 +34,11 @@ class WakeAuthorizationsCreateCommand extends Command {
     time: Flags.boolean({ description: TIME_FLAG_DESCRIPTION }),
     endpoint: Flags.string({
       description: "Target endpoint id (recipient_endpoint_id)",
+      required: true,
     }),
     domain: Flags.string({
       description: "Allowed sender domain (fully-qualified)",
+      required: true,
     }),
     address: Flags.string({
       description: "Optional specific allowed sender address",
@@ -62,8 +64,8 @@ class WakeAuthorizationsCreateCommand extends Command {
       const result = await createWakeAuthorization({
         client: apiClient.client,
         body: {
-          recipient_endpoint_id: flags.endpoint ?? "",
-          allowed_sender_domain: flags.domain ?? "",
+          recipient_endpoint_id: flags.endpoint,
+          allowed_sender_domain: flags.domain,
           ...(flags.address ? { allowed_sender_address: flags.address } : {}),
           ...(flags.command && flags.command.length > 0
             ? { allowed_commands: flags.command }

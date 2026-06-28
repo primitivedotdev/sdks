@@ -18,7 +18,7 @@ class WakeSchedulesUpdateCommand extends Command {
 
   static examples = [
     '<%= config.bin %> wake schedules update <schedule-id> --cron "*/15 * * * *"',
-    "<%= config.bin %> wake schedules update <schedule-id> --disabled",
+    "<%= config.bin %> wake schedules update <schedule-id> --no-enabled",
   ];
 
   static args = {
@@ -45,11 +45,11 @@ class WakeSchedulesUpdateCommand extends Command {
     }),
     command: Flags.string({ description: "Wake command name" }),
     cron: Flags.string({ description: "5-field cron expression" }),
-    timezone: Flags.string({ description: "IANA timezone (default UTC)" }),
+    timezone: Flags.string({ description: "IANA timezone" }),
     args: Flags.string({ description: "Args as a JSON object" }),
     note: Flags.string({ description: "Optional note" }),
     enabled: Flags.boolean({
-      description: "Enable the schedule",
+      description: "Enable the schedule (use --no-enabled to pause)",
       allowNo: true,
     }),
   };

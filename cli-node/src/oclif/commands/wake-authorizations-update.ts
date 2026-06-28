@@ -11,12 +11,14 @@ import {
 } from "../api-command.js";
 
 class WakeAuthorizationsUpdateCommand extends Command {
-  static description = "Toggle a wake authorization's enabled state.";
+  static description =
+    "Set a wake authorization's enabled state. Pass --enabled or --no-enabled.";
 
   static summary = "Update a wake authorization";
 
   static examples = [
-    "<%= config.bin %> wake authorizations update <authorization-id> --disabled",
+    "<%= config.bin %> wake authorizations update <authorization-id> --no-enabled",
+    "<%= config.bin %> wake authorizations update <authorization-id> --enabled",
   ];
 
   static args = {
@@ -39,9 +41,8 @@ class WakeAuthorizationsUpdateCommand extends Command {
     }),
     time: Flags.boolean({ description: TIME_FLAG_DESCRIPTION }),
     enabled: Flags.boolean({
-      description: "Enable the authorization",
+      description: "Enable the authorization (use --no-enabled to disable)",
       allowNo: true,
-      default: true,
     }),
   };
 
@@ -56,6 +57,11 @@ class WakeAuthorizationsUpdateCommand extends Command {
       });
 
     await runWithTiming(flags.time, async () => {
+      if (flags.enabled === undefined) {
+        this.error(
+          "Pass --enabled or --no-enabled to set the authorization state",
+        );
+      }
       const result = await updateWakeAuthorization({
         client: apiClient.client,
         path: { id: args.id },
