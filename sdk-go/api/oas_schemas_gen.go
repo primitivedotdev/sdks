@@ -3544,6 +3544,244 @@ type CreateRouteUnauthorized ErrorResponse
 
 func (*CreateRouteUnauthorized) createRouteRes() {}
 
+type CreateWakeAuthorizationBadRequest ErrorResponse
+
+func (*CreateWakeAuthorizationBadRequest) createWakeAuthorizationRes() {}
+
+type CreateWakeAuthorizationConflict ErrorResponse
+
+func (*CreateWakeAuthorizationConflict) createWakeAuthorizationRes() {}
+
+// Merged schema.
+type CreateWakeAuthorizationCreated struct {
+	Success bool              `json:"success"`
+	Data    WakeAuthorization `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateWakeAuthorizationCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateWakeAuthorizationCreated) GetData() WakeAuthorization {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateWakeAuthorizationCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateWakeAuthorizationCreated) SetData(val WakeAuthorization) {
+	s.Data = val
+}
+
+func (*CreateWakeAuthorizationCreated) createWakeAuthorizationRes() {}
+
+// Ref: #/components/schemas/CreateWakeAuthorizationInput
+type CreateWakeAuthorizationInput struct {
+	RecipientEndpointID uuid.UUID `json:"recipient_endpoint_id"`
+	// Fully-qualified sender domain (at least two labels).
+	AllowedSenderDomain string `json:"allowed_sender_domain"`
+	// Optional specific sender address to pin the grant to.
+	AllowedSenderAddress OptNilString `json:"allowed_sender_address"`
+	// Optional command allowlist; null = any command.
+	AllowedCommands OptNilStringArray `json:"allowed_commands"`
+	Note            OptString         `json:"note"`
+}
+
+// GetRecipientEndpointID returns the value of RecipientEndpointID.
+func (s *CreateWakeAuthorizationInput) GetRecipientEndpointID() uuid.UUID {
+	return s.RecipientEndpointID
+}
+
+// GetAllowedSenderDomain returns the value of AllowedSenderDomain.
+func (s *CreateWakeAuthorizationInput) GetAllowedSenderDomain() string {
+	return s.AllowedSenderDomain
+}
+
+// GetAllowedSenderAddress returns the value of AllowedSenderAddress.
+func (s *CreateWakeAuthorizationInput) GetAllowedSenderAddress() OptNilString {
+	return s.AllowedSenderAddress
+}
+
+// GetAllowedCommands returns the value of AllowedCommands.
+func (s *CreateWakeAuthorizationInput) GetAllowedCommands() OptNilStringArray {
+	return s.AllowedCommands
+}
+
+// GetNote returns the value of Note.
+func (s *CreateWakeAuthorizationInput) GetNote() OptString {
+	return s.Note
+}
+
+// SetRecipientEndpointID sets the value of RecipientEndpointID.
+func (s *CreateWakeAuthorizationInput) SetRecipientEndpointID(val uuid.UUID) {
+	s.RecipientEndpointID = val
+}
+
+// SetAllowedSenderDomain sets the value of AllowedSenderDomain.
+func (s *CreateWakeAuthorizationInput) SetAllowedSenderDomain(val string) {
+	s.AllowedSenderDomain = val
+}
+
+// SetAllowedSenderAddress sets the value of AllowedSenderAddress.
+func (s *CreateWakeAuthorizationInput) SetAllowedSenderAddress(val OptNilString) {
+	s.AllowedSenderAddress = val
+}
+
+// SetAllowedCommands sets the value of AllowedCommands.
+func (s *CreateWakeAuthorizationInput) SetAllowedCommands(val OptNilStringArray) {
+	s.AllowedCommands = val
+}
+
+// SetNote sets the value of Note.
+func (s *CreateWakeAuthorizationInput) SetNote(val OptString) {
+	s.Note = val
+}
+
+type CreateWakeAuthorizationNotFound ErrorResponse
+
+func (*CreateWakeAuthorizationNotFound) createWakeAuthorizationRes() {}
+
+type CreateWakeAuthorizationUnauthorized ErrorResponse
+
+func (*CreateWakeAuthorizationUnauthorized) createWakeAuthorizationRes() {}
+
+type CreateWakeScheduleBadRequest ErrorResponse
+
+func (*CreateWakeScheduleBadRequest) createWakeScheduleRes() {}
+
+// Merged schema.
+type CreateWakeScheduleCreated struct {
+	Success bool         `json:"success"`
+	Data    WakeSchedule `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateWakeScheduleCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateWakeScheduleCreated) GetData() WakeSchedule {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateWakeScheduleCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateWakeScheduleCreated) SetData(val WakeSchedule) {
+	s.Data = val
+}
+
+func (*CreateWakeScheduleCreated) createWakeScheduleRes() {}
+
+// Ref: #/components/schemas/CreateWakeScheduleInput
+type CreateWakeScheduleInput struct {
+	// Sending identity (must be a domain the org can sign).
+	FromAddress string `json:"from_address"`
+	// Your function address (must differ from from_address).
+	TargetAddress string `json:"target_address"`
+	Command       string `json:"command"`
+	// Optional JSON object passed through to the woken function.
+	Args     OptCreateWakeScheduleInputArgs `json:"args"`
+	CronExpr string                         `json:"cron_expr"`
+	Timezone OptString                      `json:"timezone"`
+	Note     OptString                      `json:"note"`
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *CreateWakeScheduleInput) GetFromAddress() string {
+	return s.FromAddress
+}
+
+// GetTargetAddress returns the value of TargetAddress.
+func (s *CreateWakeScheduleInput) GetTargetAddress() string {
+	return s.TargetAddress
+}
+
+// GetCommand returns the value of Command.
+func (s *CreateWakeScheduleInput) GetCommand() string {
+	return s.Command
+}
+
+// GetArgs returns the value of Args.
+func (s *CreateWakeScheduleInput) GetArgs() OptCreateWakeScheduleInputArgs {
+	return s.Args
+}
+
+// GetCronExpr returns the value of CronExpr.
+func (s *CreateWakeScheduleInput) GetCronExpr() string {
+	return s.CronExpr
+}
+
+// GetTimezone returns the value of Timezone.
+func (s *CreateWakeScheduleInput) GetTimezone() OptString {
+	return s.Timezone
+}
+
+// GetNote returns the value of Note.
+func (s *CreateWakeScheduleInput) GetNote() OptString {
+	return s.Note
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *CreateWakeScheduleInput) SetFromAddress(val string) {
+	s.FromAddress = val
+}
+
+// SetTargetAddress sets the value of TargetAddress.
+func (s *CreateWakeScheduleInput) SetTargetAddress(val string) {
+	s.TargetAddress = val
+}
+
+// SetCommand sets the value of Command.
+func (s *CreateWakeScheduleInput) SetCommand(val string) {
+	s.Command = val
+}
+
+// SetArgs sets the value of Args.
+func (s *CreateWakeScheduleInput) SetArgs(val OptCreateWakeScheduleInputArgs) {
+	s.Args = val
+}
+
+// SetCronExpr sets the value of CronExpr.
+func (s *CreateWakeScheduleInput) SetCronExpr(val string) {
+	s.CronExpr = val
+}
+
+// SetTimezone sets the value of Timezone.
+func (s *CreateWakeScheduleInput) SetTimezone(val OptString) {
+	s.Timezone = val
+}
+
+// SetNote sets the value of Note.
+func (s *CreateWakeScheduleInput) SetNote(val OptString) {
+	s.Note = val
+}
+
+// Optional JSON object passed through to the woken function.
+type CreateWakeScheduleInputArgs map[string]jx.Raw
+
+func (s *CreateWakeScheduleInputArgs) init() CreateWakeScheduleInputArgs {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CreateWakeScheduleUnauthorized ErrorResponse
+
+func (*CreateWakeScheduleUnauthorized) createWakeScheduleRes() {}
+
 type DecideRegistryRequestConflict ErrorResponse
 
 func (*DecideRegistryRequestConflict) decideRegistryRequestRes() {}
@@ -3937,6 +4175,22 @@ type DeleteRouteUnauthorized ErrorResponse
 
 func (*DeleteRouteUnauthorized) deleteRouteRes() {}
 
+type DeleteWakeAuthorizationNotFound ErrorResponse
+
+func (*DeleteWakeAuthorizationNotFound) deleteWakeAuthorizationRes() {}
+
+type DeleteWakeAuthorizationUnauthorized ErrorResponse
+
+func (*DeleteWakeAuthorizationUnauthorized) deleteWakeAuthorizationRes() {}
+
+type DeleteWakeScheduleNotFound ErrorResponse
+
+func (*DeleteWakeScheduleNotFound) deleteWakeScheduleRes() {}
+
+type DeleteWakeScheduleUnauthorized ErrorResponse
+
+func (*DeleteWakeScheduleUnauthorized) deleteWakeScheduleRes() {}
+
 // Merged schema.
 type Deleted struct {
 	Success bool        `json:"success"`
@@ -3963,13 +4217,15 @@ func (s *Deleted) SetData(val DeletedData) {
 	s.Data = val
 }
 
-func (*Deleted) deleteDomainRes()   {}
-func (*Deleted) deleteEmailRes()    {}
-func (*Deleted) deleteEndpointRes() {}
-func (*Deleted) deleteFilterRes()   {}
-func (*Deleted) deleteFunctionRes() {}
-func (*Deleted) deleteRouteRes()    {}
-func (*Deleted) unpublishAgentRes() {}
+func (*Deleted) deleteDomainRes()            {}
+func (*Deleted) deleteEmailRes()             {}
+func (*Deleted) deleteEndpointRes()          {}
+func (*Deleted) deleteFilterRes()            {}
+func (*Deleted) deleteFunctionRes()          {}
+func (*Deleted) deleteRouteRes()             {}
+func (*Deleted) deleteWakeAuthorizationRes() {}
+func (*Deleted) deleteWakeScheduleRes()      {}
+func (*Deleted) unpublishAgentRes()          {}
 
 type DeletedData struct {
 	Deleted bool `json:"deleted"`
@@ -7116,6 +7372,8 @@ func (*ErrorResponse) listFunctionsRes()                 {}
 func (*ErrorResponse) listOrgSecretsRes()                {}
 func (*ErrorResponse) listRegistriesRes()                {}
 func (*ErrorResponse) listRoutesRes()                    {}
+func (*ErrorResponse) listWakeDispatchesRes()            {}
+func (*ErrorResponse) listWakeSchedulesRes()             {}
 func (*ErrorResponse) pollCliLoginRes()                  {}
 func (*ErrorResponse) resendAgentSignupVerificationRes() {}
 func (*ErrorResponse) resendCliSignupVerificationRes()   {}
@@ -10548,6 +10806,42 @@ type GetThreadUnauthorized ErrorResponse
 
 func (*GetThreadUnauthorized) getThreadRes() {}
 
+type GetWakeScheduleNotFound ErrorResponse
+
+func (*GetWakeScheduleNotFound) getWakeScheduleRes() {}
+
+// Merged schema.
+type GetWakeScheduleOK struct {
+	Success bool         `json:"success"`
+	Data    WakeSchedule `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetWakeScheduleOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetWakeScheduleOK) GetData() WakeSchedule {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetWakeScheduleOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetWakeScheduleOK) SetData(val WakeSchedule) {
+	s.Data = val
+}
+
+func (*GetWakeScheduleOK) getWakeScheduleRes() {}
+
+type GetWakeScheduleUnauthorized ErrorResponse
+
+func (*GetWakeScheduleUnauthorized) getWakeScheduleRes() {}
+
 type GetWebhookSecretNotFound ErrorResponse
 
 func (*GetWebhookSecretNotFound) getWebhookSecretRes() {}
@@ -11837,6 +12131,98 @@ type ListSentEmailsUnauthorized ErrorResponse
 
 func (*ListSentEmailsUnauthorized) listSentEmailsRes() {}
 
+type ListWakeAuthorizationsBadRequest ErrorResponse
+
+func (*ListWakeAuthorizationsBadRequest) listWakeAuthorizationsRes() {}
+
+// Merged schema.
+type ListWakeAuthorizationsOK struct {
+	Success bool                `json:"success"`
+	Data    []WakeAuthorization `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListWakeAuthorizationsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListWakeAuthorizationsOK) GetData() []WakeAuthorization {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListWakeAuthorizationsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListWakeAuthorizationsOK) SetData(val []WakeAuthorization) {
+	s.Data = val
+}
+
+func (*ListWakeAuthorizationsOK) listWakeAuthorizationsRes() {}
+
+type ListWakeAuthorizationsUnauthorized ErrorResponse
+
+func (*ListWakeAuthorizationsUnauthorized) listWakeAuthorizationsRes() {}
+
+// Merged schema.
+type ListWakeDispatchesOK struct {
+	Success bool           `json:"success"`
+	Data    []WakeDispatch `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListWakeDispatchesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListWakeDispatchesOK) GetData() []WakeDispatch {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListWakeDispatchesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListWakeDispatchesOK) SetData(val []WakeDispatch) {
+	s.Data = val
+}
+
+func (*ListWakeDispatchesOK) listWakeDispatchesRes() {}
+
+// Merged schema.
+type ListWakeSchedulesOK struct {
+	Success bool           `json:"success"`
+	Data    []WakeSchedule `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListWakeSchedulesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListWakeSchedulesOK) GetData() []WakeSchedule {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListWakeSchedulesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListWakeSchedulesOK) SetData(val []WakeSchedule) {
+	s.Data = val
+}
+
+func (*ListWakeSchedulesOK) listWakeSchedulesRes() {}
+
 // NewNilBool returns new NilBool with value set to v.
 func NewNilBool(v bool) NilBool {
 	return NilBool{
@@ -12780,6 +13166,52 @@ func (o OptCreateFunctionInputFiles) Get() (v CreateFunctionInputFiles, ok bool)
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCreateFunctionInputFiles) Or(d CreateFunctionInputFiles) CreateFunctionInputFiles {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCreateWakeScheduleInputArgs returns new OptCreateWakeScheduleInputArgs with value set to v.
+func NewOptCreateWakeScheduleInputArgs(v CreateWakeScheduleInputArgs) OptCreateWakeScheduleInputArgs {
+	return OptCreateWakeScheduleInputArgs{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateWakeScheduleInputArgs is optional CreateWakeScheduleInputArgs.
+type OptCreateWakeScheduleInputArgs struct {
+	Value CreateWakeScheduleInputArgs
+	Set   bool
+}
+
+// IsSet returns true if OptCreateWakeScheduleInputArgs was set.
+func (o OptCreateWakeScheduleInputArgs) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateWakeScheduleInputArgs) Reset() {
+	var v CreateWakeScheduleInputArgs
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateWakeScheduleInputArgs) SetTo(v CreateWakeScheduleInputArgs) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateWakeScheduleInputArgs) Get() (v CreateWakeScheduleInputArgs, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateWakeScheduleInputArgs) Or(d CreateWakeScheduleInputArgs) CreateWakeScheduleInputArgs {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -15157,6 +15589,98 @@ func (o OptUpdateRouteInputMatchType) Or(d UpdateRouteInputMatchType) UpdateRout
 	return d
 }
 
+// NewOptUpdateWakeScheduleInputArgs returns new OptUpdateWakeScheduleInputArgs with value set to v.
+func NewOptUpdateWakeScheduleInputArgs(v UpdateWakeScheduleInputArgs) OptUpdateWakeScheduleInputArgs {
+	return OptUpdateWakeScheduleInputArgs{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdateWakeScheduleInputArgs is optional UpdateWakeScheduleInputArgs.
+type OptUpdateWakeScheduleInputArgs struct {
+	Value UpdateWakeScheduleInputArgs
+	Set   bool
+}
+
+// IsSet returns true if OptUpdateWakeScheduleInputArgs was set.
+func (o OptUpdateWakeScheduleInputArgs) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdateWakeScheduleInputArgs) Reset() {
+	var v UpdateWakeScheduleInputArgs
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdateWakeScheduleInputArgs) SetTo(v UpdateWakeScheduleInputArgs) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdateWakeScheduleInputArgs) Get() (v UpdateWakeScheduleInputArgs, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdateWakeScheduleInputArgs) Or(d UpdateWakeScheduleInputArgs) UpdateWakeScheduleInputArgs {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptWakeScheduleArgs returns new OptWakeScheduleArgs with value set to v.
+func NewOptWakeScheduleArgs(v WakeScheduleArgs) OptWakeScheduleArgs {
+	return OptWakeScheduleArgs{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptWakeScheduleArgs is optional WakeScheduleArgs.
+type OptWakeScheduleArgs struct {
+	Value WakeScheduleArgs
+	Set   bool
+}
+
+// IsSet returns true if OptWakeScheduleArgs was set.
+func (o OptWakeScheduleArgs) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptWakeScheduleArgs) Reset() {
+	var v WakeScheduleArgs
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptWakeScheduleArgs) SetTo(v WakeScheduleArgs) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptWakeScheduleArgs) Get() (v WakeScheduleArgs, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptWakeScheduleArgs) Or(d WakeScheduleArgs) WakeScheduleArgs {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptX402PaymentRequirements returns new OptX402PaymentRequirements with value set to v.
 func NewOptX402PaymentRequirements(v X402PaymentRequirements) OptX402PaymentRequirements {
 	return OptX402PaymentRequirements{
@@ -17492,6 +18016,57 @@ func (s *RoutingTopologyUnroutedFunctionsItem) SetID(val uuid.UUID) {
 func (s *RoutingTopologyUnroutedFunctionsItem) SetName(val string) {
 	s.Name = val
 }
+
+type RunWakeScheduleBadRequest ErrorResponse
+
+func (*RunWakeScheduleBadRequest) runWakeScheduleRes() {}
+
+type RunWakeScheduleNotFound ErrorResponse
+
+func (*RunWakeScheduleNotFound) runWakeScheduleRes() {}
+
+// Merged schema.
+type RunWakeScheduleOK struct {
+	Success bool                  `json:"success"`
+	Data    RunWakeScheduleOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *RunWakeScheduleOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *RunWakeScheduleOK) GetData() RunWakeScheduleOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *RunWakeScheduleOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *RunWakeScheduleOK) SetData(val RunWakeScheduleOKData) {
+	s.Data = val
+}
+
+func (*RunWakeScheduleOK) runWakeScheduleRes() {}
+
+type RunWakeScheduleOKData map[string]jx.Raw
+
+func (s *RunWakeScheduleOKData) init() RunWakeScheduleOKData {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type RunWakeScheduleUnauthorized ErrorResponse
+
+func (*RunWakeScheduleUnauthorized) runWakeScheduleRes() {}
 
 type SearchEmailsBadRequest ErrorResponse
 
@@ -22843,6 +23418,204 @@ type UpdateSpendPolicyUnauthorized ErrorResponse
 
 func (*UpdateSpendPolicyUnauthorized) updateSpendPolicyRes() {}
 
+type UpdateWakeAuthorizationBadRequest ErrorResponse
+
+func (*UpdateWakeAuthorizationBadRequest) updateWakeAuthorizationRes() {}
+
+// Ref: #/components/schemas/UpdateWakeAuthorizationInput
+type UpdateWakeAuthorizationInput struct {
+	Enabled bool `json:"enabled"`
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *UpdateWakeAuthorizationInput) GetEnabled() bool {
+	return s.Enabled
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *UpdateWakeAuthorizationInput) SetEnabled(val bool) {
+	s.Enabled = val
+}
+
+type UpdateWakeAuthorizationNotFound ErrorResponse
+
+func (*UpdateWakeAuthorizationNotFound) updateWakeAuthorizationRes() {}
+
+// Merged schema.
+type UpdateWakeAuthorizationOK struct {
+	Success bool              `json:"success"`
+	Data    WakeAuthorization `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateWakeAuthorizationOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateWakeAuthorizationOK) GetData() WakeAuthorization {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateWakeAuthorizationOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateWakeAuthorizationOK) SetData(val WakeAuthorization) {
+	s.Data = val
+}
+
+func (*UpdateWakeAuthorizationOK) updateWakeAuthorizationRes() {}
+
+type UpdateWakeAuthorizationUnauthorized ErrorResponse
+
+func (*UpdateWakeAuthorizationUnauthorized) updateWakeAuthorizationRes() {}
+
+type UpdateWakeScheduleBadRequest ErrorResponse
+
+func (*UpdateWakeScheduleBadRequest) updateWakeScheduleRes() {}
+
+// Ref: #/components/schemas/UpdateWakeScheduleInput
+type UpdateWakeScheduleInput struct {
+	Enabled       OptBool                        `json:"enabled"`
+	Command       OptString                      `json:"command"`
+	Args          OptUpdateWakeScheduleInputArgs `json:"args"`
+	CronExpr      OptString                      `json:"cron_expr"`
+	Timezone      OptString                      `json:"timezone"`
+	FromAddress   OptString                      `json:"from_address"`
+	TargetAddress OptString                      `json:"target_address"`
+	Note          OptNilString                   `json:"note"`
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *UpdateWakeScheduleInput) GetEnabled() OptBool {
+	return s.Enabled
+}
+
+// GetCommand returns the value of Command.
+func (s *UpdateWakeScheduleInput) GetCommand() OptString {
+	return s.Command
+}
+
+// GetArgs returns the value of Args.
+func (s *UpdateWakeScheduleInput) GetArgs() OptUpdateWakeScheduleInputArgs {
+	return s.Args
+}
+
+// GetCronExpr returns the value of CronExpr.
+func (s *UpdateWakeScheduleInput) GetCronExpr() OptString {
+	return s.CronExpr
+}
+
+// GetTimezone returns the value of Timezone.
+func (s *UpdateWakeScheduleInput) GetTimezone() OptString {
+	return s.Timezone
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *UpdateWakeScheduleInput) GetFromAddress() OptString {
+	return s.FromAddress
+}
+
+// GetTargetAddress returns the value of TargetAddress.
+func (s *UpdateWakeScheduleInput) GetTargetAddress() OptString {
+	return s.TargetAddress
+}
+
+// GetNote returns the value of Note.
+func (s *UpdateWakeScheduleInput) GetNote() OptNilString {
+	return s.Note
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *UpdateWakeScheduleInput) SetEnabled(val OptBool) {
+	s.Enabled = val
+}
+
+// SetCommand sets the value of Command.
+func (s *UpdateWakeScheduleInput) SetCommand(val OptString) {
+	s.Command = val
+}
+
+// SetArgs sets the value of Args.
+func (s *UpdateWakeScheduleInput) SetArgs(val OptUpdateWakeScheduleInputArgs) {
+	s.Args = val
+}
+
+// SetCronExpr sets the value of CronExpr.
+func (s *UpdateWakeScheduleInput) SetCronExpr(val OptString) {
+	s.CronExpr = val
+}
+
+// SetTimezone sets the value of Timezone.
+func (s *UpdateWakeScheduleInput) SetTimezone(val OptString) {
+	s.Timezone = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *UpdateWakeScheduleInput) SetFromAddress(val OptString) {
+	s.FromAddress = val
+}
+
+// SetTargetAddress sets the value of TargetAddress.
+func (s *UpdateWakeScheduleInput) SetTargetAddress(val OptString) {
+	s.TargetAddress = val
+}
+
+// SetNote sets the value of Note.
+func (s *UpdateWakeScheduleInput) SetNote(val OptNilString) {
+	s.Note = val
+}
+
+type UpdateWakeScheduleInputArgs map[string]jx.Raw
+
+func (s *UpdateWakeScheduleInputArgs) init() UpdateWakeScheduleInputArgs {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type UpdateWakeScheduleNotFound ErrorResponse
+
+func (*UpdateWakeScheduleNotFound) updateWakeScheduleRes() {}
+
+// Merged schema.
+type UpdateWakeScheduleOK struct {
+	Success bool         `json:"success"`
+	Data    WakeSchedule `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateWakeScheduleOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateWakeScheduleOK) GetData() WakeSchedule {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateWakeScheduleOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateWakeScheduleOK) SetData(val WakeSchedule) {
+	s.Data = val
+}
+
+func (*UpdateWakeScheduleOK) updateWakeScheduleRes() {}
+
+type UpdateWakeScheduleUnauthorized ErrorResponse
+
+func (*UpdateWakeScheduleUnauthorized) updateWakeScheduleRes() {}
+
 // Ref: #/components/schemas/VerifiedDomain
 type VerifiedDomain struct {
 	ID                uuid.UUID     `json:"id"`
@@ -23259,6 +24032,388 @@ func (*VerifyDomainOK) verifyDomainRes() {}
 type VerifyDomainUnauthorized ErrorResponse
 
 func (*VerifyDomainUnauthorized) verifyDomainRes() {}
+
+// A per-target allowlist grant authorizing a sender to wake a function.
+// Ref: #/components/schemas/WakeAuthorization
+type WakeAuthorization struct {
+	ID                   uuid.UUID         `json:"id"`
+	RecipientEndpointID  uuid.UUID         `json:"recipient_endpoint_id"`
+	AllowedSenderDomain  string            `json:"allowed_sender_domain"`
+	AllowedSenderAddress OptNilString      `json:"allowed_sender_address"`
+	AllowedCommands      OptNilStringArray `json:"allowed_commands"`
+	Enabled              bool              `json:"enabled"`
+	Note                 OptNilString      `json:"note"`
+	CreatedAt            time.Time         `json:"created_at"`
+}
+
+// GetID returns the value of ID.
+func (s *WakeAuthorization) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetRecipientEndpointID returns the value of RecipientEndpointID.
+func (s *WakeAuthorization) GetRecipientEndpointID() uuid.UUID {
+	return s.RecipientEndpointID
+}
+
+// GetAllowedSenderDomain returns the value of AllowedSenderDomain.
+func (s *WakeAuthorization) GetAllowedSenderDomain() string {
+	return s.AllowedSenderDomain
+}
+
+// GetAllowedSenderAddress returns the value of AllowedSenderAddress.
+func (s *WakeAuthorization) GetAllowedSenderAddress() OptNilString {
+	return s.AllowedSenderAddress
+}
+
+// GetAllowedCommands returns the value of AllowedCommands.
+func (s *WakeAuthorization) GetAllowedCommands() OptNilStringArray {
+	return s.AllowedCommands
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *WakeAuthorization) GetEnabled() bool {
+	return s.Enabled
+}
+
+// GetNote returns the value of Note.
+func (s *WakeAuthorization) GetNote() OptNilString {
+	return s.Note
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *WakeAuthorization) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// SetID sets the value of ID.
+func (s *WakeAuthorization) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetRecipientEndpointID sets the value of RecipientEndpointID.
+func (s *WakeAuthorization) SetRecipientEndpointID(val uuid.UUID) {
+	s.RecipientEndpointID = val
+}
+
+// SetAllowedSenderDomain sets the value of AllowedSenderDomain.
+func (s *WakeAuthorization) SetAllowedSenderDomain(val string) {
+	s.AllowedSenderDomain = val
+}
+
+// SetAllowedSenderAddress sets the value of AllowedSenderAddress.
+func (s *WakeAuthorization) SetAllowedSenderAddress(val OptNilString) {
+	s.AllowedSenderAddress = val
+}
+
+// SetAllowedCommands sets the value of AllowedCommands.
+func (s *WakeAuthorization) SetAllowedCommands(val OptNilStringArray) {
+	s.AllowedCommands = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *WakeAuthorization) SetEnabled(val bool) {
+	s.Enabled = val
+}
+
+// SetNote sets the value of Note.
+func (s *WakeAuthorization) SetNote(val OptNilString) {
+	s.Note = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *WakeAuthorization) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// A recorded wake.dispatch interaction (audit row).
+// Ref: #/components/schemas/WakeDispatch
+type WakeDispatch struct {
+	ID                  uuid.UUID      `json:"id"`
+	WireID              string         `json:"wire_id"`
+	Role                string         `json:"role"`
+	State               string         `json:"state"`
+	Outcome             OptNilString   `json:"outcome"`
+	Awaiting            OptNilString   `json:"awaiting"`
+	CounterpartyAddress string         `json:"counterparty_address"`
+	OurAddress          string         `json:"our_address"`
+	StepCount           OptInt         `json:"step_count"`
+	CreatedAt           time.Time      `json:"created_at"`
+	CompletedAt         OptNilDateTime `json:"completed_at"`
+}
+
+// GetID returns the value of ID.
+func (s *WakeDispatch) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetWireID returns the value of WireID.
+func (s *WakeDispatch) GetWireID() string {
+	return s.WireID
+}
+
+// GetRole returns the value of Role.
+func (s *WakeDispatch) GetRole() string {
+	return s.Role
+}
+
+// GetState returns the value of State.
+func (s *WakeDispatch) GetState() string {
+	return s.State
+}
+
+// GetOutcome returns the value of Outcome.
+func (s *WakeDispatch) GetOutcome() OptNilString {
+	return s.Outcome
+}
+
+// GetAwaiting returns the value of Awaiting.
+func (s *WakeDispatch) GetAwaiting() OptNilString {
+	return s.Awaiting
+}
+
+// GetCounterpartyAddress returns the value of CounterpartyAddress.
+func (s *WakeDispatch) GetCounterpartyAddress() string {
+	return s.CounterpartyAddress
+}
+
+// GetOurAddress returns the value of OurAddress.
+func (s *WakeDispatch) GetOurAddress() string {
+	return s.OurAddress
+}
+
+// GetStepCount returns the value of StepCount.
+func (s *WakeDispatch) GetStepCount() OptInt {
+	return s.StepCount
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *WakeDispatch) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetCompletedAt returns the value of CompletedAt.
+func (s *WakeDispatch) GetCompletedAt() OptNilDateTime {
+	return s.CompletedAt
+}
+
+// SetID sets the value of ID.
+func (s *WakeDispatch) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetWireID sets the value of WireID.
+func (s *WakeDispatch) SetWireID(val string) {
+	s.WireID = val
+}
+
+// SetRole sets the value of Role.
+func (s *WakeDispatch) SetRole(val string) {
+	s.Role = val
+}
+
+// SetState sets the value of State.
+func (s *WakeDispatch) SetState(val string) {
+	s.State = val
+}
+
+// SetOutcome sets the value of Outcome.
+func (s *WakeDispatch) SetOutcome(val OptNilString) {
+	s.Outcome = val
+}
+
+// SetAwaiting sets the value of Awaiting.
+func (s *WakeDispatch) SetAwaiting(val OptNilString) {
+	s.Awaiting = val
+}
+
+// SetCounterpartyAddress sets the value of CounterpartyAddress.
+func (s *WakeDispatch) SetCounterpartyAddress(val string) {
+	s.CounterpartyAddress = val
+}
+
+// SetOurAddress sets the value of OurAddress.
+func (s *WakeDispatch) SetOurAddress(val string) {
+	s.OurAddress = val
+}
+
+// SetStepCount sets the value of StepCount.
+func (s *WakeDispatch) SetStepCount(val OptInt) {
+	s.StepCount = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *WakeDispatch) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetCompletedAt sets the value of CompletedAt.
+func (s *WakeDispatch) SetCompletedAt(val OptNilDateTime) {
+	s.CompletedAt = val
+}
+
+// A cron schedule that sends a wake.dispatch command to a function.
+// Ref: #/components/schemas/WakeSchedule
+type WakeSchedule struct {
+	ID uuid.UUID `json:"id"`
+	// The sending identity the wake is signed as.
+	FromAddress OptNilString `json:"from_address"`
+	// The function address the wake is delivered to.
+	TargetAddress string              `json:"target_address"`
+	Command       string              `json:"command"`
+	Args          OptWakeScheduleArgs `json:"args"`
+	// 5-field cron expression.
+	CronExpr string `json:"cron_expr"`
+	// IANA timezone the cron is evaluated in.
+	Timezone  string         `json:"timezone"`
+	NextRunAt time.Time      `json:"next_run_at"`
+	LastRunAt OptNilDateTime `json:"last_run_at"`
+	Enabled   bool           `json:"enabled"`
+	Note      OptNilString   `json:"note"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *WakeSchedule) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *WakeSchedule) GetFromAddress() OptNilString {
+	return s.FromAddress
+}
+
+// GetTargetAddress returns the value of TargetAddress.
+func (s *WakeSchedule) GetTargetAddress() string {
+	return s.TargetAddress
+}
+
+// GetCommand returns the value of Command.
+func (s *WakeSchedule) GetCommand() string {
+	return s.Command
+}
+
+// GetArgs returns the value of Args.
+func (s *WakeSchedule) GetArgs() OptWakeScheduleArgs {
+	return s.Args
+}
+
+// GetCronExpr returns the value of CronExpr.
+func (s *WakeSchedule) GetCronExpr() string {
+	return s.CronExpr
+}
+
+// GetTimezone returns the value of Timezone.
+func (s *WakeSchedule) GetTimezone() string {
+	return s.Timezone
+}
+
+// GetNextRunAt returns the value of NextRunAt.
+func (s *WakeSchedule) GetNextRunAt() time.Time {
+	return s.NextRunAt
+}
+
+// GetLastRunAt returns the value of LastRunAt.
+func (s *WakeSchedule) GetLastRunAt() OptNilDateTime {
+	return s.LastRunAt
+}
+
+// GetEnabled returns the value of Enabled.
+func (s *WakeSchedule) GetEnabled() bool {
+	return s.Enabled
+}
+
+// GetNote returns the value of Note.
+func (s *WakeSchedule) GetNote() OptNilString {
+	return s.Note
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *WakeSchedule) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *WakeSchedule) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *WakeSchedule) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *WakeSchedule) SetFromAddress(val OptNilString) {
+	s.FromAddress = val
+}
+
+// SetTargetAddress sets the value of TargetAddress.
+func (s *WakeSchedule) SetTargetAddress(val string) {
+	s.TargetAddress = val
+}
+
+// SetCommand sets the value of Command.
+func (s *WakeSchedule) SetCommand(val string) {
+	s.Command = val
+}
+
+// SetArgs sets the value of Args.
+func (s *WakeSchedule) SetArgs(val OptWakeScheduleArgs) {
+	s.Args = val
+}
+
+// SetCronExpr sets the value of CronExpr.
+func (s *WakeSchedule) SetCronExpr(val string) {
+	s.CronExpr = val
+}
+
+// SetTimezone sets the value of Timezone.
+func (s *WakeSchedule) SetTimezone(val string) {
+	s.Timezone = val
+}
+
+// SetNextRunAt sets the value of NextRunAt.
+func (s *WakeSchedule) SetNextRunAt(val time.Time) {
+	s.NextRunAt = val
+}
+
+// SetLastRunAt sets the value of LastRunAt.
+func (s *WakeSchedule) SetLastRunAt(val OptNilDateTime) {
+	s.LastRunAt = val
+}
+
+// SetEnabled sets the value of Enabled.
+func (s *WakeSchedule) SetEnabled(val bool) {
+	s.Enabled = val
+}
+
+// SetNote sets the value of Note.
+func (s *WakeSchedule) SetNote(val OptNilString) {
+	s.Note = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *WakeSchedule) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *WakeSchedule) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+type WakeScheduleArgs map[string]jx.Raw
+
+func (s *WakeScheduleArgs) init() WakeScheduleArgs {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
 // Ref: #/components/schemas/WebhookSecret
 type WebhookSecret struct {

@@ -11005,6 +11005,929 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "create-wake-authorization",
+    "description": "Grant a sender domain (and optionally a specific address and command set)\npermission to wake a target function. The domain must be fully-qualified.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createWakeAuthorization",
+    "path": "/wake/authorizations",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recipient_endpoint_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "allowed_sender_domain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "description": "Fully-qualified sender domain (at least two labels)."
+        },
+        "allowed_sender_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Optional specific sender address to pin the grant to."
+        },
+        "allowed_commands": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": "Optional command allowlist; null = any command."
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "recipient_endpoint_id",
+        "allowed_sender_domain"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "A per-target allowlist grant authorizing a sender to wake a function.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "recipient_endpoint_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "allowed_sender_domain": {
+          "type": "string"
+        },
+        "allowed_sender_address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "allowed_commands": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "recipient_endpoint_id",
+        "allowed_sender_domain",
+        "enabled",
+        "created_at"
+      ]
+    },
+    "sdkName": "createWakeAuthorization",
+    "summary": "Create a wake authorization",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "create-wake-schedule",
+    "description": "Create a cron schedule that sends a wake.dispatch command to one of your\nown function addresses. `from` and `to` must differ (no self-dispatch);\nthe cron expression and IANA timezone are validated and the first fire\ntime is computed without firing immediately.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createWakeSchedule",
+    "path": "/wake/schedules",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "from_address": {
+          "type": "string",
+          "description": "Sending identity (must be a domain the org can sign)."
+        },
+        "target_address": {
+          "type": "string",
+          "description": "Your function address (must differ from from_address)."
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Optional JSON object passed through to the woken function."
+        },
+        "cron_expr": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "default": "UTC"
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "from_address",
+        "target_address",
+        "command",
+        "cron_expr"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "A cron schedule that sends a wake.dispatch command to a function.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "from_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The sending identity the wake is signed as."
+        },
+        "target_address": {
+          "type": "string",
+          "description": "The function address the wake is delivered to."
+        },
+        "command": {
+          "type": "string"
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "cron_expr": {
+          "type": "string",
+          "description": "5-field cron expression."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone the cron is evaluated in."
+        },
+        "next_run_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_run_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "target_address",
+        "command",
+        "cron_expr",
+        "timezone",
+        "next_run_at",
+        "enabled",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "sdkName": "createWakeSchedule",
+    "summary": "Create a wake schedule",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-wake-authorization",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteWakeAuthorization",
+    "path": "/wake/authorizations/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "deleteWakeAuthorization",
+    "summary": "Delete a wake authorization",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-wake-schedule",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteWakeSchedule",
+    "path": "/wake/schedules/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "deleteWakeSchedule",
+    "summary": "Delete a wake schedule",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-wake-schedule",
+    "description": null,
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getWakeSchedule",
+    "path": "/wake/schedules/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "A cron schedule that sends a wake.dispatch command to a function.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "from_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The sending identity the wake is signed as."
+        },
+        "target_address": {
+          "type": "string",
+          "description": "The function address the wake is delivered to."
+        },
+        "command": {
+          "type": "string"
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "cron_expr": {
+          "type": "string",
+          "description": "5-field cron expression."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone the cron is evaluated in."
+        },
+        "next_run_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_run_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "target_address",
+        "command",
+        "cron_expr",
+        "timezone",
+        "next_run_at",
+        "enabled",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "sdkName": "getWakeSchedule",
+    "summary": "Get a wake schedule",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-wake-authorizations",
+    "description": "Returns the per-target allowlist grants that authorize which senders may\nwake a function. Optionally filter by the target endpoint.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listWakeAuthorizations",
+    "path": "/wake/authorizations",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Only return grants for this target endpoint",
+        "enum": null,
+        "name": "recipient_endpoint_id",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "A per-target allowlist grant authorizing a sender to wake a function.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipient_endpoint_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "allowed_sender_domain": {
+            "type": "string"
+          },
+          "allowed_sender_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "allowed_commands": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "recipient_endpoint_id",
+          "allowed_sender_domain",
+          "enabled",
+          "created_at"
+        ]
+      }
+    },
+    "sdkName": "listWakeAuthorizations",
+    "summary": "List wake authorizations",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-wake-dispatches",
+    "description": "Read-only audit of recent wake.dispatch interactions for the org.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listWakeDispatches",
+    "path": "/wake/dispatches",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "default": 50,
+        "description": "Maximum number of rows to return (1-200, default 50)",
+        "enum": null,
+        "maximum": 200,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "A recorded wake.dispatch interaction (audit row).",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "wire_id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "awaiting": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "counterparty_address": {
+            "type": "string"
+          },
+          "our_address": {
+            "type": "string"
+          },
+          "step_count": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "wire_id",
+          "role",
+          "state",
+          "counterparty_address",
+          "our_address",
+          "created_at"
+        ]
+      }
+    },
+    "sdkName": "listWakeDispatches",
+    "summary": "List recent wake dispatches",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-wake-schedules",
+    "description": "Returns the org's wake.dispatch schedules.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listWakeSchedules",
+    "path": "/wake/schedules",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "A cron schedule that sends a wake.dispatch command to a function.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from_address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The sending identity the wake is signed as."
+          },
+          "target_address": {
+            "type": "string",
+            "description": "The function address the wake is delivered to."
+          },
+          "command": {
+            "type": "string"
+          },
+          "args": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "cron_expr": {
+            "type": "string",
+            "description": "5-field cron expression."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone the cron is evaluated in."
+          },
+          "next_run_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_run_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "target_address",
+          "command",
+          "cron_expr",
+          "timezone",
+          "next_run_at",
+          "enabled",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    },
+    "sdkName": "listWakeSchedules",
+    "summary": "List wake schedules",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "run-wake-schedule",
+    "description": "Fire the schedule immediately, sending one wake.dispatch via the same\nsigned-send path as a scheduled fire. Does not change the schedule's next\nfire time.\n",
+    "hasJsonBody": false,
+    "method": "POST",
+    "operationId": "runWakeSchedule",
+    "path": "/wake/schedules/{id}/run",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "sdkName": "runWakeSchedule",
+    "summary": "Run a wake schedule now",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-wake-authorization",
+    "description": "Toggle a wake authorization's enabled state.",
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "updateWakeAuthorization",
+    "path": "/wake/authorizations/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "A per-target allowlist grant authorizing a sender to wake a function.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "recipient_endpoint_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "allowed_sender_domain": {
+          "type": "string"
+        },
+        "allowed_sender_address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "allowed_commands": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "recipient_endpoint_id",
+        "allowed_sender_domain",
+        "enabled",
+        "created_at"
+      ]
+    },
+    "sdkName": "updateWakeAuthorization",
+    "summary": "Update a wake authorization",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-wake-schedule",
+    "description": "Update a schedule's command, args, cadence, addresses, note, or enabled\nstate. Changing the cadence (or re-enabling) recomputes the next fire time.\n",
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "updateWakeSchedule",
+    "path": "/wake/schedules/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "cron_expr": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "from_address": {
+          "type": "string"
+        },
+        "target_address": {
+          "type": "string"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "A cron schedule that sends a wake.dispatch command to a function.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "from_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The sending identity the wake is signed as."
+        },
+        "target_address": {
+          "type": "string",
+          "description": "The function address the wake is delivered to."
+        },
+        "command": {
+          "type": "string"
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "cron_expr": {
+          "type": "string",
+          "description": "5-field cron expression."
+        },
+        "timezone": {
+          "type": "string",
+          "description": "IANA timezone the cron is evaluated in."
+        },
+        "next_run_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_run_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "target_address",
+        "command",
+        "cron_expr",
+        "timezone",
+        "next_run_at",
+        "enabled",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "sdkName": "updateWakeSchedule",
+    "summary": "Update a wake schedule",
+    "tag": "Wake",
+    "tagCommand": "wake"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "list-deliveries",
     "description": "Returns a paginated list of webhook delivery attempts. Each delivery\nincludes a nested `email` object with sender, recipient, and subject.\n",

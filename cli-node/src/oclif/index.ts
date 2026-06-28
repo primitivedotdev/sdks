@@ -76,6 +76,17 @@ import SignupCommand, {
   SignupResendCommand,
   SignupStatusCommand,
 } from "./commands/signup.js";
+import WakeAuthorizationsCreateCommand from "./commands/wake-authorizations-create.js";
+import WakeAuthorizationsDeleteCommand from "./commands/wake-authorizations-delete.js";
+import WakeAuthorizationsListCommand from "./commands/wake-authorizations-list.js";
+import WakeAuthorizationsUpdateCommand from "./commands/wake-authorizations-update.js";
+import WakeDispatchesListCommand from "./commands/wake-dispatches-list.js";
+import WakeSchedulesCreateCommand from "./commands/wake-schedules-create.js";
+import WakeSchedulesDeleteCommand from "./commands/wake-schedules-delete.js";
+import WakeSchedulesGetCommand from "./commands/wake-schedules-get.js";
+import WakeSchedulesListCommand from "./commands/wake-schedules-list.js";
+import WakeSchedulesRunCommand from "./commands/wake-schedules-run.js";
+import WakeSchedulesUpdateCommand from "./commands/wake-schedules-update.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
 import { readCompletionFunction } from "./shell-completion-script.js";
@@ -646,4 +657,15 @@ export const COMMANDS: Record<string, typeof Command> = {
   // pay-email-step users can get the correctly-shaped challenge without
   // hand-mapping the envelope; `pay-email --in-reply-to` derives it internally.
   "payments:challenge-from-email": PaymentsChallengeFromEmailCommand,
+  "wake:schedules:list": WakeSchedulesListCommand,
+  "wake:schedules:create": WakeSchedulesCreateCommand,
+  "wake:schedules:get": WakeSchedulesGetCommand,
+  "wake:schedules:update": WakeSchedulesUpdateCommand,
+  "wake:schedules:delete": WakeSchedulesDeleteCommand,
+  "wake:schedules:run": WakeSchedulesRunCommand,
+  "wake:authorizations:list": WakeAuthorizationsListCommand,
+  "wake:authorizations:create": WakeAuthorizationsCreateCommand,
+  "wake:authorizations:update": WakeAuthorizationsUpdateCommand,
+  "wake:authorizations:delete": WakeAuthorizationsDeleteCommand,
+  "wake:dispatches:list": WakeDispatchesListCommand,
 };

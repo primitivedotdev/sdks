@@ -19,6 +19,14 @@ func (s *CreateEndpointInput) setDefaults() {
 }
 
 // setDefaults set default value of fields.
+func (s *CreateWakeScheduleInput) setDefaults() {
+	{
+		val := string("UTC")
+		s.Timezone.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *SemanticSearchInput) setDefaults() {
 	{
 		val := SemanticSearchInputMode("hybrid")

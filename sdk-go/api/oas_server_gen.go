@@ -177,6 +177,22 @@ type Handler interface {
 	//
 	// POST /routes
 	CreateRoute(ctx context.Context, req *CreateRouteInput) (CreateRouteRes, error)
+	// CreateWakeAuthorization implements createWakeAuthorization operation.
+	//
+	// Grant a sender domain (and optionally a specific address and command set)
+	// permission to wake a target function. The domain must be fully-qualified.
+	//
+	// POST /wake/authorizations
+	CreateWakeAuthorization(ctx context.Context, req *CreateWakeAuthorizationInput) (CreateWakeAuthorizationRes, error)
+	// CreateWakeSchedule implements createWakeSchedule operation.
+	//
+	// Create a cron schedule that sends a wake.dispatch command to one of your
+	// own function addresses. `from` and `to` must differ (no self-dispatch);
+	// the cron expression and IANA timezone are validated and the first fire
+	// time is computed without firing immediately.
+	//
+	// POST /wake/schedules
+	CreateWakeSchedule(ctx context.Context, req *CreateWakeScheduleInput) (CreateWakeScheduleRes, error)
 	// DecideRegistryRequest implements decideRegistryRequest operation.
 	//
 	// Approve or reject a publication request.
@@ -249,6 +265,18 @@ type Handler interface {
 	//
 	// DELETE /routes/{id}
 	DeleteRoute(ctx context.Context, params DeleteRouteParams) (DeleteRouteRes, error)
+	// DeleteWakeAuthorization implements deleteWakeAuthorization operation.
+	//
+	// Delete a wake authorization.
+	//
+	// DELETE /wake/authorizations/{id}
+	DeleteWakeAuthorization(ctx context.Context, params DeleteWakeAuthorizationParams) (DeleteWakeAuthorizationRes, error)
+	// DeleteWakeSchedule implements deleteWakeSchedule operation.
+	//
+	// Delete a wake schedule.
+	//
+	// DELETE /wake/schedules/{id}
+	DeleteWakeSchedule(ctx context.Context, params DeleteWakeScheduleParams) (DeleteWakeScheduleRes, error)
 	// DiscardEmailContent implements discardEmailContent operation.
 	//
 	// Permanently deletes the email's raw bytes, parsed body (text + HTML),
@@ -484,6 +512,12 @@ type Handler interface {
 	//
 	// GET /threads/{id}
 	GetThread(ctx context.Context, params GetThreadParams) (GetThreadRes, error)
+	// GetWakeSchedule implements getWakeSchedule operation.
+	//
+	// Get a wake schedule.
+	//
+	// GET /wake/schedules/{id}
+	GetWakeSchedule(ctx context.Context, params GetWakeScheduleParams) (GetWakeScheduleRes, error)
 	// GetWebhookSecret implements getWebhookSecret operation.
 	//
 	// Returns the webhook signing secret for your account. If no
@@ -655,6 +689,25 @@ type Handler interface {
 	//
 	// GET /sent-emails
 	ListSentEmails(ctx context.Context, params ListSentEmailsParams) (ListSentEmailsRes, error)
+	// ListWakeAuthorizations implements listWakeAuthorizations operation.
+	//
+	// Returns the per-target allowlist grants that authorize which senders may
+	// wake a function. Optionally filter by the target endpoint.
+	//
+	// GET /wake/authorizations
+	ListWakeAuthorizations(ctx context.Context, params ListWakeAuthorizationsParams) (ListWakeAuthorizationsRes, error)
+	// ListWakeDispatches implements listWakeDispatches operation.
+	//
+	// Read-only audit of recent wake.dispatch interactions for the org.
+	//
+	// GET /wake/dispatches
+	ListWakeDispatches(ctx context.Context, params ListWakeDispatchesParams) (ListWakeDispatchesRes, error)
+	// ListWakeSchedules implements listWakeSchedules operation.
+	//
+	// Returns the org's wake.dispatch schedules.
+	//
+	// GET /wake/schedules
+	ListWakeSchedules(ctx context.Context) (ListWakeSchedulesRes, error)
 	// PayChallenge implements payChallenge operation.
 	//
 	// Settle a challenge addressed to your org as payer. The request body
@@ -767,6 +820,14 @@ type Handler interface {
 	//
 	// POST /account/webhook-secret/rotate
 	RotateWebhookSecret(ctx context.Context) (RotateWebhookSecretRes, error)
+	// RunWakeSchedule implements runWakeSchedule operation.
+	//
+	// Fire the schedule immediately, sending one wake.dispatch via the same
+	// signed-send path as a scheduled fire. Does not change the schedule's next
+	// fire time.
+	//
+	// POST /wake/schedules/{id}/run
+	RunWakeSchedule(ctx context.Context, params RunWakeScheduleParams) (RunWakeScheduleRes, error)
 	// SearchEmails implements searchEmails operation.
 	//
 	// Searches inbound emails with structured filters and optional
@@ -1004,6 +1065,19 @@ type Handler interface {
 	//
 	// PUT /x402/spend-policy
 	UpdateSpendPolicy(ctx context.Context, req *UpdateSpendPolicyInput) (UpdateSpendPolicyRes, error)
+	// UpdateWakeAuthorization implements updateWakeAuthorization operation.
+	//
+	// Toggle a wake authorization's enabled state.
+	//
+	// PATCH /wake/authorizations/{id}
+	UpdateWakeAuthorization(ctx context.Context, req *UpdateWakeAuthorizationInput, params UpdateWakeAuthorizationParams) (UpdateWakeAuthorizationRes, error)
+	// UpdateWakeSchedule implements updateWakeSchedule operation.
+	//
+	// Update a schedule's command, args, cadence, addresses, note, or enabled
+	// state. Changing the cadence (or re-enabling) recomputes the next fire time.
+	//
+	// PATCH /wake/schedules/{id}
+	UpdateWakeSchedule(ctx context.Context, req *UpdateWakeScheduleInput, params UpdateWakeScheduleParams) (UpdateWakeScheduleRes, error)
 	// VerifyAgentClaim implements verifyAgentClaim operation.
 	//
 	// Confirms the verification code emailed by `/agent/claim/start` and

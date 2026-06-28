@@ -174,6 +174,11 @@ tags:
       never holds funds. The payee registers a payout address and creates a
       challenge; the payer signs and settles it under a configurable spend
       policy (kill-switch, per-payment and per-day caps, payee allowlist).
+  - name: Wake
+    description: |
+      Wake scheduling: schedule and send typed wake commands to your own
+      functions over real DKIM-signed email on a cron cadence, and manage the
+      per-target allowlist that authorizes which senders may wake a function.
   - name: Webhook Deliveries
     description: View and replay webhook delivery attempts
   - name: Functions
@@ -2142,6 +2147,313 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  # ---------------------------------------------------------------------------
+  # Wake Scheduling
+  # ---------------------------------------------------------------------------
+  /wake/schedules:
+    get:
+      operationId: listWakeSchedules
+      summary: List wake schedules
+      description: Returns the org's wake.dispatch schedules.
+      tags: [Wake]
+      responses:
+        '200':
+          description: List of wake schedules
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/WakeSchedule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createWakeSchedule
+      summary: Create a wake schedule
+      description: |
+        Create a cron schedule that sends a wake.dispatch command to one of your
+        own function addresses. `from` and `to` must differ (no self-dispatch);
+        the cron expression and IANA timezone are validated and the first fire
+        time is computed without firing immediately.
+      tags: [Wake]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWakeScheduleInput'
+      responses:
+        '201':
+          description: Wake schedule created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WakeSchedule'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /wake/schedules/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    get:
+      operationId: getWakeSchedule
+      summary: Get a wake schedule
+      tags: [Wake]
+      responses:
+        '200':
+          description: The wake schedule
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WakeSchedule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: updateWakeSchedule
+      summary: Update a wake schedule
+      description: |
+        Update a schedule's command, args, cadence, addresses, note, or enabled
+        state. Changing the cadence (or re-enabling) recomputes the next fire time.
+      tags: [Wake]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWakeScheduleInput'
+      responses:
+        '200':
+          description: Updated wake schedule
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WakeSchedule'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteWakeSchedule
+      summary: Delete a wake schedule
+      tags: [Wake]
+      responses:
+        '200':
+          $ref: '#/components/responses/Deleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /wake/schedules/{id}/run:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    post:
+      operationId: runWakeSchedule
+      summary: Run a wake schedule now
+      description: |
+        Fire the schedule immediately, sending one wake.dispatch via the same
+        signed-send path as a scheduled fire. Does not change the schedule's next
+        fire time.
+      tags: [Wake]
+      responses:
+        '200':
+          description: The wake interaction that was emitted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: true
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /wake/authorizations:
+    get:
+      operationId: listWakeAuthorizations
+      summary: List wake authorizations
+      description: |
+        Returns the per-target allowlist grants that authorize which senders may
+        wake a function. Optionally filter by the target endpoint.
+      tags: [Wake]
+      parameters:
+        - name: recipient_endpoint_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Only return grants for this target endpoint
+      responses:
+        '200':
+          description: List of wake authorizations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/WakeAuthorization'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createWakeAuthorization
+      summary: Create a wake authorization
+      description: |
+        Grant a sender domain (and optionally a specific address and command set)
+        permission to wake a target function. The domain must be fully-qualified.
+      tags: [Wake]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWakeAuthorizationInput'
+      responses:
+        '201':
+          description: Wake authorization created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WakeAuthorization'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /wake/authorizations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+
+    patch:
+      operationId: updateWakeAuthorization
+      summary: Update a wake authorization
+      description: Toggle a wake authorization's enabled state.
+      tags: [Wake]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWakeAuthorizationInput'
+      responses:
+        '200':
+          description: Updated wake authorization
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WakeAuthorization'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteWakeAuthorization
+      summary: Delete a wake authorization
+      tags: [Wake]
+      responses:
+        '200':
+          $ref: '#/components/responses/Deleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /wake/dispatches:
+    get:
+      operationId: listWakeDispatches
+      summary: List recent wake dispatches
+      description: Read-only audit of recent wake.dispatch interactions for the org.
+      tags: [Wake]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+          description: Maximum number of rows to return (1-200, default 50)
+      responses:
+        '200':
+          description: List of recent wake dispatches
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/WakeDispatch'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   # ---------------------------------------------------------------------------
   # Recipient Routing
@@ -8035,6 +8347,206 @@ components:
         enabled:
           type: boolean
       required: [enabled]
+
+    # -------------------------------------------------------------------------
+    # Wake Scheduling
+    # -------------------------------------------------------------------------
+    WakeSchedule:
+      type: object
+      description: A cron schedule that sends a wake.dispatch command to a function.
+      properties:
+        id:
+          type: string
+          format: uuid
+        from_address:
+          type: [string, 'null']
+          description: The sending identity the wake is signed as.
+        target_address:
+          type: string
+          description: The function address the wake is delivered to.
+        command:
+          type: string
+        args:
+          type: object
+          additionalProperties: true
+        cron_expr:
+          type: string
+          description: 5-field cron expression.
+        timezone:
+          type: string
+          description: IANA timezone the cron is evaluated in.
+        next_run_at:
+          type: string
+          format: date-time
+        last_run_at:
+          type: [string, 'null']
+          format: date-time
+        enabled:
+          type: boolean
+        note:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, target_address, command, cron_expr, timezone, next_run_at, enabled, created_at, updated_at]
+
+    CreateWakeScheduleInput:
+      type: object
+      additionalProperties: false
+      properties:
+        from_address:
+          type: string
+          description: Sending identity (must be a domain the org can sign).
+        target_address:
+          type: string
+          description: Your function address (must differ from from_address).
+        command:
+          type: string
+          minLength: 1
+          maxLength: 200
+        args:
+          type: object
+          additionalProperties: true
+          description: Optional JSON object passed through to the woken function.
+        cron_expr:
+          type: string
+          minLength: 1
+          maxLength: 120
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
+          default: UTC
+        note:
+          type: string
+          maxLength: 2000
+      required: [from_address, target_address, command, cron_expr]
+
+    UpdateWakeScheduleInput:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+        command:
+          type: string
+          minLength: 1
+          maxLength: 200
+        args:
+          type: object
+          additionalProperties: true
+        cron_expr:
+          type: string
+          minLength: 1
+          maxLength: 120
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
+        from_address:
+          type: string
+        target_address:
+          type: string
+        note:
+          type: [string, 'null']
+          maxLength: 2000
+
+    WakeAuthorization:
+      type: object
+      description: A per-target allowlist grant authorizing a sender to wake a function.
+      properties:
+        id:
+          type: string
+          format: uuid
+        recipient_endpoint_id:
+          type: string
+          format: uuid
+        allowed_sender_domain:
+          type: string
+        allowed_sender_address:
+          type: [string, 'null']
+        allowed_commands:
+          type: [array, 'null']
+          items:
+            type: string
+        enabled:
+          type: boolean
+        note:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+      required: [id, recipient_endpoint_id, allowed_sender_domain, enabled, created_at]
+
+    CreateWakeAuthorizationInput:
+      type: object
+      additionalProperties: false
+      properties:
+        recipient_endpoint_id:
+          type: string
+          format: uuid
+        allowed_sender_domain:
+          type: string
+          minLength: 1
+          maxLength: 253
+          description: Fully-qualified sender domain (at least two labels).
+        allowed_sender_address:
+          type: [string, 'null']
+          description: Optional specific sender address to pin the grant to.
+        allowed_commands:
+          type: [array, 'null']
+          maxItems: 64
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+          description: Optional command allowlist; null = any command.
+        note:
+          type: string
+          maxLength: 2000
+      required: [recipient_endpoint_id, allowed_sender_domain]
+
+    UpdateWakeAuthorizationInput:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+      required: [enabled]
+
+    WakeDispatch:
+      type: object
+      description: A recorded wake.dispatch interaction (audit row).
+      properties:
+        id:
+          type: string
+          format: uuid
+        wire_id:
+          type: string
+        role:
+          type: string
+        state:
+          type: string
+        outcome:
+          type: [string, 'null']
+        awaiting:
+          type: [string, 'null']
+        counterparty_address:
+          type: string
+        our_address:
+          type: string
+        step_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: [string, 'null']
+          format: date-time
+      required: [id, wire_id, role, state, counterparty_address, our_address, created_at]
 
     # -------------------------------------------------------------------------
     # Recipient Routing

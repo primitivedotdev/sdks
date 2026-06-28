@@ -221,6 +221,28 @@ func (UnimplementedHandler) CreateRoute(ctx context.Context, req *CreateRouteInp
 	return r, ht.ErrNotImplemented
 }
 
+// CreateWakeAuthorization implements createWakeAuthorization operation.
+//
+// Grant a sender domain (and optionally a specific address and command set)
+// permission to wake a target function. The domain must be fully-qualified.
+//
+// POST /wake/authorizations
+func (UnimplementedHandler) CreateWakeAuthorization(ctx context.Context, req *CreateWakeAuthorizationInput) (r CreateWakeAuthorizationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateWakeSchedule implements createWakeSchedule operation.
+//
+// Create a cron schedule that sends a wake.dispatch command to one of your
+// own function addresses. `from` and `to` must differ (no self-dispatch);
+// the cron expression and IANA timezone are validated and the first fire
+// time is computed without firing immediately.
+//
+// POST /wake/schedules
+func (UnimplementedHandler) CreateWakeSchedule(ctx context.Context, req *CreateWakeScheduleInput) (r CreateWakeScheduleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DecideRegistryRequest implements decideRegistryRequest operation.
 //
 // Approve or reject a publication request.
@@ -320,6 +342,24 @@ func (UnimplementedHandler) DeleteOrgSecret(ctx context.Context, params DeleteOr
 //
 // DELETE /routes/{id}
 func (UnimplementedHandler) DeleteRoute(ctx context.Context, params DeleteRouteParams) (r DeleteRouteRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteWakeAuthorization implements deleteWakeAuthorization operation.
+//
+// Delete a wake authorization.
+//
+// DELETE /wake/authorizations/{id}
+func (UnimplementedHandler) DeleteWakeAuthorization(ctx context.Context, params DeleteWakeAuthorizationParams) (r DeleteWakeAuthorizationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteWakeSchedule implements deleteWakeSchedule operation.
+//
+// Delete a wake schedule.
+//
+// DELETE /wake/schedules/{id}
+func (UnimplementedHandler) DeleteWakeSchedule(ctx context.Context, params DeleteWakeScheduleParams) (r DeleteWakeScheduleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -618,6 +658,15 @@ func (UnimplementedHandler) GetThread(ctx context.Context, params GetThreadParam
 	return r, ht.ErrNotImplemented
 }
 
+// GetWakeSchedule implements getWakeSchedule operation.
+//
+// Get a wake schedule.
+//
+// GET /wake/schedules/{id}
+func (UnimplementedHandler) GetWakeSchedule(ctx context.Context, params GetWakeScheduleParams) (r GetWakeScheduleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetWebhookSecret implements getWebhookSecret operation.
 //
 // Returns the webhook signing secret for your account. If no
@@ -840,6 +889,34 @@ func (UnimplementedHandler) ListSentEmails(ctx context.Context, params ListSentE
 	return r, ht.ErrNotImplemented
 }
 
+// ListWakeAuthorizations implements listWakeAuthorizations operation.
+//
+// Returns the per-target allowlist grants that authorize which senders may
+// wake a function. Optionally filter by the target endpoint.
+//
+// GET /wake/authorizations
+func (UnimplementedHandler) ListWakeAuthorizations(ctx context.Context, params ListWakeAuthorizationsParams) (r ListWakeAuthorizationsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListWakeDispatches implements listWakeDispatches operation.
+//
+// Read-only audit of recent wake.dispatch interactions for the org.
+//
+// GET /wake/dispatches
+func (UnimplementedHandler) ListWakeDispatches(ctx context.Context, params ListWakeDispatchesParams) (r ListWakeDispatchesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListWakeSchedules implements listWakeSchedules operation.
+//
+// Returns the org's wake.dispatch schedules.
+//
+// GET /wake/schedules
+func (UnimplementedHandler) ListWakeSchedules(ctx context.Context) (r ListWakeSchedulesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // PayChallenge implements payChallenge operation.
 //
 // Settle a challenge addressed to your org as payer. The request body
@@ -985,6 +1062,17 @@ func (UnimplementedHandler) ResolveRegistryHandle(ctx context.Context, params Re
 //
 // POST /account/webhook-secret/rotate
 func (UnimplementedHandler) RotateWebhookSecret(ctx context.Context) (r RotateWebhookSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RunWakeSchedule implements runWakeSchedule operation.
+//
+// Fire the schedule immediately, sending one wake.dispatch via the same
+// signed-send path as a scheduled fire. Does not change the schedule's next
+// fire time.
+//
+// POST /wake/schedules/{id}/run
+func (UnimplementedHandler) RunWakeSchedule(ctx context.Context, params RunWakeScheduleParams) (r RunWakeScheduleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1291,6 +1379,25 @@ func (UnimplementedHandler) UpdateRoute(ctx context.Context, req *UpdateRouteInp
 //
 // PUT /x402/spend-policy
 func (UnimplementedHandler) UpdateSpendPolicy(ctx context.Context, req *UpdateSpendPolicyInput) (r UpdateSpendPolicyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateWakeAuthorization implements updateWakeAuthorization operation.
+//
+// Toggle a wake authorization's enabled state.
+//
+// PATCH /wake/authorizations/{id}
+func (UnimplementedHandler) UpdateWakeAuthorization(ctx context.Context, req *UpdateWakeAuthorizationInput, params UpdateWakeAuthorizationParams) (r UpdateWakeAuthorizationRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateWakeSchedule implements updateWakeSchedule operation.
+//
+// Update a schedule's command, args, cadence, addresses, note, or enabled
+// state. Changing the cadence (or re-enabling) recomputes the next fire time.
+//
+// PATCH /wake/schedules/{id}
+func (UnimplementedHandler) UpdateWakeSchedule(ctx context.Context, req *UpdateWakeScheduleInput, params UpdateWakeScheduleParams) (r UpdateWakeScheduleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
