@@ -5013,6 +5013,13 @@ components:
           items: { type: string, maxLength: 40 }
           maxItems: 20
       required: [address, handle]
+      # The define fields only take effect alongside display_name (which triggers the
+      # inline define). Supplying them without it is rejected rather than silently ignored.
+      dependentRequired:
+        endpoint_id: [display_name]
+        title: [display_name]
+        description: [display_name]
+        tags: [display_name]
 
     PublishAgentResult:
       type: object
