@@ -120,7 +120,9 @@ def sync_detailed(
 
     Args:
         slug (str):
-        body (PublishAgentInput):
+        body (PublishAgentInput): Publish an agent into a registry. When display_name is present
+            the agent identity is defined (create-or-get by address) in the same call before
+            publishing; omit the define fields to publish an already-defined agent.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -154,7 +156,9 @@ def sync(
 
     Args:
         slug (str):
-        body (PublishAgentInput):
+        body (PublishAgentInput): Publish an agent into a registry. When display_name is present
+            the agent identity is defined (create-or-get by address) in the same call before
+            publishing; omit the define fields to publish an already-defined agent.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -183,7 +187,9 @@ async def asyncio_detailed(
 
     Args:
         slug (str):
-        body (PublishAgentInput):
+        body (PublishAgentInput): Publish an agent into a registry. When display_name is present
+            the agent identity is defined (create-or-get by address) in the same call before
+            publishing; omit the define fields to publish an already-defined agent.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -217,7 +223,9 @@ async def asyncio(
 
     Args:
         slug (str):
-        body (PublishAgentInput):
+        body (PublishAgentInput): Publish an agent into a registry. When display_name is present
+            the agent identity is defined (create-or-get by address) in the same call before
+            publishing; omit the define fields to publish an already-defined agent.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

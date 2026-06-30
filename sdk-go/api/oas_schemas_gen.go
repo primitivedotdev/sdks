@@ -3996,9 +3996,13 @@ func (s *DefineAgentCreatedData) SetAddress(val string) {
 
 // Ref: #/components/schemas/DefineAgentInput
 type DefineAgentInput struct {
-	// The agent's globally unique email address; must route to the endpoint.
-	Address     string       `json:"address"`
-	EndpointID  uuid.UUID    `json:"endpoint_id"`
+	// The agent's globally unique email address; mail to it must route to an endpoint the account
+	// controls.
+	Address string `json:"address"`
+	// Optional. The endpoint the agent runs on. Omit it to resolve the endpoint from the address's
+	// routing automatically; supply it to pin a specific endpoint, which is then validated against the
+	// address's route.
+	EndpointID  OptUUID      `json:"endpoint_id"`
 	DisplayName string       `json:"display_name"`
 	Title       OptNilString `json:"title"`
 	Description OptNilString `json:"description"`
@@ -4011,7 +4015,7 @@ func (s *DefineAgentInput) GetAddress() string {
 }
 
 // GetEndpointID returns the value of EndpointID.
-func (s *DefineAgentInput) GetEndpointID() uuid.UUID {
+func (s *DefineAgentInput) GetEndpointID() OptUUID {
 	return s.EndpointID
 }
 
@@ -4041,7 +4045,7 @@ func (s *DefineAgentInput) SetAddress(val string) {
 }
 
 // SetEndpointID sets the value of EndpointID.
-func (s *DefineAgentInput) SetEndpointID(val uuid.UUID) {
+func (s *DefineAgentInput) SetEndpointID(val OptUUID) {
 	s.EndpointID = val
 }
 
@@ -4167,6 +4171,14 @@ type DeleteOrgSecretUnauthorized ErrorResponse
 
 func (*DeleteOrgSecretUnauthorized) deleteOrgSecretRes() {}
 
+type DeleteRegistryNotFound ErrorResponse
+
+func (*DeleteRegistryNotFound) deleteRegistryRes() {}
+
+type DeleteRegistryUnauthorized ErrorResponse
+
+func (*DeleteRegistryUnauthorized) deleteRegistryRes() {}
+
 type DeleteRouteNotFound ErrorResponse
 
 func (*DeleteRouteNotFound) deleteRouteRes() {}
@@ -4222,6 +4234,7 @@ func (*Deleted) deleteEmailRes()             {}
 func (*Deleted) deleteEndpointRes()          {}
 func (*Deleted) deleteFilterRes()            {}
 func (*Deleted) deleteFunctionRes()          {}
+func (*Deleted) deleteRegistryRes()          {}
 func (*Deleted) deleteRouteRes()             {}
 func (*Deleted) deleteWakeAuthorizationRes() {}
 func (*Deleted) deleteWakeScheduleRes()      {}
@@ -16349,11 +16362,21 @@ type PublishAgentForbidden ErrorResponse
 
 func (*PublishAgentForbidden) publishAgentRes() {}
 
+// Publish an agent into a registry. When display_name is present the agent identity is defined
+// (create-or-get by address) in the same call before publishing; omit the define fields to publish
+// an already-defined agent.
 // Ref: #/components/schemas/PublishAgentInput
 type PublishAgentInput struct {
 	Address string `json:"address"`
 	// The registry-scoped name to list the agent under.
 	Handle string `json:"handle"`
+	// Present to define the agent identity before publishing (define + publish in one call).
+	DisplayName OptString `json:"display_name"`
+	// Optional, only used when defining. Omit to resolve the endpoint from the address's routing.
+	EndpointID  OptUUID      `json:"endpoint_id"`
+	Title       OptNilString `json:"title"`
+	Description OptNilString `json:"description"`
+	Tags        []string     `json:"tags"`
 }
 
 // GetAddress returns the value of Address.
@@ -16366,6 +16389,31 @@ func (s *PublishAgentInput) GetHandle() string {
 	return s.Handle
 }
 
+// GetDisplayName returns the value of DisplayName.
+func (s *PublishAgentInput) GetDisplayName() OptString {
+	return s.DisplayName
+}
+
+// GetEndpointID returns the value of EndpointID.
+func (s *PublishAgentInput) GetEndpointID() OptUUID {
+	return s.EndpointID
+}
+
+// GetTitle returns the value of Title.
+func (s *PublishAgentInput) GetTitle() OptNilString {
+	return s.Title
+}
+
+// GetDescription returns the value of Description.
+func (s *PublishAgentInput) GetDescription() OptNilString {
+	return s.Description
+}
+
+// GetTags returns the value of Tags.
+func (s *PublishAgentInput) GetTags() []string {
+	return s.Tags
+}
+
 // SetAddress sets the value of Address.
 func (s *PublishAgentInput) SetAddress(val string) {
 	s.Address = val
@@ -16374,6 +16422,31 @@ func (s *PublishAgentInput) SetAddress(val string) {
 // SetHandle sets the value of Handle.
 func (s *PublishAgentInput) SetHandle(val string) {
 	s.Handle = val
+}
+
+// SetDisplayName sets the value of DisplayName.
+func (s *PublishAgentInput) SetDisplayName(val OptString) {
+	s.DisplayName = val
+}
+
+// SetEndpointID sets the value of EndpointID.
+func (s *PublishAgentInput) SetEndpointID(val OptUUID) {
+	s.EndpointID = val
+}
+
+// SetTitle sets the value of Title.
+func (s *PublishAgentInput) SetTitle(val OptNilString) {
+	s.Title = val
+}
+
+// SetDescription sets the value of Description.
+func (s *PublishAgentInput) SetDescription(val OptNilString) {
+	s.Description = val
+}
+
+// SetTags sets the value of Tags.
+func (s *PublishAgentInput) SetTags(val []string) {
+	s.Tags = val
 }
 
 type PublishAgentNotFound ErrorResponse
@@ -17028,6 +17101,9 @@ type RegistryAgent struct {
 	Tags        []string  `json:"tags"`
 	// The registry-scoped name. Null on the global by-address read.
 	Handle NilString `json:"handle"`
+	// When the agent's address was last confirmed to still route to its endpoint. A freshness signal for
+	// ranking listings; null until the first check.
+	LastReachableAt NilDateTime `json:"last_reachable_at"`
 }
 
 // GetAddress returns the value of Address.
@@ -17060,6 +17136,11 @@ func (s *RegistryAgent) GetHandle() NilString {
 	return s.Handle
 }
 
+// GetLastReachableAt returns the value of LastReachableAt.
+func (s *RegistryAgent) GetLastReachableAt() NilDateTime {
+	return s.LastReachableAt
+}
+
 // SetAddress sets the value of Address.
 func (s *RegistryAgent) SetAddress(val string) {
 	s.Address = val
@@ -17088,6 +17169,11 @@ func (s *RegistryAgent) SetTags(val []string) {
 // SetHandle sets the value of Handle.
 func (s *RegistryAgent) SetHandle(val NilString) {
 	s.Handle = val
+}
+
+// SetLastReachableAt sets the value of LastReachableAt.
+func (s *RegistryAgent) SetLastReachableAt(val NilDateTime) {
+	s.LastReachableAt = val
 }
 
 // A pending publication request, as the registry owner sees it.

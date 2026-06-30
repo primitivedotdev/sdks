@@ -8,7 +8,9 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from dateutil.parser import isoparse
 from typing import cast
+import datetime
 
 
 
@@ -30,6 +32,8 @@ class RegistryAgent:
             description (None | str):
             tags (list[str]):
             handle (None | str): The registry-scoped name. Null on the global by-address read.
+            last_reachable_at (datetime.datetime | None): When the agent's address was last confirmed to still route to its
+                endpoint. A freshness signal for ranking listings; null until the first check.
      """
 
     address: str
@@ -38,6 +42,7 @@ class RegistryAgent:
     description: None | str
     tags: list[str]
     handle: None | str
+    last_reachable_at: datetime.datetime | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -62,6 +67,12 @@ class RegistryAgent:
         handle: None | str
         handle = self.handle
 
+        last_reachable_at: None | str
+        if isinstance(self.last_reachable_at, datetime.datetime):
+            last_reachable_at = self.last_reachable_at.isoformat()
+        else:
+            last_reachable_at = self.last_reachable_at
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -72,6 +83,7 @@ class RegistryAgent:
             "description": description,
             "tags": tags,
             "handle": handle,
+            "last_reachable_at": last_reachable_at,
         })
 
         return field_dict
@@ -112,6 +124,24 @@ class RegistryAgent:
         handle = _parse_handle(d.pop("handle"))
 
 
+        def _parse_last_reachable_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                last_reachable_at_type_0 = isoparse(data)
+
+
+
+                return last_reachable_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        last_reachable_at = _parse_last_reachable_at(d.pop("last_reachable_at"))
+
+
         registry_agent = cls(
             address=address,
             display_name=display_name,
@@ -119,6 +149,7 @@ class RegistryAgent:
             description=description,
             tags=tags,
             handle=handle,
+            last_reachable_at=last_reachable_at,
         )
 
 

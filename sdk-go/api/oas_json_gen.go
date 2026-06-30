@@ -11366,8 +11366,10 @@ func (s *DefineAgentInput) encodeFields(e *jx.Encoder) {
 		e.Str(s.Address)
 	}
 	{
-		e.FieldStart("endpoint_id")
-		json.EncodeUUID(e, s.EndpointID)
+		if s.EndpointID.Set {
+			e.FieldStart("endpoint_id")
+			s.EndpointID.Encode(e)
+		}
 	}
 	{
 		e.FieldStart("display_name")
@@ -11428,11 +11430,9 @@ func (s *DefineAgentInput) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"address\"")
 			}
 		case "endpoint_id":
-			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.EndpointID = v
-				if err != nil {
+				s.EndpointID.Reset()
+				if err := s.EndpointID.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -11500,7 +11500,7 @@ func (s *DefineAgentInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000111,
+		0b00000101,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -12416,6 +12416,82 @@ func (s *DeleteOrgSecretUnauthorized) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *DeleteOrgSecretUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeleteRegistryNotFound as json.
+func (s *DeleteRegistryNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeleteRegistryNotFound from json.
+func (s *DeleteRegistryNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeleteRegistryNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeleteRegistryNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeleteRegistryNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeleteRegistryNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeleteRegistryUnauthorized as json.
+func (s *DeleteRegistryUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeleteRegistryUnauthorized from json.
+func (s *DeleteRegistryUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeleteRegistryUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeleteRegistryUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeleteRegistryUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeleteRegistryUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -37062,11 +37138,50 @@ func (s *PublishAgentInput) encodeFields(e *jx.Encoder) {
 		e.FieldStart("handle")
 		e.Str(s.Handle)
 	}
+	{
+		if s.DisplayName.Set {
+			e.FieldStart("display_name")
+			s.DisplayName.Encode(e)
+		}
+	}
+	{
+		if s.EndpointID.Set {
+			e.FieldStart("endpoint_id")
+			s.EndpointID.Encode(e)
+		}
+	}
+	{
+		if s.Title.Set {
+			e.FieldStart("title")
+			s.Title.Encode(e)
+		}
+	}
+	{
+		if s.Description.Set {
+			e.FieldStart("description")
+			s.Description.Encode(e)
+		}
+	}
+	{
+		if s.Tags != nil {
+			e.FieldStart("tags")
+			e.ArrStart()
+			for _, elem := range s.Tags {
+				e.Str(elem)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfPublishAgentInput = [2]string{
+var jsonFieldsNameOfPublishAgentInput = [7]string{
 	0: "address",
 	1: "handle",
+	2: "display_name",
+	3: "endpoint_id",
+	4: "title",
+	5: "description",
+	6: "tags",
 }
 
 // Decode decodes PublishAgentInput from json.
@@ -37101,6 +37216,65 @@ func (s *PublishAgentInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"handle\"")
+			}
+		case "display_name":
+			if err := func() error {
+				s.DisplayName.Reset()
+				if err := s.DisplayName.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"display_name\"")
+			}
+		case "endpoint_id":
+			if err := func() error {
+				s.EndpointID.Reset()
+				if err := s.EndpointID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"endpoint_id\"")
+			}
+		case "title":
+			if err := func() error {
+				s.Title.Reset()
+				if err := s.Title.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"title\"")
+			}
+		case "description":
+			if err := func() error {
+				s.Description.Reset()
+				if err := s.Description.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"description\"")
+			}
+		case "tags":
+			if err := func() error {
+				s.Tags = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Tags = append(s.Tags, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"tags\"")
 			}
 		default:
 			return d.Skip()
@@ -38598,15 +38772,20 @@ func (s *RegistryAgent) encodeFields(e *jx.Encoder) {
 		e.FieldStart("handle")
 		s.Handle.Encode(e)
 	}
+	{
+		e.FieldStart("last_reachable_at")
+		s.LastReachableAt.Encode(e, json.EncodeDateTime)
+	}
 }
 
-var jsonFieldsNameOfRegistryAgent = [6]string{
+var jsonFieldsNameOfRegistryAgent = [7]string{
 	0: "address",
 	1: "display_name",
 	2: "title",
 	3: "description",
 	4: "tags",
 	5: "handle",
+	6: "last_reachable_at",
 }
 
 // Decode decodes RegistryAgent from json.
@@ -38692,6 +38871,16 @@ func (s *RegistryAgent) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"handle\"")
 			}
+		case "last_reachable_at":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				if err := s.LastReachableAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"last_reachable_at\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -38702,7 +38891,7 @@ func (s *RegistryAgent) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00111111,
+		0b01111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

@@ -24,17 +24,20 @@ T = TypeVar("T", bound="DefineAgentInput")
 class DefineAgentInput:
     """ 
         Attributes:
-            address (str): The agent's globally unique email address; must route to the endpoint.
-            endpoint_id (UUID):
+            address (str): The agent's globally unique email address; mail to it must route to an endpoint the account
+                controls.
             display_name (str):
+            endpoint_id (UUID | Unset): Optional. The endpoint the agent runs on. Omit it to resolve the endpoint from the
+                address's routing automatically; supply it to pin a specific endpoint, which is then validated against the
+                address's route.
             title (None | str | Unset):
             description (None | str | Unset):
             tags (list[str] | Unset):
      """
 
     address: str
-    endpoint_id: UUID
     display_name: str
+    endpoint_id: UUID | Unset = UNSET
     title: None | str | Unset = UNSET
     description: None | str | Unset = UNSET
     tags: list[str] | Unset = UNSET
@@ -47,9 +50,11 @@ class DefineAgentInput:
     def to_dict(self) -> dict[str, Any]:
         address = self.address
 
-        endpoint_id = str(self.endpoint_id)
-
         display_name = self.display_name
+
+        endpoint_id: str | Unset = UNSET
+        if not isinstance(self.endpoint_id, Unset):
+            endpoint_id = str(self.endpoint_id)
 
         title: None | str | Unset
         if isinstance(self.title, Unset):
@@ -74,9 +79,10 @@ class DefineAgentInput:
         field_dict.update(self.additional_properties)
         field_dict.update({
             "address": address,
-            "endpoint_id": endpoint_id,
             "display_name": display_name,
         })
+        if endpoint_id is not UNSET:
+            field_dict["endpoint_id"] = endpoint_id
         if title is not UNSET:
             field_dict["title"] = title
         if description is not UNSET:
@@ -93,12 +99,17 @@ class DefineAgentInput:
         d = dict(src_dict)
         address = d.pop("address")
 
-        endpoint_id = UUID(d.pop("endpoint_id"))
-
-
-
-
         display_name = d.pop("display_name")
+
+        _endpoint_id = d.pop("endpoint_id", UNSET)
+        endpoint_id: UUID | Unset
+        if isinstance(_endpoint_id,  Unset):
+            endpoint_id = UNSET
+        else:
+            endpoint_id = UUID(_endpoint_id)
+
+
+
 
         def _parse_title(data: object) -> None | str | Unset:
             if data is None:
@@ -125,8 +136,8 @@ class DefineAgentInput:
 
         define_agent_input = cls(
             address=address,
-            endpoint_id=endpoint_id,
             display_name=display_name,
+            endpoint_id=endpoint_id,
             title=title,
             description=description,
             tags=tags,
