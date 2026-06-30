@@ -110,14 +110,19 @@ export function resolveMemoryValueSource(input: {
     return { kind: "ok", source: input.value, label: "value" };
   }
   if (input.valueFile !== undefined) {
-    const readFile =
-      input.readFile ??
-      ((path: string) => readTextFileFlag(path, "--value-file"));
-    return {
-      kind: "ok",
-      source: readFile(input.valueFile),
-      label: `--value-file ${input.valueFile}`,
-    };
+    try {
+      const source = input.readFile
+        ? input.readFile(input.valueFile)
+        : readTextFileFlag(input.valueFile, "--value-file");
+      return {
+        kind: "ok",
+        source,
+        label: `--value-file ${input.valueFile}`,
+      };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return { kind: "error", message: detail };
+    }
   }
   return {
     kind: "error",

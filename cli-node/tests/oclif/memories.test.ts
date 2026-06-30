@@ -94,6 +94,20 @@ describe("memories value parsing", () => {
     ).toMatchObject({ kind: "error" });
     expect(resolveMemoryValueSource({})).toMatchObject({ kind: "error" });
   });
+
+  it("returns file read failures as value source errors", () => {
+    const result = resolveMemoryValueSource({
+      valueFile: "missing.json",
+      readFile: () => {
+        throw new Error("file missing");
+      },
+    });
+
+    expect(result).toEqual({
+      kind: "error",
+      message: "file missing",
+    });
+  });
 });
 
 describe("memories scope and body builders", () => {
