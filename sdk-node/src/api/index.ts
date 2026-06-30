@@ -24,16 +24,24 @@ import {
   type CreateAgentClaimLinkInput,
   type GateDenial,
   type Account as GeneratedAccount,
+  type DeleteMemoryData as GeneratedDeleteMemoryData,
+  type DeleteMemoryResult as GeneratedDeleteMemoryResult,
   type EmailStatus as GeneratedEmailStatus,
   type EmailSummary as GeneratedEmailSummary,
   type ErrorResponse as GeneratedErrorResponse,
+  type GetMemoryData as GeneratedGetMemoryData,
+  type MemoryRecord as GeneratedMemoryRecord,
+  type MemoryRecordWithValue as GeneratedMemoryRecordWithValue,
+  type PaginationMeta as GeneratedPaginationMeta,
   type ReplyInput as GeneratedReplyInput,
+  type SearchMemoriesData as GeneratedSearchMemoriesData,
   type SemanticSearchInput as GeneratedSemanticSearchInput,
   type SemanticSearchMeta as GeneratedSemanticSearchMeta,
   type SemanticSearchResult as GeneratedSemanticSearchResult,
   type SendMailAttachment as GeneratedSendMailAttachment,
   type SendMailInput as GeneratedSendMailInput,
   type SendMailResult as GeneratedSendMailResult,
+  type SetMemoryInput as GeneratedSetMemoryInput,
   operations as generatedOperations,
   PrimitiveApiClient,
   type PrimitiveApiClientOptions,
@@ -202,6 +210,34 @@ export interface SendResult {
 export interface SemanticSearchResponse {
   data: GeneratedSemanticSearchResult[];
   meta: GeneratedSemanticSearchMeta;
+}
+
+export type MemorySetInput = GeneratedSetMemoryInput;
+export type MemoryGetInput = GeneratedGetMemoryData["query"];
+export type MemoryDeleteInput = GeneratedDeleteMemoryData["query"];
+export type MemoryRecord = GeneratedMemoryRecord;
+export type MemoryRecordWithValue = GeneratedMemoryRecordWithValue;
+
+export type MemorySearchInput = Omit<
+  NonNullable<GeneratedSearchMemoriesData["query"]>,
+  "include_value"
+> & {
+  /**
+   * Return memory values with each record. Defaults to true. Use false for
+   * metadata-only key scans.
+   */
+  includeValue?: boolean;
+  /**
+   * Wire-compatible spelling for callers that already use generated query
+   * field names. Boolean values are accepted for convenience and normalized
+   * to the API's `"true"` / `"false"` strings.
+   */
+  include_value?: "true" | "false" | boolean;
+};
+
+export interface MemorySearchResponse {
+  data: GeneratedMemoryRecord[];
+  meta: GeneratedPaginationMeta;
 }
 
 function validateThreadHeaderValue(field: string, value: string): void {
@@ -374,6 +410,52 @@ function resolveRequestOptions(
   if (signal) resolved.signal = signal;
   if (Object.keys(headers).length > 0) resolved.headers = headers;
   return resolved;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function rejectGeneratedOptionsShape(
+  value: object,
+  method: "set" | "get" | "delete",
+): void {
+  if ("client" in value || "body" in value || "query" in value) {
+    const example =
+      method === "set"
+        ? "client.memories.set({ key, value })"
+        : `client.memories.${method}({ key })`;
+    throw new TypeError(
+      `client.memories.${method} takes the memory fields directly; use ${example}, not the generated operation options shape.`,
+    );
+  }
+}
+
+function normalizeMemorySearchInput(
+  input: MemorySearchInput | undefined,
+): GeneratedSearchMemoriesData["query"] {
+  if (input === undefined) return undefined;
+  if (isRecord(input) && "query" in input) {
+    throw new TypeError(
+      "client.memories.search is key-prefix search; pass { prefix } directly. For free-text mail search, use client.semanticSearch(...).",
+    );
+  }
+
+  const { includeValue, include_value, ...rest } = input;
+  const normalized: NonNullable<GeneratedSearchMemoriesData["query"]> = {
+    ...rest,
+  };
+  const includeValueRaw =
+    include_value !== undefined ? include_value : includeValue;
+  if (includeValueRaw !== undefined) {
+    normalized.include_value =
+      typeof includeValueRaw === "boolean"
+        ? includeValueRaw
+          ? "true"
+          : "false"
+        : includeValueRaw;
+  }
+  return normalized;
 }
 
 /**
@@ -746,6 +828,76 @@ export class AccountResource {
   }
 }
 
+/**
+ * Durable JSON key-value state, grouped under `client.memories`.
+ *
+ * This wraps the generated `setMemory`, `getMemory`, `deleteMemory`, and
+ * `searchMemories` operations with the shape most Function authors expect:
+ * pass the memory fields directly instead of the generated `{ client, body }`
+ * or `{ client, query }` operation wrapper. Search is key-prefix search, not
+ * free-text retrieval; use `client.semanticSearch` for mail search.
+ */
+export class MemoriesResource {
+  constructor(private readonly client: PrimitiveApiClient["client"]) {}
+
+  async set(
+    input: MemorySetInput,
+    options?: RequestOptions,
+  ): Promise<GeneratedMemoryRecordWithValue> {
+    rejectGeneratedOptionsShape(input, "set");
+    const result = await generatedOperations.setMemory({
+      body: input,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedMemoryRecordWithValue>(result, "memory");
+  }
+
+  async get(
+    input: string | MemoryGetInput,
+    options?: RequestOptions,
+  ): Promise<GeneratedMemoryRecordWithValue> {
+    const query = typeof input === "string" ? { key: input } : input;
+    rejectGeneratedOptionsShape(query, "get");
+    const result = await generatedOperations.getMemory({
+      query,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedMemoryRecordWithValue>(result, "memory");
+  }
+
+  async delete(
+    input: string | MemoryDeleteInput,
+    options?: RequestOptions,
+  ): Promise<GeneratedDeleteMemoryResult> {
+    const query = typeof input === "string" ? { key: input } : input;
+    rejectGeneratedOptionsShape(query, "delete");
+    const result = await generatedOperations.deleteMemory({
+      query,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedDeleteMemoryResult>(result, "memory delete");
+  }
+
+  async search(
+    input?: MemorySearchInput,
+    options?: RequestOptions,
+  ): Promise<MemorySearchResponse> {
+    const result = await generatedOperations.searchMemories({
+      query: normalizeMemorySearchInput(input),
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapMemorySearchResult(result);
+  }
+}
+
 export class PrimitiveClient extends PrimitiveApiClient {
   /** Agent-account lifecycle operations (create, claim/upgrade). */
   readonly agent: AgentResource = new AgentResource(this.client);
@@ -753,6 +905,8 @@ export class PrimitiveClient extends PrimitiveApiClient {
   readonly inbox: InboxResource = new InboxResource(this.client);
   /** Account introspection (plan, limits, entitlements, managed inbox). */
   readonly account: AccountResource = new AccountResource(this.client);
+  /** Durable JSON key-value state for agents and Functions. */
+  readonly memories: MemoriesResource = new MemoriesResource(this.client);
 
   async send(input: SendInput, options?: RequestOptions): Promise<SendResult> {
     validateSendInput(input);
@@ -985,6 +1139,45 @@ function unwrapSemanticSearchResult(result: {
         status: response?.status,
       },
     );
+  }
+
+  return { data: result.data.data, meta: result.data.meta };
+}
+
+function unwrapMemorySearchResult(result: {
+  data?:
+    | {
+        data?: GeneratedMemoryRecord[];
+        meta?: GeneratedPaginationMeta;
+      }
+    | undefined;
+  error?: GeneratedErrorResponse | unknown;
+  response?: Response;
+}): MemorySearchResponse {
+  const response = (result as { response?: Response }).response;
+
+  if (result.error) {
+    if (isAbortLikeError(result.error)) {
+      throw result.error;
+    }
+    const parsed = parseApiErrorPayload(result.error);
+    throw new PrimitiveApiError(parsed.message, {
+      payload: result.error,
+      status: response?.status,
+      code: parsed.code,
+      gates: parsed.gates,
+      requestId: parsed.requestId,
+      retryAfter: parseRetryAfterHeader(response),
+      details: parsed.details,
+      cause: result.error instanceof Error ? result.error : undefined,
+    });
+  }
+
+  if (!result.data?.data || !result.data.meta) {
+    throw new PrimitiveApiError("Primitive API returned no memories result", {
+      payload: result,
+      status: response?.status,
+    });
   }
 
   return { data: result.data.data, meta: result.data.meta };
