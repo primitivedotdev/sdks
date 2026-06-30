@@ -336,7 +336,7 @@ describe("buildExactEvmPaymentPayload", () => {
     nonce: NORMATIVE_NONCE,
   };
   // A shape-valid 65-byte EIP signature (r,s,v); not cryptographically meaningful.
-  const SIG = ("0x" + "ab".repeat(65)) as Hex;
+  const SIG = `0x${"ab".repeat(65)}` as Hex;
 
   it("wraps the authorization with x402Version 1 and decimal-string fields", () => {
     const p = buildExactEvmPaymentPayload({
@@ -378,7 +378,7 @@ describe("buildExactEvmPaymentPayload", () => {
 });
 
 describe("buildPaymentStepEnvelope", () => {
-  const SIG = ("0x" + "ab".repeat(65)) as Hex;
+  const SIG = `0x${"ab".repeat(65)}` as Hex;
   const payment = buildExactEvmPaymentPayload({
     network: "base-sepolia",
     authorization: {

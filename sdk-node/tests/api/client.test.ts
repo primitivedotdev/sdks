@@ -125,6 +125,39 @@ const NORMALIZED_SEND_RESULT = {
   idempotentReplay: false,
 } as const;
 
+const FUNCTION_ID = "11111111-1111-4111-8111-111111111111";
+
+const MEMORY_RECORD = {
+  id: "22222222-2222-4222-8222-222222222222",
+  key: "state",
+  scope: { type: "function", id: FUNCTION_ID },
+  value: { step: 2 },
+  version: "1",
+  created_at: "2026-06-30T00:00:00.000Z",
+  updated_at: "2026-06-30T00:00:00.000Z",
+  last_read_at: null,
+  read_count: "0",
+  write_count: "1",
+  expires_at: null,
+  created_by: "api_key:key-1",
+  updated_by: "api_key:key-1",
+} as const;
+
+const MEMORY_RECORD_WITHOUT_VALUE = {
+  id: "22222222-2222-4222-8222-222222222222",
+  key: "state",
+  scope: { type: "function", id: FUNCTION_ID },
+  version: "1",
+  created_at: "2026-06-30T00:00:00.000Z",
+  updated_at: "2026-06-30T00:00:00.000Z",
+  last_read_at: null,
+  read_count: "0",
+  write_count: "1",
+  expires_at: null,
+  created_by: "api_key:key-1",
+  updated_by: "api_key:key-1",
+} as const;
+
 describe("PrimitiveClient", () => {
   it("rejects received emails without SMTP recipients", () => {
     const event = structuredClone(RECEIVED_EMAIL.raw);
@@ -271,6 +304,186 @@ describe("PrimitiveClient", () => {
       smtpResponseCode: 250,
       smtpResponseText: "250 OK",
     });
+  });
+
+  it("exposes Primitive Memories on the high-level client", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      const url = new URL(request.url);
+
+      if (request.method === "PUT") {
+        expect(url.pathname).toBe("/v1/memories");
+        expect(await request.json()).toEqual({
+          key: "state",
+          value: { step: 2 },
+          scope: { type: "function", id: FUNCTION_ID },
+        });
+        return new Response(
+          JSON.stringify({ success: true, data: MEMORY_RECORD }),
+          { status: 201, headers: { "content-type": "application/json" } },
+        );
+      }
+
+      if (request.method === "GET" && url.pathname === "/v1/memories") {
+        expect(url.searchParams.get("key")).toBe("state");
+        expect(url.searchParams.get("scope_type")).toBe("function");
+        expect(url.searchParams.get("scope_id")).toBe(FUNCTION_ID);
+        return new Response(
+          JSON.stringify({ success: true, data: MEMORY_RECORD }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+
+      if (request.method === "GET" && url.pathname === "/v1/memories/search") {
+        const prefix = url.searchParams.get("prefix");
+        expect(url.searchParams.get("scope_type")).toBe("function");
+        expect(url.searchParams.get("scope_id")).toBe(FUNCTION_ID);
+
+        if (prefix === "st") {
+          expect(url.searchParams.get("include_value")).toBe("false");
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: [MEMORY_RECORD_WITHOUT_VALUE],
+              meta: { total: 1, limit: 50, cursor: null },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+
+        if (prefix === "state:") {
+          expect(url.searchParams.get("include_value")).toBeNull();
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: [MEMORY_RECORD],
+              meta: { total: 1, limit: 50, cursor: null },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+
+        throw new Error(
+          `Unexpected memory search prefix: ${prefix ?? "(none)"}`,
+        );
+      }
+
+      if (request.method === "DELETE") {
+        expect(url.pathname).toBe("/v1/memories");
+        expect(url.searchParams.get("key")).toBe("state");
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              deleted: true,
+              key: "state",
+              scope: { type: "function", id: FUNCTION_ID },
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+
+      throw new Error(`Unexpected memory request: ${request.method} ${url}`);
+    }) as typeof fetch;
+
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: fetchMock,
+    });
+
+    await expect(
+      client.memories.set({
+        key: "state",
+        value: { step: 2 },
+        scope: { type: "function", id: FUNCTION_ID },
+      }),
+    ).resolves.toEqual(MEMORY_RECORD);
+
+    await expect(
+      client.memories.get({
+        key: "state",
+        scope_type: "function",
+        scope_id: FUNCTION_ID,
+      }),
+    ).resolves.toEqual(MEMORY_RECORD);
+
+    await expect(
+      client.memories.search({
+        prefix: "st",
+        includeValue: false,
+        scope_type: "function",
+        scope_id: FUNCTION_ID,
+      }),
+    ).resolves.toEqual({
+      data: [MEMORY_RECORD_WITHOUT_VALUE],
+      meta: { total: 1, limit: 50, cursor: null },
+    });
+
+    await expect(
+      client.memories.search({
+        prefix: "state:",
+        scope_type: "function",
+        scope_id: FUNCTION_ID,
+      }),
+    ).resolves.toEqual({
+      data: [MEMORY_RECORD],
+      meta: { total: 1, limit: 50, cursor: null },
+    });
+
+    await expect(client.memories.delete("state")).resolves.toEqual({
+      deleted: true,
+      key: "state",
+      scope: { type: "function", id: FUNCTION_ID },
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it("rejects free-text memory search calls before making a request", async () => {
+    const fetchMock = vi.fn<typeof fetch>() as typeof fetch;
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: fetchMock,
+    });
+
+    await expect(
+      client.memories.search({
+        query: "turn protocol",
+        limit: 5,
+      } as unknown as Parameters<typeof client.memories.search>[0]),
+    ).rejects.toThrow(
+      "client.memories.search is key-prefix search; pass { prefix } directly",
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects generated operation option objects on the high-level memories client", async () => {
+    const fetchMock = vi.fn<typeof fetch>() as typeof fetch;
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: fetchMock,
+    });
+
+    await expect(
+      client.memories.set({
+        body: { key: "state", value: { step: 2 } },
+      } as unknown as Parameters<typeof client.memories.set>[0]),
+    ).rejects.toThrow("client.memories.set takes the memory fields directly");
+
+    await expect(
+      client.memories.search({
+        query: { prefix: "st" },
+      } as unknown as Parameters<typeof client.memories.search>[0]),
+    ).rejects.toThrow(
+      "client.memories.search takes the memory fields directly",
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("posts html-only send payloads", async () => {

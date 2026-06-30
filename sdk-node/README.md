@@ -419,47 +419,42 @@ const result = await getAccount({ client: api.client });
 
 #### Primitive Memories
 
-The generated API client exposes Primitive Memories as durable JSON key-value
-records. Memories default to org scope. Function-scoped memories use the
-function id UUID, not the function name.
+The high-level API client exposes Primitive Memories as durable JSON key-value
+records under `client.memories`. Memories default to org scope. Inside a
+Primitive Function, omitted scope resolves to that Function id automatically;
+explicit function scope uses the function id UUID, not the function name.
 
 ```ts
-import {
-  PrimitiveApiClient,
-  getMemory,
-  searchMemories,
-  setMemory,
-} from "@primitivedotdev/sdk/api";
+import { createPrimitiveClient } from "@primitivedotdev/sdk/api";
 
-const api = new PrimitiveApiClient({ apiKey: process.env.PRIMITIVE_API_KEY });
+const client = createPrimitiveClient({ apiKey: process.env.PRIMITIVE_API_KEY });
 
-await setMemory({
-  client: api.client,
-  body: {
-    key: "thread:latest",
-    value: { email_id: "em_123" },
-  },
+await client.memories.set({
+  key: "thread:latest",
+  value: { email_id: "em_123" },
 });
 
-await setMemory({
-  client: api.client,
-  body: {
-    key: "state",
-    value: { step: 2 },
-    scope: { type: "function", id: functionId },
-  },
+await client.memories.set({
+  key: "state",
+  value: { step: 2 },
+  scope: { type: "function", id: functionId },
 });
 
-const memory = await getMemory({
-  client: api.client,
-  query: { key: "thread:latest" },
+const memory = await client.memories.get("thread:latest");
+
+const page = await client.memories.search({
+  prefix: "thread:",
+  includeValue: false,
 });
 
-const page = await searchMemories({
-  client: api.client,
-  query: { prefix: "thread:", include_value: "false" },
-});
+await client.memories.delete("thread:latest");
 ```
+
+`client.memories.search` lists memories by key prefix; it is not free-text or
+semantic search. Use `client.semanticSearch(...)` for mail search. The raw
+generated operations (`setMemory`, `getMemory`, `searchMemories`,
+`deleteMemory`) remain exported from `@primitivedotdev/sdk/api` for callers who
+want the exact OpenAPI operation shape.
 
 ### Webhook signature verification
 
