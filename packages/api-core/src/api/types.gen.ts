@@ -502,7 +502,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -3610,6 +3610,158 @@ export type OrgSecretWriteResult = {
 };
 
 /**
+ * Bigint counter serialized as a base-10 string.
+ */
+export type NumericString = string;
+
+/**
+ * JSON value accepted by Primitive Memories. The server accepts strings,
+ * numbers, booleans, null, arrays, and objects, validates nested values,
+ * and rejects values that do not serialize as JSON.
+ *
+ */
+export type MemoryJsonValue = unknown | string | number | boolean | Array<unknown> | {
+    [key: string]: unknown;
+};
+
+/**
+ * Memory scope. `org` resolves to the authenticated organization.
+ * `function` requires the function id UUID in `id`; function names are
+ * not valid scope identifiers.
+ *
+ */
+export type MemoryScope = {
+    type: 'org';
+} | {
+    type: 'function';
+    /**
+     * Function id UUID.
+     */
+    id: string;
+};
+
+/**
+ * Resolved memory scope returned by the API.
+ */
+export type MemoryResolvedScope = {
+    type: 'org' | 'function';
+    /**
+     * Org id for org scope, function id for function scope.
+     */
+    id: string;
+};
+
+/**
+ * Metadata for a Primitive memory. Search responses omit `value` when
+ * `include_value=false`.
+ *
+ */
+export type MemoryRecord = {
+    id: string;
+    /**
+     * Caller-defined key, at most 512 UTF-8 bytes.
+     */
+    key: string;
+    scope: MemoryResolvedScope;
+    value?: MemoryJsonValue;
+    version: NumericString;
+    created_at: string;
+    updated_at: string;
+    /**
+     * Last successful get timestamp, or null before any get.
+     */
+    last_read_at: string | null;
+    read_count: NumericString;
+    write_count: NumericString;
+    /**
+     * Expiration timestamp, or null for no TTL.
+     */
+    expires_at: string | null;
+    /**
+     * Actor that created the memory, when available.
+     */
+    created_by: string | null;
+    /**
+     * Actor that last updated the memory, when available.
+     */
+    updated_by: string | null;
+};
+
+/**
+ * Memory record returned by get and set operations.
+ */
+export type MemoryRecordWithValue = {
+    id: string;
+    /**
+     * Caller-defined key, at most 512 UTF-8 bytes.
+     */
+    key: string;
+    scope: MemoryResolvedScope;
+    value: MemoryJsonValue;
+    version: NumericString;
+    created_at: string;
+    updated_at: string;
+    /**
+     * Last successful get timestamp, or null before any get.
+     */
+    last_read_at: string | null;
+    read_count: NumericString;
+    write_count: NumericString;
+    /**
+     * Expiration timestamp, or null for no TTL.
+     */
+    expires_at: string | null;
+    /**
+     * Actor that created the memory, when available.
+     */
+    created_by: string | null;
+    /**
+     * Actor that last updated the memory, when available.
+     */
+    updated_by: string | null;
+};
+
+export type SetMemoryInput = {
+    /**
+     * Caller-defined key, at most 512 UTF-8 bytes.
+     */
+    key: string;
+    value: MemoryJsonValue;
+    scope?: MemoryScope;
+    /**
+     * Set or replace the TTL in seconds. Mutually exclusive with
+     * `expires_at` and `clear_ttl`.
+     *
+     */
+    ttl_seconds?: number;
+    /**
+     * Set or replace the absolute expiration timestamp. Mutually
+     * exclusive with `ttl_seconds` and `clear_ttl`.
+     *
+     */
+    expires_at?: string;
+    /**
+     * Clear any existing TTL. Mutually exclusive with `ttl_seconds` and
+     * `expires_at`.
+     *
+     */
+    clear_ttl?: boolean;
+    /**
+     * Create only when the key is absent. Mutually exclusive with
+     * `if_version`.
+     *
+     */
+    if_absent?: boolean;
+    if_version?: NumericString;
+};
+
+export type DeleteMemoryResult = {
+    deleted: boolean;
+    key: string;
+    scope: MemoryResolvedScope;
+};
+
+/**
  * Resource UUID
  */
 export type ResourceId = string;
@@ -3633,6 +3785,25 @@ export type Cursor = string;
  * Number of results per page
  */
 export type Limit = number;
+
+/**
+ * Memory key. Must be at most 512 UTF-8 bytes.
+ */
+export type MemoryKeyQuery = string;
+
+/**
+ * Explicit scope type. Omit to use automatic scope resolution. Pass
+ * `function` with `scope_id=<function-id>`, or `org` with no `scope_id`.
+ *
+ */
+export type MemoryScopeQueryType = 'org' | 'function';
+
+/**
+ * Function id UUID when `scope_type=function`. Not valid with
+ * `scope_type=org`.
+ *
+ */
+export type MemoryScopeId = string;
 
 export type StartCliLoginData = {
     body?: StartCliLoginInput;
@@ -7294,6 +7465,306 @@ export type ListFunctionLogsResponses = {
 };
 
 export type ListFunctionLogsResponse = ListFunctionLogsResponses[keyof ListFunctionLogsResponses];
+
+export type DeleteMemoryData = {
+    body?: never;
+    headers?: {
+        /**
+         * Optional function id UUID used as the default scope when query
+         * scope parameters are omitted.
+         *
+         */
+        'x-primitive-function-id'?: string;
+    };
+    path?: never;
+    query: {
+        /**
+         * Memory key. Must be at most 512 UTF-8 bytes.
+         */
+        key: string;
+        /**
+         * Explicit scope type. Omit to use automatic scope resolution. Pass
+         * `function` with `scope_id=<function-id>`, or `org` with no `scope_id`.
+         *
+         */
+        scope_type?: 'org' | 'function';
+        /**
+         * Function id UUID when `scope_type=function`. Not valid with
+         * `scope_type=org`.
+         *
+         */
+        scope_id?: string;
+        /**
+         * Optional compare-and-delete version. If the active memory exists
+         * at a different version, the API returns `memory_conflict`.
+         *
+         */
+        if_version?: NumericString;
+    };
+    url: '/memories';
+};
+
+export type DeleteMemoryErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Usage credits are exhausted or payment is required
+     */
+    402: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type DeleteMemoryError = DeleteMemoryErrors[keyof DeleteMemoryErrors];
+
+export type DeleteMemoryResponses = {
+    /**
+     * Delete result
+     */
+    200: SuccessEnvelope & {
+        data?: DeleteMemoryResult;
+    };
+};
+
+export type DeleteMemoryResponse = DeleteMemoryResponses[keyof DeleteMemoryResponses];
+
+export type GetMemoryData = {
+    body?: never;
+    headers?: {
+        /**
+         * Optional function id UUID used as the default scope when query
+         * scope parameters are omitted.
+         *
+         */
+        'x-primitive-function-id'?: string;
+    };
+    path?: never;
+    query: {
+        /**
+         * Memory key. Must be at most 512 UTF-8 bytes.
+         */
+        key: string;
+        /**
+         * Explicit scope type. Omit to use automatic scope resolution. Pass
+         * `function` with `scope_id=<function-id>`, or `org` with no `scope_id`.
+         *
+         */
+        scope_type?: 'org' | 'function';
+        /**
+         * Function id UUID when `scope_type=function`. Not valid with
+         * `scope_type=org`.
+         *
+         */
+        scope_id?: string;
+    };
+    url: '/memories';
+};
+
+export type GetMemoryErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Usage credits are exhausted or payment is required
+     */
+    402: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetMemoryError = GetMemoryErrors[keyof GetMemoryErrors];
+
+export type GetMemoryResponses = {
+    /**
+     * Memory record with value
+     */
+    200: SuccessEnvelope & {
+        data?: MemoryRecordWithValue;
+    };
+};
+
+export type GetMemoryResponse = GetMemoryResponses[keyof GetMemoryResponses];
+
+export type SetMemoryData = {
+    body: SetMemoryInput;
+    headers?: {
+        /**
+         * Optional function id UUID used as the default scope when the body
+         * does not include `scope`. Ignored when `scope` is provided.
+         *
+         */
+        'x-primitive-function-id'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/memories';
+};
+
+export type SetMemoryErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Usage credits are exhausted or payment is required
+     */
+    402: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type SetMemoryError = SetMemoryErrors[keyof SetMemoryErrors];
+
+export type SetMemoryResponses = {
+    /**
+     * Existing memory updated
+     */
+    200: SuccessEnvelope & {
+        data?: MemoryRecordWithValue;
+    };
+    /**
+     * Memory created
+     */
+    201: SuccessEnvelope & {
+        data?: MemoryRecordWithValue;
+    };
+};
+
+export type SetMemoryResponse = SetMemoryResponses[keyof SetMemoryResponses];
+
+export type SearchMemoriesData = {
+    body?: never;
+    headers?: {
+        /**
+         * Optional function id UUID used as the default scope when query
+         * scope parameters are omitted.
+         *
+         */
+        'x-primitive-function-id'?: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Key prefix to match. Empty string lists all active memories in the
+         * selected scope. Must be at most 512 UTF-8 bytes.
+         *
+         */
+        prefix?: string;
+        /**
+         * Key cursor from a previous response's `meta.cursor`. The next page
+         * starts after this key.
+         *
+         */
+        cursor?: string;
+        /**
+         * Number of results per page
+         */
+        limit?: number;
+        /**
+         * Pass `false` to omit the `value` field and return metadata only.
+         *
+         */
+        include_value?: 'true' | 'false';
+        /**
+         * Only include memories updated at or after this timestamp.
+         */
+        updated_after?: string;
+        /**
+         * Only include memories updated at or before this timestamp.
+         */
+        updated_before?: string;
+        /**
+         * Explicit scope type. Omit to use automatic scope resolution. Pass
+         * `function` with `scope_id=<function-id>`, or `org` with no `scope_id`.
+         *
+         */
+        scope_type?: 'org' | 'function';
+        /**
+         * Function id UUID when `scope_type=function`. Not valid with
+         * `scope_type=org`.
+         *
+         */
+        scope_id?: string;
+    };
+    url: '/memories/search';
+};
+
+export type SearchMemoriesErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Usage credits are exhausted or payment is required
+     */
+    402: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type SearchMemoriesError = SearchMemoriesErrors[keyof SearchMemoriesErrors];
+
+export type SearchMemoriesResponses = {
+    /**
+     * Paginated memory records
+     */
+    200: ListEnvelope & {
+        data?: Array<MemoryRecord>;
+    };
+};
+
+export type SearchMemoriesResponse = SearchMemoriesResponses[keyof SearchMemoriesResponses];
 
 export type ListPayoutAddressesData = {
     body?: never;

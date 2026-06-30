@@ -93,6 +93,10 @@ type DeleteFunctionSecretRes interface {
 	deleteFunctionSecretRes()
 }
 
+type DeleteMemoryRes interface {
+	deleteMemoryRes()
+}
+
 type DeleteOrgSecretRes interface {
 	deleteOrgSecretRes()
 }
@@ -163,6 +167,10 @@ type GetFunctionTestRunTraceRes interface {
 
 type GetInboxStatusRes interface {
 	getInboxStatusRes()
+}
+
+type GetMemoryRes interface {
+	getMemoryRes()
 }
 
 type GetOrgRoutingTopologyRes interface {
@@ -329,6 +337,10 @@ type SearchEmailsRes interface {
 	searchEmailsRes()
 }
 
+type SearchMemoriesRes interface {
+	searchMemoriesRes()
+}
+
 type SemanticSearchRes interface {
 	semanticSearchRes()
 }
@@ -343,6 +355,10 @@ type SetFunctionRouteRes interface {
 
 type SetFunctionSecretRes interface {
 	setFunctionSecretRes()
+}
+
+type SetMemoryRes interface {
+	setMemoryRes()
 }
 
 type SetOrgSecretRes interface {

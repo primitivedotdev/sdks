@@ -101,6 +101,9 @@
       "functions": {
         "description": "Deploy JavaScript handlers that run on inbound mail. Prefer `primitive functions templates`, `primitive functions init`, `primitive functions deploy`, `primitive functions redeploy`, `primitive functions list`, `primitive functions get`, `primitive functions logs`, and `primitive functions set-secret`; generated API names remain available for compatibility."
       },
+      "memories": {
+        "description": "Store durable JSON memories by key. Use `primitive memories set|get|delete|search`; pass `--function <function-id>` for function-scoped memories."
+      },
       "org": {
         "description": "Manage org-level (global) resources shared across functions"
       },

@@ -91,6 +91,9 @@ from .delete_filter_response_200 import DeleteFilterResponse200
 from .delete_filter_response_200_data import DeleteFilterResponse200Data
 from .delete_function_response_200 import DeleteFunctionResponse200
 from .delete_function_response_200_data import DeleteFunctionResponse200Data
+from .delete_memory_response_200 import DeleteMemoryResponse200
+from .delete_memory_result import DeleteMemoryResult
+from .delete_memory_scope_type import DeleteMemoryScopeType
 from .delete_registry_response_200 import DeleteRegistryResponse200
 from .delete_registry_response_200_data import DeleteRegistryResponse200Data
 from .delete_route_response_200 import DeleteRouteResponse200
@@ -182,6 +185,8 @@ from .get_function_response_200 import GetFunctionResponse200
 from .get_function_routing_response_200 import GetFunctionRoutingResponse200
 from .get_function_test_run_trace_response_200 import GetFunctionTestRunTraceResponse200
 from .get_inbox_status_response_200 import GetInboxStatusResponse200
+from .get_memory_response_200 import GetMemoryResponse200
+from .get_memory_scope_type import GetMemoryScopeType
 from .get_org_routing_topology_response_200 import GetOrgRoutingTopologyResponse200
 from .get_registry_response_200 import GetRegistryResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
@@ -223,6 +228,15 @@ from .list_sent_emails_response_200 import ListSentEmailsResponse200
 from .list_wake_authorizations_response_200 import ListWakeAuthorizationsResponse200
 from .list_wake_dispatches_response_200 import ListWakeDispatchesResponse200
 from .list_wake_schedules_response_200 import ListWakeSchedulesResponse200
+from .memory_json_value_type_5 import MemoryJsonValueType5
+from .memory_record import MemoryRecord
+from .memory_record_with_value import MemoryRecordWithValue
+from .memory_resolved_scope import MemoryResolvedScope
+from .memory_resolved_scope_type import MemoryResolvedScopeType
+from .memory_scope_type_0 import MemoryScopeType0
+from .memory_scope_type_0_type import MemoryScopeType0Type
+from .memory_scope_type_1 import MemoryScopeType1
+from .memory_scope_type_1_type import MemoryScopeType1Type
 from .org_secret_list_item import OrgSecretListItem
 from .org_secret_write_result import OrgSecretWriteResult
 from .pagination_meta import PaginationMeta
@@ -277,6 +291,9 @@ from .search_emails_include_facets import SearchEmailsIncludeFacets
 from .search_emails_response_200 import SearchEmailsResponse200
 from .search_emails_snippet import SearchEmailsSnippet
 from .search_emails_sort import SearchEmailsSort
+from .search_memories_include_value import SearchMemoriesIncludeValue
+from .search_memories_response_200 import SearchMemoriesResponse200
+from .search_memories_scope_type import SearchMemoriesScopeType
 from .semantic_search_coverage import SemanticSearchCoverage
 from .semantic_search_field import SemanticSearchField
 from .semantic_search_input import SemanticSearchInput
@@ -310,6 +327,9 @@ from .set_function_route_response_200 import SetFunctionRouteResponse200
 from .set_function_secret_input import SetFunctionSecretInput
 from .set_function_secret_response_200 import SetFunctionSecretResponse200
 from .set_function_secret_response_201 import SetFunctionSecretResponse201
+from .set_memory_input import SetMemoryInput
+from .set_memory_response_200 import SetMemoryResponse200
+from .set_memory_response_201 import SetMemoryResponse201
 from .set_org_secret_input import SetOrgSecretInput
 from .set_org_secret_response_200 import SetOrgSecretResponse200
 from .set_org_secret_response_201 import SetOrgSecretResponse201
@@ -500,6 +520,9 @@ __all__ = (
     "DeleteFilterResponse200Data",
     "DeleteFunctionResponse200",
     "DeleteFunctionResponse200Data",
+    "DeleteMemoryResponse200",
+    "DeleteMemoryResult",
+    "DeleteMemoryScopeType",
     "DeleteRegistryResponse200",
     "DeleteRegistryResponse200Data",
     "DeleteRouteResponse200",
@@ -591,6 +614,8 @@ __all__ = (
     "GetFunctionRoutingResponse200",
     "GetFunctionTestRunTraceResponse200",
     "GetInboxStatusResponse200",
+    "GetMemoryResponse200",
+    "GetMemoryScopeType",
     "GetOrgRoutingTopologyResponse200",
     "GetRegistryResponse200",
     "GetSendPermissionsResponse200",
@@ -632,6 +657,15 @@ __all__ = (
     "ListWakeAuthorizationsResponse200",
     "ListWakeDispatchesResponse200",
     "ListWakeSchedulesResponse200",
+    "MemoryJsonValueType5",
+    "MemoryRecord",
+    "MemoryRecordWithValue",
+    "MemoryResolvedScope",
+    "MemoryResolvedScopeType",
+    "MemoryScopeType0",
+    "MemoryScopeType0Type",
+    "MemoryScopeType1",
+    "MemoryScopeType1Type",
     "OrgSecretListItem",
     "OrgSecretWriteResult",
     "PaginationMeta",
@@ -686,6 +720,9 @@ __all__ = (
     "SearchEmailsResponse200",
     "SearchEmailsSnippet",
     "SearchEmailsSort",
+    "SearchMemoriesIncludeValue",
+    "SearchMemoriesResponse200",
+    "SearchMemoriesScopeType",
     "SemanticSearchCoverage",
     "SemanticSearchField",
     "SemanticSearchInput",
@@ -719,6 +756,9 @@ __all__ = (
     "SetFunctionSecretInput",
     "SetFunctionSecretResponse200",
     "SetFunctionSecretResponse201",
+    "SetMemoryInput",
+    "SetMemoryResponse200",
+    "SetMemoryResponse201",
     "SetOrgSecretInput",
     "SetOrgSecretResponse200",
     "SetOrgSecretResponse201",

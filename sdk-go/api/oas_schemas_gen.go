@@ -4154,6 +4154,91 @@ type DeleteFunctionUnauthorized ErrorResponse
 
 func (*DeleteFunctionUnauthorized) deleteFunctionRes() {}
 
+type DeleteMemoryBadRequest ErrorResponse
+
+func (*DeleteMemoryBadRequest) deleteMemoryRes() {}
+
+type DeleteMemoryConflict ErrorResponse
+
+func (*DeleteMemoryConflict) deleteMemoryRes() {}
+
+type DeleteMemoryNotFound ErrorResponse
+
+func (*DeleteMemoryNotFound) deleteMemoryRes() {}
+
+// Merged schema.
+type DeleteMemoryOK struct {
+	Success bool               `json:"success"`
+	Data    DeleteMemoryResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *DeleteMemoryOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *DeleteMemoryOK) GetData() DeleteMemoryResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *DeleteMemoryOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *DeleteMemoryOK) SetData(val DeleteMemoryResult) {
+	s.Data = val
+}
+
+func (*DeleteMemoryOK) deleteMemoryRes() {}
+
+type DeleteMemoryPaymentRequired ErrorResponse
+
+func (*DeleteMemoryPaymentRequired) deleteMemoryRes() {}
+
+// Ref: #/components/schemas/DeleteMemoryResult
+type DeleteMemoryResult struct {
+	Deleted bool                `json:"deleted"`
+	Key     string              `json:"key"`
+	Scope   MemoryResolvedScope `json:"scope"`
+}
+
+// GetDeleted returns the value of Deleted.
+func (s *DeleteMemoryResult) GetDeleted() bool {
+	return s.Deleted
+}
+
+// GetKey returns the value of Key.
+func (s *DeleteMemoryResult) GetKey() string {
+	return s.Key
+}
+
+// GetScope returns the value of Scope.
+func (s *DeleteMemoryResult) GetScope() MemoryResolvedScope {
+	return s.Scope
+}
+
+// SetDeleted sets the value of Deleted.
+func (s *DeleteMemoryResult) SetDeleted(val bool) {
+	s.Deleted = val
+}
+
+// SetKey sets the value of Key.
+func (s *DeleteMemoryResult) SetKey(val string) {
+	s.Key = val
+}
+
+// SetScope sets the value of Scope.
+func (s *DeleteMemoryResult) SetScope(val MemoryResolvedScope) {
+	s.Scope = val
+}
+
+type DeleteMemoryUnauthorized ErrorResponse
+
+func (*DeleteMemoryUnauthorized) deleteMemoryRes() {}
+
 type DeleteOrgSecretBadRequest ErrorResponse
 
 func (*DeleteOrgSecretBadRequest) deleteOrgSecretRes() {}
@@ -7462,45 +7547,47 @@ func (s *ErrorResponseError) SetRequestID(val OptString) {
 type ErrorResponseErrorCode string
 
 const (
-	ErrorResponseErrorCodeUnauthorized              ErrorResponseErrorCode = "unauthorized"
-	ErrorResponseErrorCodeForbidden                 ErrorResponseErrorCode = "forbidden"
-	ErrorResponseErrorCodeNotFound                  ErrorResponseErrorCode = "not_found"
-	ErrorResponseErrorCodeValidationError           ErrorResponseErrorCode = "validation_error"
-	ErrorResponseErrorCodeRateLimitExceeded         ErrorResponseErrorCode = "rate_limit_exceeded"
-	ErrorResponseErrorCodeInternalError             ErrorResponseErrorCode = "internal_error"
-	ErrorResponseErrorCodeConflict                  ErrorResponseErrorCode = "conflict"
-	ErrorResponseErrorCodeMxConflict                ErrorResponseErrorCode = "mx_conflict"
-	ErrorResponseErrorCodeOutboundDisabled          ErrorResponseErrorCode = "outbound_disabled"
-	ErrorResponseErrorCodeCannotSendFromDomain      ErrorResponseErrorCode = "cannot_send_from_domain"
-	ErrorResponseErrorCodeRecipientNotAllowed       ErrorResponseErrorCode = "recipient_not_allowed"
-	ErrorResponseErrorCodeOutboundKeyMissing        ErrorResponseErrorCode = "outbound_key_missing"
-	ErrorResponseErrorCodeOutboundUnreachable       ErrorResponseErrorCode = "outbound_unreachable"
-	ErrorResponseErrorCodeOutboundKeyInvalid        ErrorResponseErrorCode = "outbound_key_invalid"
-	ErrorResponseErrorCodeOutboundCapacityExhausted ErrorResponseErrorCode = "outbound_capacity_exhausted"
-	ErrorResponseErrorCodeOutboundResponseMalformed ErrorResponseErrorCode = "outbound_response_malformed"
-	ErrorResponseErrorCodeOutboundRelayFailed       ErrorResponseErrorCode = "outbound_relay_failed"
-	ErrorResponseErrorCodeDiscardNotEnabled         ErrorResponseErrorCode = "discard_not_enabled"
-	ErrorResponseErrorCodeInboundNotRepliable       ErrorResponseErrorCode = "inbound_not_repliable"
-	ErrorResponseErrorCodeSearchTimeout             ErrorResponseErrorCode = "search_timeout"
-	ErrorResponseErrorCodeAuthorizationPending      ErrorResponseErrorCode = "authorization_pending"
-	ErrorResponseErrorCodeSlowDown                  ErrorResponseErrorCode = "slow_down"
-	ErrorResponseErrorCodeAccessDenied              ErrorResponseErrorCode = "access_denied"
-	ErrorResponseErrorCodeExpiredToken              ErrorResponseErrorCode = "expired_token"
-	ErrorResponseErrorCodeInvalidDeviceCode         ErrorResponseErrorCode = "invalid_device_code"
-	ErrorResponseErrorCodeInvalidSignupCode         ErrorResponseErrorCode = "invalid_signup_code"
-	ErrorResponseErrorCodeInvalidSignupToken        ErrorResponseErrorCode = "invalid_signup_token"
-	ErrorResponseErrorCodeInvalidVerificationCode   ErrorResponseErrorCode = "invalid_verification_code"
-	ErrorResponseErrorCodeEmailDeliveryFailed       ErrorResponseErrorCode = "email_delivery_failed"
-	ErrorResponseErrorCodeClerkSignupFailed         ErrorResponseErrorCode = "clerk_signup_failed"
-	ErrorResponseErrorCodeNoOrgsForUser             ErrorResponseErrorCode = "no_orgs_for_user"
-	ErrorResponseErrorCodeOrgNotAccessible          ErrorResponseErrorCode = "org_not_accessible"
-	ErrorResponseErrorCodeFeatureDisabled           ErrorResponseErrorCode = "feature_disabled"
-	ErrorResponseErrorCodeNoPayoutAddress           ErrorResponseErrorCode = "no_payout_address"
-	ErrorResponseErrorCodeOwnershipProofFailed      ErrorResponseErrorCode = "ownership_proof_failed"
-	ErrorResponseErrorCodePaymentVerificationFailed ErrorResponseErrorCode = "payment_verification_failed"
-	ErrorResponseErrorCodePaymentDeclined           ErrorResponseErrorCode = "payment_declined"
-	ErrorResponseErrorCodeChallengeExpired          ErrorResponseErrorCode = "challenge_expired"
-	ErrorResponseErrorCodeSettlementFailed          ErrorResponseErrorCode = "settlement_failed"
+	ErrorResponseErrorCodeUnauthorized                  ErrorResponseErrorCode = "unauthorized"
+	ErrorResponseErrorCodeForbidden                     ErrorResponseErrorCode = "forbidden"
+	ErrorResponseErrorCodeNotFound                      ErrorResponseErrorCode = "not_found"
+	ErrorResponseErrorCodeValidationError               ErrorResponseErrorCode = "validation_error"
+	ErrorResponseErrorCodeRateLimitExceeded             ErrorResponseErrorCode = "rate_limit_exceeded"
+	ErrorResponseErrorCodeInternalError                 ErrorResponseErrorCode = "internal_error"
+	ErrorResponseErrorCodeConflict                      ErrorResponseErrorCode = "conflict"
+	ErrorResponseErrorCodeMxConflict                    ErrorResponseErrorCode = "mx_conflict"
+	ErrorResponseErrorCodeOutboundDisabled              ErrorResponseErrorCode = "outbound_disabled"
+	ErrorResponseErrorCodeCannotSendFromDomain          ErrorResponseErrorCode = "cannot_send_from_domain"
+	ErrorResponseErrorCodeRecipientNotAllowed           ErrorResponseErrorCode = "recipient_not_allowed"
+	ErrorResponseErrorCodeOutboundKeyMissing            ErrorResponseErrorCode = "outbound_key_missing"
+	ErrorResponseErrorCodeOutboundUnreachable           ErrorResponseErrorCode = "outbound_unreachable"
+	ErrorResponseErrorCodeOutboundKeyInvalid            ErrorResponseErrorCode = "outbound_key_invalid"
+	ErrorResponseErrorCodeOutboundCapacityExhausted     ErrorResponseErrorCode = "outbound_capacity_exhausted"
+	ErrorResponseErrorCodeOutboundResponseMalformed     ErrorResponseErrorCode = "outbound_response_malformed"
+	ErrorResponseErrorCodeOutboundRelayFailed           ErrorResponseErrorCode = "outbound_relay_failed"
+	ErrorResponseErrorCodeDiscardNotEnabled             ErrorResponseErrorCode = "discard_not_enabled"
+	ErrorResponseErrorCodeInboundNotRepliable           ErrorResponseErrorCode = "inbound_not_repliable"
+	ErrorResponseErrorCodeSearchTimeout                 ErrorResponseErrorCode = "search_timeout"
+	ErrorResponseErrorCodeAuthorizationPending          ErrorResponseErrorCode = "authorization_pending"
+	ErrorResponseErrorCodeSlowDown                      ErrorResponseErrorCode = "slow_down"
+	ErrorResponseErrorCodeAccessDenied                  ErrorResponseErrorCode = "access_denied"
+	ErrorResponseErrorCodeExpiredToken                  ErrorResponseErrorCode = "expired_token"
+	ErrorResponseErrorCodeInvalidDeviceCode             ErrorResponseErrorCode = "invalid_device_code"
+	ErrorResponseErrorCodeInvalidSignupCode             ErrorResponseErrorCode = "invalid_signup_code"
+	ErrorResponseErrorCodeInvalidSignupToken            ErrorResponseErrorCode = "invalid_signup_token"
+	ErrorResponseErrorCodeInvalidVerificationCode       ErrorResponseErrorCode = "invalid_verification_code"
+	ErrorResponseErrorCodeEmailDeliveryFailed           ErrorResponseErrorCode = "email_delivery_failed"
+	ErrorResponseErrorCodeClerkSignupFailed             ErrorResponseErrorCode = "clerk_signup_failed"
+	ErrorResponseErrorCodeNoOrgsForUser                 ErrorResponseErrorCode = "no_orgs_for_user"
+	ErrorResponseErrorCodeOrgNotAccessible              ErrorResponseErrorCode = "org_not_accessible"
+	ErrorResponseErrorCodeFeatureDisabled               ErrorResponseErrorCode = "feature_disabled"
+	ErrorResponseErrorCodeMemoryConflict                ErrorResponseErrorCode = "memory_conflict"
+	ErrorResponseErrorCodeDeveloperUsageCreditExhausted ErrorResponseErrorCode = "developer_usage_credit_exhausted"
+	ErrorResponseErrorCodeNoPayoutAddress               ErrorResponseErrorCode = "no_payout_address"
+	ErrorResponseErrorCodeOwnershipProofFailed          ErrorResponseErrorCode = "ownership_proof_failed"
+	ErrorResponseErrorCodePaymentVerificationFailed     ErrorResponseErrorCode = "payment_verification_failed"
+	ErrorResponseErrorCodePaymentDeclined               ErrorResponseErrorCode = "payment_declined"
+	ErrorResponseErrorCodeChallengeExpired              ErrorResponseErrorCode = "challenge_expired"
+	ErrorResponseErrorCodeSettlementFailed              ErrorResponseErrorCode = "settlement_failed"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -7539,6 +7626,8 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeNoOrgsForUser,
 		ErrorResponseErrorCodeOrgNotAccessible,
 		ErrorResponseErrorCodeFeatureDisabled,
+		ErrorResponseErrorCodeMemoryConflict,
+		ErrorResponseErrorCodeDeveloperUsageCreditExhausted,
 		ErrorResponseErrorCodeNoPayoutAddress,
 		ErrorResponseErrorCodeOwnershipProofFailed,
 		ErrorResponseErrorCodePaymentVerificationFailed,
@@ -7616,6 +7705,10 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeOrgNotAccessible:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeFeatureDisabled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMemoryConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDeveloperUsageCreditExhausted:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeNoPayoutAddress:
 		return []byte(s), nil
@@ -7735,6 +7828,12 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeFeatureDisabled:
 		*s = ErrorResponseErrorCodeFeatureDisabled
+		return nil
+	case ErrorResponseErrorCodeMemoryConflict:
+		*s = ErrorResponseErrorCodeMemoryConflict
+		return nil
+	case ErrorResponseErrorCodeDeveloperUsageCreditExhausted:
+		*s = ErrorResponseErrorCodeDeveloperUsageCreditExhausted
 		return nil
 	case ErrorResponseErrorCodeNoPayoutAddress:
 		*s = ErrorResponseErrorCodeNoPayoutAddress
@@ -10564,6 +10663,50 @@ func (s *GetInboxStatusOK) SetData(val InboxStatus) {
 
 func (*GetInboxStatusOK) getInboxStatusRes() {}
 
+type GetMemoryBadRequest ErrorResponse
+
+func (*GetMemoryBadRequest) getMemoryRes() {}
+
+type GetMemoryNotFound ErrorResponse
+
+func (*GetMemoryNotFound) getMemoryRes() {}
+
+// Merged schema.
+type GetMemoryOK struct {
+	Success bool                  `json:"success"`
+	Data    MemoryRecordWithValue `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetMemoryOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetMemoryOK) GetData() MemoryRecordWithValue {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetMemoryOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetMemoryOK) SetData(val MemoryRecordWithValue) {
+	s.Data = val
+}
+
+func (*GetMemoryOK) getMemoryRes() {}
+
+type GetMemoryPaymentRequired ErrorResponse
+
+func (*GetMemoryPaymentRequired) getMemoryRes() {}
+
+type GetMemoryUnauthorized ErrorResponse
+
+func (*GetMemoryUnauthorized) getMemoryRes() {}
+
 type GetOrgRoutingTopologyForbidden ErrorResponse
 
 func (*GetOrgRoutingTopologyForbidden) getOrgRoutingTopologyRes() {}
@@ -12236,6 +12379,782 @@ func (s *ListWakeSchedulesOK) SetData(val []WakeSchedule) {
 
 func (*ListWakeSchedulesOK) listWakeSchedulesRes() {}
 
+// JSON value accepted by Primitive Memories. The server accepts strings,
+// numbers, booleans, null, arrays, and objects, validates nested values,
+// and rejects values that do not serialize as JSON.
+// Ref: #/components/schemas/MemoryJsonValue
+// MemoryJsonValue represents sum type.
+type MemoryJsonValue struct {
+	Type             MemoryJsonValueType // switch on this field
+	Null             struct{}
+	String           string
+	Float64          float64
+	Bool             bool
+	AnyArray         []jx.Raw
+	MemoryJsonValue5 MemoryJsonValue5
+}
+
+// MemoryJsonValueType is oneOf type of MemoryJsonValue.
+type MemoryJsonValueType string
+
+// Possible values for MemoryJsonValueType.
+const (
+	NullMemoryJsonValue             MemoryJsonValueType = "struct{}"
+	StringMemoryJsonValue           MemoryJsonValueType = "string"
+	Float64MemoryJsonValue          MemoryJsonValueType = "float64"
+	BoolMemoryJsonValue             MemoryJsonValueType = "bool"
+	AnyArrayMemoryJsonValue         MemoryJsonValueType = "[]jx.Raw"
+	MemoryJsonValue5MemoryJsonValue MemoryJsonValueType = "MemoryJsonValue5"
+)
+
+// IsNull reports whether MemoryJsonValue is struct{}.
+func (s MemoryJsonValue) IsNull() bool { return s.Type == NullMemoryJsonValue }
+
+// IsString reports whether MemoryJsonValue is string.
+func (s MemoryJsonValue) IsString() bool { return s.Type == StringMemoryJsonValue }
+
+// IsFloat64 reports whether MemoryJsonValue is float64.
+func (s MemoryJsonValue) IsFloat64() bool { return s.Type == Float64MemoryJsonValue }
+
+// IsBool reports whether MemoryJsonValue is bool.
+func (s MemoryJsonValue) IsBool() bool { return s.Type == BoolMemoryJsonValue }
+
+// IsAnyArray reports whether MemoryJsonValue is []jx.Raw.
+func (s MemoryJsonValue) IsAnyArray() bool { return s.Type == AnyArrayMemoryJsonValue }
+
+// IsMemoryJsonValue5 reports whether MemoryJsonValue is MemoryJsonValue5.
+func (s MemoryJsonValue) IsMemoryJsonValue5() bool { return s.Type == MemoryJsonValue5MemoryJsonValue }
+
+// SetNull sets MemoryJsonValue to struct{}.
+func (s *MemoryJsonValue) SetNull(v struct{}) {
+	s.Type = NullMemoryJsonValue
+	s.Null = v
+}
+
+// GetNull returns struct{} and true boolean if MemoryJsonValue is struct{}.
+func (s MemoryJsonValue) GetNull() (v struct{}, ok bool) {
+	if !s.IsNull() {
+		return v, false
+	}
+	return s.Null, true
+}
+
+// NewNullMemoryJsonValue returns new MemoryJsonValue from struct{}.
+func NewNullMemoryJsonValue(v struct{}) MemoryJsonValue {
+	var s MemoryJsonValue
+	s.SetNull(v)
+	return s
+}
+
+// SetString sets MemoryJsonValue to string.
+func (s *MemoryJsonValue) SetString(v string) {
+	s.Type = StringMemoryJsonValue
+	s.String = v
+}
+
+// GetString returns string and true boolean if MemoryJsonValue is string.
+func (s MemoryJsonValue) GetString() (v string, ok bool) {
+	if !s.IsString() {
+		return v, false
+	}
+	return s.String, true
+}
+
+// NewStringMemoryJsonValue returns new MemoryJsonValue from string.
+func NewStringMemoryJsonValue(v string) MemoryJsonValue {
+	var s MemoryJsonValue
+	s.SetString(v)
+	return s
+}
+
+// SetFloat64 sets MemoryJsonValue to float64.
+func (s *MemoryJsonValue) SetFloat64(v float64) {
+	s.Type = Float64MemoryJsonValue
+	s.Float64 = v
+}
+
+// GetFloat64 returns float64 and true boolean if MemoryJsonValue is float64.
+func (s MemoryJsonValue) GetFloat64() (v float64, ok bool) {
+	if !s.IsFloat64() {
+		return v, false
+	}
+	return s.Float64, true
+}
+
+// NewFloat64MemoryJsonValue returns new MemoryJsonValue from float64.
+func NewFloat64MemoryJsonValue(v float64) MemoryJsonValue {
+	var s MemoryJsonValue
+	s.SetFloat64(v)
+	return s
+}
+
+// SetBool sets MemoryJsonValue to bool.
+func (s *MemoryJsonValue) SetBool(v bool) {
+	s.Type = BoolMemoryJsonValue
+	s.Bool = v
+}
+
+// GetBool returns bool and true boolean if MemoryJsonValue is bool.
+func (s MemoryJsonValue) GetBool() (v bool, ok bool) {
+	if !s.IsBool() {
+		return v, false
+	}
+	return s.Bool, true
+}
+
+// NewBoolMemoryJsonValue returns new MemoryJsonValue from bool.
+func NewBoolMemoryJsonValue(v bool) MemoryJsonValue {
+	var s MemoryJsonValue
+	s.SetBool(v)
+	return s
+}
+
+// SetAnyArray sets MemoryJsonValue to []jx.Raw.
+func (s *MemoryJsonValue) SetAnyArray(v []jx.Raw) {
+	s.Type = AnyArrayMemoryJsonValue
+	s.AnyArray = v
+}
+
+// GetAnyArray returns []jx.Raw and true boolean if MemoryJsonValue is []jx.Raw.
+func (s MemoryJsonValue) GetAnyArray() (v []jx.Raw, ok bool) {
+	if !s.IsAnyArray() {
+		return v, false
+	}
+	return s.AnyArray, true
+}
+
+// NewAnyArrayMemoryJsonValue returns new MemoryJsonValue from []jx.Raw.
+func NewAnyArrayMemoryJsonValue(v []jx.Raw) MemoryJsonValue {
+	var s MemoryJsonValue
+	s.SetAnyArray(v)
+	return s
+}
+
+// SetMemoryJsonValue5 sets MemoryJsonValue to MemoryJsonValue5.
+func (s *MemoryJsonValue) SetMemoryJsonValue5(v MemoryJsonValue5) {
+	s.Type = MemoryJsonValue5MemoryJsonValue
+	s.MemoryJsonValue5 = v
+}
+
+// GetMemoryJsonValue5 returns MemoryJsonValue5 and true boolean if MemoryJsonValue is MemoryJsonValue5.
+func (s MemoryJsonValue) GetMemoryJsonValue5() (v MemoryJsonValue5, ok bool) {
+	if !s.IsMemoryJsonValue5() {
+		return v, false
+	}
+	return s.MemoryJsonValue5, true
+}
+
+// NewMemoryJsonValue5MemoryJsonValue returns new MemoryJsonValue from MemoryJsonValue5.
+func NewMemoryJsonValue5MemoryJsonValue(v MemoryJsonValue5) MemoryJsonValue {
+	var s MemoryJsonValue
+	s.SetMemoryJsonValue5(v)
+	return s
+}
+
+type MemoryJsonValue5 map[string]jx.Raw
+
+func (s *MemoryJsonValue5) init() MemoryJsonValue5 {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Metadata for a Primitive memory. Search responses omit `value` when
+// `include_value=false`.
+// Ref: #/components/schemas/MemoryRecord
+type MemoryRecord struct {
+	ID uuid.UUID `json:"id"`
+	// Caller-defined key, at most 512 UTF-8 bytes.
+	Key       string              `json:"key"`
+	Scope     MemoryResolvedScope `json:"scope"`
+	Value     OptMemoryJsonValue  `json:"value"`
+	Version   NumericString       `json:"version"`
+	CreatedAt time.Time           `json:"created_at"`
+	UpdatedAt time.Time           `json:"updated_at"`
+	// Last successful get timestamp, or null before any get.
+	LastReadAt NilDateTime   `json:"last_read_at"`
+	ReadCount  NumericString `json:"read_count"`
+	WriteCount NumericString `json:"write_count"`
+	// Expiration timestamp, or null for no TTL.
+	ExpiresAt NilDateTime `json:"expires_at"`
+	// Actor that created the memory, when available.
+	CreatedBy NilString `json:"created_by"`
+	// Actor that last updated the memory, when available.
+	UpdatedBy NilString `json:"updated_by"`
+}
+
+// GetID returns the value of ID.
+func (s *MemoryRecord) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetKey returns the value of Key.
+func (s *MemoryRecord) GetKey() string {
+	return s.Key
+}
+
+// GetScope returns the value of Scope.
+func (s *MemoryRecord) GetScope() MemoryResolvedScope {
+	return s.Scope
+}
+
+// GetValue returns the value of Value.
+func (s *MemoryRecord) GetValue() OptMemoryJsonValue {
+	return s.Value
+}
+
+// GetVersion returns the value of Version.
+func (s *MemoryRecord) GetVersion() NumericString {
+	return s.Version
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *MemoryRecord) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *MemoryRecord) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetLastReadAt returns the value of LastReadAt.
+func (s *MemoryRecord) GetLastReadAt() NilDateTime {
+	return s.LastReadAt
+}
+
+// GetReadCount returns the value of ReadCount.
+func (s *MemoryRecord) GetReadCount() NumericString {
+	return s.ReadCount
+}
+
+// GetWriteCount returns the value of WriteCount.
+func (s *MemoryRecord) GetWriteCount() NumericString {
+	return s.WriteCount
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *MemoryRecord) GetExpiresAt() NilDateTime {
+	return s.ExpiresAt
+}
+
+// GetCreatedBy returns the value of CreatedBy.
+func (s *MemoryRecord) GetCreatedBy() NilString {
+	return s.CreatedBy
+}
+
+// GetUpdatedBy returns the value of UpdatedBy.
+func (s *MemoryRecord) GetUpdatedBy() NilString {
+	return s.UpdatedBy
+}
+
+// SetID sets the value of ID.
+func (s *MemoryRecord) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetKey sets the value of Key.
+func (s *MemoryRecord) SetKey(val string) {
+	s.Key = val
+}
+
+// SetScope sets the value of Scope.
+func (s *MemoryRecord) SetScope(val MemoryResolvedScope) {
+	s.Scope = val
+}
+
+// SetValue sets the value of Value.
+func (s *MemoryRecord) SetValue(val OptMemoryJsonValue) {
+	s.Value = val
+}
+
+// SetVersion sets the value of Version.
+func (s *MemoryRecord) SetVersion(val NumericString) {
+	s.Version = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *MemoryRecord) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *MemoryRecord) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetLastReadAt sets the value of LastReadAt.
+func (s *MemoryRecord) SetLastReadAt(val NilDateTime) {
+	s.LastReadAt = val
+}
+
+// SetReadCount sets the value of ReadCount.
+func (s *MemoryRecord) SetReadCount(val NumericString) {
+	s.ReadCount = val
+}
+
+// SetWriteCount sets the value of WriteCount.
+func (s *MemoryRecord) SetWriteCount(val NumericString) {
+	s.WriteCount = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *MemoryRecord) SetExpiresAt(val NilDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetCreatedBy sets the value of CreatedBy.
+func (s *MemoryRecord) SetCreatedBy(val NilString) {
+	s.CreatedBy = val
+}
+
+// SetUpdatedBy sets the value of UpdatedBy.
+func (s *MemoryRecord) SetUpdatedBy(val NilString) {
+	s.UpdatedBy = val
+}
+
+// Memory record returned by get and set operations.
+// Ref: #/components/schemas/MemoryRecordWithValue
+type MemoryRecordWithValue struct {
+	ID uuid.UUID `json:"id"`
+	// Caller-defined key, at most 512 UTF-8 bytes.
+	Key       string              `json:"key"`
+	Scope     MemoryResolvedScope `json:"scope"`
+	Value     MemoryJsonValue     `json:"value"`
+	Version   NumericString       `json:"version"`
+	CreatedAt time.Time           `json:"created_at"`
+	UpdatedAt time.Time           `json:"updated_at"`
+	// Last successful get timestamp, or null before any get.
+	LastReadAt NilDateTime   `json:"last_read_at"`
+	ReadCount  NumericString `json:"read_count"`
+	WriteCount NumericString `json:"write_count"`
+	// Expiration timestamp, or null for no TTL.
+	ExpiresAt NilDateTime `json:"expires_at"`
+	// Actor that created the memory, when available.
+	CreatedBy NilString `json:"created_by"`
+	// Actor that last updated the memory, when available.
+	UpdatedBy NilString `json:"updated_by"`
+}
+
+// GetID returns the value of ID.
+func (s *MemoryRecordWithValue) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetKey returns the value of Key.
+func (s *MemoryRecordWithValue) GetKey() string {
+	return s.Key
+}
+
+// GetScope returns the value of Scope.
+func (s *MemoryRecordWithValue) GetScope() MemoryResolvedScope {
+	return s.Scope
+}
+
+// GetValue returns the value of Value.
+func (s *MemoryRecordWithValue) GetValue() MemoryJsonValue {
+	return s.Value
+}
+
+// GetVersion returns the value of Version.
+func (s *MemoryRecordWithValue) GetVersion() NumericString {
+	return s.Version
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *MemoryRecordWithValue) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *MemoryRecordWithValue) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetLastReadAt returns the value of LastReadAt.
+func (s *MemoryRecordWithValue) GetLastReadAt() NilDateTime {
+	return s.LastReadAt
+}
+
+// GetReadCount returns the value of ReadCount.
+func (s *MemoryRecordWithValue) GetReadCount() NumericString {
+	return s.ReadCount
+}
+
+// GetWriteCount returns the value of WriteCount.
+func (s *MemoryRecordWithValue) GetWriteCount() NumericString {
+	return s.WriteCount
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *MemoryRecordWithValue) GetExpiresAt() NilDateTime {
+	return s.ExpiresAt
+}
+
+// GetCreatedBy returns the value of CreatedBy.
+func (s *MemoryRecordWithValue) GetCreatedBy() NilString {
+	return s.CreatedBy
+}
+
+// GetUpdatedBy returns the value of UpdatedBy.
+func (s *MemoryRecordWithValue) GetUpdatedBy() NilString {
+	return s.UpdatedBy
+}
+
+// SetID sets the value of ID.
+func (s *MemoryRecordWithValue) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetKey sets the value of Key.
+func (s *MemoryRecordWithValue) SetKey(val string) {
+	s.Key = val
+}
+
+// SetScope sets the value of Scope.
+func (s *MemoryRecordWithValue) SetScope(val MemoryResolvedScope) {
+	s.Scope = val
+}
+
+// SetValue sets the value of Value.
+func (s *MemoryRecordWithValue) SetValue(val MemoryJsonValue) {
+	s.Value = val
+}
+
+// SetVersion sets the value of Version.
+func (s *MemoryRecordWithValue) SetVersion(val NumericString) {
+	s.Version = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *MemoryRecordWithValue) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *MemoryRecordWithValue) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetLastReadAt sets the value of LastReadAt.
+func (s *MemoryRecordWithValue) SetLastReadAt(val NilDateTime) {
+	s.LastReadAt = val
+}
+
+// SetReadCount sets the value of ReadCount.
+func (s *MemoryRecordWithValue) SetReadCount(val NumericString) {
+	s.ReadCount = val
+}
+
+// SetWriteCount sets the value of WriteCount.
+func (s *MemoryRecordWithValue) SetWriteCount(val NumericString) {
+	s.WriteCount = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *MemoryRecordWithValue) SetExpiresAt(val NilDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetCreatedBy sets the value of CreatedBy.
+func (s *MemoryRecordWithValue) SetCreatedBy(val NilString) {
+	s.CreatedBy = val
+}
+
+// SetUpdatedBy sets the value of UpdatedBy.
+func (s *MemoryRecordWithValue) SetUpdatedBy(val NilString) {
+	s.UpdatedBy = val
+}
+
+// Resolved memory scope returned by the API.
+// Ref: #/components/schemas/MemoryResolvedScope
+type MemoryResolvedScope struct {
+	Type MemoryResolvedScopeType `json:"type"`
+	// Org id for org scope, function id for function scope.
+	ID uuid.UUID `json:"id"`
+}
+
+// GetType returns the value of Type.
+func (s *MemoryResolvedScope) GetType() MemoryResolvedScopeType {
+	return s.Type
+}
+
+// GetID returns the value of ID.
+func (s *MemoryResolvedScope) GetID() uuid.UUID {
+	return s.ID
+}
+
+// SetType sets the value of Type.
+func (s *MemoryResolvedScope) SetType(val MemoryResolvedScopeType) {
+	s.Type = val
+}
+
+// SetID sets the value of ID.
+func (s *MemoryResolvedScope) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+type MemoryResolvedScopeType string
+
+const (
+	MemoryResolvedScopeTypeOrg      MemoryResolvedScopeType = "org"
+	MemoryResolvedScopeTypeFunction MemoryResolvedScopeType = "function"
+)
+
+// AllValues returns all MemoryResolvedScopeType values.
+func (MemoryResolvedScopeType) AllValues() []MemoryResolvedScopeType {
+	return []MemoryResolvedScopeType{
+		MemoryResolvedScopeTypeOrg,
+		MemoryResolvedScopeTypeFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MemoryResolvedScopeType) MarshalText() ([]byte, error) {
+	switch s {
+	case MemoryResolvedScopeTypeOrg:
+		return []byte(s), nil
+	case MemoryResolvedScopeTypeFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MemoryResolvedScopeType) UnmarshalText(data []byte) error {
+	switch MemoryResolvedScopeType(data) {
+	case MemoryResolvedScopeTypeOrg:
+		*s = MemoryResolvedScopeTypeOrg
+		return nil
+	case MemoryResolvedScopeTypeFunction:
+		*s = MemoryResolvedScopeTypeFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Memory scope. `org` resolves to the authenticated organization.
+// `function` requires the function id UUID in `id`; function names are
+// not valid scope identifiers.
+// Ref: #/components/schemas/MemoryScope
+// MemoryScope represents sum type.
+type MemoryScope struct {
+	Type         MemoryScopeType // switch on this field
+	MemoryScope0 MemoryScope0
+	MemoryScope1 MemoryScope1
+}
+
+// MemoryScopeType is oneOf type of MemoryScope.
+type MemoryScopeType string
+
+// Possible values for MemoryScopeType.
+const (
+	MemoryScope0MemoryScope MemoryScopeType = "MemoryScope0"
+	MemoryScope1MemoryScope MemoryScopeType = "MemoryScope1"
+)
+
+// IsMemoryScope0 reports whether MemoryScope is MemoryScope0.
+func (s MemoryScope) IsMemoryScope0() bool { return s.Type == MemoryScope0MemoryScope }
+
+// IsMemoryScope1 reports whether MemoryScope is MemoryScope1.
+func (s MemoryScope) IsMemoryScope1() bool { return s.Type == MemoryScope1MemoryScope }
+
+// SetMemoryScope0 sets MemoryScope to MemoryScope0.
+func (s *MemoryScope) SetMemoryScope0(v MemoryScope0) {
+	s.Type = MemoryScope0MemoryScope
+	s.MemoryScope0 = v
+}
+
+// GetMemoryScope0 returns MemoryScope0 and true boolean if MemoryScope is MemoryScope0.
+func (s MemoryScope) GetMemoryScope0() (v MemoryScope0, ok bool) {
+	if !s.IsMemoryScope0() {
+		return v, false
+	}
+	return s.MemoryScope0, true
+}
+
+// NewMemoryScope0MemoryScope returns new MemoryScope from MemoryScope0.
+func NewMemoryScope0MemoryScope(v MemoryScope0) MemoryScope {
+	var s MemoryScope
+	s.SetMemoryScope0(v)
+	return s
+}
+
+// SetMemoryScope1 sets MemoryScope to MemoryScope1.
+func (s *MemoryScope) SetMemoryScope1(v MemoryScope1) {
+	s.Type = MemoryScope1MemoryScope
+	s.MemoryScope1 = v
+}
+
+// GetMemoryScope1 returns MemoryScope1 and true boolean if MemoryScope is MemoryScope1.
+func (s MemoryScope) GetMemoryScope1() (v MemoryScope1, ok bool) {
+	if !s.IsMemoryScope1() {
+		return v, false
+	}
+	return s.MemoryScope1, true
+}
+
+// NewMemoryScope1MemoryScope returns new MemoryScope from MemoryScope1.
+func NewMemoryScope1MemoryScope(v MemoryScope1) MemoryScope {
+	var s MemoryScope
+	s.SetMemoryScope1(v)
+	return s
+}
+
+type MemoryScope0 struct {
+	Type MemoryScope0Type `json:"type"`
+}
+
+// GetType returns the value of Type.
+func (s *MemoryScope0) GetType() MemoryScope0Type {
+	return s.Type
+}
+
+// SetType sets the value of Type.
+func (s *MemoryScope0) SetType(val MemoryScope0Type) {
+	s.Type = val
+}
+
+type MemoryScope0Type string
+
+const (
+	MemoryScope0TypeOrg MemoryScope0Type = "org"
+)
+
+// AllValues returns all MemoryScope0Type values.
+func (MemoryScope0Type) AllValues() []MemoryScope0Type {
+	return []MemoryScope0Type{
+		MemoryScope0TypeOrg,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MemoryScope0Type) MarshalText() ([]byte, error) {
+	switch s {
+	case MemoryScope0TypeOrg:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MemoryScope0Type) UnmarshalText(data []byte) error {
+	switch MemoryScope0Type(data) {
+	case MemoryScope0TypeOrg:
+		*s = MemoryScope0TypeOrg
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type MemoryScope1 struct {
+	Type MemoryScope1Type `json:"type"`
+	// Function id UUID.
+	ID uuid.UUID `json:"id"`
+}
+
+// GetType returns the value of Type.
+func (s *MemoryScope1) GetType() MemoryScope1Type {
+	return s.Type
+}
+
+// GetID returns the value of ID.
+func (s *MemoryScope1) GetID() uuid.UUID {
+	return s.ID
+}
+
+// SetType sets the value of Type.
+func (s *MemoryScope1) SetType(val MemoryScope1Type) {
+	s.Type = val
+}
+
+// SetID sets the value of ID.
+func (s *MemoryScope1) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+type MemoryScope1Type string
+
+const (
+	MemoryScope1TypeFunction MemoryScope1Type = "function"
+)
+
+// AllValues returns all MemoryScope1Type values.
+func (MemoryScope1Type) AllValues() []MemoryScope1Type {
+	return []MemoryScope1Type{
+		MemoryScope1TypeFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MemoryScope1Type) MarshalText() ([]byte, error) {
+	switch s {
+	case MemoryScope1TypeFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MemoryScope1Type) UnmarshalText(data []byte) error {
+	switch MemoryScope1Type(data) {
+	case MemoryScope1TypeFunction:
+		*s = MemoryScope1TypeFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type MemoryScopeQueryType string
+
+const (
+	MemoryScopeQueryTypeOrg      MemoryScopeQueryType = "org"
+	MemoryScopeQueryTypeFunction MemoryScopeQueryType = "function"
+)
+
+// AllValues returns all MemoryScopeQueryType values.
+func (MemoryScopeQueryType) AllValues() []MemoryScopeQueryType {
+	return []MemoryScopeQueryType{
+		MemoryScopeQueryTypeOrg,
+		MemoryScopeQueryTypeFunction,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MemoryScopeQueryType) MarshalText() ([]byte, error) {
+	switch s {
+	case MemoryScopeQueryTypeOrg:
+		return []byte(s), nil
+	case MemoryScopeQueryTypeFunction:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MemoryScopeQueryType) UnmarshalText(data []byte) error {
+	switch MemoryScopeQueryType(data) {
+	case MemoryScopeQueryTypeOrg:
+		*s = MemoryScopeQueryTypeOrg
+		return nil
+	case MemoryScopeQueryTypeFunction:
+		*s = MemoryScopeQueryTypeFunction
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // NewNilBool returns new NilBool with value set to v.
 func NewNilBool(v bool) NilBool {
 	return NilBool{
@@ -13000,6 +13919,8 @@ func (o NilUUID) Or(d uuid.UUID) uuid.UUID {
 	}
 	return d
 }
+
+type NumericString string
 
 // NewOptBool returns new OptBool with value set to v.
 func NewOptBool(v bool) OptBool {
@@ -13823,6 +14744,144 @@ func (o OptListDeliveriesStatus) Get() (v ListDeliveriesStatus, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListDeliveriesStatus) Or(d ListDeliveriesStatus) ListDeliveriesStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptMemoryJsonValue returns new OptMemoryJsonValue with value set to v.
+func NewOptMemoryJsonValue(v MemoryJsonValue) OptMemoryJsonValue {
+	return OptMemoryJsonValue{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptMemoryJsonValue is optional MemoryJsonValue.
+type OptMemoryJsonValue struct {
+	Value MemoryJsonValue
+	Set   bool
+}
+
+// IsSet returns true if OptMemoryJsonValue was set.
+func (o OptMemoryJsonValue) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptMemoryJsonValue) Reset() {
+	var v MemoryJsonValue
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptMemoryJsonValue) SetTo(v MemoryJsonValue) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptMemoryJsonValue) Get() (v MemoryJsonValue, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptMemoryJsonValue) Or(d MemoryJsonValue) MemoryJsonValue {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptMemoryScope returns new OptMemoryScope with value set to v.
+func NewOptMemoryScope(v MemoryScope) OptMemoryScope {
+	return OptMemoryScope{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptMemoryScope is optional MemoryScope.
+type OptMemoryScope struct {
+	Value MemoryScope
+	Set   bool
+}
+
+// IsSet returns true if OptMemoryScope was set.
+func (o OptMemoryScope) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptMemoryScope) Reset() {
+	var v MemoryScope
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptMemoryScope) SetTo(v MemoryScope) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptMemoryScope) Get() (v MemoryScope, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptMemoryScope) Or(d MemoryScope) MemoryScope {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptMemoryScopeQueryType returns new OptMemoryScopeQueryType with value set to v.
+func NewOptMemoryScopeQueryType(v MemoryScopeQueryType) OptMemoryScopeQueryType {
+	return OptMemoryScopeQueryType{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptMemoryScopeQueryType is optional MemoryScopeQueryType.
+type OptMemoryScopeQueryType struct {
+	Value MemoryScopeQueryType
+	Set   bool
+}
+
+// IsSet returns true if OptMemoryScopeQueryType was set.
+func (o OptMemoryScopeQueryType) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptMemoryScopeQueryType) Reset() {
+	var v MemoryScopeQueryType
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptMemoryScopeQueryType) SetTo(v MemoryScopeQueryType) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptMemoryScopeQueryType) Get() (v MemoryScopeQueryType, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptMemoryScopeQueryType) Or(d MemoryScopeQueryType) MemoryScopeQueryType {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -14774,6 +15833,52 @@ func (o OptNilUUIDArray) Or(d []uuid.UUID) []uuid.UUID {
 	return d
 }
 
+// NewOptNumericString returns new OptNumericString with value set to v.
+func NewOptNumericString(v NumericString) OptNumericString {
+	return OptNumericString{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNumericString is optional NumericString.
+type OptNumericString struct {
+	Value NumericString
+	Set   bool
+}
+
+// IsSet returns true if OptNumericString was set.
+func (o OptNumericString) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNumericString) Reset() {
+	var v NumericString
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptNumericString) SetTo(v NumericString) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNumericString) Get() (v NumericString, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNumericString) Or(d NumericString) NumericString {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptPublishPolicy returns new OptPublishPolicy with value set to v.
 func NewOptPublishPolicy(v PublishPolicy) OptPublishPolicy {
 	return OptPublishPolicy{
@@ -15044,6 +16149,52 @@ func (o OptSearchEmailsSort) Get() (v SearchEmailsSort, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptSearchEmailsSort) Or(d SearchEmailsSort) SearchEmailsSort {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSearchMemoriesIncludeValue returns new OptSearchMemoriesIncludeValue with value set to v.
+func NewOptSearchMemoriesIncludeValue(v SearchMemoriesIncludeValue) OptSearchMemoriesIncludeValue {
+	return OptSearchMemoriesIncludeValue{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchMemoriesIncludeValue is optional SearchMemoriesIncludeValue.
+type OptSearchMemoriesIncludeValue struct {
+	Value SearchMemoriesIncludeValue
+	Set   bool
+}
+
+// IsSet returns true if OptSearchMemoriesIncludeValue was set.
+func (o OptSearchMemoriesIncludeValue) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchMemoriesIncludeValue) Reset() {
+	var v SearchMemoriesIncludeValue
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchMemoriesIncludeValue) SetTo(v SearchMemoriesIncludeValue) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchMemoriesIncludeValue) Get() (v SearchMemoriesIncludeValue, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchMemoriesIncludeValue) Or(d SearchMemoriesIncludeValue) SearchMemoriesIncludeValue {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -16652,10 +17803,12 @@ func (*RateLimitedHeaders) createAgentAccountRes()     {}
 func (*RateLimitedHeaders) createAgentClaimLinkRes()   {}
 func (*RateLimitedHeaders) createChallengeRes()        {}
 func (*RateLimitedHeaders) createEmailChallengeRes()   {}
+func (*RateLimitedHeaders) deleteMemoryRes()           {}
 func (*RateLimitedHeaders) discardEmailContentRes()    {}
 func (*RateLimitedHeaders) downloadDomainZoneFileRes() {}
 func (*RateLimitedHeaders) getChallengeRes()           {}
 func (*RateLimitedHeaders) getInboxStatusRes()         {}
+func (*RateLimitedHeaders) getMemoryRes()              {}
 func (*RateLimitedHeaders) getSpendPolicyRes()         {}
 func (*RateLimitedHeaders) listDeclinedPaymentsRes()   {}
 func (*RateLimitedHeaders) listPayoutAddressesRes()    {}
@@ -16665,8 +17818,10 @@ func (*RateLimitedHeaders) replayDeliveryRes()         {}
 func (*RateLimitedHeaders) replayEmailWebhooksRes()    {}
 func (*RateLimitedHeaders) replyToEmailRes()           {}
 func (*RateLimitedHeaders) rotateWebhookSecretRes()    {}
+func (*RateLimitedHeaders) searchMemoriesRes()         {}
 func (*RateLimitedHeaders) semanticSearchRes()         {}
 func (*RateLimitedHeaders) sendEmailRes()              {}
+func (*RateLimitedHeaders) setMemoryRes()              {}
 func (*RateLimitedHeaders) startAgentClaimRes()        {}
 func (*RateLimitedHeaders) startAgentSignupRes()       {}
 func (*RateLimitedHeaders) startCliLoginRes()          {}
@@ -18386,6 +19541,102 @@ func (s *SearchEmailsSort) UnmarshalText(data []byte) error {
 type SearchEmailsUnauthorized ErrorResponse
 
 func (*SearchEmailsUnauthorized) searchEmailsRes() {}
+
+type SearchMemoriesBadRequest ErrorResponse
+
+func (*SearchMemoriesBadRequest) searchMemoriesRes() {}
+
+type SearchMemoriesIncludeValue string
+
+const (
+	SearchMemoriesIncludeValueTrue  SearchMemoriesIncludeValue = "true"
+	SearchMemoriesIncludeValueFalse SearchMemoriesIncludeValue = "false"
+)
+
+// AllValues returns all SearchMemoriesIncludeValue values.
+func (SearchMemoriesIncludeValue) AllValues() []SearchMemoriesIncludeValue {
+	return []SearchMemoriesIncludeValue{
+		SearchMemoriesIncludeValueTrue,
+		SearchMemoriesIncludeValueFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchMemoriesIncludeValue) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchMemoriesIncludeValueTrue:
+		return []byte(s), nil
+	case SearchMemoriesIncludeValueFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchMemoriesIncludeValue) UnmarshalText(data []byte) error {
+	switch SearchMemoriesIncludeValue(data) {
+	case SearchMemoriesIncludeValueTrue:
+		*s = SearchMemoriesIncludeValueTrue
+		return nil
+	case SearchMemoriesIncludeValueFalse:
+		*s = SearchMemoriesIncludeValueFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SearchMemoriesNotFound ErrorResponse
+
+func (*SearchMemoriesNotFound) searchMemoriesRes() {}
+
+// Merged schema.
+type SearchMemoriesOK struct {
+	Success bool           `json:"success"`
+	Meta    PaginationMeta `json:"meta"`
+	Data    []MemoryRecord `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SearchMemoriesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetMeta returns the value of Meta.
+func (s *SearchMemoriesOK) GetMeta() PaginationMeta {
+	return s.Meta
+}
+
+// GetData returns the value of Data.
+func (s *SearchMemoriesOK) GetData() []MemoryRecord {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SearchMemoriesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *SearchMemoriesOK) SetMeta(val PaginationMeta) {
+	s.Meta = val
+}
+
+// SetData sets the value of Data.
+func (s *SearchMemoriesOK) SetData(val []MemoryRecord) {
+	s.Data = val
+}
+
+func (*SearchMemoriesOK) searchMemoriesRes() {}
+
+type SearchMemoriesPaymentRequired ErrorResponse
+
+func (*SearchMemoriesPaymentRequired) searchMemoriesRes() {}
+
+type SearchMemoriesUnauthorized ErrorResponse
+
+func (*SearchMemoriesUnauthorized) searchMemoriesRes() {}
 
 type SemanticSearchBadRequest ErrorResponse
 
@@ -21176,6 +22427,183 @@ func (*SetFunctionSecretOK) setFunctionSecretRes() {}
 type SetFunctionSecretUnauthorized ErrorResponse
 
 func (*SetFunctionSecretUnauthorized) setFunctionSecretRes() {}
+
+type SetMemoryBadRequest ErrorResponse
+
+func (*SetMemoryBadRequest) setMemoryRes() {}
+
+type SetMemoryConflict ErrorResponse
+
+func (*SetMemoryConflict) setMemoryRes() {}
+
+// Merged schema.
+type SetMemoryCreated struct {
+	Success bool                  `json:"success"`
+	Data    MemoryRecordWithValue `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SetMemoryCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SetMemoryCreated) GetData() MemoryRecordWithValue {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SetMemoryCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SetMemoryCreated) SetData(val MemoryRecordWithValue) {
+	s.Data = val
+}
+
+func (*SetMemoryCreated) setMemoryRes() {}
+
+// Ref: #/components/schemas/SetMemoryInput
+type SetMemoryInput struct {
+	// Caller-defined key, at most 512 UTF-8 bytes.
+	Key   string          `json:"key"`
+	Value MemoryJsonValue `json:"value"`
+	Scope OptMemoryScope  `json:"scope"`
+	// Set or replace the TTL in seconds. Mutually exclusive with
+	// `expires_at` and `clear_ttl`.
+	TTLSeconds OptInt `json:"ttl_seconds"`
+	// Set or replace the absolute expiration timestamp. Mutually
+	// exclusive with `ttl_seconds` and `clear_ttl`.
+	ExpiresAt OptDateTime `json:"expires_at"`
+	// Clear any existing TTL. Mutually exclusive with `ttl_seconds` and
+	// `expires_at`.
+	ClearTTL OptBool `json:"clear_ttl"`
+	// Create only when the key is absent. Mutually exclusive with
+	// `if_version`.
+	IfAbsent  OptBool          `json:"if_absent"`
+	IfVersion OptNumericString `json:"if_version"`
+}
+
+// GetKey returns the value of Key.
+func (s *SetMemoryInput) GetKey() string {
+	return s.Key
+}
+
+// GetValue returns the value of Value.
+func (s *SetMemoryInput) GetValue() MemoryJsonValue {
+	return s.Value
+}
+
+// GetScope returns the value of Scope.
+func (s *SetMemoryInput) GetScope() OptMemoryScope {
+	return s.Scope
+}
+
+// GetTTLSeconds returns the value of TTLSeconds.
+func (s *SetMemoryInput) GetTTLSeconds() OptInt {
+	return s.TTLSeconds
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *SetMemoryInput) GetExpiresAt() OptDateTime {
+	return s.ExpiresAt
+}
+
+// GetClearTTL returns the value of ClearTTL.
+func (s *SetMemoryInput) GetClearTTL() OptBool {
+	return s.ClearTTL
+}
+
+// GetIfAbsent returns the value of IfAbsent.
+func (s *SetMemoryInput) GetIfAbsent() OptBool {
+	return s.IfAbsent
+}
+
+// GetIfVersion returns the value of IfVersion.
+func (s *SetMemoryInput) GetIfVersion() OptNumericString {
+	return s.IfVersion
+}
+
+// SetKey sets the value of Key.
+func (s *SetMemoryInput) SetKey(val string) {
+	s.Key = val
+}
+
+// SetValue sets the value of Value.
+func (s *SetMemoryInput) SetValue(val MemoryJsonValue) {
+	s.Value = val
+}
+
+// SetScope sets the value of Scope.
+func (s *SetMemoryInput) SetScope(val OptMemoryScope) {
+	s.Scope = val
+}
+
+// SetTTLSeconds sets the value of TTLSeconds.
+func (s *SetMemoryInput) SetTTLSeconds(val OptInt) {
+	s.TTLSeconds = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *SetMemoryInput) SetExpiresAt(val OptDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetClearTTL sets the value of ClearTTL.
+func (s *SetMemoryInput) SetClearTTL(val OptBool) {
+	s.ClearTTL = val
+}
+
+// SetIfAbsent sets the value of IfAbsent.
+func (s *SetMemoryInput) SetIfAbsent(val OptBool) {
+	s.IfAbsent = val
+}
+
+// SetIfVersion sets the value of IfVersion.
+func (s *SetMemoryInput) SetIfVersion(val OptNumericString) {
+	s.IfVersion = val
+}
+
+type SetMemoryNotFound ErrorResponse
+
+func (*SetMemoryNotFound) setMemoryRes() {}
+
+// Merged schema.
+type SetMemoryOK struct {
+	Success bool                  `json:"success"`
+	Data    MemoryRecordWithValue `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *SetMemoryOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *SetMemoryOK) GetData() MemoryRecordWithValue {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *SetMemoryOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *SetMemoryOK) SetData(val MemoryRecordWithValue) {
+	s.Data = val
+}
+
+func (*SetMemoryOK) setMemoryRes() {}
+
+type SetMemoryPaymentRequired ErrorResponse
+
+func (*SetMemoryPaymentRequired) setMemoryRes() {}
+
+type SetMemoryUnauthorized ErrorResponse
+
+func (*SetMemoryUnauthorized) setMemoryRes() {}
 
 type SetOrgSecretBadRequest ErrorResponse
 

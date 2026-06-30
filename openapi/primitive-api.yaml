@@ -196,6 +196,11 @@ tags:
       Primitive's edge runtime; there is no infrastructure to manage.
       Secrets land in `env` as encrypted bindings and are refreshed on
       every redeploy.
+  - name: Memories
+    description: |
+      Durable org-scoped or function-scoped JSON key-value storage for
+      agents and functions. Keys are caller-defined. Function scope is
+      always addressed by the function id UUID, not by function name.
 
   - name: Registries
     description: |
@@ -3939,6 +3944,281 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   # ---------------------------------------------------------------------------
+  # Memories
+  # ---------------------------------------------------------------------------
+  /memories:
+    put:
+      operationId: setMemory
+      summary: Set a memory
+      description: |
+        Create or update a durable JSON memory under an org or function scope.
+        When no explicit scope is provided, function-authenticated requests
+        use that function's id automatically; requests with
+        `x-primitive-function-id` use that function id; all other requests
+        default to org scope.
+
+        `scope.type = function` requires the function id UUID in `scope.id`.
+        Function names are not accepted as scope identifiers. Values must be
+        valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
+        most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
+        bigint counters serialized as strings.
+
+        Passing `if_absent` turns the write into create-only. Passing
+        `if_version` turns the write into compare-and-set. These options are
+        mutually exclusive and return `memory_conflict` on a stale version or
+        existing key.
+      tags: [Memories]
+      parameters:
+        - name: x-primitive-function-id
+          in: header
+          required: false
+          description: |
+            Optional function id UUID used as the default scope when the body
+            does not include `scope`. Ignored when `scope` is provided.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetMemoryInput'
+      responses:
+        '200':
+          description: Existing memory updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MemoryRecordWithValue'
+        '201':
+          description: Memory created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MemoryRecordWithValue'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+    get:
+      operationId: getMemory
+      summary: Get a memory
+      description: |
+        Fetch one active memory by key and scope. Omit scope parameters to use
+        the automatic default: function-authenticated context, then the
+        `x-primitive-function-id` header, then org scope. Function scope uses a
+        function id UUID in `scope_id`.
+
+        A successful read records memory read usage and updates the memory's
+        read stats asynchronously.
+      tags: [Memories]
+      parameters:
+        - $ref: '#/components/parameters/MemoryKeyQuery'
+        - $ref: '#/components/parameters/MemoryScopeQueryType'
+        - $ref: '#/components/parameters/MemoryScopeId'
+        - name: x-primitive-function-id
+          in: header
+          required: false
+          description: |
+            Optional function id UUID used as the default scope when query
+            scope parameters are omitted.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Memory record with value
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MemoryRecordWithValue'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+    delete:
+      operationId: deleteMemory
+      summary: Delete a memory
+      description: |
+        Delete one active memory by key and scope. Deletes are idempotent when
+        `if_version` is omitted: deleting a missing key returns `deleted:
+        false`. With `if_version`, a missing key still returns `deleted: false`,
+        but a stale version returns `memory_conflict`.
+
+        A successful delete records memory write usage.
+      tags: [Memories]
+      parameters:
+        - $ref: '#/components/parameters/MemoryKeyQuery'
+        - $ref: '#/components/parameters/MemoryScopeQueryType'
+        - $ref: '#/components/parameters/MemoryScopeId'
+        - name: if_version
+          in: query
+          required: false
+          description: |
+            Optional compare-and-delete version. If the active memory exists
+            at a different version, the API returns `memory_conflict`.
+          schema:
+            $ref: '#/components/schemas/NumericString'
+        - name: x-primitive-function-id
+          in: header
+          required: false
+          description: |
+            Optional function id UUID used as the default scope when query
+            scope parameters are omitted.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DeleteMemoryResult'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /memories/search:
+    get:
+      operationId: searchMemories
+      summary: Search memories
+      description: |
+        List active memories in a scope by lexicographic key prefix. Results
+        are ordered by key ascending. The `meta.cursor` value is the next key
+        cursor; pass it back as `cursor` to continue after that key.
+
+        Search records one memory read usage event for the operation. Pass
+        `include_value=false` to return metadata only.
+      tags: [Memories]
+      parameters:
+        - name: prefix
+          in: query
+          required: false
+          description: |
+            Key prefix to match. Empty string lists all active memories in the
+            selected scope. Must be at most 512 UTF-8 bytes.
+          schema:
+            type: string
+            maxLength: 512
+            default: ''
+        - name: cursor
+          in: query
+          required: false
+          description: |
+            Key cursor from a previous response's `meta.cursor`. The next page
+            starts after this key.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+        - $ref: '#/components/parameters/Limit'
+        - name: include_value
+          in: query
+          required: false
+          description: |
+            Pass `false` to omit the `value` field and return metadata only.
+          schema:
+            type: string
+            enum: ['true', 'false']
+            default: 'true'
+        - name: updated_after
+          in: query
+          required: false
+          description: Only include memories updated at or after this timestamp.
+          schema:
+            type: string
+            format: date-time
+        - name: updated_before
+          in: query
+          required: false
+          description: Only include memories updated at or before this timestamp.
+          schema:
+            type: string
+            format: date-time
+        - $ref: '#/components/parameters/MemoryScopeQueryType'
+        - $ref: '#/components/parameters/MemoryScopeId'
+        - name: x-primitive-function-id
+          in: header
+          required: false
+          description: |
+            Optional function id UUID used as the default scope when query
+            scope parameters are omitted.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated memory records
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MemoryRecord'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  # ---------------------------------------------------------------------------
   # Payments (x402)
   # ---------------------------------------------------------------------------
   /x402/payout-addresses:
@@ -4731,6 +5011,38 @@ components:
         default: 50
       description: Number of results per page
 
+    MemoryKeyQuery:
+      name: key
+      in: query
+      required: true
+      description: Memory key. Must be at most 512 UTF-8 bytes.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 512
+
+    MemoryScopeQueryType:
+      name: scope_type
+      in: query
+      required: false
+      description: |
+        Explicit scope type. Omit to use automatic scope resolution. Pass
+        `function` with `scope_id=<function-id>`, or `org` with no `scope_id`.
+      schema:
+        type: string
+        enum: [org, function]
+
+    MemoryScopeId:
+      name: scope_id
+      in: query
+      required: false
+      description: |
+        Function id UUID when `scope_type=function`. Not valid with
+        `scope_type=org`.
+      schema:
+        type: string
+        format: uuid
+
   responses:
     Unauthorized:
       description: Invalid or missing API key
@@ -4779,6 +5091,18 @@ components:
             error:
               code: validation_error
               message: Invalid domain format
+
+    PaymentRequired:
+      description: Usage credits are exhausted or payment is required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: developer_usage_credit_exhausted
+              message: Usage credits exhausted for memory.write
 
     DeployFailed:
       description: Function deploy could not be completed; previously deployed code remains live
@@ -5558,6 +5882,8 @@ components:
                 - no_orgs_for_user
                 - org_not_accessible
                 - feature_disabled
+                - memory_conflict
+                - developer_usage_credit_exhausted
                 - no_payout_address
                 - ownership_proof_failed
                 - payment_verification_failed
@@ -9664,3 +9990,236 @@ components:
           type: boolean
           description: True if this call inserted a new row, false if it updated an existing one.
       required: [key, created_at, updated_at, created]
+
+    # -------------------------------------------------------------------------
+    # Memories
+    # -------------------------------------------------------------------------
+    NumericString:
+      type: string
+      pattern: '^[0-9]+$'
+      description: Bigint counter serialized as a base-10 string.
+
+    MemoryJsonValue:
+      description: |
+        JSON value accepted by Primitive Memories. The server accepts strings,
+        numbers, booleans, null, arrays, and objects, validates nested values,
+        and rejects values that do not serialize as JSON.
+      oneOf:
+        - type: 'null'
+        - type: string
+        - type: number
+        - type: boolean
+        - type: array
+          items:
+            description: Any nested JSON value.
+        - type: object
+          additionalProperties:
+            description: Any nested JSON value.
+
+    MemoryScope:
+      description: |
+        Memory scope. `org` resolves to the authenticated organization.
+        `function` requires the function id UUID in `id`; function names are
+        not valid scope identifiers.
+      oneOf:
+        - type: object
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+              enum: [org]
+          required: [type]
+        - type: object
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+              enum: [function]
+            id:
+              type: string
+              format: uuid
+              description: Function id UUID.
+          required: [type, id]
+
+    MemoryResolvedScope:
+      type: object
+      additionalProperties: false
+      description: Resolved memory scope returned by the API.
+      properties:
+        type:
+          type: string
+          enum: [org, function]
+        id:
+          type: string
+          format: uuid
+          description: Org id for org scope, function id for function scope.
+      required: [type, id]
+
+    MemoryRecord:
+      type: object
+      additionalProperties: false
+      description: |
+        Metadata for a Primitive memory. Search responses omit `value` when
+        `include_value=false`.
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Caller-defined key, at most 512 UTF-8 bytes.
+        scope:
+          $ref: '#/components/schemas/MemoryResolvedScope'
+        value:
+          $ref: '#/components/schemas/MemoryJsonValue'
+        version:
+          $ref: '#/components/schemas/NumericString'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        last_read_at:
+          type: [string, 'null']
+          format: date-time
+          description: Last successful get timestamp, or null before any get.
+        read_count:
+          $ref: '#/components/schemas/NumericString'
+        write_count:
+          $ref: '#/components/schemas/NumericString'
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+          description: Expiration timestamp, or null for no TTL.
+        created_by:
+          type: [string, 'null']
+          description: Actor that created the memory, when available.
+        updated_by:
+          type: [string, 'null']
+          description: Actor that last updated the memory, when available.
+      required:
+        - id
+        - key
+        - scope
+        - version
+        - created_at
+        - updated_at
+        - last_read_at
+        - read_count
+        - write_count
+        - expires_at
+        - created_by
+        - updated_by
+
+    MemoryRecordWithValue:
+      type: object
+      additionalProperties: false
+      description: Memory record returned by get and set operations.
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Caller-defined key, at most 512 UTF-8 bytes.
+        scope:
+          $ref: '#/components/schemas/MemoryResolvedScope'
+        value:
+          $ref: '#/components/schemas/MemoryJsonValue'
+        version:
+          $ref: '#/components/schemas/NumericString'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        last_read_at:
+          type: [string, 'null']
+          format: date-time
+          description: Last successful get timestamp, or null before any get.
+        read_count:
+          $ref: '#/components/schemas/NumericString'
+        write_count:
+          $ref: '#/components/schemas/NumericString'
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+          description: Expiration timestamp, or null for no TTL.
+        created_by:
+          type: [string, 'null']
+          description: Actor that created the memory, when available.
+        updated_by:
+          type: [string, 'null']
+          description: Actor that last updated the memory, when available.
+      required:
+        - id
+        - key
+        - scope
+        - value
+        - version
+        - created_at
+        - updated_at
+        - last_read_at
+        - read_count
+        - write_count
+        - expires_at
+        - created_by
+        - updated_by
+
+    SetMemoryInput:
+      type: object
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Caller-defined key, at most 512 UTF-8 bytes.
+        value:
+          $ref: '#/components/schemas/MemoryJsonValue'
+        scope:
+          $ref: '#/components/schemas/MemoryScope'
+        ttl_seconds:
+          type: integer
+          minimum: 1
+          maximum: 31536000
+          description: |
+            Set or replace the TTL in seconds. Mutually exclusive with
+            `expires_at` and `clear_ttl`.
+        expires_at:
+          type: string
+          format: date-time
+          description: |
+            Set or replace the absolute expiration timestamp. Mutually
+            exclusive with `ttl_seconds` and `clear_ttl`.
+        clear_ttl:
+          type: boolean
+          description: |
+            Clear any existing TTL. Mutually exclusive with `ttl_seconds` and
+            `expires_at`.
+        if_absent:
+          type: boolean
+          description: |
+            Create only when the key is absent. Mutually exclusive with
+            `if_version`.
+        if_version:
+          $ref: '#/components/schemas/NumericString'
+      required: [key, value]
+
+    DeleteMemoryResult:
+      type: object
+      additionalProperties: false
+      properties:
+        deleted:
+          type: boolean
+        key:
+          type: string
+        scope:
+          $ref: '#/components/schemas/MemoryResolvedScope'
+      required: [deleted, key, scope]

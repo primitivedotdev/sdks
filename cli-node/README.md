@@ -68,10 +68,32 @@ primitive domains list
 primitive functions templates
 primitive functions init my-fn --template email-reply
 primitive functions logs --id <function-id>
+primitive memories set thread:latest '{"email_id":"em_123"}'
+primitive memories get thread:latest
 primitive deliveries replay --id <delivery-id>
 ```
 
 Generated API commands remain available for compatibility and full schema parity, for example `primitive emails:list-emails` and `primitive sending:reply-to-email`.
+
+## Primitive Memories
+
+Memories are durable JSON key-value records scoped to your org by default. Use
+`--function <function-id>` to read or write the same key under a function scope;
+the value is the function id UUID, not the function name.
+
+```bash
+primitive memories set thread:latest '{"email_id":"em_123"}'
+primitive memories set greeting '"hello"'
+primitive memories get thread:latest
+primitive memories search thread: --metadata-only
+primitive memories delete thread:latest
+
+primitive memories set state '{"step":2}' --function <function-id>
+primitive memories get state --function <function-id>
+```
+
+Values must be valid JSON. Strings must be quoted as JSON strings, so use
+`'"hello"'`, not `hello`.
 
 ## Recipient routing
 

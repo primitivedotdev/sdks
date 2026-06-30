@@ -326,6 +326,19 @@ func (UnimplementedHandler) DeleteFunctionSecret(ctx context.Context, params Del
 	return r, ht.ErrNotImplemented
 }
 
+// DeleteMemory implements deleteMemory operation.
+//
+// Delete one active memory by key and scope. Deletes are idempotent when
+// `if_version` is omitted: deleting a missing key returns `deleted:
+// false`. With `if_version`, a missing key still returns `deleted: false`,
+// but a stale version returns `memory_conflict`.
+// A successful delete records memory write usage.
+//
+// DELETE /memories
+func (UnimplementedHandler) DeleteMemory(ctx context.Context, params DeleteMemoryParams) (r DeleteMemoryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteOrgSecret implements deleteOrgSecret operation.
 //
 // Removes the org secret. Functions keep the previous value until
@@ -554,6 +567,20 @@ func (UnimplementedHandler) GetFunctionTestRunTrace(ctx context.Context, params 
 //
 // GET /inbox/status
 func (UnimplementedHandler) GetInboxStatus(ctx context.Context) (r GetInboxStatusRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetMemory implements getMemory operation.
+//
+// Fetch one active memory by key and scope. Omit scope parameters to use
+// the automatic default: function-authenticated context, then the
+// `x-primitive-function-id` header, then org scope. Function scope uses a
+// function id UUID in `scope_id`.
+// A successful read records memory read usage and updates the memory's
+// read stats asynchronously.
+//
+// GET /memories
+func (UnimplementedHandler) GetMemory(ctx context.Context, params GetMemoryParams) (r GetMemoryRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1103,6 +1130,19 @@ func (UnimplementedHandler) SearchEmails(ctx context.Context, params SearchEmail
 	return r, ht.ErrNotImplemented
 }
 
+// SearchMemories implements searchMemories operation.
+//
+// List active memories in a scope by lexicographic key prefix. Results
+// are ordered by key ascending. The `meta.cursor` value is the next key
+// cursor; pass it back as `cursor` to continue after that key.
+// Search records one memory read usage event for the operation. Pass
+// `include_value=false` to return metadata only.
+//
+// GET /memories/search
+func (UnimplementedHandler) SearchMemories(ctx context.Context, params SearchMemoriesParams) (r SearchMemoriesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // SemanticSearch implements semanticSearch operation.
 //
 // Ranked search across both received and sent mail. The `mode`
@@ -1168,6 +1208,28 @@ func (UnimplementedHandler) SetFunctionRoute(ctx context.Context, req *FunctionR
 //
 // PUT /functions/{id}/secrets/{key}
 func (UnimplementedHandler) SetFunctionSecret(ctx context.Context, req *SetFunctionSecretInput, params SetFunctionSecretParams) (r SetFunctionSecretRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SetMemory implements setMemory operation.
+//
+// Create or update a durable JSON memory under an org or function scope.
+// When no explicit scope is provided, function-authenticated requests
+// use that function's id automatically; requests with
+// `x-primitive-function-id` use that function id; all other requests
+// default to org scope.
+// `scope.type = function` requires the function id UUID in `scope.id`.
+// Function names are not accepted as scope identifiers. Values must be
+// valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
+// most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
+// bigint counters serialized as strings.
+// Passing `if_absent` turns the write into create-only. Passing
+// `if_version` turns the write into compare-and-set. These options are
+// mutually exclusive and return `memory_conflict` on a stale version or
+// existing key.
+//
+// PUT /memories
+func (UnimplementedHandler) SetMemory(ctx context.Context, req *SetMemoryInput, params SetMemoryParams) (r SetMemoryRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

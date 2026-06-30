@@ -464,10 +464,24 @@ Use `primitive.api` when you need the full generated HTTP API surface.
 ```python
 from primitive.api import create_client
 from primitive.api.api.account.get_account import sync as get_account
+from primitive.api.api.memories.get_memory import sync as get_memory
+from primitive.api.api.memories.set_memory import sync as set_memory
+from primitive.api.models.set_memory_input import SetMemoryInput
 
 client = create_client("prim_test")
 account = get_account(client=client)
+
+saved = set_memory(
+    client=client,
+    body=SetMemoryInput(key="greeting", value="hello"),
+)
+memory = get_memory(client=client, key="greeting")
 ```
+
+Primitive Memories store durable JSON values by key. Calls default to org scope.
+Function scope is available on the generated memory operations with
+`scope_type="function"` and `scope_id=<function-id>`; the id is the function
+UUID, not the function name.
 
 ### Payment and interaction webhook events
 

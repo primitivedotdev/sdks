@@ -65,6 +65,7 @@ The low-level and generated APIs still exist for advanced use cases:
 
 - webhook verification/parsing helpers
 - generated HTTP API packages
+- Primitive Memories key-value operations
 - OpenAPI exports
 - contract tooling
 - raw MIME parsing helpers

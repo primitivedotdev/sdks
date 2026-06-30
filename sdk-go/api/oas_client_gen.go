@@ -272,6 +272,16 @@ type Invoker interface {
 	//
 	// DELETE /functions/{id}/secrets/{key}
 	DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (DeleteFunctionSecretRes, error)
+	// DeleteMemory invokes deleteMemory operation.
+	//
+	// Delete one active memory by key and scope. Deletes are idempotent when
+	// `if_version` is omitted: deleting a missing key returns `deleted:
+	// false`. With `if_version`, a missing key still returns `deleted: false`,
+	// but a stale version returns `memory_conflict`.
+	// A successful delete records memory write usage.
+	//
+	// DELETE /memories
+	DeleteMemory(ctx context.Context, params DeleteMemoryParams) (DeleteMemoryRes, error)
 	// DeleteOrgSecret invokes deleteOrgSecret operation.
 	//
 	// Removes the org secret. Functions keep the previous value until
@@ -449,6 +459,17 @@ type Invoker interface {
 	//
 	// GET /inbox/status
 	GetInboxStatus(ctx context.Context) (GetInboxStatusRes, error)
+	// GetMemory invokes getMemory operation.
+	//
+	// Fetch one active memory by key and scope. Omit scope parameters to use
+	// the automatic default: function-authenticated context, then the
+	// `x-primitive-function-id` header, then org scope. Function scope uses a
+	// function id UUID in `scope_id`.
+	// A successful read records memory read usage and updates the memory's
+	// read stats asynchronously.
+	//
+	// GET /memories
+	GetMemory(ctx context.Context, params GetMemoryParams) (GetMemoryRes, error)
 	// GetOrgRoutingTopology invokes getOrgRoutingTopology operation.
 	//
 	// Returns a single snapshot of how inbound mail is routed across
@@ -869,6 +890,16 @@ type Invoker interface {
 	//
 	// GET /emails/search
 	SearchEmails(ctx context.Context, params SearchEmailsParams) (SearchEmailsRes, error)
+	// SearchMemories invokes searchMemories operation.
+	//
+	// List active memories in a scope by lexicographic key prefix. Results
+	// are ordered by key ascending. The `meta.cursor` value is the next key
+	// cursor; pass it back as `cursor` to continue after that key.
+	// Search records one memory read usage event for the operation. Pass
+	// `include_value=false` to return metadata only.
+	//
+	// GET /memories/search
+	SearchMemories(ctx context.Context, params SearchMemoriesParams) (SearchMemoriesRes, error)
 	// SemanticSearch invokes semanticSearch operation.
 	//
 	// Ranked search across both received and sent mail. The `mode`
@@ -925,6 +956,25 @@ type Invoker interface {
 	//
 	// PUT /functions/{id}/secrets/{key}
 	SetFunctionSecret(ctx context.Context, request *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
+	// SetMemory invokes setMemory operation.
+	//
+	// Create or update a durable JSON memory under an org or function scope.
+	// When no explicit scope is provided, function-authenticated requests
+	// use that function's id automatically; requests with
+	// `x-primitive-function-id` use that function id; all other requests
+	// default to org scope.
+	// `scope.type = function` requires the function id UUID in `scope.id`.
+	// Function names are not accepted as scope identifiers. Values must be
+	// valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
+	// most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
+	// bigint counters serialized as strings.
+	// Passing `if_absent` turns the write into create-only. Passing
+	// `if_version` turns the write into compare-and-set. These options are
+	// mutually exclusive and return `memory_conflict` on a stale version or
+	// existing key.
+	//
+	// PUT /memories
+	SetMemory(ctx context.Context, request *SetMemoryInput, params SetMemoryParams) (SetMemoryRes, error)
 	// SetOrgSecret invokes setOrgSecret operation.
 	//
 	// Path-keyed companion to `POST /org/secrets`. Idempotent:
@@ -3980,6 +4030,206 @@ func (c *Client) sendDeleteFunctionSecret(ctx context.Context, params DeleteFunc
 	return result, nil
 }
 
+// DeleteMemory invokes deleteMemory operation.
+//
+// Delete one active memory by key and scope. Deletes are idempotent when
+// `if_version` is omitted: deleting a missing key returns `deleted:
+// false`. With `if_version`, a missing key still returns `deleted: false`,
+// but a stale version returns `memory_conflict`.
+// A successful delete records memory write usage.
+//
+// DELETE /memories
+func (c *Client) DeleteMemory(ctx context.Context, params DeleteMemoryParams) (DeleteMemoryRes, error) {
+	res, err := c.sendDeleteMemory(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteMemory(ctx context.Context, params DeleteMemoryParams) (res DeleteMemoryRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteMemory"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/memories"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteMemoryOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/memories"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "key" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "key",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.Key))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "scope_type" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "scope_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ScopeType.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "scope_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "scope_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ScopeID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "if_version" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "if_version",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IfVersion.Get(); ok {
+				if unwrapped := string(val); true {
+					return e.EncodeValue(conv.StringToString(unwrapped))
+				}
+				return nil
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "x-primitive-function-id",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.XPrimitiveFunctionID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteMemoryOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteMemoryResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DeleteOrgSecret invokes deleteOrgSecret operation.
 //
 // Removes the org secret. Functions keep the previous value until
@@ -6336,6 +6586,187 @@ func (c *Client) sendGetInboxStatus(ctx context.Context) (res GetInboxStatusRes,
 
 	stage = "DecodeResponse"
 	result, err := decodeGetInboxStatusResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetMemory invokes getMemory operation.
+//
+// Fetch one active memory by key and scope. Omit scope parameters to use
+// the automatic default: function-authenticated context, then the
+// `x-primitive-function-id` header, then org scope. Function scope uses a
+// function id UUID in `scope_id`.
+// A successful read records memory read usage and updates the memory's
+// read stats asynchronously.
+//
+// GET /memories
+func (c *Client) GetMemory(ctx context.Context, params GetMemoryParams) (GetMemoryRes, error) {
+	res, err := c.sendGetMemory(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetMemory(ctx context.Context, params GetMemoryParams) (res GetMemoryRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getMemory"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/memories"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetMemoryOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/memories"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "key" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "key",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.Key))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "scope_type" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "scope_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ScopeType.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "scope_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "scope_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ScopeID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "x-primitive-function-id",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.XPrimitiveFunctionID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetMemoryOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetMemoryResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -11965,6 +12396,274 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 	return result, nil
 }
 
+// SearchMemories invokes searchMemories operation.
+//
+// List active memories in a scope by lexicographic key prefix. Results
+// are ordered by key ascending. The `meta.cursor` value is the next key
+// cursor; pass it back as `cursor` to continue after that key.
+// Search records one memory read usage event for the operation. Pass
+// `include_value=false` to return metadata only.
+//
+// GET /memories/search
+func (c *Client) SearchMemories(ctx context.Context, params SearchMemoriesParams) (SearchMemoriesRes, error) {
+	res, err := c.sendSearchMemories(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendSearchMemories(ctx context.Context, params SearchMemoriesParams) (res SearchMemoriesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("searchMemories"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/memories/search"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, SearchMemoriesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/memories/search"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "prefix" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "prefix",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Prefix.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "include_value" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "include_value",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IncludeValue.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "updated_after" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "updated_after",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.UpdatedAfter.Get(); ok {
+				return e.EncodeValue(conv.DateTimeToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "updated_before" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "updated_before",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.UpdatedBefore.Get(); ok {
+				return e.EncodeValue(conv.DateTimeToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "scope_type" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "scope_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ScopeType.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "scope_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "scope_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ScopeID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "x-primitive-function-id",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.XPrimitiveFunctionID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, SearchMemoriesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSearchMemoriesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // SemanticSearch invokes semanticSearch operation.
 //
 // Ranked search across both received and sent mail. The `mode`
@@ -12503,6 +13202,146 @@ func (c *Client) sendSetFunctionSecret(ctx context.Context, request *SetFunction
 
 	stage = "DecodeResponse"
 	result, err := decodeSetFunctionSecretResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// SetMemory invokes setMemory operation.
+//
+// Create or update a durable JSON memory under an org or function scope.
+// When no explicit scope is provided, function-authenticated requests
+// use that function's id automatically; requests with
+// `x-primitive-function-id` use that function id; all other requests
+// default to org scope.
+// `scope.type = function` requires the function id UUID in `scope.id`.
+// Function names are not accepted as scope identifiers. Values must be
+// valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
+// most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
+// bigint counters serialized as strings.
+// Passing `if_absent` turns the write into create-only. Passing
+// `if_version` turns the write into compare-and-set. These options are
+// mutually exclusive and return `memory_conflict` on a stale version or
+// existing key.
+//
+// PUT /memories
+func (c *Client) SetMemory(ctx context.Context, request *SetMemoryInput, params SetMemoryParams) (SetMemoryRes, error) {
+	res, err := c.sendSetMemory(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendSetMemory(ctx context.Context, request *SetMemoryInput, params SetMemoryParams) (res SetMemoryRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("setMemory"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/memories"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, SetMemoryOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/memories"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeSetMemoryRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "x-primitive-function-id",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.XPrimitiveFunctionID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, SetMemoryOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeSetMemoryResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
