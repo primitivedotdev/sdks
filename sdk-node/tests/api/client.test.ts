@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import primitive, {
   type EmailAnalysis,
   type EmailAuth,
+  type MemoryJsonValue,
   type PrimitiveApiError,
   PrimitiveClient,
   type ReceivedEmail,
@@ -482,6 +483,48 @@ describe("PrimitiveClient", () => {
     ).rejects.toThrow(
       "client.memories.search takes the memory fields directly",
     );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid memory JSON values before making a request", async () => {
+    const fetchMock = vi.fn<typeof fetch>() as typeof fetch;
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: fetchMock,
+    });
+
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    const sparseArray = Array.from({ length: 2 }) as unknown[];
+    delete sparseArray[0];
+    sparseArray[1] = "hole";
+    const valid: MemoryJsonValue = {
+      nested: [1, "two", true, null, { ok: false }],
+    };
+    expect(valid).toEqual({ nested: [1, "two", true, null, { ok: false }] });
+
+    for (const value of [
+      undefined,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      BigInt(1),
+      Symbol("memory"),
+      () => undefined,
+      { missing: undefined },
+      [undefined],
+      sparseArray,
+      new Date("2026-01-01T00:00:00.000Z"),
+      cyclic,
+    ]) {
+      await expect(
+        client.memories.set({
+          key: "bad",
+          value: value as MemoryJsonValue,
+        }),
+      ).rejects.toThrow("JSON value");
+    }
 
     expect(fetchMock).not.toHaveBeenCalled();
   });

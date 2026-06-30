@@ -59,6 +59,22 @@ function guardOptionalBodyContentType(content: string): string {
   );
 }
 
+// @hey-api/openapi-ts currently treats the OpenAPI 3.1 `type: "null"` branch
+// of this recursive JSON schema as `unknown`, which widens the entire generated
+// alias. Keep the public schema standards-compliant, then repair this one alias
+// so downstream SDK users get the exact JSON type.
+function fixMemoryJsonValueType(content: string): string {
+  return content.replace(
+    /export type MemoryJsonValue = [\s\S]*?;\n\n\/\*\*\n \* Memory scope\./,
+    `export type MemoryJsonValue = string | number | boolean | Array<MemoryJsonValue> | {
+    [key: string]: MemoryJsonValue;
+} | null;
+
+/**
+ * Memory scope.`,
+  );
+}
+
 for (const file of visit(generatedRoot)) {
   const content = readFileSync(file, "utf8");
   let updated = content
@@ -69,6 +85,7 @@ for (const file of visit(generatedRoot)) {
       return `${prefix}${addJsExtension(file, specifier)}${suffix}`;
     });
   updated = guardOptionalBodyContentType(updated);
+  updated = fixMemoryJsonValueType(updated);
 
   if (updated !== content) {
     writeFileSync(file, updated);

@@ -45,6 +45,7 @@ export {
   MemoriesResource,
   type MemoryDeleteInput,
   type MemoryGetInput,
+  type MemoryJsonValue,
   type MemoryRecord,
   type MemoryRecordWithValue,
   type MemorySearchInput,
