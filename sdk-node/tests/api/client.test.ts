@@ -335,17 +335,36 @@ describe("PrimitiveClient", () => {
       }
 
       if (request.method === "GET" && url.pathname === "/v1/memories/search") {
-        expect(url.searchParams.get("prefix")).toBe("st");
-        expect(url.searchParams.get("include_value")).toBe("false");
+        const prefix = url.searchParams.get("prefix");
         expect(url.searchParams.get("scope_type")).toBe("function");
         expect(url.searchParams.get("scope_id")).toBe(FUNCTION_ID);
-        return new Response(
-          JSON.stringify({
-            success: true,
-            data: [MEMORY_RECORD_WITHOUT_VALUE],
-            meta: { total: 1, limit: 50, cursor: null },
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
+
+        if (prefix === "st") {
+          expect(url.searchParams.get("include_value")).toBe("false");
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: [MEMORY_RECORD_WITHOUT_VALUE],
+              meta: { total: 1, limit: 50, cursor: null },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+
+        if (prefix === "state:") {
+          expect(url.searchParams.get("include_value")).toBeNull();
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: [MEMORY_RECORD],
+              meta: { total: 1, limit: 50, cursor: null },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+
+        throw new Error(
+          `Unexpected memory search prefix: ${prefix ?? "(none)"}`,
         );
       }
 
@@ -402,13 +421,24 @@ describe("PrimitiveClient", () => {
       meta: { total: 1, limit: 50, cursor: null },
     });
 
+    await expect(
+      client.memories.search({
+        prefix: "state:",
+        scope_type: "function",
+        scope_id: FUNCTION_ID,
+      }),
+    ).resolves.toEqual({
+      data: [MEMORY_RECORD],
+      meta: { total: 1, limit: 50, cursor: null },
+    });
+
     await expect(client.memories.delete("state")).resolves.toEqual({
       deleted: true,
       key: "state",
       scope: { type: "function", id: FUNCTION_ID },
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
   it("rejects free-text memory search calls before making a request", async () => {
@@ -444,6 +474,14 @@ describe("PrimitiveClient", () => {
         body: { key: "state", value: { step: 2 } },
       } as unknown as Parameters<typeof client.memories.set>[0]),
     ).rejects.toThrow("client.memories.set takes the memory fields directly");
+
+    await expect(
+      client.memories.search({
+        query: { prefix: "st" },
+      } as unknown as Parameters<typeof client.memories.search>[0]),
+    ).rejects.toThrow(
+      "client.memories.search takes the memory fields directly",
+    );
 
     expect(fetchMock).not.toHaveBeenCalled();
   });

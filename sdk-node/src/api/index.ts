@@ -236,7 +236,7 @@ export type MemorySearchInput = Omit<
 };
 
 export interface MemorySearchResponse {
-  data: GeneratedMemoryRecord[];
+  data: Array<GeneratedMemoryRecord | GeneratedMemoryRecordWithValue>;
   meta: GeneratedPaginationMeta;
 }
 
@@ -418,13 +418,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function rejectGeneratedOptionsShape(
   value: object,
-  method: "set" | "get" | "delete",
+  method: "set" | "get" | "delete" | "search",
 ): void {
   if ("client" in value || "body" in value || "query" in value) {
     const example =
       method === "set"
         ? "client.memories.set({ key, value })"
-        : `client.memories.${method}({ key })`;
+        : method === "search"
+          ? "client.memories.search({ prefix })"
+          : `client.memories.${method}({ key })`;
     throw new TypeError(
       `client.memories.${method} takes the memory fields directly; use ${example}, not the generated operation options shape.`,
     );
@@ -436,10 +438,14 @@ function normalizeMemorySearchInput(
 ): GeneratedSearchMemoriesData["query"] {
   if (input === undefined) return undefined;
   if (isRecord(input) && "query" in input) {
+    if (typeof input.query !== "string") {
+      rejectGeneratedOptionsShape(input, "search");
+    }
     throw new TypeError(
       "client.memories.search is key-prefix search; pass { prefix } directly. For free-text mail search, use client.semanticSearch(...).",
     );
   }
+  rejectGeneratedOptionsShape(input, "search");
 
   const { includeValue, include_value, ...rest } = input;
   const normalized: NonNullable<GeneratedSearchMemoriesData["query"]> = {
@@ -1147,7 +1153,7 @@ function unwrapSemanticSearchResult(result: {
 function unwrapMemorySearchResult(result: {
   data?:
     | {
-        data?: GeneratedMemoryRecord[];
+        data?: Array<GeneratedMemoryRecord | GeneratedMemoryRecordWithValue>;
         meta?: GeneratedPaginationMeta;
       }
     | undefined;
