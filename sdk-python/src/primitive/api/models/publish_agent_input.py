@@ -8,6 +8,8 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from typing import cast
+from uuid import UUID
 
 
 
@@ -20,14 +22,28 @@ T = TypeVar("T", bound="PublishAgentInput")
 
 @_attrs_define
 class PublishAgentInput:
-    """ 
+    """ Publish an agent into a registry. When display_name is present the agent identity is defined (create-or-get by
+    address) in the same call before publishing; omit the define fields to publish an already-defined agent.
+
         Attributes:
             address (str):
             handle (str): The registry-scoped name to list the agent under.
+            display_name (str | Unset): Present to define the agent identity before publishing (define + publish in one
+                call).
+            endpoint_id (UUID | Unset): Optional, only used when defining. Omit to resolve the endpoint from the address's
+                routing.
+            title (None | str | Unset):
+            description (None | str | Unset):
+            tags (list[str] | Unset):
      """
 
     address: str
     handle: str
+    display_name: str | Unset = UNSET
+    endpoint_id: UUID | Unset = UNSET
+    title: None | str | Unset = UNSET
+    description: None | str | Unset = UNSET
+    tags: list[str] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -39,6 +55,30 @@ class PublishAgentInput:
 
         handle = self.handle
 
+        display_name = self.display_name
+
+        endpoint_id: str | Unset = UNSET
+        if not isinstance(self.endpoint_id, Unset):
+            endpoint_id = str(self.endpoint_id)
+
+        title: None | str | Unset
+        if isinstance(self.title, Unset):
+            title = UNSET
+        else:
+            title = self.title
+
+        description: None | str | Unset
+        if isinstance(self.description, Unset):
+            description = UNSET
+        else:
+            description = self.description
+
+        tags: list[str] | Unset = UNSET
+        if not isinstance(self.tags, Unset):
+            tags = self.tags
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -46,6 +86,16 @@ class PublishAgentInput:
             "address": address,
             "handle": handle,
         })
+        if display_name is not UNSET:
+            field_dict["display_name"] = display_name
+        if endpoint_id is not UNSET:
+            field_dict["endpoint_id"] = endpoint_id
+        if title is not UNSET:
+            field_dict["title"] = title
+        if description is not UNSET:
+            field_dict["description"] = description
+        if tags is not UNSET:
+            field_dict["tags"] = tags
 
         return field_dict
 
@@ -58,9 +108,49 @@ class PublishAgentInput:
 
         handle = d.pop("handle")
 
+        display_name = d.pop("display_name", UNSET)
+
+        _endpoint_id = d.pop("endpoint_id", UNSET)
+        endpoint_id: UUID | Unset
+        if isinstance(_endpoint_id,  Unset):
+            endpoint_id = UNSET
+        else:
+            endpoint_id = UUID(_endpoint_id)
+
+
+
+
+        def _parse_title(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        title = _parse_title(d.pop("title", UNSET))
+
+
+        def _parse_description(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        description = _parse_description(d.pop("description", UNSET))
+
+
+        tags = cast(list[str], d.pop("tags", UNSET))
+
+
         publish_agent_input = cls(
             address=address,
             handle=handle,
+            display_name=display_name,
+            endpoint_id=endpoint_id,
+            title=title,
+            description=description,
+            tags=tags,
         )
 
 

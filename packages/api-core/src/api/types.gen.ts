@@ -34,6 +34,10 @@ export type RegistryAgent = {
      * The registry-scoped name. Null on the global by-address read.
      */
     handle: string | null;
+    /**
+     * When the agent's address was last confirmed to still route to its endpoint. A freshness signal for ranking listings; null until the first check.
+     */
+    last_reachable_at: string | null;
 };
 
 /**
@@ -67,22 +71,39 @@ export type UpdateRegistryInput = {
 
 export type DefineAgentInput = {
     /**
-     * The agent's globally unique email address; must route to the endpoint.
+     * The agent's globally unique email address; mail to it must route to an endpoint the account controls.
      */
     address: string;
-    endpoint_id: string;
+    /**
+     * Optional. The endpoint the agent runs on. Omit it to resolve the endpoint from the address's routing automatically; supply it to pin a specific endpoint, which is then validated against the address's route.
+     */
+    endpoint_id?: string;
     display_name: string;
     title?: string | null;
     description?: string | null;
     tags?: Array<string>;
 };
 
+/**
+ * Publish an agent into a registry. When display_name is present the agent identity is defined (create-or-get by address) in the same call before publishing; omit the define fields to publish an already-defined agent.
+ */
 export type PublishAgentInput = {
     address: string;
     /**
      * The registry-scoped name to list the agent under.
      */
     handle: string;
+    /**
+     * Present to define the agent identity before publishing (define + publish in one call).
+     */
+    display_name?: string;
+    /**
+     * Optional, only used when defining. Omit to resolve the endpoint from the address's routing.
+     */
+    endpoint_id?: string;
+    title?: string | null;
+    description?: string | null;
+    tags?: Array<string>;
 };
 
 export type PublishAgentResult = {
@@ -7760,6 +7781,44 @@ export type CreateRegistryResponses = {
 };
 
 export type CreateRegistryResponse = CreateRegistryResponses[keyof CreateRegistryResponses];
+
+export type DeleteRegistryData = {
+    body?: never;
+    path: {
+        /**
+         * The registry slug
+         */
+        slug: string;
+    };
+    query?: never;
+    url: '/registries/{slug}';
+};
+
+export type DeleteRegistryErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteRegistryError = DeleteRegistryErrors[keyof DeleteRegistryErrors];
+
+export type DeleteRegistryResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteRegistryResponse = DeleteRegistryResponses[keyof DeleteRegistryResponses];
 
 export type GetRegistryData = {
     body?: never;

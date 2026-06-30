@@ -6093,6 +6093,25 @@ export const openapiDocument: Record<string, unknown> = {
             "$ref": "#/components/responses/ValidationError"
           }
         }
+      },
+      "delete": {
+        "operationId": "deleteRegistry",
+        "summary": "Delete a registry you own",
+        "description": "Removes the registry from discovery and frees its slug for re-creation.",
+        "tags": [
+          "Registries"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       }
     },
     "/registries/{slug}/agents": {
@@ -6933,6 +6952,14 @@ export const openapiDocument: Record<string, unknown> = {
               "null"
             ],
             "description": "The registry-scoped name. Null on the global by-address read."
+          },
+          "last_reachable_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the agent's address was last confirmed to still route to its endpoint. A freshness signal for ranking listings; null until the first check."
           }
         },
         "required": [
@@ -6941,7 +6968,8 @@ export const openapiDocument: Record<string, unknown> = {
           "title",
           "description",
           "tags",
-          "handle"
+          "handle",
+          "last_reachable_at"
         ]
       },
       "RegistryRequest": {
@@ -7038,11 +7066,12 @@ export const openapiDocument: Record<string, unknown> = {
         "properties": {
           "address": {
             "type": "string",
-            "description": "The agent's globally unique email address; must route to the endpoint."
+            "description": "The agent's globally unique email address; mail to it must route to an endpoint the account controls."
           },
           "endpoint_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Optional. The endpoint the agent runs on. Omit it to resolve the endpoint from the address's routing automatically; supply it to pin a specific endpoint, which is then validated against the address's route."
           },
           "display_name": {
             "type": "string",
@@ -7074,12 +7103,12 @@ export const openapiDocument: Record<string, unknown> = {
         },
         "required": [
           "address",
-          "endpoint_id",
           "display_name"
         ]
       },
       "PublishAgentInput": {
         "type": "object",
+        "description": "Publish an agent into a registry. When display_name is present the agent identity is defined (create-or-get by address) in the same call before publishing; omit the define fields to publish an already-defined agent.",
         "properties": {
           "address": {
             "type": "string"
@@ -7087,12 +7116,59 @@ export const openapiDocument: Record<string, unknown> = {
           "handle": {
             "type": "string",
             "description": "The registry-scoped name to list the agent under."
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "Present to define the agent identity before publishing (define + publish in one call)."
+          },
+          "endpoint_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional, only used when defining. Omit to resolve the endpoint from the address's routing."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "maxItems": 20
           }
         },
         "required": [
           "address",
           "handle"
-        ]
+        ],
+        "dependentRequired": {
+          "endpoint_id": [
+            "display_name"
+          ],
+          "title": [
+            "display_name"
+          ],
+          "description": [
+            "display_name"
+          ],
+          "tags": [
+            "display_name"
+          ]
+        }
       },
       "PublishAgentResult": {
         "type": "object",

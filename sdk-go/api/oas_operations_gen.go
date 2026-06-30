@@ -30,6 +30,7 @@ const (
 	DeleteFunctionOperation                OperationName = "DeleteFunction"
 	DeleteFunctionSecretOperation          OperationName = "DeleteFunctionSecret"
 	DeleteOrgSecretOperation               OperationName = "DeleteOrgSecret"
+	DeleteRegistryOperation                OperationName = "DeleteRegistry"
 	DeleteRouteOperation                   OperationName = "DeleteRoute"
 	DeleteWakeAuthorizationOperation       OperationName = "DeleteWakeAuthorization"
 	DeleteWakeScheduleOperation            OperationName = "DeleteWakeSchedule"

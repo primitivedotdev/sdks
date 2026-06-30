@@ -97,6 +97,10 @@ type DeleteOrgSecretRes interface {
 	deleteOrgSecretRes()
 }
 
+type DeleteRegistryRes interface {
+	deleteRegistryRes()
+}
+
 type DeleteRouteRes interface {
 	deleteRouteRes()
 }

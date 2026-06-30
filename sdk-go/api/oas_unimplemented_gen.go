@@ -336,6 +336,15 @@ func (UnimplementedHandler) DeleteOrgSecret(ctx context.Context, params DeleteOr
 	return r, ht.ErrNotImplemented
 }
 
+// DeleteRegistry implements deleteRegistry operation.
+//
+// Removes the registry from discovery and frees its slug for re-creation.
+//
+// DELETE /registries/{slug}
+func (UnimplementedHandler) DeleteRegistry(ctx context.Context, params DeleteRegistryParams) (r DeleteRegistryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteRoute implements deleteRoute operation.
 //
 // Delete a recipient route.

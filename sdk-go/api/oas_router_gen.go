@@ -179,7 +179,8 @@ var (
 		"POST": "Authorization,Content-Type",
 	}
 	rn25AllowedHeaders = map[string]string{
-		"PATCH": "Authorization,Content-Type",
+		"DELETE": "Authorization",
+		"PATCH":  "Authorization,Content-Type",
 	}
 	rn85AllowedHeaders = map[string]string{
 		"POST": "Authorization,Content-Type",
@@ -2112,6 +2113,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 						if len(elem) == 0 {
 							switch r.Method {
+							case "DELETE":
+								s.handleDeleteRegistryRequest([1]string{
+									args[0],
+								}, elemIsEscaped, w, r)
 							case "GET":
 								s.handleGetRegistryRequest([1]string{
 									args[0],
@@ -2122,7 +2127,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								}, elemIsEscaped, w, r)
 							default:
 								s.notAllowed(w, r, notAllowedParams{
-									allowedMethods: "GET,PATCH",
+									allowedMethods: "DELETE,GET,PATCH",
 									allowedHeaders: rn25AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "application/json",
@@ -5068,6 +5073,15 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 
 						if len(elem) == 0 {
 							switch method {
+							case "DELETE":
+								r.name = DeleteRegistryOperation
+								r.summary = "Delete a registry you own"
+								r.operationID = "deleteRegistry"
+								r.operationGroup = ""
+								r.pathPattern = "/registries/{slug}"
+								r.args = args
+								r.count = 1
+								return r, true
 							case "GET":
 								r.name = GetRegistryOperation
 								r.summary = "Get a public registry's metadata"

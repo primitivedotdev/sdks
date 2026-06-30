@@ -259,6 +259,12 @@ type Handler interface {
 	//
 	// DELETE /org/secrets/{key}
 	DeleteOrgSecret(ctx context.Context, params DeleteOrgSecretParams) (DeleteOrgSecretRes, error)
+	// DeleteRegistry implements deleteRegistry operation.
+	//
+	// Removes the registry from discovery and frees its slug for re-creation.
+	//
+	// DELETE /registries/{slug}
+	DeleteRegistry(ctx context.Context, params DeleteRegistryParams) (DeleteRegistryRes, error)
 	// DeleteRoute implements deleteRoute operation.
 	//
 	// Delete a recipient route.

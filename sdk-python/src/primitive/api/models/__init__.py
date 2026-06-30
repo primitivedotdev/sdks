@@ -91,6 +91,8 @@ from .delete_filter_response_200 import DeleteFilterResponse200
 from .delete_filter_response_200_data import DeleteFilterResponse200Data
 from .delete_function_response_200 import DeleteFunctionResponse200
 from .delete_function_response_200_data import DeleteFunctionResponse200Data
+from .delete_registry_response_200 import DeleteRegistryResponse200
+from .delete_registry_response_200_data import DeleteRegistryResponse200Data
 from .delete_route_response_200 import DeleteRouteResponse200
 from .delete_route_response_200_data import DeleteRouteResponse200Data
 from .delete_wake_authorization_response_200 import DeleteWakeAuthorizationResponse200
@@ -498,6 +500,8 @@ __all__ = (
     "DeleteFilterResponse200Data",
     "DeleteFunctionResponse200",
     "DeleteFunctionResponse200Data",
+    "DeleteRegistryResponse200",
+    "DeleteRegistryResponse200Data",
     "DeleteRouteResponse200",
     "DeleteRouteResponse200Data",
     "DeleteWakeAuthorizationResponse200",

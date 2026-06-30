@@ -61,6 +61,7 @@ var operationRolesBearerAuth = map[string][]string{
 	DeleteFunctionOperation:          []string{},
 	DeleteFunctionSecretOperation:    []string{},
 	DeleteOrgSecretOperation:         []string{},
+	DeleteRegistryOperation:          []string{},
 	DeleteRouteOperation:             []string{},
 	DeleteWakeAuthorizationOperation: []string{},
 	DeleteWakeScheduleOperation:      []string{},
