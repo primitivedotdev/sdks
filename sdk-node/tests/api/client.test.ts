@@ -143,6 +143,21 @@ const MEMORY_RECORD = {
   updated_by: "api_key:key-1",
 } as const;
 
+const MEMORY_RECORD_WITHOUT_VALUE = {
+  id: "22222222-2222-4222-8222-222222222222",
+  key: "state",
+  scope: { type: "function", id: FUNCTION_ID },
+  version: "1",
+  created_at: "2026-06-30T00:00:00.000Z",
+  updated_at: "2026-06-30T00:00:00.000Z",
+  last_read_at: null,
+  read_count: "0",
+  write_count: "1",
+  expires_at: null,
+  created_by: "api_key:key-1",
+  updated_by: "api_key:key-1",
+} as const;
+
 describe("PrimitiveClient", () => {
   it("rejects received emails without SMTP recipients", () => {
     const event = structuredClone(RECEIVED_EMAIL.raw);
@@ -327,7 +342,7 @@ describe("PrimitiveClient", () => {
         return new Response(
           JSON.stringify({
             success: true,
-            data: [MEMORY_RECORD],
+            data: [MEMORY_RECORD_WITHOUT_VALUE],
             meta: { total: 1, limit: 50, cursor: null },
           }),
           { status: 200, headers: { "content-type": "application/json" } },
@@ -383,7 +398,7 @@ describe("PrimitiveClient", () => {
         scope_id: FUNCTION_ID,
       }),
     ).resolves.toEqual({
-      data: [MEMORY_RECORD],
+      data: [MEMORY_RECORD_WITHOUT_VALUE],
       meta: { total: 1, limit: 50, cursor: null },
     });
 
