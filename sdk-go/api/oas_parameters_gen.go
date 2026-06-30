@@ -764,6 +764,332 @@ func decodeDeleteFunctionSecretParams(args [2]string, argsEscaped bool, r *http.
 	return params, nil
 }
 
+// DeleteMemoryParams is parameters of deleteMemory operation.
+type DeleteMemoryParams struct {
+	// Memory key. Must be at most 512 UTF-8 bytes.
+	Key string
+	// Explicit scope type. Omit to use automatic scope resolution. Pass
+	// `function` with `scope_id=<function-id>`, or `org` with no `scope_id`.
+	ScopeType OptMemoryScopeQueryType `json:",omitempty,omitzero"`
+	// Function id UUID when `scope_type=function`. Not valid with
+	// `scope_type=org`.
+	ScopeID OptUUID `json:",omitempty,omitzero"`
+	// Optional compare-and-delete version. If the active memory exists
+	// at a different version, the API returns `memory_conflict`.
+	IfVersion OptNumericString `json:",omitempty,omitzero"`
+	// Optional function id UUID used as the default scope when query
+	// scope parameters are omitted.
+	XPrimitiveFunctionID OptUUID `json:",omitempty,omitzero"`
+}
+
+func unpackDeleteMemoryParams(packed middleware.Parameters) (params DeleteMemoryParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "key",
+			In:   "query",
+		}
+		params.Key = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "scope_type",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ScopeType = v.(OptMemoryScopeQueryType)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "scope_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ScopeID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "if_version",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.IfVersion = v.(OptNumericString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "x-primitive-function-id",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.XPrimitiveFunctionID = v.(OptUUID)
+		}
+	}
+	return params
+}
+
+func decodeDeleteMemoryParams(args [0]string, argsEscaped bool, r *http.Request) (params DeleteMemoryParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode query: key.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "key",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Key = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     512,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.Key)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "key",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: scope_type.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "scope_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotScopeTypeVal MemoryScopeQueryType
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotScopeTypeVal = MemoryScopeQueryType(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ScopeType.SetTo(paramsDotScopeTypeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.ScopeType.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "scope_type",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: scope_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "scope_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotScopeIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotScopeIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ScopeID.SetTo(paramsDotScopeIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "scope_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: if_version.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "if_version",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIfVersionVal NumericString
+				if err := func() error {
+					var paramsDotIfVersionValVal string
+					if err := func() error {
+						val, err := d.DecodeValue()
+						if err != nil {
+							return err
+						}
+
+						c, err := conv.ToString(val)
+						if err != nil {
+							return err
+						}
+
+						paramsDotIfVersionValVal = c
+						return nil
+					}(); err != nil {
+						return err
+					}
+					paramsDotIfVersionVal = NumericString(paramsDotIfVersionValVal)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IfVersion.SetTo(paramsDotIfVersionVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IfVersion.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "if_version",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode header: x-primitive-function-id.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "x-primitive-function-id",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotXPrimitiveFunctionIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotXPrimitiveFunctionIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.XPrimitiveFunctionID.SetTo(paramsDotXPrimitiveFunctionIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "x-primitive-function-id",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // DeleteOrgSecretParams is parameters of deleteOrgSecret operation.
 type DeleteOrgSecretParams struct {
 	// Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.
@@ -2049,6 +2375,257 @@ func decodeGetFunctionTestRunTraceParams(args [2]string, argsEscaped bool, r *ht
 		return params, &ogenerrors.DecodeParamError{
 			Name: "run_id",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetMemoryParams is parameters of getMemory operation.
+type GetMemoryParams struct {
+	// Memory key. Must be at most 512 UTF-8 bytes.
+	Key string
+	// Explicit scope type. Omit to use automatic scope resolution. Pass
+	// `function` with `scope_id=<function-id>`, or `org` with no `scope_id`.
+	ScopeType OptMemoryScopeQueryType `json:",omitempty,omitzero"`
+	// Function id UUID when `scope_type=function`. Not valid with
+	// `scope_type=org`.
+	ScopeID OptUUID `json:",omitempty,omitzero"`
+	// Optional function id UUID used as the default scope when query
+	// scope parameters are omitted.
+	XPrimitiveFunctionID OptUUID `json:",omitempty,omitzero"`
+}
+
+func unpackGetMemoryParams(packed middleware.Parameters) (params GetMemoryParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "key",
+			In:   "query",
+		}
+		params.Key = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "scope_type",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ScopeType = v.(OptMemoryScopeQueryType)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "scope_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ScopeID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "x-primitive-function-id",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.XPrimitiveFunctionID = v.(OptUUID)
+		}
+	}
+	return params
+}
+
+func decodeGetMemoryParams(args [0]string, argsEscaped bool, r *http.Request) (params GetMemoryParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode query: key.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "key",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Key = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     512,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.Key)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "key",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: scope_type.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "scope_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotScopeTypeVal MemoryScopeQueryType
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotScopeTypeVal = MemoryScopeQueryType(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ScopeType.SetTo(paramsDotScopeTypeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.ScopeType.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "scope_type",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: scope_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "scope_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotScopeIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotScopeIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ScopeID.SetTo(paramsDotScopeIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "scope_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode header: x-primitive-function-id.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "x-primitive-function-id",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotXPrimitiveFunctionIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotXPrimitiveFunctionIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.XPrimitiveFunctionID.SetTo(paramsDotXPrimitiveFunctionIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "x-primitive-function-id",
+			In:   "header",
 			Err:  err,
 		}
 	}
@@ -6345,6 +6922,615 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
+// SearchMemoriesParams is parameters of searchMemories operation.
+type SearchMemoriesParams struct {
+	// Key prefix to match. Empty string lists all active memories in the
+	// selected scope. Must be at most 512 UTF-8 bytes.
+	Prefix OptString `json:",omitempty,omitzero"`
+	// Key cursor from a previous response's `meta.cursor`. The next page
+	// starts after this key.
+	Cursor OptString `json:",omitempty,omitzero"`
+	// Number of results per page.
+	Limit OptInt `json:",omitempty,omitzero"`
+	// Pass `false` to omit the `value` field and return metadata only.
+	IncludeValue OptSearchMemoriesIncludeValue `json:",omitempty,omitzero"`
+	// Only include memories updated at or after this timestamp.
+	UpdatedAfter OptDateTime `json:",omitempty,omitzero"`
+	// Only include memories updated at or before this timestamp.
+	UpdatedBefore OptDateTime `json:",omitempty,omitzero"`
+	// Explicit scope type. Omit to use automatic scope resolution. Pass
+	// `function` with `scope_id=<function-id>`, or `org` with no `scope_id`.
+	ScopeType OptMemoryScopeQueryType `json:",omitempty,omitzero"`
+	// Function id UUID when `scope_type=function`. Not valid with
+	// `scope_type=org`.
+	ScopeID OptUUID `json:",omitempty,omitzero"`
+	// Optional function id UUID used as the default scope when query
+	// scope parameters are omitted.
+	XPrimitiveFunctionID OptUUID `json:",omitempty,omitzero"`
+}
+
+func unpackSearchMemoriesParams(packed middleware.Parameters) (params SearchMemoriesParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "prefix",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Prefix = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "cursor",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Cursor = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "limit",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Limit = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "include_value",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.IncludeValue = v.(OptSearchMemoriesIncludeValue)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "updated_after",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.UpdatedAfter = v.(OptDateTime)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "updated_before",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.UpdatedBefore = v.(OptDateTime)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "scope_type",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ScopeType = v.(OptMemoryScopeQueryType)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "scope_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ScopeID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "x-primitive-function-id",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.XPrimitiveFunctionID = v.(OptUUID)
+		}
+	}
+	return params
+}
+
+func decodeSearchMemoriesParams(args [0]string, argsEscaped bool, r *http.Request) (params SearchMemoriesParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	h := uri.NewHeaderDecoder(r.Header)
+	// Set default value for query: prefix.
+	{
+		val := string("")
+		params.Prefix.SetTo(val)
+	}
+	// Decode query: prefix.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "prefix",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrefixVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrefixVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Prefix.SetTo(paramsDotPrefixVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Prefix.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     512,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "prefix",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: cursor.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotCursorVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotCursorVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Cursor.SetTo(paramsDotCursorVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Cursor.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     512,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "cursor",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: limit.
+	{
+		val := int(50)
+		params.Limit.SetTo(val)
+	}
+	// Decode query: limit.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLimitVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLimitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Limit.SetTo(paramsDotLimitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Limit.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "limit",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: include_value.
+	{
+		val := SearchMemoriesIncludeValue("true")
+		params.IncludeValue.SetTo(val)
+	}
+	// Decode query: include_value.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "include_value",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIncludeValueVal SearchMemoriesIncludeValue
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIncludeValueVal = SearchMemoriesIncludeValue(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IncludeValue.SetTo(paramsDotIncludeValueVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IncludeValue.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "include_value",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: updated_after.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "updated_after",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotUpdatedAfterVal time.Time
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToDateTime(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotUpdatedAfterVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.UpdatedAfter.SetTo(paramsDotUpdatedAfterVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "updated_after",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: updated_before.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "updated_before",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotUpdatedBeforeVal time.Time
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToDateTime(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotUpdatedBeforeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.UpdatedBefore.SetTo(paramsDotUpdatedBeforeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "updated_before",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: scope_type.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "scope_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotScopeTypeVal MemoryScopeQueryType
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotScopeTypeVal = MemoryScopeQueryType(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ScopeType.SetTo(paramsDotScopeTypeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.ScopeType.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "scope_type",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: scope_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "scope_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotScopeIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotScopeIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ScopeID.SetTo(paramsDotScopeIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "scope_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode header: x-primitive-function-id.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "x-primitive-function-id",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotXPrimitiveFunctionIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotXPrimitiveFunctionIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.XPrimitiveFunctionID.SetTo(paramsDotXPrimitiveFunctionIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "x-primitive-function-id",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // SendEmailParams is parameters of sendEmail operation.
 type SendEmailParams struct {
 	// Optional customer-supplied idempotency key. If omitted, Primitive
@@ -6637,6 +7823,70 @@ func decodeSetFunctionSecretParams(args [2]string, argsEscaped bool, r *http.Req
 		return params, &ogenerrors.DecodeParamError{
 			Name: "key",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// SetMemoryParams is parameters of setMemory operation.
+type SetMemoryParams struct {
+	// Optional function id UUID used as the default scope when the body
+	// does not include `scope`. Ignored when `scope` is provided.
+	XPrimitiveFunctionID OptUUID `json:",omitempty,omitzero"`
+}
+
+func unpackSetMemoryParams(packed middleware.Parameters) (params SetMemoryParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "x-primitive-function-id",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.XPrimitiveFunctionID = v.(OptUUID)
+		}
+	}
+	return params
+}
+
+func decodeSetMemoryParams(args [0]string, argsEscaped bool, r *http.Request) (params SetMemoryParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: x-primitive-function-id.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "x-primitive-function-id",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotXPrimitiveFunctionIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotXPrimitiveFunctionIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.XPrimitiveFunctionID.SetTo(paramsDotXPrimitiveFunctionIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "x-primitive-function-id",
+			In:   "header",
 			Err:  err,
 		}
 	}

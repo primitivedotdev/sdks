@@ -89,6 +89,16 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" describe domains:zone-file >/dev/null && \
 	"$$bin" domains zone-file --help | grep -q -- "--outbound-only" && \
 	"$$bin" inbox status --help | grep -q -- "readiness" && \
+	"$$bin" memories --help | grep -q -- "memories set" && \
+	"$$bin" memories set --help | grep -q -- "JSON value" && \
+	"$$bin" memories set --help | grep -q -- "--function" && \
+	"$$bin" memories get --help | grep -q -- "--function" && \
+	"$$bin" memories delete --help | grep -q -- "--if-version" && \
+	"$$bin" memories search --help | grep -q -- "--metadata-only" && \
+	"$$bin" describe memories:set >/dev/null && \
+	"$$bin" describe memories:get >/dev/null && \
+	"$$bin" describe memories:delete >/dev/null && \
+	"$$bin" describe memories:search >/dev/null && \
 	"$$bin" payments pay-email-step --help | grep -q -- "interaction.json" && \
 	"$$bin" payments pay-email-step --help | grep -q -- "--challenge-file" && \
 	"$$bin" payments create-email-challenge --help | grep -q -- "--from" && \

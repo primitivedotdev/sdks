@@ -181,6 +181,22 @@ describe("COMMANDS / manifest coverage", () => {
     expect(inboxStatusCommand.flags.json).toBeDefined();
   });
 
+  it("registers memories generated operations and friendly commands", () => {
+    for (const id of [
+      "memories:set-memory",
+      "memories:get-memory",
+      "memories:delete-memory",
+      "memories:search-memories",
+      "memories:set",
+      "memories:get",
+      "memories:delete",
+      "memories:search",
+    ]) {
+      expect(COMMANDS[id]).toBeDefined();
+    }
+    expect(COMMANDS["memories:set"]).not.toBe(COMMANDS["memories:set-memory"]);
+  });
+
   it("registers semantic search as a top-level command", () => {
     expect(COMMANDS["semantic-search"]).toBeDefined();
     const semanticSearchCommand = COMMANDS["semantic-search"] as unknown as {

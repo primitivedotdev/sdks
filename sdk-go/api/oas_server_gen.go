@@ -252,6 +252,16 @@ type Handler interface {
 	//
 	// DELETE /functions/{id}/secrets/{key}
 	DeleteFunctionSecret(ctx context.Context, params DeleteFunctionSecretParams) (DeleteFunctionSecretRes, error)
+	// DeleteMemory implements deleteMemory operation.
+	//
+	// Delete one active memory by key and scope. Deletes are idempotent when
+	// `if_version` is omitted: deleting a missing key returns `deleted:
+	// false`. With `if_version`, a missing key still returns `deleted: false`,
+	// but a stale version returns `memory_conflict`.
+	// A successful delete records memory write usage.
+	//
+	// DELETE /memories
+	DeleteMemory(ctx context.Context, params DeleteMemoryParams) (DeleteMemoryRes, error)
 	// DeleteOrgSecret implements deleteOrgSecret operation.
 	//
 	// Removes the org secret. Functions keep the previous value until
@@ -429,6 +439,17 @@ type Handler interface {
 	//
 	// GET /inbox/status
 	GetInboxStatus(ctx context.Context) (GetInboxStatusRes, error)
+	// GetMemory implements getMemory operation.
+	//
+	// Fetch one active memory by key and scope. Omit scope parameters to use
+	// the automatic default: function-authenticated context, then the
+	// `x-primitive-function-id` header, then org scope. Function scope uses a
+	// function id UUID in `scope_id`.
+	// A successful read records memory read usage and updates the memory's
+	// read stats asynchronously.
+	//
+	// GET /memories
+	GetMemory(ctx context.Context, params GetMemoryParams) (GetMemoryRes, error)
 	// GetOrgRoutingTopology implements getOrgRoutingTopology operation.
 	//
 	// Returns a single snapshot of how inbound mail is routed across
@@ -849,6 +870,16 @@ type Handler interface {
 	//
 	// GET /emails/search
 	SearchEmails(ctx context.Context, params SearchEmailsParams) (SearchEmailsRes, error)
+	// SearchMemories implements searchMemories operation.
+	//
+	// List active memories in a scope by lexicographic key prefix. Results
+	// are ordered by key ascending. The `meta.cursor` value is the next key
+	// cursor; pass it back as `cursor` to continue after that key.
+	// Search records one memory read usage event for the operation. Pass
+	// `include_value=false` to return metadata only.
+	//
+	// GET /memories/search
+	SearchMemories(ctx context.Context, params SearchMemoriesParams) (SearchMemoriesRes, error)
 	// SemanticSearch implements semanticSearch operation.
 	//
 	// Ranked search across both received and sent mail. The `mode`
@@ -905,6 +936,25 @@ type Handler interface {
 	//
 	// PUT /functions/{id}/secrets/{key}
 	SetFunctionSecret(ctx context.Context, req *SetFunctionSecretInput, params SetFunctionSecretParams) (SetFunctionSecretRes, error)
+	// SetMemory implements setMemory operation.
+	//
+	// Create or update a durable JSON memory under an org or function scope.
+	// When no explicit scope is provided, function-authenticated requests
+	// use that function's id automatically; requests with
+	// `x-primitive-function-id` use that function id; all other requests
+	// default to org scope.
+	// `scope.type = function` requires the function id UUID in `scope.id`.
+	// Function names are not accepted as scope identifiers. Values must be
+	// valid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at
+	// most 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are
+	// bigint counters serialized as strings.
+	// Passing `if_absent` turns the write into create-only. Passing
+	// `if_version` turns the write into compare-and-set. These options are
+	// mutually exclusive and return `memory_conflict` on a stale version or
+	// existing key.
+	//
+	// PUT /memories
+	SetMemory(ctx context.Context, req *SetMemoryInput, params SetMemoryParams) (SetMemoryRes, error)
 	// SetOrgSecret implements setOrgSecret operation.
 	//
 	// Path-keyed companion to `POST /org/secrets`. Idempotent:

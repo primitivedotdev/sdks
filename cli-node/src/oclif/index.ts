@@ -32,6 +32,12 @@ import FunctionsTestFunctionCommand from "./commands/functions-test-function.js"
 import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
 import LogoutCommand from "./commands/logout.js";
+import {
+  MemoriesDeleteCommand,
+  MemoriesGetCommand,
+  MemoriesSearchCommand,
+  MemoriesSetCommand,
+} from "./commands/memories.js";
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
@@ -402,6 +408,10 @@ const DESCRIBE_OPERATION_ALIASES: Record<string, string> = {
   ...CANONICAL_OPERATION_ALIASES,
   "domains:zone-file": "domains:download-domain-zone-file",
   "functions:logs": "functions:list-function-logs",
+  "memories:delete": "memories:delete-memory",
+  "memories:get": "memories:get-memory",
+  "memories:search": "memories:search-memories",
+  "memories:set": "memories:set-memory",
   reply: "sending:reply-to-email",
 };
 
@@ -626,6 +636,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   "routes:update": RoutesUpdateCommand,
   "routes:reorder": RoutesReorderCommand,
   "routes:remove": RoutesRemoveCommand,
+  // Friendly Primitive Memories commands. The generated operation-shaped
+  // wrappers remain available as memories:set-memory, memories:get-memory,
+  // memories:delete-memory, and memories:search-memories for raw API parity.
+  "memories:set": MemoriesSetCommand,
+  "memories:get": MemoriesGetCommand,
+  "memories:delete": MemoriesDeleteCommand,
+  "memories:search": MemoriesSearchCommand,
   ...generatedCommandAliases,
   ...generatedCommands,
   // `functions:logs` is the human/agent-friendly log viewer: compact

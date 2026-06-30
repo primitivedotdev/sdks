@@ -417,6 +417,50 @@ const api = new PrimitiveApiClient({ apiKey: process.env.PRIMITIVE_API_KEY });
 const result = await getAccount({ client: api.client });
 ```
 
+#### Primitive Memories
+
+The generated API client exposes Primitive Memories as durable JSON key-value
+records. Memories default to org scope. Function-scoped memories use the
+function id UUID, not the function name.
+
+```ts
+import {
+  PrimitiveApiClient,
+  getMemory,
+  searchMemories,
+  setMemory,
+} from "@primitivedotdev/sdk/api";
+
+const api = new PrimitiveApiClient({ apiKey: process.env.PRIMITIVE_API_KEY });
+
+await setMemory({
+  client: api.client,
+  body: {
+    key: "thread:latest",
+    value: { email_id: "em_123" },
+  },
+});
+
+await setMemory({
+  client: api.client,
+  body: {
+    key: "state",
+    value: { step: 2 },
+    scope: { type: "function", id: functionId },
+  },
+});
+
+const memory = await getMemory({
+  client: api.client,
+  query: { key: "thread:latest" },
+});
+
+const page = await searchMemories({
+  client: api.client,
+  query: { prefix: "thread:", include_value: "false" },
+});
+```
+
 ### Webhook signature verification
 
 `primitive.receive(...)` handles verification automatically. If you need to verify a delivery yourself (a different language reverse-proxying through Node, a one-off audit, etc.), the wire format is:

@@ -895,6 +895,14 @@ export const OPERATION_HINTS: Record<string, string> = {
     "Tip: prefer `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
   setFunctionSecret:
     "Tip: prefer `primitive functions set-secret --id <id> --key <KEY> --value <value> [--redeploy]` for secret writes that also push the binding live. This raw command exists for callers passing JSON.",
+  setMemory:
+    "Tip: prefer `primitive memories set <key> <json-value> [--function <function-id>]` for JSON value parsing and scope flags. This raw command exists for callers passing full request JSON.",
+  getMemory:
+    "Tip: prefer `primitive memories get <key> [--function <function-id>]` for the common read path.",
+  deleteMemory:
+    "Tip: prefer `primitive memories delete <key> [--function <function-id>]` for the common delete path.",
+  searchMemories:
+    "Tip: prefer `primitive memories search [prefix] [--metadata-only] [--function <function-id>]` for the common search path.",
   startAgentSignup:
     "Tip: pass --terms-accepted, and optionally --signup-code <code> if you have one. Capture the signup_token from the response and feed it to `primitive agent verify-agent-signup --signup-token <token> --verification-code <6-digit-code>` (the verify flag accepts --code as an alias). The high-level `primitive signup <email>` command walks an interactive user through both steps with friendlier prompts.",
   verifyAgentSignup:

@@ -476,7 +476,24 @@ Use the sibling `api` package when you want the full generated HTTP API surface.
 import primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
 
 client, err := primitiveapi.NewAPIClient("prim_test")
+if err != nil {
+	log.Fatal(err)
+}
+
+res, err := client.SetMemory(ctx, &primitiveapi.SetMemoryInput{
+	Key:   "greeting",
+	Value: primitiveapi.NewStringMemoryJsonValue("hello"),
+}, primitiveapi.SetMemoryParams{})
+if err != nil {
+	log.Fatal(err)
+}
+_ = res
 ```
+
+Primitive Memories store durable JSON values by key. Calls default to org scope.
+Function-scoped memories use the function id UUID, not the function name. The
+generated memory methods are `SetMemory`, `GetMemory`, `DeleteMemory`, and
+`SearchMemories`.
 
 ### Payment and interaction webhook events
 

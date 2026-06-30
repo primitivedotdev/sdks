@@ -6783,6 +6783,761 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-memory",
+    "description": "Delete one active memory by key and scope. Deletes are idempotent when\n`if_version` is omitted: deleting a missing key returns `deleted:\nfalse`. With `if_version`, a missing key still returns `deleted: false`,\nbut a stale version returns `memory_conflict`.\n\nA successful delete records memory write usage.\n",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteMemory",
+    "path": "/memories",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Memory key. Must be at most 512 UTF-8 bytes.",
+        "enum": null,
+        "name": "key",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "Explicit scope type. Omit to use automatic scope resolution. Pass\n`function` with `scope_id=<function-id>`, or `org` with no `scope_id`.\n",
+        "enum": [
+          "org",
+          "function"
+        ],
+        "name": "scope_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Function id UUID when `scope_type=function`. Not valid with\n`scope_type=org`.\n",
+        "enum": null,
+        "name": "scope_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Optional compare-and-delete version. If the active memory exists\nat a different version, the API returns `memory_conflict`.\n",
+        "enum": null,
+        "name": "if_version",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deleted": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Resolved memory scope returned by the API.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "org",
+                "function"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Org id for org scope, function id for function scope."
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ]
+        }
+      },
+      "required": [
+        "deleted",
+        "key",
+        "scope"
+      ]
+    },
+    "sdkName": "deleteMemory",
+    "summary": "Delete a memory",
+    "tag": "Memories",
+    "tagCommand": "memories"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-memory",
+    "description": "Fetch one active memory by key and scope. Omit scope parameters to use\nthe automatic default: function-authenticated context, then the\n`x-primitive-function-id` header, then org scope. Function scope uses a\nfunction id UUID in `scope_id`.\n\nA successful read records memory read usage and updates the memory's\nread stats asynchronously.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getMemory",
+    "path": "/memories",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Memory key. Must be at most 512 UTF-8 bytes.",
+        "enum": null,
+        "name": "key",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "Explicit scope type. Omit to use automatic scope resolution. Pass\n`function` with `scope_id=<function-id>`, or `org` with no `scope_id`.\n",
+        "enum": [
+          "org",
+          "function"
+        ],
+        "name": "scope_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Function id UUID when `scope_type=function`. Not valid with\n`scope_type=org`.\n",
+        "enum": null,
+        "name": "scope_id",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Memory record returned by get and set operations.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Caller-defined key, at most 512 UTF-8 bytes."
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Resolved memory scope returned by the API.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "org",
+                "function"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Org id for org scope, function id for function scope."
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ]
+        },
+        "value": {
+          "description": "JSON value accepted by Primitive Memories. The server accepts strings,\nnumbers, booleans, null, arrays, and objects, validates nested values,\nand rejects values that do not serialize as JSON.\n",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "items": {
+                "description": "Any nested JSON value."
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "description": "Any nested JSON value."
+              }
+            }
+          ]
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Bigint counter serialized as a base-10 string."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_read_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Last successful get timestamp, or null before any get."
+        },
+        "read_count": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Bigint counter serialized as a base-10 string."
+        },
+        "write_count": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Bigint counter serialized as a base-10 string."
+        },
+        "expires_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Expiration timestamp, or null for no TTL."
+        },
+        "created_by": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Actor that created the memory, when available."
+        },
+        "updated_by": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Actor that last updated the memory, when available."
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "scope",
+        "value",
+        "version",
+        "created_at",
+        "updated_at",
+        "last_read_at",
+        "read_count",
+        "write_count",
+        "expires_at",
+        "created_by",
+        "updated_by"
+      ]
+    },
+    "sdkName": "getMemory",
+    "summary": "Get a memory",
+    "tag": "Memories",
+    "tagCommand": "memories"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "search-memories",
+    "description": "List active memories in a scope by lexicographic key prefix. Results\nare ordered by key ascending. The `meta.cursor` value is the next key\ncursor; pass it back as `cursor` to continue after that key.\n\nSearch records one memory read usage event for the operation. Pass\n`include_value=false` to return metadata only.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "searchMemories",
+    "path": "/memories/search",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "default": "",
+        "description": "Key prefix to match. Empty string lists all active memories in the\nselected scope. Must be at most 512 UTF-8 bytes.\n",
+        "enum": null,
+        "name": "prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Key cursor from a previous response's `meta.cursor`. The next page\nstarts after this key.\n",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": 50,
+        "description": "Number of results per page",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "default": "true",
+        "description": "Pass `false` to omit the `value` field and return metadata only.\n",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "include_value",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only include memories updated at or after this timestamp.",
+        "enum": null,
+        "name": "updated_after",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only include memories updated at or before this timestamp.",
+        "enum": null,
+        "name": "updated_before",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Explicit scope type. Omit to use automatic scope resolution. Pass\n`function` with `scope_id=<function-id>`, or `org` with no `scope_id`.\n",
+        "enum": [
+          "org",
+          "function"
+        ],
+        "name": "scope_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Function id UUID when `scope_type=function`. Not valid with\n`scope_type=org`.\n",
+        "enum": null,
+        "name": "scope_id",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Metadata for a Primitive memory. Search responses omit `value` when\n`include_value=false`.\n",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Caller-defined key, at most 512 UTF-8 bytes."
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Resolved memory scope returned by the API.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "org",
+                  "function"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "Org id for org scope, function id for function scope."
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ]
+          },
+          "value": {
+            "description": "JSON value accepted by Primitive Memories. The server accepts strings,\nnumbers, booleans, null, arrays, and objects, validates nested values,\nand rejects values that do not serialize as JSON.\n",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "description": "Any nested JSON value."
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "description": "Any nested JSON value."
+                }
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Bigint counter serialized as a base-10 string."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_read_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Last successful get timestamp, or null before any get."
+          },
+          "read_count": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Bigint counter serialized as a base-10 string."
+          },
+          "write_count": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Bigint counter serialized as a base-10 string."
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Expiration timestamp, or null for no TTL."
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Actor that created the memory, when available."
+          },
+          "updated_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Actor that last updated the memory, when available."
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "scope",
+          "version",
+          "created_at",
+          "updated_at",
+          "last_read_at",
+          "read_count",
+          "write_count",
+          "expires_at",
+          "created_by",
+          "updated_by"
+        ]
+      }
+    },
+    "sdkName": "searchMemories",
+    "summary": "Search memories",
+    "tag": "Memories",
+    "tagCommand": "memories"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "set-memory",
+    "description": "Create or update a durable JSON memory under an org or function scope.\nWhen no explicit scope is provided, function-authenticated requests\nuse that function's id automatically; requests with\n`x-primitive-function-id` use that function id; all other requests\ndefault to org scope.\n\n`scope.type = function` requires the function id UUID in `scope.id`.\nFunction names are not accepted as scope identifiers. Values must be\nvalid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at\nmost 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are\nbigint counters serialized as strings.\n\nPassing `if_absent` turns the write into create-only. Passing\n`if_version` turns the write into compare-and-set. These options are\nmutually exclusive and return `memory_conflict` on a stale version or\nexisting key.\n",
+    "hasJsonBody": true,
+    "method": "PUT",
+    "operationId": "setMemory",
+    "path": "/memories",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Caller-defined key, at most 512 UTF-8 bytes."
+        },
+        "value": {
+          "description": "JSON value accepted by Primitive Memories. The server accepts strings,\nnumbers, booleans, null, arrays, and objects, validates nested values,\nand rejects values that do not serialize as JSON.\n",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "items": {
+                "description": "Any nested JSON value."
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "description": "Any nested JSON value."
+              }
+            }
+          ]
+        },
+        "scope": {
+          "description": "Memory scope. `org` resolves to the authenticated organization.\n`function` requires the function id UUID in `id`; function names are\nnot valid scope identifiers.\n",
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "org"
+                  ]
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "function"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Function id UUID."
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ]
+            }
+          ]
+        },
+        "ttl_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31536000,
+          "description": "Set or replace the TTL in seconds. Mutually exclusive with\n`expires_at` and `clear_ttl`.\n"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Set or replace the absolute expiration timestamp. Mutually\nexclusive with `ttl_seconds` and `clear_ttl`.\n"
+        },
+        "clear_ttl": {
+          "type": "boolean",
+          "description": "Clear any existing TTL. Mutually exclusive with `ttl_seconds` and\n`expires_at`.\n"
+        },
+        "if_absent": {
+          "type": "boolean",
+          "description": "Create only when the key is absent. Mutually exclusive with\n`if_version`.\n"
+        },
+        "if_version": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Bigint counter serialized as a base-10 string."
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Memory record returned by get and set operations.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Caller-defined key, at most 512 UTF-8 bytes."
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Resolved memory scope returned by the API.",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "org",
+                "function"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Org id for org scope, function id for function scope."
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ]
+        },
+        "value": {
+          "description": "JSON value accepted by Primitive Memories. The server accepts strings,\nnumbers, booleans, null, arrays, and objects, validates nested values,\nand rejects values that do not serialize as JSON.\n",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "items": {
+                "description": "Any nested JSON value."
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "description": "Any nested JSON value."
+              }
+            }
+          ]
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Bigint counter serialized as a base-10 string."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_read_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Last successful get timestamp, or null before any get."
+        },
+        "read_count": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Bigint counter serialized as a base-10 string."
+        },
+        "write_count": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Bigint counter serialized as a base-10 string."
+        },
+        "expires_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Expiration timestamp, or null for no TTL."
+        },
+        "created_by": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Actor that created the memory, when available."
+        },
+        "updated_by": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Actor that last updated the memory, when available."
+        }
+      },
+      "required": [
+        "id",
+        "key",
+        "scope",
+        "value",
+        "version",
+        "created_at",
+        "updated_at",
+        "last_read_at",
+        "read_count",
+        "write_count",
+        "expires_at",
+        "created_by",
+        "updated_by"
+      ]
+    },
+    "sdkName": "setMemory",
+    "summary": "Set a memory",
+    "tag": "Memories",
+    "tagCommand": "memories"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-challenge",
     "description": "Create an x402 payment challenge (the payee side of a payment). The\n`pay_to` address is resolved server-side from your registered default\npayout address for the network, never from the request. The response\ncarries the `nonce_binding` and `payment_requirements` the payer needs to\nsign; hand the whole challenge object to the payer (for example in an\nemail reply). Amounts are in token base units (USDC has 6 decimals, so\n`\"10000\"` is 0.01 USDC).\n",
