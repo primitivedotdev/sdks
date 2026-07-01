@@ -43,6 +43,7 @@ import {
   type SendMailResult as GeneratedSendMailResult,
   type SetMemoryInput as GeneratedSetMemoryInput,
   operations as generatedOperations,
+  isMemoryJsonValue,
   PrimitiveApiClient,
   type PrimitiveApiClientOptions,
   PrimitiveApiError,
@@ -212,11 +213,27 @@ export interface SemanticSearchResponse {
   meta: GeneratedSemanticSearchMeta;
 }
 
-export type MemorySetInput = GeneratedSetMemoryInput;
+export type MemoryJsonValue =
+  | null
+  | string
+  | number
+  | boolean
+  | MemoryJsonValue[]
+  | { [key: string]: MemoryJsonValue };
+export type MemorySetInput = Omit<GeneratedSetMemoryInput, "value"> & {
+  value: MemoryJsonValue;
+};
 export type MemoryGetInput = GeneratedGetMemoryData["query"];
 export type MemoryDeleteInput = GeneratedDeleteMemoryData["query"];
-export type MemoryRecord = GeneratedMemoryRecord;
-export type MemoryRecordWithValue = GeneratedMemoryRecordWithValue;
+export type MemoryRecord = Omit<GeneratedMemoryRecord, "value"> & {
+  value?: MemoryJsonValue;
+};
+export type MemoryRecordWithValue = Omit<
+  GeneratedMemoryRecordWithValue,
+  "value"
+> & {
+  value: MemoryJsonValue;
+};
 
 export type MemorySearchInput = Omit<
   NonNullable<GeneratedSearchMemoriesData["query"]>,
@@ -417,9 +434,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function rejectGeneratedOptionsShape(
-  value: object,
+  value: unknown,
   method: "set" | "get" | "delete" | "search",
 ): void {
+  if (!isRecord(value)) return;
   if ("client" in value || "body" in value || "query" in value) {
     const example =
       method === "set"
@@ -433,10 +451,46 @@ function rejectGeneratedOptionsShape(
   }
 }
 
+function assertMemoryJsonValue(
+  value: unknown,
+): asserts value is MemoryJsonValue {
+  if (isMemoryJsonValue(value)) return;
+  throw new TypeError(
+    "client.memories.set value must be a JSON value: string, finite number, boolean, null, array, or plain object. Undefined, bigint, symbol, function, NaN, Infinity, sparse arrays, class instances, and cyclic values are not valid memory values.",
+  );
+}
+
+function assertMemorySetInput(input: unknown): asserts input is MemorySetInput {
+  if (!isRecord(input)) {
+    throw new TypeError(
+      "client.memories.set takes the memory fields directly; use client.memories.set({ key, value }).",
+    );
+  }
+  if (!("value" in input)) {
+    throw new TypeError("client.memories.set requires a value field.");
+  }
+  assertMemoryJsonValue(input.value);
+}
+
+function assertMemoryQueryInput(
+  input: unknown,
+  method: "get" | "delete" | "search",
+): asserts input is Record<string, unknown> {
+  if (isRecord(input)) return;
+  const example =
+    method === "search"
+      ? "client.memories.search({ prefix })"
+      : `client.memories.${method}({ key })`;
+  throw new TypeError(
+    `client.memories.${method} takes the memory fields directly; use ${example}.`,
+  );
+}
+
 function normalizeMemorySearchInput(
   input: MemorySearchInput | undefined,
 ): GeneratedSearchMemoriesData["query"] {
   if (input === undefined) return undefined;
+  assertMemoryQueryInput(input, "search");
   if (isRecord(input) && "query" in input) {
     if (typeof input.query !== "string") {
       rejectGeneratedOptionsShape(input, "search");
@@ -851,6 +905,7 @@ export class MemoriesResource {
     options?: RequestOptions,
   ): Promise<GeneratedMemoryRecordWithValue> {
     rejectGeneratedOptionsShape(input, "set");
+    assertMemorySetInput(input);
     const result = await generatedOperations.setMemory({
       body: input,
       ...resolveRequestOptions(options),
@@ -866,6 +921,7 @@ export class MemoriesResource {
   ): Promise<GeneratedMemoryRecordWithValue> {
     const query = typeof input === "string" ? { key: input } : input;
     rejectGeneratedOptionsShape(query, "get");
+    assertMemoryQueryInput(query, "get");
     const result = await generatedOperations.getMemory({
       query,
       ...resolveRequestOptions(options),
@@ -881,6 +937,7 @@ export class MemoriesResource {
   ): Promise<GeneratedDeleteMemoryResult> {
     const query = typeof input === "string" ? { key: input } : input;
     rejectGeneratedOptionsShape(query, "delete");
+    assertMemoryQueryInput(query, "delete");
     const result = await generatedOperations.deleteMemory({
       query,
       ...resolveRequestOptions(options),

@@ -3620,9 +3620,9 @@ export type NumericString = string;
  * and rejects values that do not serialize as JSON.
  *
  */
-export type MemoryJsonValue = unknown | string | number | boolean | Array<unknown> | {
-    [key: string]: unknown;
-};
+export type MemoryJsonValue = string | number | boolean | Array<MemoryJsonValue> | {
+    [key: string]: MemoryJsonValue;
+} | null;
 
 /**
  * Memory scope. `org` resolves to the authenticated organization.

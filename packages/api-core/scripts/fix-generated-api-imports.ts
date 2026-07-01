@@ -4,6 +4,11 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = fileURLToPath(new URL(".", import.meta.url));
 const generatedRoot = resolve(scriptDir, "../src/api");
+const MEMORY_JSON_VALUE_TYPE = `export type MemoryJsonValue = string | number | boolean | Array<MemoryJsonValue> | {
+    [key: string]: MemoryJsonValue;
+} | null;`;
+const MEMORY_JSON_VALUE_PATTERN =
+  /export type MemoryJsonValue = [\s\S]*?;\n\n\/\*\*\n \* Memory scope\./;
 
 function visit(directory: string, files: string[] = []): string[] {
   for (const entry of readdirSync(directory)) {
@@ -59,6 +64,32 @@ function guardOptionalBodyContentType(content: string): string {
   );
 }
 
+// @hey-api/openapi-ts currently treats the OpenAPI 3.1 `type: "null"` branch
+// of this recursive JSON schema as `unknown`, which widens the entire generated
+// alias. Keep the public schema standards-compliant, then repair this one alias
+// so downstream SDK users get the exact JSON type.
+function fixMemoryJsonValueType(file: string, content: string): string {
+  if (!content.includes("export type MemoryJsonValue =")) {
+    return content;
+  }
+
+  const updated = content.replace(
+    MEMORY_JSON_VALUE_PATTERN,
+    `${MEMORY_JSON_VALUE_TYPE}
+
+/**
+ * Memory scope.`,
+  );
+
+  if (updated === content || !updated.includes(MEMORY_JSON_VALUE_TYPE)) {
+    throw new Error(
+      `Unable to repair generated MemoryJsonValue type in ${file}. The codegen output shape changed; update fixMemoryJsonValueType before publishing.`,
+    );
+  }
+
+  return updated;
+}
+
 for (const file of visit(generatedRoot)) {
   const content = readFileSync(file, "utf8");
   let updated = content
@@ -69,6 +100,7 @@ for (const file of visit(generatedRoot)) {
       return `${prefix}${addJsExtension(file, specifier)}${suffix}`;
     });
   updated = guardOptionalBodyContentType(updated);
+  updated = fixMemoryJsonValueType(file, updated);
 
   if (updated !== content) {
     writeFileSync(file, updated);

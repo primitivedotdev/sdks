@@ -8,6 +8,7 @@ import type {
 import {
   deleteMemory,
   getMemory,
+  isMemoryJsonValue,
   searchMemories,
   setMemory,
 } from "@primitivedotdev/api-core";
@@ -33,6 +34,8 @@ type ScopeFlags = {
 };
 
 type ScopeQuery = NonNullable<SearchMemoriesData["query"]>;
+type MemoryGetQuery = ScopeQuery & { key: string };
+type MemoryDeleteQuery = MemoryGetQuery & { if_version?: string };
 
 type ValueSourceResult =
   | { kind: "ok"; source: string; label: string }
@@ -41,6 +44,8 @@ type ValueSourceResult =
 export type ParseMemoryJsonResult =
   | { kind: "ok"; value: MemoryJsonValue }
   | { kind: "error"; message: string };
+
+class MemoryCliInputError extends Error {}
 
 const API_KEY_FLAG = Flags.string({
   description:
@@ -79,12 +84,37 @@ function printData(command: Command, responseData: unknown): void {
   command.log(JSON.stringify(data, null, 2));
 }
 
+function handleMemoryInputError(error: unknown): boolean {
+  if (!(error instanceof MemoryCliInputError)) return false;
+  process.stderr.write(`${error.message}\n`);
+  process.exitCode = 1;
+  return true;
+}
+
+function nonEmptyFlag(
+  value: string | undefined,
+  name: string,
+): string | undefined {
+  if (value === undefined) return undefined;
+  if (value.trim().length === 0) {
+    throw new MemoryCliInputError(`${name} must be a non-empty string.`);
+  }
+  return value;
+}
+
 export function parseMemoryJson(
   source: string,
   label = "value",
 ): ParseMemoryJsonResult {
   try {
-    return { kind: "ok", value: JSON.parse(source) as MemoryJsonValue };
+    const value = JSON.parse(source) as unknown;
+    if (!isMemoryJsonValue(value)) {
+      return {
+        kind: "error",
+        message: `${label} must be valid JSON. Numbers must be finite, arrays must not be sparse, and values may not contain undefined, bigint, symbol, function, class instance, or cyclic entries.`,
+      };
+    }
+    return { kind: "ok", value };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -131,14 +161,16 @@ export function resolveMemoryValueSource(input: {
 }
 
 export function memoryScopeForBody(flags: ScopeFlags): MemoryScope | undefined {
-  if (flags.function) return { type: "function", id: flags.function };
+  const functionId = nonEmptyFlag(flags.function, "--function");
+  if (functionId !== undefined) return { type: "function", id: functionId };
   if (flags.org) return { type: "org" };
   return undefined;
 }
 
 export function memoryScopeForQuery(flags: ScopeFlags): ScopeQuery {
-  if (flags.function) {
-    return { scope_type: "function", scope_id: flags.function };
+  const functionId = nonEmptyFlag(flags.function, "--function");
+  if (functionId !== undefined) {
+    return { scope_type: "function", scope_id: functionId };
   }
   if (flags.org) return { scope_type: "org" };
   return {};
@@ -156,6 +188,8 @@ export function buildSetMemoryInput(params: {
   };
 }): SetMemoryInput {
   const scope = memoryScopeForBody(params.flags);
+  const expiresAt = nonEmptyFlag(params.flags["expires-at"], "--expires-at");
+  const ifVersion = nonEmptyFlag(params.flags["if-version"], "--if-version");
   return {
     key: params.key,
     value: params.value,
@@ -163,14 +197,61 @@ export function buildSetMemoryInput(params: {
     ...(params.flags["ttl-seconds"] !== undefined
       ? { ttl_seconds: params.flags["ttl-seconds"] }
       : {}),
-    ...(params.flags["expires-at"]
-      ? { expires_at: params.flags["expires-at"] }
-      : {}),
+    ...(expiresAt !== undefined ? { expires_at: expiresAt } : {}),
     ...(params.flags["clear-ttl"] ? { clear_ttl: true } : {}),
     ...(params.flags["if-absent"] ? { if_absent: true } : {}),
-    ...(params.flags["if-version"]
-      ? { if_version: params.flags["if-version"] }
+    ...(ifVersion !== undefined ? { if_version: ifVersion } : {}),
+  };
+}
+
+export function buildGetMemoryQuery(params: {
+  key: string;
+  flags: ScopeFlags;
+}): MemoryGetQuery {
+  return { key: params.key, ...memoryScopeForQuery(params.flags) };
+}
+
+export function buildDeleteMemoryQuery(params: {
+  key: string;
+  flags: ScopeFlags & { "if-version"?: string };
+}): MemoryDeleteQuery {
+  const ifVersion = nonEmptyFlag(params.flags["if-version"], "--if-version");
+  return {
+    key: params.key,
+    ...memoryScopeForQuery(params.flags),
+    ...(ifVersion !== undefined ? { if_version: ifVersion } : {}),
+  };
+}
+
+export function buildSearchMemoriesQuery(params: {
+  prefix?: string;
+  flags: ScopeFlags & {
+    cursor?: string;
+    limit: number;
+    "metadata-only"?: boolean;
+    "updated-after"?: string;
+    "updated-before"?: string;
+  };
+}): ScopeQuery {
+  const cursor = nonEmptyFlag(params.flags.cursor, "--cursor");
+  const updatedAfter = nonEmptyFlag(
+    params.flags["updated-after"],
+    "--updated-after",
+  );
+  const updatedBefore = nonEmptyFlag(
+    params.flags["updated-before"],
+    "--updated-before",
+  );
+  return {
+    ...(params.prefix !== undefined ? { prefix: params.prefix } : {}),
+    limit: params.flags.limit,
+    ...(cursor !== undefined ? { cursor } : {}),
+    ...(params.flags["metadata-only"]
+      ? { include_value: "false" as const }
       : {}),
+    ...(updatedAfter !== undefined ? { updated_after: updatedAfter } : {}),
+    ...(updatedBefore !== undefined ? { updated_before: updatedBefore } : {}),
+    ...memoryScopeForQuery(params.flags),
   };
 }
 
@@ -259,6 +340,18 @@ class MemoriesSetCommand extends Command {
       return;
     }
 
+    let body: SetMemoryInput;
+    try {
+      body = buildSetMemoryInput({
+        key: args.key,
+        value: parsed.value,
+        flags,
+      });
+    } catch (error) {
+      if (handleMemoryInputError(error)) return;
+      throw error;
+    }
+
     const { apiClient, auth, baseUrlOverridden } =
       await createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
@@ -269,11 +362,7 @@ class MemoriesSetCommand extends Command {
     await runWithTiming(flags.time, async () => {
       const result = await setMemory({
         client: apiClient.client,
-        body: buildSetMemoryInput({
-          key: args.key,
-          value: parsed.value,
-          flags,
-        }),
+        body,
         responseStyle: "fields",
       });
 
@@ -320,6 +409,14 @@ class MemoriesGetCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(MemoriesGetCommand);
+    let query: MemoryGetQuery;
+    try {
+      query = buildGetMemoryQuery({ key: args.key, flags });
+    } catch (error) {
+      if (handleMemoryInputError(error)) return;
+      throw error;
+    }
+
     const { apiClient, auth, baseUrlOverridden } =
       await createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
@@ -330,7 +427,7 @@ class MemoriesGetCommand extends Command {
     await runWithTiming(flags.time, async () => {
       const result = await getMemory({
         client: apiClient.client,
-        query: { key: args.key, ...memoryScopeForQuery(flags) },
+        query,
         responseStyle: "fields",
       });
 
@@ -382,6 +479,14 @@ class MemoriesDeleteCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(MemoriesDeleteCommand);
+    let query: MemoryDeleteQuery;
+    try {
+      query = buildDeleteMemoryQuery({ key: args.key, flags });
+    } catch (error) {
+      if (handleMemoryInputError(error)) return;
+      throw error;
+    }
+
     const { apiClient, auth, baseUrlOverridden } =
       await createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
@@ -392,11 +497,7 @@ class MemoriesDeleteCommand extends Command {
     await runWithTiming(flags.time, async () => {
       const result = await deleteMemory({
         client: apiClient.client,
-        query: {
-          key: args.key,
-          ...memoryScopeForQuery(flags),
-          ...(flags["if-version"] ? { if_version: flags["if-version"] } : {}),
-        },
+        query,
         responseStyle: "fields",
       });
 
@@ -463,6 +564,14 @@ class MemoriesSearchCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(MemoriesSearchCommand);
+    let query: ScopeQuery;
+    try {
+      query = buildSearchMemoriesQuery({ prefix: args.prefix, flags });
+    } catch (error) {
+      if (handleMemoryInputError(error)) return;
+      throw error;
+    }
+
     const { apiClient, auth, baseUrlOverridden } =
       await createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
@@ -473,21 +582,7 @@ class MemoriesSearchCommand extends Command {
     await runWithTiming(flags.time, async () => {
       const result = await searchMemories({
         client: apiClient.client,
-        query: {
-          ...(args.prefix !== undefined ? { prefix: args.prefix } : {}),
-          limit: flags.limit,
-          ...(flags.cursor ? { cursor: flags.cursor } : {}),
-          ...(flags["metadata-only"]
-            ? { include_value: "false" as const }
-            : {}),
-          ...(flags["updated-after"]
-            ? { updated_after: flags["updated-after"] }
-            : {}),
-          ...(flags["updated-before"]
-            ? { updated_before: flags["updated-before"] }
-            : {}),
-          ...memoryScopeForQuery(flags),
-        },
+        query,
         responseStyle: "fields",
       });
 

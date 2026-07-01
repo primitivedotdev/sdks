@@ -63,3 +63,5 @@ export {
   type PrimitiveApiErrorDetails,
   type RequestOptions as PrimitiveRequestOptions,
 } from "./client.js";
+
+export { isMemoryJsonValue } from "./memories.js";
