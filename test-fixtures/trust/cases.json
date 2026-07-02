@@ -1,0 +1,463 @@
+{
+  "description": "Shared cases for the domain-anchored sender trust check (isTrustedSender / is_trusted_sender / IsTrustedSender). Each case overrides email.headers.from and email.auth on the base valid email.received event, runs the trust check with the given options, and asserts the full result. Cases use only From-header shapes that every SDK's address parser handles identically; parser-specific edge cases live in per-SDK tests.",
+  "cases": [
+    {
+      "name": "legit-domain-match",
+      "from": "sender@example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": { "trusted": true, "retryable": false, "reason": "trusted" }
+    },
+    {
+      "name": "legit-domain-and-sender-match",
+      "from": "sender@example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com", "sender": "sender@example.com" },
+      "expected": { "trusted": true, "retryable": false, "reason": "trusted" }
+    },
+    {
+      "name": "case-insensitive-domain-and-sender",
+      "from": "Sender@EXAMPLE.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "Example.COM",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "Example.com", "sender": "SENDER@example.com" },
+      "expected": { "trusted": true, "retryable": false, "reason": "trusted" }
+    },
+    {
+      "name": "legit-but-wrong-dmarc-from-domain",
+      "from": "attacker@evil.example.net",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "evil.example.net",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "evil.example.net",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "display-name-spoof-with-legit-attacker-domain",
+      "from": "\"sender@example.com\" <attacker@evil.example.net>",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "evil.example.net",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "evil.example.net",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "subdomain-does-not-match",
+      "from": "sender@mail.example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "mail.example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "mail.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "null-dmarc-from-domain",
+      "from": "sender@example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": null,
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "suspicious-dmarc-fail-reject-policy",
+      "from": "sender@example.com",
+      "auth": {
+        "spf": "fail",
+        "dmarc": "fail",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": false,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": []
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "auth-suspicious"
+      }
+    },
+    {
+      "name": "unknown-no-dmarc-record-is-not-retryable",
+      "from": "sender@example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "none",
+        "dmarcPolicy": null,
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": false,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": []
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "auth-unknown"
+      }
+    },
+    {
+      "name": "dmarc-temperror-is-retryable",
+      "from": "sender@example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "temperror",
+        "dmarcPolicy": null,
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": false,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": []
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": true,
+        "reason": "dmarc-temperror"
+      }
+    },
+    {
+      "name": "dmarc-permerror-is-not-retryable",
+      "from": "sender@example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "permerror",
+        "dmarcPolicy": null,
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": false,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": []
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "auth-unknown"
+      }
+    },
+    {
+      "name": "from-domain-disagrees-with-dmarc-domain",
+      "from": "attacker@evil.example.net",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "from-domain-mismatch"
+      }
+    },
+    {
+      "name": "multi-address-from-is-rejected",
+      "from": "sender@example.com, second@example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "from-header-multiple-addresses"
+      }
+    },
+    {
+      "name": "group-syntax-from-is-rejected",
+      "from": "Friends: sender@example.com;",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "from-header-invalid"
+      }
+    },
+    {
+      "name": "quoted-colon-display-name-is-not-a-group",
+      "from": "\"Support: Billing\" <sender@example.com>",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": { "trusted": true, "retryable": false, "reason": "trusted" }
+    },
+    {
+      "name": "unparseable-from-header",
+      "from": "not-an-email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "from-header-invalid"
+      }
+    },
+    {
+      "name": "exact-sender-mismatch",
+      "from": "other@example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com", "sender": "sender@example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "sender-mismatch"
+      }
+    }
+  ]
+}

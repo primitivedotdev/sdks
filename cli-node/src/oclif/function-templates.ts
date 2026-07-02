@@ -175,6 +175,14 @@ function inboundRecipientDomains(event: EmailReceivedEvent): Set<string> {
 //   - Track Message-ID / In-Reply-To chains to break ping-pong loops
 //     between two cooperating handlers on different domains.
 //   - Rate-limit replies per sender per hour as a safety net.
+//
+// Loop protection is NOT sender authentication. The address matching
+// here is deliberately loose (it exists to avoid replying to our own
+// mail, where a false positive just drops one reply). If your handler
+// gates any privileged action on WHO sent the email, do not reuse this
+// logic or regex the From header yourself; use isTrustedSender from
+// "@primitivedotdev/sdk/api", which anchors the DMARC verdict to your
+// expected domain and strict-parses the From header.
 export function isLoop(event: EmailReceivedEvent): boolean {
   // RFC 5321: bounce notifications use the null MAIL FROM (envelope
   // sender = empty string). Some MTAs report this as "<>" verbatim.

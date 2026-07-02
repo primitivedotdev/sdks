@@ -198,6 +198,43 @@ email.Thread.References
 email.Raw
 ```
 
+## Deciding whether to trust an inbound email
+
+Every `email.received` event carries the server's SPF, DKIM, and DMARC results
+on `event.Email.Auth`. `ValidateEmailAuth` computes an overall verdict
+(`legit`, `suspicious`, or `unknown`) with a confidence level and reasons. The
+verdict alone does not say which domain authenticated: a fully authenticated
+email from any domain returns `legit`.
+
+`IsTrustedSender` anchors the verdict to an expected From domain, for handlers
+that gate an action on "this really came from our domain":
+
+```go
+trust, err := primitive.IsTrustedSender(email.Raw, primitive.TrustedSenderOptions{
+    Domain: "example.com",
+})
+if err != nil {
+    // invalid options
+}
+switch {
+case trust.Trusted:
+    // authenticated mail whose From address is @example.com
+case trust.Retryable:
+    // transient DNS failure during DMARC evaluation; respond 5xx so
+    // webhook redelivery retries this email later
+default:
+    log.Printf("untrusted: %s %v", trust.Reason, trust.Auth.Reasons)
+}
+```
+
+`Trusted` is true only when the verdict is `legit`, the domain DMARC evaluated
+equals `Domain`, and the From header strict-parses to a single valid address
+in `Domain` (exactly matching `Sender` when given). Do not authorize based on
+`email.ReplyTarget` or `email.Raw.Email.SMTP.MailFrom` (both
+sender-controlled), and note that the normalized `email.Sender` is parsed
+leniently for display and falls back to the SMTP envelope sender, so it is not
+a safe authorization anchor.
+
 ## x402 payments
 
 The x402 client lets one agent request a USDC payment and another pay it. It is

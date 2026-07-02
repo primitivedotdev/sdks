@@ -501,6 +501,14 @@ func VerifyRawEmailDownload(downloaded []byte, event any) ([]byte, error) {
 	return downloaded, nil
 }
 
+// ValidateEmailAuth computes an authentication verdict from SPF, DKIM,
+// and DMARC results.
+//
+// A legit verdict means the email authenticated as its own From domain,
+// not as any particular domain you trust: a fully authenticated email
+// from any domain returns legit. For authorization decisions, anchor
+// the verdict to an expected domain with IsTrustedSender instead of
+// checking the verdict alone.
 func ValidateEmailAuth(input any) (ValidateEmailAuthResult, error) {
 	auth, err := decodeInto[EmailAuth](input)
 	if err != nil {

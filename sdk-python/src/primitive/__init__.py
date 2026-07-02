@@ -46,6 +46,11 @@ from .received_email import (
     receive,
 )
 from .schema import email_received_event_json_schema
+from .trust import (
+    TrustedSenderResult,
+    TrustReason,
+    is_trusted_sender,
+)
 from .types import (
     AuthConfidence,
     AuthVerdict,
@@ -207,6 +212,8 @@ __all__ = [
     "Smtp",
     "Spamassassin",
     "SpfResult",
+    "TrustReason",
+    "TrustedSenderResult",
     "UnknownEvent",
     "ValidateEmailAuthResult",
     "STANDARD_WEBHOOK_ID_HEADER",
@@ -291,6 +298,7 @@ __all__ = [
     "is_payment_failed_event",
     "is_payment_settled_event",
     "is_raw_included",
+    "is_trusted_sender",
     "normalize_received_email",
     "parse_header_address",
     "parse_json_body",
