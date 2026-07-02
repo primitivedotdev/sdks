@@ -4,6 +4,12 @@
  * This module provides the `validateEmailAuth()` function for computing
  * an authentication verdict based on SPF, DKIM, and DMARC results.
  *
+ * The verdict says whether the email was authenticated, not which
+ * domain it was authenticated as: a fully authenticated email from any
+ * domain returns `legit`. To gate an action on "this really came from
+ * our domain", use `isTrustedSender()` from `./trust.js`, which anchors
+ * the verdict to an expected From domain.
+ *
  * @example
  * ```typescript
  * import { handleWebhook, validateEmailAuth } from '@primitivedotdev/sdk';
@@ -12,7 +18,7 @@
  * const result = validateEmailAuth(event.email.auth);
  *
  * if (result.verdict === 'legit') {
- *   // Email is authenticated
+ *   // Email is authenticated (as its own From domain, whatever that is)
  * } else if (result.verdict === 'suspicious') {
  *   // Email may be spoofed
  *   console.warn('Suspicious email:', result.reasons);
@@ -74,6 +80,11 @@ const MIN_SECURE_KEY_BITS = 1024;
  * - No DMARC record and no clear pass/fail
  * - Temporary errors during authentication
  * - No authentication data available
+ *
+ * A `legit` verdict means the email authenticated as its own From
+ * domain, not as any particular domain you trust. For authorization
+ * decisions, pair the verdict with a domain anchor via
+ * {@link isTrustedSender} instead of checking the verdict alone.
  *
  * @param auth - Email authentication results from the webhook
  * @returns Verdict, confidence level, and explanatory reasons

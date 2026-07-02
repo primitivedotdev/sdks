@@ -200,6 +200,39 @@ email.raw;
 
 Use `email.raw` when you need the original validated webhook event shape.
 
+## Deciding whether to trust an inbound email
+
+Every `email.received` event carries the server's SPF, DKIM, and DMARC results on `event.email.auth`. Two helpers turn those into decisions, and both are importable from `@primitivedotdev/sdk/api` so they work inside Primitive Functions:
+
+`validateEmailAuth(event.email.auth)` computes an overall verdict (`legit`, `suspicious`, or `unknown`) with a confidence level and human-readable reasons. It answers "was this email authenticated?" but not which domain it was authenticated as: a fully authenticated email from any domain, including one an attacker registered, returns `legit`.
+
+`isTrustedSender(event, { domain, sender? })` anchors the verdict to an expected From domain, for handlers that gate an action on "this really came from our domain":
+
+```ts
+import { isTrustedSender } from "@primitivedotdev/sdk/api";
+
+const trust = isTrustedSender(email.raw, { domain: "example.com" });
+
+if (trust.trusted) {
+  // Authenticated mail whose From address is @example.com
+} else if (trust.retryable) {
+  // Transient DNS failure during DMARC evaluation. Respond with a 5xx
+  // so webhook redelivery retries this email later.
+} else {
+  console.warn("Untrusted:", trust.reason, trust.auth.reasons);
+}
+```
+
+`trusted` is true only when the verdict is `legit`, the domain DMARC evaluated equals `domain`, and the From header strict-parses to a single valid address in `domain` (exactly matching `sender` when given). `reason` is a stable machine-readable code naming the first check that failed.
+
+If you are writing your own check instead, three details matter:
+
+- Do not regex the raw From header. `From: "trusted@example.com" <x@evil.com>` puts an allowlisted address in the display name while DMARC evaluates, and can pass for, `evil.com`.
+- Do not authorize based on `email.replyTarget` or `email.smtp.mail_from`; both are fully sender-controlled. `email.sender` is parsed leniently for display purposes and falls back to `smtp.mail_from`, so it is not a safe authorization anchor either.
+- An `unknown` verdict has two very different causes: a temporary DNS error (retry later) and a sender domain that publishes no DMARC record (permanent for that email). `isTrustedSender` separates them via `retryable`.
+
+The same helper is available in the Python SDK (`is_trusted_sender`) and the Go SDK (`IsTrustedSender`) with identical semantics.
+
 ## x402 payments
 
 The `x402` client lets one agent request a USDC payment and another pay it. It is non-custodial: the payer signs an EIP-3009 `transferWithAuthorization` locally with their own key, and the key never leaves the caller. The platform resolves the real payee address, verifies every signed field against its own records, enforces the org's spend policy, and settles on chain.

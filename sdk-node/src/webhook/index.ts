@@ -181,6 +181,13 @@ export {
 } from "../types.js";
 // Auth Validation
 export { validateEmailAuth } from "./auth.js";
+// Domain-anchored sender trust
+export {
+  isTrustedSender,
+  type TrustedSenderOptions,
+  type TrustedSenderResult,
+  type TrustReason,
+} from "./trust.js";
 // Version
 export { WEBHOOK_VERSION } from "./version.js";
 

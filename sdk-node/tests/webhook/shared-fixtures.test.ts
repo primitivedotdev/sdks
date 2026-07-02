@@ -9,6 +9,7 @@ import {
   type EmailReceivedEvent,
   handleWebhook,
   isRawIncluded,
+  isTrustedSender,
   PrimitiveWebhookError,
   parseHeaderAddress,
   parseWebhookEvent,
@@ -142,6 +143,32 @@ describe("shared compatibility fixtures", () => {
       expect(result.confidence, testCase.name).toBe(
         testCase.expected.confidence,
       );
+    }
+  });
+
+  it("decides shared sender trust fixtures", () => {
+    const baseEvent = loadJson<EmailReceivedEvent>(
+      "webhook",
+      "valid-email-received.json",
+    );
+    const fixtures = loadJson<{
+      cases: Array<{
+        name: string;
+        from: string;
+        auth: EmailReceivedEvent["email"]["auth"];
+        options: { domain: string; sender?: string };
+        expected: { trusted: boolean; retryable: boolean; reason: string };
+      }>;
+    }>("trust", "cases.json");
+
+    for (const testCase of fixtures.cases) {
+      const event = structuredClone(baseEvent);
+      event.email.headers.from = testCase.from;
+      event.email.auth = testCase.auth;
+      const result = isTrustedSender(event, testCase.options);
+      expect(result.trusted, testCase.name).toBe(testCase.expected.trusted);
+      expect(result.retryable, testCase.name).toBe(testCase.expected.retryable);
+      expect(result.reason, testCase.name).toBe(testCase.expected.reason);
     }
   });
 

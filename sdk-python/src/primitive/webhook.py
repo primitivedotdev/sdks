@@ -838,6 +838,14 @@ def verify_raw_email_download(
 def validate_email_auth(
     auth: EmailAuth | Mapping[str, Any],
 ) -> ValidateEmailAuthResult:
+    """Compute an authentication verdict from SPF, DKIM, and DMARC results.
+
+    A ``legit`` verdict means the email authenticated as its own From
+    domain, not as any particular domain you trust: a fully authenticated
+    email from any domain returns ``legit``. For authorization decisions,
+    anchor the verdict to an expected domain with ``is_trusted_sender``
+    instead of checking the verdict alone.
+    """
     if isinstance(auth, Mapping):
         try:
             auth = EmailAuth.model_validate(auth, by_alias=True, by_name=True)

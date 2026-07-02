@@ -33,6 +33,7 @@ The shared fixtures define behavioral parity expectations across SDKs, including
 - schema validation outcomes
 - signature verification behavior
 - auth classification behavior
+- sender trust decisions (domain-anchored trust check)
 - raw-content helper behavior
 - `parseWebhookEvent` parity
 - `handleWebhook` parity
