@@ -101,6 +101,29 @@ func TestIsTrustedSenderInvalidOptions(t *testing.T) {
 	}
 }
 
+func TestParseFromHeaderStrictGroupSyntax(t *testing.T) {
+	// mail.ParseAddressList flattens a single-member group to its
+	// member, so the explicit group-delimiter guard must reject it to
+	// stay aligned with the Node parser.
+	if _, reason := parseFromHeaderStrict("Friends: sender@example.com;"); reason != TrustReasonFromHeaderInvalid {
+		t.Fatalf("expected group-syntax rejection, got %q", reason)
+	}
+	// A colon inside a quoted display name is not group syntax.
+	if address, _ := parseFromHeaderStrict(`"Support: Billing" <sender@example.com>`); address != "sender@example.com" {
+		t.Fatalf("expected quoted-colon display name to parse, got %q", address)
+	}
+	// An escaped quote inside a quoted display name does not end the
+	// quoted string; the colon after it stays quoted.
+	if address, _ := parseFromHeaderStrict(`"a\": b" <sender@example.com>`); address != "sender@example.com" {
+		t.Fatalf("expected escaped-quote display name to parse, got %q", address)
+	}
+	// A colon inside an IPv6 domain literal is rejected, matching the
+	// Node parser (whose lexer also treats it as a group marker).
+	if _, reason := parseFromHeaderStrict("user@[IPv6:2001:db8::1]"); reason != TrustReasonFromHeaderInvalid {
+		t.Fatalf("expected IPv6 domain-literal rejection, got %q", reason)
+	}
+}
+
 func TestParseFromHeaderStrict(t *testing.T) {
 	if address, _ := parseFromHeaderStrict(`"spoofed@example.com" <attacker@evil.example.net>`); address != "attacker@evil.example.net" {
 		t.Fatalf("expected angle-addr address, got %q", address)

@@ -82,14 +82,50 @@ func untrustedSender(reason TrustReason, auth ValidateEmailAuthResult, retryable
 	return TrustedSenderResult{Trusted: false, Retryable: retryable, Reason: reason, Auth: auth}
 }
 
+// containsGroupDelimiter detects RFC 5322 group syntax for the strict
+// parser. mail.ParseAddressList silently expands group syntax
+// ("Friends: a@b.com;") into its member addresses, so a single-member
+// group would otherwise pass the multi-address count check. A colon
+// outside quoted strings and comments only occurs in group syntax (or
+// an IPv6 domain literal, which headerAddressRe rejects anyway), so
+// treat it as a group marker and reject, matching the Node parser's
+// explicit group rejection.
+func containsGroupDelimiter(value string) bool {
+	inQuotes := false
+	parenDepth := 0
+	escaped := false
+	for _, r := range value {
+		if escaped {
+			escaped = false
+			continue
+		}
+		switch {
+		case r == '\\' && (inQuotes || parenDepth > 0):
+			escaped = true
+		case r == '"' && parenDepth == 0:
+			inQuotes = !inQuotes
+		case r == '(' && !inQuotes:
+			parenDepth++
+		case r == ')' && !inQuotes && parenDepth > 0:
+			parenDepth--
+		case r == ':' && !inQuotes && parenDepth == 0:
+			return true
+		}
+	}
+	return false
+}
+
 // parseFromHeaderStrict is the single-address From parse used by the
 // trust gate. Unlike ParseHeaderAddress (which is lenient and lets the
 // normalizer fall back to the attacker-controlled SMTP envelope
-// sender), it rejects multi-address headers and anything that fails
-// address validation, with no recovery fallbacks.
+// sender), it rejects multi-address headers, group syntax, and anything
+// that fails address validation, with no recovery fallbacks.
 func parseFromHeaderStrict(value string) (string, TrustReason) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" || len(trimmed) > maxHeaderBytes {
+		return "", TrustReasonFromHeaderInvalid
+	}
+	if containsGroupDelimiter(trimmed) {
 		return "", TrustReasonFromHeaderInvalid
 	}
 	addrs, err := mail.ParseAddressList(trimmed)

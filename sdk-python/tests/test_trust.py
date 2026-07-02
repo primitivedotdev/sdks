@@ -129,6 +129,46 @@ def test_whitespace_padded_dmarc_from_domain_is_normalized() -> None:
     assert result.trusted is True
 
 
+def test_group_syntax_from_is_rejected() -> None:
+    # getaddresses flattens a single-member group to its member, so the
+    # explicit group-delimiter guard must reject it to stay aligned with
+    # the Node parser.
+    result = is_trusted_sender(
+        _build_event(from_header="Friends: sender@example.com;"),
+        domain="example.com",
+    )
+    assert result.trusted is False
+    assert result.reason == "from-header-invalid"
+
+
+def test_quoted_colon_display_name_is_not_a_group() -> None:
+    result = is_trusted_sender(
+        _build_event(from_header='"Support: Billing" <sender@example.com>'),
+        domain="example.com",
+    )
+    assert result.trusted is True
+
+
+def test_escaped_quote_in_display_name_keeps_colon_quoted() -> None:
+    result = is_trusted_sender(
+        _build_event(from_header='"a\\": b" <sender@example.com>'),
+        domain="example.com",
+    )
+    assert result.trusted is True
+
+
+def test_ipv6_domain_literal_is_rejected() -> None:
+    # The colon inside the domain literal trips the group-delimiter
+    # guard, matching the Node parser (whose lexer also treats it as a
+    # group marker).
+    result = is_trusted_sender(
+        _build_event(from_header="user@[IPv6:2001:db8::1]"),
+        domain="example.com",
+    )
+    assert result.trusted is False
+    assert result.reason == "from-header-invalid"
+
+
 def test_invalid_options_raise_value_error() -> None:
     event = _build_event(from_header="sender@example.com")
     with pytest.raises(ValueError):

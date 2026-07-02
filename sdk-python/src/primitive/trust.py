@@ -75,14 +75,46 @@ def _untrusted(
     )
 
 
+def _contains_group_delimiter(value: str) -> bool:
+    """Detect RFC 5322 group syntax for the strict parser.
+
+    ``getaddresses`` silently expands group syntax ("Friends: a@b.com;")
+    into its member addresses, so a single-member group would otherwise
+    pass the multi-address count check. A colon outside quoted strings
+    and comments only occurs in group syntax (or an IPv6 domain literal,
+    which the address regex rejects anyway), so treat it as a group
+    marker and reject, matching the Node parser's explicit group
+    rejection.
+    """
+    in_quotes = False
+    paren_depth = 0
+    escaped = False
+    for ch in value:
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\" and (in_quotes or paren_depth > 0):
+            escaped = True
+        elif ch == '"' and paren_depth == 0:
+            in_quotes = not in_quotes
+        elif ch == "(" and not in_quotes:
+            paren_depth += 1
+        elif ch == ")" and not in_quotes and paren_depth > 0:
+            paren_depth -= 1
+        elif ch == ":" and not in_quotes and paren_depth == 0:
+            return True
+    return False
+
+
 def _parse_from_strict(value: str | None) -> tuple[str | None, str]:
     """Strict single-address From parse for the trust gate.
 
     Unlike ``parse_header_address`` (which is lenient and lets the
     normalizer fall back to the attacker-controlled SMTP envelope
-    sender), this rejects multi-address headers and anything that fails
-    address validation. Returns ``(address, "")`` or ``(None, reason)``
-    where reason is ``"multiple"`` or ``"invalid"``.
+    sender), this rejects multi-address headers, group syntax, and
+    anything that fails address validation. Returns ``(address, "")``
+    or ``(None, reason)`` where reason is ``"multiple"`` or
+    ``"invalid"``.
     """
     if value is None:
         return None, "invalid"
@@ -90,6 +122,8 @@ def _parse_from_strict(value: str | None) -> tuple[str | None, str]:
     if not trimmed:
         return None, "invalid"
     if len(trimmed.encode("utf-8")) > _MAX_HEADER_BYTES:
+        return None, "invalid"
+    if _contains_group_delimiter(trimmed):
         return None, "invalid"
 
     addresses = [

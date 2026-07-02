@@ -344,6 +344,62 @@
       }
     },
     {
+      "name": "group-syntax-from-is-rejected",
+      "from": "Friends: sender@example.com;",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "from-header-invalid"
+      }
+    },
+    {
+      "name": "quoted-colon-display-name-is-not-a-group",
+      "from": "\"Support: Billing\" <sender@example.com>",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": { "domain": "example.com" },
+      "expected": { "trusted": true, "retryable": false, "reason": "trusted" }
+    },
+    {
       "name": "unparseable-from-header",
       "from": "not-an-email",
       "auth": {
