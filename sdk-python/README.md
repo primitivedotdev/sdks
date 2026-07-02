@@ -210,6 +210,39 @@ email.thread.references
 email.raw
 ```
 
+## Deciding whether to trust an inbound email
+
+Every `email.received` event carries the server's SPF, DKIM, and DMARC results
+on `event.email.auth`. `validate_email_auth(event.email.auth)` computes an
+overall verdict (`legit`, `suspicious`, or `unknown`) with a confidence level
+and reasons. The verdict alone does not say which domain authenticated: a
+fully authenticated email from any domain returns `legit`.
+
+`is_trusted_sender` anchors the verdict to an expected From domain, for
+handlers that gate an action on "this really came from our domain":
+
+```python
+from primitive import is_trusted_sender
+
+trust = is_trusted_sender(email.raw, domain="example.com")
+
+if trust.trusted:
+    ...  # authenticated mail whose From address is @example.com
+elif trust.retryable:
+    # Transient DNS failure during DMARC evaluation. Respond with a 5xx
+    # so webhook redelivery retries this email later.
+    ...
+else:
+    print("untrusted:", trust.reason, trust.auth.reasons)
+```
+
+`trusted` is True only when the verdict is `legit`, the domain DMARC evaluated
+equals `domain`, and the From header strict-parses to a single valid address
+in `domain` (exactly matching `sender=` when given). Do not authorize based on
+`email.reply_target` or `email.smtp.mail_from` (both sender-controlled), and
+note that `email.sender` is parsed leniently for display and falls back to the
+SMTP envelope sender, so it is not a safe authorization anchor.
+
 ## x402 payments
 
 The x402 client lets one agent request a USDC payment and another pay it. It is

@@ -59,7 +59,22 @@ import { formatAddress } from "../webhook/received-email.js";
 // so scaffolded handlers can type the request body without importing
 // from `@primitivedotdev/sdk` root or `/webhook` (both of which pull
 // node:crypto via the Node-crypto signing helpers).
-export type { EmailReceivedEvent } from "../types.js";
+export type { EmailReceivedEvent, ValidateEmailAuthResult } from "../types.js";
+// NOTE: the webhook-shaped `EmailAuth` type is deliberately NOT
+// re-exported here. The `export *` from api-core below already exports
+// a generated `EmailAuth` (the REST email-detail auth shape), and an
+// explicit re-export would shadow it and change the type existing
+// `/api` imports resolve to.
+export { AuthConfidence, AuthVerdict } from "../types.js";
+// Email-auth verdict computation and the domain-anchored trust check
+// (isTrustedSender below), re-exported from the Workers-safe `/api`
+// subpath for the same reason as `normalizeReceivedEmail`: Functions
+// handlers import from
+// `/api` only (the root and `/webhook` entries pull `node:crypto`), and
+// deciding whether to trust an inbound email is core handler logic.
+// Both modules import only types and the pure address parser, so they
+// are safe in Workers-style bundles.
+export { validateEmailAuth } from "../webhook/auth.js";
 // Re-export the inbound-email normalizer and its types from the
 // Workers-safe `/api` subpath so handler authors can pass the inbound
 // event into `client.reply()` without importing from
@@ -76,6 +91,12 @@ export type {
   ReceivedEmailThread,
 } from "../webhook/received-email.js";
 export { normalizeReceivedEmail } from "../webhook/received-email.js";
+export {
+  isTrustedSender,
+  type TrustedSenderOptions,
+  type TrustedSenderResult,
+  type TrustReason,
+} from "../webhook/trust.js";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_THREAD_REFERENCES = 100;

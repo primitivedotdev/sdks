@@ -183,6 +183,49 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 		}
 	})
 
+	t.Run("trust", func(t *testing.T) {
+		baseEvent := loadFixtureCases[EmailReceivedEvent](t, "webhook", "valid-email-received.json")
+		fixtures := loadFixtureCases[struct {
+			Cases []struct {
+				Name    string          `json:"name"`
+				From    string          `json:"from"`
+				Auth    json.RawMessage `json:"auth"`
+				Options struct {
+					Domain string `json:"domain"`
+					Sender string `json:"sender"`
+				} `json:"options"`
+				Expected struct {
+					Trusted   bool   `json:"trusted"`
+					Retryable bool   `json:"retryable"`
+					Reason    string `json:"reason"`
+				} `json:"expected"`
+			} `json:"cases"`
+		}](t, "trust", "cases.json")
+
+		for _, testCase := range fixtures.Cases {
+			event := baseEvent
+			var auth EmailAuth
+			if err := json.Unmarshal(testCase.Auth, &auth); err != nil {
+				t.Fatalf("%s: decode auth fixture: %v", testCase.Name, err)
+			}
+			event.Email.Auth = auth
+			event.Email.Headers.From = testCase.From
+
+			result, err := IsTrustedSender(event, TrustedSenderOptions{
+				Domain: testCase.Options.Domain,
+				Sender: testCase.Options.Sender,
+			})
+			if err != nil {
+				t.Fatalf("%s: IsTrustedSender returned error: %v", testCase.Name, err)
+			}
+			if result.Trusted != testCase.Expected.Trusted ||
+				result.Retryable != testCase.Expected.Retryable ||
+				string(result.Reason) != testCase.Expected.Reason {
+				t.Fatalf("%s: unexpected result %#v", testCase.Name, result)
+			}
+		}
+	})
+
 	t.Run("raw", func(t *testing.T) {
 		fixtures := loadFixtureCases[struct {
 			Cases []struct {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 from typing import Any, cast
@@ -18,6 +19,7 @@ from primitive import (
     decode_raw_email,
     handle_webhook,
     is_raw_included,
+    is_trusted_sender,
     parse_header_address,
     parse_webhook_event,
     safe_validate_email_received_event,
@@ -108,6 +110,22 @@ def test_shared_auth_cases() -> None:
         result = validate_email_auth(case["input"])
         assert result.verdict == case["expected"]["verdict"]
         assert result.confidence == case["expected"]["confidence"]
+
+
+def test_shared_trust_cases() -> None:
+    base_event = _load_json("webhook", "valid-email-received.json")
+    fixtures = _load_json("trust", "cases.json")["cases"]
+    for case in fixtures:
+        event = copy.deepcopy(base_event)
+        event["email"]["headers"]["from"] = case["from"]
+        event["email"]["auth"] = case["auth"]
+        options = case["options"]
+        result = is_trusted_sender(
+            event, domain=options["domain"], sender=options.get("sender")
+        )
+        assert result.trusted is case["expected"]["trusted"], case["name"]
+        assert result.retryable is case["expected"]["retryable"], case["name"]
+        assert result.reason == case["expected"]["reason"], case["name"]
 
 
 def test_shared_raw_cases() -> None:
