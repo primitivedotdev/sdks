@@ -18,6 +18,7 @@ function readCliPackageJson(): {
       message?: string;
       timeoutInDays?: number;
     };
+    topicSeparator?: string;
   };
   scripts?: Record<string, string>;
 } {
@@ -197,6 +198,17 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS["memories:set"]).not.toBe(COMMANDS["memories:set-memory"]);
   });
 
+  it("registers template API operations", () => {
+    for (const id of [
+      "templates:list-templates",
+      "templates:get-template",
+      "templates:install-template",
+      "templates:get-template-install",
+    ]) {
+      expect(COMMANDS[id]).toBeDefined();
+    }
+  });
+
   it("registers semantic search as a top-level command", () => {
     expect(COMMANDS["semantic-search"]).toBeDefined();
     const semanticSearchCommand = COMMANDS["semantic-search"] as unknown as {
@@ -301,6 +313,15 @@ describe("COMMANDS / manifest coverage", () => {
     expect(packageJson.oclif?.topics?.threads?.description).toContain(
       "primitive threads get --id <thread-id>",
     );
+  });
+
+  it("documents template commands in root help", () => {
+    const packageJson = readCliPackageJson();
+    const description = packageJson.oclif?.topics?.templates?.description ?? "";
+
+    expect(packageJson.oclif?.topicSeparator).toBe(" ");
+    expect(description).toContain("primitive templates list-templates");
+    expect(description).toContain("primitive templates install-template");
   });
 
   it("documents active chat replies in root help", () => {

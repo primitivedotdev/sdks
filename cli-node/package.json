@@ -104,6 +104,9 @@
       "memories": {
         "description": "Store durable JSON memories by key. Use `primitive memories set|get|delete|search`; pass `--function <function-id>` for function-scoped memories."
       },
+      "templates": {
+        "description": "Browse and install Function templates. Use `primitive templates list-templates`, `primitive templates get-template`, `primitive templates install-template`, and `primitive templates get-template-install`."
+      },
       "org": {
         "description": "Manage org-level (global) resources shared across functions"
       },

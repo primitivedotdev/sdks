@@ -11721,6 +11721,781 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-template",
+    "description": "Fetch one approved Function template by slug, including its manifest\nsnapshot and README. The stored source files used for install are not\nreturned.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getTemplate",
+    "path": "/templates/{id}",
+    "pathParams": [
+      {
+        "description": "Template slug from the template manifest.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+          "description": "Stable template slug used in template URLs and install commands."
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "author": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "verified": {
+          "type": "boolean"
+        },
+        "install_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "github_repo": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$",
+          "description": "GitHub repository in owner/repo form."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "github_sha": {
+          "type": "string"
+        },
+        "github_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "manifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schemaVersion": {
+              "type": "integer",
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+              "description": "Stable template slug from the manifest."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": {
+              "type": "string"
+            },
+            "author": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "required": [
+                "id",
+                "name"
+              ]
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "source": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "managed-build"
+                    },
+                    "dir": {
+                      "type": "string",
+                      "minLength": 1,
+                      "default": "."
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "dir"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "const": "bundle"
+                    },
+                    "file": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "file"
+                  ]
+                }
+              ]
+            },
+            "install": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "deploy",
+                    "scaffold"
+                  ]
+                },
+                "editFiles": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "reason": {
+                  "type": "string",
+                  "default": ""
+                }
+              },
+              "required": [
+                "mode",
+                "editFiles",
+                "reason"
+              ]
+            },
+            "secrets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "pattern": "^[A-Z_][A-Z0-9_]*$"
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "key",
+                  "required"
+                ]
+              }
+            },
+            "secretGroups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "keys": {
+                    "type": "array",
+                    "minItems": 2,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Z_][A-Z0-9_]*$"
+                    }
+                  },
+                  "min": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 1
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "keys",
+                  "min"
+                ]
+              }
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "default": {
+                    "type": "string"
+                  },
+                  "file": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "string",
+                      "select",
+                      "url",
+                      "email"
+                    ],
+                    "default": "string"
+                  },
+                  "options": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "validation": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "pattern": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "maxLength": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "key",
+                  "prompt",
+                  "type"
+                ]
+              }
+            },
+            "setup": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "agent": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "prompt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "produces": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "required": [
+                "agent",
+                "prompt",
+                "produces"
+              ]
+            },
+            "postInstall": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "title",
+            "summary",
+            "author",
+            "tags",
+            "source",
+            "install",
+            "secrets",
+            "secretGroups",
+            "variables"
+          ]
+        },
+        "readme": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "slug",
+        "title",
+        "summary",
+        "author",
+        "tags",
+        "verified",
+        "install_count",
+        "github_repo",
+        "created_at",
+        "updated_at",
+        "description",
+        "github_sha",
+        "github_path",
+        "manifest",
+        "readme",
+        "status"
+      ]
+    },
+    "sdkName": "getTemplate",
+    "summary": "Get a function template",
+    "tag": "Templates",
+    "tagCommand": "templates"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-template-install",
+    "description": "Fetch the current state of a template install. Reads may advance the\nself-test phase when a reply effect has been observed.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getTemplateInstall",
+    "path": "/templates/installs/{id}",
+    "pathParams": [
+      {
+        "description": "Template install UUID.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "template_slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+          "description": "Template slug for this install."
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "deploying",
+            "connecting",
+            "bound",
+            "tested",
+            "deploy_failed",
+            "bind_failed",
+            "test_failed"
+          ]
+        },
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "function_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "template_slug",
+        "state",
+        "address",
+        "function_id",
+        "error",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "sdkName": "getTemplateInstall",
+    "summary": "Get template install status",
+    "tag": "Templates",
+    "tagCommand": "templates"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "install-template",
+    "description": "Start a one-shot deploy of an approved deploy-mode Function template.\nThe response returns an install record immediately; poll\n`GET /templates/installs/{id}` for progress.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "installTemplate",
+    "path": "/templates/{id}/install",
+    "pathParams": [
+      {
+        "description": "Template slug from the template manifest.",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+          "description": "Localpart to claim on the selected inbound domain. Defaults to the template slug."
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 3,
+          "description": "Org domain name to claim the address on. Defaults to the org's newest active domain."
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Template variable values keyed by manifest variable key."
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Secret values keyed by manifest secret key."
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "template_slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+          "description": "Template slug for this install."
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "deploying",
+            "connecting",
+            "bound",
+            "tested",
+            "deploy_failed",
+            "bind_failed",
+            "test_failed"
+          ]
+        },
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "function_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "template_slug",
+        "state",
+        "address",
+        "function_id",
+        "error",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "sdkName": "installTemplate",
+    "summary": "Install a function template",
+    "tag": "Templates",
+    "tagCommand": "templates"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-templates",
+    "description": "List approved Function templates available for browsing and\ninstallation. Results are cacheable and paginated with\n`data.next_cursor`.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listTemplates",
+    "path": "/templates",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "Search templates by title, summary, or slug.",
+        "enum": null,
+        "name": "q",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter templates by an exact tag.",
+        "enum": null,
+        "name": "tag",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Cursor from a previous response `data.next_cursor` value.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": 50,
+        "description": "Maximum number of templates to return. The server caps this at 100.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "slug": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+                "description": "Stable template slug used in template URLs and install commands."
+              },
+              "title": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "author": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ]
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "verified": {
+                "type": "boolean"
+              },
+              "install_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "github_repo": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$",
+                "description": "GitHub repository in owner/repo form."
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "slug",
+              "title",
+              "summary",
+              "author",
+              "tags",
+              "verified",
+              "install_count",
+              "github_repo",
+              "created_at",
+              "updated_at"
+            ]
+          }
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Cursor to pass as the next `cursor` query value, or null when there are no more templates."
+        }
+      },
+      "required": [
+        "items",
+        "next_cursor"
+      ]
+    },
+    "sdkName": "listTemplates",
+    "summary": "List function templates",
+    "tag": "Templates",
+    "tagCommand": "templates"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "get-thread",
     "description": "Returns a conversation thread: its metadata plus the inbound\nand outbound messages that belong to it, interleaved in time\norder (oldest first). A thread spans both received emails and\nyour sends, so an agent can reconstruct an entire back-and-forth\nfrom one call instead of walking reply headers.\n\nEach message carries a `direction` (`inbound` | `outbound`) and\nan `id`; fetch the full message via `/emails/{id}` or\n`/sent-emails/{id}` accordingly. Bodies are omitted here to keep\nthe thread view lightweight.\n\nDiscover a thread id from the `thread_id` field on any email or\nsent-email (list or detail). The message list is capped; compare\n`message_count` against `messages.length` to detect truncation.\n",
     "hasJsonBody": false,

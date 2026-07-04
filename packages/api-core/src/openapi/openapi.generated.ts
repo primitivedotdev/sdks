@@ -105,6 +105,10 @@ export const openapiDocument: Record<string, unknown> = {
       "description": "Durable org-scoped or function-scoped JSON key-value storage for\nagents and functions. Keys are caller-defined. Function scope is\nalways addressed by the function id UUID, not by function name.\n"
     },
     {
+      "name": "Templates",
+      "description": "Browse approved Function templates, install deploy-mode templates, and\npoll install progress.\n"
+    },
+    {
       "name": "Registries",
       "description": "The Agent Registry: ownable directories of agents, addressable by a\nregistry-scoped handle. A registry's publish policy (owner_only, request,\nor open) decides whether a publish lists immediately or pends owner\napproval. An agent is defined once with a globally unique,\nreachability-verified address, then published into any registry under a\nhandle. Discovery reads (list, resolve, get) are public for public\nregistries; managing a registry and moderating requests use the owner's\nAPI key.\n"
     }
@@ -5695,6 +5699,295 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/templates": {
+      "get": {
+        "operationId": "listTemplates",
+        "summary": "List function templates",
+        "description": "List approved Function templates available for browsing and\ninstallation. Results are cacheable and paginated with\n`data.next_cursor`.\n",
+        "tags": [
+          "Templates"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Search templates by title, summary, or slug.",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "description": "Filter templates by an exact tag.",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Cursor from a previous response `data.next_cursor` value.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of templates to return. The server caps this at 100.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated template registry summaries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TemplateRegistryPage"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/templates/{id}": {
+      "get": {
+        "operationId": "getTemplate",
+        "summary": "Get a function template",
+        "description": "Fetch one approved Function template by slug, including its manifest\nsnapshot and README. The stored source files used for install are not\nreturned.\n",
+        "tags": [
+          "Templates"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Template slug from the template manifest.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Template registry detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TemplateRegistryDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/templates/{id}/install": {
+      "post": {
+        "operationId": "installTemplate",
+        "summary": "Install a function template",
+        "description": "Start a one-shot deploy of an approved deploy-mode Function template.\nThe response returns an install record immediately; poll\n`GET /templates/installs/{id}` for progress.\n",
+        "tags": [
+          "Templates"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Template slug from the template manifest.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallTemplateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Template install started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TemplateInstallStatus"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntity"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/templates/installs/{id}": {
+      "get": {
+        "operationId": "getTemplateInstall",
+        "summary": "Get template install status",
+        "description": "Fetch the current state of a template install. Reads may advance the\nself-test phase when a reply effect has been observed.\n",
+        "tags": [
+          "Templates"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Template install UUID.",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current template install status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TemplateInstallStatus"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
     "/x402/payout-addresses": {
       "post": {
         "operationId": "registerPayoutAddress",
@@ -8401,6 +8694,16 @@ export const openapiDocument: Record<string, unknown> = {
                   "org_not_accessible",
                   "feature_disabled",
                   "memory_conflict",
+                  "template_not_installable",
+                  "scaffold_only",
+                  "invalid_variables",
+                  "unknown_secrets",
+                  "missing_secrets",
+                  "no_inbound_domain",
+                  "domain_cannot_send",
+                  "address_taken",
+                  "route_cap_reached",
+                  "name_exhausted",
                   "developer_usage_credit_exhausted",
                   "no_payout_address",
                   "ownership_proof_failed",
@@ -14720,6 +15023,593 @@ export const openapiDocument: Record<string, unknown> = {
           "deleted",
           "key",
           "scope"
+        ]
+      },
+      "TemplateAuthor": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "TemplateSource": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "managed-build"
+              },
+              "dir": {
+                "type": "string",
+                "minLength": 1,
+                "default": "."
+              }
+            },
+            "required": [
+              "mode",
+              "dir"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "type": "string",
+                "const": "bundle"
+              },
+              "file": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "mode",
+              "file"
+            ]
+          }
+        ]
+      },
+      "TemplateInstall": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "deploy",
+              "scaffold"
+            ]
+          },
+          "editFiles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "reason": {
+            "type": "string",
+            "default": ""
+          }
+        },
+        "required": [
+          "mode",
+          "editFiles",
+          "reason"
+        ]
+      },
+      "TemplateSecret": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[A-Z_][A-Z0-9_]*$"
+          },
+          "required": {
+            "type": "boolean",
+            "default": true
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "required"
+        ]
+      },
+      "TemplateSecretGroup": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "keys": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z_][A-Z0-9_]*$"
+            }
+          },
+          "min": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "keys",
+          "min"
+        ]
+      },
+      "TemplateVariableValidation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxLength": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "TemplateVariable": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "default": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "select",
+              "url",
+              "email"
+            ],
+            "default": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "validation": {
+            "$ref": "#/components/schemas/TemplateVariableValidation"
+          }
+        },
+        "required": [
+          "key",
+          "prompt",
+          "type"
+        ]
+      },
+      "TemplateSetup": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "produces": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "agent",
+          "prompt",
+          "produces"
+        ]
+      },
+      "TemplateManifest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+            "description": "Stable template slug from the manifest."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/TemplateAuthor"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "source": {
+            "$ref": "#/components/schemas/TemplateSource"
+          },
+          "install": {
+            "$ref": "#/components/schemas/TemplateInstall"
+          },
+          "secrets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateSecret"
+            }
+          },
+          "secretGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateSecretGroup"
+            }
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateVariable"
+            }
+          },
+          "setup": {
+            "$ref": "#/components/schemas/TemplateSetup"
+          },
+          "postInstall": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "id",
+          "title",
+          "summary",
+          "author",
+          "tags",
+          "source",
+          "install",
+          "secrets",
+          "secretGroups",
+          "variables"
+        ]
+      },
+      "TemplateRegistryStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected"
+        ]
+      },
+      "TemplateRegistrySummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+            "description": "Stable template slug used in template URLs and install commands."
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/TemplateAuthor"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "install_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "github_repo": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$",
+            "description": "GitHub repository in owner/repo form."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "summary",
+          "author",
+          "tags",
+          "verified",
+          "install_count",
+          "github_repo",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "TemplateRegistryDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+            "description": "Stable template slug used in template URLs and install commands."
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/TemplateAuthor"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "install_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "github_repo": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$",
+            "description": "GitHub repository in owner/repo form."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "github_sha": {
+            "type": "string"
+          },
+          "github_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/TemplateManifest"
+          },
+          "readme": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/TemplateRegistryStatus"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "summary",
+          "author",
+          "tags",
+          "verified",
+          "install_count",
+          "github_repo",
+          "created_at",
+          "updated_at",
+          "description",
+          "github_sha",
+          "github_path",
+          "manifest",
+          "readme",
+          "status"
+        ]
+      },
+      "TemplateRegistryPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateRegistrySummary"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cursor to pass as the next `cursor` query value, or null when there are no more templates."
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ]
+      },
+      "InstallTemplateBody": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+            "description": "Localpart to claim on the selected inbound domain. Defaults to the template slug."
+          },
+          "domain": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Org domain name to claim the address on. Defaults to the org's newest active domain."
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Template variable values keyed by manifest variable key."
+          },
+          "secrets": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Secret values keyed by manifest secret key."
+          }
+        }
+      },
+      "TemplateInstallState": {
+        "type": "string",
+        "enum": [
+          "deploying",
+          "connecting",
+          "bound",
+          "tested",
+          "deploy_failed",
+          "bind_failed",
+          "test_failed"
+        ]
+      },
+      "TemplateInstallStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "template_slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
+            "description": "Template slug for this install."
+          },
+          "state": {
+            "$ref": "#/components/schemas/TemplateInstallState"
+          },
+          "address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "function_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "template_slug",
+          "state",
+          "address",
+          "function_id",
+          "error",
+          "created_at",
+          "updated_at"
         ]
       }
     }

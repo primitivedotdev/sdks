@@ -18,19 +18,23 @@ import (
 )
 
 var regexMap = map[string]ogenregex.Regexp{
-	"^0x[0-9a-fA-F]+$":                   ogenregex.MustCompile("^0x[0-9a-fA-F]+$"),
-	"^0x[0-9a-fA-F]{40}$":                ogenregex.MustCompile("^0x[0-9a-fA-F]{40}$"),
-	"^[0-9]+$":                           ogenregex.MustCompile("^[0-9]+$"),
-	"^[0-9a-f]{64}$":                     ogenregex.MustCompile("^[0-9a-f]{64}$"),
-	"^[1-9][0-9]{0,38}$":                 ogenregex.MustCompile("^[1-9][0-9]{0,38}$"),
-	"^[A-Z_][A-Z0-9_]*$":                 ogenregex.MustCompile("^[A-Z_][A-Z0-9_]*$"),
-	"^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$": ogenregex.MustCompile("^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$"),
+	"^0x[0-9a-fA-F]+$":    ogenregex.MustCompile("^0x[0-9a-fA-F]+$"),
+	"^0x[0-9a-fA-F]{40}$": ogenregex.MustCompile("^0x[0-9a-fA-F]{40}$"),
+	"^[0-9]+$":            ogenregex.MustCompile("^[0-9]+$"),
+	"^[0-9a-f]{64}$":      ogenregex.MustCompile("^[0-9a-f]{64}$"),
+	"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$": ogenregex.MustCompile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"),
+	"^[1-9][0-9]{0,38}$":                                    ogenregex.MustCompile("^[1-9][0-9]{0,38}$"),
+	"^[A-Z_][A-Z0-9_]*$":                                    ogenregex.MustCompile("^[A-Z_][A-Z0-9_]*$"),
+	"^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$":                       ogenregex.MustCompile("^[A-Za-z0-9-]+/[A-Za-z0-9_.-]+$"),
+	"^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$":                    ogenregex.MustCompile("^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$"),
 	"^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$": ogenregex.MustCompile("^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$"),
-	"^[\\x21-\\x7E]+$":                       ogenregex.MustCompile("^[\\x21-\\x7E]+$"),
-	"^[^\\x00-\\x1F\\x7F]+$":                 ogenregex.MustCompile("^[^\\x00-\\x1F\\x7F]+$"),
-	"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$": ogenregex.MustCompile("^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"),
-	"^[a-z0-9_-]{1,64}$":                     ogenregex.MustCompile("^[a-z0-9_-]{1,64}$"),
-	"^\\d+$":                                 ogenregex.MustCompile("^\\d+$"),
+	"^[\\x21-\\x7E]+$":                                      ogenregex.MustCompile("^[\\x21-\\x7E]+$"),
+	"^[^\\x00-\\x1F\\x7F]+$":                                ogenregex.MustCompile("^[^\\x00-\\x1F\\x7F]+$"),
+	"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$":                ogenregex.MustCompile("^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"),
+	"^[a-z0-9][a-z0-9._-]{0,63}$":                           ogenregex.MustCompile("^[a-z0-9][a-z0-9._-]{0,63}$"),
+	"^[a-z0-9][a-z0-9_-]{0,62}$":                            ogenregex.MustCompile("^[a-z0-9][a-z0-9_-]{0,62}$"),
+	"^[a-z0-9_-]{1,64}$":                                    ogenregex.MustCompile("^[a-z0-9_-]{1,64}$"),
+	"^\\d+$":                                                ogenregex.MustCompile("^\\d+$"),
 }
 var (
 	// Allocate option closure once.
