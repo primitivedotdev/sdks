@@ -193,6 +193,8 @@ from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
 from .get_spend_policy_response_200 import GetSpendPolicyResponse200
 from .get_storage_stats_response_200 import GetStorageStatsResponse200
+from .get_template_install_response_200 import GetTemplateInstallResponse200
+from .get_template_response_200 import GetTemplateResponse200
 from .get_thread_response_200 import GetThreadResponse200
 from .get_wake_schedule_response_200 import GetWakeScheduleResponse200
 from .get_webhook_secret_response_200 import GetWebhookSecretResponse200
@@ -204,6 +206,10 @@ from .inbox_status_function_summary import InboxStatusFunctionSummary
 from .inbox_status_next_action import InboxStatusNextAction
 from .inbox_status_next_action_kind import InboxStatusNextActionKind
 from .inbox_status_recent_email_summary import InboxStatusRecentEmailSummary
+from .install_template_body import InstallTemplateBody
+from .install_template_body_secrets import InstallTemplateBodySecrets
+from .install_template_body_variables import InstallTemplateBodyVariables
+from .install_template_response_201 import InstallTemplateResponse201
 from .list_declined_payments_response_200 import ListDeclinedPaymentsResponse200
 from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
@@ -225,6 +231,7 @@ from .list_registry_agents_response_200 import ListRegistryAgentsResponse200
 from .list_registry_requests_response_200 import ListRegistryRequestsResponse200
 from .list_routes_response_200 import ListRoutesResponse200
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
+from .list_templates_response_200 import ListTemplatesResponse200
 from .list_wake_authorizations_response_200 import ListWakeAuthorizationsResponse200
 from .list_wake_dispatches_response_200 import ListWakeDispatchesResponse200
 from .list_wake_schedules_response_200 import ListWakeSchedulesResponse200
@@ -356,6 +363,24 @@ from .start_cli_signup_input_metadata import StartCliSignupInputMetadata
 from .start_cli_signup_response_201 import StartCliSignupResponse201
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
+from .template_author import TemplateAuthor
+from .template_install import TemplateInstall
+from .template_install_mode import TemplateInstallMode
+from .template_install_state import TemplateInstallState
+from .template_install_status import TemplateInstallStatus
+from .template_manifest import TemplateManifest
+from .template_registry_detail import TemplateRegistryDetail
+from .template_registry_page import TemplateRegistryPage
+from .template_registry_status import TemplateRegistryStatus
+from .template_registry_summary import TemplateRegistrySummary
+from .template_secret import TemplateSecret
+from .template_secret_group import TemplateSecretGroup
+from .template_setup import TemplateSetup
+from .template_source_type_0 import TemplateSourceType0
+from .template_source_type_1 import TemplateSourceType1
+from .template_variable import TemplateVariable
+from .template_variable_type import TemplateVariableType
+from .template_variable_validation import TemplateVariableValidation
 from .test_endpoint_response_200 import TestEndpointResponse200
 from .test_function_body import TestFunctionBody
 from .test_function_response_200 import TestFunctionResponse200
@@ -622,6 +647,8 @@ __all__ = (
     "GetSentEmailResponse200",
     "GetSpendPolicyResponse200",
     "GetStorageStatsResponse200",
+    "GetTemplateInstallResponse200",
+    "GetTemplateResponse200",
     "GetThreadResponse200",
     "GetWakeScheduleResponse200",
     "GetWebhookSecretResponse200",
@@ -633,6 +660,10 @@ __all__ = (
     "InboxStatusNextAction",
     "InboxStatusNextActionKind",
     "InboxStatusRecentEmailSummary",
+    "InstallTemplateBody",
+    "InstallTemplateBodySecrets",
+    "InstallTemplateBodyVariables",
+    "InstallTemplateResponse201",
     "ListDeclinedPaymentsResponse200",
     "ListDeliveriesResponse200",
     "ListDeliveriesStatus",
@@ -654,6 +685,7 @@ __all__ = (
     "ListRegistryRequestsResponse200",
     "ListRoutesResponse200",
     "ListSentEmailsResponse200",
+    "ListTemplatesResponse200",
     "ListWakeAuthorizationsResponse200",
     "ListWakeDispatchesResponse200",
     "ListWakeSchedulesResponse200",
@@ -785,6 +817,24 @@ __all__ = (
     "StartCliSignupResponse201",
     "StorageStats",
     "SuccessEnvelope",
+    "TemplateAuthor",
+    "TemplateInstall",
+    "TemplateInstallMode",
+    "TemplateInstallState",
+    "TemplateInstallStatus",
+    "TemplateManifest",
+    "TemplateRegistryDetail",
+    "TemplateRegistryPage",
+    "TemplateRegistryStatus",
+    "TemplateRegistrySummary",
+    "TemplateSecret",
+    "TemplateSecretGroup",
+    "TemplateSetup",
+    "TemplateSourceType0",
+    "TemplateSourceType1",
+    "TemplateVariable",
+    "TemplateVariableType",
+    "TemplateVariableValidation",
     "TestEndpointResponse200",
     "TestFunctionBody",
     "TestFunctionResponse200",

@@ -522,6 +522,21 @@ type Handler interface {
 	//
 	// GET /account/storage
 	GetStorageStats(ctx context.Context) (GetStorageStatsRes, error)
+	// GetTemplate implements getTemplate operation.
+	//
+	// Fetch one approved Function template by slug, including its manifest
+	// snapshot and README. The stored source files used for install are not
+	// returned.
+	//
+	// GET /templates/{id}
+	GetTemplate(ctx context.Context, params GetTemplateParams) (GetTemplateRes, error)
+	// GetTemplateInstall implements getTemplateInstall operation.
+	//
+	// Fetch the current state of a template install. Reads may advance the
+	// self-test phase when a reply effect has been observed.
+	//
+	// GET /templates/installs/{id}
+	GetTemplateInstall(ctx context.Context, params GetTemplateInstallParams) (GetTemplateInstallRes, error)
 	// GetThread implements getThread operation.
 	//
 	// Returns a conversation thread: its metadata plus the inbound
@@ -566,6 +581,14 @@ type Handler interface {
 	//
 	// GET /account/webhook-secret
 	GetWebhookSecret(ctx context.Context) (GetWebhookSecretRes, error)
+	// InstallTemplate implements installTemplate operation.
+	//
+	// Start a one-shot deploy of an approved deploy-mode Function template.
+	// The response returns an install record immediately; poll
+	// `GET /templates/installs/{id}` for progress.
+	//
+	// POST /templates/{id}/install
+	InstallTemplate(ctx context.Context, req *InstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error)
 	// ListDeclinedPayments implements listDeclinedPayments operation.
 	//
 	// The 50 most recent payments your org's spend policy declined, newest
@@ -716,6 +739,14 @@ type Handler interface {
 	//
 	// GET /sent-emails
 	ListSentEmails(ctx context.Context, params ListSentEmailsParams) (ListSentEmailsRes, error)
+	// ListTemplates implements listTemplates operation.
+	//
+	// List approved Function templates available for browsing and
+	// installation. Results are cacheable and paginated with
+	// `data.next_cursor`.
+	//
+	// GET /templates
+	ListTemplates(ctx context.Context, params ListTemplatesParams) (ListTemplatesRes, error)
 	// ListWakeAuthorizations implements listWakeAuthorizations operation.
 	//
 	// Returns the per-target allowlist grants that authorize which senders may

@@ -502,7 +502,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -3759,6 +3759,174 @@ export type DeleteMemoryResult = {
     deleted: boolean;
     key: string;
     scope: MemoryResolvedScope;
+};
+
+export type TemplateAuthor = {
+    id: string;
+    name: string;
+    url?: string;
+};
+
+export type TemplateSource = {
+    mode: string;
+    dir: string;
+} | {
+    mode: string;
+    file: string;
+};
+
+export type TemplateInstall = {
+    mode: 'deploy' | 'scaffold';
+    editFiles: Array<string>;
+    reason: string;
+};
+
+export type TemplateSecret = {
+    key: string;
+    required: boolean;
+    description?: string;
+};
+
+export type TemplateSecretGroup = {
+    keys: Array<string>;
+    min: number;
+    description?: string;
+};
+
+export type TemplateVariableValidation = {
+    pattern?: string;
+    maxLength?: number;
+};
+
+export type TemplateVariable = {
+    key: string;
+    prompt: string;
+    default?: string;
+    file?: string;
+    type: 'string' | 'select' | 'url' | 'email';
+    options?: Array<string>;
+    validation?: TemplateVariableValidation;
+};
+
+export type TemplateSetup = {
+    agent: string;
+    prompt: string;
+    produces: Array<string>;
+};
+
+export type TemplateManifest = {
+    schemaVersion: number;
+    /**
+     * Stable template slug from the manifest.
+     */
+    id: string;
+    title: string;
+    summary: string;
+    description?: string;
+    author: TemplateAuthor;
+    tags: Array<string>;
+    source: TemplateSource;
+    install: TemplateInstall;
+    secrets: Array<TemplateSecret>;
+    secretGroups: Array<TemplateSecretGroup>;
+    variables: Array<TemplateVariable>;
+    setup?: TemplateSetup;
+    postInstall?: string;
+};
+
+export type TemplateRegistryStatus = 'pending' | 'approved' | 'rejected';
+
+export type TemplateRegistrySummary = {
+    id: string;
+    /**
+     * Stable template slug used in template URLs and install commands.
+     */
+    slug: string;
+    title: string;
+    summary: string;
+    author: TemplateAuthor;
+    tags: Array<string>;
+    verified: boolean;
+    install_count: number;
+    /**
+     * GitHub repository in owner/repo form.
+     */
+    github_repo: string;
+    created_at: string;
+    updated_at: string;
+};
+
+export type TemplateRegistryDetail = {
+    id: string;
+    /**
+     * Stable template slug used in template URLs and install commands.
+     */
+    slug: string;
+    title: string;
+    summary: string;
+    author: TemplateAuthor;
+    tags: Array<string>;
+    verified: boolean;
+    install_count: number;
+    /**
+     * GitHub repository in owner/repo form.
+     */
+    github_repo: string;
+    created_at: string;
+    updated_at: string;
+    description: string | null;
+    github_sha: string;
+    github_path: string | null;
+    manifest: TemplateManifest;
+    readme: string | null;
+    status: TemplateRegistryStatus;
+};
+
+export type TemplateRegistryPage = {
+    items: Array<TemplateRegistrySummary>;
+    /**
+     * Cursor to pass as the next `cursor` query value, or null when there are no more templates.
+     */
+    next_cursor: string | null;
+};
+
+export type InstallTemplateBody = {
+    /**
+     * Localpart to claim on the selected inbound domain. Defaults to the template slug.
+     */
+    address?: string;
+    /**
+     * Org domain name to claim the address on. Defaults to the org's newest active domain.
+     */
+    domain?: string;
+    /**
+     * Template variable values keyed by manifest variable key.
+     */
+    variables?: {
+        [key: string]: string;
+    };
+    /**
+     * Secret values keyed by manifest secret key.
+     */
+    secrets?: {
+        [key: string]: string;
+    };
+};
+
+export type TemplateInstallState = 'deploying' | 'connecting' | 'bound' | 'tested' | 'deploy_failed' | 'bind_failed' | 'test_failed';
+
+export type TemplateInstallStatus = {
+    id: string;
+    /**
+     * Template slug for this install.
+     */
+    template_slug: string;
+    state: TemplateInstallState;
+    address: string | null;
+    function_id: string | null;
+    error: string | null;
+    created_at: string;
+    updated_at: string;
 };
 
 /**
@@ -7765,6 +7933,202 @@ export type SearchMemoriesResponses = {
 };
 
 export type SearchMemoriesResponse = SearchMemoriesResponses[keyof SearchMemoriesResponses];
+
+export type ListTemplatesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Search templates by title, summary, or slug.
+         */
+        q?: string;
+        /**
+         * Filter templates by an exact tag.
+         */
+        tag?: string;
+        /**
+         * Cursor from a previous response `data.next_cursor` value.
+         */
+        cursor?: string;
+        /**
+         * Maximum number of templates to return. The server caps this at 100.
+         */
+        limit?: number;
+    };
+    url: '/templates';
+};
+
+export type ListTemplatesErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type ListTemplatesError = ListTemplatesErrors[keyof ListTemplatesErrors];
+
+export type ListTemplatesResponses = {
+    /**
+     * Paginated template registry summaries
+     */
+    200: SuccessEnvelope & {
+        data: TemplateRegistryPage;
+    };
+};
+
+export type ListTemplatesResponse = ListTemplatesResponses[keyof ListTemplatesResponses];
+
+export type GetTemplateData = {
+    body?: never;
+    path: {
+        /**
+         * Template slug from the template manifest.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/templates/{id}';
+};
+
+export type GetTemplateErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetTemplateError = GetTemplateErrors[keyof GetTemplateErrors];
+
+export type GetTemplateResponses = {
+    /**
+     * Template registry detail
+     */
+    200: SuccessEnvelope & {
+        data: TemplateRegistryDetail;
+    };
+};
+
+export type GetTemplateResponse = GetTemplateResponses[keyof GetTemplateResponses];
+
+export type InstallTemplateData = {
+    body: InstallTemplateBody;
+    path: {
+        /**
+         * Template slug from the template manifest.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/templates/{id}/install';
+};
+
+export type InstallTemplateErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * The request was well-formed but could not be processed. For Payments
+     * this covers a missing payout address, a failed payment verification, a
+     * spend-policy decline, or an expired challenge; `error.code` distinguishes
+     * them.
+     *
+     */
+    422: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type InstallTemplateError = InstallTemplateErrors[keyof InstallTemplateErrors];
+
+export type InstallTemplateResponses = {
+    /**
+     * Template install started
+     */
+    201: SuccessEnvelope & {
+        data: TemplateInstallStatus;
+    };
+};
+
+export type InstallTemplateResponse = InstallTemplateResponses[keyof InstallTemplateResponses];
+
+export type GetTemplateInstallData = {
+    body?: never;
+    path: {
+        /**
+         * Template install UUID.
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/templates/installs/{id}';
+};
+
+export type GetTemplateInstallErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetTemplateInstallError = GetTemplateInstallErrors[keyof GetTemplateInstallErrors];
+
+export type GetTemplateInstallResponses = {
+    /**
+     * Current template install status
+     */
+    200: SuccessEnvelope & {
+        data: TemplateInstallStatus;
+    };
+};
+
+export type GetTemplateInstallResponse = GetTemplateInstallResponses[keyof GetTemplateInstallResponses];
 
 export type ListPayoutAddressesData = {
     body?: never;

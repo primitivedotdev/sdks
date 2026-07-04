@@ -7470,6 +7470,7 @@ func (*ErrorResponse) listFunctionsRes()                 {}
 func (*ErrorResponse) listOrgSecretsRes()                {}
 func (*ErrorResponse) listRegistriesRes()                {}
 func (*ErrorResponse) listRoutesRes()                    {}
+func (*ErrorResponse) listTemplatesRes()                 {}
 func (*ErrorResponse) listWakeDispatchesRes()            {}
 func (*ErrorResponse) listWakeSchedulesRes()             {}
 func (*ErrorResponse) pollCliLoginRes()                  {}
@@ -7581,6 +7582,16 @@ const (
 	ErrorResponseErrorCodeOrgNotAccessible              ErrorResponseErrorCode = "org_not_accessible"
 	ErrorResponseErrorCodeFeatureDisabled               ErrorResponseErrorCode = "feature_disabled"
 	ErrorResponseErrorCodeMemoryConflict                ErrorResponseErrorCode = "memory_conflict"
+	ErrorResponseErrorCodeTemplateNotInstallable        ErrorResponseErrorCode = "template_not_installable"
+	ErrorResponseErrorCodeScaffoldOnly                  ErrorResponseErrorCode = "scaffold_only"
+	ErrorResponseErrorCodeInvalidVariables              ErrorResponseErrorCode = "invalid_variables"
+	ErrorResponseErrorCodeUnknownSecrets                ErrorResponseErrorCode = "unknown_secrets"
+	ErrorResponseErrorCodeMissingSecrets                ErrorResponseErrorCode = "missing_secrets"
+	ErrorResponseErrorCodeNoInboundDomain               ErrorResponseErrorCode = "no_inbound_domain"
+	ErrorResponseErrorCodeDomainCannotSend              ErrorResponseErrorCode = "domain_cannot_send"
+	ErrorResponseErrorCodeAddressTaken                  ErrorResponseErrorCode = "address_taken"
+	ErrorResponseErrorCodeRouteCapReached               ErrorResponseErrorCode = "route_cap_reached"
+	ErrorResponseErrorCodeNameExhausted                 ErrorResponseErrorCode = "name_exhausted"
 	ErrorResponseErrorCodeDeveloperUsageCreditExhausted ErrorResponseErrorCode = "developer_usage_credit_exhausted"
 	ErrorResponseErrorCodeNoPayoutAddress               ErrorResponseErrorCode = "no_payout_address"
 	ErrorResponseErrorCodeOwnershipProofFailed          ErrorResponseErrorCode = "ownership_proof_failed"
@@ -7627,6 +7638,16 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeOrgNotAccessible,
 		ErrorResponseErrorCodeFeatureDisabled,
 		ErrorResponseErrorCodeMemoryConflict,
+		ErrorResponseErrorCodeTemplateNotInstallable,
+		ErrorResponseErrorCodeScaffoldOnly,
+		ErrorResponseErrorCodeInvalidVariables,
+		ErrorResponseErrorCodeUnknownSecrets,
+		ErrorResponseErrorCodeMissingSecrets,
+		ErrorResponseErrorCodeNoInboundDomain,
+		ErrorResponseErrorCodeDomainCannotSend,
+		ErrorResponseErrorCodeAddressTaken,
+		ErrorResponseErrorCodeRouteCapReached,
+		ErrorResponseErrorCodeNameExhausted,
 		ErrorResponseErrorCodeDeveloperUsageCreditExhausted,
 		ErrorResponseErrorCodeNoPayoutAddress,
 		ErrorResponseErrorCodeOwnershipProofFailed,
@@ -7707,6 +7728,26 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeFeatureDisabled:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeMemoryConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeTemplateNotInstallable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeScaffoldOnly:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidVariables:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeUnknownSecrets:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMissingSecrets:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNoInboundDomain:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDomainCannotSend:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAddressTaken:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRouteCapReached:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNameExhausted:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeDeveloperUsageCreditExhausted:
 		return []byte(s), nil
@@ -7831,6 +7872,36 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeMemoryConflict:
 		*s = ErrorResponseErrorCodeMemoryConflict
+		return nil
+	case ErrorResponseErrorCodeTemplateNotInstallable:
+		*s = ErrorResponseErrorCodeTemplateNotInstallable
+		return nil
+	case ErrorResponseErrorCodeScaffoldOnly:
+		*s = ErrorResponseErrorCodeScaffoldOnly
+		return nil
+	case ErrorResponseErrorCodeInvalidVariables:
+		*s = ErrorResponseErrorCodeInvalidVariables
+		return nil
+	case ErrorResponseErrorCodeUnknownSecrets:
+		*s = ErrorResponseErrorCodeUnknownSecrets
+		return nil
+	case ErrorResponseErrorCodeMissingSecrets:
+		*s = ErrorResponseErrorCodeMissingSecrets
+		return nil
+	case ErrorResponseErrorCodeNoInboundDomain:
+		*s = ErrorResponseErrorCodeNoInboundDomain
+		return nil
+	case ErrorResponseErrorCodeDomainCannotSend:
+		*s = ErrorResponseErrorCodeDomainCannotSend
+		return nil
+	case ErrorResponseErrorCodeAddressTaken:
+		*s = ErrorResponseErrorCodeAddressTaken
+		return nil
+	case ErrorResponseErrorCodeRouteCapReached:
+		*s = ErrorResponseErrorCodeRouteCapReached
+		return nil
+	case ErrorResponseErrorCodeNameExhausted:
+		*s = ErrorResponseErrorCodeNameExhausted
 		return nil
 	case ErrorResponseErrorCodeDeveloperUsageCreditExhausted:
 		*s = ErrorResponseErrorCodeDeveloperUsageCreditExhausted
@@ -10922,6 +10993,86 @@ type GetStorageStatsUnauthorized ErrorResponse
 
 func (*GetStorageStatsUnauthorized) getStorageStatsRes() {}
 
+type GetTemplateBadRequest ErrorResponse
+
+func (*GetTemplateBadRequest) getTemplateRes() {}
+
+type GetTemplateInstallBadRequest ErrorResponse
+
+func (*GetTemplateInstallBadRequest) getTemplateInstallRes() {}
+
+type GetTemplateInstallForbidden ErrorResponse
+
+func (*GetTemplateInstallForbidden) getTemplateInstallRes() {}
+
+type GetTemplateInstallNotFound ErrorResponse
+
+func (*GetTemplateInstallNotFound) getTemplateInstallRes() {}
+
+// Merged schema.
+type GetTemplateInstallOK struct {
+	Success bool                  `json:"success"`
+	Data    TemplateInstallStatus `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetTemplateInstallOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetTemplateInstallOK) GetData() TemplateInstallStatus {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetTemplateInstallOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetTemplateInstallOK) SetData(val TemplateInstallStatus) {
+	s.Data = val
+}
+
+func (*GetTemplateInstallOK) getTemplateInstallRes() {}
+
+type GetTemplateInstallUnauthorized ErrorResponse
+
+func (*GetTemplateInstallUnauthorized) getTemplateInstallRes() {}
+
+type GetTemplateNotFound ErrorResponse
+
+func (*GetTemplateNotFound) getTemplateRes() {}
+
+// Merged schema.
+type GetTemplateOK struct {
+	Success bool                   `json:"success"`
+	Data    TemplateRegistryDetail `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetTemplateOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetTemplateOK) GetData() TemplateRegistryDetail {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetTemplateOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetTemplateOK) SetData(val TemplateRegistryDetail) {
+	s.Data = val
+}
+
+func (*GetTemplateOK) getTemplateRes() {}
+
 type GetThreadBadRequest ErrorResponse
 
 func (*GetThreadBadRequest) getThreadRes() {}
@@ -11615,6 +11766,134 @@ func (s *InboxStatusRecentEmailSummary) SetLatestReceivedAt(val NilDateTime) {
 	s.LatestReceivedAt = val
 }
 
+type InstallTemplateBadRequest ErrorResponse
+
+func (*InstallTemplateBadRequest) installTemplateRes() {}
+
+// Ref: #/components/schemas/InstallTemplateBody
+type InstallTemplateBody struct {
+	// Localpart to claim on the selected inbound domain. Defaults to the template slug.
+	Address OptString `json:"address"`
+	// Org domain name to claim the address on. Defaults to the org's newest active domain.
+	Domain OptString `json:"domain"`
+	// Template variable values keyed by manifest variable key.
+	Variables OptInstallTemplateBodyVariables `json:"variables"`
+	// Secret values keyed by manifest secret key.
+	Secrets OptInstallTemplateBodySecrets `json:"secrets"`
+}
+
+// GetAddress returns the value of Address.
+func (s *InstallTemplateBody) GetAddress() OptString {
+	return s.Address
+}
+
+// GetDomain returns the value of Domain.
+func (s *InstallTemplateBody) GetDomain() OptString {
+	return s.Domain
+}
+
+// GetVariables returns the value of Variables.
+func (s *InstallTemplateBody) GetVariables() OptInstallTemplateBodyVariables {
+	return s.Variables
+}
+
+// GetSecrets returns the value of Secrets.
+func (s *InstallTemplateBody) GetSecrets() OptInstallTemplateBodySecrets {
+	return s.Secrets
+}
+
+// SetAddress sets the value of Address.
+func (s *InstallTemplateBody) SetAddress(val OptString) {
+	s.Address = val
+}
+
+// SetDomain sets the value of Domain.
+func (s *InstallTemplateBody) SetDomain(val OptString) {
+	s.Domain = val
+}
+
+// SetVariables sets the value of Variables.
+func (s *InstallTemplateBody) SetVariables(val OptInstallTemplateBodyVariables) {
+	s.Variables = val
+}
+
+// SetSecrets sets the value of Secrets.
+func (s *InstallTemplateBody) SetSecrets(val OptInstallTemplateBodySecrets) {
+	s.Secrets = val
+}
+
+// Secret values keyed by manifest secret key.
+type InstallTemplateBodySecrets map[string]string
+
+func (s *InstallTemplateBodySecrets) init() InstallTemplateBodySecrets {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
+}
+
+// Template variable values keyed by manifest variable key.
+type InstallTemplateBodyVariables map[string]string
+
+func (s *InstallTemplateBodyVariables) init() InstallTemplateBodyVariables {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
+}
+
+type InstallTemplateConflict ErrorResponse
+
+func (*InstallTemplateConflict) installTemplateRes() {}
+
+// Merged schema.
+type InstallTemplateCreated struct {
+	Success bool                  `json:"success"`
+	Data    TemplateInstallStatus `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *InstallTemplateCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *InstallTemplateCreated) GetData() TemplateInstallStatus {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *InstallTemplateCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *InstallTemplateCreated) SetData(val TemplateInstallStatus) {
+	s.Data = val
+}
+
+func (*InstallTemplateCreated) installTemplateRes() {}
+
+type InstallTemplateForbidden ErrorResponse
+
+func (*InstallTemplateForbidden) installTemplateRes() {}
+
+type InstallTemplateNotFound ErrorResponse
+
+func (*InstallTemplateNotFound) installTemplateRes() {}
+
+type InstallTemplateUnauthorized ErrorResponse
+
+func (*InstallTemplateUnauthorized) installTemplateRes() {}
+
+type InstallTemplateUnprocessableEntity ErrorResponse
+
+func (*InstallTemplateUnprocessableEntity) installTemplateRes() {}
+
 type ListDeclinedPaymentsForbidden ErrorResponse
 
 func (*ListDeclinedPaymentsForbidden) listDeclinedPaymentsRes() {}
@@ -12286,6 +12565,34 @@ func (*ListSentEmailsOK) listSentEmailsRes() {}
 type ListSentEmailsUnauthorized ErrorResponse
 
 func (*ListSentEmailsUnauthorized) listSentEmailsRes() {}
+
+// Merged schema.
+type ListTemplatesOK struct {
+	Success bool                 `json:"success"`
+	Data    TemplateRegistryPage `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListTemplatesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListTemplatesOK) GetData() TemplateRegistryPage {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListTemplatesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListTemplatesOK) SetData(val TemplateRegistryPage) {
+	s.Data = val
+}
+
+func (*ListTemplatesOK) listTemplatesRes() {}
 
 type ListWakeAuthorizationsBadRequest ErrorResponse
 
@@ -14658,6 +14965,98 @@ func (o OptGateFix) Or(d GateFix) GateFix {
 	return d
 }
 
+// NewOptInstallTemplateBodySecrets returns new OptInstallTemplateBodySecrets with value set to v.
+func NewOptInstallTemplateBodySecrets(v InstallTemplateBodySecrets) OptInstallTemplateBodySecrets {
+	return OptInstallTemplateBodySecrets{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptInstallTemplateBodySecrets is optional InstallTemplateBodySecrets.
+type OptInstallTemplateBodySecrets struct {
+	Value InstallTemplateBodySecrets
+	Set   bool
+}
+
+// IsSet returns true if OptInstallTemplateBodySecrets was set.
+func (o OptInstallTemplateBodySecrets) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptInstallTemplateBodySecrets) Reset() {
+	var v InstallTemplateBodySecrets
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptInstallTemplateBodySecrets) SetTo(v InstallTemplateBodySecrets) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptInstallTemplateBodySecrets) Get() (v InstallTemplateBodySecrets, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptInstallTemplateBodySecrets) Or(d InstallTemplateBodySecrets) InstallTemplateBodySecrets {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptInstallTemplateBodyVariables returns new OptInstallTemplateBodyVariables with value set to v.
+func NewOptInstallTemplateBodyVariables(v InstallTemplateBodyVariables) OptInstallTemplateBodyVariables {
+	return OptInstallTemplateBodyVariables{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptInstallTemplateBodyVariables is optional InstallTemplateBodyVariables.
+type OptInstallTemplateBodyVariables struct {
+	Value InstallTemplateBodyVariables
+	Set   bool
+}
+
+// IsSet returns true if OptInstallTemplateBodyVariables was set.
+func (o OptInstallTemplateBodyVariables) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptInstallTemplateBodyVariables) Reset() {
+	var v InstallTemplateBodyVariables
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptInstallTemplateBodyVariables) SetTo(v InstallTemplateBodyVariables) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptInstallTemplateBodyVariables) Get() (v InstallTemplateBodyVariables, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptInstallTemplateBodyVariables) Or(d InstallTemplateBodyVariables) InstallTemplateBodyVariables {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptInt returns new OptInt with value set to v.
 func NewOptInt(v int) OptInt {
 	return OptInt{
@@ -16523,6 +16922,98 @@ func (o OptString) Or(d string) string {
 	return d
 }
 
+// NewOptTemplateSetup returns new OptTemplateSetup with value set to v.
+func NewOptTemplateSetup(v TemplateSetup) OptTemplateSetup {
+	return OptTemplateSetup{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptTemplateSetup is optional TemplateSetup.
+type OptTemplateSetup struct {
+	Value TemplateSetup
+	Set   bool
+}
+
+// IsSet returns true if OptTemplateSetup was set.
+func (o OptTemplateSetup) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptTemplateSetup) Reset() {
+	var v TemplateSetup
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptTemplateSetup) SetTo(v TemplateSetup) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptTemplateSetup) Get() (v TemplateSetup, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptTemplateSetup) Or(d TemplateSetup) TemplateSetup {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptTemplateVariableValidation returns new OptTemplateVariableValidation with value set to v.
+func NewOptTemplateVariableValidation(v TemplateVariableValidation) OptTemplateVariableValidation {
+	return OptTemplateVariableValidation{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptTemplateVariableValidation is optional TemplateVariableValidation.
+type OptTemplateVariableValidation struct {
+	Value TemplateVariableValidation
+	Set   bool
+}
+
+// IsSet returns true if OptTemplateVariableValidation was set.
+func (o OptTemplateVariableValidation) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptTemplateVariableValidation) Reset() {
+	var v TemplateVariableValidation
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptTemplateVariableValidation) SetTo(v TemplateVariableValidation) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptTemplateVariableValidation) Get() (v TemplateVariableValidation, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptTemplateVariableValidation) Or(d TemplateVariableValidation) TemplateVariableValidation {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptTestFunctionReq returns new OptTestFunctionReq with value set to v.
 func NewOptTestFunctionReq(v TestFunctionReq) OptTestFunctionReq {
 	return OptTestFunctionReq{
@@ -17810,8 +18301,12 @@ func (*RateLimitedHeaders) getChallengeRes()           {}
 func (*RateLimitedHeaders) getInboxStatusRes()         {}
 func (*RateLimitedHeaders) getMemoryRes()              {}
 func (*RateLimitedHeaders) getSpendPolicyRes()         {}
+func (*RateLimitedHeaders) getTemplateInstallRes()     {}
+func (*RateLimitedHeaders) getTemplateRes()            {}
+func (*RateLimitedHeaders) installTemplateRes()        {}
 func (*RateLimitedHeaders) listDeclinedPaymentsRes()   {}
 func (*RateLimitedHeaders) listPayoutAddressesRes()    {}
+func (*RateLimitedHeaders) listTemplatesRes()          {}
 func (*RateLimitedHeaders) payChallengeRes()           {}
 func (*RateLimitedHeaders) registerPayoutAddressRes()  {}
 func (*RateLimitedHeaders) replayDeliveryRes()         {}
@@ -23505,6 +24000,1234 @@ func (s *StorageStats) SetPercentage(val float64) {
 // SetEmailsCount sets the value of EmailsCount.
 func (s *StorageStats) SetEmailsCount(val int) {
 	s.EmailsCount = val
+}
+
+// Ref: #/components/schemas/TemplateAuthor
+type TemplateAuthor struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	URL  OptURI `json:"url"`
+}
+
+// GetID returns the value of ID.
+func (s *TemplateAuthor) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *TemplateAuthor) GetName() string {
+	return s.Name
+}
+
+// GetURL returns the value of URL.
+func (s *TemplateAuthor) GetURL() OptURI {
+	return s.URL
+}
+
+// SetID sets the value of ID.
+func (s *TemplateAuthor) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *TemplateAuthor) SetName(val string) {
+	s.Name = val
+}
+
+// SetURL sets the value of URL.
+func (s *TemplateAuthor) SetURL(val OptURI) {
+	s.URL = val
+}
+
+// Ref: #/components/schemas/TemplateInstall
+type TemplateInstall struct {
+	Mode      TemplateInstallMode `json:"mode"`
+	EditFiles []string            `json:"editFiles"`
+	Reason    string              `json:"reason"`
+}
+
+// GetMode returns the value of Mode.
+func (s *TemplateInstall) GetMode() TemplateInstallMode {
+	return s.Mode
+}
+
+// GetEditFiles returns the value of EditFiles.
+func (s *TemplateInstall) GetEditFiles() []string {
+	return s.EditFiles
+}
+
+// GetReason returns the value of Reason.
+func (s *TemplateInstall) GetReason() string {
+	return s.Reason
+}
+
+// SetMode sets the value of Mode.
+func (s *TemplateInstall) SetMode(val TemplateInstallMode) {
+	s.Mode = val
+}
+
+// SetEditFiles sets the value of EditFiles.
+func (s *TemplateInstall) SetEditFiles(val []string) {
+	s.EditFiles = val
+}
+
+// SetReason sets the value of Reason.
+func (s *TemplateInstall) SetReason(val string) {
+	s.Reason = val
+}
+
+type TemplateInstallMode string
+
+const (
+	TemplateInstallModeDeploy   TemplateInstallMode = "deploy"
+	TemplateInstallModeScaffold TemplateInstallMode = "scaffold"
+)
+
+// AllValues returns all TemplateInstallMode values.
+func (TemplateInstallMode) AllValues() []TemplateInstallMode {
+	return []TemplateInstallMode{
+		TemplateInstallModeDeploy,
+		TemplateInstallModeScaffold,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TemplateInstallMode) MarshalText() ([]byte, error) {
+	switch s {
+	case TemplateInstallModeDeploy:
+		return []byte(s), nil
+	case TemplateInstallModeScaffold:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TemplateInstallMode) UnmarshalText(data []byte) error {
+	switch TemplateInstallMode(data) {
+	case TemplateInstallModeDeploy:
+		*s = TemplateInstallModeDeploy
+		return nil
+	case TemplateInstallModeScaffold:
+		*s = TemplateInstallModeScaffold
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/TemplateInstallState
+type TemplateInstallState string
+
+const (
+	TemplateInstallStateDeploying    TemplateInstallState = "deploying"
+	TemplateInstallStateConnecting   TemplateInstallState = "connecting"
+	TemplateInstallStateBound        TemplateInstallState = "bound"
+	TemplateInstallStateTested       TemplateInstallState = "tested"
+	TemplateInstallStateDeployFailed TemplateInstallState = "deploy_failed"
+	TemplateInstallStateBindFailed   TemplateInstallState = "bind_failed"
+	TemplateInstallStateTestFailed   TemplateInstallState = "test_failed"
+)
+
+// AllValues returns all TemplateInstallState values.
+func (TemplateInstallState) AllValues() []TemplateInstallState {
+	return []TemplateInstallState{
+		TemplateInstallStateDeploying,
+		TemplateInstallStateConnecting,
+		TemplateInstallStateBound,
+		TemplateInstallStateTested,
+		TemplateInstallStateDeployFailed,
+		TemplateInstallStateBindFailed,
+		TemplateInstallStateTestFailed,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TemplateInstallState) MarshalText() ([]byte, error) {
+	switch s {
+	case TemplateInstallStateDeploying:
+		return []byte(s), nil
+	case TemplateInstallStateConnecting:
+		return []byte(s), nil
+	case TemplateInstallStateBound:
+		return []byte(s), nil
+	case TemplateInstallStateTested:
+		return []byte(s), nil
+	case TemplateInstallStateDeployFailed:
+		return []byte(s), nil
+	case TemplateInstallStateBindFailed:
+		return []byte(s), nil
+	case TemplateInstallStateTestFailed:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TemplateInstallState) UnmarshalText(data []byte) error {
+	switch TemplateInstallState(data) {
+	case TemplateInstallStateDeploying:
+		*s = TemplateInstallStateDeploying
+		return nil
+	case TemplateInstallStateConnecting:
+		*s = TemplateInstallStateConnecting
+		return nil
+	case TemplateInstallStateBound:
+		*s = TemplateInstallStateBound
+		return nil
+	case TemplateInstallStateTested:
+		*s = TemplateInstallStateTested
+		return nil
+	case TemplateInstallStateDeployFailed:
+		*s = TemplateInstallStateDeployFailed
+		return nil
+	case TemplateInstallStateBindFailed:
+		*s = TemplateInstallStateBindFailed
+		return nil
+	case TemplateInstallStateTestFailed:
+		*s = TemplateInstallStateTestFailed
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/TemplateInstallStatus
+type TemplateInstallStatus struct {
+	ID uuid.UUID `json:"id"`
+	// Template slug for this install.
+	TemplateSlug string               `json:"template_slug"`
+	State        TemplateInstallState `json:"state"`
+	Address      NilString            `json:"address"`
+	FunctionID   NilUUID              `json:"function_id"`
+	Error        NilString            `json:"error"`
+	CreatedAt    time.Time            `json:"created_at"`
+	UpdatedAt    time.Time            `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *TemplateInstallStatus) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetTemplateSlug returns the value of TemplateSlug.
+func (s *TemplateInstallStatus) GetTemplateSlug() string {
+	return s.TemplateSlug
+}
+
+// GetState returns the value of State.
+func (s *TemplateInstallStatus) GetState() TemplateInstallState {
+	return s.State
+}
+
+// GetAddress returns the value of Address.
+func (s *TemplateInstallStatus) GetAddress() NilString {
+	return s.Address
+}
+
+// GetFunctionID returns the value of FunctionID.
+func (s *TemplateInstallStatus) GetFunctionID() NilUUID {
+	return s.FunctionID
+}
+
+// GetError returns the value of Error.
+func (s *TemplateInstallStatus) GetError() NilString {
+	return s.Error
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *TemplateInstallStatus) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *TemplateInstallStatus) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *TemplateInstallStatus) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetTemplateSlug sets the value of TemplateSlug.
+func (s *TemplateInstallStatus) SetTemplateSlug(val string) {
+	s.TemplateSlug = val
+}
+
+// SetState sets the value of State.
+func (s *TemplateInstallStatus) SetState(val TemplateInstallState) {
+	s.State = val
+}
+
+// SetAddress sets the value of Address.
+func (s *TemplateInstallStatus) SetAddress(val NilString) {
+	s.Address = val
+}
+
+// SetFunctionID sets the value of FunctionID.
+func (s *TemplateInstallStatus) SetFunctionID(val NilUUID) {
+	s.FunctionID = val
+}
+
+// SetError sets the value of Error.
+func (s *TemplateInstallStatus) SetError(val NilString) {
+	s.Error = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *TemplateInstallStatus) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *TemplateInstallStatus) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// Ref: #/components/schemas/TemplateManifest
+type TemplateManifest struct {
+	SchemaVersion int `json:"schemaVersion"`
+	// Stable template slug from the manifest.
+	ID           string                `json:"id"`
+	Title        string                `json:"title"`
+	Summary      string                `json:"summary"`
+	Description  OptString             `json:"description"`
+	Author       TemplateAuthor        `json:"author"`
+	Tags         []string              `json:"tags"`
+	Source       TemplateSource        `json:"source"`
+	Install      TemplateInstall       `json:"install"`
+	Secrets      []TemplateSecret      `json:"secrets"`
+	SecretGroups []TemplateSecretGroup `json:"secretGroups"`
+	Variables    []TemplateVariable    `json:"variables"`
+	Setup        OptTemplateSetup      `json:"setup"`
+	PostInstall  OptString             `json:"postInstall"`
+}
+
+// GetSchemaVersion returns the value of SchemaVersion.
+func (s *TemplateManifest) GetSchemaVersion() int {
+	return s.SchemaVersion
+}
+
+// GetID returns the value of ID.
+func (s *TemplateManifest) GetID() string {
+	return s.ID
+}
+
+// GetTitle returns the value of Title.
+func (s *TemplateManifest) GetTitle() string {
+	return s.Title
+}
+
+// GetSummary returns the value of Summary.
+func (s *TemplateManifest) GetSummary() string {
+	return s.Summary
+}
+
+// GetDescription returns the value of Description.
+func (s *TemplateManifest) GetDescription() OptString {
+	return s.Description
+}
+
+// GetAuthor returns the value of Author.
+func (s *TemplateManifest) GetAuthor() TemplateAuthor {
+	return s.Author
+}
+
+// GetTags returns the value of Tags.
+func (s *TemplateManifest) GetTags() []string {
+	return s.Tags
+}
+
+// GetSource returns the value of Source.
+func (s *TemplateManifest) GetSource() TemplateSource {
+	return s.Source
+}
+
+// GetInstall returns the value of Install.
+func (s *TemplateManifest) GetInstall() TemplateInstall {
+	return s.Install
+}
+
+// GetSecrets returns the value of Secrets.
+func (s *TemplateManifest) GetSecrets() []TemplateSecret {
+	return s.Secrets
+}
+
+// GetSecretGroups returns the value of SecretGroups.
+func (s *TemplateManifest) GetSecretGroups() []TemplateSecretGroup {
+	return s.SecretGroups
+}
+
+// GetVariables returns the value of Variables.
+func (s *TemplateManifest) GetVariables() []TemplateVariable {
+	return s.Variables
+}
+
+// GetSetup returns the value of Setup.
+func (s *TemplateManifest) GetSetup() OptTemplateSetup {
+	return s.Setup
+}
+
+// GetPostInstall returns the value of PostInstall.
+func (s *TemplateManifest) GetPostInstall() OptString {
+	return s.PostInstall
+}
+
+// SetSchemaVersion sets the value of SchemaVersion.
+func (s *TemplateManifest) SetSchemaVersion(val int) {
+	s.SchemaVersion = val
+}
+
+// SetID sets the value of ID.
+func (s *TemplateManifest) SetID(val string) {
+	s.ID = val
+}
+
+// SetTitle sets the value of Title.
+func (s *TemplateManifest) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetSummary sets the value of Summary.
+func (s *TemplateManifest) SetSummary(val string) {
+	s.Summary = val
+}
+
+// SetDescription sets the value of Description.
+func (s *TemplateManifest) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *TemplateManifest) SetAuthor(val TemplateAuthor) {
+	s.Author = val
+}
+
+// SetTags sets the value of Tags.
+func (s *TemplateManifest) SetTags(val []string) {
+	s.Tags = val
+}
+
+// SetSource sets the value of Source.
+func (s *TemplateManifest) SetSource(val TemplateSource) {
+	s.Source = val
+}
+
+// SetInstall sets the value of Install.
+func (s *TemplateManifest) SetInstall(val TemplateInstall) {
+	s.Install = val
+}
+
+// SetSecrets sets the value of Secrets.
+func (s *TemplateManifest) SetSecrets(val []TemplateSecret) {
+	s.Secrets = val
+}
+
+// SetSecretGroups sets the value of SecretGroups.
+func (s *TemplateManifest) SetSecretGroups(val []TemplateSecretGroup) {
+	s.SecretGroups = val
+}
+
+// SetVariables sets the value of Variables.
+func (s *TemplateManifest) SetVariables(val []TemplateVariable) {
+	s.Variables = val
+}
+
+// SetSetup sets the value of Setup.
+func (s *TemplateManifest) SetSetup(val OptTemplateSetup) {
+	s.Setup = val
+}
+
+// SetPostInstall sets the value of PostInstall.
+func (s *TemplateManifest) SetPostInstall(val OptString) {
+	s.PostInstall = val
+}
+
+// Ref: #/components/schemas/TemplateRegistryDetail
+type TemplateRegistryDetail struct {
+	ID uuid.UUID `json:"id"`
+	// Stable template slug used in template URLs and install commands.
+	Slug         string         `json:"slug"`
+	Title        string         `json:"title"`
+	Summary      string         `json:"summary"`
+	Author       TemplateAuthor `json:"author"`
+	Tags         []string       `json:"tags"`
+	Verified     bool           `json:"verified"`
+	InstallCount int            `json:"install_count"`
+	// GitHub repository in owner/repo form.
+	GithubRepo  string                 `json:"github_repo"`
+	CreatedAt   time.Time              `json:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at"`
+	Description NilString              `json:"description"`
+	GithubSha   string                 `json:"github_sha"`
+	GithubPath  NilString              `json:"github_path"`
+	Manifest    TemplateManifest       `json:"manifest"`
+	Readme      NilString              `json:"readme"`
+	Status      TemplateRegistryStatus `json:"status"`
+}
+
+// GetID returns the value of ID.
+func (s *TemplateRegistryDetail) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetSlug returns the value of Slug.
+func (s *TemplateRegistryDetail) GetSlug() string {
+	return s.Slug
+}
+
+// GetTitle returns the value of Title.
+func (s *TemplateRegistryDetail) GetTitle() string {
+	return s.Title
+}
+
+// GetSummary returns the value of Summary.
+func (s *TemplateRegistryDetail) GetSummary() string {
+	return s.Summary
+}
+
+// GetAuthor returns the value of Author.
+func (s *TemplateRegistryDetail) GetAuthor() TemplateAuthor {
+	return s.Author
+}
+
+// GetTags returns the value of Tags.
+func (s *TemplateRegistryDetail) GetTags() []string {
+	return s.Tags
+}
+
+// GetVerified returns the value of Verified.
+func (s *TemplateRegistryDetail) GetVerified() bool {
+	return s.Verified
+}
+
+// GetInstallCount returns the value of InstallCount.
+func (s *TemplateRegistryDetail) GetInstallCount() int {
+	return s.InstallCount
+}
+
+// GetGithubRepo returns the value of GithubRepo.
+func (s *TemplateRegistryDetail) GetGithubRepo() string {
+	return s.GithubRepo
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *TemplateRegistryDetail) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *TemplateRegistryDetail) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetDescription returns the value of Description.
+func (s *TemplateRegistryDetail) GetDescription() NilString {
+	return s.Description
+}
+
+// GetGithubSha returns the value of GithubSha.
+func (s *TemplateRegistryDetail) GetGithubSha() string {
+	return s.GithubSha
+}
+
+// GetGithubPath returns the value of GithubPath.
+func (s *TemplateRegistryDetail) GetGithubPath() NilString {
+	return s.GithubPath
+}
+
+// GetManifest returns the value of Manifest.
+func (s *TemplateRegistryDetail) GetManifest() TemplateManifest {
+	return s.Manifest
+}
+
+// GetReadme returns the value of Readme.
+func (s *TemplateRegistryDetail) GetReadme() NilString {
+	return s.Readme
+}
+
+// GetStatus returns the value of Status.
+func (s *TemplateRegistryDetail) GetStatus() TemplateRegistryStatus {
+	return s.Status
+}
+
+// SetID sets the value of ID.
+func (s *TemplateRegistryDetail) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetSlug sets the value of Slug.
+func (s *TemplateRegistryDetail) SetSlug(val string) {
+	s.Slug = val
+}
+
+// SetTitle sets the value of Title.
+func (s *TemplateRegistryDetail) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetSummary sets the value of Summary.
+func (s *TemplateRegistryDetail) SetSummary(val string) {
+	s.Summary = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *TemplateRegistryDetail) SetAuthor(val TemplateAuthor) {
+	s.Author = val
+}
+
+// SetTags sets the value of Tags.
+func (s *TemplateRegistryDetail) SetTags(val []string) {
+	s.Tags = val
+}
+
+// SetVerified sets the value of Verified.
+func (s *TemplateRegistryDetail) SetVerified(val bool) {
+	s.Verified = val
+}
+
+// SetInstallCount sets the value of InstallCount.
+func (s *TemplateRegistryDetail) SetInstallCount(val int) {
+	s.InstallCount = val
+}
+
+// SetGithubRepo sets the value of GithubRepo.
+func (s *TemplateRegistryDetail) SetGithubRepo(val string) {
+	s.GithubRepo = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *TemplateRegistryDetail) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *TemplateRegistryDetail) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetDescription sets the value of Description.
+func (s *TemplateRegistryDetail) SetDescription(val NilString) {
+	s.Description = val
+}
+
+// SetGithubSha sets the value of GithubSha.
+func (s *TemplateRegistryDetail) SetGithubSha(val string) {
+	s.GithubSha = val
+}
+
+// SetGithubPath sets the value of GithubPath.
+func (s *TemplateRegistryDetail) SetGithubPath(val NilString) {
+	s.GithubPath = val
+}
+
+// SetManifest sets the value of Manifest.
+func (s *TemplateRegistryDetail) SetManifest(val TemplateManifest) {
+	s.Manifest = val
+}
+
+// SetReadme sets the value of Readme.
+func (s *TemplateRegistryDetail) SetReadme(val NilString) {
+	s.Readme = val
+}
+
+// SetStatus sets the value of Status.
+func (s *TemplateRegistryDetail) SetStatus(val TemplateRegistryStatus) {
+	s.Status = val
+}
+
+// Ref: #/components/schemas/TemplateRegistryPage
+type TemplateRegistryPage struct {
+	Items []TemplateRegistrySummary `json:"items"`
+	// Cursor to pass as the next `cursor` query value, or null when there are no more templates.
+	NextCursor NilString `json:"next_cursor"`
+}
+
+// GetItems returns the value of Items.
+func (s *TemplateRegistryPage) GetItems() []TemplateRegistrySummary {
+	return s.Items
+}
+
+// GetNextCursor returns the value of NextCursor.
+func (s *TemplateRegistryPage) GetNextCursor() NilString {
+	return s.NextCursor
+}
+
+// SetItems sets the value of Items.
+func (s *TemplateRegistryPage) SetItems(val []TemplateRegistrySummary) {
+	s.Items = val
+}
+
+// SetNextCursor sets the value of NextCursor.
+func (s *TemplateRegistryPage) SetNextCursor(val NilString) {
+	s.NextCursor = val
+}
+
+// Ref: #/components/schemas/TemplateRegistryStatus
+type TemplateRegistryStatus string
+
+const (
+	TemplateRegistryStatusPending  TemplateRegistryStatus = "pending"
+	TemplateRegistryStatusApproved TemplateRegistryStatus = "approved"
+	TemplateRegistryStatusRejected TemplateRegistryStatus = "rejected"
+)
+
+// AllValues returns all TemplateRegistryStatus values.
+func (TemplateRegistryStatus) AllValues() []TemplateRegistryStatus {
+	return []TemplateRegistryStatus{
+		TemplateRegistryStatusPending,
+		TemplateRegistryStatusApproved,
+		TemplateRegistryStatusRejected,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TemplateRegistryStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case TemplateRegistryStatusPending:
+		return []byte(s), nil
+	case TemplateRegistryStatusApproved:
+		return []byte(s), nil
+	case TemplateRegistryStatusRejected:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TemplateRegistryStatus) UnmarshalText(data []byte) error {
+	switch TemplateRegistryStatus(data) {
+	case TemplateRegistryStatusPending:
+		*s = TemplateRegistryStatusPending
+		return nil
+	case TemplateRegistryStatusApproved:
+		*s = TemplateRegistryStatusApproved
+		return nil
+	case TemplateRegistryStatusRejected:
+		*s = TemplateRegistryStatusRejected
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/TemplateRegistrySummary
+type TemplateRegistrySummary struct {
+	ID uuid.UUID `json:"id"`
+	// Stable template slug used in template URLs and install commands.
+	Slug         string         `json:"slug"`
+	Title        string         `json:"title"`
+	Summary      string         `json:"summary"`
+	Author       TemplateAuthor `json:"author"`
+	Tags         []string       `json:"tags"`
+	Verified     bool           `json:"verified"`
+	InstallCount int            `json:"install_count"`
+	// GitHub repository in owner/repo form.
+	GithubRepo string    `json:"github_repo"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *TemplateRegistrySummary) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetSlug returns the value of Slug.
+func (s *TemplateRegistrySummary) GetSlug() string {
+	return s.Slug
+}
+
+// GetTitle returns the value of Title.
+func (s *TemplateRegistrySummary) GetTitle() string {
+	return s.Title
+}
+
+// GetSummary returns the value of Summary.
+func (s *TemplateRegistrySummary) GetSummary() string {
+	return s.Summary
+}
+
+// GetAuthor returns the value of Author.
+func (s *TemplateRegistrySummary) GetAuthor() TemplateAuthor {
+	return s.Author
+}
+
+// GetTags returns the value of Tags.
+func (s *TemplateRegistrySummary) GetTags() []string {
+	return s.Tags
+}
+
+// GetVerified returns the value of Verified.
+func (s *TemplateRegistrySummary) GetVerified() bool {
+	return s.Verified
+}
+
+// GetInstallCount returns the value of InstallCount.
+func (s *TemplateRegistrySummary) GetInstallCount() int {
+	return s.InstallCount
+}
+
+// GetGithubRepo returns the value of GithubRepo.
+func (s *TemplateRegistrySummary) GetGithubRepo() string {
+	return s.GithubRepo
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *TemplateRegistrySummary) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *TemplateRegistrySummary) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *TemplateRegistrySummary) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetSlug sets the value of Slug.
+func (s *TemplateRegistrySummary) SetSlug(val string) {
+	s.Slug = val
+}
+
+// SetTitle sets the value of Title.
+func (s *TemplateRegistrySummary) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetSummary sets the value of Summary.
+func (s *TemplateRegistrySummary) SetSummary(val string) {
+	s.Summary = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *TemplateRegistrySummary) SetAuthor(val TemplateAuthor) {
+	s.Author = val
+}
+
+// SetTags sets the value of Tags.
+func (s *TemplateRegistrySummary) SetTags(val []string) {
+	s.Tags = val
+}
+
+// SetVerified sets the value of Verified.
+func (s *TemplateRegistrySummary) SetVerified(val bool) {
+	s.Verified = val
+}
+
+// SetInstallCount sets the value of InstallCount.
+func (s *TemplateRegistrySummary) SetInstallCount(val int) {
+	s.InstallCount = val
+}
+
+// SetGithubRepo sets the value of GithubRepo.
+func (s *TemplateRegistrySummary) SetGithubRepo(val string) {
+	s.GithubRepo = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *TemplateRegistrySummary) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *TemplateRegistrySummary) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// Ref: #/components/schemas/TemplateSecret
+type TemplateSecret struct {
+	Key         string    `json:"key"`
+	Required    bool      `json:"required"`
+	Description OptString `json:"description"`
+}
+
+// GetKey returns the value of Key.
+func (s *TemplateSecret) GetKey() string {
+	return s.Key
+}
+
+// GetRequired returns the value of Required.
+func (s *TemplateSecret) GetRequired() bool {
+	return s.Required
+}
+
+// GetDescription returns the value of Description.
+func (s *TemplateSecret) GetDescription() OptString {
+	return s.Description
+}
+
+// SetKey sets the value of Key.
+func (s *TemplateSecret) SetKey(val string) {
+	s.Key = val
+}
+
+// SetRequired sets the value of Required.
+func (s *TemplateSecret) SetRequired(val bool) {
+	s.Required = val
+}
+
+// SetDescription sets the value of Description.
+func (s *TemplateSecret) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// Ref: #/components/schemas/TemplateSecretGroup
+type TemplateSecretGroup struct {
+	Keys        []string  `json:"keys"`
+	Min         int       `json:"min"`
+	Description OptString `json:"description"`
+}
+
+// GetKeys returns the value of Keys.
+func (s *TemplateSecretGroup) GetKeys() []string {
+	return s.Keys
+}
+
+// GetMin returns the value of Min.
+func (s *TemplateSecretGroup) GetMin() int {
+	return s.Min
+}
+
+// GetDescription returns the value of Description.
+func (s *TemplateSecretGroup) GetDescription() OptString {
+	return s.Description
+}
+
+// SetKeys sets the value of Keys.
+func (s *TemplateSecretGroup) SetKeys(val []string) {
+	s.Keys = val
+}
+
+// SetMin sets the value of Min.
+func (s *TemplateSecretGroup) SetMin(val int) {
+	s.Min = val
+}
+
+// SetDescription sets the value of Description.
+func (s *TemplateSecretGroup) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// Ref: #/components/schemas/TemplateSetup
+type TemplateSetup struct {
+	Agent    string   `json:"agent"`
+	Prompt   string   `json:"prompt"`
+	Produces []string `json:"produces"`
+}
+
+// GetAgent returns the value of Agent.
+func (s *TemplateSetup) GetAgent() string {
+	return s.Agent
+}
+
+// GetPrompt returns the value of Prompt.
+func (s *TemplateSetup) GetPrompt() string {
+	return s.Prompt
+}
+
+// GetProduces returns the value of Produces.
+func (s *TemplateSetup) GetProduces() []string {
+	return s.Produces
+}
+
+// SetAgent sets the value of Agent.
+func (s *TemplateSetup) SetAgent(val string) {
+	s.Agent = val
+}
+
+// SetPrompt sets the value of Prompt.
+func (s *TemplateSetup) SetPrompt(val string) {
+	s.Prompt = val
+}
+
+// SetProduces sets the value of Produces.
+func (s *TemplateSetup) SetProduces(val []string) {
+	s.Produces = val
+}
+
+// Ref: #/components/schemas/TemplateSource
+// TemplateSource represents sum type.
+type TemplateSource struct {
+	Type            TemplateSourceType // switch on this field
+	TemplateSource0 TemplateSource0
+	TemplateSource1 TemplateSource1
+}
+
+// TemplateSourceType is oneOf type of TemplateSource.
+type TemplateSourceType string
+
+// Possible values for TemplateSourceType.
+const (
+	TemplateSource0TemplateSource TemplateSourceType = "TemplateSource0"
+	TemplateSource1TemplateSource TemplateSourceType = "TemplateSource1"
+)
+
+// IsTemplateSource0 reports whether TemplateSource is TemplateSource0.
+func (s TemplateSource) IsTemplateSource0() bool { return s.Type == TemplateSource0TemplateSource }
+
+// IsTemplateSource1 reports whether TemplateSource is TemplateSource1.
+func (s TemplateSource) IsTemplateSource1() bool { return s.Type == TemplateSource1TemplateSource }
+
+// SetTemplateSource0 sets TemplateSource to TemplateSource0.
+func (s *TemplateSource) SetTemplateSource0(v TemplateSource0) {
+	s.Type = TemplateSource0TemplateSource
+	s.TemplateSource0 = v
+}
+
+// GetTemplateSource0 returns TemplateSource0 and true boolean if TemplateSource is TemplateSource0.
+func (s TemplateSource) GetTemplateSource0() (v TemplateSource0, ok bool) {
+	if !s.IsTemplateSource0() {
+		return v, false
+	}
+	return s.TemplateSource0, true
+}
+
+// NewTemplateSource0TemplateSource returns new TemplateSource from TemplateSource0.
+func NewTemplateSource0TemplateSource(v TemplateSource0) TemplateSource {
+	var s TemplateSource
+	s.SetTemplateSource0(v)
+	return s
+}
+
+// SetTemplateSource1 sets TemplateSource to TemplateSource1.
+func (s *TemplateSource) SetTemplateSource1(v TemplateSource1) {
+	s.Type = TemplateSource1TemplateSource
+	s.TemplateSource1 = v
+}
+
+// GetTemplateSource1 returns TemplateSource1 and true boolean if TemplateSource is TemplateSource1.
+func (s TemplateSource) GetTemplateSource1() (v TemplateSource1, ok bool) {
+	if !s.IsTemplateSource1() {
+		return v, false
+	}
+	return s.TemplateSource1, true
+}
+
+// NewTemplateSource1TemplateSource returns new TemplateSource from TemplateSource1.
+func NewTemplateSource1TemplateSource(v TemplateSource1) TemplateSource {
+	var s TemplateSource
+	s.SetTemplateSource1(v)
+	return s
+}
+
+type TemplateSource0 struct {
+	Mode string `json:"mode"`
+	Dir  string `json:"dir"`
+}
+
+// GetMode returns the value of Mode.
+func (s *TemplateSource0) GetMode() string {
+	return s.Mode
+}
+
+// GetDir returns the value of Dir.
+func (s *TemplateSource0) GetDir() string {
+	return s.Dir
+}
+
+// SetMode sets the value of Mode.
+func (s *TemplateSource0) SetMode(val string) {
+	s.Mode = val
+}
+
+// SetDir sets the value of Dir.
+func (s *TemplateSource0) SetDir(val string) {
+	s.Dir = val
+}
+
+type TemplateSource1 struct {
+	Mode string `json:"mode"`
+	File string `json:"file"`
+}
+
+// GetMode returns the value of Mode.
+func (s *TemplateSource1) GetMode() string {
+	return s.Mode
+}
+
+// GetFile returns the value of File.
+func (s *TemplateSource1) GetFile() string {
+	return s.File
+}
+
+// SetMode sets the value of Mode.
+func (s *TemplateSource1) SetMode(val string) {
+	s.Mode = val
+}
+
+// SetFile sets the value of File.
+func (s *TemplateSource1) SetFile(val string) {
+	s.File = val
+}
+
+// Ref: #/components/schemas/TemplateVariable
+type TemplateVariable struct {
+	Key        string                        `json:"key"`
+	Prompt     string                        `json:"prompt"`
+	Default    OptString                     `json:"default"`
+	File       OptString                     `json:"file"`
+	Type       TemplateVariableType          `json:"type"`
+	Options    []string                      `json:"options"`
+	Validation OptTemplateVariableValidation `json:"validation"`
+}
+
+// GetKey returns the value of Key.
+func (s *TemplateVariable) GetKey() string {
+	return s.Key
+}
+
+// GetPrompt returns the value of Prompt.
+func (s *TemplateVariable) GetPrompt() string {
+	return s.Prompt
+}
+
+// GetDefault returns the value of Default.
+func (s *TemplateVariable) GetDefault() OptString {
+	return s.Default
+}
+
+// GetFile returns the value of File.
+func (s *TemplateVariable) GetFile() OptString {
+	return s.File
+}
+
+// GetType returns the value of Type.
+func (s *TemplateVariable) GetType() TemplateVariableType {
+	return s.Type
+}
+
+// GetOptions returns the value of Options.
+func (s *TemplateVariable) GetOptions() []string {
+	return s.Options
+}
+
+// GetValidation returns the value of Validation.
+func (s *TemplateVariable) GetValidation() OptTemplateVariableValidation {
+	return s.Validation
+}
+
+// SetKey sets the value of Key.
+func (s *TemplateVariable) SetKey(val string) {
+	s.Key = val
+}
+
+// SetPrompt sets the value of Prompt.
+func (s *TemplateVariable) SetPrompt(val string) {
+	s.Prompt = val
+}
+
+// SetDefault sets the value of Default.
+func (s *TemplateVariable) SetDefault(val OptString) {
+	s.Default = val
+}
+
+// SetFile sets the value of File.
+func (s *TemplateVariable) SetFile(val OptString) {
+	s.File = val
+}
+
+// SetType sets the value of Type.
+func (s *TemplateVariable) SetType(val TemplateVariableType) {
+	s.Type = val
+}
+
+// SetOptions sets the value of Options.
+func (s *TemplateVariable) SetOptions(val []string) {
+	s.Options = val
+}
+
+// SetValidation sets the value of Validation.
+func (s *TemplateVariable) SetValidation(val OptTemplateVariableValidation) {
+	s.Validation = val
+}
+
+type TemplateVariableType string
+
+const (
+	TemplateVariableTypeString TemplateVariableType = "string"
+	TemplateVariableTypeSelect TemplateVariableType = "select"
+	TemplateVariableTypeURL    TemplateVariableType = "url"
+	TemplateVariableTypeEmail  TemplateVariableType = "email"
+)
+
+// AllValues returns all TemplateVariableType values.
+func (TemplateVariableType) AllValues() []TemplateVariableType {
+	return []TemplateVariableType{
+		TemplateVariableTypeString,
+		TemplateVariableTypeSelect,
+		TemplateVariableTypeURL,
+		TemplateVariableTypeEmail,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TemplateVariableType) MarshalText() ([]byte, error) {
+	switch s {
+	case TemplateVariableTypeString:
+		return []byte(s), nil
+	case TemplateVariableTypeSelect:
+		return []byte(s), nil
+	case TemplateVariableTypeURL:
+		return []byte(s), nil
+	case TemplateVariableTypeEmail:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TemplateVariableType) UnmarshalText(data []byte) error {
+	switch TemplateVariableType(data) {
+	case TemplateVariableTypeString:
+		*s = TemplateVariableTypeString
+		return nil
+	case TemplateVariableTypeSelect:
+		*s = TemplateVariableTypeSelect
+		return nil
+	case TemplateVariableTypeURL:
+		*s = TemplateVariableTypeURL
+		return nil
+	case TemplateVariableTypeEmail:
+		*s = TemplateVariableTypeEmail
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/TemplateVariableValidation
+type TemplateVariableValidation struct {
+	Pattern   OptString `json:"pattern"`
+	MaxLength OptInt    `json:"maxLength"`
+}
+
+// GetPattern returns the value of Pattern.
+func (s *TemplateVariableValidation) GetPattern() OptString {
+	return s.Pattern
+}
+
+// GetMaxLength returns the value of MaxLength.
+func (s *TemplateVariableValidation) GetMaxLength() OptInt {
+	return s.MaxLength
+}
+
+// SetPattern sets the value of Pattern.
+func (s *TemplateVariableValidation) SetPattern(val OptString) {
+	s.Pattern = val
+}
+
+// SetMaxLength sets the value of MaxLength.
+func (s *TemplateVariableValidation) SetMaxLength(val OptInt) {
+	s.MaxLength = val
 }
 
 type TestEndpointBadRequest ErrorResponse

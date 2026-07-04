@@ -37,3 +37,43 @@ func (s *SemanticSearchInput) setDefaults() {
 		s.Limit.SetTo(val)
 	}
 }
+
+// setDefaults set default value of fields.
+func (s *TemplateInstall) setDefaults() {
+	{
+		val := string("")
+		s.Reason = val
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *TemplateSecret) setDefaults() {
+	{
+		val := bool(true)
+		s.Required = val
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *TemplateSecretGroup) setDefaults() {
+	{
+		val := int(1)
+		s.Min = val
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *TemplateSource0) setDefaults() {
+	{
+		val := string(".")
+		s.Dir = val
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *TemplateVariable) setDefaults() {
+	{
+		val := TemplateVariableType("string")
+		s.Type = val
+	}
+}

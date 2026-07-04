@@ -197,6 +197,14 @@ type GetStorageStatsRes interface {
 	getStorageStatsRes()
 }
 
+type GetTemplateInstallRes interface {
+	getTemplateInstallRes()
+}
+
+type GetTemplateRes interface {
+	getTemplateRes()
+}
+
 type GetThreadRes interface {
 	getThreadRes()
 }
@@ -207,6 +215,10 @@ type GetWakeScheduleRes interface {
 
 type GetWebhookSecretRes interface {
 	getWebhookSecretRes()
+}
+
+type InstallTemplateRes interface {
+	installTemplateRes()
 }
 
 type ListDeclinedPaymentsRes interface {
@@ -267,6 +279,10 @@ type ListRoutesRes interface {
 
 type ListSentEmailsRes interface {
 	listSentEmailsRes()
+}
+
+type ListTemplatesRes interface {
+	listTemplatesRes()
 }
 
 type ListWakeAuthorizationsRes interface {
