@@ -10401,7 +10401,7 @@ func (s *Server) handleInstallTemplateRequest(args [1]string, argsEscaped bool, 
 		}
 
 		type (
-			Request  = OptInstallTemplateBody
+			Request  = *InstallTemplateBody
 			Params   = InstallTemplateParams
 			Response = InstallTemplateRes
 		)

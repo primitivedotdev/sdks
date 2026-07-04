@@ -7976,7 +7976,7 @@ export type ListTemplatesResponses = {
      * Paginated template registry summaries
      */
     200: SuccessEnvelope & {
-        data?: TemplateRegistryPage;
+        data: TemplateRegistryPage;
     };
 };
 
@@ -8016,14 +8016,14 @@ export type GetTemplateResponses = {
      * Template registry detail
      */
     200: SuccessEnvelope & {
-        data?: TemplateRegistryDetail;
+        data: TemplateRegistryDetail;
     };
 };
 
 export type GetTemplateResponse = GetTemplateResponses[keyof GetTemplateResponses];
 
 export type InstallTemplateData = {
-    body?: InstallTemplateBody;
+    body: InstallTemplateBody;
     path: {
         /**
          * Template slug from the template manifest.
@@ -8076,7 +8076,7 @@ export type InstallTemplateResponses = {
      * Template install started
      */
     201: SuccessEnvelope & {
-        data?: TemplateInstallStatus;
+        data: TemplateInstallStatus;
     };
 };
 
@@ -8124,7 +8124,7 @@ export type GetTemplateInstallResponses = {
      * Current template install status
      */
     200: SuccessEnvelope & {
-        data?: TemplateInstallStatus;
+        data: TemplateInstallStatus;
     };
 };
 

@@ -14965,52 +14965,6 @@ func (o OptGateFix) Or(d GateFix) GateFix {
 	return d
 }
 
-// NewOptInstallTemplateBody returns new OptInstallTemplateBody with value set to v.
-func NewOptInstallTemplateBody(v InstallTemplateBody) OptInstallTemplateBody {
-	return OptInstallTemplateBody{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptInstallTemplateBody is optional InstallTemplateBody.
-type OptInstallTemplateBody struct {
-	Value InstallTemplateBody
-	Set   bool
-}
-
-// IsSet returns true if OptInstallTemplateBody was set.
-func (o OptInstallTemplateBody) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptInstallTemplateBody) Reset() {
-	var v InstallTemplateBody
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptInstallTemplateBody) SetTo(v InstallTemplateBody) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptInstallTemplateBody) Get() (v InstallTemplateBody, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptInstallTemplateBody) Or(d InstallTemplateBody) InstallTemplateBody {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptInstallTemplateBodySecrets returns new OptInstallTemplateBodySecrets with value set to v.
 func NewOptInstallTemplateBodySecrets(v InstallTemplateBodySecrets) OptInstallTemplateBodySecrets {
 	return OptInstallTemplateBodySecrets{

@@ -588,7 +588,7 @@ type Handler interface {
 	// `GET /templates/installs/{id}` for progress.
 	//
 	// POST /templates/{id}/install
-	InstallTemplate(ctx context.Context, req OptInstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error)
+	InstallTemplate(ctx context.Context, req *InstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error)
 	// ListDeclinedPayments implements listDeclinedPayments operation.
 	//
 	// The 50 most recent payments your org's spend policy declined, newest

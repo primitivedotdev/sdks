@@ -36929,39 +36929,6 @@ func (s *OptGateFix) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes InstallTemplateBody as json.
-func (o OptInstallTemplateBody) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes InstallTemplateBody from json.
-func (o *OptInstallTemplateBody) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptInstallTemplateBody to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptInstallTemplateBody) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptInstallTemplateBody) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes InstallTemplateBodySecrets as json.
 func (o OptInstallTemplateBodySecrets) Encode(e *jx.Encoder) {
 	if !o.Set {

@@ -608,7 +608,7 @@ type Invoker interface {
 	// `GET /templates/installs/{id}` for progress.
 	//
 	// POST /templates/{id}/install
-	InstallTemplate(ctx context.Context, request OptInstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error)
+	InstallTemplate(ctx context.Context, request *InstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error)
 	// ListDeclinedPayments invokes listDeclinedPayments operation.
 	//
 	// The 50 most recent payments your org's spend policy declined, newest
@@ -8096,12 +8096,12 @@ func (c *Client) sendGetWebhookSecret(ctx context.Context) (res GetWebhookSecret
 // `GET /templates/installs/{id}` for progress.
 //
 // POST /templates/{id}/install
-func (c *Client) InstallTemplate(ctx context.Context, request OptInstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error) {
+func (c *Client) InstallTemplate(ctx context.Context, request *InstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error) {
 	res, err := c.sendInstallTemplate(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendInstallTemplate(ctx context.Context, request OptInstallTemplateBody, params InstallTemplateParams) (res InstallTemplateRes, err error) {
+func (c *Client) sendInstallTemplate(ctx context.Context, request *InstallTemplateBody, params InstallTemplateParams) (res InstallTemplateRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("installTemplate"),
 		semconv.HTTPRequestMethodKey.String("POST"),

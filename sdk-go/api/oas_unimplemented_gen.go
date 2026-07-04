@@ -755,7 +755,7 @@ func (UnimplementedHandler) GetWebhookSecret(ctx context.Context) (r GetWebhookS
 // `GET /templates/installs/{id}` for progress.
 //
 // POST /templates/{id}/install
-func (UnimplementedHandler) InstallTemplate(ctx context.Context, req OptInstallTemplateBody, params InstallTemplateParams) (r InstallTemplateRes, _ error) {
+func (UnimplementedHandler) InstallTemplate(ctx context.Context, req *InstallTemplateBody, params InstallTemplateParams) (r InstallTemplateRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

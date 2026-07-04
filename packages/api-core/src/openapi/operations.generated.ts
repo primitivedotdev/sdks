@@ -12229,7 +12229,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
-    "bodyRequired": false,
+    "bodyRequired": true,
     "command": "install-template",
     "description": "Start a one-shot deploy of an approved deploy-mode Function template.\nThe response returns an install record immediately; poll\n`GET /templates/installs/{id}` for progress.\n",
     "hasJsonBody": true,

@@ -5767,7 +5767,10 @@ export const openapiDocument: Record<string, unknown> = {
                         "data": {
                           "$ref": "#/components/schemas/TemplateRegistryPage"
                         }
-                      }
+                      },
+                      "required": [
+                        "data"
+                      ]
                     }
                   ]
                 }
@@ -5820,7 +5823,10 @@ export const openapiDocument: Record<string, unknown> = {
                         "data": {
                           "$ref": "#/components/schemas/TemplateRegistryDetail"
                         }
-                      }
+                      },
+                      "required": [
+                        "data"
+                      ]
                     }
                   ]
                 }
@@ -5865,7 +5871,7 @@ export const openapiDocument: Record<string, unknown> = {
           }
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -5890,7 +5896,10 @@ export const openapiDocument: Record<string, unknown> = {
                         "data": {
                           "$ref": "#/components/schemas/TemplateInstallStatus"
                         }
-                      }
+                      },
+                      "required": [
+                        "data"
+                      ]
                     }
                   ]
                 }
@@ -5943,7 +5952,7 @@ export const openapiDocument: Record<string, unknown> = {
             "schema": {
               "type": "string",
               "format": "uuid",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
             }
           }
         ],
@@ -5963,7 +5972,10 @@ export const openapiDocument: Record<string, unknown> = {
                         "data": {
                           "$ref": "#/components/schemas/TemplateInstallStatus"
                         }
-                      }
+                      },
+                      "required": [
+                        "data"
+                      ]
                     }
                   ]
                 }

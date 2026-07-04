@@ -11,7 +11,6 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.install_template_body import InstallTemplateBody
 from ...models.install_template_response_201 import InstallTemplateResponse201
-from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,7 +18,7 @@ from typing import cast
 def _get_kwargs(
     id: str,
     *,
-    body: InstallTemplateBody | Unset = UNSET,
+    body: InstallTemplateBody,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
@@ -34,10 +33,10 @@ def _get_kwargs(
         "url": "/templates/{id}/install".format(id=quote(str(id), safe=""),),
     }
 
-    
-    if not isinstance(body, Unset):
-        _kwargs["json"] = body.to_dict()
-        headers["Content-Type"] = "application/json"
+    _kwargs["json"] = body.to_dict()
+
+
+    headers["Content-Type"] = "application/json"
 
     _kwargs["headers"] = headers
     return _kwargs
@@ -120,7 +119,7 @@ def sync_detailed(
     id: str,
     *,
     client: AuthenticatedClient,
-    body: InstallTemplateBody | Unset = UNSET,
+    body: InstallTemplateBody,
 
 ) -> Response[ErrorResponse | InstallTemplateResponse201]:
     """ Install a function template
@@ -131,7 +130,7 @@ def sync_detailed(
 
     Args:
         id (str):
-        body (InstallTemplateBody | Unset):
+        body (InstallTemplateBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -158,7 +157,7 @@ def sync(
     id: str,
     *,
     client: AuthenticatedClient,
-    body: InstallTemplateBody | Unset = UNSET,
+    body: InstallTemplateBody,
 
 ) -> ErrorResponse | InstallTemplateResponse201 | None:
     """ Install a function template
@@ -169,7 +168,7 @@ def sync(
 
     Args:
         id (str):
-        body (InstallTemplateBody | Unset):
+        body (InstallTemplateBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -191,7 +190,7 @@ async def asyncio_detailed(
     id: str,
     *,
     client: AuthenticatedClient,
-    body: InstallTemplateBody | Unset = UNSET,
+    body: InstallTemplateBody,
 
 ) -> Response[ErrorResponse | InstallTemplateResponse201]:
     """ Install a function template
@@ -202,7 +201,7 @@ async def asyncio_detailed(
 
     Args:
         id (str):
-        body (InstallTemplateBody | Unset):
+        body (InstallTemplateBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -229,7 +228,7 @@ async def asyncio(
     id: str,
     *,
     client: AuthenticatedClient,
-    body: InstallTemplateBody | Unset = UNSET,
+    body: InstallTemplateBody,
 
 ) -> ErrorResponse | InstallTemplateResponse201 | None:
     """ Install a function template
@@ -240,7 +239,7 @@ async def asyncio(
 
     Args:
         id (str):
-        body (InstallTemplateBody | Unset):
+        body (InstallTemplateBody):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

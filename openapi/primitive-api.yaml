@@ -4277,6 +4277,7 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/TemplateRegistryPage'
+                    required: [data]
         '400':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -4312,6 +4313,7 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/TemplateRegistryDetail'
+                    required: [data]
         '400':
           $ref: '#/components/responses/ValidationError'
         '404':
@@ -4338,7 +4340,7 @@ paths:
             type: string
             pattern: '^[a-z0-9][a-z0-9_-]{0,62}$'
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
@@ -4355,6 +4357,7 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/TemplateInstallStatus'
+                    required: [data]
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -4387,7 +4390,7 @@ paths:
           schema:
             type: string
             format: uuid
-            pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
       responses:
         '200':
           description: Current template install status
@@ -4400,6 +4403,7 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/TemplateInstallStatus'
+                    required: [data]
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
