@@ -113,3 +113,15 @@ cd sdk-go && go test ./... && go test -run TestSharedCompatibilityFixtures ./...
 - `docs/schema-generation.md` documents schema/codegen flow
 - `docs/repo-model.md` documents the monorepo task model
 - `RELEASE.md` documents the release process
+
+## Primitive developer resources
+
+Everything for building on [primitive.dev](https://www.primitive.dev), the email API for AI agents:
+
+- **Primitive API documentation** — [docs.primitive.dev/docs](https://docs.primitive.dev/docs) (REST reference: [/docs/api](https://docs.primitive.dev/docs/api))
+- **Primitive OpenAPI spec** — [primitive.dev/openapi.json](https://www.primitive.dev/openapi.json)
+- **Primitive authentication guide** — [/docs/auth](https://docs.primitive.dev/docs/auth)
+- **Primitive webhooks** — [/docs/endpoints](https://docs.primitive.dev/docs/endpoints)
+- **Primitive MCP server** (Claude & ChatGPT connector) — [/docs/connectors](https://docs.primitive.dev/docs/connectors)
+- **Primitive CLI** — `npm install -g primitive`
+- **Full developer-resources index** — [primitive.dev/developers](https://www.primitive.dev/developers)
