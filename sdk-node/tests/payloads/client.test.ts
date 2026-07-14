@@ -1,5 +1,11 @@
 import { createHash, randomFillSync } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +19,8 @@ interface ServerOptions {
   flakyPuts?: number;
   /** On download, corrupt the ciphertext of this chunk index (integrity path). */
   corruptChunkIndex?: number;
+  /** On GET manifest, alter a chunk hash so the manifest no longer hashes to the root. */
+  tamperManifestHash?: boolean;
 }
 
 /** In-memory Primitive Payloads server as a fetch mock. */
@@ -66,12 +74,29 @@ function makeServer(opts: ServerOptions = {}) {
       }
       if (method === "POST" && kind === "finalize")
         return json(200, { merkle_root: root, state: "ready" });
-      if (method === "GET" && kind === "manifest")
+      if (method === "GET" && kind === "manifest") {
+        const m = manifests.get(root) as {
+          chunks: { ciphertextHash: string }[];
+        };
+        const served = opts.tamperManifestHash
+          ? {
+              ...m,
+              chunks: m.chunks.map((c, i) =>
+                i === 0
+                  ? {
+                      ...c,
+                      ciphertextHash: `${c.ciphertextHash.slice(0, -1)}${c.ciphertextHash.slice(-1) === "0" ? "1" : "0"}`,
+                    }
+                  : c,
+              ),
+            }
+          : m;
         return json(200, {
           merkle_root: root,
           state: "ready",
-          manifest: manifests.get(root),
+          manifest: served,
         });
+      }
       if (method === "GET" && kind === "chunks") {
         const bytes = chunks.get(`${root}/${hash}`);
         if (!bytes) return new Response("not found", { status: 404 });
@@ -175,10 +200,30 @@ describe("payloads streaming client (offline)", () => {
     await roundTrip(3000, 1024, makeServer({ flakyPuts: 1 }));
   });
 
-  it("rejects a corrupted chunk on download (integrity check)", async () => {
+  it("rejects a corrupted chunk on download and leaves no partial file", async () => {
     const server = makeServer({ corruptChunkIndex: 1 });
     vi.stubGlobal("fetch", server.fetchMock);
     const inPath = writeRandom("in.bin", 5000);
+    const pushed = await pushFile(inPath, {
+      baseUrl: BASE,
+      apiKey: KEY,
+      chunkSize: 1024,
+    });
+    const outPath = join(dir, "out.bin");
+    await expect(
+      pullFile(pushed.merkleRoot, outPath, {
+        baseUrl: BASE,
+        apiKey: KEY,
+        cek: pushed.cek,
+      }),
+    ).rejects.toThrow(/integrity check/);
+    expect(existsSync(outPath)).toBe(false);
+  });
+
+  it("rejects a manifest whose content address does not match the request", async () => {
+    const server = makeServer({ tamperManifestHash: true });
+    vi.stubGlobal("fetch", server.fetchMock);
+    const inPath = writeRandom("in.bin", 3000);
     const pushed = await pushFile(inPath, {
       baseUrl: BASE,
       apiKey: KEY,
@@ -190,6 +235,6 @@ describe("payloads streaming client (offline)", () => {
         apiKey: KEY,
         cek: pushed.cek,
       }),
-    ).rejects.toThrow(/integrity check/);
+    ).rejects.toThrow(/content address/);
   });
 });

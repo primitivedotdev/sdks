@@ -12,7 +12,7 @@
  * model (packages/payloads-core in the API monorepo).
  */
 import { createWriteStream } from "node:fs";
-import { type FileHandle, open, stat } from "node:fs/promises";
+import { type FileHandle, open, rm, stat } from "node:fs/promises";
 
 // ── Object-model constants (must match the server's payloads-core) ──
 const CHUNK_SIZE = 64 * 1024 * 1024;
@@ -211,7 +211,11 @@ function authHeaders(apiKey: string): Record<string, string> {
 }
 
 function apiRoot(baseUrl: string): string {
-  return `${baseUrl.replace(/\/+$/, "")}/v1/payloads`;
+  // Trim trailing slashes without a regex — a `/\/+$/` on a caller-supplied URL
+  // is a polynomial-ReDoS vector (many repeated '/').
+  let end = baseUrl.length;
+  while (end > 0 && baseUrl.charCodeAt(end - 1) === 47 /* "/" */) end--;
+  return `${baseUrl.slice(0, end)}/v1/payloads`;
 }
 
 const DEFAULT_MAX_RETRIES = 6;
@@ -513,9 +517,21 @@ export async function pullFile(
   opts: PullOptions,
 ): Promise<PayloadManifest> {
   const manifest = await fetchManifest(opts, root);
+  // Content-address check: the manifest must actually describe the object at
+  // `root`. Recompute the Merkle root from the chunk hashes so a server can't
+  // substitute a manifest for a different object.
+  const computedRoot = await merkleRoot(
+    manifest.chunks.map((c) => c.ciphertextHash),
+  );
+  if (computedRoot !== root) {
+    throw new Error(
+      `manifest does not match the requested content address (got ${computedRoot})`,
+    );
+  }
   const cek = fromHex(opts.cek);
   const objectId = fromHex(manifest.objectId);
   const out = createWriteStream(outPath);
+  let failed = false;
   try {
     let done = 0;
     for (const d of manifest.chunks) {
@@ -528,10 +544,15 @@ export async function pullFile(
         await new Promise<void>((r) => out.once("drain", r));
       opts.onProgress?.("download", ++done, manifest.chunkCount);
     }
+  } catch (err) {
+    failed = true;
+    throw err;
   } finally {
     await new Promise<void>((resolve, reject) =>
       out.end((err?: Error | null) => (err ? reject(err) : resolve())),
     );
+    // Don't leave a partial/corrupt plaintext file behind on a failed download.
+    if (failed) await rm(outPath, { force: true });
   }
   return manifest;
 }
