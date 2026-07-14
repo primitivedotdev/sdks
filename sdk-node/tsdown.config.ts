@@ -10,6 +10,7 @@ export default defineConfig({
     "src/parser/index.ts",
     "src/parser/address.ts",
     "src/x402/index.ts",
+    "src/payloads/index.ts",
   ],
   format: ["esm"],
   // Keep `.js` / `.d.ts` extensions so the existing `package.json` exports map

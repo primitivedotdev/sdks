@@ -45,6 +45,11 @@
       "types": "./dist/x402/index.d.ts",
       "import": "./dist/x402/index.js",
       "default": "./dist/x402/index.js"
+    },
+    "./payloads": {
+      "types": "./dist/payloads/index.d.ts",
+      "import": "./dist/payloads/index.js",
+      "default": "./dist/payloads/index.js"
     }
   },
   "sideEffects": false,

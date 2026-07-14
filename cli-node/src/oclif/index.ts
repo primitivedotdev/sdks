@@ -39,6 +39,7 @@ import {
   MemoriesSetCommand,
 } from "./commands/memories.js";
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
+import { PayloadsPullCommand, PayloadsPushCommand } from "./commands/payloads.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
 import PaymentsChallengeFromEmailCommand from "./commands/payments-challenge-from-email.js";
@@ -610,6 +611,12 @@ export const COMMANDS: Record<string, typeof Command> = {
   "org:secrets:list": OrgSecretsListCommand,
   "org:secrets:set": OrgSecretsSetCommand,
   "org:secrets:remove": OrgSecretsRemoveCommand,
+  // `payloads:push` / `payloads:pull` stream large (multi-GB) content-addressed,
+  // end-to-end-encrypted objects up and down in bounded memory. Hand-rolled on
+  // the SDK's streaming payloads client; the routes are not on the generated
+  // client (openapi:false server-side).
+  "payloads:push": PayloadsPushCommand,
+  "payloads:pull": PayloadsPullCommand,
   // `functions:test-function` is hand-rolled to add --wait, --show-sends,
   // and --timeout on top of POST /functions/{id}/test. Without those
   // flags, agents had to manually thread queued-send + emails:wait +
