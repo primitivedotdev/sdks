@@ -348,6 +348,57 @@ async function getChunkBytes(
   return new Uint8Array(await res.arrayBuffer());
 }
 
+export interface EncodeManifestOptions {
+  chunkSize?: number;
+  /** Hex CEK for deterministic/convergent encoding (default: random). */
+  cekHex?: string;
+  /** Hex object id for deterministic encoding (default: random). */
+  objectIdHex?: string;
+}
+
+/**
+ * Encode in-memory bytes into a payload manifest (no upload). Exposed for
+ * precomputing an object's content address and for conformance-testing the
+ * chunk/crypto/Merkle construction against the server object model. With a fixed
+ * cek/objectId the output is fully deterministic.
+ */
+export async function encodeManifest(
+  bytes: Uint8Array,
+  opts: EncodeManifestOptions = {},
+): Promise<PayloadManifest> {
+  const chunkSize = opts.chunkSize ?? CHUNK_SIZE;
+  const cek = opts.cekHex ? fromHex(opts.cekHex) : randomBytes(CEK_BYTES);
+  const objectId = opts.objectIdHex
+    ? fromHex(opts.objectIdHex)
+    : randomBytes(OBJECT_ID_BYTES);
+  const chunkCount =
+    bytes.length === 0 ? 0 : Math.ceil(bytes.length / chunkSize);
+  const descriptors: ChunkDescriptor[] = [];
+  for (let index = 0; index < chunkCount; index++) {
+    const start = index * chunkSize;
+    const plaintext = bytes.subarray(
+      start,
+      Math.min(start + chunkSize, bytes.length),
+    );
+    const ciphertext = await encryptChunk(cek, objectId, index, plaintext);
+    descriptors.push({
+      index,
+      ciphertextHash: await contentHashHex(ciphertext),
+      plaintextSize: plaintext.length,
+      ciphertextSize: ciphertext.length,
+    });
+  }
+  return {
+    version: MANIFEST_VERSION,
+    objectId: toHex(objectId),
+    chunkSize,
+    totalPlaintextSize: bytes.length,
+    chunkCount,
+    chunks: descriptors,
+    merkleRoot: await merkleRoot(descriptors.map((d) => d.ciphertextHash)),
+  };
+}
+
 // ── Streaming file I/O ──
 async function readWindow(
   fh: FileHandle,
