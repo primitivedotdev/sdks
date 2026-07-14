@@ -1,0 +1,44 @@
+{
+  "_comment": "Cross-implementation conformance vector for the Primitive Payloads object model. Generated from the SERVER reference implementation (@primitivedotdev/payloads-core in the primitive mono-repo). Any payloads client (this SDK, and future Python/Go SDKs) MUST reproduce `expectedManifest` byte-for-byte for the given input + cek + objectId. A mismatch means the client crypto / content-addressing / Merkle construction has drifted from the server and would break interop, cross-decrypt, and content-address dedup. Regenerate from the mono-repo (packages/payloads-format) whenever the object model changes.",
+  "input": {
+    "sizeBytes": 200000,
+    "recipe": "byteAt(i) = (i * 31 + 7) & 0xff"
+  },
+  "cekHex": "01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3da",
+  "objectIdHex": "03101d2a3744515e6b7885929facb9c6",
+  "chunkSize": 65536,
+  "expectedManifest": {
+    "version": 1,
+    "objectId": "03101d2a3744515e6b7885929facb9c6",
+    "chunkSize": 65536,
+    "totalPlaintextSize": 200000,
+    "chunkCount": 4,
+    "chunks": [
+      {
+        "index": 0,
+        "ciphertextHash": "fa778a503267e363b40ca0140fe701c5498b449195c9fa673ca1e73bcf8455f4",
+        "plaintextSize": 65536,
+        "ciphertextSize": 65552
+      },
+      {
+        "index": 1,
+        "ciphertextHash": "60776e6b061d9d2012954d4c2d117fc05b294a679c81f083c59be9f1fa7d4c47",
+        "plaintextSize": 65536,
+        "ciphertextSize": 65552
+      },
+      {
+        "index": 2,
+        "ciphertextHash": "ddee83984dbb39ae328106b3a5216f2e40f9e98ec79c3a695b0b2b8707692e8c",
+        "plaintextSize": 65536,
+        "ciphertextSize": 65552
+      },
+      {
+        "index": 3,
+        "ciphertextHash": "d4b069a6d54cf5a6400d591ce08e2bb4f10bc02cf4221abd21a9cf16d8924322",
+        "plaintextSize": 3392,
+        "ciphertextSize": 3408
+      }
+    ],
+    "merkleRoot": "424c887d687ae7bfdd7b8882901b53913515c63531fb25da026de91ddae135ff"
+  }
+}
