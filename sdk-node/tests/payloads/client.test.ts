@@ -237,4 +237,25 @@ describe("payloads streaming client (offline)", () => {
       }),
     ).rejects.toThrow(/content address/);
   });
+
+  it("surfaces an output write error as a rejection (no uncaught crash)", async () => {
+    const server = makeServer();
+    vi.stubGlobal("fetch", server.fetchMock);
+    const inPath = writeRandom("in.bin", 3000);
+    const pushed = await pushFile(inPath, {
+      baseUrl: BASE,
+      apiKey: KEY,
+      chunkSize: 1024,
+    });
+    // Parent directory does not exist → the write stream emits an ENOENT error.
+    const badOut = join(dir, "missing-subdir", "out.bin");
+    await expect(
+      pullFile(pushed.merkleRoot, badOut, {
+        baseUrl: BASE,
+        apiKey: KEY,
+        cek: pushed.cek,
+      }),
+    ).rejects.toThrow();
+    expect(existsSync(badOut)).toBe(false);
+  });
 });

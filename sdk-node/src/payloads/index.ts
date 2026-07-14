@@ -531,7 +531,16 @@ export async function pullFile(
   const cek = fromHex(opts.cek);
   const objectId = fromHex(manifest.objectId);
   const out = createWriteStream(outPath);
-  let failed = false;
+  // Surface async write failures (disk full, EIO) as a rejection: without an
+  // 'error' listener the stream would throw an uncaught error and crash the
+  // process, bypassing the cleanup below.
+  let onWriteError: (err: Error) => void = () => {};
+  const writeErrored = new Promise<never>((_, reject) => {
+    onWriteError = reject;
+  });
+  writeErrored.catch(() => {}); // never an unhandled rejection on the happy path
+  out.on("error", (err: Error) => onWriteError(err));
+
   try {
     let done = 0;
     for (const d of manifest.chunks) {
@@ -540,19 +549,23 @@ export async function pullFile(
         throw new Error(`chunk ${d.index} failed integrity check`);
       }
       const plaintext = await decryptChunk(cek, objectId, d.index, ciphertext);
-      if (!out.write(plaintext))
-        await new Promise<void>((r) => out.once("drain", r));
+      if (!out.write(plaintext)) {
+        await Promise.race([
+          new Promise<void>((resolve) => out.once("drain", resolve)),
+          writeErrored,
+        ]);
+      }
       opts.onProgress?.("download", ++done, manifest.chunkCount);
     }
+    await Promise.race([
+      new Promise<void>((resolve) => out.end(resolve)),
+      writeErrored,
+    ]);
   } catch (err) {
-    failed = true;
-    throw err;
-  } finally {
-    await new Promise<void>((resolve, reject) =>
-      out.end((err?: Error | null) => (err ? reject(err) : resolve())),
-    );
     // Don't leave a partial/corrupt plaintext file behind on a failed download.
-    if (failed) await rm(outPath, { force: true });
+    out.destroy();
+    await rm(outPath, { force: true });
+    throw err;
   }
   return manifest;
 }
