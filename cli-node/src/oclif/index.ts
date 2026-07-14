@@ -39,9 +39,12 @@ import {
   MemoriesSetCommand,
 } from "./commands/memories.js";
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
-import { PayloadsPullCommand, PayloadsPushCommand } from "./commands/payloads.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
+import {
+  PayloadsPullCommand,
+  PayloadsPushCommand,
+} from "./commands/payloads.js";
 import PaymentsChallengeFromEmailCommand from "./commands/payments-challenge-from-email.js";
 import PaymentsChargeCommand from "./commands/payments-charge.js";
 import PaymentsPayCommand from "./commands/payments-pay.js";
