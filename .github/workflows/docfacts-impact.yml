@@ -1,0 +1,16 @@
+# Report-only: comments on PRs that touch code cited as evidence by documented
+# claims. Never blocks a merge. Requires the DOCFACTS_READ_TOKEN secret.
+name: docfacts-impact
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  pull-requests: write
+  contents: read
+jobs:
+  impact:
+    uses: primitivedotdev/docfacts/.github/workflows/impact.yml@42413cfcb2d9ff116f60ba34d48b5843cc9e83a8 # pin: docfacts main; bump deliberately
+    with:
+      repo_key: sdks
+    secrets:
+      docfacts_read_token: ${{ secrets.DOCFACTS_READ_TOKEN }}
