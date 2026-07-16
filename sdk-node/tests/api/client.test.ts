@@ -1260,6 +1260,27 @@ describe("PrimitiveClient send-by-reference + sendAttachment", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("sendAttachment rejects when both content and path are given", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: vi.fn<typeof fetch>() as typeof fetch,
+    });
+    await expect(
+      client.sendAttachment({
+        from: "a@example.com",
+        to: "b@example.com",
+        subject: "Hi",
+        bodyText: "x",
+        attachment: {
+          filename: "x.bin",
+          content: new Uint8Array([1]),
+          path: "/tmp/x.bin",
+        },
+      }),
+    ).rejects.toThrow(/not both/);
+  });
+
   it("sendAttachment uploads large content and sends it by reference", async () => {
     let uploadCalls = 0;
     let sentBody:

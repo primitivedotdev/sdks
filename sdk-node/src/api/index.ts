@@ -1137,6 +1137,11 @@ export class PrimitiveClient extends PrimitiveApiClient {
     options?: RequestOptions,
   ): Promise<SendResult> {
     const { attachment, inlineThreshold, ...rest } = input;
+    if (attachment.content !== undefined && attachment.path !== undefined) {
+      throw new TypeError(
+        "sendAttachment accepts either attachment.content or attachment.path, not both",
+      );
+    }
     const threshold = inlineThreshold ?? DEFAULT_INLINE_ATTACHMENT_MAX;
     const meta = {
       filename: attachment.filename,

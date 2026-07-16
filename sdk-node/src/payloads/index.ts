@@ -430,15 +430,26 @@ async function mapLimit<T>(
   fn: (item: T, i: number) => Promise<void>,
 ): Promise<void> {
   let next = 0;
+  let firstError: unknown;
   const worker = async (): Promise<void> => {
-    while (next < items.length) {
+    // Stop pulling new items once any worker has failed, and capture the error
+    // instead of throwing: a throwing worker would leave the OTHER in-flight
+    // workers' later rejections unhandled (Node 15+ crashes the process on an
+    // unhandled rejection) once Promise.all has already settled on the first.
+    while (next < items.length && firstError === undefined) {
       const i = next++;
-      await fn(items[i], i);
+      try {
+        await fn(items[i], i);
+      } catch (err) {
+        if (firstError === undefined) firstError = err;
+        return;
+      }
     }
   };
   await Promise.all(
     Array.from({ length: Math.min(limit, items.length || 1) }, () => worker()),
   );
+  if (firstError !== undefined) throw firstError;
 }
 
 /**
