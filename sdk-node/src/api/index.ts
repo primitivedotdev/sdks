@@ -100,7 +100,10 @@ export {
   type TrustReason,
 } from "../webhook/trust.js";
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Domain is dot-separated labels (each label excludes '.', '@', whitespace) so
+// the quantifiers don't overlap — a plain `[^\s@]+\.[^\s@]+` is a polynomial
+// ReDoS on inputs with many dots.
+const EMAIL_REGEX = /^[^\s@]+@[^\s.@]+(?:\.[^\s.@]+)+$/;
 const MAX_THREAD_REFERENCES = 100;
 const MAX_THREAD_HEADER_BYTES = 8 * 1024;
 const MAX_FROM_HEADER_LENGTH = 998;
@@ -122,7 +125,9 @@ function validateAddressHeader(field: "from" | "to", value: string): void {
 function validateEmailAddress(field: "to", value: string): void {
   if (
     !EMAIL_REGEX.test(value) &&
-    !/^.+<[^\s@]+@[^\s@]+\.[^\s@]+>$/.test(value)
+    // Display-name form: `Name <addr>`. `[^<]+` (not `.+`) before the bracket
+    // and the same dot-separated-domain shape keep this ReDoS-free.
+    !/^[^<]+<[^\s@]+@[^\s.@]+(?:\.[^\s.@]+)+>$/.test(value)
   ) {
     throw new TypeError(`${field} must be a valid email address`);
   }
