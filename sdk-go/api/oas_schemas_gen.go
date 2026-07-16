@@ -21079,6 +21079,10 @@ type SendMailInput struct {
 	// Inline attachments. Send requests with attachments to https://api.primitive.dev/v1/send-mail.
 	// Combined raw decoded attachment bytes must be at most 31457280.
 	Attachments []SendMailAttachment `json:"attachments"`
+	// Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without
+	// inlining the bytes — the way to send attachments larger than the inline cap. Upload the object
+	// via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.
+	PayloadAttachments []SendMailPayloadRef `json:"payload_attachments"`
 	// When true, wait for the first downstream SMTP delivery outcome before returning.
 	Wait OptBool `json:"wait"`
 	// Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
@@ -21123,6 +21127,11 @@ func (s *SendMailInput) GetReferences() []string {
 // GetAttachments returns the value of Attachments.
 func (s *SendMailInput) GetAttachments() []SendMailAttachment {
 	return s.Attachments
+}
+
+// GetPayloadAttachments returns the value of PayloadAttachments.
+func (s *SendMailInput) GetPayloadAttachments() []SendMailPayloadRef {
+	return s.PayloadAttachments
 }
 
 // GetWait returns the value of Wait.
@@ -21175,6 +21184,11 @@ func (s *SendMailInput) SetAttachments(val []SendMailAttachment) {
 	s.Attachments = val
 }
 
+// SetPayloadAttachments sets the value of PayloadAttachments.
+func (s *SendMailInput) SetPayloadAttachments(val []SendMailPayloadRef) {
+	s.PayloadAttachments = val
+}
+
 // SetWait sets the value of Wait.
 func (s *SendMailInput) SetWait(val OptBool) {
 	s.Wait = val
@@ -21183,6 +21197,62 @@ func (s *SendMailInput) SetWait(val OptBool) {
 // SetWaitTimeoutMs sets the value of WaitTimeoutMs.
 func (s *SendMailInput) SetWaitTimeoutMs(val OptInt) {
 	s.WaitTimeoutMs = val
+}
+
+// A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without
+// inlining the bytes — the way to send an attachment larger than the inline cap. Upload the object
+// via /v1/payloads (with a client-held CEK the server never sees), then reference it here.
+// Ref: #/components/schemas/SendMailPayloadRef
+type SendMailPayloadRef struct {
+	// The 64-char lowercase-hex Merkle root of a finalized payloads object.
+	Root string `json:"root"`
+	// Attachment filename presented to the recipient.
+	Filename string `json:"filename"`
+	// Optional MIME content type.
+	ContentType OptString `json:"content_type"`
+	// Base64url-encoded (unpadded) content-encryption key the recipient uses to decrypt. Travels with
+	// the email; the object store only ever holds ciphertext.
+	Cek string `json:"cek"`
+}
+
+// GetRoot returns the value of Root.
+func (s *SendMailPayloadRef) GetRoot() string {
+	return s.Root
+}
+
+// GetFilename returns the value of Filename.
+func (s *SendMailPayloadRef) GetFilename() string {
+	return s.Filename
+}
+
+// GetContentType returns the value of ContentType.
+func (s *SendMailPayloadRef) GetContentType() OptString {
+	return s.ContentType
+}
+
+// GetCek returns the value of Cek.
+func (s *SendMailPayloadRef) GetCek() string {
+	return s.Cek
+}
+
+// SetRoot sets the value of Root.
+func (s *SendMailPayloadRef) SetRoot(val string) {
+	s.Root = val
+}
+
+// SetFilename sets the value of Filename.
+func (s *SendMailPayloadRef) SetFilename(val string) {
+	s.Filename = val
+}
+
+// SetContentType sets the value of ContentType.
+func (s *SendMailPayloadRef) SetContentType(val OptString) {
+	s.ContentType = val
+}
+
+// SetCek sets the value of Cek.
+func (s *SendMailPayloadRef) SetCek(val string) {
+	s.Cek = val
 }
 
 // Ref: #/components/schemas/SendMailResult
