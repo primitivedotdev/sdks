@@ -11598,6 +11598,45 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ]
           }
         },
+        "payload_attachments": {
+          "type": "array",
+          "maxItems": 1,
+          "description": "Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes — the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.",
+            "properties": {
+              "root": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "The 64-char lowercase-hex Merkle root of a finalized payloads object."
+              },
+              "filename": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "description": "Attachment filename presented to the recipient."
+              },
+              "content_type": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "description": "Optional MIME content type."
+              },
+              "cek": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,128}$",
+                "description": "Base64url-encoded (unpadded) content-encryption key the recipient uses to decrypt. Travels with the email; the object store only ever holds ciphertext."
+              }
+            },
+            "required": [
+              "root",
+              "filename",
+              "cek"
+            ]
+          }
+        },
         "wait": {
           "type": "boolean",
           "description": "When true, wait for the first downstream SMTP delivery outcome before returning."

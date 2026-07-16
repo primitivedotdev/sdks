@@ -12,6 +12,7 @@ from typing import cast
 
 if TYPE_CHECKING:
   from ..models.send_mail_attachment import SendMailAttachment
+  from ..models.send_mail_payload_ref import SendMailPayloadRef
 
 
 
@@ -36,6 +37,9 @@ class SendMailInput:
             references (list[str] | Unset): Full ordered message-id chain for the thread.
             attachments (list[SendMailAttachment] | Unset): Inline attachments. Send requests with attachments to
                 https://api.primitive.dev/v1/send-mail. Combined raw decoded attachment bytes must be at most 31457280.
+            payload_attachments (list[SendMailPayloadRef] | Unset): Deliver an already-uploaded Primitive Payloads object as
+                an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap.
+                Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.
             wait (bool | Unset): When true, wait for the first downstream SMTP delivery outcome before returning.
             wait_timeout_ms (int | Unset): Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
      """
@@ -48,6 +52,7 @@ class SendMailInput:
     in_reply_to: str | Unset = UNSET
     references: list[str] | Unset = UNSET
     attachments: list[SendMailAttachment] | Unset = UNSET
+    payload_attachments: list[SendMailPayloadRef] | Unset = UNSET
     wait: bool | Unset = UNSET
     wait_timeout_ms: int | Unset = UNSET
 
@@ -57,6 +62,7 @@ class SendMailInput:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.send_mail_attachment import SendMailAttachment
+        from ..models.send_mail_payload_ref import SendMailPayloadRef
         from_ = self.from_
 
         to = self.to
@@ -84,6 +90,15 @@ class SendMailInput:
 
 
 
+        payload_attachments: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.payload_attachments, Unset):
+            payload_attachments = []
+            for payload_attachments_item_data in self.payload_attachments:
+                payload_attachments_item = payload_attachments_item_data.to_dict()
+                payload_attachments.append(payload_attachments_item)
+
+
+
         wait = self.wait
 
         wait_timeout_ms = self.wait_timeout_ms
@@ -106,6 +121,8 @@ class SendMailInput:
             field_dict["references"] = references
         if attachments is not UNSET:
             field_dict["attachments"] = attachments
+        if payload_attachments is not UNSET:
+            field_dict["payload_attachments"] = payload_attachments
         if wait is not UNSET:
             field_dict["wait"] = wait
         if wait_timeout_ms is not UNSET:
@@ -118,6 +135,7 @@ class SendMailInput:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.send_mail_attachment import SendMailAttachment
+        from ..models.send_mail_payload_ref import SendMailPayloadRef
         d = dict(src_dict)
         from_ = d.pop("from")
 
@@ -146,6 +164,18 @@ class SendMailInput:
                 attachments.append(attachments_item)
 
 
+        _payload_attachments = d.pop("payload_attachments", UNSET)
+        payload_attachments: list[SendMailPayloadRef] | Unset = UNSET
+        if _payload_attachments is not UNSET:
+            payload_attachments = []
+            for payload_attachments_item_data in _payload_attachments:
+                payload_attachments_item = SendMailPayloadRef.from_dict(payload_attachments_item_data)
+
+
+
+                payload_attachments.append(payload_attachments_item)
+
+
         wait = d.pop("wait", UNSET)
 
         wait_timeout_ms = d.pop("wait_timeout_ms", UNSET)
@@ -159,6 +189,7 @@ class SendMailInput:
             in_reply_to=in_reply_to,
             references=references,
             attachments=attachments,
+            payload_attachments=payload_attachments,
             wait=wait,
             wait_timeout_ms=wait_timeout_ms,
         )

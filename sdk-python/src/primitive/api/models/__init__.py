@@ -317,6 +317,7 @@ from .semantic_search_snippet import SemanticSearchSnippet
 from .send_email_response_200 import SendEmailResponse200
 from .send_mail_attachment import SendMailAttachment
 from .send_mail_input import SendMailInput
+from .send_mail_payload_ref import SendMailPayloadRef
 from .send_mail_result import SendMailResult
 from .send_permission_address import SendPermissionAddress
 from .send_permission_address_type import SendPermissionAddressType
@@ -771,6 +772,7 @@ __all__ = (
     "SendEmailResponse200",
     "SendMailAttachment",
     "SendMailInput",
+    "SendMailPayloadRef",
     "SendMailResult",
     "SendPermissionAddress",
     "SendPermissionAddressType",

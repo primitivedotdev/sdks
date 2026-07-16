@@ -15,6 +15,7 @@
  * here rather than in api-core.
  */
 
+import { readFile, stat } from "node:fs/promises";
 import {
   type AgentAccountResult,
   type AgentClaimLinkResult,
@@ -51,6 +52,7 @@ import {
   type StartAgentClaimInput,
   type VerifyAgentClaimInput,
 } from "@primitivedotdev/api-core";
+import { type PushResult, pushBytes, pushFile } from "../payloads/index.js";
 import type { ReceivedEmail } from "../webhook/received-email.js";
 import { formatAddress } from "../webhook/received-email.js";
 
@@ -98,7 +100,10 @@ export {
   type TrustReason,
 } from "../webhook/trust.js";
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Domain is dot-separated labels (each label excludes '.', '@', whitespace) so
+// the quantifiers don't overlap — a plain `[^\s@]+\.[^\s@]+` is a polynomial
+// ReDoS on inputs with many dots.
+const EMAIL_REGEX = /^[^\s@]+@[^\s.@]+(?:\.[^\s.@]+)+$/;
 const MAX_THREAD_REFERENCES = 100;
 const MAX_THREAD_HEADER_BYTES = 8 * 1024;
 const MAX_FROM_HEADER_LENGTH = 998;
@@ -120,7 +125,9 @@ function validateAddressHeader(field: "from" | "to", value: string): void {
 function validateEmailAddress(field: "to", value: string): void {
   if (
     !EMAIL_REGEX.test(value) &&
-    !/^.+<[^\s@]+@[^\s@]+\.[^\s@]+>$/.test(value)
+    // Display-name form: `Name <addr>`. `[^<]+` (not `.+`) before the bracket
+    // and the same dot-separated-domain shape keep this ReDoS-free.
+    !/^[^<]+<[^\s@]+@[^\s.@]+(?:\.[^\s.@]+)+>$/.test(value)
   ) {
     throw new TypeError(`${field} must be a valid email address`);
   }
@@ -133,6 +140,28 @@ export interface SendThreadInput {
 
 export type SendAttachment = GeneratedSendMailAttachment;
 
+/**
+ * A reference to an already-uploaded Primitive Payloads object, delivered as an
+ * attachment without inlining the bytes — the way to send an attachment larger
+ * than the inline cap. Upload the object with `payloads.pushFile` / `pushBytes`
+ * (client-held CEK), then reference it here. Prefer {@link PrimitiveClient.sendAttachment},
+ * which picks inline-vs-reference by size for you.
+ */
+export interface SendPayloadReference {
+  /** 64-char lowercase-hex Merkle root of the finalized object (`PushResult.merkleRoot`). */
+  root: string;
+  /** Filename presented to the recipient. */
+  filename: string;
+  /** Optional MIME content type. */
+  contentType?: string;
+  /**
+   * Hex-encoded content-encryption key the recipient needs to decrypt — pass
+   * `PushResult.cek` verbatim. `send` converts it to the base64url the wire
+   * carries, so the whole SDK surface (push/pull/reference) stays hex.
+   */
+  cek: string;
+}
+
 export interface SendInput {
   from: string;
   to: string;
@@ -140,9 +169,43 @@ export interface SendInput {
   bodyText?: string;
   bodyHtml?: string;
   thread?: SendThreadInput;
+  /** Inline attachments (base64 content). Combined raw bytes must stay under the inline cap (~30 MiB). */
+  attachments?: SendAttachment[];
+  /** Deliver already-uploaded payloads objects by reference (v1: at most one). No size ceiling. */
+  payloadAttachments?: SendPayloadReference[];
   wait?: boolean;
   waitTimeoutMs?: number;
 }
+
+/** Attachments at or below this size are sent inline; larger ones are uploaded + referenced. */
+const DEFAULT_INLINE_ATTACHMENT_MAX = 25 * 1024 * 1024;
+
+/**
+ * Input for {@link PrimitiveClient.sendAttachment}: the normal send fields plus
+ * one attachment, given as in-memory `content` OR a file `path`. The SDK sends
+ * it inline when it's small and uploads-then-references it when it's large, so
+ * the caller never has to choose the mechanism. Provide exactly one of
+ * `content` / `path`.
+ */
+export type SendAttachmentInput = Omit<
+  SendInput,
+  "attachments" | "payloadAttachments"
+> & {
+  attachment: {
+    filename: string;
+    contentType?: string;
+    /** In-memory bytes. Use `path` for large files that shouldn't be resident. */
+    content?: Uint8Array;
+    /** Path to a file streamed from disk (bounded memory) — for large attachments. */
+    path?: string;
+  };
+  /**
+   * Size at or below which the attachment goes inline; larger ones are uploaded
+   * as an E2E-encrypted payloads object and delivered by reference. Defaults to
+   * 25 MiB (the server's inline/offload threshold).
+   */
+  inlineThreshold?: number;
+};
 
 export interface RequestOptions {
   /** Cancel the in-flight request when this signal fires. Surfaces as AbortError. */
@@ -992,6 +1055,24 @@ export class PrimitiveClient extends PrimitiveApiClient {
   /** Durable JSON key-value state for agents and Functions. */
   readonly memories: MemoriesResource = new MemoriesResource(this.client);
 
+  // Captured for sendAttachment's upload path, which talks to /v1/payloads
+  // directly (streaming, content-addressed) rather than through the generated
+  // operation client.
+  readonly #payloadApiKey: string | undefined;
+  readonly #payloadBaseUrl: string;
+
+  constructor(options: PrimitiveClientOptions = {}) {
+    super(options);
+    this.#payloadApiKey = options.apiKey;
+    // The generated config's baseUrl carries a trailing "/v1"; the payloads
+    // client appends "/v1/payloads" itself, so strip it (string ops, not a
+    // regex — the payloads module avoids regex on URLs for ReDoS safety).
+    let base = this.getConfig().baseUrl ?? "https://api.primitive.dev/v1";
+    while (base.endsWith("/")) base = base.slice(0, -1);
+    if (base.endsWith("/v1")) base = base.slice(0, -3);
+    this.#payloadBaseUrl = base;
+  }
+
   async send(input: SendInput, options?: RequestOptions): Promise<SendResult> {
     validateSendInput(input);
 
@@ -1007,6 +1088,20 @@ export class PrimitiveClient extends PrimitiveApiClient {
       ...(input.thread?.references?.length
         ? { references: input.thread.references }
         : {}),
+      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
+      ...(input.payloadAttachments?.length
+        ? {
+            payload_attachments: input.payloadAttachments.map((ref) => ({
+              root: ref.root,
+              filename: ref.filename,
+              // SDK surface is hex (matches push/pull); the wire carries base64url.
+              cek: Buffer.from(ref.cek, "hex").toString("base64url"),
+              ...(ref.contentType !== undefined
+                ? { content_type: ref.contentType }
+                : {}),
+            })),
+          }
+        : {}),
       ...(input.wait !== undefined ? { wait: input.wait } : {}),
       ...(input.waitTimeoutMs !== undefined
         ? { wait_timeout_ms: input.waitTimeoutMs }
@@ -1020,6 +1115,121 @@ export class PrimitiveClient extends PrimitiveApiClient {
       responseStyle: "fields",
     });
     return unwrapSendResult(result);
+  }
+
+  /**
+   * Send an attachment of any size in one call. Small attachments are delivered
+   * inline; large ones are uploaded as an E2E-encrypted, content-addressed
+   * Primitive Payloads object and delivered by reference — unbounded size, and
+   * streamed from disk (bounded memory) when given a `path`. Either way the
+   * recipient gets a normal attachment (Primitive agents, via the DKIM-signed
+   * reference) or a download link (any mailbox). The SDK never sees a smaller
+   * ceiling than the object model itself.
+   *
+   *   // in-memory
+   *   await client.sendAttachment({ from, to, subject, bodyText,
+   *     attachment: { filename: "note.txt", content: bytes } });
+   *   // large file, streamed
+   *   await client.sendAttachment({ from, to, subject, bodyText,
+   *     attachment: { filename: "video.mp4", path: "./video.mp4" } });
+   */
+  async sendAttachment(
+    input: SendAttachmentInput,
+    options?: RequestOptions,
+  ): Promise<SendResult> {
+    const { attachment, inlineThreshold, ...rest } = input;
+    if (attachment.content !== undefined && attachment.path !== undefined) {
+      throw new TypeError(
+        "sendAttachment accepts either attachment.content or attachment.path, not both",
+      );
+    }
+    const threshold = inlineThreshold ?? DEFAULT_INLINE_ATTACHMENT_MAX;
+    const meta = {
+      filename: attachment.filename,
+      contentType: attachment.contentType,
+    };
+
+    if (attachment.content !== undefined) {
+      return attachment.content.length <= threshold
+        ? this.#sendInline(rest, meta, attachment.content, options)
+        : this.#sendByReference(
+            rest,
+            meta,
+            await pushBytes(attachment.content, this.#pushOptions()),
+            options,
+          );
+    }
+    if (attachment.path !== undefined) {
+      const { size } = await stat(attachment.path);
+      return size <= threshold
+        ? this.#sendInline(rest, meta, await readFile(attachment.path), options)
+        : this.#sendByReference(
+            rest,
+            meta,
+            await pushFile(attachment.path, this.#pushOptions()),
+            options,
+          );
+    }
+    throw new TypeError(
+      "sendAttachment requires exactly one of attachment.content or attachment.path",
+    );
+  }
+
+  #pushOptions(): { apiKey: string; baseUrl: string } {
+    if (this.#payloadApiKey === undefined) {
+      throw new TypeError(
+        "sendAttachment requires an API key to upload a large attachment",
+      );
+    }
+    return { apiKey: this.#payloadApiKey, baseUrl: this.#payloadBaseUrl };
+  }
+
+  #sendInline(
+    rest: Omit<SendInput, "attachments" | "payloadAttachments">,
+    meta: { filename: string; contentType?: string },
+    bytes: Uint8Array,
+    options?: RequestOptions,
+  ): Promise<SendResult> {
+    return this.send(
+      {
+        ...rest,
+        attachments: [
+          {
+            filename: meta.filename,
+            content_base64: Buffer.from(bytes).toString("base64"),
+            ...(meta.contentType !== undefined
+              ? { content_type: meta.contentType }
+              : {}),
+          },
+        ],
+      },
+      options,
+    );
+  }
+
+  #sendByReference(
+    rest: Omit<SendInput, "attachments" | "payloadAttachments">,
+    meta: { filename: string; contentType?: string },
+    pushed: PushResult,
+    options?: RequestOptions,
+  ): Promise<SendResult> {
+    return this.send(
+      {
+        ...rest,
+        payloadAttachments: [
+          {
+            root: pushed.merkleRoot,
+            filename: meta.filename,
+            // Hex, matching the rest of the SDK; send() converts to base64url.
+            cek: pushed.cek,
+            ...(meta.contentType !== undefined
+              ? { contentType: meta.contentType }
+              : {}),
+          },
+        ],
+      },
+      options,
+    );
   }
 
   /**
