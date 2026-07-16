@@ -66,6 +66,7 @@ class SendCommand extends Command {
     "<%= config.bin %> send --to alice@example.com --body 'See attached.' --attachment ./report.pdf",
     "<%= config.bin %> send --to alice@example.com --from support@yourcompany.com --subject 'Quick question' --body 'Are you free Thursday?'",
     "<%= config.bin %> send --to alice@example.com --html '<p>Hello!</p>'",
+    "<%= config.bin %> send --to alice@example.com --cc bob@example.com --bcc audit@example.com --body 'Loop bob in; audit copy stays hidden.'",
     "<%= config.bin %> send --to alice@example.com --body 'Confirmed' --wait",
     "<%= config.bin %> send --to inbox@your-managed-domain.primitive.email --body 'self-loop smoke test' --wait  # any *.primitive.email address routes back to the sending account; useful for proving outbound + inbound work end-to-end",
   ];
@@ -121,6 +122,16 @@ class SendCommand extends Command {
     attachment: Flags.string({
       description:
         "Attach a file to the email. Repeatable. Sends file bytes as a MIME attachment; use --body-file only for message body text.",
+      multiple: true,
+    }),
+    cc: Flags.string({
+      description:
+        "Carbon-copy recipient. Repeatable for multiple. Cc recipients are visible to everyone who receives the message.",
+      multiple: true,
+    }),
+    bcc: Flags.string({
+      description:
+        "Blind-carbon-copy recipient. Repeatable for multiple. Bcc recipients receive the message but are not disclosed to the other recipients.",
       multiple: true,
     }),
     "in-reply-to": Flags.string({
@@ -179,6 +190,8 @@ class SendCommand extends Command {
         body: {
           from,
           to: flags.to,
+          ...(flags.cc !== undefined ? { cc: flags.cc } : {}),
+          ...(flags.bcc !== undefined ? { bcc: flags.bcc } : {}),
           subject,
           ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
           ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),

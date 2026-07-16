@@ -1892,6 +1892,14 @@ export type SendMailInput = {
      */
     to: string;
     /**
+     * Carbon-copy recipients. Either a single address or an array of addresses. Each entry must be a single address; use the array form for multiple recipients. Cc recipients are visible to everyone who receives the message. The combined number of to, cc, and bcc recipients must not exceed 100.
+     */
+    cc?: string | Array<string>;
+    /**
+     * Blind-carbon-copy recipients. Either a single address or an array of addresses. Each entry must be a single address; use the array form for multiple recipients. Bcc recipients receive the message but are not disclosed to the other recipients: no Bcc header is sent. The combined number of to, cc, and bcc recipients must not exceed 100.
+     */
+    bcc?: string | Array<string>;
+    /**
      * Subject line for the outbound message
      */
     subject: string;

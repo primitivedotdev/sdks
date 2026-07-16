@@ -16646,6 +16646,98 @@ func (o OptSemanticSearchInputMode) Or(d SemanticSearchInputMode) SemanticSearch
 	return d
 }
 
+// NewOptSendMailInputBcc returns new OptSendMailInputBcc with value set to v.
+func NewOptSendMailInputBcc(v SendMailInputBcc) OptSendMailInputBcc {
+	return OptSendMailInputBcc{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSendMailInputBcc is optional SendMailInputBcc.
+type OptSendMailInputBcc struct {
+	Value SendMailInputBcc
+	Set   bool
+}
+
+// IsSet returns true if OptSendMailInputBcc was set.
+func (o OptSendMailInputBcc) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSendMailInputBcc) Reset() {
+	var v SendMailInputBcc
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSendMailInputBcc) SetTo(v SendMailInputBcc) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSendMailInputBcc) Get() (v SendMailInputBcc, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSendMailInputBcc) Or(d SendMailInputBcc) SendMailInputBcc {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSendMailInputCc returns new OptSendMailInputCc with value set to v.
+func NewOptSendMailInputCc(v SendMailInputCc) OptSendMailInputCc {
+	return OptSendMailInputCc{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSendMailInputCc is optional SendMailInputCc.
+type OptSendMailInputCc struct {
+	Value SendMailInputCc
+	Set   bool
+}
+
+// IsSet returns true if OptSendMailInputCc was set.
+func (o OptSendMailInputCc) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSendMailInputCc) Reset() {
+	var v SendMailInputCc
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSendMailInputCc) SetTo(v SendMailInputCc) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSendMailInputCc) Get() (v SendMailInputCc, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSendMailInputCc) Or(d SendMailInputCc) SendMailInputCc {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSentEmailStatus returns new OptSentEmailStatus with value set to v.
 func NewOptSentEmailStatus(v SentEmailStatus) OptSentEmailStatus {
 	return OptSentEmailStatus{
@@ -21064,6 +21156,15 @@ type SendMailInput struct {
 	From string `json:"from"`
 	// Recipient address. Recipient eligibility depends on your account's outbound entitlements.
 	To string `json:"to"`
+	// Carbon-copy recipients. Either a single address or an array of addresses. Each entry must be a
+	// single address; use the array form for multiple recipients. Cc recipients are visible to everyone
+	// who receives the message. The combined number of to, cc, and bcc recipients must not exceed 100.
+	Cc OptSendMailInputCc `json:"cc"`
+	// Blind-carbon-copy recipients. Either a single address or an array of addresses. Each entry must be
+	// a single address; use the array form for multiple recipients. Bcc recipients receive the message
+	// but are not disclosed to the other recipients: no Bcc header is sent. The combined number of to,
+	// cc, and bcc recipients must not exceed 100.
+	Bcc OptSendMailInputBcc `json:"bcc"`
 	// Subject line for the outbound message.
 	Subject string `json:"subject"`
 	// Plain-text message body. At least one of body_text or body_html is required. The combined UTF-8
@@ -21097,6 +21198,16 @@ func (s *SendMailInput) GetFrom() string {
 // GetTo returns the value of To.
 func (s *SendMailInput) GetTo() string {
 	return s.To
+}
+
+// GetCc returns the value of Cc.
+func (s *SendMailInput) GetCc() OptSendMailInputCc {
+	return s.Cc
+}
+
+// GetBcc returns the value of Bcc.
+func (s *SendMailInput) GetBcc() OptSendMailInputBcc {
+	return s.Bcc
 }
 
 // GetSubject returns the value of Subject.
@@ -21154,6 +21265,16 @@ func (s *SendMailInput) SetTo(val string) {
 	s.To = val
 }
 
+// SetCc sets the value of Cc.
+func (s *SendMailInput) SetCc(val OptSendMailInputCc) {
+	s.Cc = val
+}
+
+// SetBcc sets the value of Bcc.
+func (s *SendMailInput) SetBcc(val OptSendMailInputBcc) {
+	s.Bcc = val
+}
+
 // SetSubject sets the value of Subject.
 func (s *SendMailInput) SetSubject(val string) {
 	s.Subject = val
@@ -21197,6 +21318,141 @@ func (s *SendMailInput) SetWait(val OptBool) {
 // SetWaitTimeoutMs sets the value of WaitTimeoutMs.
 func (s *SendMailInput) SetWaitTimeoutMs(val OptInt) {
 	s.WaitTimeoutMs = val
+}
+
+// Blind-carbon-copy recipients. Either a single address or an array of addresses. Each entry must be
+// a single address; use the array form for multiple recipients. Bcc recipients receive the message
+// but are not disclosed to the other recipients: no Bcc header is sent. The combined number of to,
+// cc, and bcc recipients must not exceed 100.
+// SendMailInputBcc represents sum type.
+type SendMailInputBcc struct {
+	Type        SendMailInputBccType // switch on this field
+	String      string
+	StringArray []string
+}
+
+// SendMailInputBccType is oneOf type of SendMailInputBcc.
+type SendMailInputBccType string
+
+// Possible values for SendMailInputBccType.
+const (
+	StringSendMailInputBcc      SendMailInputBccType = "string"
+	StringArraySendMailInputBcc SendMailInputBccType = "[]string"
+)
+
+// IsString reports whether SendMailInputBcc is string.
+func (s SendMailInputBcc) IsString() bool { return s.Type == StringSendMailInputBcc }
+
+// IsStringArray reports whether SendMailInputBcc is []string.
+func (s SendMailInputBcc) IsStringArray() bool { return s.Type == StringArraySendMailInputBcc }
+
+// SetString sets SendMailInputBcc to string.
+func (s *SendMailInputBcc) SetString(v string) {
+	s.Type = StringSendMailInputBcc
+	s.String = v
+}
+
+// GetString returns string and true boolean if SendMailInputBcc is string.
+func (s SendMailInputBcc) GetString() (v string, ok bool) {
+	if !s.IsString() {
+		return v, false
+	}
+	return s.String, true
+}
+
+// NewStringSendMailInputBcc returns new SendMailInputBcc from string.
+func NewStringSendMailInputBcc(v string) SendMailInputBcc {
+	var s SendMailInputBcc
+	s.SetString(v)
+	return s
+}
+
+// SetStringArray sets SendMailInputBcc to []string.
+func (s *SendMailInputBcc) SetStringArray(v []string) {
+	s.Type = StringArraySendMailInputBcc
+	s.StringArray = v
+}
+
+// GetStringArray returns []string and true boolean if SendMailInputBcc is []string.
+func (s SendMailInputBcc) GetStringArray() (v []string, ok bool) {
+	if !s.IsStringArray() {
+		return v, false
+	}
+	return s.StringArray, true
+}
+
+// NewStringArraySendMailInputBcc returns new SendMailInputBcc from []string.
+func NewStringArraySendMailInputBcc(v []string) SendMailInputBcc {
+	var s SendMailInputBcc
+	s.SetStringArray(v)
+	return s
+}
+
+// Carbon-copy recipients. Either a single address or an array of addresses. Each entry must be a
+// single address; use the array form for multiple recipients. Cc recipients are visible to everyone
+// who receives the message. The combined number of to, cc, and bcc recipients must not exceed 100.
+// SendMailInputCc represents sum type.
+type SendMailInputCc struct {
+	Type        SendMailInputCcType // switch on this field
+	String      string
+	StringArray []string
+}
+
+// SendMailInputCcType is oneOf type of SendMailInputCc.
+type SendMailInputCcType string
+
+// Possible values for SendMailInputCcType.
+const (
+	StringSendMailInputCc      SendMailInputCcType = "string"
+	StringArraySendMailInputCc SendMailInputCcType = "[]string"
+)
+
+// IsString reports whether SendMailInputCc is string.
+func (s SendMailInputCc) IsString() bool { return s.Type == StringSendMailInputCc }
+
+// IsStringArray reports whether SendMailInputCc is []string.
+func (s SendMailInputCc) IsStringArray() bool { return s.Type == StringArraySendMailInputCc }
+
+// SetString sets SendMailInputCc to string.
+func (s *SendMailInputCc) SetString(v string) {
+	s.Type = StringSendMailInputCc
+	s.String = v
+}
+
+// GetString returns string and true boolean if SendMailInputCc is string.
+func (s SendMailInputCc) GetString() (v string, ok bool) {
+	if !s.IsString() {
+		return v, false
+	}
+	return s.String, true
+}
+
+// NewStringSendMailInputCc returns new SendMailInputCc from string.
+func NewStringSendMailInputCc(v string) SendMailInputCc {
+	var s SendMailInputCc
+	s.SetString(v)
+	return s
+}
+
+// SetStringArray sets SendMailInputCc to []string.
+func (s *SendMailInputCc) SetStringArray(v []string) {
+	s.Type = StringArraySendMailInputCc
+	s.StringArray = v
+}
+
+// GetStringArray returns []string and true boolean if SendMailInputCc is []string.
+func (s SendMailInputCc) GetStringArray() (v []string, ok bool) {
+	if !s.IsStringArray() {
+		return v, false
+	}
+	return s.StringArray, true
+}
+
+// NewStringArraySendMailInputCc returns new SendMailInputCc from []string.
+func NewStringArraySendMailInputCc(v []string) SendMailInputCc {
+	var s SendMailInputCc
+	s.SetStringArray(v)
+	return s
 }
 
 // A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without
