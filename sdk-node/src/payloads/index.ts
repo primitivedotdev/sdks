@@ -507,6 +507,69 @@ export async function pushFile(
 }
 
 /**
+ * Push an in-memory buffer as a Primitive Payload. Same chunked, content-
+ * addressed, per-chunk-AEAD encoding as {@link pushFile}, over a Uint8Array
+ * (chunks are views, so no copy). Use {@link pushFile} for large objects that
+ * shouldn't be resident in memory. Returns the content address (merkleRoot) and
+ * the hex CEK.
+ */
+export async function pushBytes(
+  bytes: Uint8Array,
+  opts: PushOptions,
+): Promise<PushResult> {
+  const chunkSize = opts.chunkSize ?? CHUNK_SIZE;
+  const concurrency = opts.concurrency ?? 3;
+  const size = bytes.length;
+  const cek = randomBytes(CEK_BYTES);
+  const objectId = randomBytes(OBJECT_ID_BYTES);
+  const chunkCount = size === 0 ? 0 : Math.ceil(size / chunkSize);
+  const chunkOf = (index: number): Uint8Array =>
+    bytes.subarray(index * chunkSize, Math.min(size, (index + 1) * chunkSize));
+
+  // Pass 1: content-address every chunk to build the manifest.
+  const descriptors: ChunkDescriptor[] = [];
+  for (let index = 0; index < chunkCount; index++) {
+    const plaintext = chunkOf(index);
+    const ciphertext = await encryptChunk(cek, objectId, index, plaintext);
+    descriptors.push({
+      index,
+      ciphertextHash: await contentHashHex(ciphertext),
+      plaintextSize: plaintext.length,
+      ciphertextSize: ciphertext.length,
+    });
+    opts.onProgress?.("encrypt", index + 1, chunkCount);
+  }
+
+  const root = await merkleRoot(descriptors.map((d) => d.ciphertextHash));
+  const manifest: PayloadManifest = {
+    version: MANIFEST_VERSION,
+    objectId: toHex(objectId),
+    chunkSize,
+    totalPlaintextSize: size,
+    chunkCount,
+    chunks: descriptors,
+    merkleRoot: root,
+  };
+  await initiate(opts, manifest);
+
+  // Pass 2: re-encrypt (deterministic) and upload, bounded concurrency.
+  let uploaded = 0;
+  await mapLimit(descriptors, concurrency, async (d) => {
+    const ciphertext = await encryptChunk(
+      cek,
+      objectId,
+      d.index,
+      chunkOf(d.index),
+    );
+    await putChunk(opts, root, d, ciphertext);
+    opts.onProgress?.("upload", ++uploaded, chunkCount);
+  });
+
+  await finalize(opts, root);
+  return { merkleRoot: root, cek: toHex(cek), chunkCount, totalBytes: size };
+}
+
+/**
  * Stream a Primitive Payload down to a file, verifying and decrypting one chunk
  * at a time (bounded memory). Every chunk is content-address-checked before
  * decryption, so a corrupt or substituted chunk throws.

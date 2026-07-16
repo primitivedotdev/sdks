@@ -1180,3 +1180,139 @@ describe("PrimitiveClient", () => {
     } satisfies Partial<PrimitiveApiError>);
   });
 });
+
+describe("PrimitiveClient send-by-reference + sendAttachment", () => {
+  const jsonOk = (data: unknown) =>
+    new Response(JSON.stringify({ success: true, data }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+
+  it("threads payloadAttachments into the wire body as payload_attachments", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      expect(request.url).toBe("https://api.example.test/v1/send-mail");
+      expect(await request.json()).toMatchObject({
+        payload_attachments: [
+          {
+            root: "a".repeat(64),
+            filename: "big.bin",
+            content_type: "application/octet-stream",
+            cek: "Zm9v",
+          },
+        ],
+      });
+      return jsonOk(SEND_RESULT);
+    }) as typeof fetch;
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: fetchMock,
+    });
+    await client.send({
+      from: "a@example.com",
+      to: "b@example.com",
+      subject: "Hi",
+      bodyText: "x",
+      payloadAttachments: [
+        {
+          root: "a".repeat(64),
+          filename: "big.bin",
+          contentType: "application/octet-stream",
+          cek: "Zm9v",
+        },
+      ],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("sendAttachment sends small content inline", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const request = input as Request;
+      const body = (await request.json()) as {
+        attachments?: unknown[];
+        payload_attachments?: unknown[];
+      };
+      expect(body.attachments).toEqual([
+        {
+          filename: "note.txt",
+          content_base64: Buffer.from("hello").toString("base64"),
+        },
+      ]);
+      expect(body.payload_attachments).toBeUndefined();
+      return jsonOk(SEND_RESULT);
+    }) as typeof fetch;
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: fetchMock,
+    });
+    await client.sendAttachment({
+      from: "a@example.com",
+      to: "b@example.com",
+      subject: "Hi",
+      bodyText: "x",
+      attachment: {
+        filename: "note.txt",
+        content: new TextEncoder().encode("hello"),
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("sendAttachment uploads large content and sends it by reference", async () => {
+    let uploadCalls = 0;
+    let sentBody:
+      | {
+          payload_attachments?: Array<{
+            root: string;
+            filename: string;
+            cek: string;
+          }>;
+        }
+      | undefined;
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const isRequest = typeof input !== "string";
+        const url = isRequest ? (input as Request).url : String(input);
+        if (url.endsWith("/v1/send-mail")) {
+          sentBody = isRequest
+            ? await (input as Request).json()
+            : JSON.parse(String(init?.body));
+          return jsonOk(SEND_RESULT);
+        }
+        // initiate / chunk PUT / finalize — the push helpers only check res.ok.
+        uploadCalls++;
+        return new Response(null, {
+          status: url.endsWith("/v1/payloads") ? 201 : 200,
+        });
+      });
+    try {
+      const client = new PrimitiveClient({
+        apiKey: "prim_test",
+        apiBaseUrl: "https://api.example.test/v1",
+      });
+      await client.sendAttachment({
+        from: "a@example.com",
+        to: "b@example.com",
+        subject: "Hi",
+        bodyText: "x",
+        inlineThreshold: 4,
+        attachment: {
+          filename: "big.bin",
+          content: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]),
+        },
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    // The object was uploaded (initiate + chunk + finalize) before the send.
+    expect(uploadCalls).toBeGreaterThanOrEqual(3);
+    const ref = sentBody?.payload_attachments?.[0];
+    expect(ref?.filename).toBe("big.bin");
+    expect(ref?.root).toMatch(/^[0-9a-f]{64}$/);
+    // The hex push CEK is converted to base64url for the reference.
+    expect(ref?.cek).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+});
