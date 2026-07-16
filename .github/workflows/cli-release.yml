@@ -103,8 +103,8 @@ jobs:
         run: scripts/npm-wait-for-version.sh @primitivedotdev/sdk "${{ steps.sdk_version.outputs.current }}" 1200 10
 
       - name: Install cli dependencies
-        # Gated only on the version bump (not the scoped publish state) so the
-        # mirror step below can still build and recover even when the scoped
+        # Gated only on the version bump (not the primary publish state) so the
+        # mirror steps below can still build and recover even when the primary
         # package for this version is already on npm.
         if: ${{ steps.version.outputs.changed == 'true' }}
         run: make cli-install
@@ -148,7 +148,7 @@ jobs:
         # downstream GitHub release and Homebrew tap steps.
         if: ${{ steps.version.outputs.changed == 'true' }}
         continue-on-error: true
-        run: scripts/cli-mirror-publish.sh @primitivedotdev/cli "${{ steps.version.outputs.current }}"
+        run: scripts/cli-mirror-publish.sh "@primitivedotdev/cli" "${{ steps.version.outputs.current }}"
 
       - name: Check GitHub release state
         if: ${{ steps.version.outputs.changed == 'true' }}
