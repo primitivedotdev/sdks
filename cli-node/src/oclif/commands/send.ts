@@ -66,6 +66,7 @@ class SendCommand extends Command {
     "<%= config.bin %> send --to alice@example.com --body 'See attached.' --attachment ./report.pdf",
     "<%= config.bin %> send --to alice@example.com --from support@yourcompany.com --subject 'Quick question' --body 'Are you free Thursday?'",
     "<%= config.bin %> send --to alice@example.com --html '<p>Hello!</p>'",
+    "<%= config.bin %> send --to alice@example.com --cc bob@example.com --bcc audit@example.com --body 'Loop bob in; audit copy stays hidden.'",
     "<%= config.bin %> send --to alice@example.com --body 'Confirmed' --wait",
     "<%= config.bin %> send --to inbox@your-managed-domain.primitive.email --body 'self-loop smoke test' --wait  # any *.primitive.email address routes back to the sending account; useful for proving outbound + inbound work end-to-end",
   ];
