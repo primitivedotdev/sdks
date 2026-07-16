@@ -1860,6 +1860,28 @@ export type SendMailAttachment = {
     content_base64: string;
 };
 
+/**
+ * A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes — the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.
+ */
+export type SendMailPayloadRef = {
+    /**
+     * The 64-char lowercase-hex Merkle root of a finalized payloads object.
+     */
+    root: string;
+    /**
+     * Attachment filename presented to the recipient.
+     */
+    filename: string;
+    /**
+     * Optional MIME content type.
+     */
+    content_type?: string;
+    /**
+     * Base64url-encoded (unpadded) content-encryption key the recipient uses to decrypt. Travels with the email; the object store only ever holds ciphertext.
+     */
+    cek: string;
+};
+
 export type SendMailInput = {
     /**
      * RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
@@ -1901,6 +1923,10 @@ export type SendMailInput = {
      * Inline attachments. Send requests with attachments to https://api.primitive.dev/v1/send-mail. Combined raw decoded attachment bytes must be at most 31457280.
      */
     attachments?: Array<SendMailAttachment>;
+    /**
+     * Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.
+     */
+    payload_attachments?: Array<SendMailPayloadRef>;
     /**
      * When true, wait for the first downstream SMTP delivery outcome before returning.
      */
