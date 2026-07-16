@@ -354,8 +354,6 @@ describe("COMMANDS / manifest coverage", () => {
     expect(updateWarning?.timeoutInDays).toBe(1);
     expect(updateWarning?.frequency).toBe(1);
     expect(updateWarning?.frequencyUnit).toBe("days");
-    expect(updateWarning?.message).toContain(
-      "npm install -g @primitivedotdev/cli@latest",
-    );
+    expect(updateWarning?.message).toContain("npm install -g primitive@latest");
   });
 });

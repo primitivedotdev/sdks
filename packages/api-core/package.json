@@ -2,7 +2,7 @@
   "name": "@primitivedotdev/api-core",
   "version": "0.0.0",
   "private": true,
-  "description": "Workspace-internal package: TypeScript OpenAPI surface (generated fetch client, operation manifest, OpenAPI document, request/response types, and the host-aware PrimitiveApiClient) shared by @primitivedotdev/sdk and @primitivedotdev/cli. Never published; both consumers bundle this module inline.",
+  "description": "Workspace-internal package: TypeScript OpenAPI surface (generated fetch client, operation manifest, OpenAPI document, request/response types, and the host-aware PrimitiveApiClient) shared by @primitivedotdev/sdk and primitive. Never published; both consumers bundle this module inline.",
   "type": "module",
   "module": "./src/index.ts",
   "types": "./src/index.ts",

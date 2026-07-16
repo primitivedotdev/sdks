@@ -5,11 +5,12 @@ usage() {
   cat >&2 <<'USAGE'
 Usage: cli-mirror-publish.sh <mirror-package-name> <version>
 
-Publishes the cli-node artifact a second time under an unscoped mirror name
-(for example `primcli`). The scoped `@primitivedotdev/cli` package remains
-the source of truth: this packs the real CLI to capture its exact published
-file set, rewrites only the package.json "name", and republishes it verbatim so
-the two packages always ship identical contents at the same version.
+Publishes the cli-node artifact a second time under a mirror name (for
+example `primcli` or the legacy `@primitivedotdev/cli`). The unscoped
+`primitive` package remains the source of truth: this packs the real CLI to
+capture its exact published file set, rewrites only the package.json "name",
+and republishes it verbatim so the two packages always ship identical
+contents at the same version.
 
 The publish itself is delegated to npm-publish-with-retry.sh, which is a no-op
 when the requested mirror version is already on npm.
