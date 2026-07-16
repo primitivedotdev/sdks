@@ -1188,7 +1188,9 @@ describe("PrimitiveClient send-by-reference + sendAttachment", () => {
       headers: { "content-type": "application/json" },
     });
 
-  it("threads payloadAttachments into the wire body as payload_attachments", async () => {
+  it("threads payloadAttachments into the wire body, converting the hex CEK to base64url", async () => {
+    const hexCek = "deadbeef";
+    const wireCek = Buffer.from(hexCek, "hex").toString("base64url");
     const fetchMock = vi.fn<typeof fetch>(async (input) => {
       const request = input as Request;
       expect(request.url).toBe("https://api.example.test/v1/send-mail");
@@ -1198,7 +1200,7 @@ describe("PrimitiveClient send-by-reference + sendAttachment", () => {
             root: "a".repeat(64),
             filename: "big.bin",
             content_type: "application/octet-stream",
-            cek: "Zm9v",
+            cek: wireCek,
           },
         ],
       });
@@ -1219,7 +1221,7 @@ describe("PrimitiveClient send-by-reference + sendAttachment", () => {
           root: "a".repeat(64),
           filename: "big.bin",
           contentType: "application/octet-stream",
-          cek: "Zm9v",
+          cek: hexCek,
         },
       ],
     });

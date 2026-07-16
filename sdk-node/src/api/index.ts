@@ -155,9 +155,9 @@ export interface SendPayloadReference {
   /** Optional MIME content type. */
   contentType?: string;
   /**
-   * Base64url-encoded (unpadded) content-encryption key the recipient uses to
-   * decrypt. Note `PushResult.cek` is hex — convert with
-   * `Buffer.from(cek, "hex").toString("base64url")`.
+   * Hex-encoded content-encryption key the recipient needs to decrypt — pass
+   * `PushResult.cek` verbatim. `send` converts it to the base64url the wire
+   * carries, so the whole SDK surface (push/pull/reference) stays hex.
    */
   cek: string;
 }
@@ -1094,7 +1094,8 @@ export class PrimitiveClient extends PrimitiveApiClient {
             payload_attachments: input.payloadAttachments.map((ref) => ({
               root: ref.root,
               filename: ref.filename,
-              cek: ref.cek,
+              // SDK surface is hex (matches push/pull); the wire carries base64url.
+              cek: Buffer.from(ref.cek, "hex").toString("base64url"),
               ...(ref.contentType !== undefined
                 ? { content_type: ref.contentType }
                 : {}),
@@ -1219,8 +1220,8 @@ export class PrimitiveClient extends PrimitiveApiClient {
           {
             root: pushed.merkleRoot,
             filename: meta.filename,
-            // PushResult.cek is hex; the reference carries base64url.
-            cek: Buffer.from(pushed.cek, "hex").toString("base64url"),
+            // Hex, matching the rest of the SDK; send() converts to base64url.
+            cek: pushed.cek,
             ...(meta.contentType !== undefined
               ? { contentType: meta.contentType }
               : {}),
