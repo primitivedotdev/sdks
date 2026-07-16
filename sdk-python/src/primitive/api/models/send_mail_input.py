@@ -28,6 +28,13 @@ class SendMailInput:
             from_ (str): RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
             to (str): Recipient address. Recipient eligibility depends on your account's outbound entitlements.
             subject (str): Subject line for the outbound message
+            cc (list[str] | str | Unset): Carbon-copy recipients. Either a single address or an array of addresses. Each
+                entry must be a single address; use the array form for multiple recipients. Cc recipients are visible to
+                everyone who receives the message. The combined number of to, cc, and bcc recipients must not exceed 100.
+            bcc (list[str] | str | Unset): Blind-carbon-copy recipients. Either a single address or an array of addresses.
+                Each entry must be a single address; use the array form for multiple recipients. Bcc recipients receive the
+                message but are not disclosed to the other recipients: no Bcc header is sent. The combined number of to, cc, and
+                bcc recipients must not exceed 100.
             body_text (str | Unset): Plain-text message body. At least one of body_text or body_html is required. The
                 combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes.
             body_html (str | Unset): HTML message body. At least one of body_text or body_html is required. The combined
@@ -43,6 +50,8 @@ class SendMailInput:
     from_: str
     to: str
     subject: str
+    cc: list[str] | str | Unset = UNSET
+    bcc: list[str] | str | Unset = UNSET
     body_text: str | Unset = UNSET
     body_html: str | Unset = UNSET
     in_reply_to: str | Unset = UNSET
@@ -62,6 +71,26 @@ class SendMailInput:
         to = self.to
 
         subject = self.subject
+
+        cc: list[str] | str | Unset
+        if isinstance(self.cc, Unset):
+            cc = UNSET
+        elif isinstance(self.cc, list):
+            cc = self.cc
+
+
+        else:
+            cc = self.cc
+
+        bcc: list[str] | str | Unset
+        if isinstance(self.bcc, Unset):
+            bcc = UNSET
+        elif isinstance(self.bcc, list):
+            bcc = self.bcc
+
+
+        else:
+            bcc = self.bcc
 
         body_text = self.body_text
 
@@ -96,6 +125,10 @@ class SendMailInput:
             "to": to,
             "subject": subject,
         })
+        if cc is not UNSET:
+            field_dict["cc"] = cc
+        if bcc is not UNSET:
+            field_dict["bcc"] = bcc
         if body_text is not UNSET:
             field_dict["body_text"] = body_text
         if body_html is not UNSET:
@@ -124,6 +157,38 @@ class SendMailInput:
         to = d.pop("to")
 
         subject = d.pop("subject")
+
+        def _parse_cc(data: object) -> list[str] | str | Unset:
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                cc_type_1 = cast(list[str], data)
+
+                return cc_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | str | Unset, data)
+
+        cc = _parse_cc(d.pop("cc", UNSET))
+
+
+        def _parse_bcc(data: object) -> list[str] | str | Unset:
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                bcc_type_1 = cast(list[str], data)
+
+                return bcc_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | str | Unset, data)
+
+        bcc = _parse_bcc(d.pop("bcc", UNSET))
+
 
         body_text = d.pop("body_text", UNSET)
 
@@ -154,6 +219,8 @@ class SendMailInput:
             from_=from_,
             to=to,
             subject=subject,
+            cc=cc,
+            bcc=bcc,
             body_text=body_text,
             body_html=body_html,
             in_reply_to=in_reply_to,

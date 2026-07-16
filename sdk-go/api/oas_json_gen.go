@@ -38030,6 +38030,72 @@ func (s *OptSemanticSearchInputMode) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes SendMailInputBcc as json.
+func (o OptSendMailInputBcc) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SendMailInputBcc from json.
+func (o *OptSendMailInputBcc) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSendMailInputBcc to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSendMailInputBcc) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSendMailInputBcc) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SendMailInputCc as json.
+func (o OptSendMailInputCc) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SendMailInputCc from json.
+func (o *OptSendMailInputCc) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSendMailInputCc to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSendMailInputCc) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSendMailInputCc) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes SentEmailStatus as json.
 func (o OptSentEmailStatus) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -48720,6 +48786,18 @@ func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 		e.Str(s.To)
 	}
 	{
+		if s.Cc.Set {
+			e.FieldStart("cc")
+			s.Cc.Encode(e)
+		}
+	}
+	{
+		if s.Bcc.Set {
+			e.FieldStart("bcc")
+			s.Bcc.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("subject")
 		e.Str(s.Subject)
 	}
@@ -48775,17 +48853,19 @@ func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSendMailInput = [10]string{
-	0: "from",
-	1: "to",
-	2: "subject",
-	3: "body_text",
-	4: "body_html",
-	5: "in_reply_to",
-	6: "references",
-	7: "attachments",
-	8: "wait",
-	9: "wait_timeout_ms",
+var jsonFieldsNameOfSendMailInput = [12]string{
+	0:  "from",
+	1:  "to",
+	2:  "cc",
+	3:  "bcc",
+	4:  "subject",
+	5:  "body_text",
+	6:  "body_html",
+	7:  "in_reply_to",
+	8:  "references",
+	9:  "attachments",
+	10: "wait",
+	11: "wait_timeout_ms",
 }
 
 // Decode decodes SendMailInput from json.
@@ -48821,8 +48901,28 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"to\"")
 			}
+		case "cc":
+			if err := func() error {
+				s.Cc.Reset()
+				if err := s.Cc.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"cc\"")
+			}
+		case "bcc":
+			if err := func() error {
+				s.Bcc.Reset()
+				if err := s.Bcc.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"bcc\"")
+			}
 		case "subject":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := d.Str()
 				s.Subject = string(v)
@@ -48929,7 +49029,7 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
-		0b00000111,
+		0b00010011,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -48972,6 +49072,130 @@ func (s *SendMailInput) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SendMailInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SendMailInputBcc as json.
+func (s SendMailInputBcc) Encode(e *jx.Encoder) {
+	switch s.Type {
+	case StringSendMailInputBcc:
+		e.Str(s.String)
+	case StringArraySendMailInputBcc:
+		e.ArrStart()
+		for _, elem := range s.StringArray {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
+}
+
+// Decode decodes SendMailInputBcc from json.
+func (s *SendMailInputBcc) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SendMailInputBcc to nil")
+	}
+	// Sum type type_discriminator.
+	switch t := d.Next(); t {
+	case jx.Array:
+		s.StringArray = make([]string, 0)
+		if err := d.Arr(func(d *jx.Decoder) error {
+			var elem string
+			v, err := d.Str()
+			elem = string(v)
+			if err != nil {
+				return err
+			}
+			s.StringArray = append(s.StringArray, elem)
+			return nil
+		}); err != nil {
+			return err
+		}
+		s.Type = StringArraySendMailInputBcc
+	case jx.String:
+		v, err := d.Str()
+		s.String = string(v)
+		if err != nil {
+			return err
+		}
+		s.Type = StringSendMailInputBcc
+	default:
+		return errors.Errorf("unexpected json type %q", t)
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SendMailInputBcc) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SendMailInputBcc) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SendMailInputCc as json.
+func (s SendMailInputCc) Encode(e *jx.Encoder) {
+	switch s.Type {
+	case StringSendMailInputCc:
+		e.Str(s.String)
+	case StringArraySendMailInputCc:
+		e.ArrStart()
+		for _, elem := range s.StringArray {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
+}
+
+// Decode decodes SendMailInputCc from json.
+func (s *SendMailInputCc) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SendMailInputCc to nil")
+	}
+	// Sum type type_discriminator.
+	switch t := d.Next(); t {
+	case jx.Array:
+		s.StringArray = make([]string, 0)
+		if err := d.Arr(func(d *jx.Decoder) error {
+			var elem string
+			v, err := d.Str()
+			elem = string(v)
+			if err != nil {
+				return err
+			}
+			s.StringArray = append(s.StringArray, elem)
+			return nil
+		}); err != nil {
+			return err
+		}
+		s.Type = StringArraySendMailInputCc
+	case jx.String:
+		v, err := d.Str()
+		s.String = string(v)
+		if err != nil {
+			return err
+		}
+		s.Type = StringSendMailInputCc
+	default:
+		return errors.Errorf("unexpected json type %q", t)
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SendMailInputCc) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SendMailInputCc) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

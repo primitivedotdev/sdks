@@ -123,6 +123,16 @@ class SendCommand extends Command {
         "Attach a file to the email. Repeatable. Sends file bytes as a MIME attachment; use --body-file only for message body text.",
       multiple: true,
     }),
+    cc: Flags.string({
+      description:
+        "Carbon-copy recipient. Repeatable for multiple. Cc recipients are visible to everyone who receives the message.",
+      multiple: true,
+    }),
+    bcc: Flags.string({
+      description:
+        "Blind-carbon-copy recipient. Repeatable for multiple. Bcc recipients receive the message but are not disclosed to the other recipients.",
+      multiple: true,
+    }),
     "in-reply-to": Flags.string({
       description:
         "Message-Id of the parent email when threading a reply on the wire. For replying to an inbound message you received, prefer `primitive reply --id <inbound-id>`.",
@@ -179,6 +189,8 @@ class SendCommand extends Command {
         body: {
           from,
           to: flags.to,
+          ...(flags.cc !== undefined ? { cc: flags.cc } : {}),
+          ...(flags.bcc !== undefined ? { bcc: flags.bcc } : {}),
           subject,
           ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
           ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
