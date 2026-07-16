@@ -24,7 +24,7 @@ Requires Node.js 22 or newer.
 
 ## Set your API key
 
-Get a key from your [dashboard](https://primitive.dev) and export it. The library defaults to reading `PRIMITIVE_API_KEY` from the environment.
+Get a key from your [dashboard](https://primitive.dev) and export it, then pass it to the client as `apiKey` (the examples below read it from `process.env.PRIMITIVE_API_KEY`).
 
 ```bash
 export PRIMITIVE_API_KEY=prim_...
@@ -84,7 +84,7 @@ const result = await client.send({
 console.log(result.id, result.status, result.queueId, result.deliveryStatus);
 ```
 
-`send`, `reply`, and `forward` keep the HTTP request open until Primitive's downstream SMTP transaction completes. In production, configure your runtime or transport with a request timeout long enough for SMTP delivery, typically 30 to 60 seconds.
+By default `send`, `reply`, and `forward` return as soon as Primitive accepts the message for delivery. On `send` and `reply`, pass `wait: true` to keep the HTTP request open until the first downstream SMTP delivery outcome; in that mode, configure your runtime or transport with a request timeout long enough for SMTP delivery, typically 30 to 60 seconds.
 
 ### Per-call request options
 
@@ -340,9 +340,9 @@ const built = await x402.payEmailChallenge(issued, { signer: payer });
 // client above). The platform reads the envelope, re-derives the
 // interaction-bound nonce, and settles on chain.
 import { Buffer } from "node:buffer";
-import { createClient } from "@primitivedotdev/sdk";
+import primitive from "@primitivedotdev/sdk";
 
-const mail = createClient({ apiKey: process.env.PRIMITIVE_API_KEY! });
+const mail = primitive.client({ apiKey: process.env.PRIMITIVE_API_KEY! });
 await mail.reply(challengeEmail, {
   text: "Payment attached.",
   attachments: [

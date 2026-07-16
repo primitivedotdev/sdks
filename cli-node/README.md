@@ -172,7 +172,7 @@ The signing commands (`register-payout-address`, `pay`, `pay-email`, and `pay-em
 export PRIMITIVE_X402_PRIVATE_KEY=0x...
 ```
 
-A hidden `--private-key` flag is available as an escape hatch for scripted use, but the environment variable is preferred. The non-signing commands (`charge`, `get-challenge`, `list-payout-addresses`, `get-spend-policy`, `update-spend-policy`) need only your Primitive API key. Run `primitive payments <command> --help` for the full flag list of any command.
+A `--private-key` flag is available as an escape hatch for scripted use, but the environment variable is preferred. The non-signing commands (`charge`, `get-challenge`, `list-payout-addresses`, `get-spend-policy`, `update-spend-policy`) need only your Primitive API key. Run `primitive payments <command> --help` for the full flag list of any command.
 
 ## Migrating from `@primitivedotdev/sdk` CLI
 

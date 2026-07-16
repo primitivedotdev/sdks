@@ -67,9 +67,11 @@ result = client.send(
 print(result.id, result.status, result.queue_id, result.delivery_status)
 ```
 
-`send`, `reply`, and `forward` keep the HTTP request open until Primitive's
-downstream SMTP transaction completes. In production, configure the client with
-a request timeout long enough for SMTP delivery, typically 30-60 seconds:
+By default `send`, `reply`, and `forward` return as soon as Primitive accepts
+the message for delivery. On `send` and `reply`, pass `wait=True` to keep the
+HTTP request open until the first downstream SMTP delivery outcome; in that
+mode, configure the client with a request timeout long enough for SMTP
+delivery, typically 30-60 seconds:
 
 ```python
 client = primitive.client(api_key="prim_test", timeout=60.0)

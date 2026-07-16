@@ -85,9 +85,10 @@ The repository separates orchestration from environment setup.
 
 ## CI Model
 
-`.github/workflows/sdk-checks.yml` runs four categories of checks:
+`.github/workflows/sdk-checks.yml` runs five categories of checks:
 
 - Node SDK checks
+- Node CLI checks
 - Python SDK checks
 - Go SDK checks
 - shared fixture compatibility checks across all three SDKs
@@ -111,4 +112,4 @@ When changing the HTTP API contract:
 1. update `openapi/primitive-api.yaml`
 2. regenerate the Node, Python, and Go API clients
 3. run `make node-check python-check go-check`
-4. verify the Node smoke test still exposes `api`, `openapi`, and the CLI bin
+4. verify the Node smoke test still exposes `api` and `openapi` (and still confirms the SDK tarball installs no `primitive` bin; the CLI bin is exercised by the separate CLI smoke test)

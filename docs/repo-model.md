@@ -47,7 +47,7 @@ This keeps the repo easy to operate without forcing one language ecosystem to be
 
 ## Notes
 
-- `sdk-node/pnpm-workspace.yaml` is package-local Node configuration, not a repo-wide workspace definition
+- the root `pnpm-workspace.yaml` defines a pnpm workspace covering only the Node packages (`cli-node`, `sdk-node`, `packages/*`); it does not govern the Python or Go SDKs
 - changes to the webhook contract should usually touch `json-schema/`, generated artifacts, and `test-fixtures/` together
 - changes to the HTTP API contract should usually touch `openapi/` and the generated API clients in all three SDKs together
 - SDK-specific helpers can remain local to a package as long as shared webhook behavior stays consistent across languages
