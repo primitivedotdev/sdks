@@ -1,11 +1,11 @@
 import { defineConfig } from "tsdown";
 
 // Bundle the CLI through tsdown so api-core's source is inlined
-// into the published @primitivedotdev/cli tarball. The historical
+// into the published primitive tarball. The historical
 // `tsc -p tsconfig.oclif.json` build emitted per-file output, which
 // would leave a bare `import "@primitivedotdev/api-core"` in
 // dist/oclif/index.js that resolves to nothing for a customer who
-// only installed @primitivedotdev/cli (api-core is private and
+// only installed primitive (api-core is private and
 // never published).
 //
 // Two entry points are listed under the historical `oclif/` output

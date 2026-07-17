@@ -314,7 +314,7 @@ describe("renderPackageJson", () => {
     expect(parsed.devDependencies.esbuild).toMatch(/^\^/);
   });
 
-  it("includes @primitivedotdev/cli as a devDependency so node_modules/.bin/primitive resolves to the new CLI, not the SDK alias", () => {
+  it("includes primitive as a devDependency so node_modules/.bin/primitive resolves to the new CLI, not the SDK alias", () => {
     // AGX feedback: scaffolded projects with only the SDK as a dep
     // hit the SDK package's deprecated CLI bin every time `npm run
     // deploy` runs, which prints the "CLI moved" stderr banner.
@@ -323,11 +323,11 @@ describe("renderPackageJson", () => {
     const parsed = JSON.parse(raw) as {
       devDependencies: Record<string, string>;
     };
-    expect(parsed.devDependencies["@primitivedotdev/cli"]).toMatch(/^\^/);
+    expect(parsed.devDependencies["primitive"]).toMatch(/^\^/);
   });
 
-  it("ships @primitivedotdev/cli at a range that includes this CLI's own published version", () => {
-    // Regression guard: the scaffolded @primitivedotdev/cli devDep
+  it("ships primitive at a range that includes this CLI's own published version", () => {
+    // Regression guard: the scaffolded primitive devDep
     // must include this CLI's own version. Otherwise a `primitive
     // functions:init` run from CLI 0.26 could scaffold a project
     // pinned at ^0.25.0, silently downgrading the bin the user just
@@ -342,7 +342,7 @@ describe("renderPackageJson", () => {
     const scaffolded = JSON.parse(renderPackageJson("test-fn")) as {
       devDependencies: Record<string, string>;
     };
-    const range = scaffolded.devDependencies["@primitivedotdev/cli"];
+    const range = scaffolded.devDependencies["primitive"];
 
     // Range must be a caret on a 3-part semver: ^X.Y.Z.
     const rangeMatch = range.match(/^\^(\d+)\.(\d+)\.(\d+)$/);

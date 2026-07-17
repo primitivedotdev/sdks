@@ -11,7 +11,7 @@ The Primitive SDKs monorepo. Four published artifacts, all generated from the sa
 | `sdk-node/` | `@primitivedotdev/sdk` | `npm install @primitivedotdev/sdk` |
 | `sdk-python/` | `primitivedotdev` (PyPI) | `pip install primitivedotdev` |
 | `sdk-go/` | `github.com/primitivedotdev/sdks/sdk-go` | `go get github.com/primitivedotdev/sdks/sdk-go@latest` |
-| `cli-node/` | `@primitivedotdev/cli` | `npm install -g @primitivedotdev/cli` |
+| `cli-node/` | `primitive` | `npm install -g primitive` |
 
 Plus one workspace-internal package at `packages/api-core/` that ships the generated TypeScript API client and is bundled inline into the Node SDK + CLI.
 
@@ -47,7 +47,7 @@ make node-generate python-generate go-generate
 
 # Run the per-language full check (includes generated-file-sync gate)
 make node-check          # @primitivedotdev/sdk + packages/api-core
-make cli-check           # @primitivedotdev/cli
+make cli-check           # primitive
 make python-check        # primitivedotdev (PyPI)
 make go-check            # sdk-go
 

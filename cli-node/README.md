@@ -1,4 +1,4 @@
-# @primitivedotdev/cli
+# primitive
 
 Official Primitive CLI. Deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal.
 
@@ -10,18 +10,18 @@ primitive whoami
 Or with npm:
 
 ```bash
-npm install -g @primitivedotdev/cli
+npm install -g primitive
 primitive whoami
 # `prim` is installed as a short alias for the same CLI.
 prim whoami
 ```
 
-The same CLI is also published unscoped as [`primcli`](https://www.npmjs.com/package/primcli). `npm install -g primcli` installs an identical build with the same `primitive`/`prim` commands. Use whichever name you prefer; they track the same version.
+The same CLI is also published as [`primcli`](https://www.npmjs.com/package/primcli) and under the legacy scoped name [`@primitivedotdev/cli`](https://www.npmjs.com/package/@primitivedotdev/cli). Each installs an identical build with the same `primitive`/`prim` commands. Use whichever name you prefer; they track the same version.
 
 Or with no install:
 
 ```bash
-npx @primitivedotdev/cli@latest <command>
+npx primitive@latest <command>
 ```
 
 This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@primitivedotdev/sdk) runtime client with one-shot commands. For in-handler use (calling Primitive from inside a Function), import `createPrimitiveClient` from `@primitivedotdev/sdk/api` directly; the CLI is for operator and deploy workflows.
@@ -180,10 +180,10 @@ The CLI previously shipped inside `@primitivedotdev/sdk`. The shipped surface ar
 
 | Before | After |
 |--------|-------|
-| `npm install -g @primitivedotdev/sdk` | `npm install -g @primitivedotdev/cli` |
-| `npx @primitivedotdev/sdk@latest <cmd>` | `npx @primitivedotdev/cli@latest <cmd>` |
+| `npm install -g @primitivedotdev/sdk` | `npm install -g primitive` |
+| `npx @primitivedotdev/sdk@latest <cmd>` | `npx primitive@latest <cmd>` |
 
-`@primitivedotdev/sdk` continues to ship the runtime SDK (webhook, API client, contract, parser, openapi). Use it in your application code; use `@primitivedotdev/cli` in your shell and CI.
+`@primitivedotdev/sdk` continues to ship the runtime SDK (webhook, API client, contract, parser, openapi). Use it in your application code; use `primitive` in your shell and CI.
 
 ## License
 

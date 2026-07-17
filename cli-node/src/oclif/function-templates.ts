@@ -54,7 +54,7 @@ export const PRIMITIVE_TEAM_AUTHOR: FunctionTemplateAuthor = {
 const SDK_VERSION_RANGE = "^1.22.0";
 
 // The CLI version range that ships in the scaffolded devDependencies.
-// Pinned separately from SDK_VERSION_RANGE because @primitivedotdev/cli
+// Pinned separately from SDK_VERSION_RANGE because primitive
 // and @primitivedotdev/sdk are independent packages on independent
 // release cadences. Coupling them silently breaks `npm install` in
 // every scaffolded project the day we bump one without publishing the
@@ -340,13 +340,13 @@ export function renderPackageJson(name: string): string {
       "@primitivedotdev/sdk": SDK_VERSION_RANGE,
     },
     devDependencies: {
-      // @primitivedotdev/cli ships the primitive bin. Including it as
+      // primitive ships the primitive bin. Including it as
       // a devDep here means `node_modules/.bin/primitive` resolves to
       // the real CLI inside the scaffolded project so `npm run deploy`
       // works without a global install. Pinned via CLI_VERSION_RANGE,
       // a dedicated constant so the version is decoupled from the SDK
       // range and bumps are explicit on both ends.
-      "@primitivedotdev/cli": CLI_VERSION_RANGE,
+      primitive: CLI_VERSION_RANGE,
       esbuild: ESBUILD_VERSION_RANGE,
       typescript: "^5.7.2",
     },
@@ -419,9 +419,9 @@ npm run deploy
 \`\`\`
 
 The deploy step calls \`primitive functions deploy --wait\` (provided
-by the \`@primitivedotdev/cli\` package; install with
-\`npm install -g @primitivedotdev/cli\` or run via
-\`npx @primitivedotdev/cli@latest <command>\`). It requires
+by the \`primitive\` package; install with
+\`npm install -g primitive\` or run via
+\`npx primitive@latest <command>\`). It requires
 \`PRIMITIVE_API_KEY\` to be set in your shell (or pass \`--api-key\`).
 Run \`primitive signin\` once to save a key in your CLI config if you
 prefer that to an env var.
@@ -496,7 +496,7 @@ export const FUNCTION_TEMPLATES: FunctionTemplate[] = [
     dependencies: ["@primitivedotdev/sdk"],
     description:
       "A deployable TypeScript email handler that verifies signed email.received events, skips likely loops, and replies with the Primitive SDK.",
-    devDependencies: ["@primitivedotdev/cli", "esbuild", "typescript"],
+    devDependencies: ["primitive", "esbuild", "typescript"],
     files: ({ name }) => renderEmailReplyTemplateFiles(name),
     id: DEFAULT_FUNCTION_TEMPLATE_ID,
     secrets: [],

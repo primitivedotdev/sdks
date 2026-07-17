@@ -21,8 +21,9 @@
  *   forbiddenName...   Optional extra forbidden specifier names. Always
  *                      includes "@primitivedotdev/api-core". Pass
  *                      "@primitivedotdev/sdk" for cli-node's check, or
- *                      "@primitivedotdev/cli" for sdk-node's check, to
- *                      pin the no-cross-dep invariant too.
+ *                      "primitive" (and its legacy scoped mirror
+ *                      "@primitivedotdev/cli") for sdk-node's check,
+ *                      to pin the no-cross-dep invariant too.
  *
  * Exits 0 on success, 1 with a diagnostic on the first offense.
  */

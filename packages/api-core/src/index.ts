@@ -4,7 +4,7 @@
  * Owns the TypeScript OpenAPI surface (generated fetch client,
  * operation manifest, OpenAPI document constant, request/response
  * types) used by both `@primitivedotdev/sdk` and
- * `@primitivedotdev/cli`.
+ * `primitive`.
  *
  * This package is never published. Consumers bundle it inline at
  * build time so the public tarballs declare neither a dependency

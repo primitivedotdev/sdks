@@ -1,5 +1,5 @@
 {
-  "name": "@primitivedotdev/cli",
+  "name": "primitive",
   "version": "1.22.0",
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
@@ -33,7 +33,7 @@
       "timeoutInDays": 1,
       "frequency": 1,
       "frequencyUnit": "days",
-      "message": "Primitive CLI update available from <%= chalk.greenBright(config.version) %> to <%= chalk.greenBright(latest) %>. Run `npm install -g @primitivedotdev/cli@latest` to update."
+      "message": "Primitive CLI update available from <%= chalk.greenBright(config.version) %> to <%= chalk.greenBright(latest) %>. Run `npm install -g primitive@latest` to update."
     },
     "topics": {
       "chat": {

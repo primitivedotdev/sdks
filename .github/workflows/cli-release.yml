@@ -88,7 +88,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.current }}
         run: |
-          if npm view "@primitivedotdev/cli@$VERSION" version >/dev/null 2>&1; then
+          if npm view "primitive@$VERSION" version >/dev/null 2>&1; then
             printf 'published=true\n' >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -103,53 +103,52 @@ jobs:
         run: scripts/npm-wait-for-version.sh @primitivedotdev/sdk "${{ steps.sdk_version.outputs.current }}" 1200 10
 
       - name: Install cli dependencies
-        # Gated only on the version bump (not the scoped publish state) so the
-        # mirror step below can still build and recover even when the scoped
+        # Gated only on the version bump (not the primary publish state) so the
+        # mirror steps below can still build and recover even when the primary
         # package for this version is already on npm.
         if: ${{ steps.version.outputs.changed == 'true' }}
         run: make cli-install
 
       - name: Publish package to npm
         if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
-        run: scripts/npm-publish-with-retry.sh --package @primitivedotdev/cli --version "${{ steps.version.outputs.current }}" --directory cli-node
+        run: scripts/npm-publish-with-retry.sh --package primitive --version "${{ steps.version.outputs.current }}" --directory cli-node
 
-      - name: Publish unscoped mirror package to npm
-        # Additive: republishes the identical CLI artifact under the unscoped
-        # `primcli` name so `npm i -g primcli` works without the scope. Locked
-        # to the same version as @primitivedotdev/cli; the publish helper is a
-        # no-op when the mirror version is already on npm.
+      - name: Publish mirror package to npm (primcli)
+        # Additive: republishes the identical CLI artifact under the `primcli`
+        # name. Locked to the same version as `primitive`; the publish helper
+        # is a no-op when the mirror version is already on npm.
         #
-        # Gated only on the version bump — NOT on the scoped package's publish
-        # state — so a run where the scoped publish already happened (e.g. the
+        # Gated only on the version bump — NOT on the primary package's publish
+        # state — so a run where the primary publish already happened (e.g. the
         # mirror failed on a prior run before its trusted publisher existed, or
         # a workflow_dispatch re-run) still attempts the mirror and recovers.
         #
-        # continue-on-error: the unscoped mirrors are additive. A mirror failure
-        # must never fail the job and skip the downstream GitHub release and
-        # Homebrew tap steps; the scoped @primitivedotdev/cli publish above is
-        # the source of truth. A failed mirror still surfaces as a step warning.
+        # continue-on-error: the mirrors are additive. A mirror failure must
+        # never fail the job and skip the downstream GitHub release and
+        # Homebrew tap steps; the unscoped `primitive` publish above — the
+        # documented primary install (`npm i -g primitive`) — is the source of
+        # truth. A failed mirror still surfaces as a step warning.
         if: ${{ steps.version.outputs.changed == 'true' }}
         continue-on-error: true
         run: scripts/cli-mirror-publish.sh primcli "${{ steps.version.outputs.current }}"
 
-      - name: Publish unscoped mirror package to npm (primitive)
-        # Additive: republishes the identical CLI artifact under the unscoped
-        # `primitive` name, the documented primary install (`npm i -g primitive`).
-        # Same artifact and version as @primitivedotdev/cli; the publish helper
-        # is a no-op when the mirror version is already on npm.
+      - name: Publish mirror package to npm (@primitivedotdev/cli)
+        # Additive: republishes the identical CLI artifact under the legacy
+        # scoped `@primitivedotdev/cli` name so existing scoped installs keep
+        # receiving releases. Same artifact and version as `primitive`; the
+        # publish helper is a no-op when the mirror version is already on npm.
         #
-        # Gated only on the version bump — NOT on the scoped package's publish
-        # state — so a run where the scoped publish already happened (e.g. the
-        # mirror failed on a prior run before its trusted publisher existed, or
-        # a workflow_dispatch re-run) still attempts the mirror and recovers.
+        # Gated only on the version bump — NOT on the primary package's publish
+        # state — so a run where the primary publish already happened still
+        # attempts the mirror and recovers.
         #
-        # Requires a trusted publisher for the `primitive` package on npm that
-        # authorizes this workflow; without it the publish fails like any other
-        # unconfigured mirror. continue-on-error keeps that failure from
-        # skipping the downstream GitHub release and Homebrew tap steps.
+        # Uses the pre-existing trusted publisher for @primitivedotdev/cli
+        # (this workflow published it as the primary name before the rename).
+        # continue-on-error keeps a mirror failure from skipping the
+        # downstream GitHub release and Homebrew tap steps.
         if: ${{ steps.version.outputs.changed == 'true' }}
         continue-on-error: true
-        run: scripts/cli-mirror-publish.sh primitive "${{ steps.version.outputs.current }}"
+        run: scripts/cli-mirror-publish.sh "@primitivedotdev/cli" "${{ steps.version.outputs.current }}"
 
       - name: Check GitHub release state
         if: ${{ steps.version.outputs.changed == 'true' }}
