@@ -15,7 +15,6 @@
  * here rather than in api-core.
  */
 
-import { readFile, stat } from "node:fs/promises";
 import {
   type AgentAccountResult,
   type AgentClaimLinkResult,
@@ -53,6 +52,7 @@ import {
   type VerifyAgentClaimInput,
 } from "@primitivedotdev/api-core";
 import { type PushResult, pushBytes, pushFile } from "../payloads/index.js";
+import { loadNodeFsPromises } from "../payloads/node-fs.js";
 import type { ReceivedEmail } from "../webhook/received-email.js";
 import { formatAddress } from "../webhook/received-email.js";
 
@@ -1160,6 +1160,12 @@ export class PrimitiveClient extends PrimitiveApiClient {
           );
     }
     if (attachment.path !== undefined) {
+      // Loaded lazily so the /api entry has no top-level node:fs import
+      // and keeps bundling for Workers-style targets; see
+      // ../payloads/node-fs.ts. The file-path branch stays Node-only.
+      const { readFile, stat } = await loadNodeFsPromises(
+        "sendAttachment with attachment.path",
+      );
       const { size } = await stat(attachment.path);
       return size <= threshold
         ? this.#sendInline(rest, meta, await readFile(attachment.path), options)
