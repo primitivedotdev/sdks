@@ -66,8 +66,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "pnpm generate && tsc --noEmit -p tsconfig.typecheck.json",
-    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads/index.ts tests/",
-    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts tests/",
+    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads tests/",
+    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads tests/",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
@@ -115,6 +115,7 @@
     "@types/tar-stream": "^3.1.4",
     "@types/validator": "^13.15.10",
     "@vitest/coverage-v8": "^4.1.4",
+    "esbuild": "^0.27.0",
     "json-schema-to-typescript": "^15.0.4",
     "tsdown": "^0.21.10",
     "tsx": "^4.21.0",

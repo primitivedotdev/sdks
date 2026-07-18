@@ -11,8 +11,8 @@
  * The chunk/manifest construction is byte-compatible with the server's object
  * model (packages/payloads-core in the API monorepo).
  */
-import { createWriteStream } from "node:fs";
-import { type FileHandle, open, rm, stat } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
+import { loadNodeFs, loadNodeFsPromises } from "./node-fs.js";
 
 // ── Object-model constants (must match the server's payloads-core) ──
 const CHUNK_SIZE = 64 * 1024 * 1024;
@@ -462,6 +462,9 @@ export async function pushFile(
   filePath: string,
   opts: PushOptions,
 ): Promise<PushResult> {
+  // Resolved lazily (and before any network call) so this module stays
+  // Workers-bundleable; see node-fs.ts.
+  const { open, stat } = await loadNodeFsPromises("pushFile");
   const chunkSize = opts.chunkSize ?? CHUNK_SIZE;
   const concurrency = opts.concurrency ?? 3;
   const { size } = await stat(filePath);
@@ -590,6 +593,10 @@ export async function pullFile(
   outPath: string,
   opts: PullOptions,
 ): Promise<PayloadManifest> {
+  // Resolved lazily (and before any network call) so this module stays
+  // Workers-bundleable; see node-fs.ts.
+  const { createWriteStream } = await loadNodeFs("pullFile");
+  const { rm } = await loadNodeFsPromises("pullFile");
   const manifest = await fetchManifest(opts, root);
   // Content-address check: the manifest must actually describe the object at
   // `root`. Recompute the Merkle root from the chunk hashes so a server can't
