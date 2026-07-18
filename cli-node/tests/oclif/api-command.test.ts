@@ -690,6 +690,7 @@ describe("isIncompleteDomainVerification", () => {
           command: "verify",
           description: "Verify domain",
           hasJsonBody: false,
+          headerParams: [],
           method: "POST",
           operationId: "verifyDomain",
           path: "/domains/{id}/verify",
@@ -757,6 +758,7 @@ describe("createOperationCommand description", () => {
       command: "fake-op",
       description: "Fake operation",
       hasJsonBody: false,
+      headerParams: [],
       method: "GET",
       operationId: "fakeOp",
       path: "/fake",
@@ -897,6 +899,27 @@ describe("createOperationCommand description", () => {
     };
 
     expect(flag.allowNo).toBe(true);
+  });
+
+  it("registers generated header params as lowercase flags", () => {
+    const Cmd = createOperationCommand(
+      makeOperation({
+        headerParams: [
+          {
+            description: "Optional idempotency key",
+            enum: null,
+            name: "Idempotency-Key",
+            required: false,
+            type: "string",
+          },
+        ],
+      }),
+    ) as unknown as {
+      flags: Record<string, unknown>;
+    };
+
+    expect(Cmd.flags["idempotency-key"]).toBeDefined();
+    expect(Cmd.flags["Idempotency-Key"]).toBeUndefined();
   });
 
   it("adds --envelope to non-binary generated commands", () => {

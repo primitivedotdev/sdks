@@ -1,0 +1,4 @@
+/openapi/primitive-api.codegen.json text eol=lf
+/packages/api-core/src/api/** text eol=lf
+/packages/api-core/src/openapi/*.ts text eol=lf
+/cli-rust/src/operation-manifest.json text eol=lf

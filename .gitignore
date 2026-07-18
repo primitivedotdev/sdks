@@ -5,6 +5,9 @@
 /flake.nix
 /flake.lock
 node_modules/
+cli-rust/target/
+cli-rust/dist/
+cli-rust/release-assets/
 sdk-node/node_modules/
 sdk-node/dist/
 sdk-node/*.tsbuildinfo

@@ -42,19 +42,32 @@ The shared fixtures define behavioral parity expectations across SDKs, including
 
 The HTTP API contract lives at `openapi/primitive-api.yaml`.
 
-That source is transformed into a generated codegen artifact so all three SDKs generate from the same normalized API description, while Node also publishes the raw OpenAPI document for other JavaScript consumers.
+That source is transformed into a generated codegen artifact so all three SDKs generate from the same normalized API description, while Node also publishes the raw OpenAPI document for other JavaScript consumers. The same operation metadata also feeds the Rust CLI command manifest.
 
 ## SDK Layers
 
 ### Node
 
 - package path: `sdk-node/`
-- published modules: root webhook entrypoint plus `webhook`, `api`, `openapi`, `contract`, and `parser` subpaths
-- published CLI: `primitive`
+- published modules: root webhook entrypoint plus `webhook`, `api`, `openapi`, `contract`, `parser`, `parser/address`, `x402`, and `payloads` subpaths
 - runtime validation: generated AJV standalone validator
 - generated artifacts: webhook schema module, TypeScript types, validator module, generated API client, generated OpenAPI document export
-- Node-only modules: `contract` and `parser`
-- CLI runtime: `oclif` with official autocomplete for bash/zsh/powershell plus custom fish completion output
+- Node-only modules: `contract`, `parser`, `x402`, and `payloads`
+
+### Node CLI
+
+- package path: `cli-node/`
+- published command: `primitive` with `prim` as a short alias
+- runtime: `oclif` with official autocomplete for bash/zsh/powershell plus custom fish completion output
+- API client: consumes the Node SDK and generated API client
+
+### Rust CLI
+
+- package path: `cli-rust/`
+- local commands: `primitive-rust`, `primitive`, and `prim`
+- release artifact: GitHub archive containing the user-facing `primitive` and `prim` commands
+- validation: command-surface and black-box parity checks against the Node CLI
+- generated artifacts: `cli-rust/src/operation-manifest.json` from the OpenAPI operation metadata
 
 ### Python
 
@@ -85,15 +98,16 @@ The repository separates orchestration from environment setup.
 
 ## CI Model
 
-`.github/workflows/sdk-checks.yml` runs five categories of checks:
+`.github/workflows/sdk-checks.yml` runs SDK checks plus an optional Rust CLI validation lane:
 
 - Node SDK checks
 - Node CLI checks
 - Python SDK checks
 - Go SDK checks
 - shared fixture compatibility checks across all three SDKs
+- Rust CLI checks and Node/Rust CLI parity when Rust CLI files or CLI/API parity inputs change
 
-CI uses the same root `make` targets that contributors use locally. That keeps the documented workflow and the enforced workflow aligned.
+CI uses the same root `make` targets that contributors use locally. Default root targets cover the supported SDK and Node CLI packages; the Rust CLI port is checked explicitly with `make rust-cli-full-check`.
 
 ## Change Strategy
 
@@ -110,6 +124,7 @@ When changing only one SDK's internal implementation, keep the shared fixture co
 When changing the HTTP API contract:
 
 1. update `openapi/primitive-api.yaml`
-2. regenerate the Node, Python, and Go API clients
+2. regenerate the Node, Python, and Go API clients plus the Rust CLI operation manifest
 3. run `make node-check python-check go-check`
-4. verify the Node smoke test still exposes `api` and `openapi` (and still confirms the SDK tarball installs no `primitive` bin; the CLI bin is exercised by the separate CLI smoke test)
+4. if the optional Rust CLI port is touched, run `make rust-cli-full-check`
+5. verify the Node smoke test still exposes `api` and `openapi` (and still confirms the SDK tarball installs no `primitive` bin; the CLI bin is exercised by the separate CLI smoke test)

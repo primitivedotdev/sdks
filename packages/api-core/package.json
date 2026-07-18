@@ -17,7 +17,10 @@
   "scripts": {
     "generate:openapi": "tsx scripts/generate-openapi-artifacts.ts",
     "generate:api": "openapi-ts -f openapi-ts.config.ts && tsx scripts/fix-generated-api-imports.ts",
-    "generate": "pnpm generate:openapi && pnpm generate:api"
+    "generate": "pnpm generate:openapi && pnpm generate:api",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "pnpm --dir ../../sdk-node exec biome check --error-on-warnings ../packages/api-core/openapi-ts.config.ts ../packages/api-core/scripts ../packages/api-core/src/client.ts ../packages/api-core/src/index.ts ../packages/api-core/src/memories.ts ../packages/api-core/src/openapi/index.ts",
+    "check": "pnpm typecheck && pnpm lint"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.97.3",
