@@ -1,7 +1,7 @@
 {
   "name": "@primitivedotdev/sdk",
   "version": "1.22.1",
-  "description": "Official Primitive Node.js SDK: webhook, api, openapi, contract, and parser runtime modules.",
+  "description": "Official Primitive Node.js SDK: webhook, api, openapi, contract, parser, x402, and payload runtime modules.",
   "type": "module",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -79,7 +79,9 @@
     "signature",
     "hmac",
     "contract",
-    "parser"
+    "parser",
+    "x402",
+    "payloads"
   ],
   "author": "Primitive <support@primitive.dev>",
   "license": "MIT",

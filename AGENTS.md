@@ -48,6 +48,7 @@ make node-generate python-generate go-generate
 # Run the per-language full check (includes generated-file-sync gate)
 make node-check          # @primitivedotdev/sdk + packages/api-core
 make cli-check           # primitive
+make rust-cli-check      # Rust CLI port
 make python-check        # primitivedotdev (PyPI)
 make go-check            # sdk-go
 
@@ -57,11 +58,14 @@ make shared-check
 # Build artifacts
 make node-build cli-build python-build go-build
 
+# Optional Rust CLI port checks
+make rust-cli-full-check
+
 # Convenience aggregator
-make check               # runs all of the above except the smokes
+make check               # runs the default SDK + Node CLI checks
 ```
 
-Before pushing any branch, the minimum is `make node-check cli-check go-check shared-check`. If you touched the JSON schema OR the OpenAPI spec, also run `make python-check`.
+Before pushing any branch, the minimum is `make node-check cli-check go-check shared-check`. If you touched the optional Rust CLI port, also run `make rust-cli-full-check`. If you touched the JSON schema OR the OpenAPI spec, also run `make python-check`.
 
 ## Generated files are committed
 

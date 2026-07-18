@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   EMAIL_EVENT_TYPES,
@@ -15,10 +18,18 @@ import {
   type PaymentSettledEvent,
   parseWebhookEvent,
   WEBHOOK_EVENT_TYPES,
+  WebhookPayloadError,
 } from "../../src/webhook/index.js";
 import { signWebhookPayload } from "../../src/webhook/signing.js";
 
 const SECRET = "whsec_test_secret_for_events";
+const validEmailReceivedBody = readFileSync(
+  resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "../../../test-fixtures/webhook/valid-email-received.json",
+  ),
+  "utf8",
+);
 
 function sign(body: string): string {
   return signWebhookPayload(body, SECRET).header;
@@ -105,6 +116,34 @@ describe("header-keyed event parsing", () => {
     const event = parseWebhookEvent({ event: "payment.failed", id: "pay_2" });
     expect(event.event).toBe("payment.failed");
     expect(isPaymentFailedEvent(event)).toBe(true);
+  });
+
+  it("rejects known event headers that disagree with the body event field", () => {
+    expect(() =>
+      parseWebhookEvent({ event: "email.received" }, "payment.settled"),
+    ).toThrow(WebhookPayloadError);
+    try {
+      parseWebhookEvent({ event: "email.received" }, "payment.settled");
+      expect.fail("expected event mismatch");
+    } catch (error) {
+      expect((error as WebhookPayloadError).code).toBe(
+        "PAYLOAD_EVENT_MISMATCH",
+      );
+    }
+  });
+
+  it("rejects known payment headers that disagree with the body type field", () => {
+    expect(() =>
+      parseWebhookEvent({ type: "payment.settled" }, "payment.failed"),
+    ).toThrow(WebhookPayloadError);
+    try {
+      parseWebhookEvent({ type: "payment.settled" }, "payment.failed");
+      expect.fail("expected type mismatch");
+    } catch (error) {
+      expect((error as WebhookPayloadError).code).toBe(
+        "PAYLOAD_EVENT_MISMATCH",
+      );
+    }
   });
 
   it("exposes the full canonical catalog", () => {
@@ -196,5 +235,20 @@ describe("handleWebhookEvent verify-then-parse", () => {
     const event = handleWebhookEvent({ body, headers, secret: SECRET });
 
     expect(isInteractionX402Event(event)).toBe(true);
+  });
+
+  it("rejects a signed email body reclassified by a mismatched event header", () => {
+    const headers = {
+      "primitive-signature": sign(validEmailReceivedBody),
+      "x-webhook-event": "payment.settled",
+    };
+
+    expect(() =>
+      handleWebhookEvent({
+        body: validEmailReceivedBody,
+        headers,
+        secret: SECRET,
+      }),
+    ).toThrow(WebhookPayloadError);
   });
 });

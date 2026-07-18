@@ -78,11 +78,11 @@ func TestParseWebhookEvent(t *testing.T) {
 		}
 	}
 
-	unknown, err := ParseWebhookEvent(map[string]any{"event": "email.bounced", "id": "evt_2"})
+	unknown, err := ParseWebhookEvent(map[string]any{"event": "email.opened", "id": "evt_2"})
 	if err != nil {
 		t.Fatalf("ParseWebhookEvent returned error for unknown event: %v", err)
 	}
-	if unknown.GetEvent() != "email.bounced" {
+	if unknown.GetEvent() != "email.opened" {
 		t.Fatalf("unexpected unknown event type: %s", unknown.GetEvent())
 	}
 
@@ -90,19 +90,19 @@ func TestParseWebhookEvent(t *testing.T) {
 		t.Fatal("expected array payload error")
 	}
 
-	fromBytes, err := ParseWebhookEvent([]byte(`{"event":"email.bounced","id":"evt_1"}`))
+	fromBytes, err := ParseWebhookEvent([]byte(`{"event":"email.opened","id":"evt_1"}`))
 	if err != nil {
 		t.Fatalf("expected raw byte payload to parse: %v", err)
 	}
-	if fromBytes.GetEvent() != "email.bounced" {
+	if fromBytes.GetEvent() != "email.opened" {
 		t.Fatalf("unexpected event type from bytes: %s", fromBytes.GetEvent())
 	}
 
-	fromRawMessage, err := ParseWebhookEvent(json.RawMessage(`{"event":"email.bounced","id":"evt_1"}`))
+	fromRawMessage, err := ParseWebhookEvent(json.RawMessage(`{"event":"email.opened","id":"evt_1"}`))
 	if err != nil {
 		t.Fatalf("expected json.RawMessage payload to parse: %v", err)
 	}
-	if fromRawMessage.GetEvent() != "email.bounced" {
+	if fromRawMessage.GetEvent() != "email.opened" {
 		t.Fatalf("unexpected event type from json.RawMessage: %s", fromRawMessage.GetEvent())
 	}
 
@@ -149,7 +149,7 @@ func TestParseJSONBodyAcceptsJSONRawMessage(t *testing.T) {
 func TestUnknownEventMarshalJSON(t *testing.T) {
 	parsed, err := ParseWebhookEvent(map[string]any{
 		"id":      "evt_unknown",
-		"event":   "email.bounced",
+		"event":   "email.opened",
 		"version": "2025-12-14",
 		"reason":  "mailbox_full",
 		"retry":   false,
@@ -173,7 +173,7 @@ func TestUnknownEventMarshalJSON(t *testing.T) {
 		t.Fatalf("json.Unmarshal returned error: %v", err)
 	}
 
-	if roundTrip["event"] != "email.bounced" {
+	if roundTrip["event"] != "email.opened" {
 		t.Fatalf("unexpected event after marshal: %#v", roundTrip)
 	}
 	if roundTrip["id"] != "evt_unknown" {
@@ -215,11 +215,11 @@ func TestParseWebhookEventPreservesLargeUnknownIntegers(t *testing.T) {
 
 func TestUnknownEventUnmarshalJSONPreservesPayload(t *testing.T) {
 	var unknown UnknownEvent
-	if err := json.Unmarshal([]byte(`{"event":"email.bounced","id":"evt_1","foo":"bar","count":9007199254740993}`), &unknown); err != nil {
+	if err := json.Unmarshal([]byte(`{"event":"email.opened","id":"evt_1","foo":"bar","count":9007199254740993}`), &unknown); err != nil {
 		t.Fatalf("json.Unmarshal returned error: %v", err)
 	}
 
-	if unknown.Event != "email.bounced" {
+	if unknown.Event != "email.opened" {
 		t.Fatalf("unexpected event after unmarshal: %#v", unknown)
 	}
 	if unknown.ID == nil || *unknown.ID != "evt_1" {
@@ -237,7 +237,7 @@ func TestUnknownEventUnmarshalJSONPreservesPayload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("json.Marshal returned error: %v", err)
 	}
-	if string(data) != `{"count":9007199254740993,"event":"email.bounced","foo":"bar","id":"evt_1"}` {
+	if string(data) != `{"count":9007199254740993,"event":"email.opened","foo":"bar","id":"evt_1"}` {
 		t.Fatalf("unexpected round-tripped payload: %s", data)
 	}
 }
@@ -419,7 +419,7 @@ func TestHandleWebhookEvent(t *testing.T) {
 
 	unknownBody, err := json.Marshal(map[string]any{
 		"id":      "evt_unknown",
-		"event":   "email.bounced",
+		"event":   "email.opened",
 		"version": "2025-12-14",
 		"reason":  "mailbox_full",
 	})
@@ -444,7 +444,7 @@ func TestHandleWebhookEvent(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected UnknownEvent, got %T", unknownEvent)
 	}
-	if unknown.Event != "email.bounced" {
+	if unknown.Event != "email.opened" {
 		t.Fatalf("unexpected unknown event type: %s", unknown.Event)
 	}
 	if unknown.Payload["reason"] != "mailbox_full" {

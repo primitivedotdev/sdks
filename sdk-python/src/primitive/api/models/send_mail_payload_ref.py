@@ -20,9 +20,9 @@ T = TypeVar("T", bound="SendMailPayloadRef")
 
 @_attrs_define
 class SendMailPayloadRef:
-    """ A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes
-    — the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held
-    CEK the server never sees), then reference it here.
+    """ A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes,
+    the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK
+    the server never sees), then reference it here.
 
         Attributes:
             root (str): The 64-char lowercase-hex Merkle root of a finalized payloads object.

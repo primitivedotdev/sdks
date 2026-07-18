@@ -1,0 +1,713 @@
+#!/usr/bin/env node
+
+import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  CANONICAL_OPERATION_ALIASES,
+  COMMANDS,
+} from "../cli-node/dist/oclif/index.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const REPO_ROOT = path.resolve(path.dirname(__filename), "..");
+const DEFAULT_TIMEOUT_MS = 30_000;
+const RETRY_TIMEOUT_MS = 60_000;
+const DEFAULT_CONCURRENCY = 8;
+const HELP_FLAG_TOKEN_SECTION_HEADINGS = new Set([
+  "USAGE",
+  "FLAGS",
+  "GLOBAL FLAGS",
+  "OPTIONS",
+  "GLOBAL OPTIONS",
+]);
+const HELP_SECTION_HEADINGS = new Set([
+  ...HELP_FLAG_TOKEN_SECTION_HEADINGS,
+  "ALIASES",
+  "API",
+  "ARGUMENTS",
+  "COMMANDS",
+  "DESCRIPTION",
+  "EXAMPLES",
+  "TOPICS",
+]);
+// Intentional Rust/Node help differences only. Do not add backlog gaps here:
+// --compare-flags is useful precisely because it can fail while surfacing them.
+const RUST_MISSING_NODE_FLAG_TOKEN_ALLOWLIST = [];
+const RUST_EXTRA_NODE_FLAG_TOKEN_ALLOWLIST = [];
+const OPERATION_MANIFEST = JSON.parse(
+  readFileSync(path.join(REPO_ROOT, "cli-rust/src/operation-manifest.json"), "utf8"),
+);
+const OPERATIONS_BY_COMMAND_ID = new Map(
+  OPERATION_MANIFEST.map((operation) => [
+    `${operation.tagCommand}:${operation.command}`,
+    operation,
+  ]),
+);
+const OVERRIDDEN_OPERATION_IDS = new Set([
+  "domains:download-domain-zone-file",
+  "functions:test-function",
+  "inbox:get-inbox-status",
+  "search:semantic-search",
+  "payments:register-payout-address",
+  "payments:pay-challenge",
+]);
+
+function usage() {
+  return `Usage:
+  node scripts/run-cli-help-sweep.mjs --node-bin "node cli-node/bin/run.js" --rust-bin cli-rust/target/debug/primitive
+
+Options:
+  --node-bin <command>   Node CLI command. Can also use NODE_CLI.
+  --rust-bin <command>   Rust CLI command. Can also use RUST_CLI.
+  --concurrency <n>      Number of help commands to run in parallel. Defaults to 8.
+  --compare-flags        Also fail when Rust help omits a Node-visible flag token.
+  --verbose              Print every accepted command spelling.
+`;
+}
+
+function parseArgs(argv) {
+  const options = {
+    compareFlags: false,
+    concurrency: DEFAULT_CONCURRENCY,
+    nodeCli: process.env.NODE_CLI,
+    rustCli: process.env.RUST_CLI,
+    verbose: false,
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--help" || arg === "-h") {
+      console.log(usage());
+      process.exit(0);
+    }
+    if (arg === "--verbose") {
+      options.verbose = true;
+      continue;
+    }
+    if (arg === "--compare-flags") {
+      options.compareFlags = true;
+      continue;
+    }
+
+    const next = argv[index + 1];
+    if (!next) throw new Error(`Missing value for ${arg}`);
+    if (arg === "--node-cli" || arg === "--node-bin") {
+      options.nodeCli = next;
+    } else if (arg === "--rust-cli" || arg === "--rust-bin") {
+      options.rustCli = next;
+    } else if (arg === "--concurrency") {
+      options.concurrency = Number.parseInt(next, 10);
+    } else {
+      throw new Error(`Unknown option ${arg}`);
+    }
+    index += 1;
+  }
+
+  if (!options.nodeCli || !options.rustCli) {
+    throw new Error("Both --node-cli and --rust-cli are required.");
+  }
+  if (!Number.isInteger(options.concurrency) || options.concurrency < 1) {
+    throw new Error("--concurrency must be a positive integer.");
+  }
+  return options;
+}
+
+function shellWords(input) {
+  const words = [];
+  let current = "";
+  let quote = null;
+  let escaped = false;
+
+  for (const char of input) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) quote = null;
+      else current += char;
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      if (current) {
+        words.push(current);
+        current = "";
+      }
+      continue;
+    }
+    current += char;
+  }
+  if (escaped) current += "\\";
+  if (quote) throw new Error(`Unclosed ${quote} quote in command: ${input}`);
+  if (current) words.push(current);
+  if (words.length === 0) throw new Error("CLI command cannot be empty.");
+  return words;
+}
+
+function loadTopics() {
+  const packageJson = JSON.parse(
+    readFileSync(path.join(REPO_ROOT, "cli-node/package.json"), "utf8"),
+  );
+  return Object.keys(packageJson.oclif?.topics ?? {});
+}
+
+function isGeneratedCommand(commandId) {
+  return COMMANDS[commandId]?.name === "OperationCommand";
+}
+
+function nodePluginCommands() {
+  const manifest = JSON.parse(
+    readFileSync(
+      path.join(
+        REPO_ROOT,
+        "cli-node/node_modules/@oclif/plugin-autocomplete/oclif.manifest.json",
+      ),
+      "utf8",
+    ),
+  );
+  return Object.values(manifest.commands ?? {})
+    .filter((command) => !command.hidden)
+    .map((command) => ({
+      aliases: command.aliases ?? [],
+      id: command.id,
+    }));
+}
+
+function addCandidate(candidates, args, required, commandId = null) {
+  const key = args.join("\u0000");
+  const existing = candidates.get(key);
+  if (!existing || required) {
+    candidates.set(key, {
+      args,
+      commandId,
+      generated: commandId ? isGeneratedCommand(commandId) : false,
+      required,
+    });
+  }
+}
+
+function addHelpCandidates(candidates, commandId, required) {
+  addCandidate(candidates, [commandId, "--help"], required, commandId);
+  addCandidate(candidates, ["help", commandId], required, commandId);
+  if (commandId.includes(":")) {
+    const splitCommand = commandId.split(":");
+    addCandidate(candidates, [...splitCommand, "--help"], false, commandId);
+    addCandidate(candidates, ["help", ...splitCommand], false, commandId);
+  }
+}
+
+function addTopicCandidates(candidates, topicId) {
+  addCandidate(candidates, [topicId], false);
+  addCandidate(candidates, [topicId, "--help"], false);
+  addCandidate(candidates, ["help", topicId], false);
+  if (topicId.includes(":")) {
+    const splitTopic = topicId.split(":");
+    addCandidate(candidates, splitTopic, false);
+    addCandidate(candidates, [...splitTopic, "--help"], false);
+    addCandidate(candidates, ["help", ...splitTopic], false);
+  }
+}
+
+function commandIdsWithAliases() {
+  const commandIds = new Set(Object.keys(COMMANDS));
+  for (const command of Object.values(COMMANDS)) {
+    for (const alias of command.aliases ?? []) {
+      commandIds.add(alias);
+    }
+  }
+  for (const command of nodePluginCommands()) {
+    commandIds.add(command.id);
+    for (const alias of command.aliases) {
+      commandIds.add(alias);
+    }
+  }
+  return commandIds;
+}
+
+function inferredTopicIds(commandIds) {
+  const topics = new Set(loadTopics());
+  for (const commandId of commandIds) {
+    const parts = commandId.split(":");
+    for (let length = 1; length < parts.length; length += 1) {
+      topics.add(parts.slice(0, length).join(":"));
+    }
+  }
+  return topics;
+}
+
+function buildCandidates() {
+  const candidates = new Map();
+  const commandIds = commandIdsWithAliases();
+
+  for (const commandId of [...commandIds].sort()) {
+    addHelpCandidates(candidates, commandId, true);
+  }
+
+  addCandidate(candidates, ["autocomplete", "bash", "--help"], true, "autocomplete");
+
+  for (const topicId of [...inferredTopicIds(commandIds)].sort()) {
+    addTopicCandidates(candidates, topicId);
+  }
+
+  return [...candidates.values()];
+}
+
+function helpEnv() {
+  return {
+    ...process.env,
+    PRIMITIVE_API_KEY: "",
+    PRIMITIVE_HIDE_SIGNUP_HINT: "1",
+    PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1",
+  };
+}
+
+function runProcess(cli, args, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  const [command, ...baseArgs] = cli;
+  return new Promise((resolve) => {
+    const child = spawn(command, [...baseArgs, ...args], {
+      cwd: REPO_ROOT,
+      env: helpEnv(),
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGTERM");
+    }, timeoutMs);
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      clearTimeout(timeout);
+      resolve({ exitCode: 127, stderr: `${stderr}${error.message}\n`, stdout });
+    });
+    child.on("close", (code, signal) => {
+      clearTimeout(timeout);
+      resolve({
+        exitCode: signal ? 128 : (code ?? 0),
+        signal,
+        stderr,
+        timedOut,
+        timeoutMs,
+        stdout,
+      });
+    });
+  });
+}
+
+function formatResult(result) {
+  const stdout = result.stdout.trim();
+  const stderr = result.stderr.trim();
+  return [
+    `exit: ${result.exitCode}${result.signal ? `, signal: ${result.signal}` : ""}`,
+    result.timedOut ? `timed out after ${result.timeoutMs}ms` : "",
+    stdout ? `stdout:\n${stdout}` : "stdout: <empty>",
+    stderr ? `stderr:\n${stderr}` : "stderr: <empty>",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function runHelpProcess(cli, args) {
+  const first = await runProcess(cli, args);
+  if (!first.timedOut) return first;
+  return runProcess(cli, args, RETRY_TIMEOUT_MS);
+}
+
+function helpSectionHeading(line) {
+  const normalized = line.trim().replace(/:$/, "").toUpperCase();
+  return HELP_SECTION_HEADINGS.has(normalized) ? normalized : null;
+}
+
+function addFlagTokensFromText(tokens, text) {
+  for (const match of text.matchAll(/--(?:\[no-\])?[A-Za-z0-9][A-Za-z0-9-]*/g)) {
+    const token = match[0];
+    if (token.startsWith("--[no-]")) {
+      const positive = token.slice("--[no-]".length);
+      tokens.add(`--${positive}`);
+      tokens.add(`--no-${positive}`);
+    } else {
+      tokens.add(token);
+    }
+  }
+  for (const match of text.matchAll(/(^|[\s,[({])(-[A-Za-z])(?=$|[\s,\])}=<])/g)) {
+    tokens.add(match[2]);
+  }
+}
+
+function flagDeclarationSegment(line) {
+  const trimmed = line.trimStart();
+  if (!trimmed.startsWith("-")) return "";
+  const descriptionIndex = trimmed.search(/\s{2,}/);
+  const segment = descriptionIndex === -1 ? trimmed : trimmed.slice(0, descriptionIndex);
+  const normalized = segment.replace(/\s+required$/, "");
+  const flagPart =
+    /(?:-[A-Za-z]|--(?:\[no-\])?[A-Za-z0-9][A-Za-z0-9-]*)(?:[ =](?:<[^>]+>|\[[^\]]+\]|[A-Za-z0-9_.:|/-]+))?/;
+  const declaration = new RegExp(
+    `^${flagPart.source}(?:,\\s*${flagPart.source})*$`,
+  );
+  return declaration.test(normalized) ? normalized : "";
+}
+
+function helpFlagTokens(output) {
+  const tokens = new Set();
+  let section = null;
+  let foundFlagSection = false;
+
+  for (const line of output.split(/\r?\n/)) {
+    const heading = helpSectionHeading(line);
+    if (heading) {
+      section = heading;
+      continue;
+    }
+    if (!HELP_FLAG_TOKEN_SECTION_HEADINGS.has(section)) continue;
+    foundFlagSection = true;
+
+    if (section === "USAGE") {
+      addFlagTokensFromText(tokens, line);
+      continue;
+    }
+
+    const segment = flagDeclarationSegment(line);
+    if (!segment) continue;
+    addFlagTokensFromText(tokens, segment);
+  }
+
+  if (!foundFlagSection) {
+    for (const line of output.split(/\r?\n/)) {
+      const segment = flagDeclarationSegment(line);
+      if (!segment) continue;
+      addFlagTokensFromText(tokens, segment);
+    }
+  }
+
+  return tokens;
+}
+
+function sortedFlagTokens(tokens) {
+  return [...tokens].sort((left, right) => left.localeCompare(right));
+}
+
+function matchesFlagTokenAllowlistEntry(candidate, entry) {
+  if (entry.commandId && entry.commandId !== candidate.commandId) return false;
+  if (entry.args && entry.args.join("\u0000") !== candidate.args.join("\u0000")) {
+    return false;
+  }
+  return Boolean(entry.commandId || entry.args);
+}
+
+function allowedMissingRustFlagTokens(candidate) {
+  const allowed = new Set();
+  for (const entry of RUST_MISSING_NODE_FLAG_TOKEN_ALLOWLIST) {
+    if (!matchesFlagTokenAllowlistEntry(candidate, entry)) continue;
+    for (const flag of entry.flags) {
+      allowed.add(flag);
+    }
+  }
+  return allowed;
+}
+
+function allowedExtraRustFlagTokens(candidate) {
+  const allowed = new Set();
+  for (const entry of RUST_EXTRA_NODE_FLAG_TOKEN_ALLOWLIST) {
+    if (!matchesFlagTokenAllowlistEntry(candidate, entry)) continue;
+    for (const flag of entry.flags) {
+      allowed.add(flag);
+    }
+  }
+  return allowed;
+}
+
+function flagName(name) {
+  return name.replaceAll("_", "-").toLowerCase();
+}
+
+function bodyScalarType(schema) {
+  const rawType = schema?.type;
+  if (["string", "integer", "number", "boolean"].includes(rawType)) {
+    return rawType;
+  }
+  if (Array.isArray(rawType)) {
+    const nonNull = rawType.filter((item) => item !== "null");
+    if (nonNull.length === 1 && ["string", "integer", "number", "boolean"].includes(nonNull[0])) {
+      return nonNull[0];
+    }
+  }
+  return null;
+}
+
+function requestBodyProperties(operation) {
+  const properties = operation.requestSchema?.properties;
+  if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
+    return [];
+  }
+
+  const occupied = new Set([
+    "api-key",
+    "api-base-url",
+    "time",
+    ...(operation.binaryResponse ? [] : ["json"]),
+    "raw-body",
+    "body-file",
+    "envelope",
+    "output",
+  ]);
+  for (const parameter of [
+    ...(operation.pathParams ?? []),
+    ...(operation.queryParams ?? []),
+    ...(operation.headerParams ?? []),
+  ]) {
+    occupied.add(flagName(parameter.name));
+  }
+
+  const result = [];
+  for (const [property, schema] of Object.entries(properties)) {
+    const name = flagName(property);
+    if (occupied.has(name) || !bodyScalarType(schema)) continue;
+    occupied.add(name);
+    result.push(property);
+  }
+  return result;
+}
+
+function generatedOperationId(candidate) {
+  if (!candidate.generated || !candidate.commandId) return null;
+  const operationId =
+    CANONICAL_OPERATION_ALIASES[candidate.commandId] ?? candidate.commandId;
+  if (OVERRIDDEN_OPERATION_IDS.has(operationId)) return null;
+  if (!OPERATIONS_BY_COMMAND_ID.has(operationId)) return null;
+  return operationId;
+}
+
+function expectedGeneratedManifestFlags(candidate) {
+  const operationId = generatedOperationId(candidate);
+  if (!operationId) return [];
+  const operation = OPERATIONS_BY_COMMAND_ID.get(operationId);
+
+  const flags = ["--api-key", "--time"];
+  if (operation.binaryResponse) {
+    flags.push("--output");
+  } else {
+    flags.push("--json", "--envelope");
+  }
+  for (const parameter of [
+    ...(operation.pathParams ?? []),
+    ...(operation.queryParams ?? []),
+    ...(operation.headerParams ?? []),
+  ]) {
+    flags.push(`--${flagName(parameter.name)}`);
+  }
+  if (operation.hasJsonBody) {
+    flags.push("--raw-body", "--body-file");
+    for (const property of requestBodyProperties(operation)) {
+      flags.push(`--${flagName(property)}`);
+    }
+  }
+  return [...new Set(flags)].sort();
+}
+
+function expectedVisibleFlags(candidate) {
+  const flags = [];
+  if (candidate.commandId === "config:list") {
+    flags.push("--json", "--show-secrets");
+  }
+  if (candidate.commandId === "config:reset") {
+    flags.push("--environment");
+  }
+  return flags;
+}
+
+function assertHelpFlagParity(candidate, nodeResult, rustResult) {
+  const label = candidate.args.join(" ");
+  const nodeFlags = helpFlagTokens(nodeResult.stdout);
+  const rustFlags = helpFlagTokens(rustResult.stdout);
+
+  for (const flag of expectedVisibleFlags(candidate)) {
+    if (nodeFlags.has(flag) && !rustFlags.has(flag)) {
+      throw new Error(
+        `Rust CLI help is missing Node-visible flag ${flag} for ${label}\n${formatResult(rustResult)}`,
+      );
+    }
+  }
+
+  const generatedFlags = expectedGeneratedManifestFlags(candidate);
+  const missingNodeFlags = generatedFlags.filter((flag) => !nodeFlags.has(flag));
+  const missingRustFlags = generatedFlags.filter((flag) => !rustFlags.has(flag));
+  if (missingNodeFlags.length > 0 || missingRustFlags.length > 0) {
+    const messages = [];
+    if (missingNodeFlags.length > 0) {
+      messages.push(
+        `Node CLI generated help is missing manifest-required flag(s) ${missingNodeFlags.join(", ")} for ${label}`,
+      );
+    }
+    if (missingRustFlags.length > 0) {
+      messages.push(
+        `Rust CLI generated help is missing manifest-required flag(s) ${missingRustFlags.join(", ")} for ${label}`,
+      );
+    }
+    throw new Error(
+      `${messages.join("\n")}\n\nNode ${formatResult(nodeResult)}\n\nRust ${formatResult(rustResult)}`,
+    );
+  }
+
+  if (!generatedOperationId(candidate)) return;
+  const exposedHidden = [];
+  if (nodeFlags.has("--api-base-url")) exposedHidden.push("Node");
+  if (rustFlags.has("--api-base-url")) exposedHidden.push("Rust");
+  if (exposedHidden.length > 0) {
+    throw new Error(
+      `${exposedHidden.join(" and ")} CLI generated help exposes hidden flag --api-base-url for ${label}`,
+    );
+  }
+}
+
+function assertNodeVisibleFlagCoverage(candidate, nodeResult, rustResult) {
+  const nodeFlags = helpFlagTokens(nodeResult.stdout);
+  const rustFlags = helpFlagTokens(rustResult.stdout);
+  const allowedMissing = allowedMissingRustFlagTokens(candidate);
+  const missing = sortedFlagTokens(
+    new Set(
+      [...nodeFlags].filter(
+        (flag) => !rustFlags.has(flag) && !allowedMissing.has(flag),
+      ),
+    ),
+  );
+
+  if (missing.length === 0) return;
+
+  const label = candidate.args.join(" ");
+  const allowed = sortedFlagTokens(
+    new Set([...nodeFlags].filter((flag) => allowedMissing.has(flag))),
+  );
+  const allowedText =
+    allowed.length > 0
+      ? `Allowlisted missing Rust flag token(s): ${allowed.join(", ")}`
+      : "";
+  throw new Error(
+    [
+      `Rust CLI help is missing Node-visible flag token(s) for ${label}: ${missing.join(", ")}`,
+      `Node flag tokens: ${sortedFlagTokens(nodeFlags).join(", ") || "<none>"}`,
+      `Rust flag tokens: ${sortedFlagTokens(rustFlags).join(", ") || "<none>"}`,
+      allowedText,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+}
+
+function assertNoExtraRustVisibleFlags(candidate, nodeResult, rustResult) {
+  const nodeFlags = helpFlagTokens(nodeResult.stdout);
+  const rustFlags = helpFlagTokens(rustResult.stdout);
+  const allowedExtra = allowedExtraRustFlagTokens(candidate);
+  const extra = sortedFlagTokens(
+    new Set(
+      [...rustFlags].filter(
+        (flag) => !nodeFlags.has(flag) && !allowedExtra.has(flag),
+      ),
+    ),
+  );
+
+  if (extra.length === 0) return;
+
+  const label = candidate.args.join(" ");
+  const allowed = sortedFlagTokens(
+    new Set([...rustFlags].filter((flag) => allowedExtra.has(flag))),
+  );
+  const allowedText =
+    allowed.length > 0
+      ? `Allowlisted extra Rust flag token(s): ${allowed.join(", ")}`
+      : "";
+  throw new Error(
+    [
+      `Rust CLI help exposes extra flag token(s) for ${label}: ${extra.join(", ")}`,
+      `Node flag tokens: ${sortedFlagTokens(nodeFlags).join(", ") || "<none>"}`,
+      `Rust flag tokens: ${sortedFlagTokens(rustFlags).join(", ") || "<none>"}`,
+      allowedText,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+}
+
+async function runPool(items, concurrency, worker) {
+  let index = 0;
+  const results = [];
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (index < items.length) {
+        const currentIndex = index;
+        index += 1;
+        results[currentIndex] = await worker(items[currentIndex]);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return results;
+}
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2));
+  const nodeCli = shellWords(options.nodeCli);
+  const rustCli = shellWords(options.rustCli);
+  const candidates = buildCandidates();
+
+  const results = await runPool(candidates, options.concurrency, async (candidate) => {
+    const label = candidate.args.join(" ");
+    const nodeResult = await runHelpProcess(nodeCli, candidate.args);
+    if (nodeResult.exitCode !== 0) {
+      if (candidate.required) {
+        throw new Error(
+          `Node CLI rejected exported command help: ${label}\n${formatResult(nodeResult)}`,
+        );
+      }
+      return { checked: false, label };
+    }
+
+    const rustResult = await runHelpProcess(rustCli, candidate.args);
+    if (rustResult.exitCode !== 0) {
+      throw new Error(
+        `Rust CLI rejected Node-accepted help command: ${label}\n${formatResult(rustResult)}`,
+      );
+    }
+    if (!rustResult.stdout.trim()) {
+      throw new Error(`Rust CLI printed empty help for ${label}`);
+    }
+    assertHelpFlagParity(candidate, nodeResult, rustResult);
+    if (options.compareFlags) {
+      assertNodeVisibleFlagCoverage(candidate, nodeResult, rustResult);
+      assertNoExtraRustVisibleFlags(candidate, nodeResult, rustResult);
+    }
+    if (options.verbose) process.stdout.write(`+ ${label}\n`);
+    return { checked: true, label };
+  });
+
+  const checked = results.filter((result) => result.checked).length;
+  const skipped = results.length - checked;
+  process.stdout.write(
+    `CLI help sweep OK: ${checked} Node-accepted command spelling(s) checked, ${skipped} Node-rejected optional spelling(s) skipped.\n`,
+  );
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

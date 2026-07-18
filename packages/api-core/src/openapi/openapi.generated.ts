@@ -9728,7 +9728,7 @@ export const openapiDocument: Record<string, unknown> = {
             "items": {
               "type": "string"
             },
-            "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here — e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
+            "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here, e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
           },
           "managed_inbox_address": {
             "type": [
@@ -11485,7 +11485,7 @@ export const openapiDocument: Record<string, unknown> = {
       "SendMailPayloadRef": {
         "type": "object",
         "additionalProperties": false,
-        "description": "A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes — the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.",
+        "description": "A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes, the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.",
         "properties": {
           "root": {
             "type": "string",
@@ -11611,7 +11611,7 @@ export const openapiDocument: Record<string, unknown> = {
           "payload_attachments": {
             "type": "array",
             "maxItems": 1,
-            "description": "Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.",
+            "description": "Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes, the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.",
             "items": {
               "$ref": "#/components/schemas/SendMailPayloadRef"
             }
@@ -13564,7 +13564,7 @@ export const openapiDocument: Record<string, unknown> = {
           "deployed",
           "failed"
         ],
-        "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+        "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
       },
       "FunctionListItem": {
         "type": "object",
@@ -14596,7 +14596,7 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "FunctionSecretListItem": {
         "type": "object",
-        "description": "One row from GET /functions/{id}/secrets. Discriminate on the\n`managed` field:\n  * `managed = true`  — system secret provisioned by Primitive.\n    `description` is set; `created_at` / `updated_at` are\n    null because the row is virtual (resolved at deploy time\n    from the managed registry, not stored in the secrets\n    table).\n  * `managed = false` — secret the user set via the API.\n    `created_at` / `updated_at` are set; `description` is\n    null.\n",
+        "description": "One row from GET /functions/{id}/secrets. Discriminate on the\n`managed` field:\n  * `managed = true` - system secret provisioned by Primitive.\n    `description` is set; `created_at` / `updated_at` are\n    null because the row is virtual (resolved at deploy time\n    from the managed registry, not stored in the secrets\n    table).\n  * `managed = false` - secret the user set via the API.\n    `created_at` / `updated_at` are set; `description` is\n    null.\n",
         "properties": {
           "key": {
             "type": "string"
