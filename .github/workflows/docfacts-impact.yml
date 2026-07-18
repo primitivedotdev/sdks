@@ -9,8 +9,9 @@ permissions:
   contents: read
 jobs:
   impact:
-    uses: primitivedotdev/docfacts/.github/workflows/impact.yml@42413cfcb2d9ff116f60ba34d48b5843cc9e83a8 # pin: docfacts main; bump deliberately
+    uses: primitivedotdev/docfacts/.github/workflows/impact.yml@ca881c2f19e84c9f977478b6f405b342d3171de4 # pin: docfacts main; bump deliberately
     with:
       repo_key: sdks
+      docfacts_ref: ca881c2f19e84c9f977478b6f405b342d3171de4
     secrets:
       docfacts_read_token: ${{ secrets.DOCFACTS_READ_TOKEN }}
