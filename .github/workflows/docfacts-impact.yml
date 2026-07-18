@@ -1,5 +1,13 @@
 # Report-only: comments on PRs that touch code cited as evidence by documented
 # claims. Never blocks a merge. Requires the DOCFACTS_READ_TOKEN secret.
+#
+# NOTE: this job is INLINED rather than calling docfacts's reusable workflow
+# (primitivedotdev/docfacts/.github/workflows/impact.yml). GitHub forbids a
+# PUBLIC repo (this one) from resolving a reusable workflow stored in a PRIVATE
+# repo (docfacts) — it fails at startup with "workflow file issue" and never
+# creates a job. Cloning the private repo with a PAT is allowed, so we run the
+# same steps here directly. Keep this in sync with docfacts's impact.yml; bump
+# DOCFACTS_REF deliberately (it pins the engine to a known-good commit).
 name: docfacts-impact
 on:
   pull_request:
@@ -7,11 +15,83 @@ on:
 permissions:
   pull-requests: write
   contents: read
+env:
+  DOCFACTS_REF: ca881c2f19e84c9f977478b6f405b342d3171de4 # pin: docfacts main
 jobs:
   impact:
-    uses: primitivedotdev/docfacts/.github/workflows/impact.yml@ca881c2f19e84c9f977478b6f405b342d3171de4 # pin: docfacts main; bump deliberately
-    with:
-      repo_key: sdks
-      docfacts_ref: ca881c2f19e84c9f977478b6f405b342d3171de4
-    secrets:
-      docfacts_read_token: ${{ secrets.DOCFACTS_READ_TOKEN }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Report-only: no failure in ANY step (checkout, install, engine crash) may
+    # put a red X on the PR.
+    continue-on-error: true
+    steps:
+      - name: Check credentials present
+        id: gate
+        env:
+          TOKEN: ${{ secrets.DOCFACTS_READ_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "DOCFACTS_READ_TOKEN not configured - skipping (report-only)."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout PR (full history for merge-base)
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: caller
+
+      - name: Checkout docfacts
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: primitivedotdev/docfacts
+          token: ${{ secrets.DOCFACTS_READ_TOKEN }}
+          path: docfacts
+          ref: ${{ env.DOCFACTS_REF }}
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: 24
+
+      - name: Compute impact
+        if: steps.gate.outputs.enabled == 'true'
+        id: impact
+        continue-on-error: true
+        working-directory: docfacts
+        env:
+          DOCFACTS_REPO_SDKS: ${{ github.workspace }}/caller
+        run: |
+          npm ci
+          BASE=$(git -C ../caller merge-base origin/${{ github.base_ref }} HEAD)
+          npx tsx packages/cli/src/index.ts impact --repo sdks --base "$BASE" --head HEAD > impact.md
+          cat impact.md
+          {
+            echo "body<<IMPACT_EOF"
+            cat impact.md
+            echo "IMPACT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upsert PR comment
+        if: steps.gate.outputs.enabled == 'true' && steps.impact.outcome == 'success'
+        uses: actions/github-script@v7
+        env:
+          IMPACT_BODY: ${{ steps.impact.outputs.body }}
+        with:
+          script: |
+            const body = process.env.IMPACT_BODY;
+            const marker = "<!-- docfacts-impact -->";
+            const full = marker + "\n" + body;
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo, issue_number: context.issue.number, per_page: 100,
+            });
+            const mine = comments.find((c) => c.body?.startsWith(marker));
+            if (mine) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: mine.id, body: full });
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body: full });
+            }
