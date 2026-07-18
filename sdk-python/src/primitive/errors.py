@@ -43,6 +43,10 @@ PAYLOAD_ERRORS = {
         "message": "Webhook payload missing 'event' field",
         "suggestion": "All webhook payloads must have an 'event' field. This may not be a valid Primitive webhook.",
     },
+    "PAYLOAD_EVENT_MISMATCH": {
+        "message": "Webhook event header does not match the signed body",
+        "suggestion": "Reject webhook requests whose X-Webhook-Event header disagrees with the body event/type field.",
+    },
     "PAYLOAD_UNKNOWN_EVENT": {
         "message": "Unknown webhook event type",
         "suggestion": "This event type is not recognized. You may need to update your SDK or handle unknown events gracefully.",
@@ -88,6 +92,7 @@ WebhookPayloadErrorCode = Literal[
     "PAYLOAD_WRONG_TYPE",
     "PAYLOAD_IS_ARRAY",
     "PAYLOAD_MISSING_EVENT",
+    "PAYLOAD_EVENT_MISMATCH",
     "PAYLOAD_UNKNOWN_EVENT",
     "PAYLOAD_EMPTY_BODY",
     "JSON_PARSE_FAILED",
@@ -184,7 +189,9 @@ class WebhookValidationError(PrimitiveWebhookError):
 
 
 class RawEmailDecodeError(PrimitiveWebhookError):
-    def __init__(self, code: RawEmailDecodeErrorCode, message: str | None = None) -> None:
+    def __init__(
+        self, code: RawEmailDecodeErrorCode, message: str | None = None
+    ) -> None:
         definition = RAW_EMAIL_ERRORS[code]
         super().__init__(message or definition["message"])
         self.code = code

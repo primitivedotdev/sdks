@@ -35,8 +35,11 @@ function resolveClient(
       "Not authenticated: set PRIMITIVE_API_KEY, pass --api-key, or run `primitive login`.",
     );
   }
+  let baseUrl = auth.apiBaseUrl ?? DEFAULT_API_BASE_URL;
+  while (baseUrl.endsWith("/")) baseUrl = baseUrl.slice(0, -1);
+  if (baseUrl.endsWith("/v1")) baseUrl = baseUrl.slice(0, -3);
   return {
-    baseUrl: auth.apiBaseUrl ?? DEFAULT_API_BASE_URL,
+    baseUrl,
     apiKey: auth.apiKey,
   };
 }

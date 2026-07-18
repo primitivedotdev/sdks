@@ -1,6 +1,7 @@
 name: Node Release
 
 env:
+  COREPACK_ENABLE_AUTO_PIN: "0"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 on:
@@ -74,6 +75,10 @@ jobs:
       - name: Install node dependencies
         if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
         run: make node-install
+
+      - name: Run Node SDK release checks
+        if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}
+        run: make node-check node-smoke
 
       - name: Publish package to npm
         if: ${{ steps.version.outputs.changed == 'true' && steps.npm_state.outputs.published != 'true' }}

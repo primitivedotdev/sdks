@@ -337,11 +337,15 @@ const built = await x402.payEmailChallenge(issued, { signer: payer });
 // `built.json` is the interaction.json body. The payer received the challenge
 // as an inbound email; reply to it with the envelope attached as
 // `interaction.json` using the email client's `reply` method (see the email
-// client above). The platform reads the envelope, re-derives the
+// client above). In a webhook handler, `req` is the inbound Request carrying
+// the challenge email. The platform reads the envelope, re-derives the
 // interaction-bound nonce, and settles on chain.
 import { Buffer } from "node:buffer";
 import primitive from "@primitivedotdev/sdk";
 
+const challengeEmail = await primitive.receive(req, {
+  secret: process.env.PRIMITIVE_WEBHOOK_SECRET!,
+});
 const mail = primitive.client({ apiKey: process.env.PRIMITIVE_API_KEY! });
 await mail.reply(challengeEmail, {
   text: "Payment attached.",
@@ -559,6 +563,9 @@ Signature verification runs on the raw body and is independent of the event type
 - `@primitivedotdev/sdk/openapi` exports the OpenAPI document and the operation manifest as JSON. Useful for tools that want the spec inline.
 - `@primitivedotdev/sdk/contract` builds and signs webhook payloads. Useful for tests or replaying inbound events through your own handler.
 - `@primitivedotdev/sdk/parser` parses raw `.eml` files and bundles attachments. Useful when you receive inbound mail through a different path (forwarded `.eml` files, archived storage) and want the same normalization the webhook receiver applies.
+- `@primitivedotdev/sdk/parser/address` exports the DOM-free RFC 5322 From-header parsers for runtimes that only need address validation.
+- `@primitivedotdev/sdk/x402` exports the x402 client and signing helpers for charge, pay, payout registration, and email-native payment challenge flows.
+- `@primitivedotdev/sdk/payloads` exports `pushFile`, `pushBytes`, and `pullFile` for large encrypted payload objects. `PrimitiveClient.sendAttachment` uses the same payload object model for large attachments.
 
 ## Going further
 

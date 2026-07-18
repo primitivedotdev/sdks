@@ -121,9 +121,9 @@ def test_parse_webhook_event_handles_known_and_unknown_events() -> None:
     )
     unknown = cast(
         UnknownEvent,
-        parse_webhook_event({"event": "email.bounced", "id": "y"}),
+        parse_webhook_event({"event": "email.opened", "id": "y"}),
     )
-    assert unknown["event"] == "email.bounced"
+    assert unknown["event"] == "email.opened"
 
 
 def test_exported_enums_match_validated_runtime_values(
@@ -495,7 +495,10 @@ def test_handle_webhook_rejects_invalid_payload_structure(
 
 
 def test_confirmed_headers() -> None:
-    assert confirmed_headers() == {"X-Primitive-Confirmed": "true", "X-MyMX-Confirmed": "true"}
+    assert confirmed_headers() == {
+        "X-Primitive-Confirmed": "true",
+        "X-MyMX-Confirmed": "true",
+    }
 
 
 def test_download_helpers(valid_payload: dict[str, Any]) -> None:

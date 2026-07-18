@@ -1,10 +1,16 @@
-.PHONY: node-install node-generate node-check-generated node-test node-check node-build node-smoke node-tarball-isolation node-coverage
-.PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-tarball-isolation cli-coverage
+.PHONY: api-core-check node-install node-generate node-check-generated node-test node-check node-build node-smoke node-tarball-isolation node-coverage
+.PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-tarball-isolation cli-coverage rust-cli-generate rust-cli-manifest-bytewise rust-cli-help-snapshots-bytewise rust-cli-check-generated rust-cli-check rust-cli-doc rust-cli-package rust-cli-build rust-cli-release-build rust-cli-dist rust-cli-smoke rust-cli-release-smoke rust-cli-linux-portability-smoke rust-cli-archive-smoke rust-cli-windows-archive-smoke rust-cli-install-smoke rust-cli-live-smoke rust-cli-live-smoke-no-key rust-cli-full-check cli-command-surface-parity cli-operation-coverage cli-help-parity cli-archive-parity cli-parity
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
 .PHONY: shared-check check build release-check ci
 
 PYTHON := $(shell if command -v python3 >/dev/null 2>&1; then printf python3; else printf python; fi)
+export COREPACK_ENABLE_AUTO_PIN := 0
+NODE_GENERATED_PATHS := openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated/email-received-event.validator.generated.ts packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts
+RUST_CLI_GENERATED_PATHS := openapi/primitive-api.codegen.json packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts cli-rust/src/operation-manifest.json cli-rust/src/help_snapshots.generated.rs
+
+api-core-check:
+	pnpm --dir packages/api-core check
 
 node-install:
 	pnpm install --frozen-lockfile
@@ -13,13 +19,13 @@ node-generate:
 	pnpm --filter @primitivedotdev/sdk generate
 
 node-check-generated:
-	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated/email-received-event.validator.generated.ts packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts
+	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- $(NODE_GENERATED_PATHS) && test -z "$$(git status --porcelain -- $(NODE_GENERATED_PATHS))"
 
 node-test:
 	pnpm --dir sdk-node test
 
-node-check: node-check-generated
-	if command -v biome >/dev/null 2>&1; then cd sdk-node && biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/payloads tests/; else pnpm --dir sdk-node lint; fi
+node-check: node-check-generated api-core-check
+	if command -v biome >/dev/null 2>&1; then cd sdk-node && biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads tests/; else pnpm --dir sdk-node lint; fi
 	pnpm --dir sdk-node typecheck
 	$(MAKE) node-test
 
@@ -30,7 +36,15 @@ node-tarball-isolation:
 	node scripts/assert-tarball-isolation.mjs sdk-node "primitive" "@primitivedotdev/cli"
 
 node-smoke: node-build node-tarball-isolation
-	pack_dir=$$(mktemp -d) && smoke_dir=$$(mktemp -d) && tarball=$$(cd sdk-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && cd "$$smoke_dir" && npm init -y && npm install "$$pack_dir/$$tarball" && node --input-type=module -e "const root = await import('@primitivedotdev/sdk'); const webhook = await import('@primitivedotdev/sdk/webhook'); const api = await import('@primitivedotdev/sdk/api'); const openapi = await import('@primitivedotdev/sdk/openapi'); const contract = await import('@primitivedotdev/sdk/contract'); const parser = await import('@primitivedotdev/sdk/parser'); if (typeof root.handleWebhook !== 'function') throw new Error('missing root handleWebhook export'); if (typeof webhook.handleWebhook !== 'function') throw new Error('missing webhook handleWebhook export'); if (typeof api.createPrimitiveApiClient !== 'function') throw new Error('missing api client factory'); if (typeof openapi.openapiDocument !== 'object') throw new Error('missing openapi document export'); if (typeof contract.buildEmailReceivedEvent !== 'function') throw new Error('missing contract buildEmailReceivedEvent export'); if (typeof parser.parseEmail !== 'function') throw new Error('missing parser parseEmail export');" && if [ -e "$$smoke_dir/node_modules/.bin/primitive" ]; then echo "SDK tarball must not install a primitive bin (the CLI is the separate primitive package)"; exit 1; fi && if [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "SDK tarball pulled @primitivedotdev/api-core into node_modules; the workspace-internal package must be bundled inline, not declared as a runtime dep."; exit 1; fi
+	pack_dir=$$(mktemp -d) && \
+	smoke_dir=$$(mktemp -d) && \
+	tarball=$$(cd sdk-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && \
+	cd "$$smoke_dir" && \
+	npm init -y && \
+	npm install "$$pack_dir/$$tarball" && \
+	node --input-type=module -e 'const root = await import("@primitivedotdev/sdk"); const webhook = await import("@primitivedotdev/sdk/webhook"); const api = await import("@primitivedotdev/sdk/api"); const openapi = await import("@primitivedotdev/sdk/openapi"); const contract = await import("@primitivedotdev/sdk/contract"); const parser = await import("@primitivedotdev/sdk/parser"); const parserAddress = await import("@primitivedotdev/sdk/parser/address"); const x402 = await import("@primitivedotdev/sdk/x402"); const payloads = await import("@primitivedotdev/sdk/payloads"); const sendEmail = openapi.operationManifest.find((op) => op.operationId === "sendEmail"); if (typeof root.handleWebhook !== "function") throw new Error("missing root handleWebhook export"); if (typeof webhook.handleWebhook !== "function") throw new Error("missing webhook handleWebhook export"); if (typeof api.createPrimitiveApiClient !== "function") throw new Error("missing api client factory"); if (typeof openapi.openapiDocument !== "object") throw new Error("missing openapi document export"); if (!Array.isArray(openapi.operationManifest)) throw new Error("missing openapi operation manifest export"); if (!sendEmail?.requestSchema || !sendEmail?.responseSchema || !sendEmail.headerParams.some((param) => param.name === "Idempotency-Key" && param.minLength === 1 && param.maxLength === 255)) throw new Error("missing sendEmail manifest metadata"); if (typeof contract.buildEmailReceivedEvent !== "function") throw new Error("missing contract buildEmailReceivedEvent export"); if (typeof parser.parseEmail !== "function") throw new Error("missing parser parseEmail export"); if (typeof parserAddress.parseFromHeader !== "function") throw new Error("missing parser/address parseFromHeader export"); if (typeof x402.createX402Client !== "function") throw new Error("missing x402 createX402Client export"); if (typeof payloads.pushFile !== "function" || typeof payloads.pullFile !== "function") throw new Error("missing payloads pushFile/pullFile exports");' && \
+	if [ -e "$$smoke_dir/node_modules/.bin/primitive" ]; then echo "SDK tarball must not install a primitive bin (the CLI is the separate primitive package)"; exit 1; fi && \
+	if [ -d "$$smoke_dir/node_modules/@primitivedotdev/api-core" ]; then echo "SDK tarball pulled @primitivedotdev/api-core into node_modules; the workspace-internal package must be bundled inline, not declared as a runtime dep."; exit 1; fi
 
 node-coverage:
 	pnpm --dir sdk-node test:coverage
@@ -236,6 +250,306 @@ cli-smoke: cli-build cli-tarball-isolation
 cli-coverage:
 	pnpm --dir cli-node test:coverage
 
+rust-cli-generate:
+	COREPACK_ENABLE_AUTO_PIN=0 pnpm --dir packages/api-core generate
+	COREPACK_ENABLE_AUTO_PIN=0 pnpm --dir cli-node build
+	node scripts/generate-rust-cli-help-snapshots.mjs --node-bin "node $(CURDIR)/cli-node/bin/run.js"
+
+rust-cli-manifest-bytewise: rust-cli-generate
+	node scripts/assert-rust-operation-manifest-bytewise.mjs
+
+rust-cli-help-snapshots-bytewise: rust-cli-generate
+	node scripts/generate-rust-cli-help-snapshots.mjs --node-bin "node $(CURDIR)/cli-node/bin/run.js" --check
+
+rust-cli-check-generated: rust-cli-manifest-bytewise rust-cli-help-snapshots-bytewise
+	git diff --exit-code -- $(RUST_CLI_GENERATED_PATHS) && test -z "$$(git status --porcelain -- $(RUST_CLI_GENERATED_PATHS))"
+
+rust-cli-check: rust-cli-check-generated
+	cargo fmt --manifest-path cli-rust/Cargo.toml --check
+	cargo check --manifest-path cli-rust/Cargo.toml --locked
+	cargo clippy --manifest-path cli-rust/Cargo.toml --locked --all-targets -- -D warnings
+	RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path cli-rust/Cargo.toml --locked --no-deps
+	cargo test --manifest-path cli-rust/Cargo.toml --locked
+
+rust-cli-doc: rust-cli-generate
+	RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path cli-rust/Cargo.toml --locked --no-deps
+
+rust-cli-package: rust-cli-generate
+	cargo package --manifest-path cli-rust/Cargo.toml --locked --allow-dirty
+
+rust-cli-build: rust-cli-generate
+	cargo build --manifest-path cli-rust/Cargo.toml --locked
+
+rust-cli-release-build: rust-cli-generate
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then cargo build --release --manifest-path cli-rust/Cargo.toml --locked --target "$$RUST_CLI_CARGO_TARGET"; else cargo build --release --manifest-path cli-rust/Cargo.toml --locked; fi
+
+rust-cli-dist: rust-cli-release-build
+	bin_dir="$(CURDIR)/cli-rust/target/release" && \
+	dist_target="$${RUST_CLI_DIST_TARGET:-}" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then \
+		bin_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; \
+		if [ -z "$$dist_target" ]; then \
+			case "$$RUST_CLI_CARGO_TARGET" in \
+				x86_64-unknown-linux-musl) dist_target="linux-x64" ;; \
+				aarch64-unknown-linux-musl) dist_target="linux-arm64" ;; \
+				x86_64-apple-darwin) dist_target="macos-x64" ;; \
+				aarch64-apple-darwin) dist_target="macos-arm64" ;; \
+				x86_64-pc-windows-msvc) dist_target="windows-x64" ;; \
+				*) echo "Set RUST_CLI_DIST_TARGET for RUST_CLI_CARGO_TARGET=$$RUST_CLI_CARGO_TARGET"; exit 1 ;; \
+			esac; \
+		fi; \
+	fi && \
+	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then bin_dir="$$RUST_CLI_DIST_BIN_DIR"; fi && \
+	if [ -n "$$dist_target" ]; then \
+		node scripts/package-rust-cli.mjs --version "$${RUST_CLI_DIST_VERSION:-}" --target "$$dist_target" --out-dir "$${RUST_CLI_DIST_DIR:-cli-rust/dist}" --bin-dir "$$bin_dir"; \
+	else \
+		node scripts/package-rust-cli.mjs --version "$${RUST_CLI_DIST_VERSION:-}" --out-dir "$${RUST_CLI_DIST_DIR:-cli-rust/dist}" --bin-dir "$$bin_dir"; \
+	fi
+
+rust-cli-smoke: rust-cli-build
+	smoke_dir=$$(mktemp -d) && \
+	cargo install --quiet --path cli-rust --locked --root "$$smoke_dir" --debug && \
+	"$$smoke_dir/bin/primitive-rust" --version > "$$smoke_dir/version.txt" && \
+	grep -q -- 'primitive-rust/' "$$smoke_dir/version.txt" && \
+	"$$smoke_dir/bin/primitive" --version > "$$smoke_dir/primitive-version.txt" && \
+	grep -q -- 'primitive/' "$$smoke_dir/primitive-version.txt" && \
+	"$$smoke_dir/bin/prim" --version > "$$smoke_dir/prim-version.txt" && \
+	grep -q -- 'prim/' "$$smoke_dir/prim-version.txt" && \
+	"$$smoke_dir/bin/primitive" list-operations > "$$smoke_dir/list-operations.json" && \
+	grep -q -- '"operationId": "getAccount"' "$$smoke_dir/list-operations.json" && \
+	"$$smoke_dir/bin/prim" list-operations > "$$smoke_dir/prim-list-operations.json" && \
+	grep -q -- '"operationId": "getAccount"' "$$smoke_dir/prim-list-operations.json" && \
+	"$$smoke_dir/bin/primitive" describe sending:send-email > "$$smoke_dir/describe-send-email.json" && \
+	grep -q -- '"operationId": "sendEmail"' "$$smoke_dir/describe-send-email.json"
+
+rust-cli-release-smoke: rust-cli-release-build
+	smoke_dir=$$(mktemp -d) && \
+	target_dir="$(CURDIR)/cli-rust/target/release" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then target_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; fi && \
+	bin="$$target_dir/primitive-rust" && \
+	"$$bin" --version > "$$smoke_dir/version.txt" && \
+	grep -q -- 'primitive-rust/' "$$smoke_dir/version.txt" && \
+	"$$target_dir/primitive" --version > "$$smoke_dir/primitive-version.txt" && \
+	grep -q -- 'primitive/' "$$smoke_dir/primitive-version.txt" && \
+	"$$target_dir/prim" --version > "$$smoke_dir/prim-version.txt" && \
+	grep -q -- 'prim/' "$$smoke_dir/prim-version.txt" && \
+	"$$bin" list-operations > "$$smoke_dir/list-operations.json" && \
+	grep -q -- '"operationId": "getAccount"' "$$smoke_dir/list-operations.json" && \
+	"$$target_dir/prim" list-operations > "$$smoke_dir/prim-list-operations.json" && \
+	grep -q -- '"operationId": "getAccount"' "$$smoke_dir/prim-list-operations.json" && \
+	"$$target_dir/primitive" describe sending:send-email > "$$smoke_dir/describe-send-email.json" && \
+	grep -q -- '"operationId": "sendEmail"' "$$smoke_dir/describe-send-email.json"
+
+rust-cli-linux-portability-smoke: rust-cli-release-build
+	target_dir="$(CURDIR)/cli-rust/target/release" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then target_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; fi && \
+	case "$${RUST_CLI_CARGO_TARGET:-}" in \
+	  *-unknown-linux-musl) node scripts/assert-rust-cli-linux-portability.mjs --bin "$$target_dir/primitive" --expect-static ;; \
+	  *) node scripts/assert-rust-cli-linux-portability.mjs --bin "$$target_dir/primitive" --max-glibc "$${RUST_CLI_MAX_GLIBC:-2.39}" ;; \
+	esac
+
+rust-cli-archive-smoke: rust-cli-release-build
+	smoke_dir=$$(mktemp -d) && \
+	extract_dir="$$smoke_dir/extract" && \
+	check_dir="$$smoke_dir/check" && \
+	run_dir="$$smoke_dir/run" && \
+	home_dir="$$smoke_dir/home" && \
+	xdg_dir="$$smoke_dir/xdg" && \
+	config_dir="$$smoke_dir/primitive" && \
+	mkdir -p "$$extract_dir" "$$check_dir" "$$run_dir" "$$home_dir" "$$xdg_dir" "$$config_dir" && \
+	bin_dir="$(CURDIR)/cli-rust/target/release" && \
+	dist_target="$${RUST_CLI_DIST_TARGET:-}" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then \
+		bin_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; \
+		if [ -z "$$dist_target" ]; then \
+			case "$$RUST_CLI_CARGO_TARGET" in \
+				x86_64-unknown-linux-musl) dist_target="linux-x64" ;; \
+				aarch64-unknown-linux-musl) dist_target="linux-arm64" ;; \
+				x86_64-apple-darwin) dist_target="macos-x64" ;; \
+				aarch64-apple-darwin) dist_target="macos-arm64" ;; \
+				x86_64-pc-windows-msvc) dist_target="windows-x64" ;; \
+				*) echo "Set RUST_CLI_DIST_TARGET for RUST_CLI_CARGO_TARGET=$$RUST_CLI_CARGO_TARGET"; exit 1 ;; \
+			esac; \
+		fi; \
+	fi && \
+	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then bin_dir="$$RUST_CLI_DIST_BIN_DIR"; fi && \
+	case "$$dist_target" in windows-*) echo "rust-cli-archive-smoke uses Unix archive extraction and execution; use rust-cli-windows-archive-smoke for $$dist_target"; exit 1 ;; esac && \
+	if [ -n "$$dist_target" ]; then \
+		node scripts/package-rust-cli.mjs --target "$$dist_target" --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
+	else \
+		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
+	fi && \
+	archive_path=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).archive);" "$$smoke_dir/package.json") && \
+	checksum_path=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).checksum);" "$$smoke_dir/package.json") && \
+	checksum_name=$$(basename "$$archive_path") && \
+	grep -q -- "  $$checksum_name" "$$checksum_path" && \
+	cp "$$archive_path" "$$check_dir/$$checksum_name" && \
+	cp "$$checksum_path" "$$check_dir/$$checksum_name.sha256" && \
+	case "$$(uname -s)" in \
+	  Darwin) cd "$$check_dir" && shasum -a 256 -c "$$checksum_name.sha256" ;; \
+	  *) cd "$$check_dir" && sha256sum -c "$$checksum_name.sha256" ;; \
+	esac && \
+	tar -tzf "$$archive_path" > "$$smoke_dir/tar-list.txt" && \
+	grep -qx -- 'primitive' "$$smoke_dir/tar-list.txt" && \
+	grep -qx -- 'prim' "$$smoke_dir/tar-list.txt" && \
+	grep -qx -- 'README.md' "$$smoke_dir/tar-list.txt" && \
+	grep -qx -- 'LICENSE' "$$smoke_dir/tar-list.txt" && \
+	tar -C "$$extract_dir" -xzf "$$archive_path" && \
+	test -s "$$extract_dir/README.md" && \
+	test -s "$$extract_dir/LICENSE" && \
+	grep -q -- 'Primitive Rust CLI' "$$extract_dir/README.md" && \
+	case "$$(uname -s)" in \
+	  Darwin) otool -L "$$extract_dir/primitive" > "$$smoke_dir/native-deps.txt" && if grep -E 'lib(ssl|crypto|z)\\.' "$$smoke_dir/native-deps.txt"; then echo "Rust CLI archive unexpectedly links OpenSSL/libz"; exit 1; fi ;; \
+	  Linux) if command -v ldd >/dev/null 2>&1; then if ldd "$$extract_dir/primitive" > "$$smoke_dir/native-deps.txt" 2> "$$smoke_dir/native-deps.err"; then if grep -E 'lib(ssl|crypto|z)\\.so' "$$smoke_dir/native-deps.txt"; then echo "Rust CLI archive unexpectedly links OpenSSL/libz"; exit 1; fi; elif grep -Eiq 'not a dynamic executable|statically linked' "$$smoke_dir/native-deps.txt" "$$smoke_dir/native-deps.err"; then :; else cat "$$smoke_dir/native-deps.txt" "$$smoke_dir/native-deps.err"; exit 1; fi; fi ;; \
+	esac && \
+	cd "$$run_dir" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$extract_dir/primitive" --version > "$$smoke_dir/version.txt" && \
+	grep -q -- 'primitive/' "$$smoke_dir/version.txt" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$extract_dir/prim" --version > "$$smoke_dir/prim-version.txt" && \
+	grep -q -- 'prim/' "$$smoke_dir/prim-version.txt" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$extract_dir/primitive" list-operations > "$$smoke_dir/list-operations.json" && \
+	grep -q -- '"operationId": "getAccount"' "$$smoke_dir/list-operations.json" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$extract_dir/prim" list-operations > "$$smoke_dir/prim-list-operations.json" && \
+	grep -q -- '"operationId": "getAccount"' "$$smoke_dir/prim-list-operations.json" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$extract_dir/prim" describe sending:send-email > "$$smoke_dir/prim-describe-send-email.json" && \
+	grep -q -- '"operationId": "sendEmail"' "$$smoke_dir/prim-describe-send-email.json" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$extract_dir/primitive" describe sending:send-email > "$$smoke_dir/describe-send-email.json" && \
+	grep -q -- '"operationId": "sendEmail"' "$$smoke_dir/describe-send-email.json"
+
+rust-cli-windows-archive-smoke: rust-cli-release-build
+	smoke_dir=$$(mktemp -d) && \
+	bin_dir="$$smoke_dir/bin" && \
+	check_dir="$$smoke_dir/check" && \
+	mkdir -p "$$bin_dir" "$$check_dir" && \
+	cp "$(CURDIR)/cli-rust/target/release/primitive" "$$bin_dir/primitive.exe" && \
+	cp "$(CURDIR)/cli-rust/target/release/prim" "$$bin_dir/prim.exe" && \
+	node scripts/package-rust-cli.mjs --target windows-x64 --archive-format zip --bin-dir "$$bin_dir" --out-dir "$$smoke_dir/dist" --json > "$$smoke_dir/package.json" && \
+	archive_path=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).archive);" "$$smoke_dir/package.json") && \
+	checksum_path=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).checksum);" "$$smoke_dir/package.json") && \
+	archive_name=$$(basename "$$archive_path") && \
+	case "$$archive_name" in primitive-rust-cli-v*-windows-x64.zip) ;; *) echo "Unexpected Windows archive name: $$archive_name"; exit 1 ;; esac && \
+	grep -q -- "  $$archive_name" "$$checksum_path" && \
+	cp "$$archive_path" "$$check_dir/$$archive_name" && \
+	cp "$$checksum_path" "$$check_dir/$$archive_name.sha256" && \
+	case "$$(uname -s)" in \
+	  Darwin) cd "$$check_dir" && shasum -a 256 -c "$$archive_name.sha256" ;; \
+	  *) cd "$$check_dir" && sha256sum -c "$$archive_name.sha256" ;; \
+	esac && \
+	printf '%s\n' LICENSE README.md prim.exe primitive.exe | sort > "$$smoke_dir/expected-zip-members.txt" && \
+	if command -v zipinfo >/dev/null 2>&1; then \
+	  zipinfo -1 "$$archive_path"; \
+	else \
+	  unzip -Z1 "$$archive_path"; \
+	fi | sort > "$$smoke_dir/actual-zip-members.txt" && \
+	diff -u "$$smoke_dir/expected-zip-members.txt" "$$smoke_dir/actual-zip-members.txt"
+
+rust-cli-install-smoke: rust-cli-release-build
+	smoke_dir=$$(mktemp -d) && \
+	install_dir="$$smoke_dir/bin" && \
+	home_dir="$$smoke_dir/home" && \
+	xdg_dir="$$smoke_dir/xdg" && \
+	config_dir="$$smoke_dir/primitive" && \
+	mkdir -p "$$install_dir" "$$home_dir" "$$xdg_dir" "$$config_dir" && \
+	bin_dir="$(CURDIR)/cli-rust/target/release" && \
+	dist_target="$${RUST_CLI_DIST_TARGET:-}" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then \
+		bin_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; \
+		if [ -z "$$dist_target" ]; then \
+			case "$$RUST_CLI_CARGO_TARGET" in \
+				x86_64-unknown-linux-musl) dist_target="linux-x64" ;; \
+				aarch64-unknown-linux-musl) dist_target="linux-arm64" ;; \
+				x86_64-apple-darwin) dist_target="macos-x64" ;; \
+				aarch64-apple-darwin) dist_target="macos-arm64" ;; \
+				x86_64-pc-windows-msvc) dist_target="windows-x64" ;; \
+				*) echo "Set RUST_CLI_DIST_TARGET for RUST_CLI_CARGO_TARGET=$$RUST_CLI_CARGO_TARGET"; exit 1 ;; \
+			esac; \
+		fi; \
+	fi && \
+	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then bin_dir="$$RUST_CLI_DIST_BIN_DIR"; fi && \
+	case "$$dist_target" in windows-*) echo "rust-cli-install-smoke uses the Unix installer; use scripts/install-rust-cli.ps1 for $$dist_target"; exit 1 ;; esac && \
+	if [ -n "$$dist_target" ]; then \
+		node scripts/package-rust-cli.mjs --target "$$dist_target" --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
+	else \
+		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
+	fi && \
+	version=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).version);" "$$smoke_dir/package.json") && \
+	target=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).target);" "$$smoke_dir/package.json") && \
+	scripts/install-rust-cli.sh --version "$$version" --target "$$target" --base-url "file://$$smoke_dir/dist" --install-dir "$$install_dir" > "$$smoke_dir/install.txt" && \
+	grep -q -- "Installed primitive and prim to $$install_dir" "$$smoke_dir/install.txt" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$install_dir/primitive" --version > "$$smoke_dir/primitive-version.txt" && \
+	grep -q -- 'primitive/' "$$smoke_dir/primitive-version.txt" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$install_dir/prim" --version > "$$smoke_dir/prim-version.txt" && \
+	grep -q -- 'prim/' "$$smoke_dir/prim-version.txt" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$install_dir/primitive" list-operations > "$$smoke_dir/list-operations.json" && \
+	grep -q -- '"operationId": "getAccount"' "$$smoke_dir/list-operations.json" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$install_dir/prim" list-operations > "$$smoke_dir/prim-list-operations.json" && \
+	grep -q -- '"operationId": "getAccount"' "$$smoke_dir/prim-list-operations.json" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$install_dir/prim" describe sending:send-email > "$$smoke_dir/prim-describe-send-email.json" && \
+	grep -q -- '"operationId": "sendEmail"' "$$smoke_dir/prim-describe-send-email.json" && \
+	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$install_dir/primitive" describe sending:send-email > "$$smoke_dir/describe-send-email.json" && \
+	grep -q -- '"operationId": "sendEmail"' "$$smoke_dir/describe-send-email.json"
+
+rust-cli-live-smoke: rust-cli-build
+	node scripts/run-rust-cli-live-smoke.mjs --rust-bin "$(CURDIR)/cli-rust/target/debug/primitive" $${RUST_CLI_LIVE_SMOKE_ARGS:-}
+
+rust-cli-live-smoke-no-key: rust-cli-build
+	node scripts/run-rust-cli-live-smoke.mjs --rust-bin "$(CURDIR)/cli-rust/target/debug/primitive" --no-key-only
+
+cli-command-surface-parity: cli-build rust-cli-check-generated
+	node scripts/assert-cli-command-surface-parity.mjs
+
+cli-operation-coverage:
+	node scripts/assert-cli-operation-request-coverage.mjs --require-all --require-generated-alias-fixtures --require-generated-command-fixtures --require-canonical-generated-command-fixtures
+
+cli-help-parity: cli-command-surface-parity rust-cli-build
+	node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "$${NODE_CLI_BIN:-node $(CURDIR)/cli-node/bin/run.js}" --rust-bin "$${RUST_CLI_BIN:-$(CURDIR)/cli-rust/target/debug/primitive}"
+	shim_dir=$$(mktemp -d) && \
+	node_prim_bin="$${NODE_CLI_PRIM_BIN:-}" && \
+	if [ -z "$$node_prim_bin" ]; then ln -s "$(CURDIR)/cli-node/bin/run.js" "$$shim_dir/prim" && node_prim_bin="node $$shim_dir/prim"; fi && \
+	node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "$$node_prim_bin" --rust-bin "$${RUST_CLI_PRIM_BIN:-$(CURDIR)/cli-rust/target/debug/prim}"
+
+cli-archive-parity: cli-command-surface-parity cli-operation-coverage rust-cli-release-build
+	smoke_dir=$$(mktemp -d) && \
+	extract_dir="$$smoke_dir/extract" && \
+	mkdir -p "$$extract_dir" && \
+	bin_dir="$(CURDIR)/cli-rust/target/release" && \
+	dist_target="$${RUST_CLI_DIST_TARGET:-}" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then \
+		bin_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; \
+		if [ -z "$$dist_target" ]; then \
+			case "$$RUST_CLI_CARGO_TARGET" in \
+				x86_64-unknown-linux-musl) dist_target="linux-x64" ;; \
+				aarch64-unknown-linux-musl) dist_target="linux-arm64" ;; \
+				x86_64-apple-darwin) dist_target="macos-x64" ;; \
+				aarch64-apple-darwin) dist_target="macos-arm64" ;; \
+				x86_64-pc-windows-msvc) dist_target="windows-x64" ;; \
+				*) echo "Set RUST_CLI_DIST_TARGET for RUST_CLI_CARGO_TARGET=$$RUST_CLI_CARGO_TARGET"; exit 1 ;; \
+			esac; \
+		fi; \
+	fi && \
+	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then bin_dir="$$RUST_CLI_DIST_BIN_DIR"; fi && \
+	case "$$dist_target" in windows-*) echo "cli-archive-parity uses Unix archive extraction and execution; use Windows workflow parity for $$dist_target"; exit 1 ;; esac && \
+	if [ -n "$$dist_target" ]; then \
+		node scripts/package-rust-cli.mjs --target "$$dist_target" --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
+	else \
+		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
+	fi && \
+	archive_path=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).archive);" "$$smoke_dir/package.json") && \
+	tar -C "$$extract_dir" -xzf "$$archive_path" && \
+	node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "$${NODE_CLI_BIN:-node $(CURDIR)/cli-node/bin/run.js}" --rust-bin "$$extract_dir/primitive" && \
+	node scripts/run-cli-parity.mjs --node-bin "$${NODE_CLI_BIN:-node $(CURDIR)/cli-node/bin/run.js}" --rust-bin "$$extract_dir/primitive" && \
+	node_prim_bin="$${NODE_CLI_PRIM_BIN:-}" && \
+	if [ -z "$$node_prim_bin" ]; then ln -s "$(CURDIR)/cli-node/bin/run.js" "$$smoke_dir/prim" && node_prim_bin="node $$smoke_dir/prim"; fi && \
+	node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "$$node_prim_bin" --rust-bin "$$extract_dir/prim" && \
+	node scripts/run-cli-parity.mjs --node-bin "$$node_prim_bin" --rust-bin "$$extract_dir/prim"
+
+cli-parity: cli-help-parity cli-operation-coverage
+	node scripts/run-cli-parity.mjs --node-bin "$${NODE_CLI_BIN:-node $(CURDIR)/cli-node/bin/run.js}" --rust-bin "$${RUST_CLI_BIN:-$(CURDIR)/cli-rust/target/debug/primitive}"
+	shim_dir=$$(mktemp -d) && \
+	node_prim_bin="$${NODE_CLI_PRIM_BIN:-}" && \
+	if [ -z "$$node_prim_bin" ]; then ln -s "$(CURDIR)/cli-node/bin/run.js" "$$shim_dir/prim" && node_prim_bin="node $$shim_dir/prim"; fi && \
+	node scripts/run-cli-parity.mjs --node-bin "$$node_prim_bin" --rust-bin "$${RUST_CLI_PRIM_BIN:-$(CURDIR)/cli-rust/target/debug/prim}"
+
 python-sync:
 	cd sdk-python && uv sync --dev
 
@@ -288,6 +602,8 @@ shared-check:
 check: node-check cli-check python-check go-check shared-check
 
 build: node-build cli-build python-build go-build
+
+rust-cli-full-check: rust-cli-check rust-cli-package rust-cli-build rust-cli-smoke rust-cli-live-smoke-no-key rust-cli-release-smoke rust-cli-linux-portability-smoke rust-cli-archive-smoke rust-cli-windows-archive-smoke rust-cli-install-smoke cli-parity cli-archive-parity
 
 release-check: node-check node-build node-smoke cli-check cli-build cli-smoke python-check python-build python-smoke go-check go-build shared-check
 
