@@ -1,0 +1,19 @@
+{
+  "_comment": "Zero-byte conformance vector for the Primitive Payloads object model. Empty payloads have no chunks, and their Merkle root is SHA-256 over the empty byte string.",
+  "input": {
+    "sizeBytes": 0,
+    "recipe": "empty"
+  },
+  "cekHex": "01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3da",
+  "objectIdHex": "03101d2a3744515e6b7885929facb9c6",
+  "chunkSize": 65536,
+  "expectedManifest": {
+    "version": 1,
+    "objectId": "03101d2a3744515e6b7885929facb9c6",
+    "chunkSize": 65536,
+    "totalPlaintextSize": 0,
+    "chunkCount": 0,
+    "chunks": [],
+    "merkleRoot": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

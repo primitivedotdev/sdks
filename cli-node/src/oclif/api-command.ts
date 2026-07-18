@@ -38,7 +38,7 @@ type OperationExecutor = (options: Record<string, unknown>) => Promise<{
 }>;
 
 function flagName(parameterName: string): string {
-  return parameterName.replace(/_/g, "-");
+  return parameterName.replace(/_/g, "-").toLowerCase();
 }
 
 function flagDescription(parameter: PrimitiveParameterManifest): string {
@@ -641,7 +641,7 @@ export function resolveCliAuthFromFlags(
 // Reserved flag names the body-field expander must never overwrite.
 // `--raw-body` and `--body-file` are the JSON escape hatches.
 // `--api-key`, `--api-base-url`, `--output` are
-// infra. Path and query params get added before body fields and take
+// infra. Path, query, and header params get added before body fields and take
 // precedence.
 //
 // Note: `--body` is intentionally NOT reserved here. The naive
@@ -740,7 +740,11 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     });
   }
 
-  for (const parameter of [...operation.pathParams, ...operation.queryParams]) {
+  for (const parameter of [
+    ...operation.pathParams,
+    ...operation.queryParams,
+    ...operation.headerParams,
+  ]) {
     flags[flagName(parameter.name)] = flagForParameter(parameter);
   }
 
@@ -1078,6 +1082,7 @@ export function createOperationCommand(
           client: apiClient.client,
           parseAs: operation.binaryResponse ? "blob" : "auto",
           path: collectValues(operation.pathParams, parsedFlags),
+          headers: collectValues(operation.headerParams, parsedFlags),
           query: collectValues(operation.queryParams, parsedFlags),
           responseStyle: "fields",
         });

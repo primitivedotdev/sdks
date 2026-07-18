@@ -59,6 +59,29 @@ func TestParsePaymentSettledFromHeader(t *testing.T) {
 	}
 }
 
+func TestParsePaymentAmountJSONNumber(t *testing.T) {
+	body := []byte(`{"type":"payment.settled","challenge_id":"chl_1","network":"base-sepolia","amount":9007199254740993,"asset":"0xToken","payer_org":"org_1","settle_tx":"0xdeadbeef"}`)
+
+	event, err := ParseWebhookEvent(body, "payment.settled")
+	if err != nil {
+		t.Fatalf("ParseWebhookEvent returned error: %v", err)
+	}
+	payment, ok := event.(PaymentEvent)
+	if !ok {
+		t.Fatalf("expected PaymentEvent, got %T", event)
+	}
+	if payment.Amount != "9007199254740993" {
+		t.Fatalf("expected Amount 9007199254740993, got %q", payment.Amount)
+	}
+	payloadAmount, ok := payment.Payload["amount"].(json.Number)
+	if !ok {
+		t.Fatalf("expected payload amount json.Number, got %T", payment.Payload["amount"])
+	}
+	if payloadAmount.String() != "9007199254740993" {
+		t.Fatalf("expected payload amount 9007199254740993, got %q", payloadAmount.String())
+	}
+}
+
 func TestParsePaymentFailedFromHeader(t *testing.T) {
 	// payment.failed carries failure_reason (and no settle_tx), payer_org null.
 	body := map[string]any{

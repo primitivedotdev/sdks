@@ -14,6 +14,7 @@ make node-generate python-generate go-generate
 
 # Run all checks (lint, typecheck, tests, generated-file-sync)
 make node-check
+make cli-check
 make python-check
 make go-check
 
@@ -26,7 +27,7 @@ make go-build
 make python-build
 ```
 
-At minimum, run `make node-check cli-check go-check shared-check` before every push. If you changed the JSON schema, you MUST also run `make python-check`.
+At minimum, run `make node-check cli-check go-check shared-check` before every push. If you changed the optional Rust CLI port, also run `make rust-cli-full-check`. If you changed the JSON schema, you MUST also run `make python-check`.
 
 `cli-node/` is the `primitive` package; it has its own `pnpm-lock.yaml` and `make cli-*` targets. It depends on `@primitivedotdev/sdk` at the published npm version; local-dev cross-package changes that require a new SDK surface need a coordinated release.
 

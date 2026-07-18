@@ -144,6 +144,115 @@ describe("contract", () => {
       expect(validateEmailReceivedEvent(event)).toEqual(event);
     });
 
+    it("builds schema-valid machine-mail email-family events", () => {
+      const cases: Array<{
+        event: NonNullable<EmailReceivedEventInput["event"]>;
+        analysis: EmailAnalysis;
+      }> = [
+        {
+          event: "email.bounced",
+          analysis: {
+            bounce: {
+              is_bounce: true,
+              kind: "dsn",
+              type: "permanent",
+              category: "mailbox_does_not_exist",
+              classified_by: "status_code",
+              failed_recipient: "to@example.com",
+              smtp_code: 550,
+              status_code: "5.1.1",
+              diagnostic_code: "550 5.1.1 user unknown",
+              reported_by_mta: "mx.example.com",
+              original_message_id: "<original@example.com>",
+              reasons: ["user unknown"],
+            },
+          },
+        },
+        {
+          event: "email.tls_report",
+          analysis: {
+            tls_report: {
+              kind: "tls_report",
+              organization: "Example Receiver",
+              report_id: "tls-report-1",
+              contact: "tls@example.com",
+              date_range: {
+                start: "2025-01-01T00:00:00Z",
+                end: "2025-01-02T00:00:00Z",
+              },
+              total_successful_sessions: 10,
+              total_failed_sessions: 1,
+              policies: [
+                {
+                  policy_domain: "example.com",
+                  policy_type: "sts",
+                  successful_sessions: 10,
+                  failed_sessions: 1,
+                  failures: [
+                    {
+                      result_type: "certificate-expired",
+                      count: 1,
+                      sending_mta_ip: "192.0.2.1",
+                      receiving_mx_hostname: "mx.example.com",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        {
+          event: "email.dmarc_report",
+          analysis: {
+            dmarc_report: {
+              kind: "dmarc_report",
+              organization: "Example Receiver",
+              report_id: "dmarc-report-1",
+              date_range: {
+                start: "2025-01-01T00:00:00Z",
+                end: "2025-01-02T00:00:00Z",
+              },
+              policy_published: {
+                domain: "example.com",
+                p: "reject",
+                sp: "reject",
+                pct: 100,
+                adkim: "r",
+                aspf: "r",
+              },
+              total_count: 3,
+              dkim_pass_count: 2,
+              spf_pass_count: 3,
+              records: [
+                {
+                  source_ip: "192.0.2.2",
+                  count: 3,
+                  disposition: "none",
+                  dkim: "pass",
+                  spf: "pass",
+                  header_from: "example.com",
+                },
+              ],
+            },
+          },
+        },
+        { event: "email.dmarc_failure", analysis: {} },
+      ];
+
+      for (const { event: eventType, analysis } of cases) {
+        const event = buildEmailReceivedEvent({
+          ...baseInput,
+          event: eventType,
+          analysis,
+        });
+        expect(event.event).toBe(eventType);
+        expect(event.id).toBe(
+          generateEventId(baseInput.endpoint_id, baseInput.email_id, eventType),
+        );
+        expect(validateEmailReceivedEvent(event)).toEqual(event);
+      }
+    });
+
     it("accepts schema-valid RFC 3339 timestamps with explicit offsets", () => {
       const event = buildEmailReceivedEvent(
         {

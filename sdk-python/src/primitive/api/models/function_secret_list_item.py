@@ -25,12 +25,12 @@ T = TypeVar("T", bound="FunctionSecretListItem")
 class FunctionSecretListItem:
     """ One row from GET /functions/{id}/secrets. Discriminate on the
     `managed` field:
-      * `managed = true`  — system secret provisioned by Primitive.
+      * `managed = true` - system secret provisioned by Primitive.
         `description` is set; `created_at` / `updated_at` are
         null because the row is virtual (resolved at deploy time
         from the managed registry, not stored in the secrets
         table).
-      * `managed = false` — secret the user set via the API.
+      * `managed = false` - secret the user set via the API.
         `created_at` / `updated_at` are set; `description` is
         null.
 

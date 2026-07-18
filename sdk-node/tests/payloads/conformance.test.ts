@@ -26,17 +26,21 @@ interface ConformanceVector {
   expectedManifest: PayloadManifest;
 }
 
-const vector = JSON.parse(
-  readFileSync(
-    fileURLToPath(
-      new URL(
-        "../../../test-fixtures/payloads/conformance-vector.json",
-        import.meta.url,
+const vectorFiles = [
+  "conformance-vector.json",
+  "zero-byte-conformance-vector.json",
+] as const;
+
+function loadVector(filename: (typeof vectorFiles)[number]): ConformanceVector {
+  return JSON.parse(
+    readFileSync(
+      fileURLToPath(
+        new URL(`../../../test-fixtures/payloads/${filename}`, import.meta.url),
       ),
+      "utf8",
     ),
-    "utf8",
-  ),
-) as ConformanceVector;
+  ) as ConformanceVector;
+}
 
 /** Deterministic input matching the fixture recipe: byteAt(i) = (i * 31 + 7) & 0xff. */
 function buildInput(size: number): Uint8Array {
@@ -46,7 +50,10 @@ function buildInput(size: number): Uint8Array {
 }
 
 describe("payloads object-model conformance (vs server reference)", () => {
-  it("reproduces the server-generated manifest byte-for-byte", async () => {
+  it.each(
+    vectorFiles,
+  )("reproduces the server-generated manifest byte-for-byte: %s", async (filename) => {
+    const vector = loadVector(filename);
     const input = buildInput(vector.input.sizeBytes);
     const manifest = await encodeManifest(input, {
       cekHex: vector.cekHex,
@@ -56,7 +63,10 @@ describe("payloads object-model conformance (vs server reference)", () => {
     expect(manifest).toEqual(vector.expectedManifest);
   });
 
-  it("matches per-chunk content addresses and the Merkle root", async () => {
+  it.each(
+    vectorFiles,
+  )("matches per-chunk content addresses and the Merkle root: %s", async (filename) => {
+    const vector = loadVector(filename);
     const input = buildInput(vector.input.sizeBytes);
     const manifest = await encodeManifest(input, {
       cekHex: vector.cekHex,
@@ -67,5 +77,39 @@ describe("payloads object-model conformance (vs server reference)", () => {
       vector.expectedManifest.chunks.map((c) => c.ciphertextHash),
     );
     expect(manifest.merkleRoot).toBe(vector.expectedManifest.merkleRoot);
+  });
+
+  it("rejects non-positive and non-integer chunk sizes", async () => {
+    const input = buildInput(16);
+    for (const chunkSize of [
+      0,
+      -1,
+      1.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+    ]) {
+      await expect(encodeManifest(input, { chunkSize })).rejects.toThrow(
+        /chunkSize/,
+      );
+    }
+  });
+
+  it("rejects CEK and object id hex values with the wrong length", async () => {
+    const vector = loadVector("conformance-vector.json");
+    const input = buildInput(vector.input.sizeBytes);
+    await expect(
+      encodeManifest(input, {
+        cekHex: vector.cekHex.slice(2),
+        objectIdHex: vector.objectIdHex,
+        chunkSize: vector.chunkSize,
+      }),
+    ).rejects.toThrow(/cekHex/);
+    await expect(
+      encodeManifest(input, {
+        cekHex: vector.cekHex,
+        objectIdHex: `${vector.objectIdHex}00`,
+        chunkSize: vector.chunkSize,
+      }),
+    ).rejects.toThrow(/objectIdHex/);
   });
 });

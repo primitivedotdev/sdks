@@ -10,6 +10,12 @@ on:
   pull_request:
   merge_group:
   workflow_dispatch:
+    inputs:
+      run_rust_cli_live_smoke:
+        description: "Run Rust CLI live smoke with the PRIMITIVE_API_KEY secret on main"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   changes:
@@ -21,6 +27,7 @@ jobs:
     outputs:
       node: ${{ steps.full.outputs.node || steps.filter.outputs.node }}
       cli: ${{ steps.full.outputs.cli || steps.filter.outputs.cli }}
+      rust: ${{ steps.full.outputs.rust || steps.filter.outputs.rust }}
       python: ${{ steps.full.outputs.python || steps.filter.outputs.python }}
       go: ${{ steps.full.outputs.go || steps.filter.outputs.go }}
       shared: ${{ steps.full.outputs.shared || steps.filter.outputs.shared }}
@@ -32,6 +39,7 @@ jobs:
         run: |
           printf 'node=true\n' >> "$GITHUB_OUTPUT"
           printf 'cli=true\n' >> "$GITHUB_OUTPUT"
+          printf 'rust=true\n' >> "$GITHUB_OUTPUT"
           printf 'python=true\n' >> "$GITHUB_OUTPUT"
           printf 'go=true\n' >> "$GITHUB_OUTPUT"
           printf 'shared=true\n' >> "$GITHUB_OUTPUT"
@@ -51,6 +59,25 @@ jobs:
               - 'cli-node/**'
               - 'packages/api-core/**'
               - 'openapi/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            rust:
+              - 'cli-rust/**'
+              - 'cli-node/**'
+              - 'packages/api-core/**'
+              - 'openapi/**'
+              - 'scripts/assert-cli-command-surface-parity.mjs'
+              - 'scripts/assert-cli-operation-request-coverage.mjs'
+              - 'scripts/assert-rust-cli-linux-portability.mjs'
+              - 'scripts/assert-rust-operation-manifest-bytewise.mjs'
+              - 'scripts/install-rust-cli.ps1'
+              - 'scripts/install-rust-cli.sh'
+              - 'scripts/package-rust-cli.mjs'
+              - 'scripts/run-cli-help-sweep.mjs'
+              - 'scripts/run-cli-parity.mjs'
+              - 'scripts/run-rust-cli-live-smoke.mjs'
+              - 'test-fixtures/cli-parity/**'
+              - 'Makefile'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
             python:
@@ -145,6 +172,287 @@ jobs:
 
       - name: Collect cli coverage
         run: make cli-coverage
+
+  rust:
+    name: Rust CLI
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' || needs.changes.outputs.cli == 'true' || needs.changes.outputs.shared == 'true' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+        with:
+          version: 10
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
+
+      - name: Install node dependencies
+        run: make cli-install
+
+      - name: Run rust CLI checks
+        run: make rust-cli-check
+
+      - name: Run Node/Rust CLI parity
+        run: make cli-parity
+
+      - name: Validate rust CLI scripts
+        run: |
+          bash -n scripts/install-rust-cli.sh
+          if command -v pwsh >/dev/null 2>&1; then pwsh -NoProfile -NonInteractive -Command '$null = [scriptblock]::Create((Get-Content -Raw scripts/install-rust-cli.ps1))'; fi
+          node --check scripts/assert-cli-command-surface-parity.mjs
+          node --check scripts/assert-cli-operation-request-coverage.mjs
+          node --check scripts/assert-rust-cli-linux-portability.mjs
+          node --check scripts/assert-rust-operation-manifest-bytewise.mjs
+          node --check scripts/package-rust-cli.mjs
+          node --check scripts/run-cli-help-sweep.mjs
+          node --check scripts/run-cli-parity.mjs
+          node --check scripts/run-rust-cli-live-smoke.mjs
+
+      - name: Smoke test installed rust CLI
+        run: make rust-cli-smoke
+
+      - name: Run local-only rust CLI live-smoke harness
+        run: make rust-cli-live-smoke-no-key
+
+      - name: Smoke test release rust CLI
+        run: make rust-cli-release-smoke
+
+      - name: Check rust CLI Linux portability
+        run: make rust-cli-linux-portability-smoke
+
+      - name: Package rust CLI crate
+        run: make rust-cli-package
+
+      - name: Smoke test rust CLI archive shape
+        run: make rust-cli-archive-smoke
+
+      - name: Run packaged Node/Rust CLI parity
+        run: make cli-archive-parity
+
+      - name: Smoke test rust CLI Windows archive shape
+        run: make rust-cli-windows-archive-smoke
+
+      - name: Smoke test rust CLI installer
+        run: make rust-cli-install-smoke
+
+  rust-platform:
+    name: Rust CLI Platform (${{ matrix.target }})
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' || needs.changes.outputs.cli == 'true' || needs.changes.outputs.shared == 'true' }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+      CC_aarch64_unknown_linux_musl: musl-gcc
+      CC_x86_64_unknown_linux_musl: musl-gcc
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-x64
+            rust_target: x86_64-unknown-linux-musl
+          - runner: ubuntu-24.04-arm
+            target: linux-arm64
+            rust_target: aarch64-unknown-linux-musl
+          - runner: macos-15-intel
+            target: macos-x64
+            rust_target: ''
+          - runner: macos-15
+            target: macos-arm64
+            rust_target: ''
+          - runner: windows-latest
+            target: windows-x64
+            rust_target: ''
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+        with:
+          version: 10
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          if [ -n "${{ matrix.rust_target }}" ]; then
+            rustup target add "${{ matrix.rust_target }}"
+          fi
+
+      - name: Install Linux musl tools
+        if: ${{ startsWith(matrix.target, 'linux-') }}
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Check Linux musl runner architecture
+        if: ${{ startsWith(matrix.target, 'linux-') }}
+        shell: bash
+        env:
+          RUST_CLI_TARGET: ${{ matrix.target }}
+        run: |
+          case "$RUST_CLI_TARGET:$(uname -m)" in
+            linux-x64:x86_64|linux-arm64:aarch64) ;;
+            *)
+              echo "Target $RUST_CLI_TARGET must run on its native Linux architecture when using musl-gcc." >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Install node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Rust CLI operation manifest
+        env:
+          COREPACK_ENABLE_AUTO_PIN: "0"
+        run: pnpm --dir packages/api-core generate
+
+      - name: Check generated Rust CLI artifacts
+        shell: bash
+        run: |
+          node scripts/assert-rust-operation-manifest-bytewise.mjs
+          paths=(
+            openapi/primitive-api.codegen.json
+            packages/api-core/src/api
+            packages/api-core/src/openapi/openapi.generated.ts
+            packages/api-core/src/openapi/operations.generated.ts
+            cli-rust/src/operation-manifest.json
+          )
+          git diff --exit-code -- "${paths[@]}"
+          test -z "$(git status --porcelain -- "${paths[@]}")"
+
+      - name: Build and test Rust CLI
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: |
+          cargo check --manifest-path cli-rust/Cargo.toml --locked
+          cargo doc --manifest-path cli-rust/Cargo.toml --locked --no-deps
+          cargo test --manifest-path cli-rust/Cargo.toml --locked
+          cargo build --release --manifest-path cli-rust/Cargo.toml --locked
+
+      - name: Build Linux musl release binary
+        if: ${{ startsWith(matrix.target, 'linux-') }}
+        run: cargo build --release --manifest-path cli-rust/Cargo.toml --locked --target "${{ matrix.rust_target }}"
+
+      - name: Check Linux binary portability
+        if: ${{ startsWith(matrix.target, 'linux-') }}
+        run: node scripts/assert-rust-cli-linux-portability.mjs --bin "cli-rust/target/${{ matrix.rust_target }}/release/primitive" --expect-static
+
+      - name: Run Unix Node/Rust CLI parity
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: |
+          pnpm --dir cli-node build
+          rust_bin="cli-rust/target/release/primitive"
+          if [ -n "${{ matrix.rust_target }}" ]; then
+            rust_bin="cli-rust/target/${{ matrix.rust_target }}/release/primitive"
+          fi
+          node scripts/run-cli-help-sweep.mjs --compare-flags --node-bin "node cli-node/bin/run.js" --rust-bin "$rust_bin"
+          node scripts/run-cli-parity.mjs --node-bin "node cli-node/bin/run.js" --rust-bin "$rust_bin"
+
+      - name: Run Windows Node/Rust CLI parity
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          pnpm config set script-shell "C:\Program Files\Git\bin\bash.exe"
+          pnpm --dir cli-node build
+          $nodeEntry = ((Resolve-Path "cli-node/bin/run.js").Path -replace "\\", "/")
+          $rustBin = ((Resolve-Path "cli-rust/target/release/primitive.exe").Path -replace "\\", "/")
+          node scripts/run-cli-help-sweep.mjs --compare-flags --node-bin "node $nodeEntry" --rust-bin "$rustBin"
+          node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustBin"
+
+      - name: Package and install Unix archive
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: |
+          dist_dir="$RUNNER_TEMP/rust-cli-dist"
+          install_dir="$RUNNER_TEMP/rust-cli-bin"
+          package_args=(--target "${{ matrix.target }}" --out-dir "$dist_dir" --json)
+          if [ -n "${{ matrix.rust_target }}" ]; then
+            package_args+=(--bin-dir "cli-rust/target/${{ matrix.rust_target }}/release")
+          fi
+          node scripts/package-rust-cli.mjs "${package_args[@]}" > "$RUNNER_TEMP/rust-cli-package.json"
+          version=$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).version);" "$RUNNER_TEMP/rust-cli-package.json")
+          scripts/install-rust-cli.sh --version "$version" --target "${{ matrix.target }}" --base-url "file://$dist_dir" --install-dir "$install_dir"
+          "$install_dir/primitive" --version | grep -q -- 'primitive/'
+          "$install_dir/prim" --version | grep -q -- 'prim/'
+          "$install_dir/primitive" list-operations | grep -q -- '"operationId": "getAccount"'
+          "$install_dir/prim" list-operations | grep -q -- '"operationId": "getAccount"'
+          "$install_dir/prim" describe sending:send-email | grep -q -- '"operationId": "sendEmail"'
+
+      - name: Package and install Windows archive
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          $distDir = Join-Path $env:RUNNER_TEMP "rust-cli-dist"
+          $installDir = Join-Path $env:RUNNER_TEMP "rust-cli-bin"
+          New-Item -ItemType Directory -Path $distDir -Force | Out-Null
+          node scripts/package-rust-cli.mjs --target "${{ matrix.target }}" --archive-format zip --out-dir "$distDir" --json | Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP "rust-cli-package.json")
+          $package = Get-Content -Raw -LiteralPath (Join-Path $env:RUNNER_TEMP "rust-cli-package.json") | ConvertFrom-Json
+          ./scripts/install-rust-cli.ps1 -Version $package.version -Target "${{ matrix.target }}" -BaseUrl $distDir -InstallDir $installDir
+          & (Join-Path $installDir "primitive.exe") --version | Select-String "primitive/"
+          & (Join-Path $installDir "prim.exe") --version | Select-String "prim/"
+          & (Join-Path $installDir "primitive.exe") list-operations | Select-String '"operationId": "getAccount"'
+          & (Join-Path $installDir "prim.exe") list-operations | Select-String '"operationId": "getAccount"'
+          & (Join-Path $installDir "prim.exe") describe sending:send-email | Select-String '"operationId": "sendEmail"'
+
+  rust-live-smoke:
+    name: Rust CLI Live Smoke
+    needs: rust
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_rust_cli_live_smoke && github.ref == 'refs/heads/main' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    env:
+      PRIMITIVE_API_KEY: ${{ secrets.PRIMITIVE_API_KEY }}
+      PRIMITIVE_LIVE_SMOKE_SHOW_OUTPUT: "0"
+      PRIMITIVE_RUST_LIVE_INCLUDE_EMAIL_E2E: "0"
+      PRIMITIVE_RUST_LIVE_INCLUDE_MUTATING: "0"
+      PRIMITIVE_RUST_LIVE_INCLUDE_SECRET_ARGV: "0"
+      PRIMITIVE_RUST_LIVE_NO_KEY_ONLY: "0"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+        with:
+          version: 10
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Install node dependencies
+        run: make cli-install
+
+      - name: Check live API key
+        run: |
+          if [ -z "$PRIMITIVE_API_KEY" ]; then
+            echo "PRIMITIVE_API_KEY repository secret is required for Rust CLI live smoke."
+            exit 2
+          fi
+
+      - name: Run rust CLI live smoke
+        run: make rust-cli-live-smoke
 
   python:
     name: Python (${{ matrix.python-version }})
@@ -246,13 +554,13 @@ jobs:
 
   ci:
     name: CI
-    needs: [changes, node, cli, python, go, shared]
+    needs: [changes, node, cli, rust, rust-platform, rust-live-smoke, python, go, shared]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check results
         run: |
-          results=("${{ needs.changes.result }}" "${{ needs.node.result }}" "${{ needs.cli.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
+          results=("${{ needs.changes.result }}" "${{ needs.node.result }}" "${{ needs.cli.result }}" "${{ needs.rust.result }}" "${{ needs.rust-platform.result }}" "${{ needs.rust-live-smoke.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
           for r in "${results[@]}"; do
             if [[ "$r" != "success" && "$r" != "skipped" ]]; then
               echo "Job failed with result: $r"

@@ -47,6 +47,10 @@ var PayloadErrors = map[string]ErrorDefinition{
 		Message:    "Webhook payload missing 'event' field",
 		Suggestion: "All webhook payloads must have an 'event' field. This may not be a valid Primitive webhook.",
 	},
+	"PAYLOAD_EVENT_MISMATCH": {
+		Message:    "Webhook event header does not match the signed body",
+		Suggestion: "Reject webhook requests whose X-Webhook-Event header disagrees with the body event/type field.",
+	},
 	"PAYLOAD_UNKNOWN_EVENT": {
 		Message:    "Unknown webhook event type",
 		Suggestion: "This event type is not recognized. You may need to update your SDK or handle unknown events gracefully.",
