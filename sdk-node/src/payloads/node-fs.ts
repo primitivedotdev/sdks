@@ -32,12 +32,21 @@ export async function loadBuiltin<T>(
   specifier: string,
   operation: string,
 ): Promise<T> {
-  const builtin =
+  let builtin: unknown;
+  if (
     typeof process !== "undefined" &&
     typeof process.getBuiltinModule === "function"
-      ? process.getBuiltinModule(specifier)
-      : undefined;
-  if (builtin !== undefined) return builtin as T;
+  ) {
+    // A runtime may expose getBuiltinModule but throw (or return null)
+    // for a module it does not provide; fall through to the dynamic
+    // import so every failure funnels into the one clear error below.
+    try {
+      builtin = process.getBuiltinModule(specifier);
+    } catch {
+      builtin = undefined;
+    }
+  }
+  if (builtin !== undefined && builtin !== null) return builtin as T;
   try {
     return (await import(specifier)) as T;
   } catch (cause) {

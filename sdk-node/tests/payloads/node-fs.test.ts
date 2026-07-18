@@ -30,6 +30,19 @@ describe("node-fs lazy loaders", () => {
     }
   });
 
+  it("falls back to a dynamic import when getBuiltinModule throws", async () => {
+    const spy = vi.spyOn(process, "getBuiltinModule").mockImplementation(() => {
+      throw new Error("builtin loading not supported");
+    });
+    try {
+      const fs = await loadNodeFs("pullFile");
+      expect(spy).toHaveBeenCalledWith("node:fs");
+      expect(typeof fs.createWriteStream).toBe("function");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("throws an error naming the operation when the module cannot load", async () => {
     await expect(
       loadBuiltin("node:module-that-does-not-exist", "pushFile"),
