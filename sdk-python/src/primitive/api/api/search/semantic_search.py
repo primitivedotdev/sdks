@@ -131,10 +131,6 @@ def sync_detailed(
     Requires the Pro plan and the `semantic_search_enabled`
     entitlement; callers without them receive `403`.
 
-    Host routing: this operation is served only by the search host
-    (`https://api.primitive.dev/v1`). The typed SDKs route it there
-    automatically.
-
     Args:
         body (SemanticSearchInput):
 
@@ -182,10 +178,6 @@ def sync(
     Requires the Pro plan and the `semantic_search_enabled`
     entitlement; callers without them receive `403`.
 
-    Host routing: this operation is served only by the search host
-    (`https://api.primitive.dev/v1`). The typed SDKs route it there
-    automatically.
-
     Args:
         body (SemanticSearchInput):
 
@@ -227,10 +219,6 @@ async def asyncio_detailed(
 
     Requires the Pro plan and the `semantic_search_enabled`
     entitlement; callers without them receive `403`.
-
-    Host routing: this operation is served only by the search host
-    (`https://api.primitive.dev/v1`). The typed SDKs route it there
-    automatically.
 
     Args:
         body (SemanticSearchInput):
@@ -278,10 +266,6 @@ async def asyncio(
 
     Requires the Pro plan and the `semantic_search_enabled`
     entitlement; callers without them receive `403`.
-
-    Host routing: this operation is served only by the search host
-    (`https://api.primitive.dev/v1`). The typed SDKs route it there
-    automatically.
 
     Args:
         body (SemanticSearchInput):
