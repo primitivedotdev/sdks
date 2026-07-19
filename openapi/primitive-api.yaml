@@ -2886,13 +2886,6 @@ paths:
 
         Requires the Pro plan and the `semantic_search_enabled`
         entitlement; callers without them receive `403`.
-
-        Host routing: this operation is served only by the search host
-        (`https://api.primitive.dev/v1`). The typed SDKs route it there
-        automatically.
-      servers:
-        - url: https://api.primitive.dev/v1
-          description: Search host
       tags: [Search]
       requestBody:
         required: true
