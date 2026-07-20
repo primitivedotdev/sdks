@@ -887,9 +887,19 @@ pub fn resolve_verification_code(
             })?;
         return Ok(strip_trailing_verification_code_newline(&value));
     }
-    let value = io
-        .read_stdin_to_string()
-        .map_err(|error| anyhow!("--code-from-stdin: {error}"))?;
+    let value = io.read_stdin_to_string().map_err(|error| {
+        // Re-stringifying would drop the CliError usage marker, so re-mark
+        // usage errors (e.g. stdin is a TTY) after adding the flag prefix.
+        let is_usage = error
+            .chain()
+            .any(|cause| cause.downcast_ref::<crate::CliError>().is_some());
+        let message = format!("--code-from-stdin: {error}");
+        if is_usage {
+            crate::usage_error(message)
+        } else {
+            anyhow!(message)
+        }
+    })?;
     Ok(strip_trailing_verification_code_newline(&value))
 }
 

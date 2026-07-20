@@ -1365,19 +1365,21 @@ fn read_json_body(invocation: &Invocation) -> Result<Option<Value>> {
     let raw_body = invocation.flags.get("raw-body");
     let body_file = invocation.flags.get("body-file");
     if raw_body.is_some() && body_file.is_some() {
-        return Err(anyhow!("Use either --raw-body or --body-file, not both"));
+        return Err(crate::usage_error(
+            "Use either --raw-body or --body-file, not both",
+        ));
     }
     if let Some(raw_body) = raw_body {
         return serde_json::from_str(raw_body)
             .map(Some)
-            .map_err(|error| anyhow!("--raw-body is not valid JSON: {error}"));
+            .map_err(|error| crate::usage_error(format!("--raw-body is not valid JSON: {error}")));
     }
     if let Some(body_file) = body_file {
         let contents = fs::read_to_string(body_file)
             .map_err(|error| anyhow!("Could not read --body-file {body_file}: {error}"))?;
-        return serde_json::from_str(&contents)
-            .map(Some)
-            .map_err(|error| anyhow!("--body-file is not valid JSON: {error}"));
+        return serde_json::from_str(&contents).map(Some).map_err(|error| {
+            crate::usage_error(format!("--body-file is not valid JSON: {error}"))
+        });
     }
     Ok(None)
 }
