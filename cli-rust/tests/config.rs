@@ -1729,3 +1729,17 @@ fn config_set_preserves_credentials_when_only_headers_change() {
     }
     fs::remove_dir_all(config_dir).ok();
 }
+
+#[test]
+fn usage_errors_exit_2_even_when_context_wrapped() {
+    use primitive_rust::CliError;
+    let usage = primitive_rust::usage_error("Unknown flag --bogus");
+    assert_eq!(usage.to_string(), "Unknown flag --bogus");
+    let wrapped = usage.context("while parsing flags");
+    let exit_code = wrapped
+        .chain()
+        .find_map(|cause| cause.downcast_ref::<CliError>())
+        .map(CliError::exit_code)
+        .unwrap_or(1);
+    assert_eq!(exit_code, 2);
+}

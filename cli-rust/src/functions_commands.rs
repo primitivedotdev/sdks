@@ -486,7 +486,7 @@ pub fn build_function_command_plan_with_io(
     mut read_source_dir: impl FnMut(&str) -> Result<BTreeMap<String, String>>,
 ) -> Result<FunctionCommandPlan> {
     let kind = function_command_kind(command)
-        .ok_or_else(|| anyhow!("Unknown functions command `{command}`"))?;
+        .ok_or_else(|| crate::usage_error(format!("Unknown functions command `{command}`")))?;
     let args = args_without_runtime_flags(args)?;
     match kind {
         FunctionCommandKind::Init => Ok(FunctionCommandPlan::Init(parse_init_command_plan(&args)?)),
@@ -670,9 +670,9 @@ pub fn auth_flags(args: &[String]) -> Result<BTreeMap<String, String>> {
                 index += 1;
                 let value = args
                     .get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                    .ok_or_else(|| crate::usage_error(format!("Missing value for --{name}")))?;
                 if value.starts_with("--") {
-                    return Err(anyhow!("Missing value for --{name}"));
+                    return Err(crate::usage_error(format!("Missing value for --{name}")));
                 }
                 value.clone()
             };
@@ -747,9 +747,9 @@ fn args_without_runtime_flags(args: &[String]) -> Result<Vec<String>> {
                 index += 1;
                 let value = args
                     .get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                    .ok_or_else(|| crate::usage_error(format!("Missing value for --{name}")))?;
                 if value.starts_with("--") {
-                    return Err(anyhow!("Missing value for --{name}"));
+                    return Err(crate::usage_error(format!("Missing value for --{name}")));
                 }
             }
             index += 1;
@@ -1992,10 +1992,10 @@ pub fn format_function_template_list(templates: &[FunctionTemplateSummary]) -> S
 pub fn scaffold_files(name: &str, template_id: Option<&str>) -> Result<Vec<FunctionTemplateFile>> {
     let template_id = template_id.unwrap_or(DEFAULT_FUNCTION_TEMPLATE_ID);
     if template_id != DEFAULT_FUNCTION_TEMPLATE_ID {
-        return Err(anyhow!(
+        return Err(crate::usage_error(format!(
             "Unknown function template \"{template_id}\". Available templates: {}. Run `primitive functions templates` for details.",
             function_template_ids().join(", ")
-        ));
+        )));
     }
     Ok(render_email_reply_template_files(name))
 }
@@ -2016,10 +2016,10 @@ pub fn parse_init_command_plan(args: &[String]) -> Result<InitCommandPlan> {
     let template_id =
         flag_one(&parsed, "template").unwrap_or_else(|| DEFAULT_FUNCTION_TEMPLATE_ID.to_string());
     if template_id != DEFAULT_FUNCTION_TEMPLATE_ID {
-        return Err(anyhow!(
+        return Err(crate::usage_error(format!(
             "Unknown function template \"{template_id}\". Available templates: {}. Run `primitive functions templates` for details.",
             function_template_ids().join(", ")
-        ));
+        )));
     }
     let out_dir = flag_one(&parsed, "out-dir").unwrap_or_else(|| format!("./{name}"));
     Ok(InitCommandPlan {
@@ -3294,7 +3294,9 @@ fn parse_args(
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_error(format!(
+                    "Unknown boolean flag --no-{name}"
+                )));
             }
             parsed.bool_flags.insert(name.to_string(), false);
             index += 1;

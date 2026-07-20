@@ -1,5 +1,5 @@
 use crate::{client, config};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use reqwest::Method;
 use serde::Serialize;
 use serde_json::Value;
@@ -184,9 +184,9 @@ pub fn execute_with_writers(
 pub fn build_doctor_plan(args: &[String]) -> Result<DoctorCommandPlan> {
     let parsed = parse_args(args, &["api-base-url", "api-key"])?;
     if let Some(positional) = parsed.positionals.first() {
-        return Err(anyhow!(
+        return Err(crate::usage_error(format!(
             "Unexpected argument: {positional}. `doctor` only accepts flags."
-        ));
+        )));
     }
     Ok(DoctorCommandPlan { auth: parsed.flags })
 }
@@ -523,7 +523,7 @@ fn parse_args(args: &[String], value_flags: &[&str]) -> Result<ParsedArgs> {
             None => (raw, None),
         };
         if !value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_error(format!("Unknown flag --{name}")));
         }
 
         let value = match inline_value {
@@ -532,7 +532,7 @@ fn parse_args(args: &[String], value_flags: &[&str]) -> Result<ParsedArgs> {
                 index += 1;
                 args.get(index)
                     .cloned()
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?
+                    .ok_or_else(|| crate::usage_error(format!("Missing value for --{name}")))?
             }
         };
         parsed.flags.insert(name.to_string(), value);

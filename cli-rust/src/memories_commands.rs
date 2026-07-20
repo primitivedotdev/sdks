@@ -171,7 +171,9 @@ pub fn build_memory_request(command: &str, args: &[String]) -> Result<MemoryApiR
         Some(MemoryCommandKind::Get) => build_memories_get_request_from_args(args),
         Some(MemoryCommandKind::Delete) => build_memories_delete_request_from_args(args),
         Some(MemoryCommandKind::Search) => build_memories_search_request_from_args(args),
-        None => Err(anyhow!("Unknown memories command `{command}`")),
+        None => Err(crate::usage_error(format!(
+            "Unknown memories command `{command}`"
+        ))),
     }
 }
 
@@ -471,9 +473,9 @@ pub fn auth_flags(args: &[String]) -> Result<BTreeMap<String, String>> {
                 index += 1;
                 let value = args
                     .get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                    .ok_or_else(|| crate::usage_error(format!("Missing value for --{name}")))?;
                 if value.starts_with("--") {
-                    return Err(anyhow!("Missing value for --{name}"));
+                    return Err(crate::usage_error(format!("Missing value for --{name}")));
                 }
                 value.clone()
             };
@@ -688,7 +690,7 @@ fn set_positionals(parsed: &ParsedArgs) -> Result<(String, Option<String>)> {
         [] => Err(anyhow!("memories set requires a key")),
         [key] => Ok((key.clone(), None)),
         [key, value] => Ok((key.clone(), Some(value.clone()))),
-        [_, _, extra, ..] => Err(anyhow!("Unexpected argument: {extra}")),
+        [_, _, extra, ..] => Err(crate::usage_error(format!("Unexpected argument: {extra}"))),
     }
 }
 
@@ -696,7 +698,7 @@ fn single_positional(parsed: &ParsedArgs, missing_message: &str) -> Result<Strin
     match parsed.positionals.as_slice() {
         [] => Err(anyhow!("{missing_message}")),
         [value] => Ok(value.clone()),
-        [_, extra, ..] => Err(anyhow!("Unexpected argument: {extra}")),
+        [_, extra, ..] => Err(crate::usage_error(format!("Unexpected argument: {extra}"))),
     }
 }
 
@@ -704,7 +706,7 @@ fn optional_single_positional(parsed: &ParsedArgs) -> Result<Option<String>> {
     match parsed.positionals.as_slice() {
         [] => Ok(None),
         [value] => Ok(Some(value.clone())),
-        [_, extra, ..] => Err(anyhow!("Unexpected argument: {extra}")),
+        [_, extra, ..] => Err(crate::usage_error(format!("Unexpected argument: {extra}"))),
     }
 }
 
@@ -723,7 +725,9 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_error(format!(
+                    "Unknown boolean flag --no-{name}"
+                )));
             }
             parsed.bool_flags.insert(name.to_string(), false);
             index += 1;
@@ -732,7 +736,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
 
         let raw = arg
             .strip_prefix("--")
-            .ok_or_else(|| anyhow!("Unexpected argument: {arg}"))?;
+            .ok_or_else(|| crate::usage_error(format!("Unexpected argument: {arg}")))?;
         let (name, inline_value) = raw
             .split_once('=')
             .map_or((raw, None), |(name, value)| (name, Some(value.to_string())));
@@ -750,7 +754,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
         }
 
         if !value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_error(format!("Unknown flag --{name}")));
         }
 
         let value = if let Some(value) = inline_value {
@@ -759,9 +763,9 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
             index += 1;
             let value = args
                 .get(index)
-                .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                .ok_or_else(|| crate::usage_error(format!("Missing value for --{name}")))?;
             if value.starts_with("--") {
-                return Err(anyhow!("Missing value for --{name}"));
+                return Err(crate::usage_error(format!("Missing value for --{name}")));
             }
             value.clone()
         };

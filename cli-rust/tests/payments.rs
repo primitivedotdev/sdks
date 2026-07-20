@@ -177,7 +177,7 @@ fn payments_help_requests_return_before_auth_or_argument_validation() {
 #[test]
 fn payments_charge_rejects_unknown_flags_missing_values_and_overprecise_usdc() {
     let (code, stdout, stderr) = run_primitive_failure(&["payments", "charge", "--bogus"]);
-    assert_eq!(code, 1);
+    assert_eq!(code, 2);
     assert_eq!(stdout, "");
     assert!(stderr.contains("Unknown flag --bogus"), "{stderr}");
 

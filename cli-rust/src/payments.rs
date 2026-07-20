@@ -270,12 +270,14 @@ fn parse_payments_invocation(command: &str, args: &[String]) -> Result<api::Invo
     while index < args.len() {
         let arg = &args[index];
         if !arg.starts_with("--") {
-            return Err(anyhow!("Unexpected argument: {arg}"));
+            return Err(crate::usage_error(format!("Unexpected argument: {arg}")));
         }
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_error(format!(
+                    "Unknown boolean flag --no-{name}"
+                )));
             }
             invocation.bool_flags.insert(name.to_string(), false);
             index += 1;
@@ -295,7 +297,7 @@ fn parse_payments_invocation(command: &str, args: &[String]) -> Result<api::Invo
         }
 
         if !value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_error(format!("Unknown flag --{name}")));
         }
 
         let value = if let Some(value) = inline_value {
