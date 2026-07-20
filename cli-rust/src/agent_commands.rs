@@ -211,7 +211,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
                     index += 1;
                     args.get(index)
                         .cloned()
-                        .ok_or_else(|| anyhow!("Missing value for --{name}"))?
+                        .ok_or_else(|| crate::usage_err!("Missing value for --{name}"))?
                 }
             };
             parsed.flags.insert(name.to_string(), value);
@@ -220,7 +220,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
         }
         if bool_flags.contains(name) {
             if inline_value.is_some() {
-                return Err(anyhow!("Flag --{name} does not take a value"));
+                return Err(crate::usage_err!("Flag --{name} does not take a value"));
             }
             parsed.bool_flags.insert(name.to_string());
             index += 1;

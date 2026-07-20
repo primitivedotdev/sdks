@@ -42,7 +42,7 @@ pub fn parse_invocation(args: &[String]) -> Result<Invocation> {
     while index < args.len() {
         let arg = &args[index];
         if !arg.starts_with("--") {
-            return Err(anyhow!("Unexpected argument: {arg}"));
+            return Err(crate::usage_err!("Unexpected argument: {arg}"));
         }
         if let Some(name) = arg.strip_prefix("--no-") {
             invocation.bool_flags.insert(name.to_string(), false);
@@ -214,7 +214,7 @@ fn parse_invocation_with_allowed_flags(
     while index < args.len() {
         let arg = &args[index];
         if !arg.starts_with("--") || arg == "--" {
-            return Err(anyhow!("Unexpected argument: {arg}"));
+            return Err(crate::usage_err!("Unexpected argument: {arg}"));
         }
         if let Some(name) = arg.strip_prefix("--no-") {
             match allowed.get(name) {
@@ -223,7 +223,7 @@ fn parse_invocation_with_allowed_flags(
                     index += 1;
                     continue;
                 }
-                Some(_) | None => return Err(anyhow!("Nonexistent flag: --no-{name}")),
+                Some(_) | None => return Err(crate::usage_err!("Nonexistent flag: --no-{name}")),
             }
         }
 
@@ -238,7 +238,7 @@ fn parse_invocation_with_allowed_flags(
                         .bool_flags
                         .insert(name.to_string(), parse_bool_flag_value(name, value)?);
                 }
-                None => return Err(anyhow!("Nonexistent flag: --{name}")),
+                None => return Err(crate::usage_err!("Nonexistent flag: --{name}")),
             }
             index += 1;
             continue;
@@ -252,12 +252,12 @@ fn parse_invocation_with_allowed_flags(
             }
             Some(FlagKind::Value) => {
                 if index + 1 >= args.len() || args[index + 1].starts_with("--") {
-                    return Err(anyhow!("Flag --{name} expects a value"));
+                    return Err(crate::usage_err!("Flag --{name} expects a value"));
                 }
                 invocation.flags.insert(name, args[index + 1].clone());
                 index += 2;
             }
-            None => return Err(anyhow!("Nonexistent flag: --{name}")),
+            None => return Err(crate::usage_err!("Nonexistent flag: --{name}")),
         }
     }
     Ok(invocation)
@@ -267,6 +267,7 @@ fn parse_bool_flag_value(name: &str, value: &str) -> Result<bool> {
     value
         .parse()
         .with_context(|| format!("Expected a boolean for --{name}"))
+        .map_err(crate::config::usage_error)
 }
 
 fn operation_flag_kinds(operation: &OperationManifest) -> BTreeMap<String, FlagKind> {

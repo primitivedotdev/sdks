@@ -532,7 +532,7 @@ fn parse_args(args: &[String], value_flags: &[&str]) -> Result<ParsedArgs> {
                 index += 1;
                 args.get(index)
                     .cloned()
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?
+                    .ok_or_else(|| crate::usage_err!("Missing value for --{name}"))?
             }
         };
         parsed.flags.insert(name.to_string(), value);

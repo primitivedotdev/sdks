@@ -731,9 +731,9 @@ fn parse_args(
                 index += 1;
                 let value = args
                     .get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                    .ok_or_else(|| crate::usage_err!("Missing value for --{name}"))?;
                 if value.starts_with("--") {
-                    return Err(anyhow!("Missing value for --{name}"));
+                    return Err(crate::usage_err!("Missing value for --{name}"));
                 }
                 value.clone()
             };

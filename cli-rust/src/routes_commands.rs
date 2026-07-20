@@ -520,7 +520,7 @@ fn auth_flags(args: &[String]) -> Result<BTreeMap<String, String>> {
             } else {
                 index += 1;
                 args.get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?
+                    .ok_or_else(|| crate::usage_err!("Missing value for --{name}"))?
                     .clone()
             };
             flags.insert(name.to_string(), value);
@@ -751,7 +751,7 @@ fn parse_args(
         } else {
             index += 1;
             args.get(index)
-                .ok_or_else(|| anyhow!("Missing value for --{name}"))?
+                .ok_or_else(|| crate::usage_err!("Missing value for --{name}"))?
                 .clone()
         };
         if repeatable_value_flags.contains(name) {

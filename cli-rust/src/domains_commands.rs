@@ -275,9 +275,9 @@ pub fn auth_flags(args: &[String]) -> Result<BTreeMap<String, String>> {
                 index += 1;
                 let value = args
                     .get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                    .ok_or_else(|| crate::usage_err!("Missing value for --{name}"))?;
                 if value.starts_with("--") {
-                    return Err(anyhow!("Missing value for --{name}"));
+                    return Err(crate::usage_err!("Missing value for --{name}"));
                 }
                 value.clone()
             };
@@ -484,9 +484,9 @@ fn parse_args(
                 index += 1;
                 let value = args
                     .get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                    .ok_or_else(|| crate::usage_err!("Missing value for --{name}"))?;
                 if value.starts_with("--") {
-                    return Err(anyhow!("Missing value for --{name}"));
+                    return Err(crate::usage_err!("Missing value for --{name}"));
                 }
                 value.clone()
             };
@@ -510,9 +510,9 @@ fn parse_args(
             index += 1;
             let value = args
                 .get(index)
-                .ok_or_else(|| anyhow!("Missing value for -{short_name}"))?;
+                .ok_or_else(|| crate::usage_err!("Missing value for -{short_name}"))?;
             if value.starts_with("--") {
-                return Err(anyhow!("Missing value for -{short_name}"));
+                return Err(crate::usage_err!("Missing value for -{short_name}"));
             }
             value.clone()
         };

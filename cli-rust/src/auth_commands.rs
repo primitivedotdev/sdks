@@ -741,7 +741,7 @@ impl ParsedArgs {
                     .map_or((raw, None), |(name, value)| (name, Some(value)));
                 if bool_flags.contains(&name) {
                     if inline_value.is_some() {
-                        return Err(anyhow!("Flag --{name} does not take a value."));
+                        return Err(crate::usage_err!("Flag --{name} does not take a value."));
                     }
                     parsed.bool_flags.insert(name.to_string());
                     index += 1;
@@ -756,9 +756,9 @@ impl ParsedArgs {
                     index += 1;
                     let value = args
                         .get(index)
-                        .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                        .ok_or_else(|| crate::usage_err!("Missing value for --{name}"))?;
                     if value.starts_with("--") {
-                        return Err(anyhow!("Missing value for --{name}"));
+                        return Err(crate::usage_err!("Missing value for --{name}"));
                     }
                     value.clone()
                 };

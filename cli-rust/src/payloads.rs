@@ -862,7 +862,9 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
             }
             Some(FlagKind::Value) => {
                 if index + 1 >= args.len() || args[index + 1].starts_with("--") {
-                    return Err(anyhow!("Flag --{name} expects a value"));
+                    return Err(crate::config::usage_error(anyhow!(
+                        "Flag --{name} expects a value"
+                    )));
                 }
                 parsed.flags.insert(name, args[index + 1].clone());
                 index += 2;
