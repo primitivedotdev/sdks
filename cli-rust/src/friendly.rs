@@ -290,7 +290,7 @@ pub fn dispatch(args: Vec<String>) -> Result<()> {
                 }
                 Ok(())
             } else {
-                Err(anyhow!("Unknown command `{other}`. Run `{} list-operations` to enumerate generated API commands.", crate::display_bin_name()))
+                Err(crate::usage_err!("Unknown command `{other}`. Run `{} list-operations` to enumerate generated API commands.", crate::display_bin_name()))
             }
         }
     }

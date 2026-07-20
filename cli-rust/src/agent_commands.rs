@@ -39,7 +39,7 @@ pub fn dispatch(args: &[String]) -> Result<()> {
             }
             execute_upgrade(&build_agent_upgrade_plan(&args[1..])?)
         }
-        other => Err(anyhow!("Unknown agent command `{other}`")),
+        other => Err(crate::usage_err!("Unknown agent command `{other}`")),
     }
 }
 
@@ -55,7 +55,7 @@ pub fn execute_command(command: &str, args: &[String]) -> Result<()> {
             }
             execute_upgrade(&build_agent_upgrade_plan(args)?)
         }
-        other => Err(anyhow!("Unknown agent command `{other}`")),
+        other => Err(crate::usage_err!("Unknown agent command `{other}`")),
     }
 }
 
@@ -226,7 +226,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
             index += 1;
             continue;
         }
-        return Err(anyhow!("Unknown flag --{name}"));
+        return Err(crate::usage_err!("Unknown flag --{name}"));
     }
     Ok(parsed)
 }

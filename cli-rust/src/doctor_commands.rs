@@ -523,7 +523,7 @@ fn parse_args(args: &[String], value_flags: &[&str]) -> Result<ParsedArgs> {
             None => (raw, None),
         };
         if !value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_err!("Unknown flag --{name}"));
         }
 
         let value = match inline_value {

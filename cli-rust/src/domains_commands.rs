@@ -130,7 +130,7 @@ pub fn build_domains_command_plan(
     args: &[String],
 ) -> Result<DomainZoneFileCommandPlan> {
     let kind = domains_command_kind(command)
-        .ok_or_else(|| anyhow!("Unknown domains command `{command}`"))?;
+        .ok_or_else(|| crate::usage_err!("Unknown domains command `{command}`"))?;
     match kind {
         DomainsCommandKind::ZoneFile => parse_zone_file_command_plan(args),
     }
@@ -448,7 +448,7 @@ fn parse_args(
         if arg.starts_with("--") {
             if let Some(name) = arg.strip_prefix("--no-") {
                 if !bool_flags.contains(name) {
-                    return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                    return Err(crate::usage_err!("Unknown boolean flag --no-{name}"));
                 }
                 parsed.bool_flags.insert(name.to_string(), false);
                 index += 1;
@@ -475,7 +475,7 @@ fn parse_args(
             }
 
             if !value_flags.contains(name) {
-                return Err(anyhow!("Unknown flag --{name}"));
+                return Err(crate::usage_err!("Unknown flag --{name}"));
             }
 
             let value = if let Some(value) = inline_value {
@@ -502,7 +502,7 @@ fn parse_args(
             .split_once('=')
             .map_or((raw, None), |(name, value)| (name, Some(value.to_string())));
         let Some(name) = short_value_flags.get(short_name).copied() else {
-            return Err(anyhow!("Unknown short flag -{short_name}"));
+            return Err(crate::usage_err!("Unknown short flag -{short_name}"));
         };
         let value = if let Some(value) = inline_value {
             value

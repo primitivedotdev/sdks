@@ -2184,18 +2184,17 @@
       "args": ["payments", "settlement", "--help"],
       "compare": false,
       "expect": {
+        "exitCode": 2,
         "requests": [],
         "stdout": ""
       },
       "expectByRunner": {
         "node": {
-          "exitCode": 2,
           "stderr": {
             "contains": ["Command payments:settlement not found"]
           }
         },
         "rust": {
-          "exitCode": 1,
           "stderr": {
             "contains": ["Unknown payments command `settlement`"]
           }
@@ -2235,22 +2234,20 @@
       "args": ["emails", "show", "--help"],
       "compare": false,
       "expect": {
-        "requests": []
+        "exitCode": 2,
+        "requests": [],
+        "stdout": ""
       },
       "expectByRunner": {
         "node": {
-          "exitCode": 2,
           "stderr": {
             "contains": ["Command emails:show not found"]
-          },
-          "stdout": ""
+          }
         },
         "rust": {
-          "exitCode": 1,
           "stderr": {
             "contains": ["Unknown emails command `emails:show`"]
-          },
-          "stdout": ""
+          }
         }
       }
     },
@@ -2259,22 +2256,20 @@
       "args": ["emails", "poll", "--help"],
       "compare": false,
       "expect": {
-        "requests": []
+        "exitCode": 2,
+        "requests": [],
+        "stdout": ""
       },
       "expectByRunner": {
         "node": {
-          "exitCode": 2,
           "stderr": {
             "contains": ["Command emails:poll not found"]
-          },
-          "stdout": ""
+          }
         },
         "rust": {
-          "exitCode": 1,
           "stderr": {
             "contains": ["Unknown emails command `emails:poll`"]
-          },
-          "stdout": ""
+          }
         }
       }
     },
@@ -4005,15 +4000,8 @@
         "stderr": {
           "contains": ["Nonexistent flag: --not-a-real-flag"]
         },
-        "requests": []
-      },
-      "expectByRunner": {
-        "node": {
-          "exitCode": 2
-        },
-        "rust": {
-          "exitCode": 1
-        }
+        "requests": [],
+        "exitCode": 2
       }
     },
     {
@@ -4025,15 +4013,8 @@
         "stderr": {
           "contains": ["Flag --subject expects a value"]
         },
-        "requests": []
-      },
-      "expectByRunner": {
-        "node": {
-          "exitCode": 2
-        },
-        "rust": {
-          "exitCode": 1
-        }
+        "requests": [],
+        "exitCode": 2
       }
     },
     {
@@ -4045,15 +4026,8 @@
         "stderr": {
           "contains": ["Nonexistent flag: --metadata"]
         },
-        "requests": []
-      },
-      "expectByRunner": {
-        "node": {
-          "exitCode": 2
-        },
-        "rust": {
-          "exitCode": 1
-        }
+        "requests": [],
+        "exitCode": 2
       }
     },
     {
@@ -4489,12 +4463,12 @@
       "stdin": "",
       "compare": false,
       "expect": {
+        "exitCode": 2,
         "requests": [],
         "stdout": ""
       },
       "expectByRunner": {
         "node": {
-          "exitCode": 2,
           "stderr": {
             "contains": [
               "Either a non-empty plain-text body",
@@ -4503,7 +4477,6 @@
           }
         },
         "rust": {
-          "exitCode": 1,
           "stderr": {
             "contains": ["Either a non-empty plain-text body or a non-empty HTML body is required."]
           }
@@ -4527,21 +4500,11 @@
       "stdin": "stdin body",
       "compare": false,
       "expect": {
+        "exitCode": 2,
         "requests": [],
-        "stdout": ""
-      },
-      "expectByRunner": {
-        "node": {
-          "exitCode": 2,
-          "stderr": {
-            "contains": ["Pass only one plain-text body source (got --body, --body-stdin)."]
-          }
-        },
-        "rust": {
-          "exitCode": 1,
-          "stderr": {
-            "contains": ["Pass only one plain-text body source (got --body, --body-stdin)."]
-          }
+        "stdout": "",
+        "stderr": {
+          "contains": ["Pass only one plain-text body source (got --body, --body-stdin)."]
         }
       }
     },
@@ -4561,21 +4524,11 @@
       "stdin": "body",
       "compare": false,
       "expect": {
+        "exitCode": 2,
         "requests": [],
-        "stdout": ""
-      },
-      "expectByRunner": {
-        "node": {
-          "exitCode": 2,
-          "stderr": {
-            "contains": ["Stdin can only be consumed once (got --body-stdin, --html-stdin)."]
-          }
-        },
-        "rust": {
-          "exitCode": 1,
-          "stderr": {
-            "contains": ["Stdin can only be consumed once (got --body-stdin, --html-stdin)."]
-          }
+        "stdout": "",
+        "stderr": {
+          "contains": ["Stdin can only be consumed once (got --body-stdin, --html-stdin)."]
         }
       }
     },
@@ -10100,20 +10053,12 @@
       "args": ["emails:list", "--api-key", "prim_test", "--limit", "not-an-int"],
       "compare": false,
       "expect": {
-        "exitCode": 1,
+        "exitCode": 2,
         "stdout": "",
         "stderr": {
           "contains": ["integer"]
         },
         "requests": []
-      },
-      "expectByRunner": {
-        "node": {
-          "exitCode": 2
-        },
-        "rust": {
-          "exitCode": 1
-        }
       }
     },
     {
@@ -11918,21 +11863,11 @@
       ],
       "compare": false,
       "expect": {
+        "exitCode": 2,
         "requests": [],
-        "stdout": ""
-      },
-      "expectByRunner": {
-        "node": {
-          "exitCode": 2,
-          "stderr": {
-            "contains": ["cursor", "follow"]
-          }
-        },
-        "rust": {
-          "exitCode": 1,
-          "stderr": {
-            "contains": ["cursor", "follow"]
-          }
+        "stdout": "",
+        "stderr": {
+          "contains": ["cursor", "follow"]
         }
       }
     },

@@ -203,7 +203,7 @@ pub fn build_wake_request(command: &str, args: &[String]) -> Result<WakeApiReque
             build_wake_authorizations_delete_request_from_args(args)
         }
         Some(WakeCommandKind::DispatchList) => build_wake_dispatches_list_request_from_args(args),
-        None => Err(anyhow!("Unknown wake command `{command}`")),
+        None => Err(crate::usage_err!("Unknown wake command `{command}`")),
     }
 }
 
@@ -951,7 +951,7 @@ fn parse_args(
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_err!("Unknown boolean flag --no-{name}"));
             }
             parsed.bool_flags.insert(name.to_string(), false);
             index += 1;
@@ -973,7 +973,7 @@ fn parse_args(
             continue;
         }
         if !value_flags.contains(name) && !repeatable_value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_err!("Unknown flag --{name}"));
         }
 
         let value = if let Some(value) = inline_value {

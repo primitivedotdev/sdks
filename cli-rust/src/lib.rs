@@ -28,6 +28,8 @@ pub const BIN_NAME: &str = "primitive-rust";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const USER_AGENT: &str = concat!("primitive-rust/", env!("CARGO_PKG_VERSION"));
 
+pub use config::{error_exit_code, usage_error, UsageError, EXIT_FAILURE, EXIT_USAGE};
+
 pub fn main_entry() {
     install_broken_pipe_panic_hook();
 
@@ -38,7 +40,7 @@ pub fn main_entry() {
                 return;
             }
             eprintln!("{error}");
-            std::process::exit(1);
+            std::process::exit(error_exit_code(&error));
         }
         Err(payload) => {
             if panic_payload_is_broken_pipe(payload.as_ref()) {

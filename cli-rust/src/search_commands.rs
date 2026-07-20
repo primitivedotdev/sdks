@@ -80,7 +80,7 @@ pub fn build_search_plan(command: &str, args: &[String]) -> Result<SearchCommand
     match command {
         "search" => build_top_level_search_plan(args),
         "semantic-search" | "search:semantic-search" => build_semantic_search_plan(args),
-        other => Err(anyhow!("Unknown search command `{other}`")),
+        other => Err(crate::usage_err!("Unknown search command `{other}`")),
     }
 }
 
@@ -145,7 +145,7 @@ fn split_search_invocation(args: &[String]) -> Result<(&'static str, &[String])>
         "search" => Ok(("search", &args[1..])),
         "semantic-search" => Ok(("semantic-search", &args[1..])),
         "search:semantic-search" => Ok(("search:semantic-search", &args[1..])),
-        other => Err(anyhow!("Unknown search command `{other}`")),
+        other => Err(crate::usage_err!("Unknown search command `{other}`")),
     }
 }
 
@@ -331,7 +331,7 @@ fn parse_args(
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_err!("Unknown boolean flag --no-{name}"));
             }
             parsed.bool_flags.insert(name.to_string(), false);
             index += 1;
@@ -358,7 +358,7 @@ fn parse_args(
         }
 
         if !value_flags.contains(name) && !repeatable_value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_err!("Unknown flag --{name}"));
         }
 
         let value = if let Some(value) = inline_value {

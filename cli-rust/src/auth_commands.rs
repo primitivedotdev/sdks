@@ -313,7 +313,7 @@ pub fn identify_auth_command(args: &[String]) -> Option<IdentifiedAuthCommand> {
 
 pub fn dispatch_identified_auth_command(args: &[String]) -> Result<AuthCommand> {
     let identified = identify_auth_command(args).ok_or_else(|| {
-        anyhow!(
+        crate::usage_err!(
             "Unknown auth command: {}",
             args.first().map_or("", String::as_str)
         )
@@ -339,7 +339,7 @@ pub fn dispatch(args: &[String]) -> Result<AuthCommand> {
         "signup" => parse_signup(rest),
         "logout" => parse_logout(rest),
         "whoami" => parse_whoami(rest),
-        other => Err(anyhow!("Unknown auth command: {other}")),
+        other => Err(crate::usage_err!("Unknown auth command: {other}")),
     }
 }
 
@@ -518,7 +518,7 @@ fn parse_login_or_signin(args: &[String], verb: BrowserLoginVerb) -> Result<Auth
                 })
             } else {
                 if parsed.bool("no-browser") {
-                    return Err(anyhow!("Unknown flag --no-browser"));
+                    return Err(crate::usage_err!("Unknown flag --no-browser"));
                 }
                 parse_start_from_parsed(parsed, top_flow)
             }
@@ -721,7 +721,7 @@ impl ParsedArgs {
             }
             if arg == "-f" {
                 if !bool_flags.contains(&"force") {
-                    return Err(anyhow!("Unknown flag -f"));
+                    return Err(crate::usage_err!("Unknown flag -f"));
                 }
                 parsed.bool_flags.insert("force".to_string());
                 index += 1;
@@ -733,7 +733,7 @@ impl ParsedArgs {
                     index += 1;
                     continue;
                 }
-                return Err(anyhow!("Unknown flag --no-{name}"));
+                return Err(crate::usage_err!("Unknown flag --no-{name}"));
             }
             if let Some(raw) = arg.strip_prefix("--") {
                 let (name, inline_value) = raw
@@ -748,7 +748,7 @@ impl ParsedArgs {
                     continue;
                 }
                 if !value_flags.contains(&name) {
-                    return Err(anyhow!("Unknown flag --{name}"));
+                    return Err(crate::usage_err!("Unknown flag --{name}"));
                 }
                 let value = if let Some(value) = inline_value {
                     value.to_string()

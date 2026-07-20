@@ -188,7 +188,7 @@ pub fn build_org_secrets_command_plan_with_io(
     read_stdin: impl FnMut() -> Result<String>,
 ) -> Result<OrgSecretsCommandPlan> {
     let kind = org_secrets_command_kind(command)
-        .ok_or_else(|| anyhow!("Unknown org secrets command `{command}`"))?;
+        .ok_or_else(|| crate::usage_err!("Unknown org secrets command `{command}`"))?;
     match kind {
         OrgSecretsCommandKind::List => {
             let request = build_org_secrets_list_request_from_args(args)?;
@@ -641,7 +641,7 @@ fn parse_args(
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_err!("Unknown boolean flag --no-{name}"));
             }
             parsed.bool_flags.insert(name.to_string(), false);
             index += 1;
@@ -663,7 +663,7 @@ fn parse_args(
             continue;
         }
         if !value_flags.contains(name) && !repeatable_value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_err!("Unknown flag --{name}"));
         }
 
         let value = if let Some(value) = inline_value {

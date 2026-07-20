@@ -1363,3 +1363,24 @@ fn config_set_preserves_credentials_when_only_headers_change() {
     }
     fs::remove_dir_all(config_dir).ok();
 }
+
+#[test]
+fn usage_errors_exit_2_and_runtime_errors_exit_1() {
+    let usage = config::usage_error(anyhow::anyhow!("Unknown flag --bogus"));
+    assert_eq!(config::error_exit_code(&usage), config::EXIT_USAGE);
+    // Display must pass through unchanged so stderr output is identical.
+    assert_eq!(usage.to_string(), "Unknown flag --bogus");
+
+    let runtime = anyhow::anyhow!("connection refused");
+    assert_eq!(config::error_exit_code(&runtime), config::EXIT_FAILURE);
+}
+
+#[test]
+fn usage_marker_survives_added_context_and_double_wrapping() {
+    let wrapped = config::usage_error(anyhow::anyhow!("bad value")).context("while parsing flags");
+    assert_eq!(config::error_exit_code(&wrapped), config::EXIT_USAGE);
+
+    let double = config::usage_error(config::usage_error(anyhow::anyhow!("bad value")));
+    assert_eq!(config::error_exit_code(&double), config::EXIT_USAGE);
+    assert_eq!(double.to_string(), "bad value");
+}

@@ -265,7 +265,7 @@ pub fn build_email_command_plan(
 ) -> Result<EmailCommandPlan> {
     match email_command_kind(command) {
         Some(kind) => build_email_command_plan_for_kind(kind, args, now_iso),
-        None => Err(anyhow!("Unknown emails command `{command}`")),
+        None => Err(crate::usage_err!("Unknown emails command `{command}`")),
     }
 }
 
@@ -289,7 +289,7 @@ pub fn execute_command(command: &str, args: &[String]) -> Result<()> {
     }
 
     let Some(kind) = email_command_kind(command) else {
-        return Err(anyhow!("Unknown emails command `{command}`"));
+        return Err(crate::usage_err!("Unknown emails command `{command}`"));
     };
 
     let start = Instant::now();
@@ -1351,7 +1351,7 @@ fn parse_args(
         if arg.starts_with("--") {
             if let Some(name) = arg.strip_prefix("--no-") {
                 if !bool_flags.contains(name) {
-                    return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                    return Err(crate::usage_err!("Unknown boolean flag --no-{name}"));
                 }
                 parsed.bool_flags.insert(name.to_string(), false);
                 index += 1;
@@ -1378,7 +1378,7 @@ fn parse_args(
             }
 
             if !value_flags.contains(name) && !repeatable_value_flags.contains(name) {
-                return Err(anyhow!("Unknown flag --{name}"));
+                return Err(crate::usage_err!("Unknown flag --{name}"));
             }
 
             let value = if let Some(value) = inline_value {
@@ -1410,7 +1410,7 @@ fn parse_args(
             .split_once('=')
             .map_or((raw, None), |(name, value)| (name, Some(value.to_string())));
         let Some(name) = short_value_flags.get(short_name).copied() else {
-            return Err(anyhow!("Unknown short flag -{short_name}"));
+            return Err(crate::usage_err!("Unknown short flag -{short_name}"));
         };
         let value = if let Some(value) = inline_value {
             value

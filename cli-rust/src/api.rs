@@ -77,12 +77,15 @@ pub fn execute_operation(operation: &OperationManifest, args: &[String]) -> Resu
         print!("{}", operation_help_text(operation));
         return Ok(0);
     }
-    let invocation = parse_operation_invocation(operation, args)?;
+    // Invocation parsing and parameter validation are usage errors (exit 2,
+    // like the Node CLI); everything past this point is a runtime failure.
+    let invocation = parse_operation_invocation(operation, args).map_err(crate::usage_error)?;
     let start = Instant::now();
     let auth = config::resolve_auth(&invocation.flags)?;
-    let body = build_body(operation, &invocation)?;
-    let url = build_url(operation, &auth.api_base_url, &invocation)?;
-    let header_values = collect_header_values(operation, &invocation)?;
+    let body = build_body(operation, &invocation).map_err(crate::usage_error)?;
+    let url = build_url(operation, &auth.api_base_url, &invocation).map_err(crate::usage_error)?;
+    let header_values =
+        collect_header_values(operation, &invocation).map_err(crate::usage_error)?;
     let client = client::http_client()?;
     let method = operation.method.parse()?;
     let mut request = client.request(method, url);

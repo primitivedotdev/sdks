@@ -479,7 +479,7 @@ pub fn build_function_command_plan_with_io(
     mut read_source_dir: impl FnMut(&str) -> Result<BTreeMap<String, String>>,
 ) -> Result<FunctionCommandPlan> {
     let kind = function_command_kind(command)
-        .ok_or_else(|| anyhow!("Unknown functions command `{command}`"))?;
+        .ok_or_else(|| crate::usage_err!("Unknown functions command `{command}`"))?;
     let args = args_without_runtime_flags(args)?;
     match kind {
         FunctionCommandKind::Init => Ok(FunctionCommandPlan::Init(parse_init_command_plan(&args)?)),
@@ -2370,7 +2370,9 @@ pub fn parse_logs_command_plan(args: &[String]) -> Result<FunctionLogsPlan> {
     let follow = parsed.bool_flags.get("follow") == Some(&true);
     let cursor = flag_one(&parsed, "cursor");
     if follow && cursor.is_some() {
-        return Err(anyhow!("--cursor cannot be combined with --follow."));
+        return Err(crate::usage_err!(
+            "--cursor cannot be combined with --follow."
+        ));
     }
     Ok(FunctionLogsPlan {
         request: build_logs_request(&required_flag(&parsed, "id")?, limit, cursor.as_deref()),
@@ -3191,7 +3193,7 @@ fn parse_args(
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_err!("Unknown boolean flag --no-{name}"));
             }
             parsed.bool_flags.insert(name.to_string(), false);
             index += 1;
@@ -3209,7 +3211,7 @@ fn parse_args(
             continue;
         }
         if !value_flags.contains(name) && !repeatable_value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_err!("Unknown flag --{name}"));
         }
         let value = if let Some(value) = inline_value {
             value

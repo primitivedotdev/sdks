@@ -226,7 +226,7 @@ pub fn build_inbox_command_plan(args: &[String]) -> Result<InboxCommandPlan> {
     match subcommand.as_str() {
         "setup" => build_setup_command_plan_from_args(rest),
         "status" | "get-inbox-status" => build_status_command_plan_from_args(rest),
-        other => Err(anyhow!("Unknown inbox command `{other}`")),
+        other => Err(crate::usage_err!("Unknown inbox command `{other}`")),
     }
 }
 
@@ -700,7 +700,7 @@ fn parse_args(
         if let Some(raw) = arg.strip_prefix("--") {
             if let Some(name) = raw.strip_prefix("no-") {
                 if !bool_flags.contains(name) {
-                    return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                    return Err(crate::usage_err!("Unknown boolean flag --no-{name}"));
                 }
                 parsed.bool_flags.insert(name.to_string(), false);
                 index += 1;
@@ -722,7 +722,7 @@ fn parse_args(
                 continue;
             }
             if !value_flags.contains(name) && !repeatable_value_flags.contains(name) {
-                return Err(anyhow!("Unknown flag --{name}"));
+                return Err(crate::usage_err!("Unknown flag --{name}"));
             }
 
             let value = if let Some(value) = inline_value {
@@ -747,7 +747,7 @@ fn parse_args(
             continue;
         }
 
-        return Err(anyhow!("Unknown short flag {arg}"));
+        return Err(crate::usage_err!("Unknown short flag {arg}"));
     }
     Ok(parsed)
 }

@@ -1220,7 +1220,7 @@ pub fn resolve_message_bodies(
         ("--body-stdin", input.body_stdin),
     ]);
     if body_sources.len() > 1 {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "Pass only one plain-text body source (got {}).",
             body_sources.join(", ")
         ));
@@ -1232,7 +1232,7 @@ pub fn resolve_message_bodies(
         ("--html-stdin", input.html_stdin),
     ]);
     if html_sources.len() > 1 {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "Pass only one HTML body source (got {}).",
             html_sources.join(", ")
         ));
@@ -1243,14 +1243,14 @@ pub fn resolve_message_bodies(
         ("--html-stdin", input.html_stdin),
     ]);
     if stdin_sources.len() > 1 {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "Stdin can only be consumed once (got {}).",
             stdin_sources.join(", ")
         ));
     }
 
     if body_sources.is_empty() && html_sources.is_empty() {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "Either a plain-text body source or an HTML body source is required."
         ));
     }
@@ -1271,7 +1271,7 @@ pub fn resolve_message_bodies(
     }
 
     if body.as_deref().is_none_or(str::is_empty) && html.as_deref().is_none_or(str::is_empty) {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "Either a non-empty plain-text body or a non-empty HTML body is required."
         ));
     }
@@ -1838,7 +1838,7 @@ fn parse_args(
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_err!("Unknown boolean flag --no-{name}"));
             }
             parsed.bool_flags.insert(name.to_string(), false);
             index += 1;
@@ -1858,7 +1858,7 @@ fn parse_args(
             continue;
         }
         if !value_flags.contains(name) && !repeatable_value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_err!("Unknown flag --{name}"));
         }
 
         let value = if let Some(value) = inline_value {
@@ -2948,7 +2948,7 @@ fn ensure_has_body(bodies: &ResolvedMessageBodies) -> Result<()> {
     {
         return Ok(());
     }
-    Err(anyhow!(
+    Err(crate::usage_err!(
         "Either a non-empty plain-text body or a non-empty HTML body is required."
     ))
 }

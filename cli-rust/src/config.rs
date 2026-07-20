@@ -26,6 +26,60 @@ const USER_AGENT_VALUE: &str = concat!("primitive-rust/", env!("CARGO_PKG_VERSIO
 const SAVED_CLI_OAUTH_SESSION_EXPIRED_MESSAGE: &str =
     "Saved Primitive CLI OAuth session expired or was revoked. Run `primitive signin` to authenticate again.";
 
+/// Exit code for invalid invocations (unknown command, unknown flag, missing
+/// flag value, conflicting inputs), matching the Node CLI's oclif convention.
+/// Runtime failures keep [`EXIT_FAILURE`].
+pub const EXIT_USAGE: i32 = 2;
+pub const EXIT_FAILURE: i32 = 1;
+
+/// Transparent marker wrapped around errors caused by an invalid invocation.
+/// Display passes through to the wrapped error so stderr output is unchanged;
+/// only the process exit code differs (2 instead of 1).
+#[derive(Debug)]
+pub struct UsageError(pub anyhow::Error);
+
+impl std::fmt::Display for UsageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for UsageError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(self.0.as_ref())
+    }
+}
+
+pub fn usage_error(error: anyhow::Error) -> anyhow::Error {
+    if error
+        .chain()
+        .any(|c| c.downcast_ref::<UsageError>().is_some())
+    {
+        return error;
+    }
+    anyhow::Error::new(UsageError(error))
+}
+
+pub fn error_exit_code(error: &anyhow::Error) -> i32 {
+    if error
+        .chain()
+        .any(|c| c.downcast_ref::<UsageError>().is_some())
+    {
+        EXIT_USAGE
+    } else {
+        EXIT_FAILURE
+    }
+}
+
+/// `anyhow::anyhow!` for usage errors: the resulting error exits with
+/// [`EXIT_USAGE`] instead of [`EXIT_FAILURE`].
+#[macro_export]
+macro_rules! usage_err {
+    ($($arg:tt)*) => {
+        $crate::config::usage_error(anyhow::anyhow!($($arg)*))
+    };
+}
+
 #[derive(Debug, Clone)]
 pub struct ResolvedAuth {
     pub api_key: Option<String>,

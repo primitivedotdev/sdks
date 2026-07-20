@@ -171,7 +171,7 @@ pub fn build_memory_request(command: &str, args: &[String]) -> Result<MemoryApiR
         Some(MemoryCommandKind::Get) => build_memories_get_request_from_args(args),
         Some(MemoryCommandKind::Delete) => build_memories_delete_request_from_args(args),
         Some(MemoryCommandKind::Search) => build_memories_search_request_from_args(args),
-        None => Err(anyhow!("Unknown memories command `{command}`")),
+        None => Err(crate::usage_err!("Unknown memories command `{command}`")),
     }
 }
 
@@ -719,7 +719,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_err!("Unknown boolean flag --no-{name}"));
             }
             parsed.bool_flags.insert(name.to_string(), false);
             index += 1;
@@ -746,7 +746,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
         }
 
         if !value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_err!("Unknown flag --{name}"));
         }
 
         let value = if let Some(value) = inline_value {

@@ -123,7 +123,9 @@ pub fn dispatch(args: &[String]) -> Result<()> {
             print_help(None);
             Ok(())
         }
-        other => Err(anyhow!("Unknown payloads command `{other}`")),
+        other => Err(crate::config::usage_error(anyhow!(
+            "Unknown payloads command `{other}`"
+        ))),
     }
 }
 

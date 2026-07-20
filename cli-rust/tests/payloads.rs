@@ -14,6 +14,10 @@ pub mod config {
             .unwrap_or_else(|| std::path::PathBuf::from(".primitive"))
     }
 
+    pub fn usage_error(error: anyhow::Error) -> anyhow::Error {
+        error
+    }
+
     pub fn resolve_auth(flags: &BTreeMap<String, String>) -> anyhow::Result<ResolvedAuth> {
         Ok(ResolvedAuth {
             api_key: flags

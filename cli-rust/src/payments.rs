@@ -161,7 +161,7 @@ pub fn dispatch(args: &[String]) -> Result<()> {
         "challenge-from-email" => execute_challenge_from_email(&args[1..]),
         "pay-email" => execute_pay_email(&args[1..]),
         "pay-email-step" => execute_pay_email_step(&args[1..]),
-        other => Err(anyhow!(
+        other => Err(crate::usage_err!(
             "Unknown payments command `{other}`. Run `{} payments --help`.",
             crate::display_bin_name()
         )),
