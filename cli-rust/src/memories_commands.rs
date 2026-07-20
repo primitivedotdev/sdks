@@ -684,7 +684,7 @@ fn set_positionals(parsed: &ParsedArgs) -> Result<(String, Option<String>)> {
         [] => Err(anyhow!("memories set requires a key")),
         [key] => Ok((key.clone(), None)),
         [key, value] => Ok((key.clone(), Some(value.clone()))),
-        [_, _, extra, ..] => Err(anyhow!("Unexpected argument: {extra}")),
+        [_, _, extra, ..] => Err(crate::usage_err!("Unexpected argument: {extra}")),
     }
 }
 
@@ -692,7 +692,7 @@ fn single_positional(parsed: &ParsedArgs, missing_message: &str) -> Result<Strin
     match parsed.positionals.as_slice() {
         [] => Err(anyhow!("{missing_message}")),
         [value] => Ok(value.clone()),
-        [_, extra, ..] => Err(anyhow!("Unexpected argument: {extra}")),
+        [_, extra, ..] => Err(crate::usage_err!("Unexpected argument: {extra}")),
     }
 }
 
@@ -700,7 +700,7 @@ fn optional_single_positional(parsed: &ParsedArgs) -> Result<Option<String>> {
     match parsed.positionals.as_slice() {
         [] => Ok(None),
         [value] => Ok(Some(value.clone())),
-        [_, extra, ..] => Err(anyhow!("Unexpected argument: {extra}")),
+        [_, extra, ..] => Err(crate::usage_err!("Unexpected argument: {extra}")),
     }
 }
 
@@ -728,7 +728,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
 
         let raw = arg
             .strip_prefix("--")
-            .ok_or_else(|| anyhow!("Unexpected argument: {arg}"))?;
+            .ok_or_else(|| crate::usage_err!("Unexpected argument: {arg}"))?;
         let (name, inline_value) = raw
             .split_once('=')
             .map_or((raw, None), |(name, value)| (name, Some(value.to_string())));

@@ -331,7 +331,7 @@ pub fn dispatch_auth_command(command: &str, rest: &[String]) -> Result<AuthComma
 pub fn dispatch(args: &[String]) -> Result<AuthCommand> {
     let (command, rest) = args
         .split_first()
-        .ok_or_else(|| anyhow!("Missing auth command."))?;
+        .ok_or_else(|| crate::usage_err!("Missing auth command."))?;
     match command.as_str() {
         "login" => parse_login_or_signin(rest, BrowserLoginVerb::Login),
         "signin" => parse_login_or_signin(rest, BrowserLoginVerb::Signin),
@@ -507,7 +507,7 @@ fn parse_login_or_signin(args: &[String], verb: BrowserLoginVerb) -> Result<Auth
             if parsed.positionals.is_empty() {
                 let start_flags = start_flags(&parsed);
                 if start_flags.signup_code.is_some() || start_flags.accept_terms {
-                    return Err(anyhow!(
+                    return Err(crate::usage_err!(
                         "Email-code auth needs an email address. Run `primitive {} --signup-code <code> --accept-terms`.",
                         top_flow.start_command("<email>")
                     ));
@@ -608,13 +608,13 @@ fn parse_whoami(args: &[String]) -> Result<AuthCommand> {
 fn parse_confirm(args: &[String], flow: EmailCodeFlow) -> Result<AuthCommand> {
     let parsed = ParsedArgs::parse(args, CONFIRM_VALUE_FLAGS, CONFIRM_BOOL_FLAGS)?;
     if parsed.positionals.is_empty() {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "{} confirm expects <email> [code].",
             flow.action_noun()
         ));
     }
     if parsed.positionals.len() > 2 {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "{} confirm received too many positional arguments.",
             flow.action_noun()
         ));
@@ -640,7 +640,10 @@ fn parse_resend(args: &[String], flow: EmailCodeFlow, email_required: bool) -> R
     let parsed = ParsedArgs::parse(args, RESEND_VALUE_FLAGS, RESEND_BOOL_FLAGS)?;
     let email = if email_required {
         if parsed.positionals.len() != 1 {
-            return Err(anyhow!("{} resend expects <email>.", flow.action_noun()));
+            return Err(crate::usage_err!(
+                "{} resend expects <email>.",
+                flow.action_noun()
+            ));
         }
         Some(parsed.positionals[0].clone())
     } else {
@@ -687,7 +690,9 @@ fn optional_single_positional(parsed: &ParsedArgs, label: &str) -> Result<Option
     match parsed.positionals.as_slice() {
         [] => Ok(None),
         [value] => Ok(Some(value.clone())),
-        _ => Err(anyhow!("{label} received too many positional arguments.")),
+        _ => Err(crate::usage_err!(
+            "{label} received too many positional arguments."
+        )),
     }
 }
 
@@ -784,7 +789,9 @@ impl ParsedArgs {
         if self.positionals.is_empty() {
             Ok(())
         } else {
-            Err(anyhow!("{label} received unexpected positional arguments."))
+            Err(crate::usage_err!(
+                "{label} received unexpected positional arguments."
+            ))
         }
     }
 }
@@ -815,12 +822,12 @@ fn validate_verification_code_sources(
 ) -> Result<()> {
     let sources = selected_verification_code_sources(positional_code, flags);
     if sources.is_empty() {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "Pass the verification code as a positional argument or via one of --code-from-stdin, --code-from-file, or --code-from-env."
         ));
     }
     if sources.len() > 1 {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "Pass exactly one source for the verification code; got {}.",
             sources.join(", ")
         ));
@@ -885,7 +892,7 @@ pub fn build_start_agent_signup_body(
     fallback_device_name: &str,
 ) -> Result<Value> {
     if !flags.accept_terms {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "terms must be accepted before starting Primitive email-code auth"
         ));
     }
@@ -912,7 +919,7 @@ pub fn required_signup_code(
     ) {
         (_, Some(code)) => Ok(Some(code)),
         (false, None) => Ok(None),
-        (true, None) => Err(anyhow!(
+        (true, None) => Err(crate::usage_err!(
             "{} requires --signup-code <code> before starting.",
             flow.action_noun()
         )),
@@ -1452,9 +1459,9 @@ pub fn plan_auth_command_request(
             plan_browser_login_start_request(flags, context.fallback_device_name),
         )),
         AuthCommand::StartEmailCode { email, flags, flow } => {
-            let email = email
-                .as_deref()
-                .ok_or_else(|| anyhow!("{} needs an email address.", flow.action_noun()))?;
+            let email = email.as_deref().ok_or_else(|| {
+                crate::usage_err!("{} needs an email address.", flow.action_noun())
+            })?;
             Ok(AuthCommandRequestPlan::StartEmailCode(
                 plan_start_email_code_request(*flow, email, flags, context.fallback_device_name)?,
             ))
@@ -2058,7 +2065,7 @@ pub trait AuthRuntimeIo {
     fn read_stdin_to_string(&mut self) -> Result<String> {
         let mut stdin = std::io::stdin();
         if stdin.is_terminal() {
-            return Err(anyhow!(
+            return Err(crate::usage_err!(
                 "stdin is a TTY; pipe the code into this command or use --code-from-file / --code-from-env instead."
             ));
         }
@@ -3169,7 +3176,8 @@ fn execute_start_email_code(
     io: &mut impl AuthRuntimeIo,
     http: &mut impl AuthRuntimeHttp,
 ) -> Result<AuthTextOutput> {
-    let email = email.ok_or_else(|| anyhow!("{} needs an email address.", flow.action_noun()))?;
+    let email =
+        email.ok_or_else(|| crate::usage_err!("{} needs an email address.", flow.action_noun()))?;
     let mut prefix = Vec::new();
     match read_credentials_for_auth(io, &context.config_dir) {
         Ok(Some(credentials)) if flags.force => {

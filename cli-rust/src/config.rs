@@ -882,7 +882,7 @@ fn parse_config_list_flags(args: &[String]) -> Result<ConfigListOptions> {
             "--json" => options.json = true,
             "--show-secrets" => options.show_secrets = true,
             "--help" | "-h" | "help" => {}
-            other => return Err(anyhow!("Unexpected argument: {other}")),
+            other => return Err(usage_error(anyhow!("Unexpected argument: {other}"))),
         }
     }
     Ok(options)

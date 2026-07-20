@@ -583,7 +583,10 @@ fn build_chat_command_plan_from_args_internal(
         .clone();
     let positional_message = parsed.positionals.get(1).cloned();
     if parsed.positionals.len() > 2 {
-        return Err(anyhow!("Unexpected argument: {}", parsed.positionals[2]));
+        return Err(crate::usage_err!(
+            "Unexpected argument: {}",
+            parsed.positionals[2]
+        ));
     }
 
     let reply = flag_one(&parsed, "reply");
@@ -742,7 +745,10 @@ pub fn build_chat_reply_command_plan_from_args(
         &["attachment"],
     )?;
     if parsed.positionals.len() > 2 {
-        return Err(anyhow!("Unexpected argument: {}", parsed.positionals[2]));
+        return Err(crate::usage_err!(
+            "Unexpected argument: {}",
+            parsed.positionals[2]
+        ));
     }
 
     let flag_id = optional_u64_flag(&parsed, "id")?;
@@ -2861,7 +2867,7 @@ fn write_idempotent_replay_banner(data: &Value) {
 
 fn reject_positionals(parsed: &ParsedArgs) -> Result<()> {
     if let Some(value) = parsed.positionals.first() {
-        return Err(anyhow!("Unexpected argument: {value}"));
+        return Err(crate::usage_err!("Unexpected argument: {value}"));
     }
     Ok(())
 }

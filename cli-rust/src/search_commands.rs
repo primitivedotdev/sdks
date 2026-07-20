@@ -340,7 +340,7 @@ fn parse_args(
 
         let raw = arg
             .strip_prefix("--")
-            .ok_or_else(|| anyhow!("Unexpected argument: {arg}"))?;
+            .ok_or_else(|| crate::usage_err!("Unexpected argument: {arg}"))?;
         let (name, inline_value) = raw
             .split_once('=')
             .map_or((raw, None), |(name, value)| (name, Some(value.to_string())));
@@ -392,7 +392,7 @@ fn required_query(parsed: &ParsedArgs, command: &str) -> Result<String> {
     match parsed.positionals.as_slice() {
         [] => Err(anyhow!("{command} requires a query")),
         [query] => Ok(query.clone()),
-        [_, extra, ..] => Err(anyhow!("Unexpected argument: {extra}")),
+        [_, extra, ..] => Err(crate::usage_err!("Unexpected argument: {extra}")),
     }
 }
 

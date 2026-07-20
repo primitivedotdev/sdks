@@ -66,7 +66,7 @@ pub fn is_agent_friendly_command(command: &str) -> bool {
 pub fn build_agent_upgrade_plan(args: &[String]) -> Result<AgentUpgradePlan> {
     let parsed = parse_args(args, &["api-base-url", "api-key", "code", "email"], &[])?;
     if !parsed.positionals.is_empty() {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "Unexpected argument: {}. Use --email and --code with agent upgrade.",
             parsed.positionals[0]
         ));

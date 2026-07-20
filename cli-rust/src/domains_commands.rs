@@ -457,7 +457,7 @@ fn parse_args(
 
             let raw = arg
                 .strip_prefix("--")
-                .ok_or_else(|| anyhow!("Unexpected argument: {arg}"))?;
+                .ok_or_else(|| crate::usage_err!("Unexpected argument: {arg}"))?;
             let (name, inline_value) = raw
                 .split_once('=')
                 .map_or((raw, None), |(name, value)| (name, Some(value.to_string())));
@@ -497,7 +497,7 @@ fn parse_args(
 
         let raw = arg
             .strip_prefix('-')
-            .ok_or_else(|| anyhow!("Unexpected argument: {arg}"))?;
+            .ok_or_else(|| crate::usage_err!("Unexpected argument: {arg}"))?;
         let (short_name, inline_value) = raw
             .split_once('=')
             .map_or((raw, None), |(name, value)| (name, Some(value.to_string())));
@@ -532,7 +532,7 @@ fn insert_parsed_value(parsed: &mut ParsedArgs, name: &str, value: String) -> Re
 
 fn reject_positionals(parsed: &ParsedArgs) -> Result<()> {
     if let Some(extra) = parsed.positionals.first() {
-        return Err(anyhow!("Unexpected argument: {extra}"));
+        return Err(crate::usage_err!("Unexpected argument: {extra}"));
     }
     Ok(())
 }

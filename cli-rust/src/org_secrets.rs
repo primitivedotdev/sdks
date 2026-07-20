@@ -695,7 +695,7 @@ fn parse_args(
 
 fn reject_positionals(parsed: &ParsedArgs) -> Result<()> {
     if let Some(value) = parsed.positionals.first() {
-        return Err(anyhow!("Unexpected argument: {value}"));
+        return Err(crate::usage_err!("Unexpected argument: {value}"));
     }
     Ok(())
 }

@@ -1000,7 +1000,7 @@ fn parse_args(
 
 fn reject_positionals(parsed: &ParsedArgs) -> Result<()> {
     if let Some(value) = parsed.positionals.first() {
-        return Err(anyhow!("Unexpected argument: {value}"));
+        return Err(crate::usage_err!("Unexpected argument: {value}"));
     }
     Ok(())
 }
@@ -1012,7 +1012,7 @@ fn single_positional(parsed: &ParsedArgs, missing_message: &str) -> Result<Strin
         .ok_or_else(|| anyhow!("{missing_message}"))?
         .clone();
     if let Some(extra) = parsed.positionals.get(1) {
-        return Err(anyhow!("Unexpected argument: {extra}"));
+        return Err(crate::usage_err!("Unexpected argument: {extra}"));
     }
     Ok(value)
 }

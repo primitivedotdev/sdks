@@ -166,7 +166,9 @@ pub fn dispatch(args: Vec<String>) -> Result<()> {
         }
         "config:use" => {
             let [name] = rest else {
-                return Err(anyhow!("config:use requires exactly one environment name"));
+                return Err(crate::usage_err!(
+                    "config:use requires exactly one environment name"
+                ));
             };
             let result = config::config_use(name)?;
             eprintln!(

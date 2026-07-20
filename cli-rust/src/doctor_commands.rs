@@ -1,5 +1,5 @@
 use crate::{client, config};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use reqwest::Method;
 use serde::Serialize;
 use serde_json::Value;
@@ -184,7 +184,7 @@ pub fn execute_with_writers(
 pub fn build_doctor_plan(args: &[String]) -> Result<DoctorCommandPlan> {
     let parsed = parse_args(args, &["api-base-url", "api-key"])?;
     if let Some(positional) = parsed.positionals.first() {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "Unexpected argument: {positional}. `doctor` only accepts flags."
         ));
     }

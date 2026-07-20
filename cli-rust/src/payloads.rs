@@ -140,7 +140,10 @@ pub fn run_push(args: &[String]) -> Result<()> {
         .first()
         .ok_or_else(|| anyhow!("payloads push requires a file path"))?;
     if parsed.positionals.len() > 1 {
-        return Err(anyhow!("Unexpected argument: {}", parsed.positionals[1]));
+        return Err(crate::config::usage_error(anyhow!(
+            "Unexpected argument: {}",
+            parsed.positionals[1]
+        )));
     }
     let client = resolve_client(&parsed.flags)?;
     let concurrency = parsed
@@ -178,7 +181,10 @@ pub fn run_pull(args: &[String]) -> Result<()> {
         .first()
         .ok_or_else(|| anyhow!("payloads pull requires a merkle_root"))?;
     if parsed.positionals.len() > 1 {
-        return Err(anyhow!("Unexpected argument: {}", parsed.positionals[1]));
+        return Err(crate::config::usage_error(anyhow!(
+            "Unexpected argument: {}",
+            parsed.positionals[1]
+        )));
     }
     let out = parsed
         .flags

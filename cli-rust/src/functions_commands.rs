@@ -1904,7 +1904,7 @@ pub fn scaffold_files(name: &str, template_id: Option<&str>) -> Result<Vec<Funct
 pub fn parse_init_command_plan(args: &[String]) -> Result<InitCommandPlan> {
     let parsed = parse_args(args, &["out-dir", "template"], &[], &[])?;
     if parsed.positionals.len() != 1 {
-        return Err(anyhow!(
+        return Err(crate::usage_err!(
             "functions init requires exactly one <name> argument."
         ));
     }
@@ -3242,7 +3242,7 @@ fn parse_args(
 
 fn reject_positionals(parsed: &ParsedArgs) -> Result<()> {
     if let Some(value) = parsed.positionals.first() {
-        return Err(anyhow!("Unexpected argument: {value}"));
+        return Err(crate::usage_err!("Unexpected argument: {value}"));
     }
     Ok(())
 }
