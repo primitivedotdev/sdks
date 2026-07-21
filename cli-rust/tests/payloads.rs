@@ -14,6 +14,12 @@ pub mod config {
             .unwrap_or_else(|| std::path::PathBuf::from(".primitive"))
     }
 
+    pub fn env_no_proxy_wildcard() -> bool {
+        std::env::var("NO_PROXY")
+            .or_else(|_| std::env::var("no_proxy"))
+            .is_ok_and(|value| value.split(',').any(|entry| entry.trim() == "*"))
+    }
+
     pub fn resolve_auth(flags: &BTreeMap<String, String>) -> anyhow::Result<ResolvedAuth> {
         resolve_auth_without_refresh(flags)
     }

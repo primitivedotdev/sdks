@@ -620,13 +620,7 @@ fn authorized(request: RequestBuilder, api_key: &str) -> RequestBuilder {
 
 fn http_client() -> Result<Client> {
     let mut builder = Client::builder().user_agent(USER_AGENT_VALUE);
-    // Local copy of client::env_no_proxy_wildcard: this module is compiled
-    // standalone by the include-style integration tests, which stub `config`
-    // but not `client`. See client.rs for why NO_PROXY=* needs handling.
-    let no_proxy_wildcard = ["NO_PROXY", "no_proxy"].iter().any(|name| {
-        std::env::var(name).is_ok_and(|value| value.split(',').any(|entry| entry.trim() == "*"))
-    });
-    if no_proxy_wildcard {
+    if crate::config::env_no_proxy_wildcard() {
         builder = builder.no_proxy();
     }
     builder.build().map_err(Into::into)

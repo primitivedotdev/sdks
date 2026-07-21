@@ -30,6 +30,23 @@ const MALFORMED_CREDENTIALS_HINT: &str = "Run `primitive logout` and then `primi
 const LEGACY_API_KEY_CREDENTIALS_REMOVED_MESSAGE: &str = "Removed local Primitive CLI API-key login state. API keys are still valid when passed explicitly, but saved CLI auth now uses OAuth. Run `primitive signin` to create an OAuth session. No API key was revoked.";
 const PRIMITIVE_KEY_RENAME_HINT: &str = "PRIMITIVE_KEY is set but the CLI reads PRIMITIVE_API_KEY. Rename your env var, or re-run with PRIMITIVE_API_KEY=$PRIMITIVE_KEY.";
 
+/// reqwest's env-proxy support does not honor the conventional `NO_PROXY=*`
+/// (bypass everything) wildcard that the Node CLI (undici) and curl respect;
+/// with `HTTP(S)_PROXY` set, requests would still route through the proxy.
+/// Detect the wildcard and let callers disable proxying entirely to match
+/// Node. The effective value resolves like reqwest itself does: `NO_PROXY`
+/// first, falling back to `no_proxy` (proxy.rs `NoProxy::from_env`), so this
+/// gate always agrees with the list reqwest would otherwise apply.
+pub fn env_no_proxy_wildcard() -> bool {
+    std::env::var("NO_PROXY")
+        .or_else(|_| std::env::var("no_proxy"))
+        .is_ok_and(|value| no_proxy_value_has_wildcard(&value))
+}
+
+pub fn no_proxy_value_has_wildcard(value: &str) -> bool {
+    value.split(',').any(|entry| entry.trim() == "*")
+}
+
 #[derive(Debug, Clone)]
 pub struct ResolvedAuth {
     pub api_key: Option<String>,
