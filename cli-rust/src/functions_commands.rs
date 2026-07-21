@@ -769,25 +769,64 @@ fn args_without_runtime_flags(args: &[String]) -> Result<Vec<String>> {
 
 fn execute_init_plan(plan: &InitCommandPlan) -> Result<()> {
     let files = scaffold_files(&plan.name, Some(&plan.template_id))?;
-    let out_dir = PathBuf::from(&plan.out_dir);
-    fs::create_dir_all(&out_dir)
-        .with_context(|| format!("Could not create {}", out_dir.display()))?;
+    let out_dir = resolve_init_out_dir(&plan.out_dir)?;
+    fs::create_dir(&out_dir).map_err(|error| match error.kind() {
+        io::ErrorKind::AlreadyExists => anyhow!(
+            "Target directory already exists: {}. Refusing to overwrite. Remove it or pick a different --out-dir.",
+            out_dir.display()
+        ),
+        io::ErrorKind::NotFound => anyhow!(
+            "Parent directory does not exist for {}. Create it first or pick a different --out-dir.",
+            out_dir.display()
+        ),
+        _ => anyhow!("Failed to create {}: {error}", out_dir.display()),
+    })?;
 
     for file in files {
         let path = out_dir.join(&file.relative_path);
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("Could not create {}", parent.display()))?;
+            if let Err(error) = fs::create_dir_all(parent) {
+                let _ = fs::remove_dir_all(&out_dir);
+                return Err(anyhow!(
+                    "Failed to write scaffold to {}: Could not create {}: {error}",
+                    out_dir.display(),
+                    parent.display()
+                ));
+            }
         }
-        fs::write(&path, file.contents)
-            .with_context(|| format!("Could not write {}", path.display()))?;
+        if let Err(error) = fs::write(&path, file.contents) {
+            let _ = fs::remove_dir_all(&out_dir);
+            return Err(anyhow!(
+                "Failed to write scaffold to {}: Could not write {}: {error}",
+                out_dir.display(),
+                path.display()
+            ));
+        }
     }
 
     println!(
-        "Created Primitive Function project in {}.",
-        out_dir.display()
+        "Scaffolded {} from {} template.",
+        out_dir.display(),
+        plan.template_id
     );
+    println!("Next:");
+    println!("  cd {}", out_dir.display());
+    println!("  npm install");
+    println!("  npm run deploy");
+    println!("  export PRIMITIVE_FUNCTION_ID=<id-from-deploy-output>");
+    println!("  npm run test:function");
     Ok(())
+}
+
+fn resolve_init_out_dir(raw: &str) -> Result<PathBuf> {
+    let path = PathBuf::from(raw);
+    if path.is_absolute() {
+        Ok(path)
+    } else {
+        Ok(std::env::current_dir()
+            .context("Could not read current working directory")?
+            .join(path))
+    }
 }
 
 fn execute_templates_plan(plan: &TemplatesCommandPlan) -> Result<()> {
@@ -2003,8 +2042,8 @@ pub fn scaffold_files(name: &str, template_id: Option<&str>) -> Result<Vec<Funct
 pub fn parse_init_command_plan(args: &[String]) -> Result<InitCommandPlan> {
     let parsed = parse_args(args, &["out-dir", "template"], &[], &[])?;
     if parsed.positionals.len() != 1 {
-        return Err(anyhow!(
-            "functions init requires exactly one <name> argument."
+        return Err(crate::usage_error(
+            "functions init requires exactly one <name> argument.",
         ));
     }
     let name = parsed.positionals[0].clone();

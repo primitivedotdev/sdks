@@ -672,6 +672,7 @@ function expectedTextFrom(spec, context) {
   if (spec.json !== undefined)
     return asJsonValue(deepSort(expand(spec.json, context)));
   if (
+    spec.jsonMatches !== undefined ||
     spec.contains !== undefined ||
     spec.notContains !== undefined ||
     spec.matches !== undefined
@@ -684,6 +685,21 @@ function expectedTextFrom(spec, context) {
 function assertStreamExpectation(label, actual, spec, context, normalizers) {
   if (spec === undefined) return;
   const comparableActual = renderComparableStream(actual, normalizers);
+  if (spec.jsonMatches !== undefined) {
+    let parsed;
+    try {
+      parsed = JSON.parse(actual);
+    } catch (error) {
+      throw new Error(
+        `${label} was not valid JSON: ${error instanceof Error ? error.message : String(error)}\nActual:\n${actual}`,
+      );
+    }
+    assertJsonMatches(
+      deepSort(parsed),
+      deepSort(expand(spec.jsonMatches, context)),
+      label,
+    );
+  }
   if (spec.contains) {
     for (const item of spec.contains) {
       const expected = expand(item, context);
@@ -750,6 +766,8 @@ const JSON_MATCHER_KEYS = new Set([
   "$matches",
   "$notEqual",
   "$notMatches",
+  "$numberMax",
+  "$numberMin",
 ]);
 
 function isJsonMatcher(value) {
@@ -758,7 +776,11 @@ function isJsonMatcher(value) {
   return (
     keys.some(
       (key) =>
-        key === "$matches" || key === "$notEqual" || key === "$notMatches",
+        key === "$matches" ||
+        key === "$notEqual" ||
+        key === "$notMatches" ||
+        key === "$numberMin" ||
+        key === "$numberMax",
     ) && keys.every((key) => JSON_MATCHER_KEYS.has(key))
   );
 }
@@ -812,6 +834,30 @@ function assertJsonMatches(actual, expected, label) {
         actual,
         expected.$notEqual,
         `${label} unexpectedly equaled ${JSON.stringify(expected.$notEqual)}`,
+      );
+    }
+    if (expected.$numberMin !== undefined) {
+      assert.equal(
+        typeof expected.$numberMin,
+        "number",
+        `${label} $numberMin must be a number`,
+      );
+      assert.equal(typeof actual, "number", `${label} expected a number`);
+      assert(
+        actual >= expected.$numberMin,
+        `${label} expected number >= ${expected.$numberMin}. Actual: ${JSON.stringify(actual)}`,
+      );
+    }
+    if (expected.$numberMax !== undefined) {
+      assert.equal(
+        typeof expected.$numberMax,
+        "number",
+        `${label} $numberMax must be a number`,
+      );
+      assert.equal(typeof actual, "number", `${label} expected a number`);
+      assert(
+        actual <= expected.$numberMax,
+        `${label} expected number <= ${expected.$numberMax}. Actual: ${JSON.stringify(actual)}`,
       );
     }
     return;
@@ -1245,18 +1291,37 @@ function isNoArgRootCase(caseItem) {
 
 function rootHelpRuntimeNormalizedStdout(output) {
   return output.replace(
-    /^ {2}primitive(?:-rust)?\/[^\n]+\n/m,
+    /^ {2}primitive(?:-rust)?\/[0-9][^\s\n]*(?: [^\n]+)?\n/m,
     "  primitive/<version>\n",
   );
 }
 
 function assertRootHelpStdoutParity(caseItem, nodeStdout, rustStdout) {
   if (!isNoArgRootCase(caseItem)) return;
+  assertRootHelpVersionLine(nodeStdout, "Node");
+  assertRootHelpVersionLine(rustStdout, "Rust");
   assert.equal(
     rootHelpRuntimeNormalizedStdout(rustStdout),
     rootHelpRuntimeNormalizedStdout(nodeStdout),
     "Node/Rust root help stdout parity mismatch",
   );
+}
+
+function assertRootHelpVersionLine(stdout, runnerName) {
+  const match = stdout.match(/^VERSION\n {2}([^\n]+)\n/m);
+  if (!match) {
+    throw new Error(`${runnerName} root help is missing VERSION line`);
+  }
+  const versionLine = match[1];
+  const valid =
+    runnerName === "Node"
+      ? /^primitive\/[0-9][^\s\n]* [^\s\n]+ node-v[0-9][^\s\n]*$/.test(versionLine)
+      : /^primitive(?:-rust)?\/[0-9][^\s\n]*$/.test(versionLine);
+  if (!valid) {
+    throw new Error(
+      `${runnerName} root help VERSION line has unexpected shape: ${JSON.stringify(versionLine)}`,
+    );
+  }
 }
 
 async function runCase(caseItem, options, tmpRoot) {
