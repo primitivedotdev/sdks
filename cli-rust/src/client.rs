@@ -41,10 +41,25 @@ const X402_ERROR_HINTS: &[(&str, &str)] = &[
 ];
 
 pub fn http_client() -> Result<Client> {
-    Client::builder()
-        .user_agent(USER_AGENT_VALUE)
-        .build()
-        .map_err(Into::into)
+    let mut builder = Client::builder().user_agent(USER_AGENT_VALUE);
+    if env_no_proxy_wildcard() {
+        builder = builder.no_proxy();
+    }
+    builder.build().map_err(Into::into)
+}
+
+/// reqwest's env-proxy support does not honor the conventional `NO_PROXY=*`
+/// (bypass everything) wildcard that the Node CLI (undici) and curl respect;
+/// with `HTTP(S)_PROXY` set, requests would still route through the proxy.
+/// Detect the wildcard and disable proxying entirely to match Node.
+pub fn env_no_proxy_wildcard() -> bool {
+    ["NO_PROXY", "no_proxy"]
+        .iter()
+        .any(|name| std::env::var(name).is_ok_and(|value| no_proxy_value_has_wildcard(&value)))
+}
+
+pub fn no_proxy_value_has_wildcard(value: &str) -> bool {
+    value.split(',').any(|entry| entry.trim() == "*")
 }
 
 pub fn apply_headers(
@@ -144,4 +159,21 @@ fn extract_error_code(payload: Option<&Value>) -> Option<&str> {
         return Some(code);
     }
     payload.get("code").and_then(Value::as_str)
+}
+
+#[cfg(test)]
+mod no_proxy_tests {
+    use super::no_proxy_value_has_wildcard;
+
+    #[test]
+    fn wildcard_detection_matches_conventional_forms() {
+        assert!(no_proxy_value_has_wildcard("*"));
+        assert!(no_proxy_value_has_wildcard(" * "));
+        assert!(no_proxy_value_has_wildcard("example.com,*"));
+        assert!(no_proxy_value_has_wildcard("*, example.com"));
+        assert!(!no_proxy_value_has_wildcard(""));
+        assert!(!no_proxy_value_has_wildcard("example.com"));
+        assert!(!no_proxy_value_has_wildcard("*.example.com"));
+        assert!(!no_proxy_value_has_wildcard("127.0.0.0/8,localhost"));
+    }
 }

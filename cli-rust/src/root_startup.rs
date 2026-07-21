@@ -134,10 +134,11 @@ fn credentials_file_exists(config_dir: &Path) -> bool {
 }
 
 fn fetch_root_account(request: &RootAccountRequest) -> Option<RootAccount> {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(ROOT_AUTH_TIMEOUT)
-        .build()
-        .ok()?;
+    let mut builder = reqwest::blocking::Client::builder().timeout(ROOT_AUTH_TIMEOUT);
+    if crate::client::env_no_proxy_wildcard() {
+        builder = builder.no_proxy();
+    }
+    let client = builder.build().ok()?;
     let mut request_builder = client.get(account_endpoint(&request.api_base_url));
     for (name, value) in &request.headers {
         request_builder = request_builder.header(name, value);
