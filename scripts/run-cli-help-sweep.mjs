@@ -421,7 +421,6 @@ function addValueFlagHelpCandidates(candidates, commandId, record) {
         [...spelling, `--${flag}`, sampleValue(flag, spec), "--help"],
         false,
         commandId,
-        { copyParity: "semantic" },
       );
     }
   }
@@ -502,11 +501,11 @@ function browserOpenTrapDirPath() {
     "#!/bin/sh",
     "{",
     "  printf '%s' \"$0\"",
-    "  for arg in \"$@\"; do",
+    '  for arg in "$@"; do',
     "    printf ' %s' \"$arg\"",
     "  done",
     "  printf '\\n'",
-    "} >> \"${PRIMITIVE_BROWSER_OPEN_TRAP_LOG:-/dev/null}\"",
+    '} >> "$' + '{PRIMITIVE_BROWSER_OPEN_TRAP_LOG:-/dev/null}"',
     "exit 0",
     "",
   ].join("\n");
@@ -525,7 +524,9 @@ function readBrowserOpenLog(logPath) {
 }
 
 function prependPathEntry(env, entry) {
-  const pathKeys = Object.keys(env).filter((key) => key.toLowerCase() === "path");
+  const pathKeys = Object.keys(env).filter(
+    (key) => key.toLowerCase() === "path",
+  );
   const pathKey = pathKeys[0] ?? "PATH";
   const currentPath = pathKeys.map((key) => env[key]).find(Boolean) ?? "";
   const next = { ...env };
@@ -543,16 +544,20 @@ function helpEnv() {
     `browser-open-${process.pid}-${browserOpenLogCounter}.log`,
   );
   browserOpenLogCounter += 1;
-  return prependPathEntry({
-    ...process.env,
-    HOME: path.join(emptyConfigRoot, "home"),
-    PRIMITIVE_API_KEY: "",
-    PRIMITIVE_BROWSER_OPEN_TRAP_LOG: browserOpenLog,
-    PRIMITIVE_CONFIG_DIR: path.join(emptyConfigRoot, "primitive"),
-    PRIMITIVE_HIDE_SIGNUP_HINT: "1",
-    PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1",
-    XDG_CONFIG_HOME: path.join(emptyConfigRoot, "xdg"),
-  }, browserOpenTrapDirPath());
+  return prependPathEntry(
+    {
+      ...process.env,
+      HOME: path.join(emptyConfigRoot, "home"),
+      PRIMITIVE_API_KEY: "",
+      PRIMITIVE_BROWSER_OPEN_DIRECT_TRAP: "1",
+      PRIMITIVE_BROWSER_OPEN_TRAP_LOG: browserOpenLog,
+      PRIMITIVE_CONFIG_DIR: path.join(emptyConfigRoot, "primitive"),
+      PRIMITIVE_HIDE_SIGNUP_HINT: "1",
+      PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1",
+      XDG_CONFIG_HOME: path.join(emptyConfigRoot, "xdg"),
+    },
+    browserOpenTrapDirPath(),
+  );
 }
 
 function cleanupHelpEnvRoot() {

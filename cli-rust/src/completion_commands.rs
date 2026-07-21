@@ -4,9 +4,11 @@ use anyhow::{anyhow, Result};
 use std::collections::BTreeSet;
 use std::io::IsTerminal;
 
+const PUBLIC_COMPLETION_BIN: &str = "primitive";
+
 pub fn dispatch(args: &[String]) -> Result<()> {
     if args.is_empty() || args.iter().any(|arg| is_help_arg(arg)) {
-        print!("{}", completion_help_text(&crate::display_bin_name()));
+        print!("{}", completion_help_text(PUBLIC_COMPLETION_BIN));
         return Ok(());
     }
     if args.len() != 1 {
@@ -14,10 +16,10 @@ pub fn dispatch(args: &[String]) -> Result<()> {
             "completion requires exactly one shell: bash, zsh, powershell, or fish"
         ));
     }
-    let bin = crate::display_bin_name();
+    let bin = PUBLIC_COMPLETION_BIN;
     print!(
         "{}",
-        completion_command_output(&bin, &args[0], std::io::stdout().is_terminal())?
+        completion_command_output(bin, &args[0], std::io::stdout().is_terminal())?
     );
     Ok(())
 }
@@ -32,9 +34,9 @@ pub fn dispatch_autocomplete(args: &[String]) -> Result<()> {
         }
     }
 
-    let bin = crate::display_bin_name();
+    let bin = PUBLIC_COMPLETION_BIN;
     if args.iter().any(|arg| is_help_arg(arg)) {
-        print!("{}", autocomplete_help_text(&bin));
+        print!("{}", autocomplete_help_text(bin));
         return Ok(());
     }
 
@@ -64,7 +66,7 @@ pub fn dispatch_autocomplete(args: &[String]) -> Result<()> {
     if args.iter().any(|arg| is_refresh_arg(arg)) {
         return Ok(());
     }
-    print!("{}", autocomplete_setup_instructions(&bin, shell)?);
+    print!("{}", autocomplete_setup_instructions(bin, shell)?);
     Ok(())
 }
 
@@ -308,9 +310,9 @@ fn fish_escape(value: &str) -> String {
 }
 
 fn dispatch_autocomplete_script(args: &[String]) -> Result<()> {
-    let bin = crate::display_bin_name();
+    let bin = PUBLIC_COMPLETION_BIN;
     if args.iter().any(|arg| is_help_arg(arg)) {
-        print!("{}", autocomplete_script_help_text(&bin));
+        print!("{}", autocomplete_script_help_text(bin));
         return Ok(());
     }
     if args.len() > 1 {
@@ -324,14 +326,14 @@ fn dispatch_autocomplete_script(args: &[String]) -> Result<()> {
             "Expected {shell} to be one of: zsh, bash, powershell"
         ));
     }
-    print!("{}", autocomplete_setup_script(&bin, shell)?);
+    print!("{}", autocomplete_setup_script(bin, shell)?);
     Ok(())
 }
 
 fn dispatch_autocomplete_create(args: &[String]) -> Result<()> {
-    let bin = crate::display_bin_name();
+    let bin = PUBLIC_COMPLETION_BIN;
     if args.iter().any(|arg| is_help_arg(arg)) {
-        print!("{}", autocomplete_create_help_text(&bin));
+        print!("{}", autocomplete_create_help_text(bin));
         return Ok(());
     }
     if !args.is_empty() {

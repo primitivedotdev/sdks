@@ -16,19 +16,23 @@ use primitive_rust::auth_commands::{
     serialize_pending_signup, signup_status_output, start_email_code_output,
     AgentSignupResendResult, AgentSignupStartResult, AgentSignupVerifyResult, AuthApiResponse,
     AuthCommand, AuthCommandId, AuthCommandRequestContext, AuthCommandRequestPlan,
-    AuthExecutionContext, AuthRequestPlan, AuthRuntimeHttp, AuthRuntimeIo, BrowserLoginFlags,
-    BrowserLoginVerb, CliLoginPollResult, CliLoginStartResult, ConfirmEmailCodeFlags,
-    EmailCodeFlow, ExistingCredentialDecision, ExistingLoginProbeStatus, PendingAgentSignup,
-    PendingStartDecision, PendingStateDecision, PollDecision, RequiredPendingDecision,
-    ResendDecision, ResendEmailCodeFlags, StartEmailCodeFlags, StoredCliCredentials,
-    VerifyDecision, WhoamiFlags,
+    AuthExecutionContext, AuthRequestBody, AuthRequestPlan, AuthRuntimeHttp, AuthRuntimeIo,
+    BrowserLoginFlags, BrowserLoginVerb, CliLoginPollResult, CliLoginStartResult,
+    ConfirmEmailCodeFlags, EmailCodeFlow, ExistingCredentialDecision, ExistingLoginProbeStatus,
+    PendingAgentSignup, PendingStartDecision, PendingStateDecision, PollDecision,
+    RequiredPendingDecision, ResendDecision, ResendEmailCodeFlags, StartEmailCodeFlags,
+    StoredCliCredentials, VerifyDecision, WhoamiFlags,
 };
-use serde_json::json;
+use serde_json::{json, Value};
 use std::collections::{BTreeMap, VecDeque};
 use std::time::{Duration, UNIX_EPOCH};
 
 fn args(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| value.to_string()).collect()
+}
+
+fn json_body(value: Value) -> Option<AuthRequestBody> {
+    Some(AuthRequestBody::Json(value))
 }
 
 fn pending(email: &str) -> PendingAgentSignup {
@@ -268,11 +272,15 @@ fn confirm_request_body_from_source_args(
 
     execute_auth_command_with(&command, &context, &mut io, &mut http).expect("execute confirm");
 
-    http.requests[0]
+    let body = http.requests[0]
         .2
         .body
         .clone()
-        .expect("confirm request body")
+        .expect("confirm request body");
+    match body {
+        AuthRequestBody::Json(value) => value,
+        AuthRequestBody::Form(_) => panic!("confirm request body should be JSON"),
+    }
 }
 
 #[derive(Default)]
@@ -1068,7 +1076,7 @@ fn plans_auth_api_requests_without_network() {
     assert!(!start.include_auth);
     assert_eq!(
         start.body,
-        Some(json!({
+        json_body(json!({
             "device_name": "work-laptop",
             "email": "user@example.com",
             "signup_code": "invite-code",
@@ -1099,12 +1107,15 @@ fn plans_auth_api_requests_without_network() {
     assert_eq!(browser.operation_id, "startCliLogin");
     assert_eq!(
         browser.body,
-        Some(json!({ "device_name": "fallback-host" }))
+        json_body(json!({ "device_name": "fallback-host" }))
     );
 
     let poll = plan_browser_login_poll_request("device-code");
     assert_eq!(poll.operation_id, "pollCliLogin");
-    assert_eq!(poll.body, Some(json!({ "device_code": "device-code" })));
+    assert_eq!(
+        poll.body,
+        json_body(json!({ "device_code": "device-code" }))
+    );
 
     let pending = pending("user@example.com");
     let confirm = plan_confirm_email_code_request(
@@ -1118,7 +1129,7 @@ fn plans_auth_api_requests_without_network() {
     assert_eq!(confirm.operation_id, "verifyAgentSignup");
     assert_eq!(
         confirm.body,
-        Some(json!({
+        json_body(json!({
             "org_id": "org-id",
             "signup_token": "signup-token",
             "verification_code": "123456",
@@ -1127,12 +1138,15 @@ fn plans_auth_api_requests_without_network() {
 
     let resend = plan_resend_email_code_request(&pending);
     assert_eq!(resend.operation_id, "resendAgentSignupVerification");
-    assert_eq!(resend.body, Some(json!({ "signup_token": "signup-token" })));
+    assert_eq!(
+        resend.body,
+        json_body(json!({ "signup_token": "signup-token" }))
+    );
 
     let logout = plan_logout_request(&credentials(None));
     assert_eq!(logout.operation_id, "cliLogout");
     assert!(logout.include_auth);
-    assert_eq!(logout.body, Some(json!({ "key_id": "grant-id" })));
+    assert_eq!(logout.body, json_body(json!({ "key_id": "grant-id" })));
 
     let domains = plan_whoami_domains_request();
     assert_eq!(domains.operation_id, "listDomains");
@@ -1187,7 +1201,7 @@ fn plans_auth_command_requests_from_dispatched_shapes() {
     assert!(matches!(
         plan,
         AuthCommandRequestPlan::StartEmailCode(ref request)
-            if request.body == Some(json!({
+            if request.body == json_body(json!({
                 "device_name": "fallback-host",
                 "email": "user@example.com",
                 "terms_accepted": true,
@@ -1615,7 +1629,7 @@ fn runtime_signup_interactive_starts_resends_and_confirms() {
     );
     assert_eq!(
         http.requests[0].2.body,
-        Some(json!({
+        json_body(json!({
             "device_name": "work-laptop",
             "email": "user@example.com",
             "signup_code": "invite-code",
@@ -1633,7 +1647,7 @@ fn runtime_signup_interactive_starts_resends_and_confirms() {
     );
     assert_eq!(
         http.requests[2].2.body,
-        Some(json!({ "signup_token": "signup-token" }))
+        json_body(json!({ "signup_token": "signup-token" }))
     );
     assert_eq!(
         http.requests[3]

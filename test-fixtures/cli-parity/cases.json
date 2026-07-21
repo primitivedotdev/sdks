@@ -8,7 +8,15 @@
     {
       "name": "root help overview",
       "args": [],
-      "compare": false,
+      "compare": true,
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "primitive(?:-rust)?/[0-9]+\\.[0-9]+\\.[0-9]+[^\\n]*",
+            "replacement": "primitive/<version>"
+          }
+        ]
+      },
       "expect": {
         "stderr": "",
         "requests": []
@@ -49,7 +57,15 @@
     {
       "name": "root logged-out signup hint",
       "args": [],
-      "compare": false,
+      "compare": true,
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "primitive(?:-rust)?/[0-9]+\\.[0-9]+\\.[0-9]+[^\\n]*",
+            "replacement": "primitive/<version>"
+          }
+        ]
+      },
       "env": {
         "PRIMITIVE_HIDE_SIGNUP_HINT": ""
       },
@@ -90,7 +106,15 @@
     {
       "name": "root signup hint hide flag requires exact one",
       "args": [],
-      "compare": false,
+      "compare": true,
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "primitive(?:-rust)?/[0-9]+\\.[0-9]+\\.[0-9]+[^\\n]*",
+            "replacement": "primitive/<version>"
+          }
+        ]
+      },
       "env": {
         "PRIMITIVE_HIDE_SIGNUP_HINT": "true"
       },
@@ -131,7 +155,15 @@
     {
       "name": "root signed-in summary from saved oauth",
       "args": [],
-      "compare": false,
+      "compare": true,
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "primitive(?:-rust)?/[0-9]+\\.[0-9]+\\.[0-9]+[^\\n]*",
+            "replacement": "primitive/<version>"
+          }
+        ]
+      },
       "env": {
         "PRIMITIVE_API_BASE_URL": "",
         "PRIMITIVE_API_KEY": "",
@@ -208,7 +240,15 @@
     {
       "name": "root signed-in summary falls back to xdg config home",
       "args": [],
-      "compare": false,
+      "compare": true,
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "primitive(?:-rust)?/[0-9]+\\.[0-9]+\\.[0-9]+[^\\n]*",
+            "replacement": "primitive/<version>"
+          }
+        ]
+      },
       "env": {
         "PRIMITIVE_API_BASE_URL": "",
         "PRIMITIVE_API_KEY": "",
@@ -287,7 +327,15 @@
     {
       "name": "root signed-in summary from explicit api key",
       "args": [],
-      "compare": false,
+      "compare": true,
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "primitive(?:-rust)?/[0-9]+\\.[0-9]+\\.[0-9]+[^\\n]*",
+            "replacement": "primitive/<version>"
+          }
+        ]
+      },
       "env": {
         "PRIMITIVE_API_KEY": "prim_explicit_root",
         "PRIMITIVE_HIDE_SIGNUP_HINT": ""
@@ -355,7 +403,15 @@
     {
       "name": "root signed-in summary uses configured environment",
       "args": [],
-      "compare": false,
+      "compare": true,
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "primitive(?:-rust)?/[0-9]+\\.[0-9]+\\.[0-9]+[^\\n]*",
+            "replacement": "primitive/<version>"
+          }
+        ]
+      },
       "env": {
         "PRIMITIVE_API_BASE_URL": "",
         "PRIMITIVE_API_KEY": "prim_explicit_configured",
@@ -437,7 +493,15 @@
     {
       "name": "root non-default environment without base suppresses auth fetch",
       "args": [],
-      "compare": false,
+      "compare": true,
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "primitive(?:-rust)?/[0-9]+\\.[0-9]+\\.[0-9]+[^\\n]*",
+            "replacement": "primitive/<version>"
+          }
+        ]
+      },
       "env": {
         "PRIMITIVE_API_BASE_URL": "",
         "PRIMITIVE_API_KEY": "prim_explicit_no_base",
@@ -488,7 +552,15 @@
     {
       "name": "root proxy startup respects node restart path",
       "args": [],
-      "compare": false,
+      "compare": true,
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "primitive(?:-rust)?/[0-9]+\\.[0-9]+\\.[0-9]+[^\\n]*",
+            "replacement": "primitive/<version>"
+          }
+        ]
+      },
       "env": {
         "HTTPS_PROXY": "http://127.0.0.1:9"
       },
@@ -535,7 +607,7 @@
           ]
         },
         "stdout": {
-          "contains": ["primitive/"]
+          "matches": ["(?:primitive|prim)/"]
         }
       }
     },
@@ -555,7 +627,7 @@
         },
         "rust": {
           "stdout": {
-            "contains": ["primitive/0.1.0"]
+            "matches": ["(?:primitive|prim)/0\\.1\\.0"]
           }
         }
       }
@@ -984,6 +1056,7 @@
           {
             "method": "POST",
             "path": "/v1/agent/accounts",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "parity-agent",
               "terms_accepted": true
@@ -1076,6 +1149,7 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/resend",
+            "headersAbsent": ["authorization"],
             "body": {
               "signup_token": "signup_tok"
             }
@@ -1121,6 +1195,7 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "parity-cli"
             }
@@ -1178,6 +1253,7 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_code": "device_tok"
             }
@@ -1228,6 +1304,7 @@
           {
             "method": "POST",
             "path": "/v1/cli/signup/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -1275,6 +1352,7 @@
           {
             "method": "POST",
             "path": "/v1/cli/signup/resend",
+            "headersAbsent": ["authorization"],
             "body": {
               "signup_token": "cli_signup_tok"
             }
@@ -1338,6 +1416,7 @@
           {
             "method": "POST",
             "path": "/v1/cli/signup/verify",
+            "headersAbsent": ["authorization"],
             "body": {
               "signup_token": "cli_signup_tok",
               "verification_code": "123456"
@@ -3065,6 +3144,7 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -3112,6 +3192,7 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -15788,6 +15869,7 @@
           {
             "method": "POST",
             "path": "/v1/agent/accounts",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "parity-agent",
               "terms_accepted": true
@@ -17777,6 +17859,8 @@
         "memories:delete-memory",
         "--api-key",
         "prim_test",
+        "--x-primitive-function-id",
+        "fn_memory",
         "--key",
         "profile",
         "--scope-type",
@@ -17811,7 +17895,8 @@
               "if_version": "v1"
             },
             "headers": {
-              "authorization": "Bearer prim_test"
+              "authorization": "Bearer prim_test",
+              "x-primitive-function-id": "fn_memory"
             }
           }
         ]
@@ -17823,6 +17908,8 @@
         "memories:get-memory",
         "--api-key",
         "prim_test",
+        "--x-primitive-function-id",
+        "fn_memory",
         "--key",
         "profile",
         "--scope-type",
@@ -17856,7 +17943,8 @@
               "scope_type": "org"
             },
             "headers": {
-              "authorization": "Bearer prim_test"
+              "authorization": "Bearer prim_test",
+              "x-primitive-function-id": "fn_memory"
             }
           }
         ]
@@ -17868,6 +17956,8 @@
         "memories:search-memories",
         "--api-key",
         "prim_test",
+        "--x-primitive-function-id",
+        "fn_memory",
         "--prefix",
         "pro",
         "--limit",
@@ -17904,7 +17994,8 @@
               "include_value": "false"
             },
             "headers": {
-              "authorization": "Bearer prim_test"
+              "authorization": "Bearer prim_test",
+              "x-primitive-function-id": "fn_memory"
             }
           }
         ]
@@ -17916,6 +18007,8 @@
         "memories:set-memory",
         "--api-key",
         "prim_test",
+        "--x-primitive-function-id",
+        "fn_memory",
         "--raw-body",
         "{\"key\":\"profile\",\"value\":{\"name\":\"Ada\"},\"ttl_seconds\":60}"
       ],
@@ -17941,7 +18034,8 @@
             "method": "PUT",
             "path": "/v1/memories",
             "headers": {
-              "authorization": "Bearer prim_test"
+              "authorization": "Bearer prim_test",
+              "x-primitive-function-id": "fn_memory"
             },
             "body": {
               "key": "profile",
@@ -18431,6 +18525,7 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "Primitive CLI"
             }
@@ -18438,11 +18533,133 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_code": "device_123"
             }
           }
+        ],
+        "configFiles": {
+          "credentials.json": {
+            "access_token": "prim_oat_browser",
+            "api_base_url": "__BASE_URL__",
+            "auth_method": "oauth",
+            "created_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "expires_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "oauth_client_id": "primitive-cli",
+            "oauth_grant_id": "grant_browser",
+            "org_id": "org_browser",
+            "org_name": "Browser Org",
+            "refresh_token": "prim_ort_browser",
+            "token_type": "Bearer"
+          }
+        }
+      }
+    },
+    {
+      "name": "login browser opens browser writes oauth credentials",
+      "args": [
+        "login",
+        "browser",
+        "--device-name",
+        "Primitive CLI"
+      ],
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "device_code": "device_123",
+                  "user_code": "ABCD-EFGH",
+                  "verification_uri": "https://app.example.test/device",
+                  "verification_uri_complete": "https://app.example.test/device?user_code=ABCD-EFGH",
+                  "expires_in": 5,
+                  "interval": 1
+                }
+              }
+            }
+          },
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "access_token": "prim_oat_browser",
+                  "auth_method": "oauth",
+                  "expires_in": 3600,
+                  "oauth_client_id": "primitive-cli",
+                  "oauth_grant_id": "grant_browser",
+                  "org_id": "org_browser",
+                  "org_name": "Browser Org",
+                  "refresh_token": "prim_ort_browser",
+                  "token_type": "Bearer"
+                }
+              }
+            }
+          }
         ]
+      },
+      "expect": {
+        "browserOpenLog": {
+          "matches": [
+            "^browser-open https://app\\.example\\.test/device\\?user_code=ABCD-EFGH\\n$"
+          ]
+        },
+        "authEventLog": "stderr \"Your sign-in code is: ABCD-EFGH\\n\"\nbrowser-open \"https://app.example.test/device?user_code=ABCD-EFGH\"\nstderr \"Opening Primitive in your browser...\\n\"\nstderr \"If the browser did not open, visit: https://app.example.test/device?user_code=ABCD-EFGH\\n\"\nstderr \"Waiting for browser approval...\\n\"\n",
+        "stdout": "",
+        "stderr": {
+          "contains": [
+            "Your sign-in code is: ABCD-EFGH",
+            "Opening Primitive in your browser...",
+            "If the browser did not open, visit: https://app.example.test/device?user_code=ABCD-EFGH",
+            "Waiting for browser approval...",
+            "Logged in to org org_browser (Browser Org).",
+            "Saved credentials to __CONFIG_DIR__/credentials.json."
+          ]
+        },
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/cli/login/start",
+            "headersAbsent": ["authorization"],
+            "body": {
+              "device_name": "Primitive CLI"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/cli/login/poll",
+            "headersAbsent": ["authorization"],
+            "body": {
+              "device_code": "device_123"
+            }
+          }
+        ],
+        "configFiles": {
+          "credentials.json": {
+            "access_token": "prim_oat_browser",
+            "api_base_url": "__BASE_URL__",
+            "auth_method": "oauth",
+            "created_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "expires_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "oauth_client_id": "primitive-cli",
+            "oauth_grant_id": "grant_browser",
+            "org_id": "org_browser",
+            "org_name": "Browser Org",
+            "refresh_token": "prim_ort_browser",
+            "token_type": "Bearer"
+          }
+        }
       }
     },
     {
@@ -18509,6 +18726,7 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "Primitive CLI"
             }
@@ -18516,11 +18734,322 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_code": "device_123"
             }
           }
+        ],
+        "configFiles": {
+          "credentials.json": {
+            "access_token": "prim_oat_browser",
+            "api_base_url": "__BASE_URL__",
+            "auth_method": "oauth",
+            "created_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "expires_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "oauth_client_id": "primitive-cli",
+            "oauth_grant_id": "grant_browser",
+            "org_id": "org_browser",
+            "org_name": "Browser Org",
+            "refresh_token": "prim_ort_browser",
+            "token_type": "Bearer"
+          }
+        }
+      }
+    },
+    {
+      "name": "signin browser opens browser writes oauth credentials",
+      "args": [
+        "signin",
+        "browser",
+        "--device-name",
+        "Primitive CLI"
+      ],
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "device_code": "device_123",
+                  "user_code": "ABCD-EFGH",
+                  "verification_uri": "https://app.example.test/device",
+                  "verification_uri_complete": "https://app.example.test/device?user_code=ABCD-EFGH",
+                  "expires_in": 5,
+                  "interval": 1
+                }
+              }
+            }
+          },
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "access_token": "prim_oat_browser",
+                  "auth_method": "oauth",
+                  "expires_in": 3600,
+                  "oauth_client_id": "primitive-cli",
+                  "oauth_grant_id": "grant_browser",
+                  "org_id": "org_browser",
+                  "org_name": "Browser Org",
+                  "refresh_token": "prim_ort_browser",
+                  "token_type": "Bearer"
+                }
+              }
+            }
+          }
         ]
+      },
+      "expect": {
+        "browserOpenLog": {
+          "matches": [
+            "^browser-open https://app\\.example\\.test/device\\?user_code=ABCD-EFGH\\n$"
+          ]
+        },
+        "authEventLog": "stderr \"Your sign-in code is: ABCD-EFGH\\n\"\nbrowser-open \"https://app.example.test/device?user_code=ABCD-EFGH\"\nstderr \"Opening Primitive in your browser...\\n\"\nstderr \"If the browser did not open, visit: https://app.example.test/device?user_code=ABCD-EFGH\\n\"\nstderr \"Waiting for browser approval...\\n\"\n",
+        "stdout": "",
+        "stderr": {
+          "contains": [
+            "Your sign-in code is: ABCD-EFGH",
+            "Opening Primitive in your browser...",
+            "If the browser did not open, visit: https://app.example.test/device?user_code=ABCD-EFGH",
+            "Waiting for browser approval...",
+            "Logged in to org org_browser (Browser Org).",
+            "Saved credentials to __CONFIG_DIR__/credentials.json."
+          ]
+        },
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/cli/login/start",
+            "headersAbsent": ["authorization"],
+            "body": {
+              "device_name": "Primitive CLI"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/cli/login/poll",
+            "headersAbsent": ["authorization"],
+            "body": {
+              "device_code": "device_123"
+            }
+          }
+        ],
+        "configFiles": {
+          "credentials.json": {
+            "access_token": "prim_oat_browser",
+            "api_base_url": "__BASE_URL__",
+            "auth_method": "oauth",
+            "created_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "expires_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "oauth_client_id": "primitive-cli",
+            "oauth_grant_id": "grant_browser",
+            "org_id": "org_browser",
+            "org_name": "Browser Org",
+            "refresh_token": "prim_ort_browser",
+            "token_type": "Bearer"
+          }
+        }
+      }
+    },
+    {
+      "name": "login browser refreshes expired oauth before blocking existing login",
+      "args": [
+        "login",
+        "browser",
+        "--device-name",
+        "Primitive CLI"
+      ],
+      "compare": false,
+      "configFiles": {
+        "credentials.json": {
+          "access_token": "expired_access",
+          "api_base_url": "__BASE_URL__",
+          "auth_method": "oauth",
+          "created_at": "2020-01-01T00:00:00.000Z",
+          "expires_at": "2020-01-01T00:00:00.000Z",
+          "oauth_client_id": "primitive-cli",
+          "oauth_grant_id": "grant_existing",
+          "org_id": "org_existing",
+          "org_name": "Existing Org",
+          "refresh_token": "stored_refresh",
+          "token_type": "Bearer"
+        }
+      },
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "access_token": "refreshed_access",
+                "refresh_token": "refreshed_refresh",
+                "token_type": "Bearer",
+                "expires_in": 3600
+              }
+            }
+          },
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "acct_existing",
+                  "email": "existing@example.com",
+                  "plan": "developer"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": {
+          "contains": [
+            "Already logged in for Existing Org",
+            "logging in again."
+          ]
+        },
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/oauth/token",
+            "headersAbsent": ["authorization"],
+            "body": "client_id=primitive-cli&grant_type=refresh_token&refresh_token=stored_refresh"
+          },
+          {
+            "method": "GET",
+            "path": "/v1/account",
+            "headers": {
+              "authorization": "Bearer refreshed_access"
+            }
+          }
+        ],
+        "configFiles": {
+          "credentials.json": {
+            "access_token": "refreshed_access",
+            "api_base_url": "__BASE_URL__",
+            "auth_method": "oauth",
+            "created_at": "2020-01-01T00:00:00.000Z",
+            "expires_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "oauth_client_id": "primitive-cli",
+            "oauth_grant_id": "grant_existing",
+            "org_id": "org_existing",
+            "org_name": "Existing Org",
+            "refresh_token": "refreshed_refresh",
+            "token_type": "Bearer"
+          }
+        }
+      }
+    },
+    {
+      "name": "signin email refreshes expired oauth before blocking existing login",
+      "args": [
+        "signin",
+        "user@example.com",
+        "--signup-code",
+        "invite-code",
+        "--accept-terms",
+        "--device-name",
+        "Primitive CLI"
+      ],
+      "compare": false,
+      "configFiles": {
+        "credentials.json": {
+          "access_token": "expired_access",
+          "api_base_url": "__BASE_URL__",
+          "auth_method": "oauth",
+          "created_at": "2020-01-01T00:00:00.000Z",
+          "expires_at": "2020-01-01T00:00:00.000Z",
+          "oauth_client_id": "primitive-cli",
+          "oauth_grant_id": "grant_existing",
+          "org_id": "org_existing",
+          "org_name": "Existing Org",
+          "refresh_token": "stored_refresh",
+          "token_type": "Bearer"
+        }
+      },
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "access_token": "refreshed_access",
+                "refresh_token": "refreshed_refresh",
+                "token_type": "Bearer",
+                "expires_in": 3600
+              }
+            }
+          },
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "acct_existing",
+                  "email": "existing@example.com",
+                  "plan": "developer"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": {
+          "contains": [
+            "Already logged in for Existing Org",
+            "signing in."
+          ]
+        },
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/oauth/token",
+            "headersAbsent": ["authorization"],
+            "body": "client_id=primitive-cli&grant_type=refresh_token&refresh_token=stored_refresh"
+          },
+          {
+            "method": "GET",
+            "path": "/v1/account",
+            "headers": {
+              "authorization": "Bearer refreshed_access"
+            }
+          }
+        ],
+        "configFiles": {
+          "credentials.json": {
+            "access_token": "refreshed_access",
+            "api_base_url": "__BASE_URL__",
+            "auth_method": "oauth",
+            "created_at": "2020-01-01T00:00:00.000Z",
+            "expires_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "oauth_client_id": "primitive-cli",
+            "oauth_grant_id": "grant_existing",
+            "org_id": "org_existing",
+            "org_name": "Existing Org",
+            "refresh_token": "refreshed_refresh",
+            "token_type": "Bearer"
+          }
+        }
       }
     },
     {
@@ -18557,6 +19086,7 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -18603,6 +19133,7 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -18650,6 +19181,7 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -18696,6 +19228,7 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
+            "headersAbsent": ["authorization"],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",

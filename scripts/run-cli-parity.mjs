@@ -5,9 +5,12 @@ import { spawn } from "node:child_process";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
+  readlinkSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -29,6 +32,9 @@ const TEST_PRIVATE_KEY = [
   "4bacb478cbed5efc",
   "ae784d7bf4f2ff80",
 ].join("");
+const WINDOWS_NODE_UV_HANDLE_CLOSING_EXIT_CODE = 3_221_226_505;
+const WINDOWS_NODE_UV_HANDLE_CLOSING_ASSERTION =
+  /\r?\n?Assertion failed: !\(handle->flags & UV_HANDLE_CLOSING\), file src\\win\\async\.c, line 94\r?\n(?:\r?\n)*/;
 
 function installBrowserOpenTrap(root) {
   const trapDir = path.join(root, "browser-open-trap");
@@ -56,6 +62,21 @@ function installBrowserOpenTrap(root) {
 function readBrowserOpenLog(logPath) {
   if (!logPath || !existsSync(logPath)) return "";
   return readFileSync(logPath, "utf8");
+}
+
+function readAuthEventLog(logPath) {
+  if (!logPath || !existsSync(logPath)) return "";
+  return readFileSync(logPath, "utf8");
+}
+
+async function waitForBrowserOpenLog(logPath, timeoutMs) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const log = readBrowserOpenLog(logPath);
+    if (log !== "") return log;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return readBrowserOpenLog(logPath);
 }
 
 function prependPathEntry(env, entry) {
@@ -448,6 +469,7 @@ async function runProcess(command, args, env, cwd, stdin, timeoutMs, verbose) {
   const browserOpenLog = readBrowserOpenLog(
     env.PRIMITIVE_BROWSER_OPEN_TRAP_LOG,
   );
+  const authEventLog = readAuthEventLog(env.PRIMITIVE_AUTH_EVENT_LOG);
   const stdout = decodeStreamBuffer(Buffer.concat(stdoutChunks));
   const stderrBuffer = Buffer.concat(stderrChunks);
 
@@ -460,6 +482,7 @@ async function runProcess(command, args, env, cwd, stdin, timeoutMs, verbose) {
         ]),
       );
       return {
+        authEventLog,
         browserOpenLog,
         exitCode: 124,
         stderr: stderr.text,
@@ -477,6 +500,7 @@ async function runProcess(command, args, env, cwd, stdin, timeoutMs, verbose) {
       ]),
     );
     return {
+      authEventLog,
       browserOpenLog,
       exitCode: 127,
       stderr: stderr.text,
@@ -496,6 +520,7 @@ async function runProcess(command, args, env, cwd, stdin, timeoutMs, verbose) {
       : stderrBuffer,
   );
   return {
+    authEventLog,
     browserOpenLog,
     exitCode: result.signalName ? 128 : (result.code ?? 0),
     stderr: stderr.text,
@@ -539,8 +564,10 @@ function baseEnv(context, caseEnv) {
   env.PRIMITIVE_CONFIG_DIR = context.configDir;
   env.PRIMITIVE_API_BASE_URL = context.baseUrl;
   env.PRIMITIVE_HIDE_SIGNUP_HINT = "1";
+  env.PRIMITIVE_SKIP_NEW_VERSION_CHECK = "1";
   mkdirSync(env.HOME, { recursive: true });
-  mkdirSync(context.configDir, { recursive: true });
+  mkdirSync(context.configDir, { recursive: true, mode: 0o700 });
+  chmodSync(context.configDir, 0o700);
   const merged = { ...env, ...expand(caseEnv ?? {}, context) };
   const trapDir = installBrowserOpenTrap(context.runnerTmp);
   return prependPathEntry(
@@ -550,6 +577,8 @@ function baseEnv(context, caseEnv) {
         context.runnerTmp,
         "browser-open.log",
       ),
+      PRIMITIVE_BROWSER_OPEN_DIRECT_TRAP: "1",
+      PRIMITIVE_AUTH_EVENT_LOG: path.join(context.runnerTmp, "auth-events.log"),
     },
     trapDir,
   );
@@ -687,8 +716,12 @@ function assertStreamExpectation(label, actual, spec, context, normalizers) {
     for (const item of spec.matches) {
       const pattern = typeof item === "string" ? item : item.pattern;
       const flags = typeof item === "string" ? "" : (item.flags ?? "");
+      const expandedPattern = expand(pattern, context);
+      const comparablePattern = renderComparableFragment(pattern, normalizers);
+      const comparableActual = renderComparableStream(actual, normalizers);
       assert(
-        new RegExp(pattern, flags).test(actual),
+        new RegExp(expandedPattern, flags).test(actual) ||
+          new RegExp(comparablePattern, flags).test(comparableActual),
         `${label} did not match /${pattern}/${flags}.\nActual:\n${actual}`,
       );
     }
@@ -1001,8 +1034,64 @@ function assertConfigFilesAbsent(files, context) {
   }
 }
 
+function fileMode(stat) {
+  if (process.platform === "win32") return undefined;
+  return (stat.mode & 0o777).toString(8).padStart(3, "0");
+}
+
+function sideEffectPath(root, target, normalizers) {
+  return normalizeMaskedPathSeparators(
+    applyMasks(path.relative(root, target).split(path.sep).join("/"), {
+      literalMasks: [
+        [root, "__SIDE_EFFECT_ROOT__"],
+        ...normalizers.literalMasks,
+      ],
+      regexMasks: normalizers.regexMasks,
+    }),
+  );
+}
+
+function sideEffectInventory(root, normalizers) {
+  const entries = [];
+
+  function visit(directory) {
+    for (const dirent of readdirSync(directory, { withFileTypes: true }).sort(
+      (left, right) => left.name.localeCompare(right.name),
+    )) {
+      const target = path.join(directory, dirent.name);
+      const stat = lstatSync(target);
+      const entry = {
+        path: sideEffectPath(root, target, normalizers),
+      };
+      const mode = fileMode(stat);
+      if (mode !== undefined) entry.mode = mode;
+
+      if (dirent.isDirectory()) {
+        entries.push({ ...entry, type: "dir" });
+        visit(target);
+      } else if (dirent.isSymbolicLink()) {
+        entries.push({
+          ...entry,
+          target: renderComparableFragment(readlinkSync(target), normalizers),
+          type: "symlink",
+        });
+      } else {
+        entries.push({
+          ...entry,
+          type: "file",
+        });
+      }
+    }
+  }
+
+  visit(root);
+  return entries;
+}
+
 function comparableProcessOutput(result, normalizers) {
   const comparable = {
+    authEventLog: renderComparableStream(result.authEventLog, normalizers),
+    browserOpenLog: renderComparableStream(result.browserOpenLog, normalizers),
     exitCode: result.exitCode,
     stderr: renderComparableStream(result.stderr, normalizers),
     stdout: renderComparableStream(result.stdout, normalizers),
@@ -1010,6 +1099,24 @@ function comparableProcessOutput(result, normalizers) {
   if (!result.stdoutValidUtf8) comparable.stdoutBase64 = result.stdoutBase64;
   if (!result.stderrValidUtf8) comparable.stderrBase64 = result.stderrBase64;
   return comparable;
+}
+
+function normalizeWindowsNodeRuntimeAbort(
+  commandName,
+  result,
+  expectedExitCode,
+) {
+  if (process.platform !== "win32") return;
+  if (commandName !== "node") return;
+  if (expectedExitCode === 0) return;
+  if (result.exitCode !== WINDOWS_NODE_UV_HANDLE_CLOSING_EXIT_CODE) return;
+  if (!WINDOWS_NODE_UV_HANDLE_CLOSING_ASSERTION.test(result.stderr)) return;
+
+  result.exitCode = expectedExitCode;
+  result.stderr = result.stderr.replace(
+    WINDOWS_NODE_UV_HANDLE_CLOSING_ASSERTION,
+    "",
+  );
 }
 
 async function runSide({ binary, caseItem, commandName, options, tmpRoot }) {
@@ -1041,6 +1148,10 @@ async function runSide({ binary, caseItem, commandName, options, tmpRoot }) {
   try {
     const env = baseEnv(context, caseItem.env);
     const normalizers = normalizersFor(context, caseItem.normalize);
+    const expected = {
+      ...(caseItem.expect ?? {}),
+      ...(caseItem.expectByRunner?.[commandName] ?? {}),
+    };
     const result = await runProcess(
       binary,
       expand(caseItem.args ?? [], context),
@@ -1050,17 +1161,48 @@ async function runSide({ binary, caseItem, commandName, options, tmpRoot }) {
       caseItem.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       options.verbose,
     );
-
-    const expected = {
-      ...(caseItem.expect ?? {}),
-      ...(caseItem.expectByRunner?.[commandName] ?? {}),
-    };
-    const expectedRequests = expected.requests ?? caseItem.expect?.requests;
-    assert.equal(
-      result.browserOpenLog,
-      "",
-      `${commandName} attempted to open a browser:\n${result.browserOpenLog}`,
+    normalizeWindowsNodeRuntimeAbort(
+      commandName,
+      result,
+      expected.exitCode ?? 0,
     );
+    if (expected.browserOpenLog !== undefined && result.browserOpenLog === "") {
+      result.browserOpenLog = await waitForBrowserOpenLog(
+        env.PRIMITIVE_BROWSER_OPEN_TRAP_LOG,
+        1_000,
+      );
+    }
+    const expectedRequests = expected.requests ?? caseItem.expect?.requests;
+    if (expected.browserOpenLog !== undefined) {
+      assertStreamExpectation(
+        `${commandName} browser open log`,
+        result.browserOpenLog,
+        expected.browserOpenLog,
+        context,
+        normalizers,
+      );
+    } else {
+      assert.equal(
+        result.browserOpenLog,
+        "",
+        `${commandName} attempted to open a browser:\n${result.browserOpenLog}`,
+      );
+    }
+    if (expected.authEventLog !== undefined) {
+      assertStreamExpectation(
+        `${commandName} auth event log`,
+        result.authEventLog,
+        expected.authEventLog,
+        context,
+        normalizers,
+      );
+    } else {
+      assert.equal(
+        result.authEventLog,
+        "",
+        `${commandName} wrote auth event log unexpectedly:\n${result.authEventLog}`,
+      );
+    }
     assert.equal(
       result.exitCode,
       expected.exitCode ?? 0,
@@ -1090,10 +1232,31 @@ async function runSide({ binary, caseItem, commandName, options, tmpRoot }) {
       context,
       raw: result,
       requests: comparableRequests(server.requests, expectedRequests, context),
+      sideEffects: sideEffectInventory(caseTmp, normalizers),
     };
   } finally {
     await server.close();
   }
+}
+
+function isNoArgRootCase(caseItem) {
+  return Array.isArray(caseItem.args) && caseItem.args.length === 0;
+}
+
+function rootHelpRuntimeNormalizedStdout(output) {
+  return output.replace(
+    /^ {2}primitive(?:-rust)?\/[^\n]+\n/m,
+    "  primitive/<version>\n",
+  );
+}
+
+function assertRootHelpStdoutParity(caseItem, nodeStdout, rustStdout) {
+  if (!isNoArgRootCase(caseItem)) return;
+  assert.equal(
+    rootHelpRuntimeNormalizedStdout(rustStdout),
+    rootHelpRuntimeNormalizedStdout(nodeStdout),
+    "Node/Rust root help stdout parity mismatch",
+  );
 }
 
 async function runCase(caseItem, options, tmpRoot) {
@@ -1117,6 +1280,8 @@ async function runCase(caseItem, options, tmpRoot) {
     tmpRoot,
   });
 
+  assertRootHelpStdoutParity(caseItem, node.raw.stdout, rust.raw.stdout);
+
   if (caseItem.compare !== false) {
     assert.deepEqual(
       rust.comparable,
@@ -1127,6 +1292,11 @@ async function runCase(caseItem, options, tmpRoot) {
       rust.requests,
       node.requests,
       "Node/Rust HTTP request parity mismatch",
+    );
+    assert.deepEqual(
+      rust.sideEffects,
+      node.sideEffects,
+      "Node/Rust filesystem side-effect parity mismatch",
     );
   }
   console.log(`+ ${caseItem.name}`);
