@@ -72,6 +72,15 @@ fn start_optional_response_json_server(
                 Err(error) => panic!("accept generated API test request: {error}"),
             }
         };
+        // The accepted stream inherits the listener's nonblocking mode on some
+        // platforms (observed on macOS), so an early read races the client and
+        // panics with WouldBlock. Force blocking with a bounded read instead.
+        stream
+            .set_nonblocking(false)
+            .expect("set test stream blocking");
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .expect("set test stream read timeout");
         stream
             .set_nonblocking(false)
             .expect("set generated API stream blocking");
