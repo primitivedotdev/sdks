@@ -1216,7 +1216,7 @@ fn request_json_raw(
     let response = request.send()?;
     let (status, bytes, json) = client::parse_response(response)?;
     if status >= 400 {
-        return Err(client::error_for_status_with_hints(
+        return Err(client::error_for_status_with_payment_hints(
             status,
             json.as_ref(),
             &bytes,
@@ -1244,7 +1244,7 @@ fn request_json_with_pay_email_not_found_hint(
     let response = request.send()?;
     let (status, bytes, json) = client::parse_response(response)?;
     if status >= 400 {
-        let error = client::error_for_status_with_hints(status, json.as_ref(), &bytes);
+        let error = client::error_for_status_with_payment_hints(status, json.as_ref(), &bytes);
         if api_key_authenticated_read
             && crate::api::extract_error_code(json.as_ref()) == Some("not_found")
         {
@@ -1264,7 +1264,7 @@ fn request_bytes(auth: &ResolvedAuth, path: &str) -> Result<Vec<u8>> {
     let response = request.send()?;
     let (status, bytes, json) = client::parse_response(response)?;
     if status >= 400 {
-        return Err(client::error_for_status_with_hints(
+        return Err(client::error_for_status_with_payment_hints(
             status,
             json.as_ref(),
             &bytes,
