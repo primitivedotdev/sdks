@@ -118,6 +118,14 @@ pub fn error_for_status_with_hints(
 /// the Node CLI where the x402 hint table lives in payments-shared.ts;
 /// `feature_disabled` in particular is not payments-specific, so surfacing
 /// the x402 hint from non-payments commands (e.g. wake) is misleading.
+///
+/// Unlike every other error path, payments prints the WHOLE `{success,
+/// error}` envelope rather than the flattened inner error. This is a
+/// deliberate cross-CLI contract, not an oversight: the Node CLI's
+/// payments-shared.ts documents the envelope as the most useful payload for
+/// x402 flows and synthesizes the same shape for client-side failures, and
+/// the "payments api error keeps x402 feature hint" parity fixture pins the
+/// envelope on both CLIs. Flattening here would diverge from Node.
 pub fn error_for_status_with_payment_hints(
     status: u16,
     json: Option<&Value>,
