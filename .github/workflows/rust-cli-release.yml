@@ -130,52 +130,10 @@ jobs:
       - name: Install dependencies
         run: make cli-install
 
-      - name: Run Rust CLI checks
-        run: make rust-cli-check
-
-      - name: Package Rust CLI crate
-        run: make rust-cli-package
-
-      - name: Smoke test installed Rust CLI
-        run: make rust-cli-smoke
-
-      - name: Run local-only Rust CLI live-smoke harness
-        run: make rust-cli-live-smoke-no-key
-
-      - name: Smoke test release Rust CLI
+      - name: Run Rust CLI release checks
         run: |
           export RUST_CLI_CARGO_TARGET="${{ matrix.rust_target }}"
-          make rust-cli-release-smoke
-
-      - name: Check Linux binary portability
-        if: ${{ startsWith(matrix.target, 'linux-') }}
-        run: |
-          export RUST_CLI_CARGO_TARGET="${{ matrix.rust_target }}"
-          make rust-cli-linux-portability-smoke
-
-      - name: Smoke test Rust CLI archive shape
-        run: |
-          export RUST_CLI_CARGO_TARGET="${{ matrix.rust_target }}"
-          if [ -n "$RUST_CLI_CARGO_TARGET" ]; then
-            export RUST_CLI_DIST_BIN_DIR="$PWD/cli-rust/target/$RUST_CLI_CARGO_TARGET/release"
-          fi
-          make rust-cli-archive-smoke
-
-      - name: Smoke test Rust CLI installer
-        run: |
-          export RUST_CLI_CARGO_TARGET="${{ matrix.rust_target }}"
-          if [ -n "$RUST_CLI_CARGO_TARGET" ]; then
-            export RUST_CLI_DIST_BIN_DIR="$PWD/cli-rust/target/$RUST_CLI_CARGO_TARGET/release"
-          fi
-          make rust-cli-install-smoke
-
-      - name: Run Node/Rust CLI archive parity
-        run: |
-          export RUST_CLI_CARGO_TARGET="${{ matrix.rust_target }}"
-          if [ -n "$RUST_CLI_CARGO_TARGET" ]; then
-            export RUST_CLI_DIST_BIN_DIR="$PWD/cli-rust/target/$RUST_CLI_CARGO_TARGET/release"
-          fi
-          make cli-archive-parity
+          make rust-cli-script-check rust-cli-release-platform-check
 
       - name: Build release asset
         run: |
@@ -258,13 +216,18 @@ jobs:
         run: |
           pnpm config set script-shell "C:\Program Files\Git\bin\bash.exe"
           pnpm --dir cli-node build
-          $nodeEntry = ((Resolve-Path "cli-node/bin/run.js").Path -replace "\\", "/")
+          $nodeEntryPath = (Resolve-Path "cli-node/bin/run.js").Path
+          $nodeEntry = ($nodeEntryPath -replace "\\", "/")
+          $nodeEntryUrl = ([System.Uri]$nodeEntryPath).AbsoluteUri
+          $nodePrimEntry = Join-Path $env:RUNNER_TEMP "prim"
+          Set-Content -NoNewline -Path $nodePrimEntry -Value "import '$nodeEntryUrl';`n"
+          $nodePrimEntry = ($nodePrimEntry -replace "\\", "/")
           $rustBin = ((Resolve-Path "cli-rust/target/release/primitive.exe").Path -replace "\\", "/")
           $rustPrimBin = ((Resolve-Path "cli-rust/target/release/prim.exe").Path -replace "\\", "/")
           node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodeEntry" --rust-bin "$rustBin"
           node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustBin"
-          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodeEntry" --rust-bin "$rustPrimBin"
-          node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustPrimBin"
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodePrimEntry" --rust-bin "$rustPrimBin"
+          node scripts/run-cli-parity.mjs --node-bin "node $nodePrimEntry" --rust-bin "$rustPrimBin"
 
       - name: Validate Rust CLI scripts
         run: |
