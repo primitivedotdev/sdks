@@ -116,8 +116,19 @@ function isRootHelpArgs(args) {
 
 function stableHelpStdout(args, stdout) {
   if (!isRootHelpArgs(args)) return stdout;
+  const versionLine = stdout.match(/^VERSION\n {2}([^\n]+)\n/m)?.[1];
+  if (
+    !versionLine ||
+    !/^primitive\/[0-9][^\s\n]* [^\s\n]+ node-v[0-9][^\s\n]*$/.test(
+      versionLine,
+    )
+  ) {
+    throw new Error(
+      `Root help VERSION line has unexpected shape: ${JSON.stringify(versionLine ?? null)}`,
+    );
+  }
   return stdout.replace(
-    /^ {2}primitive\/[^\n]+\n/m,
+    /^ {2}primitive\/[0-9][^\s\n]*(?: [^\n]+)?\n/m,
     `  primitive/${cargoPackageVersion()}\n`,
   );
 }
@@ -142,6 +153,12 @@ async function nodeHelpSnapshots(nodeCli, concurrency) {
         );
       }
       return null;
+    }
+    if (result.stderr !== "") {
+      const label = candidate.args.join(" ") || "<root>";
+      throw new Error(
+        `Node CLI wrote stderr while generating help snapshots: ${label}\n${formatResult(result)}`,
+      );
     }
     return {
       args: candidate.args,
