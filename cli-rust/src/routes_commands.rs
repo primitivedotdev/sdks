@@ -256,7 +256,9 @@ pub fn build_routes_reorder_request_from_args(args: &[String]) -> Result<RouteAp
     reject_positionals(&parsed)?;
     let set_values = flag_many(&parsed, "set");
     if set_values.is_empty() {
-        return Err(anyhow!("routes reorder requires at least one --set value"));
+        return Err(crate::usage_error(
+            "routes reorder requires at least one --set value",
+        ));
     }
     build_reorder_routes_request(&parse_reorder_updates(&set_values)?)
 }
@@ -392,7 +394,9 @@ pub fn parse_reorder_updates(set: &[String]) -> Result<Vec<ReorderRouteUpdate>> 
 
 pub fn build_reorder_routes_body(updates: &[ReorderRouteUpdate]) -> Result<Value> {
     if updates.is_empty() {
-        return Err(anyhow!("routes reorder requires at least one --set value"));
+        return Err(crate::usage_error(
+            "routes reorder requires at least one --set value",
+        ));
     }
     let values = updates
         .iter()

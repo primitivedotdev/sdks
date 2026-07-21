@@ -21437,6 +21437,98 @@
           }
         ]
       }
+    },
+    {
+      "name": "describe requires an argument exits usage",
+      "args": ["describe"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "memories set without key exits usage",
+      "args": ["memories", "set"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "chat without recipient exits usage",
+      "args": ["chat"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "payloads push without path exits usage",
+      "args": ["payloads", "push"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "payloads pull without root exits usage",
+      "args": ["payloads", "pull"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "semantic search without query exits usage",
+      "args": ["search", "--api-key", "prim_test"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "routes reorder without set exits usage",
+      "args": ["routes", "reorder", "--api-key", "prim_test"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "send without resolvable from exits usage",
+      "args": ["send", "--api-key", "prim_test", "--api-base-url", "__BASE_URL__", "--to", "user@example.com", "--body", "hi"],
+      "compare": false,
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": []
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": [{"method": "GET", "path": "/v1/domains", "headers": {"authorization": "Bearer prim_test"}}]
+      }
     }
   ]
 }

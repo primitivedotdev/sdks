@@ -585,7 +585,7 @@ fn build_chat_command_plan_from_args_internal(
     let recipient = parsed
         .positionals
         .first()
-        .ok_or_else(|| anyhow!("chat requires a recipient"))?
+        .ok_or_else(|| crate::usage_error("chat requires a recipient"))?
         .clone();
     let positional_message = parsed.positionals.get(1).cloned();
     if parsed.positionals.len() > 2 {
@@ -1421,8 +1421,8 @@ pub fn pick_default_from_address(domains_response: &Value) -> Result<String> {
         }
     }
 
-    Err(anyhow!(
-        "No active verified outbound domain found on this account; pass --from explicitly. To set up outbound, claim a domain via `primitive domains add` and verify it."
+    Err(crate::usage_error(
+        "No active verified outbound domain found on this account; pass --from explicitly. To set up outbound, claim a domain via `primitive domains add` and verify it.",
     ))
 }
 
@@ -1444,7 +1444,7 @@ pub fn build_send_shortcut_body(input: &SendShortcutInput) -> Result<Value> {
         .from
         .as_ref()
         .or(input.default_from.as_ref())
-        .ok_or_else(|| anyhow!("--from is required. Pass --from explicitly."))?;
+        .ok_or_else(|| crate::usage_error("--from is required. Pass --from explicitly."))?;
     let subject = input.subject.clone().unwrap_or_else(|| {
         input
             .bodies

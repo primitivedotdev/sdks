@@ -399,7 +399,7 @@ fn parse_args(
 
 fn required_query(parsed: &ParsedArgs, command: &str) -> Result<String> {
     match parsed.positionals.as_slice() {
-        [] => Err(anyhow!("{command} requires a query")),
+        [] => Err(crate::usage_error(format!("{command} requires a query"))),
         [query] => Ok(query.clone()),
         [_, extra, ..] => Err(crate::usage_error(format!("Unexpected argument: {extra}"))),
     }

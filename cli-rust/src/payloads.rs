@@ -138,7 +138,7 @@ pub fn run_push(args: &[String]) -> Result<()> {
     let file = parsed
         .positionals
         .first()
-        .ok_or_else(|| anyhow!("payloads push requires a file path"))?;
+        .ok_or_else(|| crate::usage_error("payloads push requires a file path"))?;
     if parsed.positionals.len() > 1 {
         return Err(crate::usage_error(format!(
             "Unexpected argument: {}",
@@ -179,7 +179,7 @@ pub fn run_pull(args: &[String]) -> Result<()> {
     let root = parsed
         .positionals
         .first()
-        .ok_or_else(|| anyhow!("payloads pull requires a merkle_root"))?;
+        .ok_or_else(|| crate::usage_error("payloads pull requires a merkle_root"))?;
     if parsed.positionals.len() > 1 {
         return Err(crate::usage_error(format!(
             "Unexpected argument: {}",

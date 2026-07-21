@@ -687,7 +687,7 @@ fn memory_json_shape_error(label: &str) -> anyhow::Error {
 
 fn set_positionals(parsed: &ParsedArgs) -> Result<(String, Option<String>)> {
     match parsed.positionals.as_slice() {
-        [] => Err(anyhow!("memories set requires a key")),
+        [] => Err(crate::usage_error("memories set requires a key")),
         [key] => Ok((key.clone(), None)),
         [key, value] => Ok((key.clone(), Some(value.clone()))),
         [_, _, extra, ..] => Err(crate::usage_error(format!("Unexpected argument: {extra}"))),
