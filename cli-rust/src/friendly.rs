@@ -652,14 +652,19 @@ fn describe(args: &[String]) -> Result<()> {
 }
 
 fn lookup_operation_with_candidates(id: &str) -> OperationLookup {
-    if let Some(operation) = manifest::lookup_operation(id) {
+    let query = resolve_describe_alias(id.trim());
+    let normalized_query = normalize_lookup_token(query);
+    if let Some(operation) = manifest::operation_manifest().iter().find(|operation| {
+        operation_lookup_tokens(operation)
+            .iter()
+            .any(|token| token == query || normalize_lookup_token(token) == normalized_query)
+    }) {
         return OperationLookup {
             operation: Some(operation),
             candidates: Vec::new(),
         };
     }
 
-    let query = manifest::resolve_alias(id.trim());
     let mut scored: Vec<(String, i32)> = manifest::operation_manifest()
         .iter()
         .map(|operation| {
@@ -681,6 +686,93 @@ fn lookup_operation_with_candidates(id: &str) -> OperationLookup {
             .collect(),
     }
 }
+
+fn resolve_describe_alias(id: &str) -> &str {
+    let normalized = normalize_lookup_token(id);
+    DESCRIBE_OPERATION_ALIASES
+        .iter()
+        .find_map(|(alias, target)| {
+            (*alias == id || normalize_lookup_token(alias) == normalized).then_some(*target)
+        })
+        .unwrap_or(id)
+}
+
+const DESCRIBE_OPERATION_ALIASES: &[(&str, &str)] = &[
+    ("account:show", "account:get-account"),
+    ("account:storage", "account:get-storage-stats"),
+    ("account:webhook-secret", "account:get-webhook-secret"),
+    ("agent:claim", "agent:start-agent-claim"),
+    ("agent:claim-link", "agent:create-agent-claim-link"),
+    ("agent:claim-verify", "agent:verify-agent-claim"),
+    ("agent:create", "agent:create-agent-account"),
+    ("deliveries:list", "webhook-deliveries:list-deliveries"),
+    ("deliveries:replay", "webhook-deliveries:replay-delivery"),
+    ("domains:add", "domains:add-domain"),
+    ("domains:delete", "domains:delete-domain"),
+    ("domains:list", "domains:list-domains"),
+    ("domains:update", "domains:update-domain"),
+    ("domains:verify", "domains:verify-domain"),
+    ("domains:zone-file", "domains:download-domain-zone-file"),
+    ("emails:conversation", "emails:get-conversation"),
+    ("emails:delete", "emails:delete-email"),
+    ("emails:discard-content", "emails:discard-email-content"),
+    ("emails:download-raw", "emails:download-raw-email"),
+    ("emails:get", "emails:get-email"),
+    ("emails:list", "emails:list-emails"),
+    ("emails:replay-webhooks", "emails:replay-email-webhooks"),
+    ("emails:search", "emails:search-emails"),
+    ("endpoints:create", "endpoints:create-endpoint"),
+    ("endpoints:delete", "endpoints:delete-endpoint"),
+    ("endpoints:list", "endpoints:list-endpoints"),
+    ("endpoints:test", "endpoints:test-endpoint"),
+    ("endpoints:update", "endpoints:update-endpoint"),
+    ("filters:create", "filters:create-filter"),
+    ("filters:delete", "filters:delete-filter"),
+    ("filters:list", "filters:list-filters"),
+    ("filters:update", "filters:update-filter"),
+    ("functions:delete", "functions:delete-function"),
+    (
+        "functions:delete-secret",
+        "functions:delete-function-secret",
+    ),
+    ("functions:get", "functions:get-function"),
+    ("functions:list", "functions:list-functions"),
+    ("functions:list-secrets", "functions:list-function-secrets"),
+    ("functions:logs", "functions:list-function-logs"),
+    ("memories:delete", "memories:delete-memory"),
+    ("memories:get", "memories:get-memory"),
+    ("memories:search", "memories:search-memories"),
+    ("memories:set", "memories:set-memory"),
+    ("registries:agent", "registries:get-agent"),
+    ("registries:agents", "registries:list-registry-agents"),
+    ("registries:create", "registries:create-registry"),
+    ("registries:decide", "registries:decide-registry-request"),
+    ("registries:define", "registries:define-agent"),
+    ("registries:get", "registries:get-registry"),
+    ("registries:list", "registries:list-registries"),
+    ("registries:publish", "registries:publish-agent"),
+    ("registries:requests", "registries:list-registry-requests"),
+    ("registries:resolve", "registries:resolve-registry-handle"),
+    ("registries:unpublish", "registries:unpublish-agent"),
+    ("registries:update", "registries:update-registry"),
+    ("reply", "sending:reply-to-email"),
+    ("sending:get", "sending:get-sent-email"),
+    ("sending:list", "sending:list-sent-emails"),
+    ("sending:permissions", "sending:get-send-permissions"),
+    ("sending:reply", "sending:reply-to-email"),
+    ("sending:send", "sending:send-email"),
+    ("sent:get", "sending:get-sent-email"),
+    ("sent:list", "sending:list-sent-emails"),
+    ("threads:get", "threads:get-thread"),
+    (
+        "webhook-deliveries:list",
+        "webhook-deliveries:list-deliveries",
+    ),
+    (
+        "webhook-deliveries:replay",
+        "webhook-deliveries:replay-delivery",
+    ),
+];
 
 fn operation_lookup_tokens(operation: &manifest::OperationManifest) -> Vec<String> {
     vec![
@@ -897,6 +989,13 @@ mod tests {
         let message = error.to_string();
         assert!(message.contains("Unknown operation `emails:get-emial`. Did you mean: "));
         assert!(message.contains("emails:get-email"));
+    }
+
+    #[test]
+    fn describe_keeps_wake_shortcut_aliases_unsupported() {
+        let result = lookup_operation_with_candidates("wake:schedules:list");
+        assert!(result.operation.is_none());
+        assert!(result.candidates.is_empty());
     }
 
     #[test]

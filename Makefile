@@ -1,5 +1,5 @@
 .PHONY: api-core-check node-install node-generate node-check-generated node-test node-check node-build node-smoke node-tarball-isolation node-coverage
-.PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-tarball-isolation cli-coverage rust-cli-generate rust-cli-manifest-bytewise rust-cli-help-snapshots-bytewise rust-cli-check-generated rust-cli-check rust-cli-doc rust-cli-package rust-cli-build rust-cli-release-build rust-cli-dist rust-cli-smoke rust-cli-release-smoke rust-cli-linux-portability-smoke rust-cli-archive-smoke rust-cli-windows-archive-smoke rust-cli-install-smoke rust-cli-live-smoke rust-cli-live-smoke-no-key rust-cli-full-check cli-command-surface-parity cli-operation-coverage cli-help-parity cli-archive-parity cli-parity
+.PHONY: cli-install cli-test cli-check cli-build cli-smoke cli-tarball-isolation cli-coverage rust-cli-generate rust-cli-manifest-bytewise rust-cli-help-snapshots-bytewise rust-cli-check-generated rust-cli-check rust-cli-doc rust-cli-package rust-cli-build rust-cli-release-build rust-cli-dist rust-cli-smoke rust-cli-release-smoke rust-cli-linux-portability-smoke rust-cli-archive-smoke rust-cli-windows-archive-smoke rust-cli-install-smoke rust-cli-live-smoke rust-cli-live-smoke-no-key rust-cli-script-check rust-cli-release-platform-check rust-cli-full-check rust-cli-ci-check cli-command-surface-parity cli-operation-coverage cli-help-parity cli-archive-parity cli-parity
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
 .PHONY: shared-check check build release-check ci
@@ -82,10 +82,15 @@ cli-smoke: cli-build cli-tarball-isolation
 	node -e 'const pkg = require(process.argv[1]); const oclif = pkg.oclif || {}; const warning = oclif["warn-if-update-available"] || {}; if (!Array.isArray(oclif.plugins) || !oclif.plugins.includes("@oclif/plugin-warn-if-update-available")) throw new Error("missing update warning plugin"); if (warning.timeoutInDays !== 1 || warning.frequency !== 1 || warning.frequencyUnit !== "days") throw new Error("update warning is not daily"); if (!String(warning.message || "").includes("npm install -g primitive@latest")) throw new Error("missing npm update command");' "$$smoke_dir/node_modules/primitive/package.json" && \
 	export PRIMITIVE_SKIP_NEW_VERSION_CHECK=1 && \
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
+	prim_bin="$$smoke_dir/node_modules/.bin/prim" && \
 	"$$bin" list-operations >/dev/null && \
+	"$$prim_bin" list-operations >/dev/null && \
 	"$$bin" completion fish >/dev/null && \
+	"$$prim_bin" completion fish >/dev/null && \
 	"$$bin" completion bash >/dev/null && \
+	"$$prim_bin" completion bash >/dev/null && \
 	"$$bin" send --help | grep -q -- "--attachment" && \
+	"$$prim_bin" send --help | grep -q -- "--attachment" && \
 	"$$bin" reply --help | grep -q -- "--wait" && \
 	"$$bin" reply --help | grep -q -- "--attachment" && \
 	if "$$bin" reply --help | grep -q -- "--wait-timeout-ms"; then echo "reply help must not advertise unsupported --wait-timeout-ms"; exit 1; fi && \
@@ -495,7 +500,19 @@ rust-cli-live-smoke: rust-cli-build
 rust-cli-live-smoke-no-key: rust-cli-build
 	node scripts/run-rust-cli-live-smoke.mjs --rust-bin "$(CURDIR)/cli-rust/target/debug/primitive" --no-key-only
 
-cli-command-surface-parity: cli-build rust-cli-check-generated
+rust-cli-script-check:
+	bash -n scripts/install-rust-cli.sh
+	if command -v pwsh >/dev/null 2>&1; then pwsh -NoProfile -NonInteractive -Command '$$null = [scriptblock]::Create((Get-Content -Raw scripts/install-rust-cli.ps1))'; fi
+	node --check scripts/assert-cli-command-surface-parity.mjs
+	node --check scripts/assert-cli-operation-request-coverage.mjs
+	node --check scripts/assert-rust-cli-linux-portability.mjs
+	node --check scripts/assert-rust-operation-manifest-bytewise.mjs
+	node --check scripts/package-rust-cli.mjs
+	node --check scripts/run-cli-help-sweep.mjs
+	node --check scripts/run-cli-parity.mjs
+	node --check scripts/run-rust-cli-live-smoke.mjs
+
+cli-command-surface-parity: rust-cli-check-generated
 	node scripts/assert-cli-command-surface-parity.mjs
 
 cli-operation-coverage:
@@ -603,7 +620,11 @@ check: node-check cli-check python-check go-check shared-check
 
 build: node-build cli-build python-build go-build
 
+rust-cli-release-platform-check: rust-cli-check rust-cli-package rust-cli-smoke rust-cli-live-smoke-no-key rust-cli-release-smoke rust-cli-linux-portability-smoke rust-cli-archive-smoke rust-cli-install-smoke cli-archive-parity
+
 rust-cli-full-check: rust-cli-check rust-cli-package rust-cli-build rust-cli-smoke rust-cli-live-smoke-no-key rust-cli-release-smoke rust-cli-linux-portability-smoke rust-cli-archive-smoke rust-cli-windows-archive-smoke rust-cli-install-smoke cli-parity cli-archive-parity
+
+rust-cli-ci-check: rust-cli-script-check rust-cli-full-check
 
 release-check: node-check node-build node-smoke cli-check cli-build cli-smoke python-check python-build python-smoke go-check go-build shared-check
 

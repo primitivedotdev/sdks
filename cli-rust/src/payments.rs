@@ -195,7 +195,14 @@ fn build_charge_request_from_invocation(invocation: &api::Invocation) -> Result<
     let has_amount = invocation.flags.contains_key("amount");
     let has_amount_usdc = invocation.flags.contains_key("amount-usdc");
     if has_amount && has_amount_usdc {
-        bail!("Use either --amount-usdc or --amount, not both.");
+        let amount = invocation.flags.get("amount").map_or("", String::as_str);
+        let amount_usdc = invocation
+            .flags
+            .get("amount-usdc")
+            .map_or("", String::as_str);
+        return Err(crate::usage_error(format!(
+            "The following errors occurred:\n  --amount-usdc={amount_usdc} cannot also be provided when using --amount\n  --amount={amount} cannot also be provided when using --amount-usdc\nSee more help with --help"
+        )));
     }
 
     let amount = if let Some(value) = invocation.flags.get("amount-usdc") {
@@ -212,7 +219,9 @@ fn build_charge_request_from_invocation(invocation: &api::Invocation) -> Result<
         base_units
     } else if let Some(value) = invocation.flags.get("amount") {
         if !is_positive_integer_token_amount(value) {
-            bail!("--amount must be a positive integer string in token base units.");
+            bail!(
+                "charge() requires `amount` as a positive integer string in token base units (e.g. \"10000\"), or `amountUsdc` as a positive USDC amount with at most 6 decimals (e.g. \"0.01\")"
+            );
         }
         value.clone()
     } else {
