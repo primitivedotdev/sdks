@@ -284,10 +284,26 @@ rust-cli-release-build: rust-cli-generate
 	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then cargo build --release --manifest-path cli-rust/Cargo.toml --locked --target "$$RUST_CLI_CARGO_TARGET"; else cargo build --release --manifest-path cli-rust/Cargo.toml --locked; fi
 
 rust-cli-dist: rust-cli-release-build
-	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then \
-		node scripts/package-rust-cli.mjs --version "$${RUST_CLI_DIST_VERSION:-}" --target "$${RUST_CLI_DIST_TARGET:-}" --out-dir "$${RUST_CLI_DIST_DIR:-cli-rust/dist}" --bin-dir "$$RUST_CLI_DIST_BIN_DIR"; \
+	bin_dir="$(CURDIR)/cli-rust/target/release" && \
+	dist_target="$${RUST_CLI_DIST_TARGET:-}" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then \
+		bin_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; \
+		if [ -z "$$dist_target" ]; then \
+			case "$$RUST_CLI_CARGO_TARGET" in \
+				x86_64-unknown-linux-musl) dist_target="linux-x64" ;; \
+				aarch64-unknown-linux-musl) dist_target="linux-arm64" ;; \
+				x86_64-apple-darwin) dist_target="macos-x64" ;; \
+				aarch64-apple-darwin) dist_target="macos-arm64" ;; \
+				x86_64-pc-windows-msvc) dist_target="windows-x64" ;; \
+				*) echo "Set RUST_CLI_DIST_TARGET for RUST_CLI_CARGO_TARGET=$$RUST_CLI_CARGO_TARGET"; exit 1 ;; \
+			esac; \
+		fi; \
+	fi && \
+	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then bin_dir="$$RUST_CLI_DIST_BIN_DIR"; fi && \
+	if [ -n "$$dist_target" ]; then \
+		node scripts/package-rust-cli.mjs --version "$${RUST_CLI_DIST_VERSION:-}" --target "$$dist_target" --out-dir "$${RUST_CLI_DIST_DIR:-cli-rust/dist}" --bin-dir "$$bin_dir"; \
 	else \
-		node scripts/package-rust-cli.mjs --version "$${RUST_CLI_DIST_VERSION:-}" --target "$${RUST_CLI_DIST_TARGET:-}" --out-dir "$${RUST_CLI_DIST_DIR:-cli-rust/dist}"; \
+		node scripts/package-rust-cli.mjs --version "$${RUST_CLI_DIST_VERSION:-}" --out-dir "$${RUST_CLI_DIST_DIR:-cli-rust/dist}" --bin-dir "$$bin_dir"; \
 	fi
 
 rust-cli-smoke: rust-cli-build
@@ -341,10 +357,27 @@ rust-cli-archive-smoke: rust-cli-release-build
 	xdg_dir="$$smoke_dir/xdg" && \
 	config_dir="$$smoke_dir/primitive" && \
 	mkdir -p "$$extract_dir" "$$check_dir" "$$run_dir" "$$home_dir" "$$xdg_dir" "$$config_dir" && \
-	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then \
-		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --bin-dir "$$RUST_CLI_DIST_BIN_DIR" --json > "$$smoke_dir/package.json"; \
+	bin_dir="$(CURDIR)/cli-rust/target/release" && \
+	dist_target="$${RUST_CLI_DIST_TARGET:-}" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then \
+		bin_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; \
+		if [ -z "$$dist_target" ]; then \
+			case "$$RUST_CLI_CARGO_TARGET" in \
+				x86_64-unknown-linux-musl) dist_target="linux-x64" ;; \
+				aarch64-unknown-linux-musl) dist_target="linux-arm64" ;; \
+				x86_64-apple-darwin) dist_target="macos-x64" ;; \
+				aarch64-apple-darwin) dist_target="macos-arm64" ;; \
+				x86_64-pc-windows-msvc) dist_target="windows-x64" ;; \
+				*) echo "Set RUST_CLI_DIST_TARGET for RUST_CLI_CARGO_TARGET=$$RUST_CLI_CARGO_TARGET"; exit 1 ;; \
+			esac; \
+		fi; \
+	fi && \
+	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then bin_dir="$$RUST_CLI_DIST_BIN_DIR"; fi && \
+	case "$$dist_target" in windows-*) echo "rust-cli-archive-smoke uses Unix archive extraction and execution; use rust-cli-windows-archive-smoke for $$dist_target"; exit 1 ;; esac && \
+	if [ -n "$$dist_target" ]; then \
+		node scripts/package-rust-cli.mjs --target "$$dist_target" --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
 	else \
-		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --json > "$$smoke_dir/package.json"; \
+		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
 	fi && \
 	archive_path=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).archive);" "$$smoke_dir/package.json") && \
 	checksum_path=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).checksum);" "$$smoke_dir/package.json") && \
@@ -367,7 +400,7 @@ rust-cli-archive-smoke: rust-cli-release-build
 	grep -q -- 'Primitive Rust CLI' "$$extract_dir/README.md" && \
 	case "$$(uname -s)" in \
 	  Darwin) otool -L "$$extract_dir/primitive" > "$$smoke_dir/native-deps.txt" && if grep -E 'lib(ssl|crypto|z)\\.' "$$smoke_dir/native-deps.txt"; then echo "Rust CLI archive unexpectedly links OpenSSL/libz"; exit 1; fi ;; \
-	  Linux) if command -v ldd >/dev/null 2>&1; then ldd "$$extract_dir/primitive" > "$$smoke_dir/native-deps.txt" && if grep -E 'lib(ssl|crypto|z)\\.so' "$$smoke_dir/native-deps.txt"; then echo "Rust CLI archive unexpectedly links OpenSSL/libz"; exit 1; fi; fi ;; \
+	  Linux) if command -v ldd >/dev/null 2>&1; then if ldd "$$extract_dir/primitive" > "$$smoke_dir/native-deps.txt" 2> "$$smoke_dir/native-deps.err"; then if grep -E 'lib(ssl|crypto|z)\\.so' "$$smoke_dir/native-deps.txt"; then echo "Rust CLI archive unexpectedly links OpenSSL/libz"; exit 1; fi; elif grep -Eiq 'not a dynamic executable|statically linked' "$$smoke_dir/native-deps.txt" "$$smoke_dir/native-deps.err"; then :; else cat "$$smoke_dir/native-deps.txt" "$$smoke_dir/native-deps.err"; exit 1; fi; fi ;; \
 	esac && \
 	cd "$$run_dir" && \
 	HOME="$$home_dir" XDG_CONFIG_HOME="$$xdg_dir" PRIMITIVE_CONFIG_DIR="$$config_dir" PRIMITIVE_API_KEY= "$$extract_dir/primitive" --version > "$$smoke_dir/version.txt" && \
@@ -417,10 +450,27 @@ rust-cli-install-smoke: rust-cli-release-build
 	xdg_dir="$$smoke_dir/xdg" && \
 	config_dir="$$smoke_dir/primitive" && \
 	mkdir -p "$$install_dir" "$$home_dir" "$$xdg_dir" "$$config_dir" && \
-	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then \
-		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --bin-dir "$$RUST_CLI_DIST_BIN_DIR" --json > "$$smoke_dir/package.json"; \
+	bin_dir="$(CURDIR)/cli-rust/target/release" && \
+	dist_target="$${RUST_CLI_DIST_TARGET:-}" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then \
+		bin_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; \
+		if [ -z "$$dist_target" ]; then \
+			case "$$RUST_CLI_CARGO_TARGET" in \
+				x86_64-unknown-linux-musl) dist_target="linux-x64" ;; \
+				aarch64-unknown-linux-musl) dist_target="linux-arm64" ;; \
+				x86_64-apple-darwin) dist_target="macos-x64" ;; \
+				aarch64-apple-darwin) dist_target="macos-arm64" ;; \
+				x86_64-pc-windows-msvc) dist_target="windows-x64" ;; \
+				*) echo "Set RUST_CLI_DIST_TARGET for RUST_CLI_CARGO_TARGET=$$RUST_CLI_CARGO_TARGET"; exit 1 ;; \
+			esac; \
+		fi; \
+	fi && \
+	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then bin_dir="$$RUST_CLI_DIST_BIN_DIR"; fi && \
+	case "$$dist_target" in windows-*) echo "rust-cli-install-smoke uses the Unix installer; use scripts/install-rust-cli.ps1 for $$dist_target"; exit 1 ;; esac && \
+	if [ -n "$$dist_target" ]; then \
+		node scripts/package-rust-cli.mjs --target "$$dist_target" --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
 	else \
-		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --json > "$$smoke_dir/package.json"; \
+		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
 	fi && \
 	version=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).version);" "$$smoke_dir/package.json") && \
 	target=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).target);" "$$smoke_dir/package.json") && \
@@ -453,23 +503,52 @@ cli-operation-coverage:
 
 cli-help-parity: cli-command-surface-parity rust-cli-build
 	node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "$${NODE_CLI_BIN:-node $(CURDIR)/cli-node/bin/run.js}" --rust-bin "$${RUST_CLI_BIN:-$(CURDIR)/cli-rust/target/debug/primitive}"
+	shim_dir=$$(mktemp -d) && \
+	node_prim_bin="$${NODE_CLI_PRIM_BIN:-}" && \
+	if [ -z "$$node_prim_bin" ]; then ln -s "$(CURDIR)/cli-node/bin/run.js" "$$shim_dir/prim" && node_prim_bin="node $$shim_dir/prim"; fi && \
+	node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "$$node_prim_bin" --rust-bin "$${RUST_CLI_PRIM_BIN:-$(CURDIR)/cli-rust/target/debug/prim}"
 
 cli-archive-parity: cli-command-surface-parity cli-operation-coverage rust-cli-release-build
 	smoke_dir=$$(mktemp -d) && \
 	extract_dir="$$smoke_dir/extract" && \
 	mkdir -p "$$extract_dir" && \
-	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then \
-		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --bin-dir "$$RUST_CLI_DIST_BIN_DIR" --json > "$$smoke_dir/package.json"; \
+	bin_dir="$(CURDIR)/cli-rust/target/release" && \
+	dist_target="$${RUST_CLI_DIST_TARGET:-}" && \
+	if [ -n "$${RUST_CLI_CARGO_TARGET:-}" ]; then \
+		bin_dir="$(CURDIR)/cli-rust/target/$$RUST_CLI_CARGO_TARGET/release"; \
+		if [ -z "$$dist_target" ]; then \
+			case "$$RUST_CLI_CARGO_TARGET" in \
+				x86_64-unknown-linux-musl) dist_target="linux-x64" ;; \
+				aarch64-unknown-linux-musl) dist_target="linux-arm64" ;; \
+				x86_64-apple-darwin) dist_target="macos-x64" ;; \
+				aarch64-apple-darwin) dist_target="macos-arm64" ;; \
+				x86_64-pc-windows-msvc) dist_target="windows-x64" ;; \
+				*) echo "Set RUST_CLI_DIST_TARGET for RUST_CLI_CARGO_TARGET=$$RUST_CLI_CARGO_TARGET"; exit 1 ;; \
+			esac; \
+		fi; \
+	fi && \
+	if [ -n "$${RUST_CLI_DIST_BIN_DIR:-}" ]; then bin_dir="$$RUST_CLI_DIST_BIN_DIR"; fi && \
+	case "$$dist_target" in windows-*) echo "cli-archive-parity uses Unix archive extraction and execution; use Windows workflow parity for $$dist_target"; exit 1 ;; esac && \
+	if [ -n "$$dist_target" ]; then \
+		node scripts/package-rust-cli.mjs --target "$$dist_target" --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
 	else \
-		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --json > "$$smoke_dir/package.json"; \
+		node scripts/package-rust-cli.mjs --out-dir "$$smoke_dir/dist" --bin-dir "$$bin_dir" --json > "$$smoke_dir/package.json"; \
 	fi && \
 	archive_path=$$(node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).archive);" "$$smoke_dir/package.json") && \
 	tar -C "$$extract_dir" -xzf "$$archive_path" && \
 	node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "$${NODE_CLI_BIN:-node $(CURDIR)/cli-node/bin/run.js}" --rust-bin "$$extract_dir/primitive" && \
-	node scripts/run-cli-parity.mjs --node-bin "$${NODE_CLI_BIN:-node $(CURDIR)/cli-node/bin/run.js}" --rust-bin "$$extract_dir/primitive"
+	node scripts/run-cli-parity.mjs --node-bin "$${NODE_CLI_BIN:-node $(CURDIR)/cli-node/bin/run.js}" --rust-bin "$$extract_dir/primitive" && \
+	node_prim_bin="$${NODE_CLI_PRIM_BIN:-}" && \
+	if [ -z "$$node_prim_bin" ]; then ln -s "$(CURDIR)/cli-node/bin/run.js" "$$smoke_dir/prim" && node_prim_bin="node $$smoke_dir/prim"; fi && \
+	node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "$$node_prim_bin" --rust-bin "$$extract_dir/prim" && \
+	node scripts/run-cli-parity.mjs --node-bin "$$node_prim_bin" --rust-bin "$$extract_dir/prim"
 
 cli-parity: cli-help-parity cli-operation-coverage
 	node scripts/run-cli-parity.mjs --node-bin "$${NODE_CLI_BIN:-node $(CURDIR)/cli-node/bin/run.js}" --rust-bin "$${RUST_CLI_BIN:-$(CURDIR)/cli-rust/target/debug/primitive}"
+	shim_dir=$$(mktemp -d) && \
+	node_prim_bin="$${NODE_CLI_PRIM_BIN:-}" && \
+	if [ -z "$$node_prim_bin" ]; then ln -s "$(CURDIR)/cli-node/bin/run.js" "$$shim_dir/prim" && node_prim_bin="node $$shim_dir/prim"; fi && \
+	node scripts/run-cli-parity.mjs --node-bin "$$node_prim_bin" --rust-bin "$${RUST_CLI_PRIM_BIN:-$(CURDIR)/cli-rust/target/debug/prim}"
 
 python-sync:
 	cd sdk-python && uv sync --dev

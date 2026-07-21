@@ -362,8 +362,13 @@ jobs:
           if [ -n "${{ matrix.rust_target }}" ]; then
             rust_bin="cli-rust/target/${{ matrix.rust_target }}/release/primitive"
           fi
-          node scripts/run-cli-help-sweep.mjs --compare-flags --node-bin "node cli-node/bin/run.js" --rust-bin "$rust_bin"
+          rust_prim_bin="${rust_bin%/primitive}/prim"
+          node_prim_bin="$RUNNER_TEMP/prim"
+          ln -s "$PWD/cli-node/bin/run.js" "$node_prim_bin"
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node cli-node/bin/run.js" --rust-bin "$rust_bin"
           node scripts/run-cli-parity.mjs --node-bin "node cli-node/bin/run.js" --rust-bin "$rust_bin"
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $node_prim_bin" --rust-bin "$rust_prim_bin"
+          node scripts/run-cli-parity.mjs --node-bin "node $node_prim_bin" --rust-bin "$rust_prim_bin"
 
       - name: Run Windows Node/Rust CLI parity
         if: ${{ runner.os == 'Windows' }}
@@ -373,8 +378,11 @@ jobs:
           pnpm --dir cli-node build
           $nodeEntry = ((Resolve-Path "cli-node/bin/run.js").Path -replace "\\", "/")
           $rustBin = ((Resolve-Path "cli-rust/target/release/primitive.exe").Path -replace "\\", "/")
-          node scripts/run-cli-help-sweep.mjs --compare-flags --node-bin "node $nodeEntry" --rust-bin "$rustBin"
+          $rustPrimBin = ((Resolve-Path "cli-rust/target/release/prim.exe").Path -replace "\\", "/")
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodeEntry" --rust-bin "$rustBin"
           node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustBin"
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodeEntry" --rust-bin "$rustPrimBin"
+          node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustPrimBin"
 
       - name: Package and install Unix archive
         if: ${{ runner.os != 'Windows' }}

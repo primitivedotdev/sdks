@@ -260,8 +260,11 @@ jobs:
           pnpm --dir cli-node build
           $nodeEntry = ((Resolve-Path "cli-node/bin/run.js").Path -replace "\\", "/")
           $rustBin = ((Resolve-Path "cli-rust/target/release/primitive.exe").Path -replace "\\", "/")
-          node scripts/run-cli-help-sweep.mjs --compare-flags --node-bin "node $nodeEntry" --rust-bin "$rustBin"
+          $rustPrimBin = ((Resolve-Path "cli-rust/target/release/prim.exe").Path -replace "\\", "/")
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodeEntry" --rust-bin "$rustBin"
           node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustBin"
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodeEntry" --rust-bin "$rustPrimBin"
+          node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustPrimBin"
 
       - name: Validate Rust CLI scripts
         run: |

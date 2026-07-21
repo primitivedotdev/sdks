@@ -1175,6 +1175,14 @@ pub struct CliLoginPollResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OAuthRefreshResult {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub token_type: String,
+    pub expires_in: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StoredCliCredentials {
     pub auth_method: String,
     pub access_token: String,
@@ -1404,8 +1412,31 @@ pub struct CliLoginStartResult {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum AuthRequestBody {
+    Form(Vec<(String, String)>),
+    Json(Value),
+}
+
+impl AuthRequestBody {
+    fn is_json(&self) -> bool {
+        matches!(self, Self::Json(_))
+    }
+
+    pub fn as_json(&self) -> Option<&Value> {
+        match self {
+            Self::Json(value) => Some(value),
+            Self::Form(_) => None,
+        }
+    }
+
+    pub fn get(&self, key: &str) -> Option<&Value> {
+        self.as_json().and_then(|value| value.get(key))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct AuthRequestPlan {
-    pub body: Option<Value>,
+    pub body: Option<AuthRequestBody>,
     pub include_auth: bool,
     pub method: &'static str,
     pub operation_id: &'static str,
@@ -1430,7 +1461,22 @@ impl AuthRequestPlan {
         include_auth: bool,
     ) -> Self {
         Self {
-            body: Some(body),
+            body: Some(AuthRequestBody::Json(body)),
+            include_auth,
+            method: "POST",
+            operation_id,
+            path,
+        }
+    }
+
+    fn post_form(
+        operation_id: &'static str,
+        path: &'static str,
+        body: Vec<(String, String)>,
+        include_auth: bool,
+    ) -> Self {
+        Self {
+            body: Some(AuthRequestBody::Form(body)),
             include_auth,
             method: "POST",
             operation_id,
@@ -1718,6 +1764,22 @@ pub enum ExistingLoginProbeStatus {
     Blocked { message: String },
     RemovedStale,
     Valid,
+}
+
+enum ExistingLoginCheckStatus {
+    Blocked {
+        message: String,
+    },
+    RemovedStale,
+    Valid {
+        credentials: Box<StoredCliCredentials>,
+    },
+}
+
+enum ExistingCredentialsRefreshStatus {
+    Blocked { message: String },
+    Ready(Box<StoredCliCredentials>),
+    RemovedStale,
 }
 
 pub fn decide_existing_credentials_before_auth(
@@ -2680,16 +2742,14 @@ pub fn execute_auth_request(
         headers: context.headers.clone(),
         config_dir: PathBuf::from(&context.config_dir),
     };
+    let has_json_body = request.body.as_ref().is_some_and(AuthRequestBody::is_json);
     let mut builder = http.request(method, url);
-    builder = client::apply_headers(
-        builder,
-        &auth,
-        request.include_auth,
-        &[],
-        request.body.is_some(),
-    )?;
+    builder = client::apply_headers(builder, &auth, request.include_auth, &[], has_json_body)?;
     if let Some(body) = &request.body {
-        builder = builder.json(body);
+        builder = match body {
+            AuthRequestBody::Form(values) => builder.form(values),
+            AuthRequestBody::Json(value) => builder.json(value),
+        };
     }
     let response = builder.send()?;
     let headers = response
@@ -2708,6 +2768,170 @@ pub fn execute_auth_request(
         headers,
         status,
     })
+}
+
+fn oauth_refresh_base_url(api_base_url: &str) -> Result<String> {
+    let mut url = reqwest::Url::parse(api_base_url)
+        .with_context(|| format!("Invalid Primitive API base URL: {api_base_url}"))?;
+    url.set_path("");
+    url.set_query(None);
+    url.set_fragment(None);
+    Ok(url.as_str().trim_end_matches('/').to_string())
+}
+
+fn plan_oauth_refresh_request(credentials: &StoredCliCredentials) -> AuthRequestPlan {
+    AuthRequestPlan::post_form(
+        "refreshCliOAuth",
+        "/oauth/token",
+        vec![
+            ("client_id".to_string(), credentials.oauth_client_id.clone()),
+            ("grant_type".to_string(), "refresh_token".to_string()),
+            (
+                "refresh_token".to_string(),
+                credentials.refresh_token.clone(),
+            ),
+        ],
+        false,
+    )
+}
+
+fn oauth_refresh_context(
+    credentials: &StoredCliCredentials,
+    context: &AuthExecutionContext,
+) -> Result<AuthExecutionContext> {
+    Ok(AuthExecutionContext {
+        api_base_url: oauth_refresh_base_url(&credentials.api_base_url)?,
+        api_key: None,
+        config_dir: context.config_dir.clone(),
+        fallback_device_name: context.fallback_device_name.clone(),
+        headers: context.headers.clone(),
+        now: context.now,
+    })
+}
+
+fn should_refresh_stored_credentials(credentials: &StoredCliCredentials, now: SystemTime) -> bool {
+    let Ok(expires_at) = DateTime::parse_from_rfc3339(&credentials.expires_at) else {
+        return true;
+    };
+    let threshold: DateTime<Utc> = (now + Duration::from_secs(60)).into();
+    expires_at.with_timezone(&Utc) <= threshold
+}
+
+fn oauth_refresh_error_code(response: &AuthApiResponse) -> Option<&str> {
+    response
+        .body
+        .as_ref()
+        .and_then(|body| body.get("error"))
+        .and_then(Value::as_str)
+}
+
+fn oauth_refresh_error_description(response: &AuthApiResponse) -> Option<String> {
+    response
+        .body
+        .as_ref()
+        .and_then(|body| body.get("error_description"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn refresh_existing_credentials_if_needed(
+    credentials: &StoredCliCredentials,
+    context: &AuthExecutionContext,
+    io: &mut impl AuthRuntimeIo,
+    http: &mut impl AuthRuntimeHttp,
+) -> Result<ExistingCredentialsRefreshStatus> {
+    if !should_refresh_stored_credentials(credentials, context.now) {
+        return Ok(ExistingCredentialsRefreshStatus::Ready(Box::new(
+            credentials.clone(),
+        )));
+    }
+
+    let Some(current) = read_credentials_for_auth(io, &context.config_dir)? else {
+        return Ok(ExistingCredentialsRefreshStatus::RemovedStale);
+    };
+    if !should_refresh_stored_credentials(&current, context.now) {
+        return Ok(ExistingCredentialsRefreshStatus::Ready(Box::new(current)));
+    }
+
+    let request = plan_oauth_refresh_request(&current);
+    let refresh_context = oauth_refresh_context(&current, context)?;
+    let response = http.send(&refresh_context, &request)?;
+    if response.status >= 400 {
+        if oauth_refresh_error_code(&response) == Some("invalid_grant") {
+            delete_cli_credentials(io, &context.config_dir)?;
+            return Ok(ExistingCredentialsRefreshStatus::RemovedStale);
+        }
+        let message = oauth_refresh_error_description(&response)
+            .map(|description| {
+                format!("Could not refresh saved Primitive CLI OAuth credentials: {description}")
+            })
+            .unwrap_or_else(|| {
+                "Could not refresh saved Primitive CLI OAuth credentials.".to_string()
+            });
+        return Ok(ExistingCredentialsRefreshStatus::Blocked { message });
+    }
+
+    let Some(body) = response.body else {
+        return Ok(ExistingCredentialsRefreshStatus::Blocked {
+            message: "Primitive OAuth token endpoint returned an unexpected refresh response."
+                .to_string(),
+        });
+    };
+    let refresh: OAuthRefreshResult = match serde_json::from_value::<OAuthRefreshResult>(body) {
+        Ok(refresh) if refresh.token_type == "Bearer" && refresh.expires_in > 0 => refresh,
+        _ => {
+            return Ok(ExistingCredentialsRefreshStatus::Blocked {
+                message: "Primitive OAuth token endpoint returned an unexpected refresh response."
+                    .to_string(),
+            });
+        }
+    };
+
+    let mut next = current;
+    next.access_token = refresh.access_token;
+    next.refresh_token = refresh.refresh_token;
+    next.token_type = refresh.token_type;
+    next.expires_at =
+        system_time_to_utc_millis(context.now + Duration::from_secs(refresh.expires_in));
+    io.write_string(
+        &credentials_path(&context.config_dir),
+        &serialize_credentials(&next)?,
+    )?;
+    Ok(ExistingCredentialsRefreshStatus::Ready(Box::new(next)))
+}
+
+fn check_existing_login(
+    credentials: &StoredCliCredentials,
+    context: &AuthExecutionContext,
+    io: &mut impl AuthRuntimeIo,
+    http: &mut impl AuthRuntimeHttp,
+) -> Result<ExistingLoginCheckStatus> {
+    let credentials = match refresh_existing_credentials_if_needed(credentials, context, io, http)?
+    {
+        ExistingCredentialsRefreshStatus::Ready(credentials) => *credentials,
+        ExistingCredentialsRefreshStatus::RemovedStale => {
+            return Ok(ExistingLoginCheckStatus::RemovedStale);
+        }
+        ExistingCredentialsRefreshStatus::Blocked { message } => {
+            return Ok(ExistingLoginCheckStatus::Blocked {
+                message: format!(
+                    "{message}\nA saved Primitive CLI OAuth session exists, but the CLI could not refresh it. Run `primitive logout` before logging in again."
+                ),
+            });
+        }
+    };
+
+    match probe_existing_login(&credentials, context, io, http)? {
+        ExistingLoginProbeStatus::Valid => Ok(ExistingLoginCheckStatus::Valid {
+            credentials: Box::new(credentials),
+        }),
+        ExistingLoginProbeStatus::RemovedStale => Ok(ExistingLoginCheckStatus::RemovedStale),
+        ExistingLoginProbeStatus::Blocked { message } => {
+            Ok(ExistingLoginCheckStatus::Blocked { message })
+        }
+    }
 }
 
 fn probe_existing_login(
@@ -2767,8 +2991,8 @@ fn execute_browser_login(
                     .to_string(),
             );
         }
-        Ok(Some(credentials)) => match probe_existing_login(&credentials, context, io, http)? {
-            ExistingLoginProbeStatus::Valid => {
+        Ok(Some(credentials)) => match check_existing_login(&credentials, context, io, http)? {
+            ExistingLoginCheckStatus::Valid { credentials } => {
                 let org = credentials
                     .org_name
                     .as_ref()
@@ -2778,13 +3002,10 @@ fn execute_browser_login(
                     "Already logged in{org}. Run `primitive logout` before logging in again."
                 ));
             }
-            ExistingLoginProbeStatus::RemovedStale => {
-                prefix.push(
-                        "Removed saved Primitive CLI OAuth credentials because the existing session was rejected during login. Continuing with a fresh login."
-                            .to_string(),
-                    );
+            ExistingLoginCheckStatus::RemovedStale => {
+                prefix.push("Continuing with a new Primitive CLI login...".to_string());
             }
-            ExistingLoginProbeStatus::Blocked { message } => return Err(anyhow!("{message}")),
+            ExistingLoginCheckStatus::Blocked { message } => return Err(anyhow!("{message}")),
         },
         Ok(None) => {}
         Err(error) if flags.force => {
@@ -2920,16 +3141,22 @@ fn execute_signup_interactive(
                 "Replacing saved Primitive CLI credentials{org} after signup because --force was set."
             ));
         }
-        Ok(Some(credentials)) => {
-            let org = credentials
-                .org_name
-                .as_ref()
-                .map(|name| format!(" for {name}"))
-                .unwrap_or_default();
-            return Err(anyhow!(
-                "Already logged in{org}. Run `primitive logout` before creating a new account."
-            ));
-        }
+        Ok(Some(credentials)) => match check_existing_login(&credentials, context, io, http)? {
+            ExistingLoginCheckStatus::Valid { credentials } => {
+                let org = credentials
+                    .org_name
+                    .as_ref()
+                    .map(|name| format!(" for {name}"))
+                    .unwrap_or_default();
+                return Err(anyhow!(
+                    "Already logged in{org}. Run `primitive logout` before creating a new account."
+                ));
+            }
+            ExistingLoginCheckStatus::RemovedStale => {
+                prefix.push("Continuing with Primitive signup...".to_string());
+            }
+            ExistingLoginCheckStatus::Blocked { message } => return Err(anyhow!("{message}")),
+        },
         Ok(None) => {}
         Err(error) if flags.force => {
             prefix.push(format!(
@@ -3281,17 +3508,23 @@ fn execute_start_email_code(
                 flow.action_noun()
             ));
         }
-        Ok(Some(credentials)) => {
-            let org = credentials
-                .org_name
-                .as_ref()
-                .map(|name| format!(" for {name}"))
-                .unwrap_or_default();
-            return Err(anyhow!(
-                "Already logged in{org}. Run `primitive logout` before {}.",
-                flow.action_gerund()
-            ));
-        }
+        Ok(Some(credentials)) => match check_existing_login(&credentials, context, io, http)? {
+            ExistingLoginCheckStatus::Valid { credentials } => {
+                let org = credentials
+                    .org_name
+                    .as_ref()
+                    .map(|name| format!(" for {name}"))
+                    .unwrap_or_default();
+                return Err(anyhow!(
+                    "Already logged in{org}. Run `primitive logout` before {}.",
+                    flow.action_gerund()
+                ));
+            }
+            ExistingLoginCheckStatus::RemovedStale => {
+                prefix.push("Continuing with Primitive signup...".to_string());
+            }
+            ExistingLoginCheckStatus::Blocked { message } => return Err(anyhow!("{message}")),
+        },
         Ok(None) => {}
         Err(error) if flags.force => {
             prefix.push(format!(
@@ -3923,17 +4156,62 @@ fn auth_error_for_response(response: &AuthApiResponse, fallback: &str) -> anyhow
 
 fn write_auth_text_output(output: &AuthTextOutput) {
     if let Some(url) = &output.open_url {
-        open_browser_url(url);
-    }
-    for line in &output.stderr {
-        eprintln!("{line}");
+        if let Some((first, rest)) = output.stderr.split_first() {
+            write_auth_stderr_line(first);
+            let _ = std::io::stderr().flush();
+            record_auth_event("browser-open", url);
+            open_browser_url(url);
+            for line in rest {
+                write_auth_stderr_line(line);
+            }
+        } else {
+            record_auth_event("browser-open", url);
+            open_browser_url(url);
+        }
+    } else {
+        for line in &output.stderr {
+            eprintln!("{line}");
+        }
     }
     for line in &output.stdout {
         println!("{line}");
     }
 }
 
+fn write_auth_stderr_line(line: &str) {
+    eprintln!("{line}");
+    record_auth_event("stderr", &format!("{line}\n"));
+}
+
+fn record_auth_event(kind: &str, value: &str) {
+    let Some(path) = env::var_os("PRIMITIVE_AUTH_EVENT_LOG") else {
+        return;
+    };
+    let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) else {
+        return;
+    };
+    let Ok(encoded) = serde_json::to_string(value) else {
+        return;
+    };
+    let _ = writeln!(file, "{kind} {encoded}");
+}
+
+fn record_browser_open_trap(url: &str) -> bool {
+    if env::var("PRIMITIVE_BROWSER_OPEN_DIRECT_TRAP").as_deref() != Ok("1") {
+        return false;
+    }
+    if let Some(path) = env::var_os("PRIMITIVE_BROWSER_OPEN_TRAP_LOG") {
+        if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
+            let _ = writeln!(file, "browser-open {url}");
+        }
+    }
+    true
+}
+
 fn open_browser_url(url: &str) {
+    if record_browser_open_trap(url) {
+        return;
+    }
     let mut command = if cfg!(target_os = "macos") {
         let mut command = ProcessCommand::new("open");
         command.arg(url);
@@ -3953,7 +4231,6 @@ fn open_browser_url(url: &str) {
         .stderr(Stdio::null())
         .spawn();
 }
-
 fn command_time_enabled(command: &AuthCommand) -> bool {
     matches!(
         command,
