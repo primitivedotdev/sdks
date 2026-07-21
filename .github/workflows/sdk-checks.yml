@@ -20,7 +20,7 @@ on:
 jobs:
   changes:
     name: Detect Changed SDKs
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: read
@@ -97,7 +97,7 @@ jobs:
     name: Node (${{ matrix.node-version }})
     needs: changes
     if: ${{ needs.changes.outputs.node == 'true' || needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -137,7 +137,7 @@ jobs:
     name: CLI (${{ matrix.node-version }})
     needs: changes
     if: ${{ needs.changes.outputs.cli == 'true' || needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -177,7 +177,7 @@ jobs:
     name: Rust CLI
     needs: changes
     if: ${{ needs.changes.outputs.rust == 'true' || needs.changes.outputs.cli == 'true' || needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
 
@@ -200,50 +200,7 @@ jobs:
         run: make cli-install
 
       - name: Run rust CLI checks
-        run: make rust-cli-check
-
-      - name: Run Node/Rust CLI parity
-        run: make cli-parity
-
-      - name: Validate rust CLI scripts
-        run: |
-          bash -n scripts/install-rust-cli.sh
-          if command -v pwsh >/dev/null 2>&1; then pwsh -NoProfile -NonInteractive -Command '$null = [scriptblock]::Create((Get-Content -Raw scripts/install-rust-cli.ps1))'; fi
-          node --check scripts/assert-cli-command-surface-parity.mjs
-          node --check scripts/assert-cli-operation-request-coverage.mjs
-          node --check scripts/assert-rust-cli-linux-portability.mjs
-          node --check scripts/assert-rust-operation-manifest-bytewise.mjs
-          node --check scripts/package-rust-cli.mjs
-          node --check scripts/run-cli-help-sweep.mjs
-          node --check scripts/run-cli-parity.mjs
-          node --check scripts/run-rust-cli-live-smoke.mjs
-
-      - name: Smoke test installed rust CLI
-        run: make rust-cli-smoke
-
-      - name: Run local-only rust CLI live-smoke harness
-        run: make rust-cli-live-smoke-no-key
-
-      - name: Smoke test release rust CLI
-        run: make rust-cli-release-smoke
-
-      - name: Check rust CLI Linux portability
-        run: make rust-cli-linux-portability-smoke
-
-      - name: Package rust CLI crate
-        run: make rust-cli-package
-
-      - name: Smoke test rust CLI archive shape
-        run: make rust-cli-archive-smoke
-
-      - name: Run packaged Node/Rust CLI parity
-        run: make cli-archive-parity
-
-      - name: Smoke test rust CLI Windows archive shape
-        run: make rust-cli-windows-archive-smoke
-
-      - name: Smoke test rust CLI installer
-        run: make rust-cli-install-smoke
+        run: make rust-cli-ci-check
 
   rust-platform:
     name: Rust CLI Platform (${{ matrix.target }})
@@ -376,13 +333,18 @@ jobs:
         run: |
           pnpm config set script-shell "C:\Program Files\Git\bin\bash.exe"
           pnpm --dir cli-node build
-          $nodeEntry = ((Resolve-Path "cli-node/bin/run.js").Path -replace "\\", "/")
+          $nodeEntryPath = (Resolve-Path "cli-node/bin/run.js").Path
+          $nodeEntry = ($nodeEntryPath -replace "\\", "/")
+          $nodeEntryUrl = ([System.Uri]$nodeEntryPath).AbsoluteUri
+          $nodePrimEntry = Join-Path $env:RUNNER_TEMP "prim"
+          Set-Content -NoNewline -Path $nodePrimEntry -Value "import '$nodeEntryUrl';`n"
+          $nodePrimEntry = ($nodePrimEntry -replace "\\", "/")
           $rustBin = ((Resolve-Path "cli-rust/target/release/primitive.exe").Path -replace "\\", "/")
           $rustPrimBin = ((Resolve-Path "cli-rust/target/release/prim.exe").Path -replace "\\", "/")
           node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodeEntry" --rust-bin "$rustBin"
           node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustBin"
-          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodeEntry" --rust-bin "$rustPrimBin"
-          node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustPrimBin"
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodePrimEntry" --rust-bin "$rustPrimBin"
+          node scripts/run-cli-parity.mjs --node-bin "node $nodePrimEntry" --rust-bin "$rustPrimBin"
 
       - name: Package and install Unix archive
         if: ${{ runner.os != 'Windows' }}
@@ -423,7 +385,7 @@ jobs:
     name: Rust CLI Live Smoke
     needs: rust
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_rust_cli_live_smoke && github.ref == 'refs/heads/main' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     env:
       PRIMITIVE_API_KEY: ${{ secrets.PRIMITIVE_API_KEY }}
       PRIMITIVE_LIVE_SMOKE_SHOW_OUTPUT: "0"
@@ -466,7 +428,7 @@ jobs:
     name: Python (${{ matrix.python-version }})
     needs: changes
     if: ${{ needs.changes.outputs.python == 'true' || needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -497,7 +459,7 @@ jobs:
     name: Go (${{ matrix.go-version }})
     needs: changes
     if: ${{ needs.changes.outputs.go == 'true' || needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -527,7 +489,7 @@ jobs:
     name: Shared
     needs: changes
     if: ${{ needs.changes.outputs.shared == 'true' }}
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
 

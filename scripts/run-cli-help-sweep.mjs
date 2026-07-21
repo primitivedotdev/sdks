@@ -44,6 +44,30 @@ const HELP_SECTION_HEADINGS = new Set([
 // --compare-flags is useful precisely because it can fail while surfacing them.
 const RUST_MISSING_NODE_FLAG_TOKEN_ALLOWLIST = [];
 const RUST_EXTRA_NODE_FLAG_TOKEN_ALLOWLIST = [];
+const EXPECTED_NODE_REJECTED_OPTIONAL_HELP_LABELS = new Set([
+  "--help create",
+  "--help script",
+  "autocomplete -h",
+  "chat -h",
+  "config -h",
+  "create",
+  "create --help",
+  "create -h",
+  "help create",
+  "help script",
+  "login -h",
+  "login otp -h",
+  "login:otp -h",
+  "otp -h",
+  "script",
+  "script --help",
+  "script -h",
+  "search -h",
+  "signin -h",
+  "signin otp -h",
+  "signin:otp -h",
+  "signup -h",
+]);
 const OPERATION_MANIFEST = JSON.parse(
   readFileSync(
     path.join(REPO_ROOT, "cli-rust/src/operation-manifest.json"),
@@ -71,7 +95,6 @@ const NODE_PLUGIN_COMMAND_ALIAS_OVERRIDES = new Map([
   ["autocomplete:create", ["create:autocomplete"]],
   ["autocomplete:script", ["script:autocomplete"]],
 ]);
-const REPRESENTATIVE_VALUE_FLAG_NAMES = ["api-key", "id"];
 
 function usage() {
   return `Usage:
@@ -81,16 +104,18 @@ Options:
   --node-bin <command>   Node CLI command. Can also use NODE_CLI.
   --rust-bin <command>   Rust CLI command. Can also use RUST_CLI.
   --concurrency <n>      Number of help commands to run in parallel. Defaults to 8.
-  --compare-flags        Also fail when Rust help omits a Node-visible flag token.
-  --compare-copy         Also fail unless help stdout is byte-for-byte identical.
+  --compare-flags        Fail when Rust help omits a Node-visible flag token. Enabled by default.
+  --no-compare-flags     Skip exact flag-token coverage checks.
+  --compare-copy         Fail unless help stdout is byte-for-byte identical. Enabled by default.
+  --no-compare-copy      Skip byte-for-byte stdout copy checks.
   --verbose              Print every accepted command spelling.
 `;
 }
 
 function parseArgs(argv) {
   const options = {
-    compareCopy: false,
-    compareFlags: false,
+    compareCopy: true,
+    compareFlags: true,
     concurrency: DEFAULT_CONCURRENCY,
     nodeCli: process.env.NODE_CLI,
     rustCli: process.env.RUST_CLI,
@@ -111,8 +136,16 @@ function parseArgs(argv) {
       options.compareFlags = true;
       continue;
     }
+    if (arg === "--no-compare-flags") {
+      options.compareFlags = false;
+      continue;
+    }
     if (arg === "--compare-copy") {
       options.compareCopy = true;
+      continue;
+    }
+    if (arg === "--no-compare-copy") {
+      options.compareCopy = false;
       continue;
     }
 
@@ -339,28 +372,6 @@ function visibleValueFlagEntries(record) {
   );
 }
 
-function representativeValueFlagEntries(record) {
-  const flags = visibleValueFlagEntries(record);
-  const selected = new Map();
-
-  for (const name of REPRESENTATIVE_VALUE_FLAG_NAMES) {
-    const entry = flags.find(([flagName]) => flagName === name);
-    if (entry) selected.set(entry[0], entry);
-  }
-  for (const entry of flags) {
-    const [name, flag] = entry;
-    if (flag.required) selected.set(name, entry);
-  }
-  const firstCommandSpecific = flags.find(
-    ([name]) => !["api-key", "api-base-url", "time"].includes(name),
-  );
-  if (firstCommandSpecific) {
-    selected.set(firstCommandSpecific[0], firstCommandSpecific);
-  }
-
-  return [...selected.values()];
-}
-
 function sampleValue(name, spec = {}) {
   const normalized = flagName(name);
   const options = Array.isArray(spec.options) ? spec.options : [];
@@ -400,7 +411,7 @@ function sampleValue(name, spec = {}) {
   ) {
     return "hello";
   }
-  if (normalized === "code") return "123456";
+  if (normalized === "code" || normalized.endsWith("code")) return "123456";
   if (normalized === "key") return "help-key";
   if (normalized === "name") return "help-name";
   return "value";
@@ -414,14 +425,56 @@ function positionalEntries(record) {
 }
 
 function addValueFlagHelpCandidates(candidates, commandId, record) {
-  for (const [flag, spec] of representativeValueFlagEntries(record)) {
+  for (const [flag, spec] of visibleValueFlagEntries(record)) {
     for (const spelling of commandSpellings(commandId)) {
-      addCandidate(
-        candidates,
-        [...spelling, `--${flag}`, sampleValue(flag, spec), "--help"],
-        false,
-        commandId,
-      );
+      for (const token of visibleFlagTokens(flag, spec)) {
+        addCandidate(
+          candidates,
+          [...spelling, token, sampleValue(flag, spec), "--help"],
+          false,
+          commandId,
+        );
+      }
+    }
+  }
+}
+
+function visibleBooleanFlagEntries(record) {
+  return Object.entries(record.flags ?? {}).filter(
+    ([, flag]) => !flag.hidden && !takesValue(flag),
+  );
+}
+
+function visibleFlagTokens(name, spec = {}) {
+  const tokens = new Set([`--${flagName(name)}`]);
+  if (typeof spec.char === "string" && spec.char.length > 0) {
+    tokens.add(`-${spec.char}`);
+  }
+  for (const alias of spec.aliases ?? []) {
+    tokens.add(`--${flagName(alias)}`);
+  }
+  return [...tokens];
+}
+
+function addBooleanFlagHelpCandidates(candidates, commandId, record) {
+  for (const [flag, spec] of visibleBooleanFlagEntries(record)) {
+    for (const spelling of commandSpellings(commandId)) {
+      for (const token of visibleFlagTokens(flag, spec)) {
+        addCandidate(
+          candidates,
+          [...spelling, token, "--help"],
+          false,
+          commandId,
+        );
+      }
+      if (spec.allowNo === true) {
+        addCandidate(
+          candidates,
+          [...spelling, `--no-${flagName(flag)}`, "--help"],
+          false,
+          commandId,
+        );
+      }
     }
   }
 }
@@ -444,6 +497,7 @@ function addCommandSyntaxCandidates(candidates, commandId) {
   const record = commandRecordForId(commandId);
   if (!record) return;
   addValueFlagHelpCandidates(candidates, commandId, record);
+  addBooleanFlagHelpCandidates(candidates, commandId, record);
   addPositionalHelpCandidates(candidates, commandId, record);
 }
 
@@ -1012,8 +1066,8 @@ function excerptAround(value, offset) {
 function rootHelpRuntimeNormalizedCopy(candidate, output) {
   if (!isRootHelpCandidate(candidate)) return output;
   return output.replace(
-    /^ {2}primitive(?:-rust)?\/[^\n]+\n/m,
-    "  <runtime-version>\n",
+    /^ {2}primitive(?:-rust)?\/[0-9][^\s\n]*(?: [^\n]+)?\n/m,
+    "  primitive/<runtime-version>\n",
   );
 }
 
@@ -1028,6 +1082,8 @@ function isRootHelpCandidate(candidate) {
 }
 
 function assertExactHelpCopyParity(candidate, nodeResult, rustResult) {
+  assertRootHelpVersionLine(candidate, nodeResult.stdout, "Node");
+  assertRootHelpVersionLine(candidate, rustResult.stdout, "Rust");
   const nodeStdout = rootHelpRuntimeNormalizedCopy(
     candidate,
     nodeResult.stdout,
@@ -1051,6 +1107,8 @@ function assertExactHelpCopyParity(candidate, nodeResult, rustResult) {
 }
 
 function assertSemanticHelpCopyParity(candidate, nodeResult, rustResult) {
+  assertRootHelpVersionLine(candidate, nodeResult.stdout, "Node");
+  assertRootHelpVersionLine(candidate, rustResult.stdout, "Rust");
   const nodeCopy = normalizedHelpCopy(
     rootHelpRuntimeNormalizedCopy(candidate, nodeResult.stdout),
   );
@@ -1066,6 +1124,58 @@ function assertSemanticHelpCopyParity(candidate, nodeResult, rustResult) {
       `Node normalized help: ${nodeCopy}`,
       `Rust normalized help: ${rustCopy}`,
     ].join("\n"),
+  );
+}
+
+function assertRootHelpVersionLine(candidate, stdout, runnerName) {
+  if (!isRootHelpCandidate(candidate)) return;
+  const match = stdout.match(/^VERSION\n {2}([^\n]+)\n/m);
+  const label = candidate.args.join(" ") || "<root>";
+  if (!match) {
+    throw new Error(`${runnerName} root help is missing VERSION line for ${label}`);
+  }
+  const versionLine = match[1];
+  const valid =
+    runnerName === "Node"
+      ? /^primitive\/[0-9][^\s\n]* [^\s\n]+ node-v[0-9][^\s\n]*$/.test(versionLine)
+      : /^primitive(?:-rust)?\/[0-9][^\s\n]*$/.test(versionLine);
+  if (!valid) {
+    throw new Error(
+      `${runnerName} root help VERSION line has unexpected shape for ${label}: ${JSON.stringify(versionLine)}`,
+    );
+  }
+}
+
+function assertNoHelpStderr(candidate, runnerName, result) {
+  if (result.stderr === "") return;
+  const label = candidate.args.join(" ") || "<root>";
+  throw new Error(
+    `${runnerName} CLI wrote stderr for accepted help command ${label}\n${formatResult(result)}`,
+  );
+}
+
+function assertExpectedSkippedOptionalHelp(results) {
+  const actual = new Set(
+    results
+      .filter((result) => !result.checked)
+      .map((result) => result.label)
+      .sort(),
+  );
+  const missing = [...EXPECTED_NODE_REJECTED_OPTIONAL_HELP_LABELS].filter(
+    (label) => !actual.has(label),
+  );
+  const extra = [...actual].filter(
+    (label) => !EXPECTED_NODE_REJECTED_OPTIONAL_HELP_LABELS.has(label),
+  );
+  if (missing.length === 0 && extra.length === 0) return;
+  throw new Error(
+    [
+      "Node-rejected optional help spelling set changed.",
+      missing.length ? `Missing expected skip(s): ${missing.join(", ")}` : "",
+      extra.length ? `Unexpected skip(s): ${extra.join(", ")}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
   );
 }
 
@@ -1109,8 +1219,20 @@ async function main() {
             `Node CLI rejected exported command help: ${label}\n${formatResult(nodeResult)}`,
           );
         }
+        const rustResult = await runHelpProcess(rustCli, candidate.args);
+        if (rustResult.browserOpenLog) {
+          throw new Error(
+            `Rust CLI attempted to open a browser while checking Node-rejected help command: ${label}\n${formatResult(rustResult)}`,
+          );
+        }
+        if (rustResult.exitCode === 0) {
+          throw new Error(
+            `Rust CLI accepted Node-rejected optional help command: ${label}\n\nNode ${formatResult(nodeResult)}\n\nRust ${formatResult(rustResult)}`,
+          );
+        }
         return { checked: false, label };
       }
+      assertNoHelpStderr(candidate, "Node", nodeResult);
 
       const rustResult = await runHelpProcess(rustCli, candidate.args);
       if (rustResult.browserOpenLog) {
@@ -1126,6 +1248,7 @@ async function main() {
       if (!rustResult.stdout.trim()) {
         throw new Error(`Rust CLI printed empty help for ${label}`);
       }
+      assertNoHelpStderr(candidate, "Rust", rustResult);
       assertHelpFlagParity(candidate, nodeResult, rustResult);
       if (options.compareFlags) {
         assertNodeVisibleFlagCoverage(candidate, nodeResult, rustResult);
@@ -1146,6 +1269,7 @@ async function main() {
 
   const checked = results.filter((result) => result.checked).length;
   const skipped = results.length - checked;
+  assertExpectedSkippedOptionalHelp(results);
   process.stdout.write(
     `CLI help sweep OK: ${checked} Node-accepted command spelling(s) checked, ${skipped} Node-rejected optional spelling(s) skipped.\n`,
   );

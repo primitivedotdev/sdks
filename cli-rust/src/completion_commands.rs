@@ -201,79 +201,116 @@ fn render_powershell_completion(bin: &str, commands: &[String]) -> String {
 }
 
 fn render_fish_completion(bin: &str) -> String {
+    let ident = shell_ident(bin);
     let mut lines = vec![
-        format!("function __fish_{}_needs_command", shell_ident(bin)),
+        format!("function __fish_{ident}_needs_command"),
         "  set -l cmd (commandline -opc)".to_string(),
         "  test (count $cmd) -le 1".to_string(),
         "end".to_string(),
         String::new(),
-        format!(
-            "function __fish_{}_topic_needs_subcommand",
-            shell_ident(bin)
-        ),
+        format!("function __fish_{ident}_topic_needs_subcommand"),
         "  set -l cmd (commandline -opc)".to_string(),
         "  test (count $cmd) -eq 2".to_string(),
         "  and test \"$cmd[2]\" = \"$argv[1]\"".to_string(),
         "end".to_string(),
         String::new(),
+        format!("function __fish_{ident}_using_operation"),
+        "  set -l cmd (commandline -opc)".to_string(),
+        "  test (count $cmd) -ge 3".to_string(),
+        "  and test \"$cmd[2]\" = \"$argv[1]\"".to_string(),
+        "  and test \"$cmd[3]\" = \"$argv[2]\"".to_string(),
+        "end".to_string(),
+        String::new(),
+        format!("function __fish_{ident}_using_root_command"),
+        "  set -l cmd (commandline -opc)".to_string(),
+        "  test (count $cmd) -eq 2".to_string(),
+        "  and test \"$cmd[2]\" = \"$argv[1]\"".to_string(),
+        "end".to_string(),
+        String::new(),
+        format!("complete -c {bin} -f -n '__fish_{ident}_needs_command' -a 'list-operations' -d 'List all generated API operations'"),
+        format!("complete -c {bin} -f -n '__fish_{ident}_needs_command' -a 'completion' -d 'Show shell completion output or installation instructions'"),
+        format!("complete -c {bin} -f -n '__fish_{ident}_needs_command' -a 'autocomplete' -d 'Install or display shell autocomplete for bash, zsh, and powershell'"),
+        format!("complete -c {bin} -f -n '__fish_{ident}_needs_command' -a 'help' -d 'Display help for {bin}'"),
     ];
 
-    let mut root_commands = BTreeSet::new();
-    for entry in expected_command_surface().into_values() {
-        if let Some((root, _)) = entry.id.split_once(':') {
-            root_commands.insert(root.to_string());
-        } else {
-            root_commands.insert(entry.id);
+    let mut top_level_topics = Vec::new();
+    for operation in manifest::operation_manifest() {
+        if !top_level_topics.contains(&operation.tag_command) {
+            top_level_topics.push(operation.tag_command.clone());
         }
     }
-    for root in root_commands {
+
+    for topic in &top_level_topics {
         lines.push(format!(
-            "complete -c {bin} -f -n '__fish_{}_needs_command' -a '{}' -d '{}'",
-            shell_ident(bin),
-            fish_escape(&root),
-            fish_escape(root_summary(&root))
+            "complete -c {bin} -f -n '__fish_{ident}_needs_command' -a '{}' -d '{}'",
+            fish_escape(topic),
+            fish_escape(node_topic_summary(topic).unwrap_or(topic))
         ));
     }
 
-    let mut topic_pairs = BTreeSet::new();
-    for operation in manifest::operation_manifest() {
-        topic_pairs.insert((
-            operation.tag_command.clone(),
-            operation.command.clone(),
-            operation
-                .summary
-                .clone()
-                .unwrap_or_else(|| format!("{} {}", operation.method, operation.path)),
-        ));
-    }
-    for alias in manifest::aliases() {
-        if let Some((topic, command)) = alias.0.split_once(':') {
-            topic_pairs.insert((
-                topic.to_string(),
-                command.to_string(),
-                format!("Alias for {}", alias.1),
+    lines.push(format!(
+        "complete -c {bin} -f -n '__fish_{ident}_using_root_command completion' -a 'bash zsh powershell fish' -d 'Shell type'"
+    ));
+
+    for topic in &top_level_topics {
+        for operation in manifest::operation_manifest()
+            .iter()
+            .filter(|operation| operation.tag_command == *topic)
+        {
+            let summary = operation.summary.as_deref().map_or_else(
+                || format!("{} {}", operation.method, operation.path),
+                str::to_string,
+            );
+            lines.push(format!(
+                "complete -c {bin} -f -n '__fish_{ident}_topic_needs_subcommand {}' -a '{}' -d '{}'",
+                fish_escape(topic),
+                fish_escape(&operation.command),
+                fish_escape(&summary)
             ));
-        }
-    }
-    for entry in expected_command_surface().into_values() {
-        if entry.source == CommandSource::Friendly {
-            if let Some((topic, command)) = entry.id.split_once(':') {
-                topic_pairs.insert((
-                    topic.to_string(),
-                    command.to_string(),
-                    entry.summary.unwrap_or_else(|| entry.id.clone()),
+
+            for parameter in operation
+                .path_params
+                .iter()
+                .chain(operation.query_params.iter())
+            {
+                lines.push(format!(
+                    "complete -c {bin} -n '{}' -l '{}' -r -d '{}'",
+                    operation_condition(bin, operation),
+                    fish_escape(&parameter.name.replace('_', "-")),
+                    fish_escape(parameter.description.as_deref().unwrap_or(&parameter.name))
+                ));
+            }
+
+            lines.push(format!(
+                "complete -c {bin} -n '{}' -l 'api-key' -r -d 'Primitive API key override (defaults to PRIMITIVE_API_KEY or saved OAuth login credentials)'",
+                operation_condition(bin, operation)
+            ));
+
+            if !operation.binary_response {
+                lines.push(format!(
+                    "complete -c {bin} -n '{}' -l 'envelope' -d 'Print the full response envelope, including pagination metadata'",
+                    operation_condition(bin, operation)
+                ));
+            }
+
+            if operation.has_json_body {
+                lines.push(format!(
+                    "complete -c {bin} -n '{}' -l 'body' -r -d 'JSON request body'",
+                    operation_condition(bin, operation)
+                ));
+                lines.push(format!(
+                    "complete -c {bin} -n '{}' -l 'body-file' -r -d 'Path to a JSON file used as the request body'",
+                    operation_condition(bin, operation)
+                ));
+            }
+
+            if operation.binary_response {
+                lines.push(format!(
+                    "complete -c {bin} -n '{}' -l 'output' -r -d 'Write binary response bytes to a file'",
+                    operation_condition(bin, operation)
                 ));
             }
         }
-    }
-    for (topic, command, summary) in topic_pairs {
-        lines.push(format!(
-            "complete -c {bin} -f -n '__fish_{}_topic_needs_subcommand {}' -a '{}' -d '{}'",
-            shell_ident(bin),
-            fish_escape(&topic),
-            fish_escape(&command),
-            fish_escape(&summary)
-        ));
     }
 
     lines.push(format!(
@@ -282,18 +319,42 @@ fn render_fish_completion(bin: &str) -> String {
     lines.push(format!(
         "complete -c {bin} -l version -d 'Show version for {bin}'"
     ));
-    format!("{}\n", lines.join("\n"))
+    format!("{}\n\n", lines.join("\n"))
 }
 
-fn root_summary(root: &str) -> &str {
-    match root {
-        "autocomplete" => "Install or display shell autocomplete for bash, zsh, and powershell",
-        "completion" => "Show shell completion output or installation instructions",
-        "list-operations" => "List generated API operations",
-        "describe" => "Describe an API operation",
-        "config" => "Manage request environments",
-        "doctor" => "Run CLI diagnostics",
-        other => other,
+fn operation_condition(bin: &str, operation: &manifest::OperationManifest) -> String {
+    format!(
+        "__fish_{}_using_operation {} {}",
+        shell_ident(bin),
+        fish_escape(&operation.tag_command),
+        fish_escape(&operation.command)
+    )
+}
+
+fn node_topic_summary(topic: &str) -> Option<&'static str> {
+    match topic {
+        "account" => Some("Manage your account settings, storage, and webhook secret"),
+        "agent" => Some("Agent signup and authentication"),
+        "cli" => Some("Browser-assisted CLI authentication"),
+        "domains" => Some("Claim, verify, and manage email domains"),
+        "emails" => Some("List, inspect, and manage received emails"),
+        "endpoints" => Some("Manage webhook endpoints that receive email events"),
+        "filters" => Some("Manage whitelist and blocklist filter rules"),
+        "functions" => Some("Deploy JavaScript handlers that run on inbound mail. Each function\nis a single ESM module whose default export is an object with an\nasync `fetch(request, env)` method, in the shape of a Workers-style\nhandler. Primitive signs each delivery and forwards the\n`Primitive-Signature` header to the handler; verify the raw request\nbody with `PRIMITIVE_WEBHOOK_SECRET` before trusting the parsed event.\nThe `event` field is `email.received` for normal inbound mail, or a\nmachine-mail type (`email.bounced`, `email.tls_report`,\n`email.dmarc_report`, `email.dmarc_failure`) for bounces and reports;\nthe payload shape is otherwise identical. Code runs on\nPrimitive's edge runtime; there is no infrastructure to manage.\nSecrets land in `env` as encrypted bindings and are refreshed on\nevery redeploy.\n"),
+        "inbox" => Some("Check inbound email setup and processing readiness"),
+        "memories" => Some("Durable org-scoped or function-scoped JSON key-value storage for\nagents and functions. Keys are caller-defined. Function scope is\nalways addressed by the function id UUID, not by function name.\n"),
+        "payments" => Some("Collect and pay stablecoin (USDC) payments with x402. Settlement is\nnon-custodial: funds move directly from payer to payee on-chain via an\nEIP-3009 authorization the payer signs with their own key, and Primitive\nnever holds funds. The payee registers a payout address and creates a\nchallenge; the payer signs and settles it under a configurable spend\npolicy (kill-switch, per-payment and per-day caps, payee allowlist).\n"),
+        "registries" => Some("The Agent Registry: ownable directories of agents, addressable by a\nregistry-scoped handle. A registry's publish policy (owner_only, request,\nor open) decides whether a publish lists immediately or pends owner\napproval. An agent is defined once with a globally unique,\nreachability-verified address, then published into any registry under a\nhandle. Discovery reads (list, resolve, get) are public for public\nregistries; managing a registry and moderating requests use the owner's\nAPI key.\n"),
+        "routes" => Some("Recipient routing: route inbound mail to a single destination per recipient\naddress. Rules bind an address pattern (exact or wildcard) to an endpoint;\n`function_id` routes an address to a function, minting its route-target\nendpoint.\n"),
+        "search" => Some("Semantic and hybrid search across received and sent mail"),
+        "sending" => Some("Send outbound emails through the Primitive API"),
+        "templates" => {
+            Some("Browse approved Function templates, install deploy-mode templates, and\npoll install progress.\n")
+        }
+        "threads" => Some("Conversation threads spanning received and sent emails"),
+        "wake" => Some("Wake scheduling: schedule and send typed wake commands to your own\nfunctions over real DKIM-signed email on a cron cadence, and manage the\nper-target allowlist that authorizes which senders may wake a function.\n"),
+        "webhook-deliveries" => Some("View and replay webhook delivery attempts"),
+        _ => None,
     }
 }
 

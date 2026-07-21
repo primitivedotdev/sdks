@@ -14,7 +14,8 @@ fn fish_completion_includes_root_and_generated_subcommands() {
     assert!(script.contains("-a 'autocomplete'"));
     assert!(script.contains("-a 'sending'"));
     assert!(script.contains("-a 'send-email'"));
-    assert!(script.contains("-a 'send'"));
+    assert!(script.contains("__fish_primitive_rust_using_operation sending send-email"));
+    assert!(script.contains("-l 'api-key'"));
     assert!(script.contains("-l help"));
 }
 

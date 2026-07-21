@@ -700,39 +700,28 @@
       }
     },
     {
-      "name": "completion fish includes friendly command surface",
+      "name": "completion fish matches generated operation surface",
       "args": ["completion", "fish"],
-      "compare": false,
       "expect": {
+        "stdout": {
+          "contains": [
+            "function __fish_primitive_needs_command",
+            "function __fish_primitive_using_operation",
+            "complete -c primitive",
+            "-a 'completion'",
+            "-a 'autocomplete'",
+            "-a 'payments'",
+            "__fish_primitive_using_root_command completion",
+            "__fish_primitive_using_operation sending send-email",
+            "-l 'api-key'"
+          ],
+          "notContains": [
+            "-a 'pay-email'",
+            "complete -c primitive-rust"
+          ]
+        },
         "stderr": "",
         "requests": []
-      },
-      "expectByRunner": {
-        "node": {
-          "stdout": {
-            "contains": [
-              "function __fish_primitive_needs_command",
-              "complete -c primitive",
-              "-a 'completion'",
-              "-a 'autocomplete'",
-              "-a 'payments'",
-              "__fish_primitive_using_root_command completion"
-            ]
-          }
-        },
-        "rust": {
-          "stdout": {
-            "contains": [
-              "function __fish_primitive_needs_command",
-              "complete -c primitive",
-              "-a 'completion'",
-              "-a 'autocomplete'",
-              "-a 'payments'",
-              "-a 'pay-email'"
-            ],
-            "notContains": ["complete -c primitive-rust"]
-          }
-        }
       }
     },
     {
@@ -4061,17 +4050,96 @@
               "authorization": "Bearer prim_test"
             }
           }
-        ]
-      },
-      "expectByRunner": {
-        "node": {
-          "stdout": {
-            "contains": ["\"readiness\"", "\"receive\"", "\"commands\"", "\"proof\""]
-          }
-        },
-        "rust": {
-          "stdout": {
-            "contains": ["\"readiness\"", "\"receive\"", "\"commands\"", "\"proof\""]
+        ],
+        "stdout": {
+          "json": {
+            "success": true,
+            "data": {
+              "readiness": {
+                "ready": false,
+                "receiving_ready": true,
+                "processing_ready": false,
+                "mode": "stored_only",
+                "summary": "Inbound mail is stored but not processed."
+              },
+              "receive": {
+                "address": "inbox@managed.primitive.dev",
+                "domain": "managed.primitive.dev",
+                "managed": true,
+                "placeholder_local_part": "inbox"
+              },
+              "processing": {
+                "stored_only": true,
+                "active": false,
+                "enabled_endpoints": 0,
+                "deployed_functions": 0
+              },
+              "commands": {
+                "scaffold": [
+                  "primitive functions init inbound-reply",
+                  "cd inbound-reply",
+                  "npm install",
+                  "npm run build",
+                  "primitive functions deploy --name inbound-reply --file ./dist/handler.js --wait",
+                  "primitive functions test --id <function-id> --wait --show-sends"
+                ],
+                "logs": "primitive functions logs --id <function-id>",
+                "status": "primitive inbox status"
+              },
+              "proof": {
+                "after_test": [
+                  "inbound id for the generated test email",
+                  "function id matching the deployed Function",
+                  "invocation status completed, failed, or send_failed",
+                  "reply/send result emitted by the handler"
+                ],
+                "logs_command": "primitive functions logs --id <function-id>"
+              },
+              "status": {
+                "ready": false,
+                "receiving_ready": true,
+                "processing_ready": false,
+                "summary": "Inbound mail is stored but not processed.",
+                "next_actions": [],
+                "domains": [
+                  {
+                    "id": "domain_managed",
+                    "domain": "managed.primitive.dev",
+                    "verified": true,
+                    "active": true,
+                    "managed": true,
+                    "receiving_ready": true,
+                    "processing_ready": false,
+                    "processing_route_count": 0,
+                    "endpoint_count": 0,
+                    "enabled_endpoint_count": 0,
+                    "function_endpoint_count": 0,
+                    "email_count": 7,
+                    "latest_email_received_at": "2026-07-17T12:13:14Z",
+                    "status": "stored_only"
+                  }
+                ],
+                "endpoints": {
+                  "total": 0,
+                  "enabled": 0,
+                  "disabled": 0,
+                  "fallback_enabled": 0,
+                  "domain_scoped_enabled": 0,
+                  "http_enabled": 0,
+                  "function_enabled": 0
+                },
+                "functions": {
+                  "total": 0,
+                  "deployed": 0,
+                  "pending": 0,
+                  "failed": 0
+                },
+                "recent_emails": {
+                  "total": 7,
+                  "latest_received_at": "2026-07-17T12:13:14Z"
+                }
+              }
+            }
           }
         }
       }
@@ -4639,6 +4707,22 @@
         "stderr": {
           "contains": [
             "Unknown operation `sending:sedn`. Did you mean: sending:send-email?"
+          ]
+        },
+        "requests": []
+      }
+    },
+    {
+      "name": "describe wake shortcut alias is not supported",
+      "args": ["describe", "wake:schedules:list"],
+      "compare": false,
+      "expect": {
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": {
+          "contains": [
+            "Unknown operation `wake:schedules:list`",
+            "list-operations"
           ]
         },
         "requests": []
@@ -5454,6 +5538,120 @@
       }
     },
     {
+      "name": "send friendly shortcut reads body from file",
+      "args": [
+        "send",
+        "--api-key",
+        "prim_test",
+        "--from",
+        "agent@example.com",
+        "--to",
+        "user@example.com",
+        "--body-file",
+        "__CASE_TMP__/message.txt"
+      ],
+      "files": {
+        "message.txt": "Hello from file\nsecond line"
+      },
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "sent_body_file",
+                  "subject": "Hello from file"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": {
+          "json": {
+            "id": "sent_body_file",
+            "subject": "Hello from file"
+          }
+        },
+        "stderr": "",
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/send-mail",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "body_text": "Hello from file\nsecond line",
+              "from": "agent@example.com",
+              "subject": "Hello from file",
+              "to": "user@example.com"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "send friendly shortcut reads html from file",
+      "args": [
+        "send",
+        "--api-key",
+        "prim_test",
+        "--from",
+        "agent@example.com",
+        "--to",
+        "user@example.com",
+        "--subject",
+        "HTML file subject",
+        "--html-file",
+        "__CASE_TMP__/message.html"
+      ],
+      "files": {
+        "message.html": "<p>Hello from html file</p>"
+      },
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "sent_html_file",
+                  "subject": "HTML file subject"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": {
+          "json": {
+            "id": "sent_html_file",
+            "subject": "HTML file subject"
+          }
+        },
+        "stderr": "",
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/send-mail",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "body_html": "<p>Hello from html file</p>",
+              "from": "agent@example.com",
+              "subject": "HTML file subject",
+              "to": "user@example.com"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "send body stdin preserves trailing newline",
       "args": [
         "send",
@@ -5746,6 +5944,108 @@
             },
             "body": {
               "body_html": "<p>Thanks from stdin</p>"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "reply friendly shortcut reads body from file",
+      "args": [
+        "reply",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "email_123",
+        "--body-file",
+        "__CASE_TMP__/reply.txt"
+      ],
+      "files": {
+        "reply.txt": "Thanks from file\nsecond line"
+      },
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "sent_reply_body_file",
+                  "status": "queued"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": {
+          "json": {
+            "id": "sent_reply_body_file",
+            "status": "queued"
+          }
+        },
+        "stderr": "",
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/emails/email_123/reply",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "body_text": "Thanks from file\nsecond line"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "reply friendly shortcut reads html from file",
+      "args": [
+        "reply",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "email_123",
+        "--html-file",
+        "__CASE_TMP__/reply.html"
+      ],
+      "files": {
+        "reply.html": "<p>Thanks from html file</p>"
+      },
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "sent_reply_html_file",
+                  "status": "queued"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": {
+          "json": {
+            "id": "sent_reply_html_file",
+            "status": "queued"
+          }
+        },
+        "stderr": "",
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/emails/email_123/reply",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "body_html": "<p>Thanks from html file</p>"
             }
           }
         ]
@@ -11561,6 +11861,7 @@
         }
       },
       "expect": {
+        "configFilesAbsent": ["config.json"],
         "requests": [],
         "stdout": "",
         "stderr": "Primitive CLI request config reset.\n"
@@ -12578,6 +12879,111 @@
       }
     },
     {
+      "name": "payments charge passes base-unit amount",
+      "args": [
+        "payments",
+        "charge",
+        "--api-key",
+        "prim_test",
+        "--amount",
+        "10000",
+        "--network",
+        "base",
+        "--payer-org",
+        "org_payer",
+        "--resource",
+        "https://example.com/invoice/123",
+        "--expires-in",
+        "120",
+        "--description",
+        "Invoice",
+        "--idempotency-key",
+        "idem_charge_base"
+      ],
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "ch_base",
+                  "network": "base",
+                  "amount": "10000"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": {
+          "json": {
+            "amount": "10000",
+            "id": "ch_base",
+            "network": "base"
+          }
+        },
+        "stderr": "Challenge ch_base for 0.01 USDC on base. Hand the JSON below to the payer; they settle it with `primitive payments pay`.\n",
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/x402/challenges",
+            "headers": {
+              "authorization": "Bearer prim_test",
+              "idempotency-key": "idem_charge_base"
+            },
+            "body": {
+              "amount": "10000",
+              "description": "Invoice",
+              "expires_in": 120,
+              "network": "base",
+              "payer_org": "org_payer",
+              "resource": "https://example.com/invoice/123"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "payments charge rejects invalid raw amount before api",
+      "args": ["payments", "charge", "--api-key", "prim_test", "--amount", "abc"],
+      "compare": false,
+      "expect": {
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": {
+          "contains": [
+            "charge() requires `amount` as a positive integer string in token base units"
+          ]
+        },
+        "requests": []
+      }
+    },
+    {
+      "name": "payments charge rejects both amount flags as usage error",
+      "args": [
+        "payments",
+        "charge",
+        "--amount",
+        "10000",
+        "--amount-usdc",
+        "0.01"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "stderr": {
+          "contains": [
+            "--amount-usdc=0.01 cannot also be provided when using --amount",
+            "--amount=10000 cannot also be provided when using --amount-usdc"
+          ]
+        },
+        "requests": []
+      }
+    },
+    {
       "name": "payments charge no payout address prints recovery hint",
       "args": [
         "payments",
@@ -13580,6 +13986,74 @@
       }
     },
     {
+      "name": "payments pay signs inline challenge",
+      "args": [
+        "payments",
+        "pay",
+        "--api-key",
+        "prim_test",
+        "--api-base-url",
+        "__BASE_URL__",
+        "--private-key",
+        "__TEST_PRIVATE_KEY__",
+        "--challenge",
+        "{\"data\":{\"id\":\"ch_123\",\"network\":\"base-sepolia\",\"amount\":\"10000\",\"pay_to\":\"0x1111111111111111111111111111111111111111\",\"nonce_binding\":{\"interaction_id\":\"a1b2c3d4-0000-0000-0000-000000000001@payer.example\",\"challenge_step_id\":\"f00dface-0000-0000-0000-0000000000aa\",\"challenge_nonce\":\"aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899\"},\"payment_requirements\":{\"scheme\":\"exact\",\"network\":\"base-sepolia\",\"maxAmountRequired\":\"10000\",\"payTo\":\"0x1111111111111111111111111111111111111111\",\"asset\":\"0x036CbD53842c5426634e7929541eC2318f3dCF7e\",\"extra\":{\"name\":\"USDC\",\"version\":\"2\"}},\"expires_at\":\"2099-01-01T00:00:00.000Z\"}}"
+      ],
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "receipt_123",
+                  "status": "settled",
+                  "settle_tx": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": "Payment settled. Transaction: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nhttps://sepolia.basescan.org/tx/0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+        "stderr": "",
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/x402/challenges/ch_123/pay",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "payment": {
+                "x402Version": 1,
+                "scheme": "exact",
+                "network": "base-sepolia",
+                "payload": {
+                  "signature": {
+                    "$matches": "^0x[0-9a-fA-F]{130}$"
+                  },
+                  "authorization": {
+                    "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                    "to": "0x1111111111111111111111111111111111111111",
+                    "value": "10000",
+                    "validAfter": {
+                      "$matches": "^[1-9][0-9]*$"
+                    },
+                    "validBefore": {
+                      "$matches": "^[1-9][0-9]*$"
+                    },
+                    "nonce": "0xc955a08812ab83f9e25c92e5162267b913957c3cc8678de1cf1449f77b516c6e"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "payments pay challenge colon alias signs challenge file",
       "args": [
         "payments:pay-challenge",
@@ -13671,6 +14145,106 @@
             }
           }
         ]
+      }
+    },
+    {
+      "name": "payments pay email step signs challenge file",
+      "args": [
+        "payments",
+        "pay-email-step",
+        "--private-key",
+        "__TEST_PRIVATE_KEY__",
+        "--challenge-file",
+        "__CASE_TMP__/email-challenge.json"
+      ],
+      "files": {
+        "email-challenge.json": {
+          "data": {
+            "interaction_id": "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+            "challenge_id": "ch_123",
+            "challenge": {
+              "payment_requirements": {
+                "scheme": "exact",
+                "network": "base-sepolia",
+                "maxAmountRequired": "10000",
+                "payTo": "0x1111111111111111111111111111111111111111",
+                "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                "extra": {
+                  "name": "USDC",
+                  "version": "2"
+                }
+              },
+              "nonce_binding": {
+                "interaction_id": "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+                "challenge_step_id": "f00dface-0000-0000-0000-0000000000aa",
+                "challenge_nonce": "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"
+              },
+              "expires_at": "2099-01-01T00:00:00.000Z"
+            }
+          }
+        }
+      },
+      "server": {
+        "exchanges": []
+      },
+      "normalize": {
+        "masks": [
+          {
+            "pattern": "\"step_id\"\\s*:\\s*\"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}\"",
+            "replacement": "\"step_id\":\"<payment-step-id>\""
+          },
+          {
+            "pattern": "\"signature\"\\s*:\\s*\"0x[0-9a-fA-F]{130}\"",
+            "replacement": "\"signature\":\"<signature>\""
+          },
+          {
+            "pattern": "\"validAfter\"\\s*:\\s*\"[0-9]+\"",
+            "replacement": "\"validAfter\":\"<valid-after>\""
+          },
+          {
+            "pattern": "\"validBefore\"\\s*:\\s*\"[0-9]+\"",
+            "replacement": "\"validBefore\":\"<valid-before>\""
+          }
+        ]
+      },
+      "expect": {
+        "stdout": {
+          "matches": [
+            "\"interaction_id\"\\s*:\\s*\"a1b2c3d4-0000-0000-0000-000000000001@payer\\.example\"",
+            "\"step\"\\s*:\\s*\"payment\"",
+            "\"signature\"\\s*:\\s*\"0x[0-9a-fA-F]{130}\""
+          ],
+          "json": {
+            "interaction_version": 1,
+            "interaction_id": "a1b2c3d4-0000-0000-0000-000000000001@payer.example",
+            "protocol": "x402.payment",
+            "protocol_version": 1,
+            "step": "payment",
+            "step_id": "<payment-step-id>",
+            "prev_step_id": "f00dface-0000-0000-0000-0000000000aa",
+            "expires_at": null,
+            "payload": {
+              "payment": {
+                "x402Version": 1,
+                "scheme": "exact",
+                "network": "base-sepolia",
+                "payload": {
+                  "signature": "<signature>",
+                  "authorization": {
+                    "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                    "to": "0x1111111111111111111111111111111111111111",
+                    "value": "10000",
+                    "validAfter": "<valid-after>",
+                    "validBefore": "<valid-before>",
+                    "nonce": "0xc955a08812ab83f9e25c92e5162267b913957c3cc8678de1cf1449f77b516c6e"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "stderr": "",
+        "requests": []
       }
     },
     {
@@ -14424,6 +14998,129 @@
       }
     },
     {
+      "name": "functions deploy stdin secret redeploy",
+      "args": [
+        "functions",
+        "deploy",
+        "--name",
+        "stdin-secret-bot",
+        "--file",
+        "__CASE_TMP__/stdin-secret-bundle.js",
+        "--secret-from-stdin",
+        "API_TOKEN",
+        "--api-key",
+        "prim_test",
+        "--api-base-url",
+        "__BASE_URL__"
+      ],
+      "stdin": "stdin-secret\n",
+      "files": {
+        "stdin-secret-bundle.js": "export default { fetch() { return new Response(\"stdin secret\"); } };"
+      },
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "fn_stdin_secret",
+                  "name": "stdin-secret-bot",
+                  "deploy_status": "pending"
+                }
+              }
+            }
+          },
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "function_id": "fn_stdin_secret",
+                  "key": "API_TOKEN",
+                  "updated_at": "2026-07-17T12:00:00.000Z"
+                }
+              }
+            }
+          },
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "id": "fn_stdin_secret",
+                  "name": "stdin-secret-bot",
+                  "deploy_status": "pending",
+                  "updated_at": "2026-07-17T12:00:01.000Z"
+                }
+              }
+            }
+          },
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": null
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": {
+          "contains": [
+            "\"id\": \"fn_stdin_secret\"",
+            "\"name\": \"stdin-secret-bot\""
+          ]
+        },
+        "stderr": {
+          "contains": [
+            "Deployed but no route is bound"
+          ]
+        },
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/functions",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "code": "export default { fetch() { return new Response(\"stdin secret\"); } };",
+              "name": "stdin-secret-bot"
+            }
+          },
+          {
+            "method": "PUT",
+            "path": "/v1/functions/fn_stdin_secret/secrets/API_TOKEN",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "value": "stdin-secret"
+            }
+          },
+          {
+            "method": "PUT",
+            "path": "/v1/functions/fn_stdin_secret",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "code": "export default { fetch() { return new Response(\"stdin secret\"); } };"
+            }
+          },
+          {
+            "method": "GET",
+            "path": "/v1/functions/fn_stdin_secret/routing",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "functions redeploy file source map secret file",
       "args": [
         "functions",
@@ -14829,6 +15526,63 @@
       }
     },
     {
+      "name": "functions set-secret reads value from stdin",
+      "args": [
+        "functions",
+        "set-secret",
+        "--id",
+        "fn_123",
+        "--key",
+        "API_TOKEN",
+        "--stdin",
+        "--api-key",
+        "prim_test",
+        "--api-base-url",
+        "__BASE_URL__"
+      ],
+      "stdin": "stdin-secret\n",
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "function_id": "fn_123",
+                  "key": "API_TOKEN",
+                  "updated_at": "2026-07-17T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": {
+          "json": {
+            "secret": {
+              "function_id": "fn_123",
+              "key": "API_TOKEN",
+              "updated_at": "2026-07-17T12:00:00.000Z"
+            }
+          }
+        },
+        "stderr": "Secret API_TOKEN saved. Not live until redeploy. Re-run with --redeploy, or run `primitive functions redeploy --id fn_123 --file <bundle.js>`.\n",
+        "requests": [
+          {
+            "method": "PUT",
+            "path": "/v1/functions/fn_123/secrets/API_TOKEN",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "value": "stdin-secret"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "functions set-secret redeploys current code",
       "args": [
         "functions",
@@ -15087,43 +15841,40 @@
         "--out-dir",
         "__CASE_TMP__/function-project"
       ],
-      "compare": false,
       "expect": {
         "stderr": "",
         "requests": [],
+        "stdout": "Scaffolded __CASE_TMP__/function-project from email-reply template.\nNext:\n  cd __CASE_TMP__/function-project\n  npm install\n  npm run deploy\n  export PRIMITIVE_FUNCTION_ID=<id-from-deploy-output>\n  npm run test:function\n",
         "files": {
+          "function-project/.gitignore": "node_modules\ndist\n",
+          "function-project/build.mjs": {
+            "contains": ["esbuild", "outfile: \"dist/handler.js\""]
+          },
           "function-project/package.json": {
             "contains": [
               "\"name\": \"agent-replier\"",
+              "\"build\"",
               "\"deploy\"",
               "\"test:function\""
             ]
           },
+          "function-project/tsconfig.json": {
+            "contains": [
+              "\"target\": \"ES2022\"",
+              "\"strict\": true"
+            ]
+          },
           "function-project/README.md": {
             "contains": [
+              "# agent-replier",
+              "npm install",
               "npm run deploy",
+              "PRIMITIVE_FUNCTION_ID",
               "npm run test:function"
             ]
           },
           "function-project/handler.ts": {
             "contains": ["createPrimitiveClient", "client.reply"]
-          }
-        }
-      },
-      "expectByRunner": {
-        "node": {
-          "stdout": {
-            "contains": [
-              "Scaffolded __CASE_TMP__/function-project from email-reply template.",
-              "npm run deploy"
-            ]
-          }
-        },
-        "rust": {
-          "stdout": {
-            "contains": [
-              "Created Primitive Function project in __CASE_TMP__/function-project."
-            ]
           }
         }
       }
@@ -18561,6 +19312,104 @@
       }
     },
     {
+      "name": "login no-arg no browser writes oauth credentials",
+      "args": [
+        "login",
+        "--no-browser",
+        "--device-name",
+        "Primitive CLI"
+      ],
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "device_code": "device_123",
+                  "user_code": "ABCD-EFGH",
+                  "verification_uri": "https://app.example.test/device",
+                  "verification_uri_complete": "https://app.example.test/device?user_code=ABCD-EFGH",
+                  "expires_in": 5,
+                  "interval": 1
+                }
+              }
+            }
+          },
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "access_token": "prim_oat_login_noarg",
+                  "auth_method": "oauth",
+                  "expires_in": 3600,
+                  "oauth_client_id": "primitive-cli",
+                  "oauth_grant_id": "grant_login_noarg",
+                  "org_id": "org_browser",
+                  "org_name": "Browser Org",
+                  "refresh_token": "prim_ort_login_noarg",
+                  "token_type": "Bearer"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": {
+          "contains": [
+            "Your sign-in code is: ABCD-EFGH",
+            "If the browser did not open, visit: https://app.example.test/device?user_code=ABCD-EFGH",
+            "Waiting for browser approval...",
+            "Logged in to org org_browser (Browser Org).",
+            "Saved credentials to __CONFIG_DIR__/credentials.json."
+          ],
+          "notContains": [
+            "Opening Primitive in your browser..."
+          ]
+        },
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/cli/login/start",
+            "headersAbsent": ["authorization"],
+            "body": {
+              "device_name": "Primitive CLI"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/cli/login/poll",
+            "headersAbsent": ["authorization"],
+            "body": {
+              "device_code": "device_123"
+            }
+          }
+        ],
+        "configFiles": {
+          "credentials.json": {
+            "access_token": "prim_oat_login_noarg",
+            "api_base_url": "__BASE_URL__",
+            "auth_method": "oauth",
+            "created_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "expires_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "oauth_client_id": "primitive-cli",
+            "oauth_grant_id": "grant_login_noarg",
+            "org_id": "org_browser",
+            "org_name": "Browser Org",
+            "refresh_token": "prim_ort_login_noarg",
+            "token_type": "Bearer"
+          }
+        }
+      }
+    },
+    {
       "name": "login browser opens browser writes oauth credentials",
       "args": [
         "login",
@@ -18756,6 +19605,104 @@
             "org_id": "org_browser",
             "org_name": "Browser Org",
             "refresh_token": "prim_ort_browser",
+            "token_type": "Bearer"
+          }
+        }
+      }
+    },
+    {
+      "name": "signin no-arg no browser writes oauth credentials",
+      "args": [
+        "signin",
+        "--no-browser",
+        "--device-name",
+        "Primitive CLI"
+      ],
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "device_code": "device_123",
+                  "user_code": "ABCD-EFGH",
+                  "verification_uri": "https://app.example.test/device",
+                  "verification_uri_complete": "https://app.example.test/device?user_code=ABCD-EFGH",
+                  "expires_in": 5,
+                  "interval": 1
+                }
+              }
+            }
+          },
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": {
+                  "access_token": "prim_oat_signin_noarg",
+                  "auth_method": "oauth",
+                  "expires_in": 3600,
+                  "oauth_client_id": "primitive-cli",
+                  "oauth_grant_id": "grant_signin_noarg",
+                  "org_id": "org_browser",
+                  "org_name": "Browser Org",
+                  "refresh_token": "prim_ort_signin_noarg",
+                  "token_type": "Bearer"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": {
+          "contains": [
+            "Your sign-in code is: ABCD-EFGH",
+            "If the browser did not open, visit: https://app.example.test/device?user_code=ABCD-EFGH",
+            "Waiting for browser approval...",
+            "Logged in to org org_browser (Browser Org).",
+            "Saved credentials to __CONFIG_DIR__/credentials.json."
+          ],
+          "notContains": [
+            "Opening Primitive in your browser..."
+          ]
+        },
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/cli/login/start",
+            "headersAbsent": ["authorization"],
+            "body": {
+              "device_name": "Primitive CLI"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/v1/cli/login/poll",
+            "headersAbsent": ["authorization"],
+            "body": {
+              "device_code": "device_123"
+            }
+          }
+        ],
+        "configFiles": {
+          "credentials.json": {
+            "access_token": "prim_oat_signin_noarg",
+            "api_base_url": "__BASE_URL__",
+            "auth_method": "oauth",
+            "created_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "expires_at": {
+              "$matches": "^\\d{4}-\\d{2}-\\d{2}T"
+            },
+            "oauth_client_id": "primitive-cli",
+            "oauth_grant_id": "grant_signin_noarg",
+            "org_id": "org_browser",
+            "org_name": "Browser Org",
+            "refresh_token": "prim_ort_signin_noarg",
             "token_type": "Bearer"
           }
         }
@@ -19843,11 +20790,19 @@
         "stderr": "",
         "requests": [],
         "stdout": {
-          "contains": [
-            "\"pending\": true",
-            "\"email\": \"user@example.com\"",
-            "\"confirm_command\": \"primitive signup confirm user@example.com <code>\""
-          ]
+          "jsonMatches": {
+            "code_length": 6,
+            "confirm_command": "primitive signup confirm user@example.com <code>",
+            "email": "user@example.com",
+            "expired": false,
+            "expires_at": "2099-01-01T00:00:00.000Z",
+            "expires_in": {
+              "$numberMin": 1
+            },
+            "pending": true,
+            "resend_after": 30,
+            "resend_command": "primitive signup resend user@example.com"
+          }
         }
       }
     },
