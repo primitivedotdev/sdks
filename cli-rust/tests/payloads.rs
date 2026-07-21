@@ -15,8 +15,8 @@ pub mod config {
     }
 
     pub fn env_no_proxy_wildcard() -> bool {
-        std::env::var("NO_PROXY")
-            .or_else(|_| std::env::var("no_proxy"))
+        std::env::var("no_proxy")
+            .or_else(|_| std::env::var("NO_PROXY"))
             .is_ok_and(|value| value.split(',').any(|entry| entry.trim() == "*"))
     }
 

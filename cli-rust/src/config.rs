@@ -34,12 +34,15 @@ const PRIMITIVE_KEY_RENAME_HINT: &str = "PRIMITIVE_KEY is set but the CLI reads 
 /// (bypass everything) wildcard that the Node CLI (undici) and curl respect;
 /// with `HTTP(S)_PROXY` set, requests would still route through the proxy.
 /// Detect the wildcard and let callers disable proxying entirely to match
-/// Node. The effective value resolves like reqwest itself does: `NO_PROXY`
-/// first, falling back to `no_proxy` (proxy.rs `NoProxy::from_env`), so this
-/// gate always agrees with the list reqwest would otherwise apply.
+/// Node. Precedence follows undici (verified empirically): the lowercase
+/// `no_proxy` wins when both spellings are set. With `NO_PROXY=*` +
+/// `no_proxy=host` this gate stays out of the way and reqwest keeps
+/// proxying (it ignores the `*` entry in the uppercase list it resolves),
+/// matching Node; with `NO_PROXY=host` + `no_proxy=*` the gate disables
+/// proxying, also matching Node.
 pub fn env_no_proxy_wildcard() -> bool {
-    std::env::var("NO_PROXY")
-        .or_else(|_| std::env::var("no_proxy"))
+    std::env::var("no_proxy")
+        .or_else(|_| std::env::var("NO_PROXY"))
         .is_ok_and(|value| no_proxy_value_has_wildcard(&value))
 }
 
