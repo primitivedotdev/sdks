@@ -21529,6 +21529,36 @@
         "stdout": "",
         "requests": [{"method": "GET", "path": "/v1/domains", "headers": {"authorization": "Bearer prim_test"}}]
       }
+    },
+    {
+      "name": "send missing required to exits usage",
+      "args": ["send", "--api-key", "prim_test", "--from", "agent@example.com", "--body", "hi"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "org secret set missing key exits usage",
+      "args": ["org", "secrets", "set", "--api-key", "prim_test", "--value", "v"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "reply missing required id exits usage",
+      "args": ["reply", "--api-key", "prim_test", "--body", "hi"],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
     }
   ]
 }

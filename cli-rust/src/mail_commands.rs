@@ -3166,7 +3166,7 @@ fn flag_many(parsed: &ParsedArgs, name: &str) -> Vec<String> {
 }
 
 fn required_flag(parsed: &ParsedArgs, name: &str) -> Result<String> {
-    flag_one(parsed, name).ok_or_else(|| anyhow!("Missing required --{name}"))
+    flag_one(parsed, name).ok_or_else(|| crate::usage_error(format!("Missing required --{name}")))
 }
 
 fn optional_u64_flag(parsed: &ParsedArgs, name: &str) -> Result<Option<u64>> {

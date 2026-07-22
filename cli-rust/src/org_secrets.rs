@@ -715,7 +715,7 @@ fn flag_one(parsed: &ParsedArgs, name: &str) -> Option<String> {
 }
 
 fn required_flag(parsed: &ParsedArgs, name: &str) -> Result<String> {
-    flag_one(parsed, name).ok_or_else(|| anyhow!("Missing required --{name}"))
+    flag_one(parsed, name).ok_or_else(|| crate::usage_error(format!("Missing required --{name}")))
 }
 
 fn single_secret_source_from_parsed(parsed: &ParsedArgs) -> Result<SingleSecretValueSource> {
