@@ -71,8 +71,11 @@ pub fn main_entry() {
             if is_broken_pipe_error(&error) {
                 return;
             }
+            // Walk the whole chain so a CliError wrapped by context() (or any
+            // other layering) still selects its exit code.
             let exit_code = error
-                .downcast_ref::<CliError>()
+                .chain()
+                .find_map(|cause| cause.downcast_ref::<CliError>())
                 .map(CliError::exit_code)
                 .unwrap_or(1);
             eprintln!("{error}");

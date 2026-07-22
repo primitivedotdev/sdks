@@ -184,7 +184,9 @@ pub fn dispatch(args: Vec<String>) -> Result<()> {
         "config:use" if is_help_request(rest) => config_help("config:use"),
         "config:use" => {
             let [name] = rest else {
-                return Err(anyhow!("config:use requires exactly one environment name"));
+                return Err(crate::usage_error(
+                    "config:use requires exactly one environment name",
+                ));
             };
             let result = config::config_use(name)?;
             eprintln!(
@@ -629,9 +631,9 @@ fn describe_help_text() -> String {
 }
 
 fn describe(args: &[String]) -> Result<()> {
-    let id = args
-        .first()
-        .ok_or_else(|| anyhow!("describe requires a command id, alias, or operation name"))?;
+    let id = args.first().ok_or_else(|| {
+        crate::usage_error("describe requires a command id, alias, or operation name")
+    })?;
     let OperationLookup {
         operation,
         candidates,

@@ -585,11 +585,14 @@ fn build_chat_command_plan_from_args_internal(
     let recipient = parsed
         .positionals
         .first()
-        .ok_or_else(|| anyhow!("chat requires a recipient"))?
+        .ok_or_else(|| crate::usage_error("chat requires a recipient"))?
         .clone();
     let positional_message = parsed.positionals.get(1).cloned();
     if parsed.positionals.len() > 2 {
-        return Err(anyhow!("Unexpected argument: {}", parsed.positionals[2]));
+        return Err(crate::usage_error(format!(
+            "Unexpected argument: {}",
+            parsed.positionals[2]
+        )));
     }
 
     let reply = flag_one(&parsed, "reply");
@@ -757,7 +760,10 @@ pub fn build_chat_reply_command_plan_from_args(
         &["attachment"],
     )?;
     if parsed.positionals.len() > 2 {
-        return Err(anyhow!("Unexpected argument: {}", parsed.positionals[2]));
+        return Err(crate::usage_error(format!(
+            "Unexpected argument: {}",
+            parsed.positionals[2]
+        )));
     }
 
     let flag_id = optional_u64_flag(&parsed, "id")?;
@@ -1415,8 +1421,8 @@ pub fn pick_default_from_address(domains_response: &Value) -> Result<String> {
         }
     }
 
-    Err(anyhow!(
-        "No active verified outbound domain found on this account; pass --from explicitly. To set up outbound, claim a domain via `primitive domains add` and verify it."
+    Err(crate::usage_error(
+        "No active verified outbound domain found on this account; pass --from explicitly. To set up outbound, claim a domain via `primitive domains add` and verify it.",
     ))
 }
 
@@ -1438,7 +1444,7 @@ pub fn build_send_shortcut_body(input: &SendShortcutInput) -> Result<Value> {
         .from
         .as_ref()
         .or(input.default_from.as_ref())
-        .ok_or_else(|| anyhow!("--from is required. Pass --from explicitly."))?;
+        .ok_or_else(|| crate::usage_error("--from is required. Pass --from explicitly."))?;
     let subject = input.subject.clone().unwrap_or_else(|| {
         input
             .bodies
@@ -3142,7 +3148,7 @@ fn write_idempotent_replay_banner(data: &Value) {
 
 fn reject_positionals(parsed: &ParsedArgs) -> Result<()> {
     if let Some(value) = parsed.positionals.first() {
-        return Err(anyhow!("Unexpected argument: {value}"));
+        return Err(crate::usage_error(format!("Unexpected argument: {value}")));
     }
     Ok(())
 }
@@ -3160,7 +3166,7 @@ fn flag_many(parsed: &ParsedArgs, name: &str) -> Vec<String> {
 }
 
 fn required_flag(parsed: &ParsedArgs, name: &str) -> Result<String> {
-    flag_one(parsed, name).ok_or_else(|| anyhow!("Missing required --{name}"))
+    flag_one(parsed, name).ok_or_else(|| crate::usage_error(format!("Missing required --{name}")))
 }
 
 fn optional_u64_flag(parsed: &ParsedArgs, name: &str) -> Result<Option<u64>> {
@@ -3229,8 +3235,8 @@ fn ensure_has_body(bodies: &ResolvedMessageBodies) -> Result<()> {
     {
         return Ok(());
     }
-    Err(anyhow!(
-        "Either a non-empty plain-text body or a non-empty HTML body is required."
+    Err(crate::usage_error(
+        "Either a non-empty plain-text body or a non-empty HTML body is required.",
     ))
 }
 

@@ -123,7 +123,9 @@ pub fn dispatch(args: &[String]) -> Result<()> {
             print_help(None);
             Ok(())
         }
-        other => Err(anyhow!("Unknown payloads command `{other}`")),
+        other => Err(crate::usage_error(format!(
+            "Unknown payloads command `{other}`"
+        ))),
     }
 }
 
@@ -136,9 +138,12 @@ pub fn run_push(args: &[String]) -> Result<()> {
     let file = parsed
         .positionals
         .first()
-        .ok_or_else(|| anyhow!("payloads push requires a file path"))?;
+        .ok_or_else(|| crate::usage_error("payloads push requires a file path"))?;
     if parsed.positionals.len() > 1 {
-        return Err(anyhow!("Unexpected argument: {}", parsed.positionals[1]));
+        return Err(crate::usage_error(format!(
+            "Unexpected argument: {}",
+            parsed.positionals[1]
+        )));
     }
     let client = resolve_client(&parsed.flags)?;
     let concurrency = parsed
@@ -174,9 +179,12 @@ pub fn run_pull(args: &[String]) -> Result<()> {
     let root = parsed
         .positionals
         .first()
-        .ok_or_else(|| anyhow!("payloads pull requires a merkle_root"))?;
+        .ok_or_else(|| crate::usage_error("payloads pull requires a merkle_root"))?;
     if parsed.positionals.len() > 1 {
-        return Err(anyhow!("Unexpected argument: {}", parsed.positionals[1]));
+        return Err(crate::usage_error(format!(
+            "Unexpected argument: {}",
+            parsed.positionals[1]
+        )));
     }
     let out = parsed
         .flags
@@ -860,7 +868,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
             }
             Some(FlagKind::Value) => {
                 if index + 1 >= args.len() || args[index + 1].starts_with("--") {
-                    return Err(anyhow!("Flag --{name} expects a value"));
+                    return Err(crate::usage_error(format!("Flag --{name} expects a value")));
                 }
                 parsed.flags.insert(name, args[index + 1].clone());
                 index += 2;

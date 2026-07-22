@@ -39,7 +39,9 @@ pub fn dispatch(args: &[String]) -> Result<()> {
             }
             execute_upgrade(&build_agent_upgrade_plan(&args[1..])?)
         }
-        other => Err(anyhow!("Unknown agent command `{other}`")),
+        other => Err(crate::usage_error(format!(
+            "Unknown agent command `{other}`"
+        ))),
     }
 }
 
@@ -55,7 +57,9 @@ pub fn execute_command(command: &str, args: &[String]) -> Result<()> {
             }
             execute_upgrade(&build_agent_upgrade_plan(args)?)
         }
-        other => Err(anyhow!("Unknown agent command `{other}`")),
+        other => Err(crate::usage_error(format!(
+            "Unknown agent command `{other}`"
+        ))),
     }
 }
 
@@ -66,10 +70,10 @@ pub fn is_agent_friendly_command(command: &str) -> bool {
 pub fn build_agent_upgrade_plan(args: &[String]) -> Result<AgentUpgradePlan> {
     let parsed = parse_args(args, &["api-base-url", "api-key", "code", "email"], &[])?;
     if !parsed.positionals.is_empty() {
-        return Err(anyhow!(
+        return Err(crate::usage_error(format!(
             "Unexpected argument: {}. Use --email and --code with agent upgrade.",
             parsed.positionals[0]
-        ));
+        )));
     }
     let auth = auth_flags(&parsed);
     Ok(AgentUpgradePlan {
@@ -215,7 +219,7 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
                     index += 1;
                     args.get(index)
                         .cloned()
-                        .ok_or_else(|| anyhow!("Missing value for --{name}"))?
+                        .ok_or_else(|| crate::usage_error(format!("Missing value for --{name}")))?
                 }
             };
             parsed.flags.insert(name.to_string(), value);
@@ -224,13 +228,15 @@ fn parse_args(args: &[String], value_flags: &[&str], bool_flags: &[&str]) -> Res
         }
         if bool_flags.contains(name) {
             if inline_value.is_some() {
-                return Err(anyhow!("Flag --{name} does not take a value"));
+                return Err(crate::usage_error(format!(
+                    "Flag --{name} does not take a value"
+                )));
             }
             parsed.bool_flags.insert(name.to_string());
             index += 1;
             continue;
         }
-        return Err(anyhow!("Unknown flag --{name}"));
+        return Err(crate::usage_error(format!("Unknown flag --{name}")));
     }
     Ok(parsed)
 }

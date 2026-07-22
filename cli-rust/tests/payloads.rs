@@ -41,6 +41,10 @@ pub mod config {
     }
 }
 
+pub fn usage_error(message: impl Into<String>) -> anyhow::Error {
+    anyhow::anyhow!(message.into())
+}
+
 #[path = "../src/payloads.rs"]
 pub mod payloads;
 

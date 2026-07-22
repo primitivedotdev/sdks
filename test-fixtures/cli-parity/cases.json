@@ -2,7 +2,9 @@
   "cases": [
     {
       "name": "list operations manifest",
-      "args": ["list-operations"],
+      "args": [
+        "list-operations"
+      ],
       "compare": true
     },
     {
@@ -24,8 +26,15 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["USAGE", "COMMANDS", "list-operations"],
-            "notContains": ["New to Primitive?", "Signed in as"]
+            "contains": [
+              "USAGE",
+              "COMMANDS",
+              "list-operations"
+            ],
+            "notContains": [
+              "New to Primitive?",
+              "Signed in as"
+            ]
           }
         },
         "rust": {
@@ -84,7 +93,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["Signed in as"]
+            "notContains": [
+              "Signed in as"
+            ]
           }
         },
         "rust": {
@@ -98,7 +109,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["Signed in as"]
+            "notContains": [
+              "Signed in as"
+            ]
           }
         }
       }
@@ -133,7 +146,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["Signed in as"]
+            "notContains": [
+              "Signed in as"
+            ]
           }
         },
         "rust": {
@@ -147,7 +162,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["Signed in as"]
+            "notContains": [
+              "Signed in as"
+            ]
           }
         }
       }
@@ -220,7 +237,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["New to Primitive?"]
+            "notContains": [
+              "New to Primitive?"
+            ]
           }
         },
         "rust": {
@@ -232,7 +251,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["New to Primitive?"]
+            "notContains": [
+              "New to Primitive?"
+            ]
           }
         }
       }
@@ -307,7 +328,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["New to Primitive?"]
+            "notContains": [
+              "New to Primitive?"
+            ]
           }
         },
         "rust": {
@@ -319,7 +342,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["New to Primitive?"]
+            "notContains": [
+              "New to Primitive?"
+            ]
           }
         }
       }
@@ -383,7 +408,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["New to Primitive?"]
+            "notContains": [
+              "New to Primitive?"
+            ]
           }
         },
         "rust": {
@@ -395,7 +422,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["New to Primitive?"]
+            "notContains": [
+              "New to Primitive?"
+            ]
           }
         }
       }
@@ -473,7 +502,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["New to Primitive?"]
+            "notContains": [
+              "New to Primitive?"
+            ]
           }
         },
         "rust": {
@@ -485,7 +516,9 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["New to Primitive?"]
+            "notContains": [
+              "New to Primitive?"
+            ]
           }
         }
       }
@@ -532,8 +565,15 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["USAGE", "COMMANDS", "list-operations"],
-            "notContains": ["New to Primitive?", "Signed in as"]
+            "contains": [
+              "USAGE",
+              "COMMANDS",
+              "list-operations"
+            ],
+            "notContains": [
+              "New to Primitive?",
+              "Signed in as"
+            ]
           }
         },
         "rust": {
@@ -544,7 +584,10 @@
               "COMMANDS",
               "list-operations"
             ],
-            "notContains": ["New to Primitive?", "Signed in as"]
+            "notContains": [
+              "New to Primitive?",
+              "Signed in as"
+            ]
           }
         }
       }
@@ -575,8 +618,14 @@
             ]
           },
           "stdout": {
-            "contains": ["USAGE", "COMMANDS"],
-            "notContains": ["New to Primitive?", "Signed in as"]
+            "contains": [
+              "USAGE",
+              "COMMANDS"
+            ],
+            "notContains": [
+              "New to Primitive?",
+              "Signed in as"
+            ]
           }
         },
         "rust": {
@@ -586,15 +635,24 @@
             ]
           },
           "stdout": {
-            "contains": ["Official Primitive CLI", "USAGE", "COMMANDS"],
-            "notContains": ["New to Primitive?", "Signed in as"]
+            "contains": [
+              "Official Primitive CLI",
+              "USAGE",
+              "COMMANDS"
+            ],
+            "notContains": [
+              "New to Primitive?",
+              "Signed in as"
+            ]
           }
         }
       }
     },
     {
       "name": "root lowercase proxy startup respects node restart path",
-      "args": ["--version"],
+      "args": [
+        "--version"
+      ],
       "compare": false,
       "env": {
         "https_proxy": "http://127.0.0.1:9"
@@ -607,13 +665,17 @@
           ]
         },
         "stdout": {
-          "matches": ["(?:primitive|prim)/"]
+          "matches": [
+            "(?:primitive|prim)/"
+          ]
         }
       }
     },
     {
       "name": "root version",
-      "args": ["--version"],
+      "args": [
+        "--version"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -622,86 +684,125 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["primitive/"]
+            "contains": [
+              "primitive/"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "matches": ["(?:primitive|prim)/0\\.1\\.0"]
+            "matches": [
+              "(?:primitive|prim)/0\\.1\\.0"
+            ]
           }
         }
       }
     },
     {
       "name": "list operations short h prints manifest",
-      "args": ["list-operations", "-h"],
+      "args": [
+        "list-operations",
+        "-h"
+      ],
       "compare": true
     },
     {
       "name": "topic short h is accepted",
-      "args": ["functions", "-h"],
+      "args": [
+        "functions",
+        "-h"
+      ],
       "compare": true
     },
     {
       "name": "nested topic short h is accepted",
-      "args": ["wake", "schedules", "-h"],
+      "args": [
+        "wake",
+        "schedules",
+        "-h"
+      ],
       "compare": true
     },
     {
       "name": "friendly concrete command rejects short h",
-      "args": ["send", "-h"],
+      "args": [
+        "send",
+        "-h"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Nonexistent flag: -h"]
+          "contains": [
+            "Nonexistent flag: -h"
+          ]
         }
       }
     },
     {
       "name": "generated concrete command rejects short h",
-      "args": ["sending", "send-email", "-h"],
+      "args": [
+        "sending",
+        "send-email",
+        "-h"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Nonexistent flag: -h"]
+          "contains": [
+            "Nonexistent flag: -h"
+          ]
         }
       }
     },
     {
       "name": "help concrete command rejects short h",
-      "args": ["help", "send", "-h"],
+      "args": [
+        "help",
+        "send",
+        "-h"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Nonexistent flag: -h"]
+          "contains": [
+            "Nonexistent flag: -h"
+          ]
         }
       }
     },
     {
       "name": "builtin concrete command rejects short h",
-      "args": ["whoami", "-h"],
+      "args": [
+        "whoami",
+        "-h"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Nonexistent flag: -h"]
+          "contains": [
+            "Nonexistent flag: -h"
+          ]
         }
       }
     },
     {
       "name": "completion fish matches generated operation surface",
-      "args": ["completion", "fish"],
+      "args": [
+        "completion",
+        "fish"
+      ],
       "expect": {
         "stdout": {
           "contains": [
@@ -726,19 +827,31 @@
     },
     {
       "name": "completion bash emits sourceable script when captured",
-      "args": ["completion", "bash"],
+      "args": [
+        "completion",
+        "bash"
+      ],
       "compare": false,
       "expect": {
         "requests": [],
         "stdout": {
-          "contains": ["complete -F", "payments", "functions"],
-          "notContains": ["Setup Instructions"]
+          "contains": [
+            "complete -F",
+            "payments",
+            "functions"
+          ],
+          "notContains": [
+            "Setup Instructions"
+          ]
         }
       }
     },
     {
       "name": "autocomplete help mirrors node plugin surface",
-      "args": ["autocomplete", "--help"],
+      "args": [
+        "autocomplete",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -769,7 +882,11 @@
     },
     {
       "name": "autocomplete shell help is accepted",
-      "args": ["autocomplete", "bash", "--help"],
+      "args": [
+        "autocomplete",
+        "bash",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -798,7 +915,10 @@
     },
     {
       "name": "help autocomplete is accepted",
-      "args": ["help", "autocomplete"],
+      "args": [
+        "help",
+        "autocomplete"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -825,7 +945,11 @@
     },
     {
       "name": "autocomplete script bash emits setup snippet",
-      "args": ["autocomplete", "script", "bash"],
+      "args": [
+        "autocomplete",
+        "script",
+        "bash"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -852,7 +976,10 @@
     },
     {
       "name": "autocomplete hidden script colon help is accepted",
-      "args": ["autocomplete:script", "--help"],
+      "args": [
+        "autocomplete:script",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -861,19 +988,26 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["outputs autocomplete config script for shells"]
+            "contains": [
+              "outputs autocomplete config script for shells"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["outputs autocomplete config script for shells"]
+            "contains": [
+              "outputs autocomplete config script for shells"
+            ]
           }
         }
       }
     },
     {
       "name": "autocomplete hidden script permuted help is accepted",
-      "args": ["script:autocomplete", "--help"],
+      "args": [
+        "script:autocomplete",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -882,19 +1016,26 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["outputs autocomplete config script for shells"]
+            "contains": [
+              "outputs autocomplete config script for shells"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["outputs autocomplete config script for shells"]
+            "contains": [
+              "outputs autocomplete config script for shells"
+            ]
           }
         }
       }
     },
     {
       "name": "autocomplete hidden create colon help is accepted",
-      "args": ["autocomplete:create", "--help"],
+      "args": [
+        "autocomplete:create",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -903,19 +1044,26 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["create autocomplete setup scripts and completion functions"]
+            "contains": [
+              "create autocomplete setup scripts and completion functions"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["create autocomplete setup scripts and completion functions"]
+            "contains": [
+              "create autocomplete setup scripts and completion functions"
+            ]
           }
         }
       }
     },
     {
       "name": "autocomplete hidden create permuted help is accepted",
-      "args": ["create:autocomplete", "--help"],
+      "args": [
+        "create:autocomplete",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -924,19 +1072,26 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["create autocomplete setup scripts and completion functions"]
+            "contains": [
+              "create autocomplete setup scripts and completion functions"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["create autocomplete setup scripts and completion functions"]
+            "contains": [
+              "create autocomplete setup scripts and completion functions"
+            ]
           }
         }
       }
     },
     {
       "name": "agent parent help advertises generated aliases",
-      "args": ["agent", "--help"],
+      "args": [
+        "agent",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -945,19 +1100,28 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["agent claim", "agent upgrade"]
+            "contains": [
+              "agent claim",
+              "agent upgrade"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["agent claim", "agent upgrade"]
+            "contains": [
+              "agent claim",
+              "agent upgrade"
+            ]
           }
         }
       }
     },
     {
       "name": "agent upgrade colon help advertises flags",
-      "args": ["agent:upgrade", "--help"],
+      "args": [
+        "agent:upgrade",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -966,12 +1130,24 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["agent upgrade", "--api-base-url", "--api-key", "--code", "--email"]
+            "contains": [
+              "agent upgrade",
+              "--api-base-url",
+              "--api-key",
+              "--code",
+              "--email"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["agent upgrade", "--api-base-url", "--api-key", "--code", "--email"]
+            "contains": [
+              "agent upgrade",
+              "--api-base-url",
+              "--api-key",
+              "--code",
+              "--email"
+            ]
           }
         }
       }
@@ -1045,7 +1221,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/accounts",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "parity-agent",
               "terms_accepted": true
@@ -1138,7 +1316,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/resend",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "signup_token": "signup_tok"
             }
@@ -1148,7 +1328,11 @@
     },
     {
       "name": "generated cli start login request",
-      "args": ["cli:start-cli-login", "--device-name", "parity-cli"],
+      "args": [
+        "cli:start-cli-login",
+        "--device-name",
+        "parity-cli"
+      ],
       "server": {
         "exchanges": [
           {
@@ -1184,7 +1368,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "parity-cli"
             }
@@ -1194,7 +1380,11 @@
     },
     {
       "name": "generated cli poll login request",
-      "args": ["cli:poll-cli-login", "--device-code", "device_tok"],
+      "args": [
+        "cli:poll-cli-login",
+        "--device-code",
+        "device_tok"
+      ],
       "server": {
         "exchanges": [
           {
@@ -1242,7 +1432,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_code": "device_tok"
             }
@@ -1293,7 +1485,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/signup/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -1341,7 +1535,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/signup/resend",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "signup_token": "cli_signup_tok"
             }
@@ -1405,7 +1601,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/signup/verify",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "signup_token": "cli_signup_tok",
               "verification_code": "123456"
@@ -1416,7 +1614,10 @@
     },
     {
       "name": "generated account parent help",
-      "args": ["account", "--help"],
+      "args": [
+        "account",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1425,7 +1626,11 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["account show", "account storage", "account update-account"]
+            "contains": [
+              "account show",
+              "account storage",
+              "account update-account"
+            ]
           }
         },
         "rust": {
@@ -1441,7 +1646,9 @@
     },
     {
       "name": "generated account bare parent help",
-      "args": ["account"],
+      "args": [
+        "account"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1450,19 +1657,30 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["account show", "account storage"]
+            "contains": [
+              "account show",
+              "account storage"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["account show", "account storage"]
+            "contains": [
+              "account show",
+              "account storage"
+            ]
           }
         }
       }
     },
     {
       "name": "generated account show alias request",
-      "args": ["account", "show", "--api-key", "prim_test"],
+      "args": [
+        "account",
+        "show",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -1501,7 +1719,12 @@
     },
     {
       "name": "generated account webhook secret",
-      "args": ["account", "get-webhook-secret", "--api-key", "prim_test"],
+      "args": [
+        "account",
+        "get-webhook-secret",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -1536,7 +1759,10 @@
     },
     {
       "name": "generated threads parent help",
-      "args": ["threads", "--help"],
+      "args": [
+        "threads",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1545,19 +1771,27 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["threads get", "threads get-thread"]
+            "contains": [
+              "threads get",
+              "threads get-thread"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["threads get", "threads get-thread"]
+            "contains": [
+              "threads get",
+              "threads get-thread"
+            ]
           }
         }
       }
     },
     {
       "name": "generated threads bare parent help",
-      "args": ["threads"],
+      "args": [
+        "threads"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1566,19 +1800,32 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["threads get", "threads get-thread"]
+            "contains": [
+              "threads get",
+              "threads get-thread"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["threads get", "threads get-thread"]
+            "contains": [
+              "threads get",
+              "threads get-thread"
+            ]
           }
         }
       }
     },
     {
       "name": "generated threads get request",
-      "args": ["threads", "get-thread", "--id", "thread_123", "--api-key", "prim_test"],
+      "args": [
+        "threads",
+        "get-thread",
+        "--id",
+        "thread_123",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -1617,7 +1864,14 @@
     },
     {
       "name": "generated threads get alias request",
-      "args": ["threads", "get", "--id", "thread_123", "--api-key", "prim_test"],
+      "args": [
+        "threads",
+        "get",
+        "--id",
+        "thread_123",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -1656,7 +1910,10 @@
     },
     {
       "name": "domains parent help advertises generated aliases",
-      "args": ["domains", "--help"],
+      "args": [
+        "domains",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1665,19 +1922,30 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["domains add", "domains list", "domains zone-file"]
+            "contains": [
+              "domains add",
+              "domains list",
+              "domains zone-file"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["domains add", "domains list", "domains zone-file"]
+            "contains": [
+              "domains add",
+              "domains list",
+              "domains zone-file"
+            ]
           }
         }
       }
     },
     {
       "name": "emails parent help advertises get alias",
-      "args": ["emails", "--help"],
+      "args": [
+        "emails",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1686,19 +1954,30 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["emails get", "emails latest", "emails wait"]
+            "contains": [
+              "emails get",
+              "emails latest",
+              "emails wait"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["emails get", "emails latest", "emails wait"]
+            "contains": [
+              "emails get",
+              "emails latest",
+              "emails wait"
+            ]
           }
         }
       }
     },
     {
       "name": "functions parent help advertises generated commands",
-      "args": ["functions", "--help"],
+      "args": [
+        "functions",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1707,19 +1986,32 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["functions list", "functions get", "functions deploy"]
+            "contains": [
+              "functions list",
+              "functions get",
+              "functions deploy"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["functions list", "functions get", "functions deploy"]
+            "contains": [
+              "functions list",
+              "functions get",
+              "functions deploy"
+            ]
           }
         }
       }
     },
     {
       "name": "generated functions list alias request",
-      "args": ["functions", "list", "--api-key", "prim_test"],
+      "args": [
+        "functions",
+        "list",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -1760,7 +2052,11 @@
     },
     {
       "name": "functions logs subcommand help advertises flags",
-      "args": ["functions", "logs", "--help"],
+      "args": [
+        "functions",
+        "logs",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1769,31 +2065,57 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["functions logs --id", "--api-key", "--jsonl", "--poll-interval", "--follow"]
+            "contains": [
+              "functions logs --id",
+              "--api-key",
+              "--jsonl",
+              "--poll-interval",
+              "--follow"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["functions logs --id", "--api-key", "--jsonl", "--poll-interval", "--follow"]
+            "contains": [
+              "functions logs --id",
+              "--api-key",
+              "--jsonl",
+              "--poll-interval",
+              "--follow"
+            ]
           }
         }
       }
     },
     {
       "name": "functions test-function help preserves generated alias usage",
-      "args": ["functions", "test-function", "--help"],
+      "args": [
+        "functions",
+        "test-function",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
         "requests": [],
         "stdout": {
-          "contains": ["functions test-function --id", "--api-key", "--local-part", "--show-sends", "--wait"]
+          "contains": [
+            "functions test-function --id",
+            "--api-key",
+            "--local-part",
+            "--show-sends",
+            "--wait"
+          ]
         }
       }
     },
     {
       "name": "functions deploy subcommand help advertises flags",
-      "args": ["functions", "deploy", "--help"],
+      "args": [
+        "functions",
+        "deploy",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1840,7 +2162,10 @@
     },
     {
       "name": "functions deploy colon help advertises flags",
-      "args": ["functions:deploy", "--help"],
+      "args": [
+        "functions:deploy",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1887,7 +2212,10 @@
     },
     {
       "name": "functions logs colon help advertises flags",
-      "args": ["functions:logs", "--help"],
+      "args": [
+        "functions:logs",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1896,19 +2224,35 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["functions logs --id", "--api-key", "--jsonl", "--poll-interval", "--follow"]
+            "contains": [
+              "functions logs --id",
+              "--api-key",
+              "--jsonl",
+              "--poll-interval",
+              "--follow"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["functions logs --id", "--api-key", "--jsonl", "--poll-interval", "--follow"]
+            "contains": [
+              "functions logs --id",
+              "--api-key",
+              "--jsonl",
+              "--poll-interval",
+              "--follow"
+            ]
           }
         }
       }
     },
     {
       "name": "domains zone file subcommand help advertises flags",
-      "args": ["domains", "zone-file", "--help"],
+      "args": [
+        "domains",
+        "zone-file",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1917,19 +2261,34 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["domains zone-file", "--domain", "--id", "--outbound-only", "--output"]
+            "contains": [
+              "domains zone-file",
+              "--domain",
+              "--id",
+              "--outbound-only",
+              "--output"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["domains zone-file", "--domain", "--id", "--outbound-only", "--output"]
+            "contains": [
+              "domains zone-file",
+              "--domain",
+              "--id",
+              "--outbound-only",
+              "--output"
+            ]
           }
         }
       }
     },
     {
       "name": "domains zone file colon help advertises flags",
-      "args": ["domains:zone-file", "--help"],
+      "args": [
+        "domains:zone-file",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1938,19 +2297,35 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["domains zone-file", "--domain", "--id", "--outbound-only", "--output"]
+            "contains": [
+              "domains zone-file",
+              "--domain",
+              "--id",
+              "--outbound-only",
+              "--output"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["domains zone-file", "--domain", "--id", "--outbound-only", "--output"]
+            "contains": [
+              "domains zone-file",
+              "--domain",
+              "--id",
+              "--outbound-only",
+              "--output"
+            ]
           }
         }
       }
     },
     {
       "name": "payments pay email subcommand help advertises flags",
-      "args": ["payments", "pay-email", "--help"],
+      "args": [
+        "payments",
+        "pay-email",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1959,19 +2334,34 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["payments pay-email --in-reply-to", "--private-key", "--challenge-file", "--wait-settle", "--settle-timeout"]
+            "contains": [
+              "payments pay-email --in-reply-to",
+              "--private-key",
+              "--challenge-file",
+              "--wait-settle",
+              "--settle-timeout"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["payments pay-email --in-reply-to", "--private-key", "--challenge-file", "--wait-settle", "--settle-timeout"]
+            "contains": [
+              "payments pay-email --in-reply-to",
+              "--private-key",
+              "--challenge-file",
+              "--wait-settle",
+              "--settle-timeout"
+            ]
           }
         }
       }
     },
     {
       "name": "payments pay email colon help advertises flags",
-      "args": ["payments:pay-email", "--help"],
+      "args": [
+        "payments:pay-email",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -1980,19 +2370,34 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["payments pay-email --in-reply-to", "--private-key", "--challenge-file", "--wait-settle", "--settle-timeout"]
+            "contains": [
+              "payments pay-email --in-reply-to",
+              "--private-key",
+              "--challenge-file",
+              "--wait-settle",
+              "--settle-timeout"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["payments pay-email --in-reply-to", "--private-key", "--challenge-file", "--wait-settle", "--settle-timeout"]
+            "contains": [
+              "payments pay-email --in-reply-to",
+              "--private-key",
+              "--challenge-file",
+              "--wait-settle",
+              "--settle-timeout"
+            ]
           }
         }
       }
     },
     {
       "name": "payloads parent help",
-      "args": ["payloads", "--help"],
+      "args": [
+        "payloads",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2001,7 +2406,10 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["payloads pull", "payloads push"]
+            "contains": [
+              "payloads pull",
+              "payloads push"
+            ]
           }
         },
         "rust": {
@@ -2017,7 +2425,9 @@
     },
     {
       "name": "payloads bare parent help",
-      "args": ["payloads"],
+      "args": [
+        "payloads"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2026,7 +2436,10 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["payloads pull", "payloads push"]
+            "contains": [
+              "payloads pull",
+              "payloads push"
+            ]
           }
         },
         "rust": {
@@ -2042,7 +2455,11 @@
     },
     {
       "name": "emails get subcommand help returns before validation",
-      "args": ["emails", "get", "--help"],
+      "args": [
+        "emails",
+        "get",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2051,19 +2468,33 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Get inbound email by id", "primitive emails get --id"]
+            "contains": [
+              "Get inbound email by id",
+              "primitive emails get --id"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["Get inbound email by id", "primitive emails get --id", "--id=<value>"]
+            "contains": [
+              "Get inbound email by id",
+              "primitive emails get --id",
+              "--id=<value>"
+            ]
           }
         }
       }
     },
     {
       "name": "generated emails get alias request",
-      "args": ["emails", "get", "--api-key", "prim_test", "--id", "email_123"],
+      "args": [
+        "emails",
+        "get",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "email_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -2102,33 +2533,52 @@
     },
     {
       "name": "generated emails get rejects inline boolean value",
-      "args": ["emails:get-email", "--id", "em_123", "--time=false"],
+      "args": [
+        "emails:get-email",
+        "--id",
+        "em_123",
+        "--time=false"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Unexpected argument: false"]
+          "contains": [
+            "Unexpected argument: false"
+          ]
         }
       }
     },
     {
       "name": "emails get rejects boolean negation",
-      "args": ["emails", "get", "--id", "em_123", "--no-json"],
+      "args": [
+        "emails",
+        "get",
+        "--id",
+        "em_123",
+        "--no-json"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Nonexistent flag: --no-json"]
+          "contains": [
+            "Nonexistent flag: --no-json"
+          ]
         }
       }
     },
     {
       "name": "emails latest subcommand help returns before auth",
-      "args": ["emails", "latest", "--help"],
+      "args": [
+        "emails",
+        "latest",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2157,14 +2607,21 @@
               "--json",
               "--time"
             ],
-            "notContains": ["Primitive Rust CLI emails commands", "primitive emails wait"]
+            "notContains": [
+              "Primitive Rust CLI emails commands",
+              "primitive emails wait"
+            ]
           }
         }
       }
     },
     {
       "name": "emails wait subcommand help returns before auth",
-      "args": ["emails", "wait", "--help"],
+      "args": [
+        "emails",
+        "wait",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2223,14 +2680,20 @@
               "--timeout",
               "--to"
             ],
-            "notContains": ["Primitive Rust CLI emails commands", "primitive emails latest"]
+            "notContains": [
+              "Primitive Rust CLI emails commands",
+              "primitive emails latest"
+            ]
           }
         }
       }
     },
     {
       "name": "emails latest colon help returns before auth",
-      "args": ["emails:latest", "--help"],
+      "args": [
+        "emails:latest",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2239,20 +2702,37 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["primitive emails latest", "--api-key", "--limit", "--json", "--time"]
+            "contains": [
+              "primitive emails latest",
+              "--api-key",
+              "--limit",
+              "--json",
+              "--time"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["primitive emails latest", "--api-key", "--limit", "--json", "--time"],
-            "notContains": ["Primitive Rust CLI emails commands"]
+            "contains": [
+              "primitive emails latest",
+              "--api-key",
+              "--limit",
+              "--json",
+              "--time"
+            ],
+            "notContains": [
+              "Primitive Rust CLI emails commands"
+            ]
           }
         }
       }
     },
     {
       "name": "emails wait colon help returns before auth",
-      "args": ["emails:wait", "--help"],
+      "args": [
+        "emails:wait",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2261,20 +2741,38 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["primitive emails wait", "--api-key", "--reply-to-sent-email-id", "--timeout", "--table"]
+            "contains": [
+              "primitive emails wait",
+              "--api-key",
+              "--reply-to-sent-email-id",
+              "--timeout",
+              "--table"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["primitive emails wait", "--api-key", "--reply-to-sent-email-id", "--timeout", "--table"],
-            "notContains": ["Primitive Rust CLI emails commands"]
+            "contains": [
+              "primitive emails wait",
+              "--api-key",
+              "--reply-to-sent-email-id",
+              "--timeout",
+              "--table"
+            ],
+            "notContains": [
+              "Primitive Rust CLI emails commands"
+            ]
           }
         }
       }
     },
     {
       "name": "emails watch subcommand help returns before auth",
-      "args": ["emails", "watch", "--help"],
+      "args": [
+        "emails",
+        "watch",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2342,7 +2840,10 @@
     },
     {
       "name": "emails watch colon help returns before auth",
-      "args": ["emails:watch", "--help"],
+      "args": [
+        "emails:watch",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2351,13 +2852,27 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["primitive emails watch", "--api-key", "--jsonl", "--seconds", "--page-size"]
+            "contains": [
+              "primitive emails watch",
+              "--api-key",
+              "--jsonl",
+              "--seconds",
+              "--page-size"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["primitive emails watch", "--api-key", "--jsonl", "--seconds", "--page-size"],
-            "notContains": ["Primitive Rust CLI emails commands"]
+            "contains": [
+              "primitive emails watch",
+              "--api-key",
+              "--jsonl",
+              "--seconds",
+              "--page-size"
+            ],
+            "notContains": [
+              "Primitive Rust CLI emails commands"
+            ]
           }
         }
       }
@@ -2481,7 +2996,11 @@
     },
     {
       "name": "routes add subcommand help returns before validation",
-      "args": ["routes", "add", "--help"],
+      "args": [
+        "routes",
+        "add",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2518,14 +3037,21 @@
               "--disabled",
               "--time"
             ],
-            "notContains": ["Primitive Rust CLI routes commands", "primitive routes list"]
+            "notContains": [
+              "Primitive Rust CLI routes commands",
+              "primitive routes list"
+            ]
           }
         }
       }
     },
     {
       "name": "memories set subcommand help returns before validation",
-      "args": ["memories", "set", "--help"],
+      "args": [
+        "memories",
+        "set",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2534,20 +3060,36 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Set a memory", "primitive memories set"]
+            "contains": [
+              "Set a memory",
+              "primitive memories set"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["Set a memory", "primitive memories set", "--api-key", "--function", "--ttl-seconds"],
-            "notContains": ["Primitive Rust CLI memories commands"]
+            "contains": [
+              "Set a memory",
+              "primitive memories set",
+              "--api-key",
+              "--function",
+              "--ttl-seconds"
+            ],
+            "notContains": [
+              "Primitive Rust CLI memories commands"
+            ]
           }
         }
       }
     },
     {
       "name": "wake schedules list subcommand help returns before auth",
-      "args": ["wake", "schedules", "list", "--help"],
+      "args": [
+        "wake",
+        "schedules",
+        "list",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2556,20 +3098,34 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["List wake schedules", "primitive wake schedules list"]
+            "contains": [
+              "List wake schedules",
+              "primitive wake schedules list"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["List wake schedules", "primitive wake schedules list", "--api-key", "--time"],
-            "notContains": ["Primitive Rust CLI wake commands"]
+            "contains": [
+              "List wake schedules",
+              "primitive wake schedules list",
+              "--api-key",
+              "--time"
+            ],
+            "notContains": [
+              "Primitive Rust CLI wake commands"
+            ]
           }
         }
       }
     },
     {
       "name": "payments pay subcommand help returns before auth",
-      "args": ["payments", "pay", "--help"],
+      "args": [
+        "payments",
+        "pay",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2578,7 +3134,10 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Sign and settle an x402 payment challenge", "primitive payments pay"]
+            "contains": [
+              "Sign and settle an x402 payment challenge",
+              "primitive payments pay"
+            ]
           }
         },
         "rust": {
@@ -2593,27 +3152,39 @@
               "--json",
               "--time"
             ],
-            "notContains": ["Primitive Rust CLI payments commands"]
+            "notContains": [
+              "Primitive Rust CLI payments commands"
+            ]
           }
         }
       }
     },
     {
       "name": "payments settlement is not a supported command",
-      "args": ["payments", "settlement", "--help"],
+      "args": [
+        "payments",
+        "settlement",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command payments:settlement not found"]
+          "contains": [
+            "Command payments:settlement not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "payloads push subcommand help returns before validation",
-      "args": ["payloads", "push", "--help"],
+      "args": [
+        "payloads",
+        "push",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2622,7 +3193,10 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Stream-upload a file as an encrypted payload", "primitive payloads push"]
+            "contains": [
+              "Stream-upload a file as an encrypted payload",
+              "primitive payloads push"
+            ]
           }
         },
         "rust": {
@@ -2638,14 +3212,20 @@
               "--concurrency",
               "--quiet"
             ],
-            "notContains": ["Primitive payload commands"]
+            "notContains": [
+              "Primitive payload commands"
+            ]
           }
         }
       }
     },
     {
       "name": "payloads pull subcommand help returns before validation",
-      "args": ["payloads", "pull", "--help"],
+      "args": [
+        "payloads",
+        "pull",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2678,7 +3258,11 @@
     },
     {
       "name": "search positional help returns before validation",
-      "args": ["search", "invoice", "--help"],
+      "args": [
+        "search",
+        "invoice",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2687,19 +3271,30 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Search mail (lexical by default; --mode for semantic)", "primitive search"]
+            "contains": [
+              "Search mail (lexical by default; --mode for semantic)",
+              "primitive search"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["Search mail (lexical by default; --mode for semantic)", "primitive search"]
+            "contains": [
+              "Search mail (lexical by default; --mode for semantic)",
+              "primitive search"
+            ]
           }
         }
       }
     },
     {
       "name": "chat positional help returns before validation",
-      "args": ["chat", "bob@example.com", "hi", "--help"],
+      "args": [
+        "chat",
+        "bob@example.com",
+        "hi",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2708,19 +3303,30 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Chat with an agent over email", "primitive chat"]
+            "contains": [
+              "Chat with an agent over email",
+              "primitive chat"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["Chat with an agent over email", "primitive chat"]
+            "contains": [
+              "Chat with an agent over email",
+              "primitive chat"
+            ]
           }
         }
       }
     },
     {
       "name": "payloads push positional help returns before validation",
-      "args": ["payloads", "push", "__CASE_TMP__/payload.bin", "--help"],
+      "args": [
+        "payloads",
+        "push",
+        "__CASE_TMP__/payload.bin",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2729,7 +3335,10 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Stream-upload a file as an encrypted payload", "primitive payloads push"]
+            "contains": [
+              "Stream-upload a file as an encrypted payload",
+              "primitive payloads push"
+            ]
           }
         },
         "rust": {
@@ -2748,7 +3357,12 @@
     },
     {
       "name": "login otp positional help returns before validation",
-      "args": ["login", "otp", "user@example.com", "--help"],
+      "args": [
+        "login",
+        "otp",
+        "user@example.com",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2757,19 +3371,29 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Start OTP login", "primitive login otp"]
+            "contains": [
+              "Start OTP login",
+              "primitive login otp"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["Start OTP login", "primitive login otp"]
+            "contains": [
+              "Start OTP login",
+              "primitive login otp"
+            ]
           }
         }
       }
     },
     {
       "name": "login email positional help returns before validation",
-      "args": ["login", "user@example.com", "--help"],
+      "args": [
+        "login",
+        "user@example.com",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2778,19 +3402,29 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["primitive login", "email"]
+            "contains": [
+              "primitive login",
+              "email"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["primitive login", "email"]
+            "contains": [
+              "primitive login",
+              "email"
+            ]
           }
         }
       }
     },
     {
       "name": "signin email positional help returns before validation",
-      "args": ["signin", "user@example.com", "--help"],
+      "args": [
+        "signin",
+        "user@example.com",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2799,19 +3433,30 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["primitive signin", "email"]
+            "contains": [
+              "primitive signin",
+              "email"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["primitive signin", "email"]
+            "contains": [
+              "primitive signin",
+              "email"
+            ]
           }
         }
       }
     },
     {
       "name": "login confirm email positional help returns before validation",
-      "args": ["login", "confirm", "user@example.com", "--help"],
+      "args": [
+        "login",
+        "confirm",
+        "user@example.com",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2820,19 +3465,30 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["primitive login confirm", "verification"]
+            "contains": [
+              "primitive login confirm",
+              "verification"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["primitive login confirm", "verification"]
+            "contains": [
+              "primitive login confirm",
+              "verification"
+            ]
           }
         }
       }
     },
     {
       "name": "config use positional help returns before validation",
-      "args": ["config", "use", "staging", "--help"],
+      "args": [
+        "config",
+        "use",
+        "staging",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -2841,162 +3497,238 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["config use", "environment"]
+            "contains": [
+              "config use",
+              "environment"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["config use", "environment"]
+            "contains": [
+              "config use",
+              "environment"
+            ]
           }
         }
       }
     },
     {
       "name": "emails show is not a supported alias",
-      "args": ["emails", "show", "--help"],
+      "args": [
+        "emails",
+        "show",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command emails:show not found"]
+          "contains": [
+            "Command emails:show not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "multi-segment unknown email help path is rejected",
-      "args": ["emails", "bogus", "foo", "--help"],
+      "args": [
+        "emails",
+        "bogus",
+        "foo",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command emails:bogus:foo not found"]
+          "contains": [
+            "Command emails:bogus:foo not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "multi-segment unknown payments help path is rejected",
-      "args": ["payments", "bogus", "foo", "--help"],
+      "args": [
+        "payments",
+        "bogus",
+        "foo",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command payments:bogus:foo not found"]
+          "contains": [
+            "Command payments:bogus:foo not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "emails poll is not a supported alias",
-      "args": ["emails", "poll", "--help"],
+      "args": [
+        "emails",
+        "poll",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command emails:poll not found"]
+          "contains": [
+            "Command emails:poll not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "sdk-name root command spelling is not supported",
-      "args": ["getEmail", "--help"],
+      "args": [
+        "getEmail",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command getEmail not found"]
+          "contains": [
+            "Command getEmail not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "loose generated root command spelling is not supported",
-      "args": ["get-email", "--help"],
+      "args": [
+        "get-email",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command get-email not found"]
+          "contains": [
+            "Command get-email not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "collapsed generated command spelling is not supported",
-      "args": ["emailsget", "--help"],
+      "args": [
+        "emailsget",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command emailsget not found"]
+          "contains": [
+            "Command emailsget not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "malformed generated email help path is rejected",
-      "args": ["emails", "get", "foo", "--help"],
+      "args": [
+        "emails",
+        "get",
+        "foo",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command emails:get:foo not found"]
+          "contains": [
+            "Command emails:get:foo not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "malformed payments help path is rejected",
-      "args": ["payments", "pay", "email", "--help"],
+      "args": [
+        "payments",
+        "pay",
+        "email",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command payments:pay:email not found"]
+          "contains": [
+            "Command payments:pay:email not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "malformed functions help path is rejected",
-      "args": ["functions", "route", "set", "--help"],
+      "args": [
+        "functions",
+        "route",
+        "set",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command functions:route:set not found"]
+          "contains": [
+            "Command functions:route:set not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "malformed send help path is rejected",
-      "args": ["send", "hi", "--help"],
+      "args": [
+        "send",
+        "hi",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Command send:hi not found"]
+          "contains": [
+            "Command send:hi not found"
+          ]
         },
         "stdout": ""
       }
     },
     {
       "name": "doctor catches primitive key env typo",
-      "args": ["doctor"],
+      "args": [
+        "doctor"
+      ],
       "compare": false,
       "env": {
         "PRIMITIVE_KEY": "prim_wrong",
@@ -3026,7 +3758,11 @@
     },
     {
       "name": "doctor validates api key and active domains",
-      "args": ["doctor", "--api-key", "prim_doctor"],
+      "args": [
+        "doctor",
+        "--api-key",
+        "prim_doctor"
+      ],
       "compare": false,
       "env": {
         "NODE_USE_ENV_PROXY": "",
@@ -3133,7 +3869,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -3181,7 +3919,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -3248,7 +3988,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/verify",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "org_id": "org_selected",
               "signup_token": "signup_tok",
@@ -3275,7 +4017,10 @@
             "token_type": "Bearer"
           }
         },
-        "configFilesAbsent": ["signup.json", "chat-state.json"]
+        "configFilesAbsent": [
+          "signup.json",
+          "chat-state.json"
+        ]
       }
     },
     {
@@ -3333,7 +4078,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/verify",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "org_id": "org_selected",
               "signup_token": "signup_tok",
@@ -3396,7 +4143,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/verify",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "signup_token": "signup_tok",
               "verification_code": "123456"
@@ -3533,7 +4282,10 @@
     },
     {
       "name": "logout force with no local state",
-      "args": ["logout", "--force"],
+      "args": [
+        "logout",
+        "--force"
+      ],
       "expect": {
         "stdout": "",
         "stderr": "No local Primitive CLI auth state was present. Backing OAuth grant was not revoked.\n",
@@ -3542,7 +4294,9 @@
     },
     {
       "name": "logout revokes saved oauth grant",
-      "args": ["logout"],
+      "args": [
+        "logout"
+      ],
       "configFiles": {
         "credentials.json": {
           "access_token": "prim_saved_access",
@@ -3602,7 +4356,12 @@
     },
     {
       "name": "whoami json uses auth runtime",
-      "args": ["whoami", "--api-key", "prim_test", "--json"],
+      "args": [
+        "whoami",
+        "--api-key",
+        "prim_test",
+        "--json"
+      ],
       "compare": false,
       "server": {
         "exchanges": [
@@ -3694,7 +4453,10 @@
     },
     {
       "name": "auth hints when primitive key env var is misnamed",
-      "args": ["whoami", "--json"],
+      "args": [
+        "whoami",
+        "--json"
+      ],
       "compare": false,
       "env": {
         "PRIMITIVE_KEY": "prim_wrong",
@@ -3730,14 +4492,19 @@
           {
             "method": "GET",
             "path": "/v1/account",
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ]
       }
     },
     {
       "name": "inbox parent help",
-      "args": ["inbox", "--help"],
+      "args": [
+        "inbox",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -3746,32 +4513,59 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["inbox setup", "inbox status"]
+            "contains": [
+              "inbox setup",
+              "inbox status"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["inbox setup", "inbox status"]
+            "contains": [
+              "inbox setup",
+              "inbox status"
+            ]
           }
         }
       }
     },
     {
       "name": "inbox generated status help uses friendly renderer",
-      "args": ["inbox", "get-inbox-status", "--help"],
+      "args": [
+        "inbox",
+        "get-inbox-status",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
         "requests": [],
         "stdout": {
-          "contains": ["Show inbound email readiness", "inbox get-inbox-status", "--api-key", "--domain", "--json", "--time"],
-          "notContains": ["inbox commands: setup, status", "--envelope", "GET /inbox/status"]
+          "contains": [
+            "Show inbound email readiness",
+            "inbox get-inbox-status",
+            "--api-key",
+            "--domain",
+            "--json",
+            "--time"
+          ],
+          "notContains": [
+            "inbox commands: setup, status",
+            "--envelope",
+            "GET /inbox/status"
+          ]
         }
       }
     },
     {
       "name": "inbox status json",
-      "args": ["inbox", "status", "--api-key", "prim_test", "--json"],
+      "args": [
+        "inbox",
+        "status",
+        "--api-key",
+        "prim_test",
+        "--json"
+      ],
       "server": {
         "exchanges": [
           {
@@ -3909,7 +4703,12 @@
     },
     {
       "name": "inbox generated status override uses friendly renderer",
-      "args": ["inbox:get-inbox-status", "--api-key", "prim_test", "--json"],
+      "args": [
+        "inbox:get-inbox-status",
+        "--api-key",
+        "prim_test",
+        "--json"
+      ],
       "server": {
         "exchanges": [
           {
@@ -3983,7 +4782,13 @@
     },
     {
       "name": "inbox setup json",
-      "args": ["inbox", "setup", "--api-key", "prim_test", "--json"],
+      "args": [
+        "inbox",
+        "setup",
+        "--api-key",
+        "prim_test",
+        "--json"
+      ],
       "compare": false,
       "server": {
         "exchanges": [
@@ -4146,7 +4951,11 @@
     },
     {
       "name": "org secrets parent help",
-      "args": ["org", "secrets", "--help"],
+      "args": [
+        "org",
+        "secrets",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4155,19 +4964,29 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["org secrets list", "org secrets set", "org secrets remove"]
+            "contains": [
+              "org secrets list",
+              "org secrets set",
+              "org secrets remove"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["org secrets list", "org secrets set", "org secrets remove"]
+            "contains": [
+              "org secrets list",
+              "org secrets set",
+              "org secrets remove"
+            ]
           }
         }
       }
     },
     {
       "name": "org bare parent help",
-      "args": ["org"],
+      "args": [
+        "org"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4176,19 +4995,27 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["org secrets", "Global secrets"]
+            "contains": [
+              "org secrets",
+              "Global secrets"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["org secrets", "Global secrets"]
+            "contains": [
+              "org secrets",
+              "Global secrets"
+            ]
           }
         }
       }
     },
     {
       "name": "org secrets colon parent help",
-      "args": ["org:secrets"],
+      "args": [
+        "org:secrets"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4197,20 +5024,33 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["org secrets list", "org secrets set", "org secrets remove"]
+            "contains": [
+              "org secrets list",
+              "org secrets set",
+              "org secrets remove"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["org secrets list", "org secrets set", "org secrets remove"],
-            "notContains": ["org secrets:list"]
+            "contains": [
+              "org secrets list",
+              "org secrets set",
+              "org secrets remove"
+            ],
+            "notContains": [
+              "org secrets:list"
+            ]
           }
         }
       }
     },
     {
       "name": "org secrets colon explicit help",
-      "args": ["org:secrets", "--help"],
+      "args": [
+        "org:secrets",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4219,20 +5059,33 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["org secrets list", "org secrets set", "org secrets remove"]
+            "contains": [
+              "org secrets list",
+              "org secrets set",
+              "org secrets remove"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["org secrets list", "org secrets set", "org secrets remove"],
-            "notContains": ["org secrets:list"]
+            "contains": [
+              "org secrets list",
+              "org secrets set",
+              "org secrets remove"
+            ],
+            "notContains": [
+              "org secrets:list"
+            ]
           }
         }
       }
     },
     {
       "name": "help org secrets colon parent",
-      "args": ["help", "org:secrets"],
+      "args": [
+        "help",
+        "org:secrets"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4241,20 +5094,36 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["org secrets list", "org secrets set", "org secrets remove"]
+            "contains": [
+              "org secrets list",
+              "org secrets set",
+              "org secrets remove"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["org secrets list", "org secrets set", "org secrets remove"],
-            "notContains": ["org secrets:list"]
+            "contains": [
+              "org secrets list",
+              "org secrets set",
+              "org secrets remove"
+            ],
+            "notContains": [
+              "org secrets:list"
+            ]
           }
         }
       }
     },
     {
       "name": "org secrets list",
-      "args": ["org", "secrets", "list", "--api-key", "prim_test"],
+      "args": [
+        "org",
+        "secrets",
+        "list",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -4387,7 +5256,15 @@
     },
     {
       "name": "org secrets delete flag alias",
-      "args": ["org", "secrets", "delete", "--api-key", "prim_test", "--key", "MODEL_API_KEY"],
+      "args": [
+        "org",
+        "secrets",
+        "delete",
+        "--api-key",
+        "prim_test",
+        "--key",
+        "MODEL_API_KEY"
+      ],
       "server": {
         "exchanges": [
           {
@@ -4416,7 +5293,13 @@
     },
     {
       "name": "org secrets colon delete alias",
-      "args": ["org:secrets:delete", "--api-key", "prim_test", "--key", "MODEL_API_KEY"],
+      "args": [
+        "org:secrets:delete",
+        "--api-key",
+        "prim_test",
+        "--key",
+        "MODEL_API_KEY"
+      ],
       "server": {
         "exchanges": [
           {
@@ -4694,12 +5577,18 @@
     },
     {
       "name": "describe send alias",
-      "args": ["describe", "sending:send"],
+      "args": [
+        "describe",
+        "sending:send"
+      ],
       "compare": true
     },
     {
       "name": "describe unknown operation suggests closest match",
-      "args": ["describe", "sending:sedn"],
+      "args": [
+        "describe",
+        "sending:sedn"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 1,
@@ -4714,7 +5603,10 @@
     },
     {
       "name": "describe wake shortcut alias is not supported",
-      "args": ["describe", "wake:schedules:list"],
+      "args": [
+        "describe",
+        "wake:schedules:list"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 1,
@@ -4730,7 +5622,10 @@
     },
     {
       "name": "generated send help returns before auth",
-      "args": ["sending:send", "--help"],
+      "args": [
+        "sending:send",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4739,7 +5634,10 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Send outbound email", "Idempotency-Key"]
+            "contains": [
+              "Send outbound email",
+              "Idempotency-Key"
+            ]
           }
         },
         "rust": {
@@ -4750,18 +5648,28 @@
               "--idempotency-key=<value>",
               "--body-text=<value>"
             ],
-            "notContains": ["primitive-rust sending:send-email"]
+            "notContains": [
+              "primitive-rust sending:send-email"
+            ]
           }
         }
       }
     },
     {
       "name": "generated help works after parsed flags",
-      "args": ["sending:send", "--subject", "Hello", "--help"],
+      "args": [
+        "sending:send",
+        "--subject",
+        "Hello",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stdout": {
-          "contains": ["Send outbound email", "--subject"]
+          "contains": [
+            "Send outbound email",
+            "--subject"
+          ]
         },
         "stderr": "",
         "requests": []
@@ -4769,7 +5677,10 @@
     },
     {
       "name": "help send routes to friendly command help",
-      "args": ["help", "send"],
+      "args": [
+        "help",
+        "send"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4778,20 +5689,30 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["Send an email (simplified, agent-friendly)", "primitive send --to"]
+            "contains": [
+              "Send an email (simplified, agent-friendly)",
+              "primitive send --to"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["send"],
-            "notContains": ["Unknown flag --help"]
+            "contains": [
+              "send"
+            ],
+            "notContains": [
+              "Unknown flag --help"
+            ]
           }
         }
       }
     },
     {
       "name": "send friendly help advertises flags",
-      "args": ["send", "--help"],
+      "args": [
+        "send",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4800,20 +5721,39 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["send --to", "--api-key", "--attachment", "--body-file", "--html-stdin", "--wait-timeout-ms"]
+            "contains": [
+              "send --to",
+              "--api-key",
+              "--attachment",
+              "--body-file",
+              "--html-stdin",
+              "--wait-timeout-ms"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["send --to", "--api-key", "--attachment", "--body-file", "--html-stdin", "--wait-timeout-ms"],
-            "notContains": ["mail commands: send, reply, chat"]
+            "contains": [
+              "send --to",
+              "--api-key",
+              "--attachment",
+              "--body-file",
+              "--html-stdin",
+              "--wait-timeout-ms"
+            ],
+            "notContains": [
+              "mail commands: send, reply, chat"
+            ]
           }
         }
       }
     },
     {
       "name": "reply friendly help advertises flags",
-      "args": ["reply", "--help"],
+      "args": [
+        "reply",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4822,20 +5762,39 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["reply --id", "--api-key", "--attachment", "--body-stdin", "--html-file", "--wait"]
+            "contains": [
+              "reply --id",
+              "--api-key",
+              "--attachment",
+              "--body-stdin",
+              "--html-file",
+              "--wait"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["reply --id", "--api-key", "--attachment", "--body-stdin", "--html-file", "--wait"],
-            "notContains": ["mail commands: send, reply, chat"]
+            "contains": [
+              "reply --id",
+              "--api-key",
+              "--attachment",
+              "--body-stdin",
+              "--html-file",
+              "--wait"
+            ],
+            "notContains": [
+              "mail commands: send, reply, chat"
+            ]
           }
         }
       }
     },
     {
       "name": "chat friendly help advertises flags",
-      "args": ["chat", "--help"],
+      "args": [
+        "chat",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4844,20 +5803,40 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["chat RECIPIENT", "--api-key", "--attachment", "--reply-to-email-id", "--strict-phase-seconds", "--timeout"]
+            "contains": [
+              "chat RECIPIENT",
+              "--api-key",
+              "--attachment",
+              "--reply-to-email-id",
+              "--strict-phase-seconds",
+              "--timeout"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["chat RECIPIENT", "--api-key", "--attachment", "--reply-to-email-id", "--strict-phase-seconds", "--timeout"],
-            "notContains": ["mail commands: send, reply, chat"]
+            "contains": [
+              "chat RECIPIENT",
+              "--api-key",
+              "--attachment",
+              "--reply-to-email-id",
+              "--strict-phase-seconds",
+              "--timeout"
+            ],
+            "notContains": [
+              "mail commands: send, reply, chat"
+            ]
           }
         }
       }
     },
     {
       "name": "chat reply friendly help advertises flags",
-      "args": ["chat", "reply", "--help"],
+      "args": [
+        "chat",
+        "reply",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4866,20 +5845,39 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["chat reply", "--api-key", "--attachment", "--id", "--strict-only", "--timeout"]
+            "contains": [
+              "chat reply",
+              "--api-key",
+              "--attachment",
+              "--id",
+              "--strict-only",
+              "--timeout"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["chat reply", "--api-key", "--attachment", "--id", "--strict-only", "--timeout"],
-            "notContains": ["mail commands: send, reply, chat"]
+            "contains": [
+              "chat reply",
+              "--api-key",
+              "--attachment",
+              "--id",
+              "--strict-only",
+              "--timeout"
+            ],
+            "notContains": [
+              "mail commands: send, reply, chat"
+            ]
           }
         }
       }
     },
     {
       "name": "chat reply colon help advertises flags",
-      "args": ["chat:reply", "--help"],
+      "args": [
+        "chat:reply",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -4888,39 +5886,65 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["chat reply", "--api-key", "--attachment", "--id", "--strict-only", "--timeout"]
+            "contains": [
+              "chat reply",
+              "--api-key",
+              "--attachment",
+              "--id",
+              "--strict-only",
+              "--timeout"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["chat reply", "--api-key", "--attachment", "--id", "--strict-only", "--timeout"],
-            "notContains": ["mail commands: send, reply, chat"]
+            "contains": [
+              "chat reply",
+              "--api-key",
+              "--attachment",
+              "--id",
+              "--strict-only",
+              "--timeout"
+            ],
+            "notContains": [
+              "mail commands: send, reply, chat"
+            ]
           }
         }
       }
     },
     {
       "name": "generated send rejects unknown flag",
-      "args": ["sending:send", "--not-a-real-flag"],
+      "args": [
+        "sending:send",
+        "--not-a-real-flag"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "stdout": "",
         "stderr": {
-          "contains": ["Nonexistent flag: --not-a-real-flag"]
+          "contains": [
+            "Nonexistent flag: --not-a-real-flag"
+          ]
         },
         "requests": []
       }
     },
     {
       "name": "generated send rejects missing flag value",
-      "args": ["sending:send", "--subject"],
+      "args": [
+        "sending:send",
+        "--subject"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "stdout": "",
         "stderr": {
-          "contains": ["Flag --subject expects a value"]
+          "contains": [
+            "Flag --subject expects a value"
+          ]
         },
         "requests": []
       }
@@ -4944,7 +5968,9 @@
         "exitCode": 2,
         "stdout": "",
         "stderr": {
-          "contains": ["Flag --to can only be specified once"]
+          "contains": [
+            "Flag --to can only be specified once"
+          ]
         },
         "requests": []
       }
@@ -4966,7 +5992,9 @@
         "exitCode": 2,
         "stdout": "",
         "stderr": {
-          "contains": ["Flag --verification-code can only be specified once"]
+          "contains": [
+            "Flag --verification-code can only be specified once"
+          ]
         },
         "requests": []
       }
@@ -4988,20 +6016,28 @@
         "exitCode": 2,
         "stdout": "",
         "stderr": {
-          "contains": ["Flag --verification-code can only be specified once"]
+          "contains": [
+            "Flag --verification-code can only be specified once"
+          ]
         },
         "requests": []
       }
     },
     {
       "name": "generated complex body flag is rejected",
-      "args": ["agent:start-agent-signup", "--metadata", "{\"source\":\"parity\"}"],
+      "args": [
+        "agent:start-agent-signup",
+        "--metadata",
+        "{\"source\":\"parity\"}"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "stdout": "",
         "stderr": {
-          "contains": ["Nonexistent flag: --metadata"]
+          "contains": [
+            "Nonexistent flag: --metadata"
+          ]
         },
         "requests": []
       }
@@ -5025,7 +6061,9 @@
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Flag --body expects a value"]
+          "contains": [
+            "Flag --body expects a value"
+          ]
         }
       }
     },
@@ -5047,7 +6085,9 @@
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Nonexistent flag: --no-wait"]
+          "contains": [
+            "Nonexistent flag: --no-wait"
+          ]
         }
       }
     },
@@ -5069,7 +6109,9 @@
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Unexpected argument: false"]
+          "contains": [
+            "Unexpected argument: false"
+          ]
         }
       }
     },
@@ -5091,7 +6133,9 @@
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Nonexistent flag: --wat"]
+          "contains": [
+            "Nonexistent flag: --wat"
+          ]
         }
       }
     },
@@ -5114,7 +6158,9 @@
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Flag --body can only be specified once"]
+          "contains": [
+            "Flag --body can only be specified once"
+          ]
         }
       }
     },
@@ -5750,7 +6796,9 @@
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Pass only one plain-text body source (got --body, --body-stdin)."]
+          "contains": [
+            "Pass only one plain-text body source (got --body, --body-stdin)."
+          ]
         },
         "stdout": ""
       }
@@ -5774,7 +6822,9 @@
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["Stdin can only be consumed once (got --body-stdin, --html-stdin)."]
+          "contains": [
+            "Stdin can only be consumed once (got --body-stdin, --html-stdin)."
+          ]
         },
         "stdout": ""
       }
@@ -6080,7 +7130,9 @@
               "bodyJson": {
                 "success": true,
                 "data": {
-                  "accepted": ["agent@example.com"],
+                  "accepted": [
+                    "agent@example.com"
+                  ],
                   "from": "me@example.com",
                   "id": "sent_help_message",
                   "idempotent_replay": false,
@@ -6201,7 +7253,9 @@
               "bodyJson": {
                 "success": true,
                 "data": {
-                  "accepted": ["agent@example.com"],
+                  "accepted": [
+                    "agent@example.com"
+                  ],
                   "from": "me@example.com",
                   "id": "sent_transcript",
                   "idempotent_replay": false,
@@ -6325,7 +7379,9 @@
               "bodyJson": {
                 "success": true,
                 "data": {
-                  "accepted": ["agent@example.com"],
+                  "accepted": [
+                    "agent@example.com"
+                  ],
                   "from": "me@example.com",
                   "id": "sent_timeout",
                   "idempotent_replay": false,
@@ -6458,7 +7514,9 @@
                 "success": true,
                 "data": {
                   "id": "sent_reply_1",
-                  "accepted": ["agent@example.com"],
+                  "accepted": [
+                    "agent@example.com"
+                  ],
                   "from": "me@example.com",
                   "status": "queued",
                   "idempotent_replay": false
@@ -6516,16 +7574,16 @@
             "headers": {
               "authorization": "Bearer prim_test"
             },
-        "body": {
-          "attachments": [
-            {
-              "content_base64": "aGVsbG8=",
-              "filename": "chat-reply-note.txt"
+            "body": {
+              "attachments": [
+                {
+                  "content_base64": "aGVsbG8=",
+                  "filename": "chat-reply-note.txt"
+                }
+              ],
+              "body_text": "One more thing",
+              "from": "me@example.com"
             }
-          ],
-          "body_text": "One more thing",
-          "from": "me@example.com"
-        }
           },
           {
             "method": "GET",
@@ -6620,7 +7678,9 @@
                 "success": true,
                 "data": {
                   "id": "sent_exact_reply",
-                  "accepted": ["agent@example.com"],
+                  "accepted": [
+                    "agent@example.com"
+                  ],
                   "from": "me@example.com",
                   "status": "queued",
                   "idempotent_replay": false
@@ -6746,7 +7806,9 @@
                 "success": true,
                 "data": {
                   "id": "sent_replay_chat",
-                  "accepted": ["agent@example.com"],
+                  "accepted": [
+                    "agent@example.com"
+                  ],
                   "from": "me@example.com",
                   "subject": "Ping",
                   "status": "queued",
@@ -6817,16 +7879,16 @@
             "headers": {
               "authorization": "Bearer prim_test"
             },
-        "body": {
-          "attachments": [
-            {
-              "content_base64": "aGVsbG8=",
-              "filename": "chat-note.txt"
-            }
-          ],
-          "body_text": "Ping",
-          "from": "me@example.com",
-          "subject": "Ping",
+            "body": {
+              "attachments": [
+                {
+                  "content_base64": "aGVsbG8=",
+                  "filename": "chat-note.txt"
+                }
+              ],
+              "body_text": "Ping",
+              "from": "me@example.com",
+              "subject": "Ping",
               "to": "agent@example.com"
             }
           },
@@ -6881,7 +7943,11 @@
     },
     {
       "name": "generated list response cursor and empty hint",
-      "args": ["emails:list", "--api-key", "prim_test"],
+      "args": [
+        "emails:list",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -6987,7 +8053,11 @@
     },
     {
       "name": "generated query default is sent without auth on public operation",
-      "args": ["templates:list-templates", "--api-key", "prim_test"],
+      "args": [
+        "templates:list-templates",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -7015,7 +8085,9 @@
             "query": {
               "limit": "50"
             },
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ]
       }
@@ -7124,7 +8196,9 @@
               "cursor": "cursor_a",
               "limit": "2"
             },
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ]
       }
@@ -7166,7 +8240,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "parity-agent",
               "email": "agent@example.com",
@@ -7192,19 +8268,25 @@
         "exitCode": 1,
         "stdout": "",
         "stderr": {
-          "contains": ["--raw-body is not valid JSON"]
+          "contains": [
+            "--raw-body is not valid JSON"
+          ]
         },
         "requests": []
       },
       "expectByRunner": {
         "node": {
           "stderr": {
-            "contains": ["Unexpected"]
+            "contains": [
+              "Unexpected"
+            ]
           }
         },
         "rust": {
           "stderr": {
-            "contains": ["line 1 column"]
+            "contains": [
+              "line 1 column"
+            ]
           }
         }
       }
@@ -7368,7 +8450,13 @@
     },
     {
       "name": "generated query omits nonnumeric defaults",
-      "args": ["emails:search", "--api-key", "prim_test", "--q", "hello"],
+      "args": [
+        "emails:search",
+        "--api-key",
+        "prim_test",
+        "--q",
+        "hello"
+      ],
       "server": {
         "exchanges": [
           {
@@ -7403,14 +8491,22 @@
     },
     {
       "name": "generated query rejects nonfinite number",
-      "args": ["emails:search", "--api-key", "prim_test", "--spam-score-lt", "inf"],
+      "args": [
+        "emails:search",
+        "--api-key",
+        "prim_test",
+        "--spam-score-lt",
+        "inf"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["spam-score-lt"]
+          "contains": [
+            "spam-score-lt"
+          ]
         }
       }
     },
@@ -7435,20 +8531,29 @@
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["wait-timeout-ms"]
+          "contains": [
+            "wait-timeout-ms"
+          ]
         }
       },
       "expectByRunner": {
         "rust": {
           "stderr": {
-            "contains": ["wait-timeout-ms", "greater than or equal to 1000"]
+            "contains": [
+              "wait-timeout-ms",
+              "greater than or equal to 1000"
+            ]
           }
         }
       }
     },
     {
       "name": "generated endpoints list request",
-      "args": ["endpoints:list-endpoints", "--api-key", "prim_test"],
+      "args": [
+        "endpoints:list-endpoints",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -7487,7 +8592,11 @@
     },
     {
       "name": "generated filters list request",
-      "args": ["filters:list-filters", "--api-key", "prim_test"],
+      "args": [
+        "filters:list-filters",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -7526,7 +8635,11 @@
     },
     {
       "name": "generated functions routing topology request",
-      "args": ["functions:get-org-routing-topology", "--api-key", "prim_test"],
+      "args": [
+        "functions:get-org-routing-topology",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -7630,7 +8743,13 @@
     },
     {
       "name": "functions route unset colon alias request",
-      "args": ["functions:route-unset", "--api-key", "prim_test", "--id", "fn_123"],
+      "args": [
+        "functions:route-unset",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "fn_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -7667,7 +8786,13 @@
     },
     {
       "name": "functions route get colon alias request",
-      "args": ["functions:route-get", "--api-key", "prim_test", "--id", "fn_123"],
+      "args": [
+        "functions:route-get",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "fn_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -7712,7 +8837,11 @@
     },
     {
       "name": "functions routing topology colon alias request",
-      "args": ["functions:routing-topology", "--api-key", "prim_test"],
+      "args": [
+        "functions:routing-topology",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -7815,7 +8944,11 @@
     },
     {
       "name": "generated sending send permissions request",
-      "args": ["sending:get-send-permissions", "--api-key", "prim_test"],
+      "args": [
+        "sending:get-send-permissions",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8008,7 +9141,11 @@
     },
     {
       "name": "generated templates get request",
-      "args": ["templates:get-template", "--id", "inbound-reply"],
+      "args": [
+        "templates:get-template",
+        "--id",
+        "inbound-reply"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8036,14 +9173,20 @@
           {
             "method": "GET",
             "path": "/v1/templates/inbound-reply",
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ]
       }
     },
     {
       "name": "generated registries get agent request",
-      "args": ["registries:get-agent", "--address", "agent@example.com"],
+      "args": [
+        "registries:get-agent",
+        "--address",
+        "agent@example.com"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8081,14 +9224,20 @@
           {
             "method": "GET",
             "path": "/v1/agents/agent%40example.com",
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ]
       }
     },
     {
       "name": "generated registries get registry request",
-      "args": ["registries:get-registry", "--slug", "public-registry"],
+      "args": [
+        "registries:get-registry",
+        "--slug",
+        "public-registry"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8124,7 +9273,9 @@
           {
             "method": "GET",
             "path": "/v1/registries/public-registry",
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ]
       }
@@ -8175,7 +9326,9 @@
               "cursor": "agent@example.com",
               "limit": "2"
             },
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ]
       }
@@ -8239,7 +9392,13 @@
     },
     {
       "name": "generated wake dispatches list request",
-      "args": ["wake:list-wake-dispatches", "--api-key", "prim_test", "--limit", "2"],
+      "args": [
+        "wake:list-wake-dispatches",
+        "--api-key",
+        "prim_test",
+        "--limit",
+        "2"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8407,7 +9566,11 @@
     },
     {
       "name": "generated account rotate webhook secret request",
-      "args": ["account:rotate-webhook-secret", "--api-key", "prim_test"],
+      "args": [
+        "account:rotate-webhook-secret",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8528,7 +9691,13 @@
     },
     {
       "name": "generated endpoints test request",
-      "args": ["endpoints:test-endpoint", "--api-key", "prim_test", "--id", "ep_123"],
+      "args": [
+        "endpoints:test-endpoint",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "ep_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8758,7 +9927,13 @@
     },
     {
       "name": "generated domains delete request",
-      "args": ["domains:delete-domain", "--api-key", "prim_test", "--id", "domain_123"],
+      "args": [
+        "domains:delete-domain",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "domain_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8847,7 +10022,13 @@
     },
     {
       "name": "generated domains verify request",
-      "args": ["domains:verify-domain", "--api-key", "prim_test", "--id", "domain_123"],
+      "args": [
+        "domains:verify-domain",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "domain_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8884,7 +10065,13 @@
     },
     {
       "name": "generated emails delete request",
-      "args": ["emails:delete-email", "--api-key", "prim_test", "--id", "email_123"],
+      "args": [
+        "emails:delete-email",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "email_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -8976,7 +10163,13 @@
     },
     {
       "name": "generated endpoints delete request",
-      "args": ["endpoints:delete-endpoint", "--api-key", "prim_test", "--id", "ep_123"],
+      "args": [
+        "endpoints:delete-endpoint",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "ep_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -9065,7 +10258,13 @@
     },
     {
       "name": "generated filters delete request",
-      "args": ["filters:delete-filter", "--api-key", "prim_test", "--id", "filter_123"],
+      "args": [
+        "filters:delete-filter",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "filter_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -9153,7 +10352,13 @@
     },
     {
       "name": "generated functions delete request",
-      "args": ["functions:delete-function", "--api-key", "prim_test", "--id", "fn_123"],
+      "args": [
+        "functions:delete-function",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "fn_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -9349,7 +10554,13 @@
     },
     {
       "name": "generated functions unset route request",
-      "args": ["functions:unset-function-route", "--api-key", "prim_test", "--id", "fn_123"],
+      "args": [
+        "functions:unset-function-route",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "fn_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -9453,7 +10664,13 @@
     },
     {
       "name": "generated payments get challenge request",
-      "args": ["payments:get-challenge", "--api-key", "prim_test", "--id", "challenge_123"],
+      "args": [
+        "payments:get-challenge",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "challenge_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -9492,7 +10709,11 @@
     },
     {
       "name": "generated payments get spend policy request",
-      "args": ["payments:get-spend-policy", "--api-key", "prim_test"],
+      "args": [
+        "payments:get-spend-policy",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -9531,7 +10752,11 @@
     },
     {
       "name": "generated payments list declined request",
-      "args": ["payments:list-declined-payments", "--api-key", "prim_test"],
+      "args": [
+        "payments:list-declined-payments",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -9572,7 +10797,11 @@
     },
     {
       "name": "generated payments list payout addresses request",
-      "args": ["payments:list-payout-addresses", "--api-key", "prim_test"],
+      "args": [
+        "payments:list-payout-addresses",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -9819,7 +11048,10 @@
               "description": "Answers support mail",
               "display_name": "Agent Example",
               "endpoint_id": "55555555-5555-4555-8555-555555555555",
-              "tags": ["support", "billing"],
+              "tags": [
+                "support",
+                "billing"
+              ],
               "title": "Support agent"
             }
           }
@@ -9970,7 +11202,11 @@
     },
     {
       "name": "generated registries list registries request",
-      "args": ["registries:list-registries", "--api-key", "prim_test"],
+      "args": [
+        "registries:list-registries",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -10116,7 +11352,13 @@
     },
     {
       "name": "generated sending get sent email request",
-      "args": ["sending:get-sent-email", "--api-key", "prim_test", "--id", "sent_123"],
+      "args": [
+        "sending:get-sent-email",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "sent_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -10155,7 +11397,14 @@
     },
     {
       "name": "generated sent get alias request",
-      "args": ["sent", "get", "--api-key", "prim_test", "--id", "sent_123"],
+      "args": [
+        "sent",
+        "get",
+        "--api-key",
+        "prim_test",
+        "--id",
+        "sent_123"
+      ],
       "server": {
         "exchanges": [
           {
@@ -10296,7 +11545,11 @@
     },
     {
       "name": "wake schedules nested topic help",
-      "args": ["wake", "schedules", "--help"],
+      "args": [
+        "wake",
+        "schedules",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -10305,19 +11558,31 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["wake schedules create", "wake schedules list", "wake schedules update"]
+            "contains": [
+              "wake schedules create",
+              "wake schedules list",
+              "wake schedules update"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["wake schedules create", "wake schedules list", "wake schedules update"]
+            "contains": [
+              "wake schedules create",
+              "wake schedules list",
+              "wake schedules update"
+            ]
           }
         }
       }
     },
     {
       "name": "wake authorizations nested topic help",
-      "args": ["wake", "authorizations", "--help"],
+      "args": [
+        "wake",
+        "authorizations",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -10346,7 +11611,11 @@
     },
     {
       "name": "wake dispatches nested topic help",
-      "args": ["wake", "dispatches", "--help"],
+      "args": [
+        "wake",
+        "dispatches",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -10355,12 +11624,16 @@
       "expectByRunner": {
         "node": {
           "stdout": {
-            "contains": ["wake dispatches list"]
+            "contains": [
+              "wake dispatches list"
+            ]
           }
         },
         "rust": {
           "stdout": {
-            "contains": ["wake dispatches list"]
+            "contains": [
+              "wake dispatches list"
+            ]
           }
         }
       }
@@ -10707,10 +11980,15 @@
       },
       "expect": {
         "stdout": {
-          "contains": ["email_search", "Hello"]
+          "contains": [
+            "email_search",
+            "Hello"
+          ]
         },
         "stderr": {
-          "contains": ["Next page: pass --cursor cursor_next"]
+          "contains": [
+            "Next page: pass --cursor cursor_next"
+          ]
         },
         "requests": [
           {
@@ -10841,7 +12119,9 @@
               "authorization": "Bearer prim_test"
             },
             "body": {
-              "corpus": ["inbound"],
+              "corpus": [
+                "inbound"
+              ],
               "date_from": "2026-01-01T00:00:00Z",
               "limit": 3,
               "mode": "keyword",
@@ -11013,7 +12293,14 @@
     },
     {
       "name": "emails latest friendly table output",
-      "args": ["emails", "latest", "--api-key", "prim_test", "--limit", "1"],
+      "args": [
+        "emails",
+        "latest",
+        "--api-key",
+        "prim_test",
+        "--limit",
+        "1"
+      ],
       "server": {
         "exchanges": [
           {
@@ -11087,14 +12374,18 @@
           {
             "method": "GET",
             "path": "/v1/registries/team-one/agents/agent%40example.com",
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ]
       }
     },
     {
       "name": "generated auth resolves stored credentials and configured headers",
-      "args": ["account:storage"],
+      "args": [
+        "account:storage"
+      ],
       "configFiles": {
         "config.json": {
           "current_environment": "default",
@@ -11167,7 +12458,9 @@
     },
     {
       "name": "generated auth resolves legacy saved credential base url",
-      "args": ["account:storage"],
+      "args": [
+        "account:storage"
+      ],
       "env": {
         "PRIMITIVE_API_BASE_URL": ""
       },
@@ -11231,7 +12524,9 @@
     },
     {
       "name": "generated auth merges api headers from env",
-      "args": ["account:storage"],
+      "args": [
+        "account:storage"
+      ],
       "env": {
         "PRIMITIVE_API_HEADERS": "{\"x-client-case\":\"env-config\",\"x-extra\":\"env-only\"}",
         "PRIMITIVE_API_KEY": "prim_env"
@@ -11282,7 +12577,9 @@
     },
     {
       "name": "generated auth rejects incomplete saved oauth credentials",
-      "args": ["account:storage"],
+      "args": [
+        "account:storage"
+      ],
       "env": {
         "PRIMITIVE_API_KEY": ""
       },
@@ -11308,7 +12605,9 @@
     },
     {
       "name": "generated auth removes legacy api key credentials",
-      "args": ["account:storage"],
+      "args": [
+        "account:storage"
+      ],
       "env": {
         "PRIMITIVE_API_KEY": ""
       },
@@ -11344,7 +12643,9 @@
           {
             "method": "GET",
             "path": "/v1/account/storage",
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ],
         "stdout": "",
@@ -11354,12 +12655,17 @@
             "Missing API key"
           ]
         },
-        "configFilesAbsent": ["credentials.json", "chat-state.json"]
+        "configFilesAbsent": [
+          "credentials.json",
+          "chat-state.json"
+        ]
       }
     },
     {
       "name": "generated auth removes blank legacy api key credentials",
-      "args": ["account:storage"],
+      "args": [
+        "account:storage"
+      ],
       "env": {
         "PRIMITIVE_API_KEY": ""
       },
@@ -11393,7 +12699,9 @@
           {
             "method": "GET",
             "path": "/v1/account/storage",
-            "headersAbsent": ["authorization"]
+            "headersAbsent": [
+              "authorization"
+            ]
           }
         ],
         "stdout": "",
@@ -11403,12 +12711,17 @@
             "Missing API key"
           ]
         },
-        "configFilesAbsent": ["credentials.json", "chat-state.json"]
+        "configFilesAbsent": [
+          "credentials.json",
+          "chat-state.json"
+        ]
       }
     },
     {
       "name": "generated auth env api key ignores malformed saved credentials",
-      "args": ["account:storage"],
+      "args": [
+        "account:storage"
+      ],
       "env": {
         "PRIMITIVE_API_KEY": "prim_env"
       },
@@ -11459,7 +12772,11 @@
     },
     {
       "name": "config list empty json",
-      "args": ["config", "list", "--json"],
+      "args": [
+        "config",
+        "list",
+        "--json"
+      ],
       "compare": true,
       "expect": {
         "stdout": {
@@ -11475,7 +12792,9 @@
     },
     {
       "name": "config bare parent",
-      "args": ["config"],
+      "args": [
+        "config"
+      ],
       "expect": {
         "stdout": "No Primitive CLI environments configured.\n",
         "stderr": "",
@@ -11484,26 +12803,38 @@
     },
     {
       "name": "config rejects authorization header",
-      "args": ["config", "set", "--header", "authorization=secret"],
+      "args": [
+        "config",
+        "set",
+        "--header",
+        "authorization=secret"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 1,
         "stdout": "",
         "stderr": {
-          "contains": ["Authorization header"]
+          "contains": [
+            "Authorization header"
+          ]
         },
         "requests": []
       }
     },
     {
       "name": "config set rejects empty mutation",
-      "args": ["config", "set"],
+      "args": [
+        "config",
+        "set"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 1,
         "stdout": "",
         "stderr": {
-          "contains": ["Nothing to set"]
+          "contains": [
+            "Nothing to set"
+          ]
         },
         "requests": []
       }
@@ -11632,13 +12963,20 @@
         "stdout": "",
         "requests": [],
         "stderr": {
-          "contains": ["Nonexistent flag: --env"]
+          "contains": [
+            "Nonexistent flag: --env"
+          ]
         }
       }
     },
     {
       "name": "config set unsets header on active environment",
-      "args": ["config", "set", "--unset-header", "x-remove"],
+      "args": [
+        "config",
+        "set",
+        "--unset-header",
+        "x-remove"
+      ],
       "compare": false,
       "configFiles": {
         "config.json": {
@@ -11689,7 +13027,11 @@
     },
     {
       "name": "config list redacts stored header values",
-      "args": ["config", "list", "--json"],
+      "args": [
+        "config",
+        "list",
+        "--json"
+      ],
       "compare": true,
       "configFiles": {
         "config.json": {
@@ -11728,7 +13070,11 @@
     },
     {
       "name": "config list rejects unsupported config version",
-      "args": ["config", "list", "--json"],
+      "args": [
+        "config",
+        "list",
+        "--json"
+      ],
       "compare": false,
       "configFiles": {
         "config.json": {
@@ -11741,14 +13087,20 @@
         "exitCode": 1,
         "stdout": "",
         "stderr": {
-          "contains": ["Primitive CLI config version must be 1."]
+          "contains": [
+            "Primitive CLI config version must be 1."
+          ]
         },
         "requests": []
       }
     },
     {
       "name": "config list rejects missing current environment",
-      "args": ["config", "list", "--json"],
+      "args": [
+        "config",
+        "list",
+        "--json"
+      ],
       "compare": false,
       "configFiles": {
         "config.json": {
@@ -11765,14 +13117,20 @@
         "exitCode": 1,
         "stdout": "",
         "stderr": {
-          "contains": ["Primitive CLI config current environment staging does not exist."]
+          "contains": [
+            "Primitive CLI config current environment staging does not exist."
+          ]
         },
         "requests": []
       }
     },
     {
       "name": "config use switches active environment",
-      "args": ["config", "use", "staging"],
+      "args": [
+        "config",
+        "use",
+        "staging"
+      ],
       "compare": false,
       "configFiles": {
         "config.json": {
@@ -11808,7 +13166,10 @@
         "requests": [],
         "stdout": "",
         "stderr": "Primitive CLI environment staging is active.\nRemoved saved Primitive CLI credentials. Run `primitive signin` to authenticate in the active environment.\n",
-        "configFilesAbsent": ["credentials.json", "chat-state.json"]
+        "configFilesAbsent": [
+          "credentials.json",
+          "chat-state.json"
+        ]
       },
       "expectByRunner": {
         "node": {
@@ -11847,7 +13208,10 @@
     },
     {
       "name": "config reset clears request config",
-      "args": ["config", "reset"],
+      "args": [
+        "config",
+        "reset"
+      ],
       "compare": false,
       "configFiles": {
         "config.json": {
@@ -11861,7 +13225,9 @@
         }
       },
       "expect": {
-        "configFilesAbsent": ["config.json"],
+        "configFilesAbsent": [
+          "config.json"
+        ],
         "requests": [],
         "stdout": "",
         "stderr": "Primitive CLI request config reset.\n"
@@ -11869,7 +13235,12 @@
     },
     {
       "name": "config reset named environment",
-      "args": ["config", "reset", "-e", "staging"],
+      "args": [
+        "config",
+        "reset",
+        "-e",
+        "staging"
+      ],
       "compare": false,
       "configFiles": {
         "config.json": {
@@ -12575,7 +13946,9 @@
         "exitCode": 1,
         "stdout": "",
         "stderr": {
-          "contains": ["Domain example.com was not found."]
+          "contains": [
+            "Domain example.com was not found."
+          ]
         },
         "requests": [
           {
@@ -12702,20 +14075,34 @@
     },
     {
       "name": "parameter validation rejects invalid integer limit",
-      "args": ["emails:list", "--api-key", "prim_test", "--limit", "not-an-int"],
+      "args": [
+        "emails:list",
+        "--api-key",
+        "prim_test",
+        "--limit",
+        "not-an-int"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "stdout": "",
         "stderr": {
-          "contains": ["integer"]
+          "contains": [
+            "integer"
+          ]
         },
         "requests": []
       }
     },
     {
       "name": "operation alias sent list maps to sending list sent emails",
-      "args": ["sent:list", "--api-key", "prim_test", "--status", "delivered"],
+      "args": [
+        "sent:list",
+        "--api-key",
+        "prim_test",
+        "--status",
+        "delivered"
+      ],
       "server": {
         "exchanges": [
           {
@@ -12760,7 +14147,14 @@
     },
     {
       "name": "generated sent list spaced alias request",
-      "args": ["sent", "list", "--api-key", "prim_test", "--status", "delivered"],
+      "args": [
+        "sent",
+        "list",
+        "--api-key",
+        "prim_test",
+        "--status",
+        "delivered"
+      ],
       "server": {
         "exchanges": [
           {
@@ -12805,7 +14199,10 @@
     },
     {
       "name": "payments parent help",
-      "args": ["payments", "--help"],
+      "args": [
+        "payments",
+        "--help"
+      ],
       "compare": false,
       "expect": {
         "stderr": "",
@@ -12818,7 +14215,9 @@
             "payments get-spend-policy",
             "payments update-spend-policy"
           ],
-          "notContains": ["payments spend-policy"]
+          "notContains": [
+            "payments spend-policy"
+          ]
         }
       }
     },
@@ -12947,7 +14346,14 @@
     },
     {
       "name": "payments charge rejects invalid raw amount before api",
-      "args": ["payments", "charge", "--api-key", "prim_test", "--amount", "abc"],
+      "args": [
+        "payments",
+        "charge",
+        "--api-key",
+        "prim_test",
+        "--amount",
+        "abc"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 1,
@@ -13036,7 +14442,12 @@
     },
     {
       "name": "payments charge rejects overprecise usdc",
-      "args": ["payments", "charge", "--amount-usdc", "0.1234567"],
+      "args": [
+        "payments",
+        "charge",
+        "--amount-usdc",
+        "0.1234567"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 1,
@@ -13047,14 +14458,21 @@
     },
     {
       "name": "payments pay email rejects value flag followed by flag token",
-      "args": ["payments", "pay-email", "--body", "--wait"],
+      "args": [
+        "payments",
+        "pay-email",
+        "--body",
+        "--wait"
+      ],
       "compare": false,
       "expect": {
         "exitCode": 2,
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Flag --body expects a value"]
+          "contains": [
+            "Flag --body expects a value"
+          ]
         }
       }
     },
@@ -14389,13 +15807,20 @@
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Flag --function expects a value"]
+          "contains": [
+            "Flag --function expects a value"
+          ]
         }
       }
     },
     {
       "name": "routes list friendly",
-      "args": ["routes", "list", "--api-key", "prim_test"],
+      "args": [
+        "routes",
+        "list",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -14590,7 +16015,13 @@
     },
     {
       "name": "routes remove friendly",
-      "args": ["routes", "remove", "route_123", "--api-key", "prim_test"],
+      "args": [
+        "routes",
+        "remove",
+        "route_123",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -14670,10 +16101,15 @@
       },
       "expect": {
         "stdout": {
-          "contains": ["\"id\": \"fn_reply\"", "\"name\": \"reply-bot\""]
+          "contains": [
+            "\"id\": \"fn_reply\"",
+            "\"name\": \"reply-bot\""
+          ]
         },
         "stderr": {
-          "contains": ["Deployed but no route is bound"]
+          "contains": [
+            "Deployed but no route is bound"
+          ]
         },
         "requests": [
           {
@@ -14842,10 +16278,15 @@
       },
       "expect": {
         "stdout": {
-          "contains": ["\"id\": \"fn_secret\"", "\"name\": \"secret-bot\""]
+          "contains": [
+            "\"id\": \"fn_secret\"",
+            "\"name\": \"secret-bot\""
+          ]
         },
         "stderr": {
-          "contains": ["Deployed but no route is bound"]
+          "contains": [
+            "Deployed but no route is bound"
+          ]
         },
         "requests": [
           {
@@ -14961,10 +16402,15 @@
       },
       "expect": {
         "stdout": {
-          "contains": ["\"id\": \"fn_existing\"", "\"name\": \"source-bot\""]
+          "contains": [
+            "\"id\": \"fn_existing\"",
+            "\"name\": \"source-bot\""
+          ]
         },
         "stderr": {
-          "contains": ["Deployed but no route is bound"]
+          "contains": [
+            "Deployed but no route is bound"
+          ]
         },
         "requests": [
           {
@@ -15174,7 +16620,10 @@
       },
       "expect": {
         "stdout": {
-          "contains": ["\"id\": \"fn_123\"", "\"deploy_status\": \"pending\""]
+          "contains": [
+            "\"id\": \"fn_123\"",
+            "\"deploy_status\": \"pending\""
+          ]
         },
         "stderr": "",
         "requests": [
@@ -15463,7 +16912,10 @@
         "exitCode": 2,
         "requests": [],
         "stderr": {
-          "contains": ["cursor", "follow"]
+          "contains": [
+            "cursor",
+            "follow"
+          ]
         },
         "stdout": ""
       }
@@ -15848,7 +17300,10 @@
         "files": {
           "function-project/.gitignore": "node_modules\ndist\n",
           "function-project/build.mjs": {
-            "contains": ["esbuild", "outfile: \"dist/handler.js\""]
+            "contains": [
+              "esbuild",
+              "outfile: \"dist/handler.js\""
+            ]
           },
           "function-project/package.json": {
             "contains": [
@@ -15874,7 +17329,10 @@
             ]
           },
           "function-project/handler.ts": {
-            "contains": ["createPrimitiveClient", "client.reply"]
+            "contains": [
+              "createPrimitiveClient",
+              "client.reply"
+            ]
           }
         }
       }
@@ -16020,7 +17478,9 @@
         "requests": [],
         "stdout": "",
         "stderr": {
-          "contains": ["Flag --note expects a value"]
+          "contains": [
+            "Flag --note expects a value"
+          ]
         }
       }
     },
@@ -16076,7 +17536,10 @@
               "authorization": "Bearer prim_wake"
             },
             "body": {
-              "allowed_commands": ["process_inbox", "sync_state"],
+              "allowed_commands": [
+                "process_inbox",
+                "sync_state"
+              ],
               "allowed_sender_address": "runner@agents.example.com",
               "allowed_sender_domain": "agents.example.com",
               "note": "scheduled agents",
@@ -16497,6 +17960,7 @@
         "--api-key",
         "prim_test"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16510,8 +17974,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -16532,6 +17994,7 @@
         "--raw-body",
         "{}"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16545,8 +18008,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16568,6 +18029,7 @@
         "--verification-code",
         "123456"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16581,8 +18043,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16605,6 +18065,7 @@
         "--device-name",
         "parity-agent"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16618,13 +18079,13 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
             "path": "/v1/agent/accounts",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "parity-agent",
               "terms_accepted": true
@@ -16642,6 +18103,7 @@
         "--id",
         "42"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16655,8 +18117,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16678,6 +18138,7 @@
         "example.com",
         "--confirmed"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16691,8 +18152,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16717,6 +18176,7 @@
         "--id",
         "domain_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16730,8 +18190,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -16750,6 +18208,7 @@
         "--api-key",
         "prim_test"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16763,8 +18222,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -16788,6 +18245,7 @@
         "--spam-threshold",
         "4.5"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16801,8 +18259,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "PATCH",
@@ -16827,6 +18283,7 @@
         "--id",
         "domain_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16840,8 +18297,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16862,6 +18317,7 @@
         "--id",
         "email_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16875,8 +18331,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -16897,6 +18351,7 @@
         "--id",
         "email_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16910,8 +18365,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -16932,6 +18385,7 @@
         "--id",
         "email_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16945,8 +18399,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16967,6 +18419,7 @@
         "--id",
         "email_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16980,8 +18433,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17005,6 +18456,7 @@
         "https://example.com/webhook",
         "--no-enabled"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17018,8 +18470,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17045,6 +18495,7 @@
         "--id",
         "ep_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17058,8 +18509,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17078,6 +18527,7 @@
         "--api-key",
         "prim_test"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17091,8 +18541,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17113,6 +18561,7 @@
         "--id",
         "ep_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17126,8 +18575,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17151,6 +18598,7 @@
         "https://example.com/updated-webhook",
         "--enabled"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17164,8 +18612,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "PATCH",
@@ -17192,6 +18638,7 @@
         "--pattern",
         "sender@example.com"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17205,8 +18652,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17231,6 +18676,7 @@
         "--id",
         "filter_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17244,8 +18690,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17264,6 +18708,7 @@
         "--api-key",
         "prim_test"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17277,8 +18722,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17300,6 +18743,7 @@
         "filter_123",
         "--no-enabled"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17313,8 +18757,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "PATCH",
@@ -17338,6 +18780,7 @@
         "--id",
         "fn_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17351,8 +18794,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17375,6 +18816,7 @@
         "--key",
         "API_TOKEN"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17388,8 +18830,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17410,6 +18850,7 @@
         "--id",
         "fn_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17423,8 +18864,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17443,6 +18882,7 @@
         "--address",
         "agent@example.com"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17456,8 +18896,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17480,6 +18918,7 @@
         "--cursor",
         "agent@example.com"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17493,8 +18932,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17526,6 +18963,7 @@
         "--publish-policy",
         "request"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17539,8 +18977,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17572,6 +19008,7 @@
         "--decision",
         "approved"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17585,8 +19022,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17616,6 +19051,7 @@
         "--raw-body",
         "{\"tags\":[\"support\",\"billing\"],\"title\":\"Support agent\",\"description\":\"Answers support mail\"}"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17629,8 +19065,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17660,6 +19094,7 @@
         "--slug",
         "public-registry"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17673,8 +19108,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17693,6 +19126,7 @@
         "--api-key",
         "prim_test"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17706,8 +19140,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17732,6 +19164,7 @@
         "--handle",
         "agent"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17745,8 +19178,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17773,6 +19204,7 @@
         "--limit",
         "2"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17786,8 +19218,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17813,6 +19243,7 @@
         "--handle",
         "agent"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17826,8 +19257,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17855,6 +19284,7 @@
         "--publish-policy",
         "owner_only"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17868,8 +19298,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "PATCH",
@@ -17896,6 +19324,7 @@
         "--id",
         "sent_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17909,8 +19338,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17931,6 +19358,7 @@
         "--status",
         "delivered"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17944,8 +19372,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17968,6 +19394,7 @@
         "--api-key",
         "prim_test"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17981,8 +19408,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -18008,6 +19433,7 @@
         "Thanks, got it.",
         "--wait"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -18021,8 +19447,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -18050,6 +19474,7 @@
         "--limit",
         "2"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -18063,8 +19488,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -18089,6 +19512,7 @@
         "--id",
         "42"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -18102,8 +19526,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -18165,7 +19587,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/verify",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "signup_token": "signup_tok",
               "verification_code": "123456"
@@ -19319,7 +20743,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI"
             }
@@ -19327,7 +20753,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_code": "device_123"
             }
@@ -19417,7 +20845,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI"
             }
@@ -19425,7 +20855,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_code": "device_123"
             }
@@ -19519,7 +20951,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI"
             }
@@ -19527,7 +20961,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_code": "device_123"
             }
@@ -19618,7 +21054,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI"
             }
@@ -19626,7 +21064,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_code": "device_123"
             }
@@ -19716,7 +21156,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI"
             }
@@ -19724,7 +21166,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_code": "device_123"
             }
@@ -19818,7 +21262,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI"
             }
@@ -19826,7 +21272,9 @@
           {
             "method": "POST",
             "path": "/v1/cli/login/poll",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_code": "device_123"
             }
@@ -19916,7 +21364,9 @@
           {
             "method": "POST",
             "path": "/oauth/token",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": "client_id=primitive-cli&grant_type=refresh_token&refresh_token=stored_refresh"
           },
           {
@@ -20012,7 +21462,9 @@
           {
             "method": "POST",
             "path": "/oauth/token",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": "client_id=primitive-cli&grant_type=refresh_token&refresh_token=stored_refresh"
           },
           {
@@ -20076,7 +21528,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -20123,7 +21577,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -20171,7 +21627,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -20218,7 +21676,9 @@
           {
             "method": "POST",
             "path": "/v1/agent/signup/start",
-            "headersAbsent": ["authorization"],
+            "headersAbsent": [
+              "authorization"
+            ],
             "body": {
               "device_name": "Primitive CLI",
               "email": "user@example.com",
@@ -21056,6 +22516,7 @@
         "--verification-code",
         "123456"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21069,8 +22530,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -21092,6 +22551,7 @@
         "--api-key",
         "prim_test"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21105,8 +22565,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -21288,6 +22746,7 @@
         "--id",
         "fn_123"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21301,8 +22760,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -21411,6 +22868,7 @@
         "--status",
         "delivered"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21424,8 +22882,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -21455,6 +22911,7 @@
         "Thanks, got it.",
         "--wait"
       ],
+      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21468,8 +22925,6 @@
         ]
       },
       "expect": {
-        "stdout": "null\n",
-        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -21488,7 +22943,13 @@
     },
     {
       "name": "generated api error prints flattened error object",
-      "args": ["emails:get-email", "--id", "email_bad", "--api-key", "prim_test"],
+      "args": [
+        "emails:get-email",
+        "--id",
+        "email_bad",
+        "--api-key",
+        "prim_test"
+      ],
       "server": {
         "exchanges": [
           {
@@ -21522,7 +22983,15 @@
     },
     {
       "name": "wake api error flattens envelope without x402 hint",
-      "args": ["wake", "schedules", "list", "--api-key", "prim_wake", "--api-base-url", "__BASE_URL__"],
+      "args": [
+        "wake",
+        "schedules",
+        "list",
+        "--api-key",
+        "prim_wake",
+        "--api-base-url",
+        "__BASE_URL__"
+      ],
       "server": {
         "exchanges": [
           {
@@ -21543,8 +23012,15 @@
         "exitCode": 1,
         "stdout": "",
         "stderr": {
-          "contains": ["\"code\": \"feature_disabled\"", "\"message\": \"Wake dispatch is not enabled for this org\""],
-          "notContains": ["x402", "\"success\"", "\"error\""]
+          "contains": [
+            "\"code\": \"feature_disabled\"",
+            "\"message\": \"Wake dispatch is not enabled for this org\""
+          ],
+          "notContains": [
+            "x402",
+            "\"success\"",
+            "\"error\""
+          ]
         },
         "requests": [
           {
@@ -21559,7 +23035,14 @@
     },
     {
       "name": "payments api error keeps x402 feature hint",
-      "args": ["payments", "charge", "--api-key", "prim_test", "--amount-usdc", "0.01"],
+      "args": [
+        "payments",
+        "charge",
+        "--api-key",
+        "prim_test",
+        "--amount-usdc",
+        "0.01"
+      ],
       "compare": false,
       "server": {
         "exchanges": [
@@ -21581,7 +23064,11 @@
         "exitCode": 1,
         "stdout": "",
         "stderr": {
-          "contains": ["\"success\": false", "\"code\": \"feature_disabled\"", "x402 payments are not enabled for this organization yet."]
+          "contains": [
+            "\"success\": false",
+            "\"code\": \"feature_disabled\"",
+            "x402 payments are not enabled for this organization yet."
+          ]
         },
         "requests": [
           {
@@ -21596,6 +23083,190 @@
             }
           }
         ]
+      }
+    },
+    {
+      "name": "describe requires an argument exits usage",
+      "args": [
+        "describe"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "memories set without key exits usage",
+      "args": [
+        "memories",
+        "set"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "chat without recipient exits usage",
+      "args": [
+        "chat"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "payloads push without path exits usage",
+      "args": [
+        "payloads",
+        "push"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "payloads pull without root exits usage",
+      "args": [
+        "payloads",
+        "pull"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "semantic search without query exits usage",
+      "args": [
+        "search",
+        "--api-key",
+        "prim_test"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "routes reorder without set exits usage",
+      "args": [
+        "routes",
+        "reorder",
+        "--api-key",
+        "prim_test"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "send without resolvable from exits usage",
+      "args": [
+        "send",
+        "--api-key",
+        "prim_test",
+        "--api-base-url",
+        "__BASE_URL__",
+        "--to",
+        "user@example.com",
+        "--body",
+        "hi"
+      ],
+      "compare": false,
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "bodyJson": {
+                "success": true,
+                "data": []
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/v1/domains",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "send missing required to exits usage",
+      "args": [
+        "send",
+        "--api-key",
+        "prim_test",
+        "--from",
+        "agent@example.com",
+        "--body",
+        "hi"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "org secret set missing key exits usage",
+      "args": [
+        "org",
+        "secrets",
+        "set",
+        "--api-key",
+        "prim_test",
+        "--value",
+        "v"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
+      }
+    },
+    {
+      "name": "reply missing required id exits usage",
+      "args": [
+        "reply",
+        "--api-key",
+        "prim_test",
+        "--body",
+        "hi"
+      ],
+      "compare": false,
+      "expect": {
+        "exitCode": 2,
+        "stdout": "",
+        "requests": []
       }
     }
   ]

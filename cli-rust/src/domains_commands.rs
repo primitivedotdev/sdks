@@ -130,7 +130,7 @@ pub fn build_domains_command_plan(
     args: &[String],
 ) -> Result<DomainZoneFileCommandPlan> {
     let kind = domains_command_kind(command)
-        .ok_or_else(|| anyhow!("Unknown domains command `{command}`"))?;
+        .ok_or_else(|| crate::usage_error(format!("Unknown domains command `{command}`")))?;
     match kind {
         DomainsCommandKind::ZoneFile => parse_zone_file_command_plan(args),
     }
@@ -266,9 +266,9 @@ pub fn auth_flags(args: &[String]) -> Result<BTreeMap<String, String>> {
                 index += 1;
                 let value = args
                     .get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                    .ok_or_else(|| crate::usage_error(format!("Missing value for --{name}")))?;
                 if value.starts_with("--") {
-                    return Err(anyhow!("Missing value for --{name}"));
+                    return Err(crate::usage_error(format!("Missing value for --{name}")));
                 }
                 value.clone()
             };
@@ -446,7 +446,9 @@ fn parse_args(
         if arg.starts_with("--") {
             if let Some(name) = arg.strip_prefix("--no-") {
                 if !bool_flags.contains(name) {
-                    return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                    return Err(crate::usage_error(format!(
+                        "Unknown boolean flag --no-{name}"
+                    )));
                 }
                 parsed.bool_flags.insert(name.to_string(), false);
                 index += 1;
@@ -455,7 +457,7 @@ fn parse_args(
 
             let raw = arg
                 .strip_prefix("--")
-                .ok_or_else(|| anyhow!("Unexpected argument: {arg}"))?;
+                .ok_or_else(|| crate::usage_error(format!("Unexpected argument: {arg}")))?;
             let (name, inline_value) = raw
                 .split_once('=')
                 .map_or((raw, None), |(name, value)| (name, Some(value.to_string())));
@@ -473,7 +475,7 @@ fn parse_args(
             }
 
             if !value_flags.contains(name) {
-                return Err(anyhow!("Unknown flag --{name}"));
+                return Err(crate::usage_error(format!("Unknown flag --{name}")));
             }
 
             let value = if let Some(value) = inline_value {
@@ -482,9 +484,9 @@ fn parse_args(
                 index += 1;
                 let value = args
                     .get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                    .ok_or_else(|| crate::usage_error(format!("Missing value for --{name}")))?;
                 if value.starts_with("--") {
-                    return Err(anyhow!("Missing value for --{name}"));
+                    return Err(crate::usage_error(format!("Missing value for --{name}")));
                 }
                 value.clone()
             };
@@ -495,7 +497,7 @@ fn parse_args(
 
         let raw = arg
             .strip_prefix('-')
-            .ok_or_else(|| anyhow!("Unexpected argument: {arg}"))?;
+            .ok_or_else(|| crate::usage_error(format!("Unexpected argument: {arg}")))?;
         let (short_name, inline_value) = raw.split_once('=').map_or_else(
             || {
                 let Some((candidate, value)) = raw.split_at_checked(1) else {
@@ -510,7 +512,9 @@ fn parse_args(
             |(name, value)| (name, Some(value.to_string())),
         );
         let Some(name) = short_value_flags.get(short_name).copied() else {
-            return Err(anyhow!("Unknown short flag -{short_name}"));
+            return Err(crate::usage_error(format!(
+                "Unknown short flag -{short_name}"
+            )));
         };
         let value = if let Some(value) = inline_value {
             value
@@ -518,9 +522,11 @@ fn parse_args(
             index += 1;
             let value = args
                 .get(index)
-                .ok_or_else(|| anyhow!("Missing value for -{short_name}"))?;
+                .ok_or_else(|| crate::usage_error(format!("Missing value for -{short_name}")))?;
             if value.starts_with("--") {
-                return Err(anyhow!("Missing value for -{short_name}"));
+                return Err(crate::usage_error(format!(
+                    "Missing value for -{short_name}"
+                )));
             }
             value.clone()
         };
@@ -540,7 +546,7 @@ fn insert_parsed_value(parsed: &mut ParsedArgs, name: &str, value: String) -> Re
 
 fn reject_positionals(parsed: &ParsedArgs) -> Result<()> {
     if let Some(extra) = parsed.positionals.first() {
-        return Err(anyhow!("Unexpected argument: {extra}"));
+        return Err(crate::usage_error(format!("Unexpected argument: {extra}")));
     }
     Ok(())
 }

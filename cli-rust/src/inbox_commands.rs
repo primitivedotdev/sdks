@@ -226,7 +226,9 @@ pub fn build_inbox_command_plan(args: &[String]) -> Result<InboxCommandPlan> {
     match subcommand.as_str() {
         "setup" => build_setup_command_plan_from_args(rest),
         "status" | "get-inbox-status" => build_status_command_plan_from_args(rest),
-        other => Err(anyhow!("Unknown inbox command `{other}`")),
+        other => Err(crate::usage_error(format!(
+            "Unknown inbox command `{other}`"
+        ))),
     }
 }
 
@@ -700,7 +702,9 @@ fn parse_args(
         if let Some(raw) = arg.strip_prefix("--") {
             if let Some(name) = raw.strip_prefix("no-") {
                 if !bool_flags.contains(name) {
-                    return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                    return Err(crate::usage_error(format!(
+                        "Unknown boolean flag --no-{name}"
+                    )));
                 }
                 parsed.bool_flags.insert(name.to_string(), false);
                 index += 1;
@@ -722,7 +726,7 @@ fn parse_args(
                 continue;
             }
             if !value_flags.contains(name) && !repeatable_value_flags.contains(name) {
-                return Err(anyhow!("Unknown flag --{name}"));
+                return Err(crate::usage_error(format!("Unknown flag --{name}")));
             }
 
             let value = if let Some(value) = inline_value {
@@ -731,9 +735,9 @@ fn parse_args(
                 index += 1;
                 let value = args
                     .get(index)
-                    .ok_or_else(|| anyhow!("Missing value for --{name}"))?;
+                    .ok_or_else(|| crate::usage_error(format!("Missing value for --{name}")))?;
                 if value.starts_with("--") {
-                    return Err(anyhow!("Missing value for --{name}"));
+                    return Err(crate::usage_error(format!("Missing value for --{name}")));
                 }
                 value.clone()
             };
@@ -747,7 +751,7 @@ fn parse_args(
             continue;
         }
 
-        return Err(anyhow!("Unknown short flag {arg}"));
+        return Err(crate::usage_error(format!("Unknown short flag {arg}")));
     }
     Ok(parsed)
 }
@@ -772,7 +776,7 @@ fn insert_parsed_value(
 
 fn reject_positionals(parsed: &ParsedArgs) -> Result<()> {
     if let Some(value) = parsed.positionals.first() {
-        return Err(anyhow!("Unexpected argument: {value}"));
+        return Err(crate::usage_error(format!("Unexpected argument: {value}")));
     }
     Ok(())
 }

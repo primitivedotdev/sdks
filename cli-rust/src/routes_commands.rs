@@ -135,7 +135,9 @@ pub fn build_route_request(command: &str, args: &[String]) -> Result<RouteApiReq
         Some(RouteCommandKind::Update) => build_routes_update_request_from_args(args),
         Some(RouteCommandKind::Reorder) => build_routes_reorder_request_from_args(args),
         Some(RouteCommandKind::Remove) => build_routes_remove_request_from_args(args),
-        None => Err(anyhow!("Unknown routes command `{command}`")),
+        None => Err(crate::usage_error(format!(
+            "Unknown routes command `{command}`"
+        ))),
     }
 }
 
@@ -254,7 +256,9 @@ pub fn build_routes_reorder_request_from_args(args: &[String]) -> Result<RouteAp
     reject_positionals(&parsed)?;
     let set_values = flag_many(&parsed, "set");
     if set_values.is_empty() {
-        return Err(anyhow!("routes reorder requires at least one --set value"));
+        return Err(crate::usage_error(
+            "routes reorder requires at least one --set value",
+        ));
     }
     build_reorder_routes_request(&parse_reorder_updates(&set_values)?)
 }
@@ -390,7 +394,9 @@ pub fn parse_reorder_updates(set: &[String]) -> Result<Vec<ReorderRouteUpdate>> 
 
 pub fn build_reorder_routes_body(updates: &[ReorderRouteUpdate]) -> Result<Value> {
     if updates.is_empty() {
-        return Err(anyhow!("routes reorder requires at least one --set value"));
+        return Err(crate::usage_error(
+            "routes reorder requires at least one --set value",
+        ));
     }
     let values = updates
         .iter()
@@ -723,7 +729,9 @@ fn parse_args(
 
         if let Some(name) = arg.strip_prefix("--no-") {
             if !bool_flags.contains(name) {
-                return Err(anyhow!("Unknown boolean flag --no-{name}"));
+                return Err(crate::usage_error(format!(
+                    "Unknown boolean flag --no-{name}"
+                )));
             }
             parsed.bool_flags.insert(name.to_string(), false);
             index += 1;
@@ -745,7 +753,7 @@ fn parse_args(
             continue;
         }
         if !value_flags.contains(name) && !repeatable_value_flags.contains(name) {
-            return Err(anyhow!("Unknown flag --{name}"));
+            return Err(crate::usage_error(format!("Unknown flag --{name}")));
         }
 
         let value = if let Some(value) = inline_value {
@@ -785,14 +793,14 @@ fn single_positional(parsed: &ParsedArgs, missing_message: &str) -> Result<Strin
         .ok_or_else(|| anyhow!("{missing_message}"))?
         .clone();
     if let Some(extra) = parsed.positionals.get(1) {
-        return Err(anyhow!("Unexpected argument: {extra}"));
+        return Err(crate::usage_error(format!("Unexpected argument: {extra}")));
     }
     Ok(value)
 }
 
 fn reject_positionals(parsed: &ParsedArgs) -> Result<()> {
     if let Some(value) = parsed.positionals.first() {
-        return Err(anyhow!("Unexpected argument: {value}"));
+        return Err(crate::usage_error(format!("Unexpected argument: {value}")));
     }
     Ok(())
 }
