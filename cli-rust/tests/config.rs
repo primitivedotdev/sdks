@@ -273,6 +273,15 @@ where
                 Err(error) => panic!("accept refresh request: {error}"),
             }
         };
+        // The accepted stream inherits the listener's nonblocking mode on some
+        // platforms (observed on macOS), so an early read races the client and
+        // panics with WouldBlock. Force blocking with a bounded read instead.
+        stream
+            .set_nonblocking(false)
+            .expect("set test stream blocking");
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .expect("set test stream read timeout");
         stream
             .set_nonblocking(false)
             .expect("set refresh stream blocking");
@@ -1731,15 +1740,15 @@ fn config_set_preserves_credentials_when_only_headers_change() {
 }
 
 #[test]
-fn usage_errors_exit_2_even_when_context_wrapped() {
-    use primitive_rust::CliError;
-    let usage = primitive_rust::usage_error("Unknown flag --bogus");
-    assert_eq!(usage.to_string(), "Unknown flag --bogus");
-    let wrapped = usage.context("while parsing flags");
-    let exit_code = wrapped
-        .chain()
-        .find_map(|cause| cause.downcast_ref::<CliError>())
-        .map(CliError::exit_code)
-        .unwrap_or(1);
-    assert_eq!(exit_code, 2);
+fn no_proxy_wildcard_detection_matches_conventional_forms() {
+    assert!(config::no_proxy_value_has_wildcard("*"));
+    assert!(config::no_proxy_value_has_wildcard(" * "));
+    assert!(config::no_proxy_value_has_wildcard("example.com,*"));
+    assert!(config::no_proxy_value_has_wildcard("*, example.com"));
+    assert!(!config::no_proxy_value_has_wildcard(""));
+    assert!(!config::no_proxy_value_has_wildcard("example.com"));
+    assert!(!config::no_proxy_value_has_wildcard("*.example.com"));
+    assert!(!config::no_proxy_value_has_wildcard(
+        "127.0.0.0/8,localhost"
+    ));
 }

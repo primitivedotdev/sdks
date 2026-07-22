@@ -1280,16 +1280,16 @@ fn coerce_parameter_value(parameter: &ParameterManifest, value: &str) -> Result<
 }
 
 fn check_numeric_bounds(parameter: &ParameterManifest, value: f64) -> Result<()> {
-    if let Some(minimum) = parameter.minimum {
-        if value < minimum {
+    if let Some(minimum) = &parameter.minimum {
+        if minimum.as_f64().is_some_and(|min| value < min) {
             return Err(crate::usage_error(format!(
                 "Expected --{} to be greater than or equal to {minimum}",
                 flag_name(&parameter.name)
             )));
         }
     }
-    if let Some(maximum) = parameter.maximum {
-        if value > maximum {
+    if let Some(maximum) = &parameter.maximum {
+        if maximum.as_f64().is_some_and(|max| value > max) {
             return Err(crate::usage_error(format!(
                 "Expected --{} to be less than or equal to {maximum}",
                 flag_name(&parameter.name)
