@@ -1729,3 +1729,17 @@ fn config_set_preserves_credentials_when_only_headers_change() {
     }
     fs::remove_dir_all(config_dir).ok();
 }
+
+#[test]
+fn no_proxy_wildcard_detection_matches_conventional_forms() {
+    assert!(config::no_proxy_value_has_wildcard("*"));
+    assert!(config::no_proxy_value_has_wildcard(" * "));
+    assert!(config::no_proxy_value_has_wildcard("example.com,*"));
+    assert!(config::no_proxy_value_has_wildcard("*, example.com"));
+    assert!(!config::no_proxy_value_has_wildcard(""));
+    assert!(!config::no_proxy_value_has_wildcard("example.com"));
+    assert!(!config::no_proxy_value_has_wildcard("*.example.com"));
+    assert!(!config::no_proxy_value_has_wildcard(
+        "127.0.0.0/8,localhost"
+    ));
+}

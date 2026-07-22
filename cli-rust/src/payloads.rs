@@ -619,10 +619,11 @@ fn authorized(request: RequestBuilder, api_key: &str) -> RequestBuilder {
 }
 
 fn http_client() -> Result<Client> {
-    Client::builder()
-        .user_agent(USER_AGENT_VALUE)
-        .build()
-        .map_err(Into::into)
+    let mut builder = Client::builder().user_agent(USER_AGENT_VALUE);
+    if crate::config::env_no_proxy_wildcard() {
+        builder = builder.no_proxy();
+    }
+    builder.build().map_err(Into::into)
 }
 
 fn api_root(base_url: &str) -> String {

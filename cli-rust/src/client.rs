@@ -41,11 +41,14 @@ const X402_ERROR_HINTS: &[(&str, &str)] = &[
 ];
 
 pub fn http_client() -> Result<Client> {
-    Client::builder()
-        .user_agent(USER_AGENT_VALUE)
-        .build()
-        .map_err(Into::into)
+    let mut builder = Client::builder().user_agent(USER_AGENT_VALUE);
+    if env_no_proxy_wildcard() {
+        builder = builder.no_proxy();
+    }
+    builder.build().map_err(Into::into)
 }
+
+pub use crate::config::env_no_proxy_wildcard;
 
 pub fn apply_headers(
     mut request: RequestBuilder,
