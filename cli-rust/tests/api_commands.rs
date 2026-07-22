@@ -322,3 +322,34 @@ fn endpoint_test_redirect_skips_unrelated_or_malformed_cases() {
     });
     assert!(detect_function_endpoint(ENDPOINT_ID, &missing_function_id).is_none());
 }
+
+#[test]
+fn manifest_numeric_bounds_serialize_as_integers_like_node() {
+    // The Node CLI emits `list-operations` numeric constraints as integers
+    // (e.g. "maximum": 200). Rust must not coerce them to floats ("200.0")
+    // when it deserializes the operation manifest and re-serializes it.
+    let manifest = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/operation-manifest.json"
+    ))
+    .expect("read operation manifest");
+    let ops: Vec<primitive_rust::manifest::OperationManifest> =
+        serde_json::from_str(&manifest).expect("parse manifest");
+    let reserialized: serde_json::Value = serde_json::to_value(&ops).expect("reserialize manifest");
+    for op in reserialized.as_array().expect("ops array") {
+        for group in ["queryParams", "pathParams", "headerParams"] {
+            for param in op[group].as_array().into_iter().flatten() {
+                for bound in ["maximum", "minimum"] {
+                    if let Some(n) = param.get(bound).and_then(|v| v.as_number()) {
+                        assert!(
+                            n.is_i64() || n.is_u64(),
+                            "{}.{group}.{bound} serialized as a float ({n}); numeric \
+                             bounds must stay integers to match the Node CLI",
+                            op["operationId"]
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
