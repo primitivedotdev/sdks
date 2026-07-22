@@ -16497,7 +16497,6 @@
         "--api-key",
         "prim_test"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16511,6 +16510,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -16531,7 +16532,6 @@
         "--raw-body",
         "{}"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16545,6 +16545,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16566,7 +16568,6 @@
         "--verification-code",
         "123456"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16580,6 +16581,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16602,7 +16605,6 @@
         "--device-name",
         "parity-agent"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16616,6 +16618,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16638,7 +16642,6 @@
         "--id",
         "42"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16652,6 +16655,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16673,7 +16678,6 @@
         "example.com",
         "--confirmed"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16687,6 +16691,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16711,7 +16717,6 @@
         "--id",
         "domain_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16725,6 +16730,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -16743,7 +16750,6 @@
         "--api-key",
         "prim_test"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16757,6 +16763,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -16780,7 +16788,6 @@
         "--spam-threshold",
         "4.5"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16794,6 +16801,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "PATCH",
@@ -16818,7 +16827,6 @@
         "--id",
         "domain_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16832,6 +16840,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16852,7 +16862,6 @@
         "--id",
         "email_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16866,6 +16875,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -16886,7 +16897,6 @@
         "--id",
         "email_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16900,6 +16910,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -16920,7 +16932,6 @@
         "--id",
         "email_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16934,6 +16945,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16954,7 +16967,6 @@
         "--id",
         "email_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -16968,6 +16980,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -16991,7 +17005,6 @@
         "https://example.com/webhook",
         "--no-enabled"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17005,6 +17018,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17030,7 +17045,6 @@
         "--id",
         "ep_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17044,6 +17058,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17062,7 +17078,6 @@
         "--api-key",
         "prim_test"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17076,6 +17091,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17096,7 +17113,6 @@
         "--id",
         "ep_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17110,6 +17126,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17133,7 +17151,6 @@
         "https://example.com/updated-webhook",
         "--enabled"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17147,6 +17164,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "PATCH",
@@ -17173,7 +17192,6 @@
         "--pattern",
         "sender@example.com"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17187,6 +17205,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17211,7 +17231,6 @@
         "--id",
         "filter_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17225,6 +17244,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17243,7 +17264,6 @@
         "--api-key",
         "prim_test"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17257,6 +17277,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17278,7 +17300,6 @@
         "filter_123",
         "--no-enabled"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17292,6 +17313,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "PATCH",
@@ -17315,7 +17338,6 @@
         "--id",
         "fn_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17329,6 +17351,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17351,7 +17375,6 @@
         "--key",
         "API_TOKEN"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17365,6 +17388,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17385,7 +17410,6 @@
         "--id",
         "fn_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17399,6 +17423,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17417,7 +17443,6 @@
         "--address",
         "agent@example.com"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17431,6 +17456,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17453,7 +17480,6 @@
         "--cursor",
         "agent@example.com"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17467,6 +17493,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17498,7 +17526,6 @@
         "--publish-policy",
         "request"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17512,6 +17539,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17543,7 +17572,6 @@
         "--decision",
         "approved"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17557,6 +17585,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17586,7 +17616,6 @@
         "--raw-body",
         "{\"tags\":[\"support\",\"billing\"],\"title\":\"Support agent\",\"description\":\"Answers support mail\"}"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17600,6 +17629,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17629,7 +17660,6 @@
         "--slug",
         "public-registry"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17643,6 +17673,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17661,7 +17693,6 @@
         "--api-key",
         "prim_test"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17675,6 +17706,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17699,7 +17732,6 @@
         "--handle",
         "agent"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17713,6 +17745,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -17739,7 +17773,6 @@
         "--limit",
         "2"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17753,6 +17786,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17778,7 +17813,6 @@
         "--handle",
         "agent"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17792,6 +17826,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "DELETE",
@@ -17819,7 +17855,6 @@
         "--publish-policy",
         "owner_only"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17833,6 +17868,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "PATCH",
@@ -17859,7 +17896,6 @@
         "--id",
         "sent_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17873,6 +17909,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17893,7 +17931,6 @@
         "--status",
         "delivered"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17907,6 +17944,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17929,7 +17968,6 @@
         "--api-key",
         "prim_test"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17943,6 +17981,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -17968,7 +18008,6 @@
         "Thanks, got it.",
         "--wait"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -17982,6 +18021,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -18009,7 +18050,6 @@
         "--limit",
         "2"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -18023,6 +18063,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -18047,7 +18089,6 @@
         "--id",
         "42"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -18061,6 +18102,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -21013,7 +21056,6 @@
         "--verification-code",
         "123456"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21027,6 +21069,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
@@ -21048,7 +21092,6 @@
         "--api-key",
         "prim_test"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21062,6 +21105,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -21243,7 +21288,6 @@
         "--id",
         "fn_123"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21257,6 +21301,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -21365,7 +21411,6 @@
         "--status",
         "delivered"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21379,6 +21424,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "GET",
@@ -21408,7 +21455,6 @@
         "Thanks, got it.",
         "--wait"
       ],
-      "compare": false,
       "server": {
         "exchanges": [
           {
@@ -21422,6 +21468,8 @@
         ]
       },
       "expect": {
+        "stdout": "null\n",
+        "stderr": "",
         "requests": [
           {
             "method": "POST",
