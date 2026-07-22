@@ -116,7 +116,54 @@ pub fn error_for_status_with_hints(
     }
 }
 
+/// Like [`error_for_status_with_hints`] but also maps x402 payment error
+/// codes to actionable hints. Only the payments commands use this, matching
+/// the Node CLI where the x402 hint table lives in payments-shared.ts;
+/// `feature_disabled` in particular is not payments-specific, so surfacing
+/// the x402 hint from non-payments commands (e.g. wake) is misleading.
+///
+/// Unlike every other error path, payments prints the WHOLE `{success,
+/// error}` envelope rather than the flattened inner error. This is a
+/// deliberate cross-CLI contract, not an oversight: the Node CLI's
+/// payments-shared.ts documents the envelope as the most useful payload for
+/// x402 flows and synthesizes the same shape for client-side failures, and
+/// the "payments api error keeps x402 feature hint" parity fixture pins the
+/// envelope on both CLIs. Flattening here would diverge from Node.
+pub fn error_for_status_with_payment_hints(
+    status: u16,
+    json: Option<&Value>,
+    bytes: &[u8],
+) -> anyhow::Error {
+    // Payments deliberately prints the whole server envelope (matching the
+    // Node CLI's payments-shared.ts, which documents the envelope as the most
+    // useful payload for x402 flows) rather than the flattened error object.
+    let message = raw_error_message_for_status(status, json, bytes);
+
+    let hint = error_hint_for_status(status, json)
+        .or_else(|| payment_error_hint_for_code(extract_error_code(json)));
+    if let Some(hint) = hint {
+        anyhow!("{message}\n{hint}")
+    } else {
+        anyhow!("{message}")
+    }
+}
+
 fn error_message_for_status(status: u16, json: Option<&Value>, bytes: &[u8]) -> String {
+    if let Some(json) = json {
+        // Match the Node CLI: unwrap the response envelope and print the
+        // inner `error` object so stderr carries `{code, message, ...}`
+        // rather than `{error: {...}, success: false}`.
+        let payload = match json.get("error") {
+            Some(inner) if !inner.is_null() => inner,
+            _ => json,
+        };
+        serde_json::to_string_pretty(payload).unwrap_or_else(|_| payload.to_string())
+    } else {
+        raw_error_message_for_status(status, None, bytes)
+    }
+}
+
+fn raw_error_message_for_status(status: u16, json: Option<&Value>, bytes: &[u8]) -> String {
     if let Some(json) = json {
         serde_json::to_string_pretty(json).unwrap_or_else(|_| json.to_string())
     } else if bytes.is_empty() {
@@ -131,6 +178,10 @@ fn error_hint_for_status(status: u16, json: Option<&Value>) -> Option<&'static s
     if code == Some("unauthorized") || status == 401 {
         return Some(UNAUTHORIZED_ERROR_HINT);
     }
+    None
+}
+
+fn payment_error_hint_for_code(code: Option<&str>) -> Option<&'static str> {
     let code = code?;
     X402_ERROR_HINTS
         .iter()
@@ -147,4 +198,72 @@ fn extract_error_code(payload: Option<&Value>) -> Option<&str> {
         return Some(code);
     }
     payload.get("code").and_then(Value::as_str)
+}
+
+#[cfg(test)]
+mod error_shape_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn envelope_errors_flatten_to_inner_error_object() {
+        let envelope = json!({
+            "error": {"code": "feature_disabled", "message": "Wake dispatch is not enabled for this org"},
+            "success": false
+        });
+        let message = error_for_status(403, Some(&envelope), b"").to_string();
+        assert_eq!(
+            message,
+            serde_json::to_string_pretty(&json!({
+                "code": "feature_disabled",
+                "message": "Wake dispatch is not enabled for this org"
+            }))
+            .unwrap()
+        );
+        assert!(!message.contains("success"));
+    }
+
+    #[test]
+    fn non_envelope_errors_print_unchanged() {
+        let flat = json!({"code": "x", "message": "y"});
+        assert_eq!(
+            error_for_status(400, Some(&flat), b"").to_string(),
+            serde_json::to_string_pretty(&flat).unwrap()
+        );
+        let null_error = json!({"error": null, "detail": "d"});
+        assert_eq!(
+            error_for_status(400, Some(&null_error), b"").to_string(),
+            serde_json::to_string_pretty(&null_error).unwrap()
+        );
+    }
+
+    #[test]
+    fn x402_hints_only_fire_from_the_payment_variant() {
+        let envelope = json!({
+            "error": {"code": "feature_disabled", "message": "Wake dispatch is not enabled for this org"},
+            "success": false
+        });
+        let generic = error_for_status_with_hints(403, Some(&envelope), b"").to_string();
+        assert!(!generic.contains("x402"), "{generic}");
+        let payments = error_for_status_with_payment_hints(403, Some(&envelope), b"").to_string();
+        assert!(
+            payments.contains("x402 payments are not enabled"),
+            "{payments}"
+        );
+        // Payments keeps the full envelope on purpose (see the Node CLI).
+        assert!(payments.contains("\"success\""), "{payments}");
+    }
+
+    #[test]
+    fn unauthorized_hint_still_fires_everywhere() {
+        let envelope = json!({
+            "error": {"code": "unauthorized", "message": "Invalid or missing API key"},
+            "success": false
+        });
+        let message = error_for_status_with_hints(401, Some(&envelope), b"").to_string();
+        assert!(
+            message.contains("Hint: run `primitive signin`"),
+            "{message}"
+        );
+    }
 }

@@ -21485,6 +21485,118 @@
           }
         ]
       }
+    },
+    {
+      "name": "generated api error prints flattened error object",
+      "args": ["emails:get-email", "--id", "email_bad", "--api-key", "prim_test"],
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "status": 400,
+              "bodyJson": {
+                "success": false,
+                "error": {
+                  "code": "validation_error",
+                  "message": "Invalid email ID"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": "{\n  \"code\": \"validation_error\",\n  \"message\": \"Invalid email ID\"\n}\n",
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/v1/emails/email_bad",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "wake api error flattens envelope without x402 hint",
+      "args": ["wake", "schedules", "list", "--api-key", "prim_wake", "--api-base-url", "__BASE_URL__"],
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "status": 403,
+              "bodyJson": {
+                "success": false,
+                "error": {
+                  "code": "feature_disabled",
+                  "message": "Wake dispatch is not enabled for this org"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": {
+          "contains": ["\"code\": \"feature_disabled\"", "\"message\": \"Wake dispatch is not enabled for this org\""],
+          "notContains": ["x402", "\"success\"", "\"error\""]
+        },
+        "requests": [
+          {
+            "method": "GET",
+            "path": "/v1/wake/schedules",
+            "headers": {
+              "authorization": "Bearer prim_wake"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "payments api error keeps x402 feature hint",
+      "args": ["payments", "charge", "--api-key", "prim_test", "--amount-usdc", "0.01"],
+      "compare": false,
+      "server": {
+        "exchanges": [
+          {
+            "response": {
+              "status": 403,
+              "bodyJson": {
+                "success": false,
+                "error": {
+                  "code": "feature_disabled",
+                  "message": "x402 is not enabled"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expect": {
+        "exitCode": 1,
+        "stdout": "",
+        "stderr": {
+          "contains": ["\"success\": false", "\"code\": \"feature_disabled\"", "x402 payments are not enabled for this organization yet."]
+        },
+        "requests": [
+          {
+            "method": "POST",
+            "path": "/v1/x402/challenges",
+            "headers": {
+              "authorization": "Bearer prim_test"
+            },
+            "body": {
+              "amount": "10000",
+              "network": "base-sepolia"
+            }
+          }
+        ]
+      }
     }
   ]
 }
