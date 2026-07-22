@@ -16,9 +16,9 @@ pub struct ParameterManifest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_length: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub maximum: Option<f64>,
+    pub maximum: Option<serde_json::Number>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub minimum: Option<f64>,
+    pub minimum: Option<serde_json::Number>,
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pattern: Option<String>,
