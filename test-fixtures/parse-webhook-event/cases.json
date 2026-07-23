@@ -20,7 +20,7 @@
       }
     },
     {
-      "name": "unknown_event_passthrough",
+      "name": "malformed_known_machine_email_event",
       "input": {
         "event": "email.bounced",
         "id": "evt_unknown",
@@ -28,8 +28,21 @@
         "bounce_reason": "mailbox_full"
       },
       "expected": {
+        "kind": "error",
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "unknown_event_passthrough",
+      "input": {
+        "event": "email.opened",
+        "id": "evt_unknown",
+        "version": "2025-12-14",
+        "opened_at": "2025-12-14T00:00:00Z"
+      },
+      "expected": {
         "kind": "unknown",
-        "event": "email.bounced",
+        "event": "email.opened",
         "id": "evt_unknown",
         "version": "2025-12-14"
       }

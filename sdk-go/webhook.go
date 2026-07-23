@@ -195,6 +195,7 @@ func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
 	}
 
 	resolvedEvent := ""
+	hasHeaderEvent := len(eventType) > 0 && eventType[0] != ""
 	if len(eventType) > 0 && eventType[0] != "" {
 		resolvedEvent = eventType[0]
 	} else if bodyEvent, ok := obj["event"].(string); ok {
@@ -209,7 +210,24 @@ func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
 		return nil, NewWebhookPayloadError("PAYLOAD_MISSING_EVENT", "Missing event discriminator: no X-Webhook-Event header and no 'event' field in payload", "Pass the X-Webhook-Event header (the canonical discriminator) or call HandleWebhookEvent, which reads it for you.", nil)
 	}
 
-	if resolvedEvent == string(EventTypeEmailReceived) {
+	if hasHeaderEvent && IsKnownWebhookEventType(resolvedEvent) {
+		bodyEvent, hasBodyEvent := obj["event"].(string)
+		bodyType, hasBodyType := obj["type"].(string)
+		if hasBodyEvent && bodyEvent != resolvedEvent {
+			return nil, eventMismatchError("event", resolvedEvent, &bodyEvent)
+		}
+		if hasBodyType && bodyType != resolvedEvent {
+			return nil, eventMismatchError("type", resolvedEvent, &bodyType)
+		}
+		if isEmailEventType(resolvedEvent) && !hasBodyEvent {
+			return nil, eventMismatchError("event", resolvedEvent, nil)
+		}
+		if isPaymentEventType(resolvedEvent) && !hasBodyType {
+			return nil, eventMismatchError("type", resolvedEvent, nil)
+		}
+	}
+
+	if isEmailEventType(resolvedEvent) {
 		event, err := ValidateEmailReceivedEvent(obj)
 		if err != nil {
 			return nil, err
@@ -222,7 +240,7 @@ func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
 		return nil, err
 	}
 
-	if resolvedEvent == "payment.settled" || resolvedEvent == "payment.failed" {
+	if isPaymentEventType(resolvedEvent) {
 		// Payment bodies are FLAT and carry the name in "type"; overlay a
 		// canonical Event (from the header) so consumers branch on a single
 		// field, and surface the on-the-wire fields as typed struct members.
@@ -236,8 +254,11 @@ func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
 		if v, ok := preserved["network"].(string); ok {
 			payment.Network = v
 		}
-		if v, ok := preserved["amount"].(string); ok {
+		switch v := preserved["amount"].(type) {
+		case string:
 			payment.Amount = v
+		case json.Number:
+			payment.Amount = v.String()
 		}
 		if v, ok := preserved["asset"].(string); ok {
 			payment.Asset = v
@@ -274,6 +295,37 @@ func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
 		unknown.Version = &version
 	}
 	return unknown, nil
+}
+
+func isEmailEventType(eventType string) bool {
+	for _, value := range EmailEventTypes {
+		if value == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+func isPaymentEventType(eventType string) bool {
+	for _, value := range PaymentEventTypes {
+		if value == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+func eventMismatchError(field string, headerEvent string, bodyValue *string) *WebhookPayloadError {
+	bodyDescription := "missing body " + field
+	if bodyValue != nil {
+		bodyDescription = fmt.Sprintf("body %s %q", field, *bodyValue)
+	}
+	return NewWebhookPayloadError(
+		"PAYLOAD_EVENT_MISMATCH",
+		fmt.Sprintf("X-Webhook-Event %q does not match %s", headerEvent, bodyDescription),
+		"Reject this webhook request. The event discriminator must agree with the signed body.",
+		nil,
+	)
 }
 
 func IsEmailReceivedEvent(event any) bool {

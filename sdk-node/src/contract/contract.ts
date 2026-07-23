@@ -24,6 +24,7 @@ import type {
   EmailAnalysis,
   EmailAuth,
   EmailReceivedEvent,
+  EventType,
   ParsedDataComplete,
   ParsedDataFailed,
   ParsedError,
@@ -98,6 +99,8 @@ export type ParsedInput = ParsedInputComplete | ParsedInputFailed;
  * Primitive `email.received` webhook payload.
  */
 export interface EmailReceivedEventInput {
+  /** Email-family event type. Defaults to `email.received`. */
+  event?: EventType;
   /** Unique email ID in Primitive. */
   email_id: string;
   /** ID of the webhook endpoint receiving this event. */
@@ -191,8 +194,12 @@ function validateTimestamp(timestamp: string, fieldName: string): string {
  * @param email_id - Primitive email ID.
  * @returns Stable event ID with `evt_` prefix.
  */
-export function generateEventId(endpoint_id: string, email_id: string): string {
-  const hashInput = `email.received:${WEBHOOK_VERSION}:${endpoint_id}:${email_id}`;
+export function generateEventId(
+  endpoint_id: string,
+  email_id: string,
+  event: EventType = "email.received",
+): string {
+  const hashInput = `${event}:${WEBHOOK_VERSION}:${endpoint_id}:${email_id}`;
   const hash = createHash("sha256").update(hashInput).digest("hex");
   return `evt_${hash}`;
 }
@@ -251,7 +258,12 @@ export function buildEmailReceivedEvent(
     attempted_at?: string;
   },
 ): EmailReceivedEvent {
-  const event_id = generateEventId(input.endpoint_id, input.email_id);
+  const event_type = input.event ?? "email.received";
+  const event_id = generateEventId(
+    input.endpoint_id,
+    input.email_id,
+    event_type,
+  );
   const attempted_at = options?.attempted_at
     ? validateTimestamp(options.attempted_at, "attempted_at")
     : new Date().toISOString();
@@ -347,7 +359,7 @@ export function buildEmailReceivedEvent(
 
   const event = {
     id: event_id,
-    event: "email.received",
+    event: event_type,
     version: WEBHOOK_VERSION,
     delivery: {
       endpoint_id: input.endpoint_id,
@@ -392,6 +404,8 @@ export function buildEmailReceivedEvent(
  * Input for building an `EmailReceivedEvent` directly from parser output.
  */
 export interface BuildEventFromParsedDataOptions {
+  /** Email-family event type. Defaults to `email.received`. */
+  event?: EventType;
   /** Unique email ID chosen by the producer. */
   emailId: string;
   /** ID of the webhook endpoint receiving this event. */
@@ -507,6 +521,7 @@ export function buildEventFromParsedData(
   };
 
   const input: EmailReceivedEventInput = {
+    event: params.event,
     email_id: params.emailId,
     endpoint_id: params.endpointId,
     message_id: params.messageId,

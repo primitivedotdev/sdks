@@ -71,15 +71,15 @@ describe("parseWebhookEvent", () => {
   describe("unknown events (forward compatibility)", () => {
     it("returns UnknownEvent for unrecognized event types", () => {
       const input = {
-        event: "email.bounced",
+        event: "email.opened",
         id: "evt-456",
-        bounce_reason: "mailbox_full",
+        opened_at: "2025-01-01T00:00:00Z",
       };
       const result = parseWebhookEvent(input);
 
-      expect(result.event).toBe("email.bounced");
-      expect((result as Record<string, unknown>).bounce_reason).toBe(
-        "mailbox_full",
+      expect(result.event).toBe("email.opened");
+      expect((result as Record<string, unknown>).opened_at).toBe(
+        "2025-01-01T00:00:00Z",
       );
     });
 

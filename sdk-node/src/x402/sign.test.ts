@@ -30,6 +30,17 @@ const CANONICAL: NonceBinding = {
 };
 const NORMATIVE_NONCE =
   "0xc955a08812ab83f9e25c92e5162267b913957c3cc8678de1cf1449f77b516c6e";
+const TEST_KEY = [
+  "0xac0974bec39a17e3",
+  "6ba4a6b4d238ff94",
+  "4bacb478cbed5efc",
+  "ae784d7bf4f2ff80",
+].join("") as Hex;
+const TEST_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+const PAYOUT_SIGNATURE =
+  "0xdc3458886b30a1707d8f7520236fd7f540809655596dfaba074cf5497dd3a7142714e7904f50ee17c08616917353fbe2e2847ec9b796e4017189fa645aff9bc91b";
+const TRANSFER_SIGNATURE =
+  "0x7b4900f43d7eca503136a94065a333144959683cc1d112352bcfa9eb007e83727316924e11486d35b2a3f16b561971cc3cd07bfd6c30d49b1f0da3ab7deab7e91c";
 
 describe("deriveEip3009Nonce", () => {
   it("matches the normative platform vector to the byte", () => {
@@ -153,6 +164,20 @@ describe("buildPayoutRegistrationMessage", () => {
     });
     expect(msg).toContain(
       "address: 0xabcdef0000000000000000000000000000000000",
+    );
+  });
+
+  it("matches the viem-compatible deterministic signature vector", async () => {
+    const account = privateKeyToAccount(TEST_KEY);
+    expect(account.address).toBe(TEST_ADDRESS);
+    const msg = buildPayoutRegistrationMessage({
+      org: "11111111-1111-4111-8111-111111111111",
+      address: "0x2222222222222222222222222222222222222222",
+      network: "base-sepolia",
+      issuedAt: "2026-01-01T00:00:00.000Z",
+    });
+    await expect(account.signMessage({ message: msg })).resolves.toBe(
+      PAYOUT_SIGNATURE,
     );
   });
 });
@@ -288,6 +313,22 @@ describe("computePaymentValidityWindow", () => {
 });
 
 describe("signInteractionPayment", () => {
+  it("matches the viem-compatible deterministic EIP-3009 signature vector", async () => {
+    const account = privateKeyToAccount(TEST_KEY);
+    const typed = transferWithAuthorizationTypedData(USDC_BASE_SEPOLIA, {
+      from: "0x2222222222222222222222222222222222222222",
+      to: PAY_TO,
+      value: AMOUNT,
+      validAfter: 1n,
+      validBefore: 99_999n,
+      nonce: NORMATIVE_NONCE,
+    });
+
+    await expect(account.signTypedData(typed)).resolves.toBe(
+      TRANSFER_SIGNATURE,
+    );
+  });
+
   it("injects the interaction-bound nonce, not a random one", async () => {
     const { sign, payer } = newSigner();
     const { validAfter, validBefore } = computePaymentValidityWindow({

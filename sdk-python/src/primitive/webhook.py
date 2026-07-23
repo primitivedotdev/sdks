@@ -17,7 +17,11 @@ from .errors import (
     WebhookPayloadError,
     WebhookVerificationError,
 )
-from .events import is_known_webhook_event_type
+from .events import (
+    EMAIL_EVENT_TYPES,
+    PAYMENT_EVENT_TYPES,
+    is_known_webhook_event_type,
+)
 from .types import (
     AuthVerdict,
     EmailAuth,
@@ -98,6 +102,23 @@ def _invalid_payload_field(
     cause: Exception | None = None,
 ) -> WebhookPayloadError:
     return WebhookPayloadError("PAYLOAD_WRONG_TYPE", message, suggestion, cause)
+
+
+def _event_mismatch_error(
+    field: str,
+    header_event: str,
+    body_value: str | None,
+) -> WebhookPayloadError:
+    body_description = (
+        f"missing body {field}"
+        if body_value is None
+        else f'body {field} "{body_value}"'
+    )
+    return WebhookPayloadError(
+        "PAYLOAD_EVENT_MISMATCH",
+        f'X-Webhook-Event "{header_event}" does not match {body_description}',
+        "Reject this webhook request. The event discriminator must agree with the signed body.",
+    )
 
 
 def _require_field(obj: Any, path: str, *names: str) -> Any:
@@ -532,9 +553,11 @@ def parse_webhook_event(
     # header is the PRIMARY discriminator; fall back to a top-level `event`
     # string in the body only for backward-compat with any sender that embeds it.
     body_event = input.get("event")
-    resolved_event = event_type or (
-        body_event if isinstance(body_event, str) else None
-    )
+    body_type = input.get("type")
+    body_event_string = body_event if isinstance(body_event, str) else None
+    body_type_string = body_type if isinstance(body_type, str) else None
+    has_header_event = isinstance(event_type, str) and len(event_type) > 0
+    resolved_event = event_type if has_header_event else body_event_string
 
     if not resolved_event:
         # No `X-Webhook-Event` header AND no in-body `event` field: we cannot
@@ -549,11 +572,21 @@ def parse_webhook_event(
             "call handle_webhook_event, which reads it for you.",
         )
 
-    if resolved_event == "email.received":
+    if has_header_event and is_known_webhook_event_type(resolved_event):
+        if body_event_string is not None and body_event_string != resolved_event:
+            raise _event_mismatch_error("event", resolved_event, body_event_string)
+        if body_type_string is not None and body_type_string != resolved_event:
+            raise _event_mismatch_error("type", resolved_event, body_type_string)
+        if resolved_event in EMAIL_EVENT_TYPES and body_event_string is None:
+            raise _event_mismatch_error("event", resolved_event, None)
+        if resolved_event in PAYMENT_EVENT_TYPES and body_type_string is None:
+            raise _event_mismatch_error("type", resolved_event, None)
+
+    if resolved_event in EMAIL_EVENT_TYPES:
         return validate_email_received_event(input)
 
-    if resolved_event in ("payment.settled", "payment.failed") or (
-        is_known_webhook_event_type(resolved_event)
+    if resolved_event in PAYMENT_EVENT_TYPES or is_known_webhook_event_type(
+        resolved_event
     ):
         # Payment bodies carry the name in `type`; interaction bodies carry no
         # event/type field. Overlay a canonical `event` (from the header) so

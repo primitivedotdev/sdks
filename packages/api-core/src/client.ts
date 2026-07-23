@@ -9,10 +9,10 @@
  */
 
 import {
-  type Client as GeneratedClient,
-  type Config as GeneratedConfig,
   createClient,
   createConfig,
+  type Client as GeneratedClient,
+  type Config as GeneratedConfig,
 } from "./api/client/index.js";
 import type {
   GateDenial,
@@ -85,7 +85,10 @@ export class PrimitiveApiError extends Error {
       cause?: unknown;
     },
   ) {
-    super(message, options.cause !== undefined ? { cause: options.cause } : undefined);
+    super(
+      message,
+      options.cause !== undefined ? { cause: options.cause } : undefined,
+    );
     this.name = "PrimitiveApiError";
     this.payload = options.payload;
     this.status = options.status;

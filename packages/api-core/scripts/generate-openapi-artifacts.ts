@@ -21,8 +21,12 @@ type OpenApiParameter = {
   schema?: {
     default?: unknown;
     enum?: unknown[];
+    format?: string;
+    maxLength?: number;
+    minLength?: number;
     maximum?: number;
     minimum?: number;
+    pattern?: string;
     type?: string;
   };
 };
@@ -62,9 +66,13 @@ type PrimitiveParameterManifest = {
   default?: boolean | number | string;
   description: string | null;
   enum: string[] | null;
+  format?: string;
+  maxLength?: number;
+  minLength?: number;
   maximum?: number;
   minimum?: number;
   name: string;
+  pattern?: string;
   required: boolean;
   type: string;
 };
@@ -75,6 +83,7 @@ type PrimitiveOperationManifest = {
   command: string;
   description: string | null;
   hasJsonBody: boolean;
+  headerParams: PrimitiveParameterManifest[];
   method: Uppercase<HttpMethod>;
   operationId: string;
   path: string;
@@ -86,12 +95,9 @@ type PrimitiveOperationManifest = {
    * `components/parameters` are inlined so the schema can be
    * inspected without re-parsing the OpenAPI document.
    *
-   * Surfaced for AGX: a CLI agent walkthrough showed that without
-   * this field on `list-operations`, agents have no way to learn
-   * the body shape short of probing the server with deliberately-
-   * malformed payloads. Now `primitive list-operations | jq '.[] |
-   * select(.command == "send-email") | .requestSchema'` produces a
-   * full schema dump in one call.
+   * This lets CLI users inspect the body shape from
+   * `primitive list-operations` without probing the server with
+   * deliberately malformed payloads.
    */
   requestSchema: Record<string, unknown> | null;
   /**
@@ -124,9 +130,22 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 // and sdk-go); the generated TypeScript outputs live inside the
 // api-core package's own src tree.
 const specPath = resolve(scriptDir, "../../../openapi/primitive-api.yaml");
-const codegenSpecPath = resolve(scriptDir, "../../../openapi/primitive-api.codegen.json");
-const openapiOutputPath = resolve(scriptDir, "../src/openapi/openapi.generated.ts");
-const manifestOutputPath = resolve(scriptDir, "../src/openapi/operations.generated.ts");
+const codegenSpecPath = resolve(
+  scriptDir,
+  "../../../openapi/primitive-api.codegen.json",
+);
+const openapiOutputPath = resolve(
+  scriptDir,
+  "../src/openapi/openapi.generated.ts",
+);
+const manifestOutputPath = resolve(
+  scriptDir,
+  "../src/openapi/operations.generated.ts",
+);
+const rustCliManifestOutputPath = resolve(
+  scriptDir,
+  "../../../cli-rust/src/operation-manifest.json",
+);
 
 function toKebabCase(value: string): string {
   return value
@@ -161,7 +180,11 @@ function normalizeForCodegen(value: unknown): unknown {
   }
 
   const contentValue = next.content;
-  if (contentValue && typeof contentValue === "object" && !Array.isArray(contentValue)) {
+  if (
+    contentValue &&
+    typeof contentValue === "object" &&
+    !Array.isArray(contentValue)
+  ) {
     const content = contentValue as Record<string, unknown>;
     if (content["message/rfc822"]) {
       content[OCTET_STREAM] = content["message/rfc822"];
@@ -192,7 +215,9 @@ function resolveLocalRef(
   }
 
   if (!current || typeof current !== "object") {
-    throw new Error(`Resolved OpenAPI reference is not an object: ${reference}`);
+    throw new Error(
+      `Resolved OpenAPI reference is not an object: ${reference}`,
+    );
   }
 
   return current as Record<string, unknown>;
@@ -235,10 +260,15 @@ function mergeParameters(
 
 function manifestParameters(
   parameters: OpenApiParameter[],
-  location: "path" | "query",
+  location: "header" | "path" | "query",
 ): PrimitiveParameterManifest[] {
   return parameters
-    .filter((parameter) => parameter.in === location && parameter.name)
+    .filter(
+      (parameter): parameter is OpenApiParameter & { name: string } =>
+        parameter.in === location &&
+        typeof parameter.name === "string" &&
+        parameter.name.length > 0,
+    )
     .map((parameter) => {
       const enumValues = Array.isArray(parameter.schema?.enum)
         ? parameter.schema.enum.filter(
@@ -255,13 +285,25 @@ function manifestParameters(
         ...(scalarDefault !== undefined ? { default: scalarDefault } : {}),
         description: parameter.description ?? null,
         enum: enumValues.length > 0 ? enumValues : null,
+        ...(typeof parameter.schema?.format === "string"
+          ? { format: parameter.schema.format }
+          : {}),
+        ...(typeof parameter.schema?.maxLength === "number"
+          ? { maxLength: parameter.schema.maxLength }
+          : {}),
+        ...(typeof parameter.schema?.minLength === "number"
+          ? { minLength: parameter.schema.minLength }
+          : {}),
         ...(typeof parameter.schema?.maximum === "number"
           ? { maximum: parameter.schema.maximum }
           : {}),
         ...(typeof parameter.schema?.minimum === "number"
           ? { minimum: parameter.schema.minimum }
           : {}),
-        name: parameter.name!,
+        name: parameter.name,
+        ...(typeof parameter.schema?.pattern === "string"
+          ? { pattern: parameter.schema.pattern }
+          : {}),
         required: Boolean(parameter.required),
         type: parameter.schema?.type ?? "string",
       };
@@ -340,12 +382,9 @@ function getRequestSchema(
  * since "imperfect schema" is more useful to an agent than "no
  * schema."
  *
- * Surfaced for AGX: the `primitive describe` command advertises
- * itself as the place to look up response field meanings (e.g.
- * "which of `sender`, `from_email`, `from_header`, `smtp_mail_from`
- * to read"). That promise was not delivered before this field
- * existed; describe printed the manifest entry verbatim and the
- * manifest had no response schema at all.
+ * The `primitive describe` command uses this field to explain
+ * response field meanings without requiring users to inspect the
+ * raw OpenAPI document.
  */
 function getResponseSchema(
   doc: Record<string, unknown>,
@@ -386,7 +425,11 @@ function hasBinaryResponse(operation: OpenApiOperation): boolean {
   for (const response of Object.values(responses)) {
     const content = response.content ?? {};
     for (const [contentType, mediaType] of Object.entries(content)) {
-      if (contentType === OCTET_STREAM || contentType === "application/gzip" || contentType === "message/rfc822") {
+      if (
+        contentType === OCTET_STREAM ||
+        contentType === "application/gzip" ||
+        contentType === "message/rfc822"
+      ) {
         return true;
       }
 
@@ -399,7 +442,9 @@ function hasBinaryResponse(operation: OpenApiOperation): boolean {
   return false;
 }
 
-function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest[] {
+function buildManifest(
+  doc: Record<string, unknown>,
+): PrimitiveOperationManifest[] {
   const manifest: PrimitiveOperationManifest[] = [];
 
   const paths = (doc.paths ?? {}) as Record<string, OpenApiPathItem>;
@@ -411,7 +456,11 @@ function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest
         continue;
       }
 
-      const parameters = mergeParameters(doc, pathItem.parameters, operation.parameters);
+      const parameters = mergeParameters(
+        doc,
+        pathItem.parameters,
+        operation.parameters,
+      );
       const tag = operation.tags?.[0] ?? "default";
 
       manifest.push({
@@ -420,6 +469,7 @@ function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest
         command: toKebabCase(operation.operationId),
         description: operation.description ?? null,
         hasJsonBody: hasJsonBody(operation),
+        headerParams: manifestParameters(parameters, "header"),
         method: method.toUpperCase() as Uppercase<HttpMethod>,
         operationId: operation.operationId,
         path,
@@ -446,15 +496,26 @@ function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest
   return manifest;
 }
 
-const rawSpec = YAML.parse(readFileSync(specPath, "utf8")) as Record<string, unknown>;
-const codegenSpec = normalizeForCodegen(structuredClone(rawSpec)) as Record<string, unknown>;
+const rawSpec = YAML.parse(readFileSync(specPath, "utf8")) as Record<
+  string,
+  unknown
+>;
+const codegenSpec = normalizeForCodegen(structuredClone(rawSpec)) as Record<
+  string,
+  unknown
+>;
 codegenSpec.openapi = "3.0.3";
 
 const manifest = buildManifest(rawSpec);
 
 mkdirSync(dirname(openapiOutputPath), { recursive: true });
+mkdirSync(dirname(rustCliManifestOutputPath), { recursive: true });
 
 writeFileSync(codegenSpecPath, `${JSON.stringify(codegenSpec, null, 2)}\n`);
+writeFileSync(
+  rustCliManifestOutputPath,
+  `${JSON.stringify(manifest, null, 2)}\n`,
+);
 writeFileSync(
   openapiOutputPath,
   `/**
@@ -480,9 +541,13 @@ export type PrimitiveParameterManifest = {
   default?: boolean | number | string;
   description: string | null;
   enum: string[] | null;
+  format?: string;
+  maxLength?: number;
+  minLength?: number;
   maximum?: number;
   minimum?: number;
   name: string;
+  pattern?: string;
   required: boolean;
   type: string;
 };
@@ -493,6 +558,7 @@ export type PrimitiveOperationManifest = {
   command: string;
   description: string | null;
   hasJsonBody: boolean;
+  headerParams: PrimitiveParameterManifest[];
   method: string;
   operationId: string;
   path: string;

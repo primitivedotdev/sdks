@@ -61,6 +61,11 @@ export const PAYLOAD_ERRORS = {
     suggestion:
       "All webhook payloads must have an 'event' field. This may not be a valid Primitive webhook.",
   },
+  PAYLOAD_EVENT_MISMATCH: {
+    message: "Webhook event header does not match the signed body",
+    suggestion:
+      "Reject webhook requests whose X-Webhook-Event header disagrees with the body event/type field.",
+  },
   PAYLOAD_UNKNOWN_EVENT: {
     message: "Unknown webhook event type",
     suggestion:

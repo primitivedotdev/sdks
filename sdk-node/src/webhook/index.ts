@@ -202,12 +202,19 @@ import {
   WebhookPayloadError,
   WebhookVerificationError,
 } from "./errors.js";
-import { isKnownWebhookEventType } from "./events.js";
+import {
+  EMAIL_EVENT_TYPES,
+  isKnownWebhookEventType,
+  PAYMENT_EVENT_TYPES,
+} from "./events.js";
 import { parseJsonBody } from "./parsing.js";
 import {
   normalizeReceivedEmail,
   type ReceivedEmail,
 } from "./received-email.js";
+
+const EMAIL_EVENT_TYPE_SET = new Set<string>(EMAIL_EVENT_TYPES);
+const PAYMENT_EVENT_TYPE_SET = new Set<string>(PAYMENT_EVENT_TYPES);
 
 /**
  * Parse a webhook payload, returning typed events for known types
@@ -288,9 +295,10 @@ export function parseWebhookEvent(
   // bodies are just `{ interaction: { ... } }` with no event/type field. So the
   // header is the PRIMARY discriminator; we fall back to a top-level `event`
   // string in the body only for backward-compat with any sender that embeds it.
-  const resolvedEvent =
-    (typeof eventType === "string" && eventType) ||
-    (typeof obj.event === "string" ? obj.event : undefined);
+  const bodyEvent = typeof obj.event === "string" ? obj.event : undefined;
+  const bodyType = typeof obj.type === "string" ? obj.type : undefined;
+  const hasHeaderEvent = typeof eventType === "string" && eventType.length > 0;
+  const resolvedEvent = (hasHeaderEvent ? eventType : undefined) || bodyEvent;
 
   if (!resolvedEvent) {
     // No `X-Webhook-Event` header AND no in-body `event` field: we cannot
@@ -304,11 +312,27 @@ export function parseWebhookEvent(
     );
   }
 
-  // Route to specific handler for known events.
-  switch (resolvedEvent) {
-    case "email.received":
-      return validateEmailReceivedEvent(input);
+  if (hasHeaderEvent && isKnownWebhookEventType(resolvedEvent)) {
+    if (bodyEvent !== undefined && bodyEvent !== resolvedEvent) {
+      throw eventMismatchError("event", resolvedEvent, bodyEvent);
+    }
+    if (bodyType !== undefined && bodyType !== resolvedEvent) {
+      throw eventMismatchError("type", resolvedEvent, bodyType);
+    }
+    if (EMAIL_EVENT_TYPE_SET.has(resolvedEvent) && bodyEvent === undefined) {
+      throw eventMismatchError("event", resolvedEvent, null);
+    }
+    if (PAYMENT_EVENT_TYPE_SET.has(resolvedEvent) && bodyType === undefined) {
+      throw eventMismatchError("type", resolvedEvent, null);
+    }
+  }
 
+  // Route to specific handler for known events.
+  if (EMAIL_EVENT_TYPE_SET.has(resolvedEvent)) {
+    return validateEmailReceivedEvent(input);
+  }
+
+  switch (resolvedEvent) {
     case "payment.settled":
     case "payment.failed":
       // Payment bodies carry the name in `type`; overlay a canonical `event`
@@ -324,6 +348,22 @@ export function parseWebhookEvent(
       // Unknown event type: return as UnknownEvent for forward compatibility.
       return { ...obj, event: resolvedEvent } as unknown as UnknownEvent;
   }
+}
+
+function eventMismatchError(
+  field: "event" | "type",
+  headerEvent: string,
+  bodyValue: string | null,
+): WebhookPayloadError {
+  const bodyDescription =
+    bodyValue === null
+      ? `missing body ${field}`
+      : `body ${field} "${bodyValue}"`;
+  return new WebhookPayloadError(
+    "PAYLOAD_EVENT_MISMATCH",
+    `X-Webhook-Event "${headerEvent}" does not match ${bodyDescription}`,
+    "Reject this webhook request. The event discriminator must agree with the signed body.",
+  );
 }
 
 // -----------------------------------------------------------------------------

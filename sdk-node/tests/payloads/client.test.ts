@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { pullFile, pushFile } from "../../src/payloads/index.js";
+import { pullFile, pushBytes, pushFile } from "../../src/payloads/index.js";
 
 const BASE = "https://api.test.example";
 const KEY = "prim_test";
@@ -21,6 +21,8 @@ interface ServerOptions {
   corruptChunkIndex?: number;
   /** On GET manifest, alter a chunk hash so the manifest no longer hashes to the root. */
   tamperManifestHash?: boolean;
+  /** On GET manifest, replace the object id with a malformed hex value. */
+  objectIdOverride?: string;
 }
 
 /** In-memory Primitive Payloads server as a fetch mock. */
@@ -91,6 +93,13 @@ function makeServer(opts: ServerOptions = {}) {
               ),
             }
           : m;
+        if (opts.objectIdOverride !== undefined) {
+          return json(200, {
+            merkle_root: root,
+            state: "ready",
+            manifest: { ...served, objectId: opts.objectIdOverride },
+          });
+        }
         return json(200, {
           merkle_root: root,
           state: "ready",
@@ -165,6 +174,20 @@ async function roundTrip(
 }
 
 describe("payloads streaming client (offline)", () => {
+  it("rejects invalid chunk size and concurrency options before transfer", async () => {
+    const opts = { baseUrl: BASE, apiKey: KEY };
+    for (const chunkSize of [0, -1, 1.5]) {
+      await expect(
+        pushBytes(new Uint8Array([1]), { ...opts, chunkSize }),
+      ).rejects.toThrow(/chunkSize/);
+    }
+    for (const concurrency of [0, -1, 1.5]) {
+      await expect(
+        pushBytes(new Uint8Array([1]), { ...opts, concurrency }),
+      ).rejects.toThrow(/concurrency/);
+    }
+  });
+
   it("round-trips a multi-chunk object", async () => {
     await roundTrip(5000, 1024); // 5 chunks (4 full + partial)
   });
@@ -218,6 +241,40 @@ describe("payloads streaming client (offline)", () => {
       }),
     ).rejects.toThrow(/integrity check/);
     expect(existsSync(outPath)).toBe(false);
+  });
+
+  it("rejects malformed CEK and manifest object id lengths on download", async () => {
+    const server = makeServer();
+    vi.stubGlobal("fetch", server.fetchMock);
+    const inPath = writeRandom("in.bin", 1024);
+    const pushed = await pushFile(inPath, {
+      baseUrl: BASE,
+      apiKey: KEY,
+      chunkSize: 1024,
+    });
+    await expect(
+      pullFile(pushed.merkleRoot, join(dir, "bad-cek.bin"), {
+        baseUrl: BASE,
+        apiKey: KEY,
+        cek: pushed.cek.slice(2),
+      }),
+    ).rejects.toThrow(/cek/);
+
+    const badObjectIdServer = makeServer({ objectIdOverride: "00" });
+    vi.stubGlobal("fetch", badObjectIdServer.fetchMock);
+    const secondInPath = writeRandom("second.bin", 1024);
+    const secondPushed = await pushFile(secondInPath, {
+      baseUrl: BASE,
+      apiKey: KEY,
+      chunkSize: 1024,
+    });
+    await expect(
+      pullFile(secondPushed.merkleRoot, join(dir, "bad-object-id.bin"), {
+        baseUrl: BASE,
+        apiKey: KEY,
+        cek: secondPushed.cek,
+      }),
+    ).rejects.toThrow(/manifest\.objectId/);
   });
 
   it("rejects a manifest whose content address does not match the request", async () => {

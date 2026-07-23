@@ -48,6 +48,27 @@ function fromHex(hex: string): Uint8Array {
   return out;
 }
 
+function fromHexExact(
+  hex: string,
+  byteLength: number,
+  label: string,
+): Uint8Array {
+  const out = fromHex(hex);
+  if (out.length !== byteLength) {
+    throw new Error(
+      `${label} must be ${byteLength} bytes (${byteLength * 2} hex chars)`,
+    );
+  }
+  return out;
+}
+
+function positiveSafeInteger(value: number, label: string): number {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`${label} must be a positive safe integer`);
+  }
+  return value;
+}
+
 async function contentHash(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await subtle.digest("SHA-256", bytes as BufferSource));
 }
@@ -370,10 +391,15 @@ export async function encodeManifest(
   bytes: Uint8Array,
   opts: EncodeManifestOptions = {},
 ): Promise<PayloadManifest> {
-  const chunkSize = opts.chunkSize ?? CHUNK_SIZE;
-  const cek = opts.cekHex ? fromHex(opts.cekHex) : randomBytes(CEK_BYTES);
+  const chunkSize = positiveSafeInteger(
+    opts.chunkSize ?? CHUNK_SIZE,
+    "chunkSize",
+  );
+  const cek = opts.cekHex
+    ? fromHexExact(opts.cekHex, CEK_BYTES, "cekHex")
+    : randomBytes(CEK_BYTES);
   const objectId = opts.objectIdHex
-    ? fromHex(opts.objectIdHex)
+    ? fromHexExact(opts.objectIdHex, OBJECT_ID_BYTES, "objectIdHex")
     : randomBytes(OBJECT_ID_BYTES);
   const chunkCount =
     bytes.length === 0 ? 0 : Math.ceil(bytes.length / chunkSize);
@@ -455,7 +481,7 @@ async function mapLimit<T>(
 /**
  * Stream a file up as a Primitive Payload. Two passes over the file (encrypt to
  * build the manifest, then encrypt again to upload) keep memory bounded to a few
- * chunks — the whole object is never resident. Returns the content address
+ * chunks, so the whole object is never resident. Returns the content address
  * (merkleRoot) and the hex CEK needed to download it.
  */
 export async function pushFile(
@@ -465,8 +491,11 @@ export async function pushFile(
   // Resolved lazily (and before any network call) so this module stays
   // Workers-bundleable; see node-fs.ts.
   const { open, stat } = await loadNodeFsPromises("pushFile");
-  const chunkSize = opts.chunkSize ?? CHUNK_SIZE;
-  const concurrency = opts.concurrency ?? 3;
+  const chunkSize = positiveSafeInteger(
+    opts.chunkSize ?? CHUNK_SIZE,
+    "chunkSize",
+  );
+  const concurrency = positiveSafeInteger(opts.concurrency ?? 3, "concurrency");
   const { size } = await stat(filePath);
   const cek = randomBytes(CEK_BYTES);
   const objectId = randomBytes(OBJECT_ID_BYTES);
@@ -531,8 +560,11 @@ export async function pushBytes(
   bytes: Uint8Array,
   opts: PushOptions,
 ): Promise<PushResult> {
-  const chunkSize = opts.chunkSize ?? CHUNK_SIZE;
-  const concurrency = opts.concurrency ?? 3;
+  const chunkSize = positiveSafeInteger(
+    opts.chunkSize ?? CHUNK_SIZE,
+    "chunkSize",
+  );
+  const concurrency = positiveSafeInteger(opts.concurrency ?? 3, "concurrency");
   const size = bytes.length;
   const cek = randomBytes(CEK_BYTES);
   const objectId = randomBytes(OBJECT_ID_BYTES);
@@ -609,8 +641,12 @@ export async function pullFile(
       `manifest does not match the requested content address (got ${computedRoot})`,
     );
   }
-  const cek = fromHex(opts.cek);
-  const objectId = fromHex(manifest.objectId);
+  const cek = fromHexExact(opts.cek, CEK_BYTES, "cek");
+  const objectId = fromHexExact(
+    manifest.objectId,
+    OBJECT_ID_BYTES,
+    "manifest.objectId",
+  );
   const out = createWriteStream(outPath);
   // Surface async write failures (disk full, EIO) as a rejection: without an
   // 'error' listener the stream would throw an uncaught error and crash the

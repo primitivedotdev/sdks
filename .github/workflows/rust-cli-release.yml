@@ -1,0 +1,505 @@
+name: Rust CLI Release
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Detect Rust CLI Version
+    runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.version.outputs.changed }}
+      current: ${{ steps.version.outputs.current }}
+    steps:
+      - name: Require main for manual release
+        if: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Manual Rust CLI releases must run from main." >&2
+          exit 1
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+
+      - name: Detect version change
+        id: version
+        run: |
+          current_version=$(sed -n '/^\[package\]/,/^\[/p' cli-rust/Cargo.toml | sed -n 's/^version = "\(.*\)"/\1/p' | head -n 1)
+          if [ -z "$current_version" ]; then
+            echo "Could not read cli-rust package version" >&2
+            exit 1
+          fi
+          if ! printf '%s\n' "$current_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "Rust CLI release versions must be semver without Cargo build metadata: $current_version" >&2
+            exit 1
+          fi
+          printf 'current=%s\n' "$current_version" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = 'workflow_dispatch' ] || [ -z "${{ github.event.before }}" ]; then
+            printf 'changed=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          previous_version=
+
+          if git cat-file -e "${{ github.event.before }}:cli-rust/Cargo.toml" 2>/dev/null; then
+            previous_version=$(git show "${{ github.event.before }}:cli-rust/Cargo.toml" | sed -n '/^\[package\]/,/^\[/p' | sed -n 's/^version = "\(.*\)"/\1/p' | head -n 1)
+          fi
+
+          if [ "$current_version" = "$previous_version" ]; then
+            printf 'changed=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf 'changed=true\n' >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build Rust CLI (${{ matrix.target }})
+    needs: version
+    if: ${{ needs.version.outputs.changed == 'true' }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+      CC_aarch64_unknown_linux_musl: musl-gcc
+      CC_x86_64_unknown_linux_musl: musl-gcc
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-x64
+            rust_target: x86_64-unknown-linux-musl
+          - runner: ubuntu-24.04-arm
+            target: linux-arm64
+            rust_target: aarch64-unknown-linux-musl
+          - runner: macos-15-intel
+            target: macos-x64
+            rust_target: ''
+          - runner: macos-15
+            target: macos-arm64
+            rust_target: ''
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+        with:
+          version: 10
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
+          if [ -n "${{ matrix.rust_target }}" ]; then
+            rustup target add "${{ matrix.rust_target }}"
+          fi
+
+      - name: Install Linux musl tools
+        if: ${{ startsWith(matrix.target, 'linux-') }}
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: Check Linux musl runner architecture
+        if: ${{ startsWith(matrix.target, 'linux-') }}
+        env:
+          RUST_CLI_TARGET: ${{ matrix.target }}
+        run: |
+          case "$RUST_CLI_TARGET:$(uname -m)" in
+            linux-x64:x86_64|linux-arm64:aarch64) ;;
+            *)
+              echo "Target $RUST_CLI_TARGET must run on its native Linux architecture when using musl-gcc." >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Install dependencies
+        run: make cli-install
+
+      - name: Run Rust CLI release checks
+        run: |
+          export RUST_CLI_CARGO_TARGET="${{ matrix.rust_target }}"
+          make rust-cli-script-check rust-cli-release-platform-check
+
+      - name: Build release asset
+        run: |
+          export RUST_CLI_CARGO_TARGET="${{ matrix.rust_target }}"
+          if [ -n "$RUST_CLI_CARGO_TARGET" ]; then
+            export RUST_CLI_DIST_BIN_DIR="$PWD/cli-rust/target/$RUST_CLI_CARGO_TARGET/release"
+          fi
+          rm -rf cli-rust/dist
+          make rust-cli-dist RUST_CLI_DIST_VERSION="${{ needs.version.outputs.current }}" RUST_CLI_DIST_TARGET="${{ matrix.target }}"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          if-no-files-found: error
+          name: rust-cli-${{ matrix.target }}
+          path: cli-rust/dist/*
+
+  build-windows:
+    name: Build Rust CLI (windows-x64)
+    needs: version
+    if: ${{ needs.version.outputs.changed == 'true' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+        with:
+          version: 10
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Rust CLI artifacts
+        run: |
+          $env:COREPACK_ENABLE_AUTO_PIN = "0"
+          pnpm --dir packages/api-core generate
+
+      - name: Check generated Rust CLI artifacts
+        run: |
+          node scripts/assert-rust-operation-manifest-bytewise.mjs
+          $paths = @("openapi/primitive-api.codegen.json", "packages/api-core/src/api", "packages/api-core/src/openapi/openapi.generated.ts", "packages/api-core/src/openapi/operations.generated.ts", "cli-rust/src/operation-manifest.json")
+          git diff --exit-code -- $paths
+          $status = git status --porcelain -- $paths
+          if ($status) {
+            $status
+            exit 1
+          }
+
+      - name: Run Rust CLI checks
+        run: |
+          cargo fmt --manifest-path cli-rust/Cargo.toml --check
+          cargo check --manifest-path cli-rust/Cargo.toml --locked
+          cargo clippy --manifest-path cli-rust/Cargo.toml --locked --all-targets -- -D warnings
+          $env:RUSTDOCFLAGS = "-D warnings"
+          cargo doc --manifest-path cli-rust/Cargo.toml --locked --no-deps
+          cargo test --manifest-path cli-rust/Cargo.toml --locked
+
+      - name: Package Rust CLI crate
+        run: cargo package --manifest-path cli-rust/Cargo.toml --locked --allow-dirty
+
+      - name: Build release binaries
+        run: cargo build --release --manifest-path cli-rust/Cargo.toml --locked
+
+      - name: Run local-only Rust CLI live-smoke harness
+        run: node scripts/run-rust-cli-live-smoke.mjs --rust-bin "cli-rust/target/release/primitive.exe" --no-key-only
+
+      - name: Run Windows Node/Rust CLI parity
+        run: |
+          pnpm config set script-shell "C:\Program Files\Git\bin\bash.exe"
+          pnpm --dir cli-node build
+          $nodeEntryPath = (Resolve-Path "cli-node/bin/run.js").Path
+          $nodeEntry = ($nodeEntryPath -replace "\\", "/")
+          $nodeEntryUrl = ([System.Uri]$nodeEntryPath).AbsoluteUri
+          $nodePrimEntry = Join-Path $env:RUNNER_TEMP "prim"
+          Set-Content -NoNewline -Path $nodePrimEntry -Value "import '$nodeEntryUrl';`n"
+          $nodePrimEntry = ($nodePrimEntry -replace "\\", "/")
+          $rustBin = ((Resolve-Path "cli-rust/target/release/primitive.exe").Path -replace "\\", "/")
+          $rustPrimBin = ((Resolve-Path "cli-rust/target/release/prim.exe").Path -replace "\\", "/")
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodeEntry" --rust-bin "$rustBin"
+          node scripts/run-cli-parity.mjs --node-bin "node $nodeEntry" --rust-bin "$rustBin"
+          node scripts/run-cli-help-sweep.mjs --compare-flags --compare-copy --node-bin "node $nodePrimEntry" --rust-bin "$rustPrimBin"
+          node scripts/run-cli-parity.mjs --node-bin "node $nodePrimEntry" --rust-bin "$rustPrimBin"
+
+      - name: Validate Rust CLI scripts
+        run: |
+          node --check scripts/assert-rust-operation-manifest-bytewise.mjs
+          node --check scripts/package-rust-cli.mjs
+          $null = [scriptblock]::Create((Get-Content -Raw scripts/install-rust-cli.ps1))
+
+      - name: Build release asset
+        run: |
+          Remove-Item -Recurse -Force cli-rust/dist -ErrorAction SilentlyContinue
+          node scripts/package-rust-cli.mjs --version "${{ needs.version.outputs.current }}" --target "windows-x64" --archive-format zip --out-dir "cli-rust/dist"
+
+      - name: Smoke test Windows installer
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "primitive-rust-cli-bin"
+          ./scripts/install-rust-cli.ps1 -Version "${{ needs.version.outputs.current }}" -Target "windows-x64" -BaseUrl "cli-rust/dist" -InstallDir $installDir
+          & (Join-Path $installDir "primitive.exe") --version | Select-String "primitive/"
+          & (Join-Path $installDir "prim.exe") --version | Select-String "primitive/"
+          & (Join-Path $installDir "primitive.exe") list-operations | Select-String '"operationId": "getAccount"'
+          & (Join-Path $installDir "prim.exe") list-operations | Select-String '"operationId": "getAccount"'
+          & (Join-Path $installDir "prim.exe") describe sending:send-email | Select-String '"operationId": "sendEmail"'
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          if-no-files-found: error
+          name: rust-cli-windows-x64
+          path: cli-rust/dist/*
+
+  live-smoke:
+    name: Live Smoke Rust CLI Release Artifact
+    needs:
+      - version
+      - build
+    if: ${{ needs.version.outputs.changed == 'true' }}
+    runs-on: ubuntu-24.04
+    env:
+      PRIMITIVE_API_KEY: ${{ secrets.PRIMITIVE_API_KEY }}
+      PRIMITIVE_LIVE_SMOKE_SHOW_OUTPUT: "0"
+      PRIMITIVE_RUST_LIVE_INCLUDE_EMAIL_E2E: "0"
+      PRIMITIVE_RUST_LIVE_INCLUDE_MUTATING: "0"
+      PRIMITIVE_RUST_LIVE_INCLUDE_SECRET_ARGV: "0"
+      PRIMITIVE_RUST_LIVE_NO_KEY_ONLY: "0"
+      VERSION: ${{ needs.version.outputs.current }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: rust-cli-linux-x64
+          path: cli-rust/live-smoke-artifact
+
+      - name: Check live API key
+        run: |
+          if [ -z "$PRIMITIVE_API_KEY" ]; then
+            echo "PRIMITIVE_API_KEY repository secret is required for Rust CLI release live smoke."
+            exit 2
+          fi
+
+      - name: Run release artifact live smoke
+        run: |
+          extract_dir="$RUNNER_TEMP/rust-cli-live-smoke"
+          mkdir -p "$extract_dir"
+          tar -C "$extract_dir" -xzf "cli-rust/live-smoke-artifact/primitive-rust-cli-v$VERSION-linux-x64.tar.gz"
+          "$extract_dir/primitive" --version | grep -q -- 'primitive/'
+          node scripts/run-rust-cli-live-smoke.mjs --rust-bin "$extract_dir/primitive"
+
+  release:
+    name: Publish Rust CLI
+    needs:
+      - version
+      - build
+      - build-windows
+      - live-smoke
+    if: ${{ needs.version.outputs.changed == 'true' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          merge-multiple: true
+          path: cli-rust/release-assets
+          pattern: rust-cli-*
+
+      - name: Validate release tag target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: cli-rust-v${{ needs.version.outputs.current }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            tag_sha=$(git rev-list -n 1 "$TAG")
+            if [ "$tag_sha" != "$GITHUB_SHA" ]; then
+              echo "Release tag $TAG points at $tag_sha, expected $GITHUB_SHA" >&2
+              exit 1
+            fi
+          fi
+
+      - name: Verify release asset set
+        env:
+          VERSION: ${{ needs.version.outputs.current }}
+        run: |
+          expected_assets="
+          primitive-rust-cli-v$VERSION-linux-x64.tar.gz
+          primitive-rust-cli-v$VERSION-linux-x64.tar.gz.sha256
+          primitive-rust-cli-v$VERSION-linux-arm64.tar.gz
+          primitive-rust-cli-v$VERSION-linux-arm64.tar.gz.sha256
+          primitive-rust-cli-v$VERSION-macos-x64.tar.gz
+          primitive-rust-cli-v$VERSION-macos-x64.tar.gz.sha256
+          primitive-rust-cli-v$VERSION-macos-arm64.tar.gz
+          primitive-rust-cli-v$VERSION-macos-arm64.tar.gz.sha256
+          primitive-rust-cli-v$VERSION-windows-x64.zip
+          primitive-rust-cli-v$VERSION-windows-x64.zip.sha256
+          "
+          for asset in $expected_assets; do
+            test -f "cli-rust/release-assets/$asset" || {
+              echo "Missing release asset: $asset"
+              exit 1
+            }
+          done
+
+          actual_count=$(find cli-rust/release-assets -maxdepth 1 -type f | wc -l | tr -d ' ')
+          if [ "$actual_count" != "10" ]; then
+            find cli-rust/release-assets -maxdepth 1 -type f -print
+            echo "Expected exactly 10 release asset files, found $actual_count"
+            exit 1
+          fi
+
+          (
+            cd cli-rust/release-assets
+            for checksum in *.sha256; do
+              sha256sum -c "$checksum"
+            done
+          )
+
+      - name: Create draft GitHub release and tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: cli-rust-v${{ needs.version.outputs.current }}
+          VERSION: ${{ needs.version.outputs.current }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "GitHub release already exists: $TAG"
+          else
+            gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
+              --title "Rust CLI v$VERSION" \
+              --draft \
+              --generate-notes
+          fi
+
+      - name: Upload and verify release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: cli-rust-v${{ needs.version.outputs.current }}
+          VERSION: ${{ needs.version.outputs.current }}
+        run: |
+          expected_assets="
+          primitive-rust-cli-v$VERSION-linux-x64.tar.gz
+          primitive-rust-cli-v$VERSION-linux-x64.tar.gz.sha256
+          primitive-rust-cli-v$VERSION-linux-arm64.tar.gz
+          primitive-rust-cli-v$VERSION-linux-arm64.tar.gz.sha256
+          primitive-rust-cli-v$VERSION-macos-x64.tar.gz
+          primitive-rust-cli-v$VERSION-macos-x64.tar.gz.sha256
+          primitive-rust-cli-v$VERSION-macos-arm64.tar.gz
+          primitive-rust-cli-v$VERSION-macos-arm64.tar.gz.sha256
+          primitive-rust-cli-v$VERSION-windows-x64.zip
+          primitive-rust-cli-v$VERSION-windows-x64.zip.sha256
+          "
+          release_is_draft=$(gh release view "$TAG" --json isDraft --jq '.isDraft')
+          remote_assets=$(mktemp)
+          gh release view "$TAG" --json assets --jq '.assets[].name' > "$remote_assets"
+
+          verify_remote_asset() {
+            asset="$1"
+            remote_dir=$(mktemp -d)
+            gh release download "$TAG" --pattern "$asset" --dir "$remote_dir"
+            if ! cmp -s "cli-rust/release-assets/$asset" "$remote_dir/$asset"; then
+              echo "Existing release asset does not match local artifact: $asset" >&2
+              exit 1
+            fi
+          }
+
+          while IFS= read -r remote_asset; do
+            if [ -z "$remote_asset" ]; then
+              continue
+            fi
+            found=false
+            for expected in $expected_assets; do
+              if [ "$remote_asset" = "$expected" ]; then
+                found=true
+                break
+              fi
+            done
+            if [ "$found" != "true" ]; then
+              echo "Unexpected existing release asset: $remote_asset" >&2
+              exit 1
+            fi
+            verify_remote_asset "$remote_asset"
+          done < "$remote_assets"
+
+          for asset in $expected_assets; do
+            if grep -Fxq "$asset" "$remote_assets"; then
+              echo "Release asset already present and verified: $asset"
+            else
+              if [ "$release_is_draft" != "true" ]; then
+                echo "Refusing to add missing asset to already public release: $asset" >&2
+                exit 1
+              fi
+              gh release upload "$TAG" "cli-rust/release-assets/$asset"
+            fi
+          done
+
+          final_assets=$(mktemp)
+          gh release view "$TAG" --json assets --jq '.assets[].name' > "$final_assets"
+          final_count=$(wc -l < "$final_assets" | tr -d ' ')
+          if [ "$final_count" != "10" ]; then
+            cat "$final_assets"
+            echo "Expected exactly 10 remote release assets, found $final_count" >&2
+            exit 1
+          fi
+          for asset in $expected_assets; do
+            if ! grep -Fxq "$asset" "$final_assets"; then
+              echo "Missing remote release asset after upload: $asset" >&2
+              exit 1
+            fi
+            verify_remote_asset "$asset"
+          done
+
+      - name: Publish verified GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: cli-rust-v${{ needs.version.outputs.current }}
+        run: |
+          if [ "$(gh release view "$TAG" --json isDraft --jq '.isDraft')" = "true" ]; then
+            gh release edit "$TAG" --draft=false
+          else
+            echo "GitHub release is already public and assets are verified: $TAG"
+          fi
+
+      - name: Smoke test default installer URL
+        env:
+          VERSION: ${{ needs.version.outputs.current }}
+        run: |
+          install_dir="$RUNNER_TEMP/primitive-rust-cli-default-url"
+          scripts/install-rust-cli.sh --version "$VERSION" --target linux-x64 --install-dir "$install_dir"
+          "$install_dir/primitive" --version | grep -q -- 'primitive/'
+          "$install_dir/prim" list-operations | grep -q -- '"operationId": "getAccount"'
+
+  windows-default-installer-smoke:
+    name: Windows Default Installer Smoke
+    needs:
+      - version
+      - release
+    if: ${{ needs.version.outputs.changed == 'true' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Smoke test PowerShell default installer URL
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "primitive-rust-cli-default-url"
+          ./scripts/install-rust-cli.ps1 -Version "${{ needs.version.outputs.current }}" -Target "windows-x64" -InstallDir $installDir
+          & (Join-Path $installDir "primitive.exe") --version | Select-String "primitive/"
+          & (Join-Path $installDir "prim.exe") list-operations | Select-String '"operationId": "getAccount"'

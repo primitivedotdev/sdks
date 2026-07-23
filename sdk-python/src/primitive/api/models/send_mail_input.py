@@ -45,7 +45,7 @@ class SendMailInput:
             attachments (list[SendMailAttachment] | Unset): Inline attachments. Send requests with attachments to
                 https://api.primitive.dev/v1/send-mail. Combined raw decoded attachment bytes must be at most 31457280.
             payload_attachments (list[SendMailPayloadRef] | Unset): Deliver an already-uploaded Primitive Payloads object as
-                an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap.
+                an attachment by reference, without inlining the bytes, the way to send attachments larger than the inline cap.
                 Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.
             wait (bool | Unset): When true, wait for the first downstream SMTP delivery outcome before returning.
             wait_timeout_ms (int | Unset): Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
