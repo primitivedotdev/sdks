@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { appendFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { Command, Errors, Flags } from "@oclif/core";
 import type {
@@ -43,7 +44,32 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function recordAuthEvent(kind: string, value: string): void {
+  const target = process.env.PRIMITIVE_AUTH_EVENT_LOG;
+  if (!target) return;
+  try {
+    appendFileSync(target, `${kind} ${JSON.stringify(value)}\n`, "utf8");
+  } catch {
+    // Best-effort parity instrumentation only.
+  }
+}
+
+function recordBrowserOpenTrap(url: string): boolean {
+  if (process.env.PRIMITIVE_BROWSER_OPEN_DIRECT_TRAP !== "1") return false;
+  const target = process.env.PRIMITIVE_BROWSER_OPEN_TRAP_LOG;
+  if (target) {
+    try {
+      appendFileSync(target, `browser-open ${url}\n`, "utf8");
+    } catch {
+      // Best-effort parity instrumentation only.
+    }
+  }
+  return true;
+}
+
 function openBrowser(url: string): void {
+  recordAuthEvent("browser-open", url);
+  if (recordBrowserOpenTrap(url)) return;
   const command =
     process.platform === "darwin"
       ? "open"
@@ -295,15 +321,23 @@ class LoginCommand extends Command {
       throw cliError("Primitive API returned an empty CLI login response.");
     }
 
-    process.stderr.write(`Your sign-in code is: ${start.user_code}\n`);
+    const codeLine = `Your sign-in code is: ${start.user_code}\n`;
+    process.stderr.write(codeLine);
     if (!flags["no-browser"]) {
+      recordAuthEvent("stderr", codeLine);
       openBrowser(start.verification_uri_complete);
-      process.stderr.write("Opening Primitive in your browser...\n");
+      const openingLine = "Opening Primitive in your browser...\n";
+      process.stderr.write(openingLine);
+      recordAuthEvent("stderr", openingLine);
     }
-    process.stderr.write(
-      `If the browser did not open, visit: ${start.verification_uri_complete}\n`,
-    );
-    process.stderr.write("Waiting for browser approval...\n");
+    const fallbackLine = `If the browser did not open, visit: ${start.verification_uri_complete}\n`;
+    process.stderr.write(fallbackLine);
+    const waitingLine = "Waiting for browser approval...\n";
+    process.stderr.write(waitingLine);
+    if (!flags["no-browser"]) {
+      recordAuthEvent("stderr", fallbackLine);
+      recordAuthEvent("stderr", waitingLine);
+    }
 
     const deadline = Date.now() + start.expires_in * 1000;
     let interval = Math.min(

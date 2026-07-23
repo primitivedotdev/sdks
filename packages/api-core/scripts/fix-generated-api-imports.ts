@@ -1,4 +1,10 @@
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -38,7 +44,11 @@ function addJsExtension(file: string, specifier: string): string {
   }
 
   const absolute = resolve(dirname(file), specifier);
-  if (existsSync(absolute) && statSync(absolute).isDirectory() && existsSync(join(absolute, "index.ts"))) {
+  if (
+    existsSync(absolute) &&
+    statSync(absolute).isDirectory() &&
+    existsSync(join(absolute, "index.ts"))
+  ) {
     return `${specifier}/index.js`;
   }
 
@@ -93,12 +103,18 @@ function fixMemoryJsonValueType(file: string, content: string): string {
 for (const file of visit(generatedRoot)) {
   const content = readFileSync(file, "utf8");
   let updated = content
-    .replace(/(from\s+['"])(\.{1,2}\/[^'"]+)(['"])/g, (_, prefix, specifier, suffix) => {
-      return `${prefix}${addJsExtension(file, specifier)}${suffix}`;
-    })
-    .replace(/(import\(\s*['"])(\.{1,2}\/[^'"]+)(['"]\s*\))/g, (_, prefix, specifier, suffix) => {
-      return `${prefix}${addJsExtension(file, specifier)}${suffix}`;
-    });
+    .replace(
+      /(from\s+['"])(\.{1,2}\/[^'"]+)(['"])/g,
+      (_, prefix, specifier, suffix) => {
+        return `${prefix}${addJsExtension(file, specifier)}${suffix}`;
+      },
+    )
+    .replace(
+      /(import\(\s*['"])(\.{1,2}\/[^'"]+)(['"]\s*\))/g,
+      (_, prefix, specifier, suffix) => {
+        return `${prefix}${addJsExtension(file, specifier)}${suffix}`;
+      },
+    );
   updated = guardOptionalBodyContentType(updated);
   updated = fixMemoryJsonValueType(file, updated);
 

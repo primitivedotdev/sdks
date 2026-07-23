@@ -9,9 +9,13 @@ export type PrimitiveParameterManifest = {
   default?: boolean | number | string;
   description: string | null;
   enum: string[] | null;
+  format?: string;
+  maxLength?: number;
+  minLength?: number;
   maximum?: number;
   minimum?: number;
   name: string;
+  pattern?: string;
   required: boolean;
   type: string;
 };
@@ -22,6 +26,7 @@ export type PrimitiveOperationManifest = {
   command: string;
   description: string | null;
   hasJsonBody: boolean;
+  headerParams: PrimitiveParameterManifest[];
   method: string;
   operationId: string;
   path: string;
@@ -51,6 +56,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-account",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getAccount",
     "path": "/account",
@@ -118,7 +124,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "items": {
             "type": "string"
           },
-          "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here — e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
+          "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here, e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
         },
         "managed_inbox_address": {
           "type": [
@@ -200,6 +206,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-storage-stats",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getStorageStats",
     "path": "/account/storage",
@@ -254,6 +261,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-webhook-secret",
     "description": "Returns the webhook signing secret for your account. If no\nsecret exists yet, one is generated automatically on first\naccess.\n\nSigning is account-scoped, not per-endpoint. Every webhook\ndelivery from any of your registered endpoints is signed\nwith this single secret. Rotate via\n`POST /account/webhook-secret/rotate`.\n\n**Secret format**: the returned string looks base64-shaped\n(e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`) but is NOT base64.\nUse it AS-IS as a UTF-8 string when computing HMAC over a\ndelivery body. Base64-decoding before HMAC will silently\nproduce mismatched signatures.\n\nSee the API-level \"Webhook signing\" section for the full\nwire format (header name, signed string shape, hash algo,\ntolerance) including a language-agnostic verification\nrecipe.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getWebhookSecret",
     "path": "/account/webhook-secret",
@@ -283,6 +291,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "rotate-webhook-secret",
     "description": "Generates a new webhook signing secret, replacing the current one.\nRate limited to once per 60 minutes.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "POST",
     "operationId": "rotateWebhookSecret",
     "path": "/account/webhook-secret/rotate",
@@ -312,6 +321,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-account",
     "description": null,
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PATCH",
     "operationId": "updateAccount",
     "path": "/account",
@@ -380,6 +390,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-agent-account",
     "description": "Creates an emailless agent account without authentication and returns a\none-time API key (prefixed `prim_`) plus a provisioned managed inbox.\nThe account is on the `agent` plan: reply-only (it can send only to\naddresses that have already sent it authenticated mail) with tight send\nlimits. Use the returned `api_key` as a Bearer token on later calls. The\naccount can be upgraded to a full developer account by confirming an\nemail through the claim flow. This endpoint does not require an API key.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createAgentAccount",
     "path": "/agent/accounts",
@@ -518,6 +529,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-agent-claim-link",
     "description": "Mints an opaque, single-use link an agent can hand to a human to\ncomplete the email-confirmation upgrade in a browser. Authenticated by\nthe agent's own API key. `claim_url` is null when the API host cannot\nresolve a web origin to build the link.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createAgentClaimLink",
     "path": "/agent/claim/link",
@@ -563,6 +575,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "resend-agent-signup-verification",
     "description": "Sends a new email verification code for a pending agent signup session.\nThis endpoint does not require an API key.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "resendAgentSignupVerification",
     "path": "/agent/signup/resend",
@@ -619,6 +632,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "start-agent-claim",
     "description": "Begins upgrading an emailless `agent` account into a full `developer`\naccount by confirming an email address. Authenticated by the agent's own\nAPI key (the org is taken from the credential). Sends a verification\ncode to the supplied email and returns the claim session id plus resend\ntiming. Submit the code to `/agent/claim/verify` to complete the\nupgrade. Confirming an email that already belongs to a Primitive account\nis rejected.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "startAgentClaim",
     "path": "/agent/claim/start",
@@ -669,6 +683,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "start-agent-signup",
     "description": "Starts an agent-native signup session. `signup_code` is optional;\nomit it to sign up without one. The API creates a pending signup\nsession, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "startAgentSignup",
     "path": "/agent/signup/start",
@@ -754,6 +769,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "verify-agent-claim",
     "description": "Confirms the verification code emailed by `/agent/claim/start` and\nupgrades the account to the `developer` plan. The org id, API key, and\nmanaged inbox all carry over; the send cap lifts. Authenticated by the\nagent's own API key.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "verifyAgentClaim",
     "path": "/agent/claim/verify",
@@ -853,6 +869,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "verify-agent-signup",
     "description": "Verifies the email code for an agent signup session and creates\nthe account when needed. When the session was started with a\n`signup_code`, the reserved code is redeemed; sessions started\nwithout a code skip the redemption step. An org-scoped OAuth\nsession for CLI authentication is minted and the raw tokens are\nreturned exactly once. For existing users, the optional `org_id`\nselects which accessible workspace should receive the new\nsession (no signup-code redemption is performed for existing\nusers regardless of how the session was started).\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "verifyAgentSignup",
     "path": "/agent/signup/verify",
@@ -990,6 +1007,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "cli-logout",
     "description": "Revokes the OAuth grant used to authenticate the request. API-key\nauthenticated legacy logout requests succeed without deleting server API\nkeys so old local CLI state can be cleared safely.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "cliLogout",
     "path": "/cli/logout",
@@ -1039,6 +1057,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "poll-cli-login",
     "description": "Polls a CLI login session until the browser approval either succeeds,\nis denied, expires, or is polled too quickly. The OAuth token set is\ncreated only after approval and is returned exactly once.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "pollCliLogin",
     "path": "/cli/login/poll",
@@ -1141,6 +1160,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "resend-cli-signup-verification",
     "description": "Sends a new email verification code for a pending CLI signup session.\nThis endpoint does not require an API key.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "resendCliSignupVerification",
     "path": "/cli/signup/resend",
@@ -1197,6 +1217,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "start-cli-login",
     "description": "Starts a browser-assisted CLI login session. The response includes a\ndevice code for polling and a user code that the user approves in the\nbrowser. This endpoint does not require an API key.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "startCliLogin",
     "path": "/cli/login/start",
@@ -1268,6 +1289,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "start-cli-signup",
     "description": "Starts a terminal-native CLI signup. `signup_code` is optional;\nomit it to sign up without one. The API creates a pending signup\nsession, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "startCliSignup",
     "path": "/cli/signup/start",
@@ -1353,6 +1375,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "verify-cli-signup",
     "description": "Verifies the email code for a CLI signup session and creates the\naccount. When the session was started with a `signup_code`, the\nreserved code is redeemed; sessions started without a code skip\nthe redemption step. Either way an org-scoped OAuth CLI session\nis created and the token set is returned exactly once. This\nendpoint does not require an API key.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "verifyCliSignup",
     "path": "/cli/signup/verify",
@@ -1466,6 +1489,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "add-domain",
     "description": "Creates an unverified domain claim and returns the exact\nDNS records to publish in `dns_records`. Publish those\nrecords before calling the verify endpoint. To give users\nan importable DNS file, call `downloadDomainZoneFile` or run\n`primitive domains zone-file --id <domain-id>`.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "addDomain",
     "path": "/domains",
@@ -1617,6 +1641,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-domain",
     "description": "Deletes a verified or unverified domain claim.",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteDomain",
     "path": "/domains/{id}",
@@ -1624,6 +1649,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -1643,6 +1669,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "download-domain-zone-file",
     "description": "Downloads a BIND-format DNS zone file containing the DNS records\nrequired for a domain claim. Agents should offer this after\n`addDomain` when users want to import DNS records instead of\ncopying each record manually.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "downloadDomainZoneFile",
     "path": "/domains/{id}/zone-file",
@@ -1650,6 +1677,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -1677,6 +1705,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-domains",
     "description": "Returns all verified and unverified domains for your organization,\nsorted by creation date (newest first). Each domain includes a\n`verified` boolean to distinguish between the two states.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listDomains",
     "path": "/domains",
@@ -1862,6 +1891,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-domain",
     "description": "Update a verified domain's settings. Only verified domains can be\nupdated. Per-domain spam thresholds require a Pro plan.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PATCH",
     "operationId": "updateDomain",
     "path": "/domains/{id}",
@@ -1869,6 +1899,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -1955,6 +1986,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "verify-domain",
     "description": "Checks DNS records required for inbound routing, ownership,\nand outbound authentication: MX, ownership TXT, SPF, DKIM,\nDMARC, and TLS-RPT.\nOn success, the domain is promoted from unverified to verified.\nOn failure, returns which checks passed and which failed,\nplus the exact DNS records still expected. To give users\nan importable DNS file for missing records, call\n`downloadDomainZoneFile` or run\n`primitive domains zone-file --id <domain-id>`.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "POST",
     "operationId": "verifyDomain",
     "path": "/domains/{id}/verify",
@@ -1962,6 +1994,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -2189,6 +2222,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-email",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteEmail",
     "path": "/emails/{id}",
@@ -2196,6 +2230,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -2215,6 +2250,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "discard-email-content",
     "description": "Permanently deletes the email's raw bytes, parsed body (text + HTML),\nand attachments while preserving metadata (sender, recipient,\nsubject, timestamps, hashes, attachment manifest) for audit logs.\nIdempotent: a second call returns success with\n`already_discarded: true` and does no work.\n\n**Gated** on the customer's discard-content opt-in (managed in the\ndashboard at Settings > Webhooks). When the toggle is off, this\nendpoint returns `403` with code `discard_not_enabled` and a\nmessage pointing the human at the dashboard. There is intentionally\nno API to flip this toggle. Opting in to a destructive,\nnon-reversible operation must be a deliberate human click in the\nUI.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "POST",
     "operationId": "discardEmailContent",
     "path": "/emails/{id}/discard-content",
@@ -2222,6 +2258,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -2257,6 +2294,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "download-attachments",
     "description": "Downloads all attachments as a gzip-compressed tar archive.\nAuthenticates via a signed download token (provided in webhook\npayloads) or a valid session.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "downloadAttachments",
     "path": "/emails/{id}/attachments.tar.gz",
@@ -2264,6 +2302,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -2291,6 +2330,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "download-raw-email",
     "description": "Downloads the raw RFC 822 email file (.eml). Authenticates via\na signed download token (provided in webhook payloads) or a\nvalid session.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "downloadRawEmail",
     "path": "/emails/{id}/raw",
@@ -2298,6 +2338,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -2325,6 +2366,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-conversation",
     "description": "Returns the full conversation the given inbound email belongs\nto, as ordered, ready-to-prompt turns WITH bodies. It resolves\nthe thread from the email and returns every message oldest-first,\nso an agent that received an email can pass `messages` straight\nto a chat model in one call instead of walking `/threads/{id}`\nplus `/emails/{id}` and `/sent-emails/{id}` per message.\n\nEach message carries a `direction` (`inbound` | `outbound`) and a\nderived `role`: `inbound` -> `user`, `outbound` -> `assistant`\n(your own prior replies). The role mapping assumes the caller\nowns the outbound side, which is the agent-reply case this exists\nfor. If the email has no thread yet (a brand-new message), the\nconversation is just that one message as a single user turn.\n\nThe message list is capped; check `truncated` to detect when\nolder messages were omitted. Consecutive same-role turns are not\nmerged here; that normalization is model-specific and left to the\ncaller.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getConversation",
     "path": "/emails/{id}/conversation",
@@ -2332,6 +2374,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -2456,6 +2499,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-email",
     "description": "Returns the full record for an inbound email received at one\nof your verified domains, including the parsed text and HTML\nbodies, threading metadata, SMTP envelope detail, webhook\ndelivery state, and a `replies` array for any outbound sends\nrecorded as replies to this inbound.\n\nFor listing inbound emails (with cursor pagination, status\nand date filters, and free-text search), use\n`/emails`. Outbound (sent) email records are NOT returned\nhere; use `/sent-emails/{id}` for those.\n\nThe response carries four sender-shaped fields whose\nmeanings overlap. `from_email` is the canonical \"who sent\nthis\" field for most use cases (parsed bare address from\nthe `From:` header, with a `sender` fallback). `from_header`\nis the raw header including any display name. `sender` and\n`smtp_mail_from` both carry the SMTP envelope MAIL FROM\n(return-path) and are equal by construction; `sender` is\nthe older field name retained for compatibility. See\n`primitive describe emails:get-email | jq '.responseSchema.properties'`\nfor per-field detail.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getEmail",
     "path": "/emails/{id}",
@@ -2463,6 +2507,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -3091,6 +3136,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-emails",
     "description": "Returns a paginated list of INBOUND emails received at your\nverified domains. Outbound messages sent via /send-mail are\nnot included; this endpoint is the inbox view, not a\nunified send/receive history.\n\nSupports filtering by domain, status, date range, and\nfree-text search across subject, sender, and recipient\nfields.\n\nFor a compact text-table summary of the most recent N\ninbounds (no filters, no cursor pagination), the CLI ships\n`primitive emails:latest` as a one-line-per-email shortcut.\nIt's TTY-aware so id columns are full UUIDs when piped, and\na `--json` flag returns the same envelope this endpoint\ndoes. Use whichever fits the call site.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listEmails",
     "path": "/emails",
@@ -3116,6 +3162,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter by domain ID",
         "enum": null,
+        "format": "uuid",
         "name": "domain_id",
         "required": false,
         "type": "string"
@@ -3130,6 +3177,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Search subject, sender, and recipient (case-insensitive)",
         "enum": null,
+        "maxLength": 500,
         "name": "search",
         "required": false,
         "type": "string"
@@ -3137,6 +3185,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter emails created on or after this timestamp",
         "enum": null,
+        "format": "date-time",
         "name": "date_from",
         "required": false,
         "type": "string"
@@ -3144,6 +3193,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter emails created on or before this timestamp",
         "enum": null,
+        "format": "date-time",
         "name": "date_to",
         "required": false,
         "type": "string"
@@ -3151,6 +3201,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Forward-tail cursor. Returns rows that became visible AFTER this\ncursor, oldest-first, so a caller can stream new inbound mail by\nre-passing the cursor from each response. Mutually exclusive with\n`cursor` (which pages history newest-first). Pass the `meta.cursor`\nfrom the previous `since` response; an empty page means caught up.\n",
         "enum": null,
+        "maxLength": 200,
         "name": "since",
         "required": false,
         "type": "string"
@@ -3291,6 +3342,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "replay-email-webhooks",
     "description": "Re-delivers the webhook payload for this email to all active\nendpoints matching the email's domain. Rate limited per-email\n(short cooldown between successive replays of the same email)\nand per-org (burst + sustained windows), sharing an org-wide\nbudget with delivery replays.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "POST",
     "operationId": "replayEmailWebhooks",
     "path": "/emails/{id}/replay",
@@ -3298,6 +3350,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -3333,6 +3386,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "search-emails",
     "description": "Searches inbound emails with structured filters and optional\nfull-text matching across parsed email fields. This endpoint is\noptimized for filtered inbox views and CLI polling workflows:\ncallers that only need new accepted mail can pass\n`sort=received_at_asc`, `snippet=false`, `include_facets=false`,\nand a `date_from` timestamp.\n\n`q`, `subject`, and `body` use the same English full-text index\nas the web inbox search. Structured filters such as `from`, `to`,\n`domain_id`, status, attachment presence, and spam score bounds\nare combined with the text query.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "searchEmails",
     "path": "/emails/search",
@@ -3341,6 +3395,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Full-text search DSL query.",
         "enum": null,
+        "maxLength": 500,
         "name": "q",
         "required": false,
         "type": "string"
@@ -3348,6 +3403,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter by sender address or sender domain.",
         "enum": null,
+        "maxLength": 255,
         "name": "from",
         "required": false,
         "type": "string"
@@ -3355,6 +3411,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter by recipient address or recipient domain.",
         "enum": null,
+        "maxLength": 255,
         "name": "to",
         "required": false,
         "type": "string"
@@ -3362,6 +3419,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Full-text search restricted to the subject field.",
         "enum": null,
+        "maxLength": 500,
         "name": "subject",
         "required": false,
         "type": "string"
@@ -3369,6 +3427,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Full-text search restricted to the parsed text body.",
         "enum": null,
+        "maxLength": 2000,
         "name": "body",
         "required": false,
         "type": "string"
@@ -3376,6 +3435,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter by domain ID.",
         "enum": null,
+        "format": "uuid",
         "name": "domain_id",
         "required": false,
         "type": "string"
@@ -3383,6 +3443,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter to inbound emails that are replies to a specific\noutbound send. The value is a `sent_emails.id` (UUID). At\ninbound ingest, Primitive matches the parsed In-Reply-To\nheader (or References as a fallback) against\n`sent_emails.message_id` in the same org and records the\nresolved id on `emails.reply_to_sent_email_id`. This filter\nis the strict-threading lookup behind `primitive chat` and\nany UI that wants to show the inbound reply to a given\nsend. NULL on inbound that isn't a threaded reply to one\nof your sends, so existing emails received before this\ningestion landed will not match.\n",
         "enum": null,
+        "format": "uuid",
         "name": "reply_to_sent_email_id",
         "required": false,
         "type": "string"
@@ -3397,6 +3458,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter emails received on or after this timestamp.",
         "enum": null,
+        "format": "date-time",
         "name": "date_from",
         "required": false,
         "type": "string"
@@ -3404,6 +3466,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter emails received on or before this timestamp.",
         "enum": null,
+        "format": "date-time",
         "name": "date_to",
         "required": false,
         "type": "string"
@@ -3446,6 +3509,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Opaque pagination cursor from a previous search response.",
         "enum": null,
+        "maxLength": 200,
         "name": "cursor",
         "required": false,
         "type": "string"
@@ -3657,6 +3721,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-endpoint",
     "description": "Creates a new webhook endpoint. If a deactivated endpoint\nwith the same URL and domain exists, it is reactivated\ninstead. Subject to plan limits on the number of active\nendpoints.\n\n**Signing is account-scoped, not per-endpoint.** This call\ndoes not return any signing material; every endpoint on the\naccount uses the same webhook secret, fetched via\n`GET /account/webhook-secret`. See the API-level \"Webhook\nsigning\" section for the full wire format (header name,\nsigned string, hash algo, secret format, tolerance) and a\nlanguage-agnostic verification recipe.\n\nAfter creating the endpoint, fire a test delivery against\nit via `POST /endpoints/{id}/test` to confirm your verifier\naccepts the signature.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createEndpoint",
     "path": "/endpoints",
@@ -3838,6 +3903,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-endpoint",
     "description": "Soft-deletes a webhook endpoint. The endpoint will no longer\nreceive webhook deliveries.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteEndpoint",
     "path": "/endpoints/{id}",
@@ -3845,6 +3911,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -3864,6 +3931,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-endpoints",
     "description": "Returns all active (non-deleted) webhook endpoints.",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listEndpoints",
     "path": "/endpoints",
@@ -4002,6 +4070,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "test-endpoint",
     "description": "Sends a sample `email.received` event to the endpoint. The request\nincludes SSRF protection (private IP rejection and DNS pinning).\nRate limited to 4 per minute and 30 per hour (non-exempt).\nSuccessful deliveries and verified-domain endpoints are exempt\nfrom the rate limit.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "POST",
     "operationId": "testEndpoint",
     "path": "/endpoints/{id}/test",
@@ -4009,6 +4078,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4048,6 +4118,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-endpoint",
     "description": "Updates an active webhook endpoint. If the URL is changed, the old\nendpoint is deactivated and a new one is created (or an existing\ndeactivated endpoint with the new URL is reactivated).\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PATCH",
     "operationId": "updateEndpoint",
     "path": "/endpoints/{id}",
@@ -4055,6 +4126,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4215,6 +4287,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-filter",
     "description": "Creates a new whitelist or blocklist filter. Per-domain filters\nrequire a Pro plan. Patterns are stored as lowercase.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createFilter",
     "path": "/filters",
@@ -4309,6 +4382,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-filter",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteFilter",
     "path": "/filters/{id}",
@@ -4316,6 +4390,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4335,6 +4410,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-filters",
     "description": "Returns all whitelist and blocklist filter rules.",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listFilters",
     "path": "/filters",
@@ -4402,6 +4478,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-filter",
     "description": "Toggle a filter's enabled state.",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PATCH",
     "operationId": "updateFilter",
     "path": "/filters/{id}",
@@ -4409,6 +4486,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4485,6 +4563,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-function",
     "description": "Creates and deploys a new function. The handler must be a single\nESM module whose default export is an object with an async\n`fetch(request, env)` method (Workers-style). Primitive signs\neach delivery and forwards the `Primitive-Signature` header to\nthe handler. Verify the raw request body with\n`PRIMITIVE_WEBHOOK_SECRET` before parsing JSON; after verification\nthe request body parses to a webhook event whose `event` field is\n`email.received` for normal inbound mail, or a machine-mail type\n(`email.bounced`, `email.tls_report`, `email.dmarc_report`,\n`email.dmarc_failure`) for bounces and reports. Code is bundled\nbefore being uploaded; ship a single self-contained file rather\nthan relying on external imports.\n\n**Code limits.** `code` is capped at 1 MiB UTF-8. `sourceMap`\n(optional) is capped at 5 MiB UTF-8, stored with each deployment\nattempt, and sent to the runtime so stack traces can resolve to\noriginal source files.\n\n**Routing.** On successful deploy, the function code is live\nin the runtime, but inbound mail will not reach it until at\nleast one route is bound. Routes are managed from the Primitive\ndashboard. A `deploy_status` of `deployed` means the script is\ninstalled, not that the function is receiving mail. The\ninternal runtime URL is not returned by the API and is not a\ncustomer-facing integration surface.\n\n**Secrets.** New functions ship with the managed secrets\n(`PRIMITIVE_WEBHOOK_SECRET`, `PRIMITIVE_API_KEY`,\n`PRIMITIVE_API_BASE_URL`) already bound. Add user-set secrets via\n`POST /functions/{id}/secrets`; secret writes only land in the\nrunning handler on the next redeploy.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createFunction",
     "path": "/functions",
@@ -4541,7 +4620,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "deployed",
             "failed"
           ],
-          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
         }
       },
       "required": [
@@ -4561,6 +4640,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-function-secret",
     "description": "Idempotent insert-or-update keyed on `(function_id, key)`.\nReturns 201 the first time the key is set, 200 on subsequent\nupdates. Values are encrypted at rest and only become visible\nto the running handler on the next deploy (`PUT /functions/{id}`\nwith the existing code is sufficient to refresh bindings).\n\nKeys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,\ndigits, underscores; first character is a letter or\nunderscore). Values are at most 4096 UTF-8 bytes. System-\nmanaged keys are reserved and rejected.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createFunctionSecret",
     "path": "/functions/{id}/secrets",
@@ -4568,6 +4648,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4634,6 +4715,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-org-secret",
     "description": "Idempotent insert-or-update keyed on `(org_id, key)`. Returns\n201 the first time the key is set, 200 on subsequent updates.\nValues are encrypted at rest. A changed value lands in a\nfunction only on that function's next deploy.\n\nKeys must match `^[A-Z_][A-Z0-9_]*$` (uppercase letters,\ndigits, underscores; first character is a letter or\nunderscore). Values are at most 4096 UTF-8 bytes. System-\nmanaged keys are reserved and rejected.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createOrgSecret",
     "path": "/org/secrets",
@@ -4699,6 +4781,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-function",
     "description": "Soft-deletes the function row, removes the script from the edge\nruntime, and deactivates any route bound to this function so no\nfurther inbound mail is delivered. Past deploy history,\ninvocations, and logs are retained.\n\nReturns 502 if the runtime delete fails partway; the function\nrow stays in place and the call is safe to retry until it\nsucceeds.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteFunction",
     "path": "/functions/{id}",
@@ -4706,6 +4789,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4725,6 +4809,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-function-secret",
     "description": "Removes the secret. The binding stays live in the running\nhandler until the next deploy refreshes the binding set\n(`PUT /functions/{id}` with the existing code is sufficient).\nReturns 404 if the key did not exist. Managed system keys\ncannot be deleted.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteFunctionSecret",
     "path": "/functions/{id}/secrets/{key}",
@@ -4732,6 +4817,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4740,6 +4826,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.",
         "enum": null,
         "name": "key",
+        "pattern": "^[A-Z_][A-Z0-9_]*$",
         "required": true,
         "type": "string"
       }
@@ -4758,6 +4845,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-org-secret",
     "description": "Removes the org secret. Functions keep the previous value until\neach is redeployed. Returns 404 if the key did not exist.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteOrgSecret",
     "path": "/org/secrets/{key}",
@@ -4766,6 +4854,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.",
         "enum": null,
         "name": "key",
+        "pattern": "^[A-Z_][A-Z0-9_]*$",
         "required": true,
         "type": "string"
       }
@@ -4784,6 +4873,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-function",
     "description": "Returns the full record for a function, including its current\nsource code and the deploy status / error from the most recent\ndeploy attempt.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getFunction",
     "path": "/functions/{id}",
@@ -4791,6 +4881,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4820,7 +4911,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "deployed",
             "failed"
           ],
-          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
         },
         "deploy_error": {
           "type": [
@@ -4865,6 +4956,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-function-routing",
     "description": "Returns the endpoint binding for the function, or null when no\nroute is currently bound. The binding identifies whether the\nfunction receives mail for a specific domain (scoped) or for any\nactive domain that has no scoped binding (fallback).\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getFunctionRouting",
     "path": "/functions/{id}/routing",
@@ -4872,6 +4964,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4974,6 +5067,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-function-test-run-trace",
     "description": "Returns the current end-to-end trace for a function test run.\nThe trace is intentionally partial while the test is still in\nflight: callers can poll this endpoint and watch it fill in\nfrom send -> inbound -> webhook deliveries -> outbound\nrequests, logs, and replies.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getFunctionTestRunTrace",
     "path": "/functions/{id}/test-runs/{run_id}/trace",
@@ -4981,6 +5075,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -4988,6 +5083,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Function test run id returned by POST /functions/{id}/test.",
         "enum": null,
+        "format": "uuid",
         "name": "run_id",
         "required": true,
         "type": "string"
@@ -5545,6 +5641,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-org-routing-topology",
     "description": "Returns a single snapshot of how inbound mail is routed across\nthis org's active domains and functions: which active domain has\nwhich function bound, the org's fallback function (if any), and\nevery deployed function with no route bound. Use this to answer\n\"which of my functions actually receive mail?\" diagnostically.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getOrgRoutingTopology",
     "path": "/functions/routing-topology",
@@ -5664,6 +5761,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-function-logs",
     "description": "Returns the most recent `function_logs` rows for the function,\nnewest first. Each row is a single `console.log` / `console.error`\ninvocation captured from the running handler.\n\nPage through history with the opaque `cursor` returned as\n`next_cursor`; pass it back as the `cursor` query param on the\nnext call. `next_cursor` is `null` when there are no further\nrows. The cursor format is an implementation detail and should\nnot be parsed by callers.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listFunctionLogs",
     "path": "/functions/{id}/logs",
@@ -5671,6 +5769,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -5777,6 +5876,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-function-secrets",
     "description": "Returns metadata for every secret bound to the function, with\nmanaged entries (provisioned by Primitive) listed first and\nuser-set entries listed alphabetically after. **Values are\nnever returned.** Secret writes are write-only.\n\nManaged entries (e.g. `PRIMITIVE_WEBHOOK_SECRET`,\n`PRIMITIVE_API_KEY`, `PRIMITIVE_API_BASE_URL`) carry a\n`description` instead of `created_at` / `updated_at`. They\ncannot be created, updated, or deleted via this API.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listFunctionSecrets",
     "path": "/functions/{id}/secrets",
@@ -5784,6 +5884,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -5798,7 +5899,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "description": "One row from GET /functions/{id}/secrets. Discriminate on the\n`managed` field:\n  * `managed = true`  — system secret provisioned by Primitive.\n    `description` is set; `created_at` / `updated_at` are\n    null because the row is virtual (resolved at deploy time\n    from the managed registry, not stored in the secrets\n    table).\n  * `managed = false` — secret the user set via the API.\n    `created_at` / `updated_at` are set; `description` is\n    null.\n",
+            "description": "One row from GET /functions/{id}/secrets. Discriminate on the\n`managed` field:\n  * `managed = true` - system secret provisioned by Primitive.\n    `description` is set; `created_at` / `updated_at` are\n    null because the row is virtual (resolved at deploy time\n    from the managed registry, not stored in the secrets\n    table).\n  * `managed = false` - secret the user set via the API.\n    `created_at` / `updated_at` are set; `description` is\n    null.\n",
             "properties": {
               "key": {
                 "type": "string"
@@ -5853,6 +5954,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-functions",
     "description": "Returns every active (non-deleted) function in the org, newest\nfirst. Each entry carries deploy status and timestamps. To\ninspect the source code or deploy errors, use `GET /functions/{id}`.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listFunctions",
     "path": "/functions",
@@ -5881,7 +5983,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "deployed",
               "failed"
             ],
-            "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+            "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
           },
           "deployed_at": {
             "type": [
@@ -5920,6 +6022,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-org-secrets",
     "description": "Returns metadata for every org-level secret. Org secrets apply\nto every function in the org and are read as `env.<KEY>` in\nhandlers. **Values are never returned.** Secret writes are\nwrite-only. A function-level secret of the same name overrides\nthe org-level value for that function.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listOrgSecrets",
     "path": "/org/secrets",
@@ -5970,6 +6073,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "set-function-route",
     "description": "Binds inbound mail to this function. The route target is either\na specific verified domain (scoped) or the org's fallback (any\nactive domain with no scoped binding). If another function is\nalready bound at the target, returns a `conflict` envelope\ndescribing the holder; re-issue with `takeover: true` to\ndeactivate that prior binding and install this one.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PUT",
     "operationId": "setFunctionRoute",
     "path": "/functions/{id}/route",
@@ -5977,6 +6081,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -6168,6 +6273,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "set-function-secret",
     "description": "Path-keyed companion to `POST /functions/{id}/secrets`.\nIdempotent: returns 201 the first time the key is set, 200 on\nsubsequent updates. Same validation rules and same write-only\nguarantees as the POST verb; the new value lands in the running\nhandler on the next deploy.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PUT",
     "operationId": "setFunctionSecret",
     "path": "/functions/{id}/secrets/{key}",
@@ -6175,6 +6281,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -6183,6 +6290,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.",
         "enum": null,
         "name": "key",
+        "pattern": "^[A-Z_][A-Z0-9_]*$",
         "required": true,
         "type": "string"
       }
@@ -6241,6 +6349,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "set-org-secret",
     "description": "Path-keyed companion to `POST /org/secrets`. Idempotent:\nreturns 201 the first time the key is set, 200 on subsequent\nupdates. Same validation and write-only guarantees as POST.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PUT",
     "operationId": "setOrgSecret",
     "path": "/org/secrets/{key}",
@@ -6249,6 +6358,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Secret key. Must match `^[A-Z_][A-Z0-9_]*$`.",
         "enum": null,
         "name": "key",
+        "pattern": "^[A-Z_][A-Z0-9_]*$",
         "required": true,
         "type": "string"
       }
@@ -6307,6 +6417,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "test-function",
     "description": "Sends a real test email from a Primitive-controlled sender to a\nlocal-part on one of the org's verified inbound domains. By\ndefault the recipient is a synthetic\n`__primitive_function_test+<random>@<domain>` address on a\ndomain selected to route to the function. Scoped functions use\ntheir scoped domain; fallback functions use a domain that has\nno enabled domain-scoped endpoint. Pass `local_part` to\noverride and exercise routing logic that branches on a specific\nrecipient (the common pattern when one function handles multiple\ninboxes like `summarize@` and `action@`). The function fires\nthrough the normal MX delivery path, so reply / send-mail calls\nfrom inside the handler against the inbound's `email.id` work\nthe same as in production. Returns immediately after the send is\nqueued; the invocation appears on the function's invocations\nlist within a few seconds.\n\nRequires that the function is currently `deployed`. Returns 422\nif the function is in `pending` or `failed` state, or if the\norg has no verified inbound domain to receive the test mail.\nReturns 400 if `local_part` is set to a value that does not\nmatch the local-part character set.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "testFunction",
     "path": "/functions/{id}/test",
@@ -6314,6 +6425,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -6400,6 +6512,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "unset-function-route",
     "description": "Deactivates every active endpoint bound to this function. The\nfunction stays deployed but stops receiving inbound mail. Safe\nto call when no route is currently bound (no-op).\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "unsetFunctionRoute",
     "path": "/functions/{id}/route",
@@ -6407,6 +6520,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -6439,6 +6553,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-function",
     "description": "Replaces the function's source code with the body's `code` and\ntriggers a redeploy. Same size limits as `POST /functions`.\nUse this verb to push secret writes into the running handler:\npassing the same `code` re-runs the deploy and refreshes the\nbinding set with the latest values from the secrets table.\n\nOn deploy failure, the previously-deployed code stays live; the\nruntime never serves a half-built bundle. The response uses\n`error.code` `deploy_failed`, and the function's `deploy_error`\nfield carries the latest deploy error for dashboard/API reads.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PUT",
     "operationId": "updateFunction",
     "path": "/functions/{id}",
@@ -6446,6 +6561,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -6499,7 +6615,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "deployed",
             "failed"
           ],
-          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
         },
         "deploy_error": {
           "type": [
@@ -6544,6 +6660,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-inbox-status",
     "description": "Returns one consolidated view of inbound domain readiness,\nwebhook/function processing routes, deployed Functions, and\nrecent inbound email activity.\n\nAgents should call this before guiding a user through inbound\nsetup. It answers the practical questions \"can I receive mail\",\n\"will anything process that mail\", and \"what should I do next\"\nwithout forcing clients to stitch together domains, endpoints,\nfunctions, and emails manually.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getInboxStatus",
     "path": "/inbox/status",
@@ -6787,6 +6904,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-memory",
     "description": "Delete one active memory by key and scope. Deletes are idempotent when\n`if_version` is omitted: deleting a missing key returns `deleted:\nfalse`. With `if_version`, a missing key still returns `deleted: false`,\nbut a stale version returns `memory_conflict`.\n\nA successful delete records memory write usage.\n",
     "hasJsonBody": false,
+    "headerParams": [
+      {
+        "description": "Optional function id UUID used as the default scope when query\nscope parameters are omitted.\n",
+        "enum": null,
+        "format": "uuid",
+        "name": "x-primitive-function-id",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "method": "DELETE",
     "operationId": "deleteMemory",
     "path": "/memories",
@@ -6795,6 +6922,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Memory key. Must be at most 512 UTF-8 bytes.",
         "enum": null,
+        "maxLength": 512,
+        "minLength": 1,
         "name": "key",
         "required": true,
         "type": "string"
@@ -6812,6 +6941,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Function id UUID when `scope_type=function`. Not valid with\n`scope_type=org`.\n",
         "enum": null,
+        "format": "uuid",
         "name": "scope_id",
         "required": false,
         "type": "string"
@@ -6876,6 +7006,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-memory",
     "description": "Fetch one active memory by key and scope. Omit scope parameters to use\nthe automatic default: function-authenticated context, then the\n`x-primitive-function-id` header, then org scope. Function scope uses a\nfunction id UUID in `scope_id`.\n\nA successful read records memory read usage and updates the memory's\nread stats asynchronously.\n",
     "hasJsonBody": false,
+    "headerParams": [
+      {
+        "description": "Optional function id UUID used as the default scope when query\nscope parameters are omitted.\n",
+        "enum": null,
+        "format": "uuid",
+        "name": "x-primitive-function-id",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "method": "GET",
     "operationId": "getMemory",
     "path": "/memories",
@@ -6884,6 +7024,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Memory key. Must be at most 512 UTF-8 bytes.",
         "enum": null,
+        "maxLength": 512,
+        "minLength": 1,
         "name": "key",
         "required": true,
         "type": "string"
@@ -6901,6 +7043,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Function id UUID when `scope_type=function`. Not valid with\n`scope_type=org`.\n",
         "enum": null,
+        "format": "uuid",
         "name": "scope_id",
         "required": false,
         "type": "string"
@@ -7055,6 +7198,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "search-memories",
     "description": "List active memories in a scope by lexicographic key prefix. Results\nare ordered by key ascending. The `meta.cursor` value is the next key\ncursor; pass it back as `cursor` to continue after that key.\n\nSearch records one memory read usage event for the operation. Pass\n`include_value=false` to return metadata only.\n",
     "hasJsonBody": false,
+    "headerParams": [
+      {
+        "description": "Optional function id UUID used as the default scope when query\nscope parameters are omitted.\n",
+        "enum": null,
+        "format": "uuid",
+        "name": "x-primitive-function-id",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "method": "GET",
     "operationId": "searchMemories",
     "path": "/memories/search",
@@ -7064,6 +7217,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "default": "",
         "description": "Key prefix to match. Empty string lists all active memories in the\nselected scope. Must be at most 512 UTF-8 bytes.\n",
         "enum": null,
+        "maxLength": 512,
         "name": "prefix",
         "required": false,
         "type": "string"
@@ -7071,6 +7225,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Key cursor from a previous response's `meta.cursor`. The next page\nstarts after this key.\n",
         "enum": null,
+        "maxLength": 512,
+        "minLength": 1,
         "name": "cursor",
         "required": false,
         "type": "string"
@@ -7099,6 +7255,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Only include memories updated at or after this timestamp.",
         "enum": null,
+        "format": "date-time",
         "name": "updated_after",
         "required": false,
         "type": "string"
@@ -7106,6 +7263,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Only include memories updated at or before this timestamp.",
         "enum": null,
+        "format": "date-time",
         "name": "updated_before",
         "required": false,
         "type": "string"
@@ -7123,6 +7281,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Function id UUID when `scope_type=function`. Not valid with\n`scope_type=org`.\n",
         "enum": null,
+        "format": "uuid",
         "name": "scope_id",
         "required": false,
         "type": "string"
@@ -7279,6 +7438,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "set-memory",
     "description": "Create or update a durable JSON memory under an org or function scope.\nWhen no explicit scope is provided, function-authenticated requests\nuse that function's id automatically; requests with\n`x-primitive-function-id` use that function id; all other requests\ndefault to org scope.\n\n`scope.type = function` requires the function id UUID in `scope.id`.\nFunction names are not accepted as scope identifiers. Values must be\nvalid JSON and serialize to at most 65536 UTF-8 bytes. Keys must be at\nmost 512 UTF-8 bytes. `version`, `read_count`, and `write_count` are\nbigint counters serialized as strings.\n\nPassing `if_absent` turns the write into create-only. Passing\n`if_version` turns the write into compare-and-set. These options are\nmutually exclusive and return `memory_conflict` on a stale version or\nexisting key.\n",
     "hasJsonBody": true,
+    "headerParams": [
+      {
+        "description": "Optional function id UUID used as the default scope when the body\ndoes not include `scope`. Ignored when `scope` is provided.\n",
+        "enum": null,
+        "format": "uuid",
+        "name": "x-primitive-function-id",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "method": "PUT",
     "operationId": "setMemory",
     "path": "/memories",
@@ -7542,6 +7711,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-challenge",
     "description": "Create an x402 payment challenge (the payee side of a payment). The\n`pay_to` address is resolved server-side from your registered default\npayout address for the network, never from the request. The response\ncarries the `nonce_binding` and `payment_requirements` the payer needs to\nsign; hand the whole challenge object to the payer (for example in an\nemail reply). Amounts are in token base units (USDC has 6 decimals, so\n`\"10000\"` is 0.01 USDC).\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createChallenge",
     "path": "/x402/challenges",
@@ -7789,6 +7959,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-email-challenge",
     "description": "Issue an x402 payment challenge over a real email thread (the payee\nside). Unlike `createChallenge` (which mints a synthetic challenge id),\nthis sends the challenge as an email from `from` to `to` and binds the\npayment to that DKIM-authenticated thread. The `pay_to` address and the\ntoken asset are resolved server-side from your registered default payout\naddress for the network, never from the request. The response carries\nthe thread's `interaction_id` plus the `challenge` (the\n`payment_requirements`, the `nonce_binding`, and `expires_at`) the payer\nneeds to sign; the payer replies with a signed `payment` interaction\nstep. Amounts are in token base units (USDC has 6 decimals, so `\"10000\"`\nis 0.01 USDC).\n",
     "hasJsonBody": true,
+    "headerParams": [
+      {
+        "description": "Optional idempotency key. Retrying a request with the same key returns\nthe original result instead of repeating the side effect (for\n`createEmailChallenge`, re-sending the email).\n",
+        "enum": null,
+        "maxLength": 255,
+        "name": "idempotency-key",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "method": "POST",
     "operationId": "createEmailChallenge",
     "path": "/x402/email-challenges",
@@ -7980,6 +8160,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-challenge",
     "description": "Fetch a challenge you created, to poll its `status` and settlement\nreceipt (`settle_tx`). Scoped to the challenger org that created it.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getChallenge",
     "path": "/x402/challenges/{id}",
@@ -7987,6 +8168,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -8192,6 +8374,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-spend-policy",
     "description": "Read your org's outbound spend policy: the kill-switch, per-payment and\nper-day caps, and the payee allowlist. Returns the defaults (no limits,\nnot paused) when no policy has been set.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getSpendPolicy",
     "path": "/x402/spend-policy",
@@ -8250,6 +8433,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-declined-payments",
     "description": "The 50 most recent payments your org's spend policy declined, newest\nfirst. Use this to see why an outbound payment was refused (a cap, the\npayee allowlist, or the kill-switch) instead of only reading the\ndashboard.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listDeclinedPayments",
     "path": "/x402/declined-payments",
@@ -8322,6 +8506,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-payout-addresses",
     "description": "List your org's registered payout addresses, newest first.",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listPayoutAddresses",
     "path": "/x402/payout-addresses",
@@ -8389,6 +8574,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "pay-challenge",
     "description": "Settle a challenge addressed to your org as payer. The request body\ncarries a signed x402 `PaymentPayload`: an EIP-3009\n`transferWithAuthorization` signed locally with your own key, whose nonce\nis bound to the challenge via the SDK's `deriveEip3009Nonce`. The platform\nverifies every signed field against its own record of the challenge,\napplies your spend policy, and settles on-chain through a facilitator.\nSettlement is non-custodial; Primitive never holds funds. Idempotent:\npaying an already-settled challenge returns the original receipt. Most\ncallers use the SDK `pay()` helper rather than building the payload by\nhand.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "payChallenge",
     "path": "/x402/challenges/{id}/pay",
@@ -8396,6 +8582,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -8522,6 +8709,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "register-payout-address",
     "description": "Register (or update) the default payout address your org receives x402\npayments at, for a given network. You prove control of the address with\nan org-bound `personal_sign` signature over the message produced by the\nSDK helper `buildPayoutRegistrationMessage`. The org id is taken from your\nauthenticated key, never the body, so a captured signature can't register\nan address under another org. Exactly one default address exists per\n(org, network); registering again replaces it. A payee MUST register a\npayout address before calling `createChallenge`, because the challenge's\n`pay_to` is resolved from this directory.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "registerPayoutAddress",
     "path": "/x402/payout-addresses",
@@ -8625,6 +8813,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-spend-policy",
     "description": "Update your org's spend policy. Applied as a merge: only the fields you\ninclude change, and omitted fields keep their current value, so a partial\nupdate can't silently reset the kill-switch. Send an explicit `null` to\nclear a cap. Caps are in token base units.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PUT",
     "operationId": "updateSpendPolicy",
     "path": "/x402/spend-policy",
@@ -8717,6 +8906,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-registry",
     "description": null,
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createRegistry",
     "path": "/registries",
@@ -8787,6 +8977,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "decide-registry-request",
     "description": null,
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "decideRegistryRequest",
     "path": "/registries/{slug}/requests/{id}",
@@ -8801,6 +8992,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -8848,6 +9040,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "define-agent",
     "description": null,
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "defineAgent",
     "path": "/agents",
@@ -8925,6 +9118,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-registry",
     "description": "Removes the registry from discovery and frees its slug for re-creation.",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteRegistry",
     "path": "/registries/{slug}",
@@ -8951,6 +9145,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-agent",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getAgent",
     "path": "/agents/{address}",
@@ -9030,6 +9225,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-registry",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getRegistry",
     "path": "/registries/{slug}",
@@ -9096,6 +9292,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-registries",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listRegistries",
     "path": "/registries",
@@ -9157,6 +9354,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-registry-agents",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listRegistryAgents",
     "path": "/registries/{slug}/agents",
@@ -9256,6 +9454,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-registry-requests",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listRegistryRequests",
     "path": "/registries/{slug}/requests",
@@ -9327,6 +9526,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "publish-agent",
     "description": null,
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "publishAgent",
     "path": "/registries/{slug}/agents",
@@ -9440,6 +9640,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "resolve-registry-handle",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "resolveRegistryHandle",
     "path": "/registries/{slug}/agents/{handle}",
@@ -9526,6 +9727,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "unpublish-agent",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "unpublishAgent",
     "path": "/registries/{slug}/agents/{handle}",
@@ -9559,6 +9761,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-registry",
     "description": null,
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PATCH",
     "operationId": "updateRegistry",
     "path": "/registries/{slug}",
@@ -9625,6 +9828,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-route",
     "description": "Binds a recipient pattern to a destination. Provide exactly one of\n`endpoint_id` (an existing endpoint) or `function_id`. With `function_id`,\na dedicated route-target endpoint is minted for that function in the same\ntransaction, enabling per-address function routing (e.g.\n`alice@acme.com -> functionA`).\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createRoute",
     "path": "/routes",
@@ -9762,6 +9966,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-route",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteRoute",
     "path": "/routes/{id}",
@@ -9769,6 +9974,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -9788,6 +9994,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-routes",
     "description": "Returns the org's recipient routing rules in evaluation order. Each rule\nbinds a recipient address pattern to one endpoint; inbound mail resolves\nto a single destination at delivery time.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listRoutes",
     "path": "/routes",
@@ -9879,6 +10086,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "reorder-routes",
     "description": "Update the priority of one or more routes in a single call.",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "reorderRoutes",
     "path": "/routes/reorder",
@@ -10002,6 +10210,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "simulate-route",
     "description": "Resolves where an inbound email to `recipient` would be delivered, with a\ntrace of every rule evaluated and why. Read-only; creates nothing.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "simulateRoute",
     "path": "/routes/simulate",
@@ -10150,6 +10359,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-route",
     "description": null,
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PATCH",
     "operationId": "updateRoute",
     "path": "/routes/{id}",
@@ -10157,6 +10367,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -10283,6 +10494,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "semantic-search",
     "description": "Ranked search across both received and sent mail. The `mode`\nfield selects the ranking strategy:\n\n- `keyword`: lexical full-text matching only (no embeddings).\n- `semantic`: meaning-based matching using vector embeddings.\n- `hybrid` (default): blends the semantic and keyword signals.\n\nResults are ordered by a relevance `score`. Every row reports the\nfields it matched (`matched_fields`), a match-centered excerpt per\nfield (`snippets`), and a `score_breakdown` whose components account\nfor the `score`. Page through results by passing the prior\nresponse's `meta.cursor` back as `cursor`.\n\nRequires the Pro plan and the `semantic_search_enabled`\nentitlement; callers without them receive `403`.\n\nHost routing: this operation is served only by the search host\n(`https://api.primitive.dev/v1`). The typed SDKs route it there\nautomatically.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "semanticSearch",
     "path": "/semantic-search",
@@ -10544,6 +10756,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-send-permissions",
     "description": "Returns a flat list of rules describing every recipient the\ncaller may send to. Each rule has a `type`, a kind-specific\npayload, and a human-readable `description`. If any rule\nmatches the recipient, /send-mail will accept the send under\nthe recipient-scope check.\n\nThe endpoint is the answer to \"where can I send\" without\nexposing internal entitlement names. Agents that don't\nrecognize a `type` can still read the `description` prose\nand act on it.\n\nRule kinds, ordered broadest-first so an agent can stop\nscanning at the first match:\n\n  1. `any_recipient` (one entry, only when the org can send\n     anywhere): every other rule below it is redundant.\n  2. `managed_zone` (always emitted, one per Primitive-managed\n     zone): sends to any address at *.primitive.email or\n     *.email.works always succeed; no entitlement required.\n  3. `your_domain` (one per active verified outbound domain\n     owned by the org): sends to that domain are approved.\n  4. `address` (one per address that has authenticated\n     inbound mail to the org, capped at `meta.address_cap`):\n     sends to that exact address are approved.\n\nThe list is informational, not an authorization check.\n/send-mail remains the source of truth on whether an\nindividual send will succeed (it also enforces the\nfrom-address and the `send_mail` entitlement, which are\nnot recipient-scope concerns and are not represented here).\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getSendPermissions",
     "path": "/send-permissions",
@@ -10684,6 +10897,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-sent-email",
     "description": "Returns the full sent-email record by id, including\n`body_text` and `body_html` (omitted from the listing\nendpoint to keep paginated responses small). Use this when\ndiagnosing a specific send, e.g. inspecting the receiver's\nSMTP response on a `bounced` row or pulling the gate\ndenial detail on a `gate_denied` row.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getSentEmail",
     "path": "/sent-emails/{id}",
@@ -10691,6 +10905,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -10996,6 +11211,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-sent-emails",
     "description": "Returns a paginated list of OUTBOUND emails the caller's\norg has sent via /send-mail (and /emails/{id}/reply, which\nforwards through /send-mail). Includes every recorded\nattempt, including gate-denied attempts that the agent\nnever called and rows still in `queued` state.\n\nFor inbound mail received at your verified domains, see\n/emails. There is no unified send/receive history endpoint;\nthe two surfaces are intentionally separate because the\nunderlying tables, statuses, and lifecycle differ.\n\nEmail bodies (`body_text`, `body_html`) are NOT included on\nlist rows so a 50-row page can't balloon into a multi-MB\nresponse when sends are near the 5MB body cap. Use\n/sent-emails/{id} to fetch a single row with bodies, or\ncross-reference by `client_idempotency_key` if the caller\nalready has the body locally.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listSentEmails",
     "path": "/sent-emails",
@@ -11028,6 +11244,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter to the row matching a specific server-issued\n`request_id`. The /send-mail response surfaces\n`request_id` on every send; this lookup lets the\ncaller find the historical row for a given live call\nwithout remembering its `id`.\n",
         "enum": null,
+        "format": "uuid",
         "name": "request_id",
         "required": false,
         "type": "string"
@@ -11035,6 +11252,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter to rows with the given `client_idempotency_key`.\nMultiple rows can share a key (a retry that hit the\nidempotent-replay path returns the same row, but a\nretry with a DIFFERENT canonical payload under the\nsame key is rejected by /send-mail before the row is\nwritten, so duplicates are bounded).\n",
         "enum": null,
+        "maxLength": 255,
+        "minLength": 1,
         "name": "idempotency_key",
         "required": false,
         "type": "string"
@@ -11042,6 +11261,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Inclusive lower bound on `created_at`.",
         "enum": null,
+        "format": "date-time",
         "name": "date_from",
         "required": false,
         "type": "string"
@@ -11049,6 +11269,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Inclusive upper bound on `created_at`.",
         "enum": null,
+        "format": "date-time",
         "name": "date_to",
         "required": false,
         "type": "string"
@@ -11332,6 +11553,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "reply-to-email",
     "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody, optional From override, optional attachments, and optional\n`wait` flag; passing any header or recipient override is\nrejected by the schema (`additionalProperties: false`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "replyToEmail",
     "path": "/emails/{id}/reply",
@@ -11339,6 +11561,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -11512,6 +11735,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "send-email",
     "description": "Sends an outbound email through Primitive's outbound relay. By default\nthe request returns once the relay accepts the message for delivery.\nSet `wait: true` to wait for the first downstream SMTP delivery outcome.\n\n**Host routing.** /send-mail is served by the canonical API host\n(`https://api.primitive.dev/v1`) so the request body can carry\ninline attachments up to ~30 MiB raw. The legacy dashboard\ncompatibility host (`https://www.primitive.dev/api/v1`) also accepts\n/send-mail, but Vercel request body limits apply before proxying.\nThe typed SDKs route /send-mail to the canonical API host\nautomatically.\n",
     "hasJsonBody": true,
+    "headerParams": [
+      {
+        "description": "Optional customer-supplied idempotency key. If omitted, Primitive\nderives one from the canonical request payload and echoes the\neffective value in the `Idempotency-Key` response header.\n",
+        "enum": null,
+        "maxLength": 255,
+        "minLength": 1,
+        "name": "Idempotency-Key",
+        "pattern": "^[\\x21-\\x7E]+$",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "method": "POST",
     "operationId": "sendEmail",
     "path": "/send-mail",
@@ -11637,11 +11872,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "payload_attachments": {
           "type": "array",
           "maxItems": 1,
-          "description": "Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.",
+          "description": "Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes, the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "description": "A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes — the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.",
+            "description": "A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes, the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.",
             "properties": {
               "root": {
                 "type": "string",
@@ -11799,6 +12034,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-template",
     "description": "Fetch one approved Function template by slug, including its manifest\nsnapshot and README. The stored source files used for install are not\nreturned.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getTemplate",
     "path": "/templates/{id}",
@@ -11807,6 +12043,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Template slug from the template manifest.",
         "enum": null,
         "name": "id",
+        "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
         "required": true,
         "type": "string"
       }
@@ -12220,6 +12457,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-template-install",
     "description": "Fetch the current state of a template install. Reads may advance the\nself-test phase when a reply effect has been observed.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getTemplateInstall",
     "path": "/templates/installs/{id}",
@@ -12227,7 +12465,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Template install UUID.",
         "enum": null,
+        "format": "uuid",
         "name": "id",
+        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
         "required": true,
         "type": "string"
       }
@@ -12308,6 +12548,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "install-template",
     "description": "Start a one-shot deploy of an approved deploy-mode Function template.\nThe response returns an install record immediately; poll\n`GET /templates/installs/{id}` for progress.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "installTemplate",
     "path": "/templates/{id}/install",
@@ -12316,6 +12557,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Template slug from the template manifest.",
         "enum": null,
         "name": "id",
+        "pattern": "^[a-z0-9][a-z0-9_-]{0,62}$",
         "required": true,
         "type": "string"
       }
@@ -12425,6 +12667,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-templates",
     "description": "List approved Function templates available for browsing and\ninstallation. Results are cacheable and paginated with\n`data.next_cursor`.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listTemplates",
     "path": "/templates",
@@ -12433,6 +12676,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Search templates by title, summary, or slug.",
         "enum": null,
+        "minLength": 1,
         "name": "q",
         "required": false,
         "type": "string"
@@ -12440,6 +12684,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter templates by an exact tag.",
         "enum": null,
+        "minLength": 1,
         "name": "tag",
         "required": false,
         "type": "string"
@@ -12574,6 +12819,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-thread",
     "description": "Returns a conversation thread: its metadata plus the inbound\nand outbound messages that belong to it, interleaved in time\norder (oldest first). A thread spans both received emails and\nyour sends, so an agent can reconstruct an entire back-and-forth\nfrom one call instead of walking reply headers.\n\nEach message carries a `direction` (`inbound` | `outbound`) and\nan `id`; fetch the full message via `/emails/{id}` or\n`/sent-emails/{id}` accordingly. Bodies are omitted here to keep\nthe thread view lightweight.\n\nDiscover a thread id from the `thread_id` field on any email or\nsent-email (list or detail). The message list is capped; compare\n`message_count` against `messages.length` to detect truncation.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getThread",
     "path": "/threads/{id}",
@@ -12581,6 +12827,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -12715,6 +12962,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-wake-authorization",
     "description": "Grant a sender domain (and optionally a specific address and command set)\npermission to wake a target function. The domain must be fully-qualified.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createWakeAuthorization",
     "path": "/wake/authorizations",
@@ -12827,6 +13075,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "create-wake-schedule",
     "description": "Create a cron schedule that sends a wake.dispatch command to one of your\nown function addresses. `from` and `to` must differ (no self-dispatch);\nthe cron expression and IANA timezone are validated and the first fire\ntime is computed without firing immediately.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "POST",
     "operationId": "createWakeSchedule",
     "path": "/wake/schedules",
@@ -12963,6 +13212,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-wake-authorization",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteWakeAuthorization",
     "path": "/wake/authorizations/{id}",
@@ -12970,6 +13220,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -12989,6 +13240,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "delete-wake-schedule",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "DELETE",
     "operationId": "deleteWakeSchedule",
     "path": "/wake/schedules/{id}",
@@ -12996,6 +13248,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -13015,6 +13268,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "get-wake-schedule",
     "description": null,
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "getWakeSchedule",
     "path": "/wake/schedules/{id}",
@@ -13022,6 +13276,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -13115,6 +13370,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-wake-authorizations",
     "description": "Returns the per-target allowlist grants that authorize which senders may\nwake a function. Optionally filter by the target endpoint.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listWakeAuthorizations",
     "path": "/wake/authorizations",
@@ -13123,6 +13379,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Only return grants for this target endpoint",
         "enum": null,
+        "format": "uuid",
         "name": "recipient_endpoint_id",
         "required": false,
         "type": "string"
@@ -13195,6 +13452,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-wake-dispatches",
     "description": "Read-only audit of recent wake.dispatch interactions for the org.",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listWakeDispatches",
     "path": "/wake/dispatches",
@@ -13286,6 +13544,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-wake-schedules",
     "description": "Returns the org's wake.dispatch schedules.",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listWakeSchedules",
     "path": "/wake/schedules",
@@ -13381,6 +13640,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "run-wake-schedule",
     "description": "Fire the schedule immediately, sending one wake.dispatch via the same\nsigned-send path as a scheduled fire. Does not change the schedule's next\nfire time.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "POST",
     "operationId": "runWakeSchedule",
     "path": "/wake/schedules/{id}/run",
@@ -13388,6 +13648,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -13410,6 +13671,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-wake-authorization",
     "description": "Toggle a wake authorization's enabled state.",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PATCH",
     "operationId": "updateWakeAuthorization",
     "path": "/wake/authorizations/{id}",
@@ -13417,6 +13679,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -13498,6 +13761,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "update-wake-schedule",
     "description": "Update a schedule's command, args, cadence, addresses, note, or enabled\nstate. Changing the cadence (or re-enabling) recomputes the next fire time.\n",
     "hasJsonBody": true,
+    "headerParams": [],
     "method": "PATCH",
     "operationId": "updateWakeSchedule",
     "path": "/wake/schedules/{id}",
@@ -13505,6 +13769,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Resource UUID",
         "enum": null,
+        "format": "uuid",
         "name": "id",
         "required": true,
         "type": "string"
@@ -13638,6 +13903,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "list-deliveries",
     "description": "Returns a paginated list of webhook delivery attempts. Each delivery\nincludes a nested `email` object with sender, recipient, and subject.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "GET",
     "operationId": "listDeliveries",
     "path": "/webhooks/deliveries",
@@ -13663,6 +13929,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter by email ID",
         "enum": null,
+        "format": "uuid",
         "name": "email_id",
         "required": false,
         "type": "string"
@@ -13682,6 +13949,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter deliveries created on or after this timestamp",
         "enum": null,
+        "format": "date-time",
         "name": "date_from",
         "required": false,
         "type": "string"
@@ -13689,6 +13957,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       {
         "description": "Filter deliveries created on or before this timestamp",
         "enum": null,
+        "format": "date-time",
         "name": "date_to",
         "required": false,
         "type": "string"
@@ -13800,6 +14069,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "command": "replay-delivery",
     "description": "Re-sends the stored webhook payload from a previous delivery attempt.\nIf the original endpoint is still active, it is targeted. If the\noriginal endpoint was deleted, the oldest active endpoint is used.\nDeactivated endpoints cannot be replayed to. Rate limited per-org,\nsharing an org-wide budget with email replays.\n",
     "hasJsonBody": false,
+    "headerParams": [],
     "method": "POST",
     "operationId": "replayDelivery",
     "path": "/webhooks/deliveries/{id}/replay",
@@ -13808,6 +14078,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Delivery ID (numeric)",
         "enum": null,
         "name": "id",
+        "pattern": "^\\d+$",
         "required": true,
         "type": "string"
       }

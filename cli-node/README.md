@@ -2,6 +2,10 @@
 
 Official Primitive CLI. Deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal.
 
+This README documents the supported npm and Homebrew CLI package. The Rust port
+lives in `cli-rust/` and is released through GitHub archives with `primitive`
+and `prim` binaries.
+
 ```bash
 brew install primitivedotdev/tap/primitive
 primitive whoami

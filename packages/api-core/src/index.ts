@@ -11,12 +11,6 @@
  * on this package nor on each other.
  */
 
-// Generated fetch client + operation functions + request/response
-// type definitions. Re-exported flat so consumers import names
-// directly off `@primitivedotdev/api-core` without remembering
-// which generated file each name lives in.
-export * from "./api/index.js";
-
 // Re-export the generated client primitives explicitly. `./api/index`
 // only re-exports the operations and types from sdk.gen / types.gen;
 // the client factory and config primitives live in `./api/client/`.
@@ -25,32 +19,24 @@ export {
   type Client,
   type ClientOptions,
   type Config,
+  type CreateClientConfig,
   createClient,
   createConfig,
-  type CreateClientConfig,
   type Options,
   type RequestOptions,
   type RequestResult,
   type ResponseStyle,
 } from "./api/client/index.js";
-
-// OpenAPI document + operation manifest used by tooling that needs
-// to enumerate the API surface (CLI command generator, fish
-// completion, `primitive describe`, future SDK consumers serving
-// the spec from an app).
-export { openapiDocument } from "./openapi/openapi.generated.js";
-export {
-  operationManifest,
-  type PrimitiveOperationManifest,
-  type PrimitiveParameterManifest,
-} from "./openapi/operations.generated.js";
-
+// Generated fetch client + operation functions + request/response
+// type definitions. Re-exported flat so consumers import names
+// directly off `@primitivedotdev/api-core` without remembering
+// which generated file each name lives in.
+export * from "./api/index.js";
 // Re-export operations as an `operations` object too, mirroring the
 // historical SDK shape that the CLI's generated-command path relies
 // on (`operations[sdkName]`). The named exports above remain for
 // callers that want a specific operation function.
 export * as operations from "./api/sdk.gen.js";
-
 // Host-aware client used by the CLI and the higher-level
 // `PrimitiveClient` in sdk-node. Lives here (not in sdk-node) so the
 // CLI never has to depend on sdk-node to construct a request client.
@@ -63,5 +49,14 @@ export {
   type PrimitiveApiErrorDetails,
   type RequestOptions as PrimitiveRequestOptions,
 } from "./client.js";
-
 export { isMemoryJsonValue } from "./memories.js";
+// OpenAPI document + operation manifest used by tooling that needs
+// to enumerate the API surface (CLI command generator, fish
+// completion, `primitive describe`, future SDK consumers serving
+// the spec from an app).
+export { openapiDocument } from "./openapi/openapi.generated.js";
+export {
+  operationManifest,
+  type PrimitiveOperationManifest,
+  type PrimitiveParameterManifest,
+} from "./openapi/operations.generated.js";

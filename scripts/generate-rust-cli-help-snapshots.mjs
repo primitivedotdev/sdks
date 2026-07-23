@@ -1,0 +1,252 @@
+#!/usr/bin/env node
+
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  buildCandidates,
+  formatResult,
+  runHelpProcess,
+  runPool,
+  shellWords,
+} from "./run-cli-help-sweep.mjs";
+
+const __filename = fileURLToPath(import.meta.url);
+const REPO_ROOT = path.resolve(path.dirname(__filename), "..");
+const DEFAULT_OUT = path.join(
+  REPO_ROOT,
+  "cli-rust/src/help_snapshots.generated.rs",
+);
+const DEFAULT_CONCURRENCY = 8;
+const CARGO_TOML = path.join(REPO_ROOT, "cli-rust/Cargo.toml");
+
+function usage() {
+  return `Usage:
+  node scripts/generate-rust-cli-help-snapshots.mjs --node-bin "node cli-node/bin/run.js"
+
+Options:
+  --node-bin <command>   Node CLI command. Can also use NODE_CLI.
+  --out <path>           Output Rust file. Defaults to cli-rust/src/help_snapshots.generated.rs.
+  --concurrency <n>      Number of help commands to run in parallel. Defaults to 8.
+  --check                Verify the committed output is byte-for-byte current.
+`;
+}
+
+function parseArgs(argv) {
+  const options = {
+    check: false,
+    concurrency: DEFAULT_CONCURRENCY,
+    nodeCli: process.env.NODE_CLI,
+    out: DEFAULT_OUT,
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--help" || arg === "-h") {
+      console.log(usage());
+      process.exit(0);
+    }
+    if (arg === "--check") {
+      options.check = true;
+      continue;
+    }
+
+    const next = argv[index + 1];
+    if (!next) throw new Error(`Missing value for ${arg}`);
+    if (arg === "--node-cli" || arg === "--node-bin") {
+      options.nodeCli = next;
+    } else if (arg === "--out") {
+      options.out = path.resolve(next);
+    } else if (arg === "--concurrency") {
+      options.concurrency = Number.parseInt(next, 10);
+    } else {
+      throw new Error(`Unknown option ${arg}`);
+    }
+    index += 1;
+  }
+
+  if (!options.nodeCli) {
+    throw new Error("Missing --node-bin or NODE_CLI.");
+  }
+  if (!Number.isInteger(options.concurrency) || options.concurrency < 1) {
+    throw new Error("--concurrency must be a positive integer.");
+  }
+  return options;
+}
+
+function sha256(input) {
+  return createHash("sha256").update(input).digest("hex");
+}
+
+function rustStringLiteral(value) {
+  let output = '"';
+  for (const char of value) {
+    const codePoint = char.codePointAt(0);
+    if (char === "\\") output += "\\\\";
+    else if (char === '"') output += '\\"';
+    else if (char === "\n") output += "\\n";
+    else if (char === "\r") output += "\\r";
+    else if (char === "\t") output += "\\t";
+    else if (char === "\0") output += "\\x00";
+    else if (codePoint >= 0x20 && codePoint <= 0x7e) output += char;
+    else output += `\\u{${codePoint.toString(16)}}`;
+  }
+  return `${output}"`;
+}
+
+function snapshotKey(args) {
+  return args.join("\0");
+}
+
+function cargoPackageVersion() {
+  const cargoToml = readFileSync(CARGO_TOML, "utf8");
+  const match = cargoToml.match(/^version\s*=\s*"([^"]+)"/m);
+  if (!match) throw new Error("Could not read cli-rust package version.");
+  return match[1];
+}
+
+function isRootHelpArgs(args) {
+  return (
+    args.length === 0 ||
+    (args.length === 1 && (args[0] === "--help" || args[0] === "help")) ||
+    (args.length === 2 && args[0] === "help" && args[1] === "--help")
+  );
+}
+
+function stableHelpStdout(args, stdout) {
+  if (!isRootHelpArgs(args)) return stdout;
+  const versionLine = stdout.match(/^VERSION\n {2}([^\n]+)\n/m)?.[1];
+  if (
+    !versionLine ||
+    !/^primitive\/[0-9][^\s\n]* [^\s\n]+ node-v[0-9][^\s\n]*$/.test(
+      versionLine,
+    )
+  ) {
+    throw new Error(
+      `Root help VERSION line has unexpected shape: ${JSON.stringify(versionLine ?? null)}`,
+    );
+  }
+  return stdout.replace(
+    /^ {2}primitive\/[0-9][^\s\n]*(?: [^\n]+)?\n/m,
+    `  primitive/${cargoPackageVersion()}\n`,
+  );
+}
+
+async function nodeHelpSnapshots(nodeCli, concurrency) {
+  const candidates = buildCandidates().filter(
+    (candidate) => candidate.snapshot !== false,
+  );
+  const rows = await runPool(candidates, concurrency, async (candidate) => {
+    const result = await runHelpProcess(nodeCli, candidate.args);
+    if (result.browserOpenLog) {
+      const label = candidate.args.join(" ") || "<root>";
+      throw new Error(
+        `Node CLI attempted to open a browser while generating help snapshots: ${label}\n${formatResult(result)}`,
+      );
+    }
+    if (result.exitCode !== 0) {
+      if (candidate.required) {
+        const label = candidate.args.join(" ") || "<root>";
+        throw new Error(
+          `Node CLI rejected exported command help: ${label}\n${formatResult(result)}`,
+        );
+      }
+      return null;
+    }
+    if (result.stderr !== "") {
+      const label = candidate.args.join(" ") || "<root>";
+      throw new Error(
+        `Node CLI wrote stderr while generating help snapshots: ${label}\n${formatResult(result)}`,
+      );
+    }
+    return {
+      args: candidate.args,
+      stdout: stableHelpStdout(candidate.args, result.stdout),
+    };
+  });
+
+  return rows
+    .filter(Boolean)
+    .sort((left, right) =>
+      snapshotKey(left.args).localeCompare(snapshotKey(right.args)),
+    );
+}
+
+function renderRust(snapshots) {
+  const arms = snapshots
+    .map(
+      ({ args, stdout }) =>
+        `        ${rustStringLiteral(snapshotKey(args))} => Some(${rustStringLiteral(stdout)}),`,
+    )
+    .join("\n");
+
+  return `// @generated by scripts/generate-rust-cli-help-snapshots.mjs
+// Do not edit by hand.
+
+#[rustfmt::skip]
+pub fn lookup(args: &[String]) -> Option<&'static str> {
+    let key = args.join("\\0");
+    match key.as_str() {
+${arms}
+        _ => None,
+    }
+}
+`;
+}
+
+function firstDifference(left, right) {
+  const limit = Math.min(left.length, right.length);
+  for (let index = 0; index < limit; index += 1) {
+    if (left[index] !== right[index]) return index;
+  }
+  return left.length === right.length ? -1 : limit;
+}
+
+async function main() {
+  const options = parseArgs(process.argv.slice(2));
+  const nodeCli = shellWords(options.nodeCli);
+  const output = renderRust(
+    await nodeHelpSnapshots(nodeCli, options.concurrency),
+  );
+
+  if (options.check) {
+    if (!existsSync(options.out)) {
+      throw new Error(`Missing generated help snapshot file: ${options.out}`);
+    }
+    const current = readFileSync(options.out, "utf8");
+    if (current !== output) {
+      const offset = firstDifference(output, current);
+      console.error("Rust CLI help snapshots are not byte-for-byte current.");
+      console.error(
+        JSON.stringify(
+          {
+            path: path.relative(REPO_ROOT, options.out),
+            firstDifferentByte: offset,
+            expectedBytes: Buffer.byteLength(output),
+            actualBytes: Buffer.byteLength(current),
+            expectedSha256: sha256(output),
+            actualSha256: sha256(current),
+          },
+          null,
+          2,
+        ),
+      );
+      process.exit(1);
+    }
+    console.log(
+      `Rust CLI help snapshots bytewise OK: ${Buffer.byteLength(output)} bytes, sha256 ${sha256(output)}`,
+    );
+    return;
+  }
+
+  writeFileSync(options.out, output);
+  console.log(
+    `Wrote ${path.relative(REPO_ROOT, options.out)}: ${Buffer.byteLength(output)} bytes, sha256 ${sha256(output)}`,
+  );
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

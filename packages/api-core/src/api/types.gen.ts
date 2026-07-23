@@ -1000,7 +1000,7 @@ export type Account = {
     limits: PlanLimits;
     /**
      * Granted org entitlement keys (sorted). A headless caller reads its
-     * capabilities here — e.g. an emailless agent seeing only
+     * capabilities here, e.g. an emailless agent seeing only
      * ["send_mail", "send_to_known_addresses"] knows it is reply-only.
      *
      */
@@ -1861,7 +1861,7 @@ export type SendMailAttachment = {
 };
 
 /**
- * A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes — the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.
+ * A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes, the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.
  */
 export type SendMailPayloadRef = {
     /**
@@ -1924,7 +1924,7 @@ export type SendMailInput = {
      */
     attachments?: Array<SendMailAttachment>;
     /**
-     * Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.
+     * Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes, the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.
      */
     payload_attachments?: Array<SendMailPayloadRef>;
     /**
@@ -3089,10 +3089,10 @@ export type DiscardContentResult = {
 
 /**
  * Lifecycle state of the latest deploy attempt:
- * * `pending` — deploy in flight; the runtime has not yet
+ * * `pending` - deploy in flight; the runtime has not yet
  * confirmed the new bundle is live.
- * * `deployed` — the running edge handler is the latest code.
- * * `failed` — the most recent deploy attempt failed; the
+ * * `deployed` - the running edge handler is the latest code.
+ * * `failed` - the most recent deploy attempt failed; the
  * previously-live code (if any) is still running. The
  * `deploy_error` field carries the error message.
  *
@@ -3523,12 +3523,12 @@ export type FunctionLogRow = {
 /**
  * One row from GET /functions/{id}/secrets. Discriminate on the
  * `managed` field:
- * * `managed = true`  — system secret provisioned by Primitive.
+ * * `managed = true` - system secret provisioned by Primitive.
  * `description` is set; `created_at` / `updated_at` are
  * null because the row is virtual (resolved at deploy time
  * from the managed registry, not stored in the secrets
  * table).
- * * `managed = false` — secret the user set via the API.
+ * * `managed = false` - secret the user set via the API.
  * `created_at` / `updated_at` are set; `description` is
  * null.
  *

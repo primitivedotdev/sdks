@@ -33,7 +33,7 @@ class Account:
             plan (str):
             limits (PlanLimits): Plan-derived quota limits for an account.
             entitlements (list[str]): Granted org entitlement keys (sorted). A headless caller reads its
-                capabilities here — e.g. an emailless agent seeing only
+                capabilities here, e.g. an emailless agent seeing only
                 ["send_mail", "send_to_known_addresses"] knows it is reply-only.
             managed_inbox_address (None | str): The managed inbox FQDN to reply as, or null if the org has no managed inbox.
             created_at (datetime.datetime):

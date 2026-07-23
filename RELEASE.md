@@ -1,9 +1,10 @@
 # Release Process
 
-This repository publishes three language SDKs plus a Node-only CLI from one shared webhook contract and one shared API contract.
+This repository publishes three language SDKs and the official Node-distributed CLI from one shared webhook contract and one shared API contract. The Rust CLI port can also produce GitHub release archives, but that release path is manual while the port remains optional.
 
 - Node SDK: `@primitivedotdev/sdk`
 - Node CLI: `primitive` (also mirrored as `primcli` and the legacy scoped `@primitivedotdev/cli`)
+- Rust CLI: `cli-rust/`, optional GitHub release archives exposing `primitive` and `prim`
 - Python: `primitivedotdev`
 - Go: `github.com/primitivedotdev/sdks/sdk-go`
 
@@ -12,7 +13,8 @@ Use this process when cutting a release for one or more packages.
 Releases are automated from `main`.
 
 - If a PR merges with a new `sdk-node/package.json` version, GitHub Actions publishes the Node SDK.
-- If a PR merges with a new `cli-node/package.json` version, GitHub Actions publishes the CLI.
+- If a PR merges with a new `cli-node/package.json` version, GitHub Actions publishes the Node-distributed CLI.
+- Rust CLI archives are created only by manually running the `Rust CLI Release` workflow.
 - If a PR merges with a new `sdk-python/pyproject.toml` version, GitHub Actions publishes the Python SDK.
 - If a PR merges with a new `sdk-go/VERSION` value, GitHub Actions creates the Go module tag and GitHub release.
 
@@ -31,9 +33,9 @@ Releases are automated from `main`.
 2. Merge that PR into `main`.
 3. The `Node Release` workflow verifies the version bump, publishes to npm through trusted publishing/OIDC, and creates the `sdk-node/vX.Y.Z` tag plus a GitHub release.
 4. Verify the package contents with `npm view @primitivedotdev/sdk version`.
-5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/api`, `@primitivedotdev/sdk/openapi`, `@primitivedotdev/sdk/contract`, and `@primitivedotdev/sdk/parser`, and that it does NOT install a `primitive` bin (the CLI lives in the separate `primitive` package).
+5. Confirm the packed artifact exposes `@primitivedotdev/sdk`, `@primitivedotdev/sdk/webhook`, `@primitivedotdev/sdk/api`, `@primitivedotdev/sdk/openapi`, `@primitivedotdev/sdk/contract`, `@primitivedotdev/sdk/parser`, `@primitivedotdev/sdk/parser/address`, `@primitivedotdev/sdk/x402`, and `@primitivedotdev/sdk/payloads`, and that it does NOT install a `primitive` bin (the CLI lives in the separate `primitive` package).
 
-## CLI Release
+## Node CLI Release
 
 1. Open a PR that bumps `cli-node/package.json` to the target version.
 2. Merge that PR into `main`.
@@ -50,6 +52,33 @@ Coordinate Node SDK and CLI releases when both ship in the same cycle: cut the S
 Both npm packages use npm trusted publishing from GitHub Actions. Do not add npm API tokens; configure npmjs trusted publishers for `@primitivedotdev/sdk` with `.github/workflows/node-release.yml` and `primitive` with `.github/workflows/cli-release.yml`.
 
 Each mirror (`primcli` and `@primitivedotdev/cli`) needs its own npm trusted publisher (same `.github/workflows/cli-release.yml`). All three names already have trusted publishers configured for this workflow (each published from it before or after the rename), so no npm-side changes are needed; the workflow keeps the mirrors in lockstep. For any future new mirror name: npm trusted publishing requires the package to already exist, so claim the name with a one-time manual `npm publish` first (`primcli` was claimed at `primcli@1.2.0`).
+
+## Rust CLI Release
+
+1. Open a PR that bumps `cli-rust/Cargo.toml` to the target version.
+2. Merge that PR into `main`.
+3. Manually run the `Rust CLI Release` workflow from `main`. The workflow verifies the version, runs the Rust CLI checks on each release platform, runs authenticated live smoke against the packaged Linux x64 release artifact, creates the `cli-rust-vX.Y.Z` tag plus a GitHub release, and uploads Linux x64, Linux arm64, macOS x64, macOS arm64, and Windows x64 archives plus their `.sha256` checksums. Linux archives are built from musl Rust targets while keeping the public `linux-x64` and `linux-arm64` archive names. Each archive keeps the top-level `primitive`/`prim` binaries and includes `LICENSE` plus a concise `README.md` install note.
+4. Install the archive for your platform with `scripts/install-rust-cli.sh --version X.Y.Z` on macOS/Linux or `scripts/install-rust-cli.ps1 -Version X.Y.Z` on Windows. If the installer reports that the install directory is not on `PATH`, add it or invoke the full printed path, then confirm `primitive --version`, `prim --version`, and `primitive list-operations` succeed.
+
+The release workflow requires a `PRIMITIVE_API_KEY` repository secret for the live smoke gate. Keep that gate read-only; run mutating or email E2E smoke manually with a disposable account when needed.
+
+Every CLI-facing release PR should keep the Rust port green:
+
+```bash
+make rust-cli-check
+make rust-cli-package
+make rust-cli-smoke
+make rust-cli-release-smoke
+make rust-cli-linux-portability-smoke
+make rust-cli-archive-smoke
+make rust-cli-windows-archive-smoke
+make rust-cli-install-smoke
+make rust-cli-dist
+make cli-parity
+make cli-archive-parity
+```
+
+`rust-cli-linux-portability-smoke` checks Linux release binaries for unexpected OpenSSL/libz linkage and can enforce a static musl binary for release-platform builds. `rust-cli-archive-smoke` validates the release binary after packaging it as extracted `primitive` and `prim` commands, with `README.md` and `LICENSE` present. `rust-cli-windows-archive-smoke` validates the Windows `.zip` archive, checksum shape, and bundled `README.md`/`LICENSE` files. `rust-cli-install-smoke` validates the macOS/Linux installer against that archive and checksum shape. `cli-archive-parity` runs the full Node/Rust help sweep and request/response parity suite against the extracted release archive binary. `rust-cli-dist` writes the same archive shape to `cli-rust/dist/` for release uploads.
 
 ## Python Release
 
@@ -80,5 +109,5 @@ If a release includes schema or shared-fixture changes:
 If a release includes API spec changes:
 
 1. Update `openapi/primitive-api.yaml`.
-2. Regenerate the Node, Python, and Go API clients.
+2. Regenerate the Node, Python, and Go API clients plus `cli-rust/src/operation-manifest.json`.
 3. Ensure the PR passes `SDK Checks` again before merging.
