@@ -53,7 +53,7 @@ jobs:
           path: docfacts
           ref: ${{ env.DOCFACTS_REF }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.gate.outputs.enabled == 'true'
         with:
           node-version: 24
