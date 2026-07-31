@@ -4,7 +4,7 @@ packages:
   - packages/*
 
 overrides:
-  brace-expansion@>=2.0.0 <2.1.2: 2.1.2
+  filelist@<2.0.2: 2.0.2
   brace-expansion@>=3.0.0 <5.0.8: 5.0.8
   esbuild@>=0.27.3 <0.28.1: 0.28.1
   fast-uri@>=3.0.0 <3.1.4: 3.1.4
