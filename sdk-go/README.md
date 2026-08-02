@@ -82,9 +82,11 @@ result, err := client.Send(ctx, primitive.SendParams{
 })
 ```
 
-`Send`, `Reply`, and `Forward` keep the HTTP request open until Primitive's
-downstream SMTP transaction completes. Use a context deadline long enough for
-SMTP delivery, typically 30-60 seconds.
+By default `Send`, `Reply`, and `Forward` return as soon as Primitive accepts
+the message for delivery. On `Send` and `Reply`, set `Wait` to keep the HTTP
+request open until the first downstream SMTP delivery outcome; in that mode,
+give the context a deadline long enough for SMTP delivery, typically 30-60
+seconds. `Forward` has no `Wait` field and always returns on acceptance.
 
 ### Per-call timeout and cancellation
 
