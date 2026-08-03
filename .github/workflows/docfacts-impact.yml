@@ -39,14 +39,14 @@ jobs:
 
       - name: Checkout PR (full history for merge-base)
         if: steps.gate.outputs.enabled == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           path: caller
 
       - name: Checkout docfacts
         if: steps.gate.outputs.enabled == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: primitivedotdev/docfacts
           token: ${{ secrets.DOCFACTS_READ_TOKEN }}
