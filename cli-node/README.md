@@ -124,10 +124,11 @@ The `primitive payments` command group drives non-custodial x402 USDC payments. 
 # ownership message locally with your wallet key. Org is auto-resolved.
 primitive payments register-payout-address --network base-sepolia --label treasury
 
-# Payee: request a payment with a human USDC amount. Prints a summary by default.
+# Payee: request a payment with a human USDC amount. Prints the challenge JSON
+# to stdout; a one-line summary goes to stderr.
 primitive payments charge --network base-sepolia --amount-usdc 0.01
-# Capture the raw challenge JSON to hand to the payer.
-primitive payments charge --network base-sepolia --amount-usdc 0.01 --json > challenge.json
+# Capture the challenge JSON to hand to the payer.
+primitive payments charge --network base-sepolia --amount-usdc 0.01 > challenge.json
 
 # Payer: sign and settle the challenge locally. Reads the challenge inline,
 # from a file, or piped on stdin.
@@ -164,7 +165,7 @@ primitive payments get-spend-policy
 primitive payments update-spend-policy --max-per-payment 5000000
 ```
 
-`charge` is the friendly verb that matches the SDK `charge` and accepts `--amount-usdc`; `create-challenge` is the lower-level command that takes base-unit `--amount`. Either creates a challenge. The signing commands print a human-readable summary by default; pass `--json` for raw JSON suitable for piping.
+`charge` is the friendly verb that matches the SDK `charge` and accepts `--amount-usdc`; `create-challenge` is the lower-level command that takes base-unit `--amount`. Either creates a challenge. All four signing commands accept `--json`. `register-payout-address` and `pay` print a human-readable summary by default and raw JSON with `--json`; `pay-email` and `pay-email-step` print JSON by default (the send result and the `interaction.json` bytes, respectively), and `--json` switches them to a fuller envelope object.
 
 The signing commands (`register-payout-address`, `pay`, `pay-email`, and `pay-email-step`) need your wallet key. `pay-email` is the recommended payer path for the email-native flow: it signs and sends in one step. `pay-email-step` signs only and emits the `interaction.json` artifact for advanced use where you want to deliver it yourself. Set the key in `PRIMITIVE_X402_PRIVATE_KEY` (a `0x`-prefixed hex private key) so it never lands in shell history or the process list:
 
