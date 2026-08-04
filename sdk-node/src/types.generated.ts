@@ -535,7 +535,7 @@ dmarc_report?: DmarcReportAnalysis
 /**
  * Forward detection and analysis results.
  * 
- * Optional. Present when the email was processed by a forward-detection pipeline (always present in Primitive's managed service). When absent, forward detection was not performed on this email.
+ * Optional. In Primitive's managed service this object is included only when forwarded content is detected; when absent, no forward was detected or forward detection was not performed.
  */
 export interface ForwardAnalysis {
 /**

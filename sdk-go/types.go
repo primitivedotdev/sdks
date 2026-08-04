@@ -264,8 +264,8 @@ type EmailAnalysis struct {
 	Spamassassin *SpamAssassinAnalysis `json:"spamassassin,omitempty"`
 
 	// Forward holds forward detection and analysis results.
-	// Optional. Present when the email was processed by a forward-detection
-	// pipeline (always present in Primitive's managed service).
+	// Optional. In Primitive's managed service this is included only when
+	// forwarded content is detected; nil otherwise.
 	Forward *ForwardAnalysis `json:"forward,omitempty"`
 
 	// Bounce holds parsed delivery status notification (bounce) details.
