@@ -713,7 +713,7 @@
         },
         "forward": {
           "$ref": "#/definitions/ForwardAnalysis",
-          "description": "Forward detection and analysis results.\n\nOptional. Present when the email was processed by a forward-detection pipeline (always present in Primitive's managed service). When absent, forward detection was not performed on this email."
+          "description": "Forward detection and analysis results.\n\nOptional. In Primitive's managed service this object is included only when forwarded content is detected; when absent, no forward was detected or forward detection was not performed."
         },
         "bounce": {
           "$ref": "#/definitions/BounceAnalysis",

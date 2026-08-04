@@ -90,9 +90,11 @@ long enough for SMTP delivery, typically 30-60 seconds.
 
 ### Per-call timeout and cancellation
 
-Every client method takes `ctx context.Context` as its first argument, so
-per-call deadlines, cancellation, and request-scoped values use the standard
-library directly. There is no separate `RequestOptions` struct.
+Every client method that performs a network request takes `ctx context.Context`
+as its first argument, so per-call deadlines, cancellation, and request-scoped
+values use the standard library directly. There is no separate `RequestOptions`
+struct. The one exception is `X402Client.PayEmailChallenge`, which signs a
+payment locally without any I/O and therefore takes no context.
 
 ```go
 // Per-call timeout: cancel after 15 seconds.
@@ -169,9 +171,10 @@ Conversation View needs both a References match and a normalized-subject match
 to thread, so a custom subject silently breaks the thread for half the
 recipient population. Use `client.Send(...)` if you need full subject control.
 
-If the inbound row is not in a state we can reply to (no `Message-Id` recorded,
-or content was discarded), the API returns `inbound_not_repliable` (HTTP 422)
-and the SDK returns an error.
+If the inbound row is not in a state we can reply to (the email was rejected,
+its content was discarded, or no recipient was recorded), the API returns
+`inbound_not_repliable` (HTTP 422) and the SDK returns an error. A missing
+`Message-Id` does not block the reply; it only omits the threading headers.
 
 ### Forward an inbound email
 
@@ -567,7 +570,7 @@ The full catalog of header values is exported as the `WebhookEventTypes` slice:
 - `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
 
-Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed with the dual-header scheme: the primary `Primitive-Signature` header and a legacy `MyMX-Signature` header carrying the same value. `HandleWebhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `HandleWebhookEvent(...)` when you need the full event union.
+Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed once, and the same `t=...,v1=...` value is sent on three headers: the primary `Primitive-Signature` header, plus `X-Primitive-Signature` and the legacy `X-Webhook-Signature` for backward compatibility. `HandleWebhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `HandleWebhookEvent(...)` when you need the full event union.
 
 ### Lower-level webhook helpers
 
