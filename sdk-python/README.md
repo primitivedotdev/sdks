@@ -552,7 +552,7 @@ The full catalog of header values is exported as the `WEBHOOK_EVENT_TYPES` tuple
 - `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
 
-Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed with the dual-header scheme: the primary `Primitive-Signature` header and a legacy `MyMX-Signature` header carrying the same value. `handle_webhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `handle_webhook_event(...)` when you need the full event union.
+Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery carries one HMAC signature value set on three headers: `Primitive-Signature` (primary), `X-Primitive-Signature`, and the legacy `X-Webhook-Signature`. `handle_webhook(...)` remains hard-typed to `email.received` for backward compatibility; reach for `handle_webhook_event(...)` when you need the full event union.
 
 ### Lower-level webhook helpers
 

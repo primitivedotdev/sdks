@@ -171,9 +171,10 @@ Conversation View needs both a References match and a normalized-subject match
 to thread, so a custom subject silently breaks the thread for half the
 recipient population. Use `client.Send(...)` if you need full subject control.
 
-If the inbound row is not in a state we can reply to (no `Message-Id` recorded,
-or content was discarded), the API returns `inbound_not_repliable` (HTTP 422)
-and the SDK returns an error.
+If the inbound row is not in a state we can reply to (the email was rejected,
+its content was discarded, or no recipient was recorded), the API returns
+`inbound_not_repliable` (HTTP 422) and the SDK returns an error. A missing
+`Message-Id` does not block the reply; it only omits the threading headers.
 
 ### Forward an inbound email
 
