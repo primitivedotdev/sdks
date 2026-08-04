@@ -163,7 +163,7 @@ await client.reply(email, {
 
 `subject` is intentionally not accepted on `reply()`. Gmail's Conversation View needs both a References match and a normalized-subject match to thread, so a custom subject silently breaks the thread for half the recipient population. Use `client.send(...)` if you need full subject control.
 
-If the inbound row is not in a state we can reply to (no `Message-Id` recorded, or content was discarded), the API returns `inbound_not_repliable` (HTTP 422) and the SDK throws.
+If the inbound row is not in a state we can reply to (it was rejected at ingestion, its content was discarded, or it has no recipient recorded), the API returns `inbound_not_repliable` (HTTP 422) and the SDK throws.
 
 ### Forward an inbound email
 
