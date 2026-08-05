@@ -311,3 +311,13 @@ ci:
 	$(MAKE) go-build
 	$(MAKE) go-coverage
 	$(MAKE) shared-check
+
+# Regenerate every artifact derived from the JSON schemas and the OpenAPI spec
+# (node, python, go). Run after editing json-schema/ or openapi/primitive-api.yaml;
+# the pre-commit hook in .githooks/ refuses source edits without regenerated output.
+regen:
+	pnpm --filter @primitivedotdev/sdk generate
+	cd sdk-python && uv run python scripts/generate_schema_module.py && uv run python scripts/generate_models.py && uv run python scripts/generate_api_client.py
+	cd sdk-go && $(PYTHON) scripts/generate_schema_module.py && $(PYTHON) scripts/generate_api_client.py && go mod tidy
+
+.PHONY: regen

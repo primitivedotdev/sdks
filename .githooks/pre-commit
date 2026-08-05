@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Repo pre-commit: the JSON schemas and the OpenAPI spec are codegen sources.
+# Editing one without regenerating its artifacts fails CI later with a
+# git-diff drift error; catch it here instead, before the commit exists.
+#
+# Regenerate everything:  make regen
+# Bypass once:            git commit --no-verify
+set -u
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+echo "$staged" | grep -qE '^(json-schema/|openapi/primitive-api\.yaml$)' || exit 0
+
+generated_pattern='^(openapi/primitive-api\.codegen\.json$|sdk-node/src/(schema|types)\.generated\.ts$|sdk-node/src/generated/|sdk-python/src/primitive/(models_generated\.py$|schemas/)|sdk-go/(schema_generated\.go$|api/)|packages/api-core/src/(api/|openapi/))'
+
+if echo "$staged" | grep -qE "$generated_pattern"; then
+  exit 0
+fi
+
+echo "pre-commit: staged changes touch codegen sources (json-schema/ or the OpenAPI spec)" >&2
+echo "but no regenerated artifacts are staged. CI will fail on generated-file drift." >&2
+echo "" >&2
+echo "  Fix:         make regen   (then stage the regenerated files)" >&2
+echo "  Bypass once: git commit --no-verify" >&2
+exit 1
