@@ -493,7 +493,7 @@ want the exact OpenAPI operation shape.
 
 `primitive.receive(...)` handles verification automatically. If you need to verify a delivery yourself (a different language reverse-proxying through Node, a one-off audit, etc.), the wire format is:
 
-- Header: `Primitive-Signature: t=<unix-seconds>,v1=<hex>`. A legacy `MyMX-Signature` header carries the same value for back-compat.
+- Header: `Primitive-Signature: t=<unix-seconds>,v1=<hex>`. The same value also rides `X-Primitive-Signature` and `X-Webhook-Signature`; the SDK additionally accepts the retired `MyMX-Signature` name when verifying older captured deliveries.
 - Signed string: `${timestamp}.${rawBody}` where `rawBody` is the exact request bytes before any JSON decoding.
 - Signature: HMAC-SHA256, hex-encoded.
 - Secret: returned by `GET /account/webhook-secret`. Use as a UTF-8 string; do not base64-decode despite the base64-shaped output.
@@ -552,7 +552,7 @@ The full catalog of header values is the `WebhookEventType` union, also exported
 - `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`
 
-Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed with the dual-header scheme: the primary `Primitive-Signature` header and a legacy `MyMX-Signature` header carrying the same value. `handleWebhook` remains hard-typed to `email.received` for backward compatibility; reach for `handleWebhookEvent` when you need the full event union.
+Signature verification runs on the raw body and is independent of the event type, so it works identically for `payment.*` and `interaction.*` bodies. Each delivery is signed once; the same `t=...,v1=...` value is sent on the primary `Primitive-Signature` header plus `X-Primitive-Signature` and `X-Webhook-Signature` for non-SDK consumers. The SDK verifies `Primitive-Signature`, and still accepts the retired `MyMX-Signature` header name when verifying older captured deliveries. `handleWebhook` remains hard-typed to `email.received` for backward compatibility; reach for `handleWebhookEvent` when you need the full event union.
 
 ### Other subpath imports
 
