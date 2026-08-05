@@ -84,7 +84,7 @@ When `wait=True`, the call returns the first downstream SMTP outcome (or
 
 - `delivered` accepted by the receiving MTA
 - `bounced` rejected by the receiving MTA (the response is still 200 OK)
-- `deferred` temporary failure, the receiving MTA may retry
+- `deferred` temporary failure (receiver said 4xx); Primitive retries the delivery later
 - `wait_timeout` no outcome was observed in time. Treat as "outcome unknown."
   The send may still complete after the response returns.
 
