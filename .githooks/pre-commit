@@ -7,7 +7,7 @@
 # Bypass once:            git commit --no-verify
 set -u
 
-staged=$(git diff --cached --name-only --diff-filter=ACMR)
+staged=$(git diff --cached --name-only --diff-filter=ACMRD)
 
 echo "$staged" | grep -qE '^(json-schema/|openapi/primitive-api\.yaml$)' || exit 0
 
