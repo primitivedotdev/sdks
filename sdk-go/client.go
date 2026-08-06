@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
@@ -41,6 +42,14 @@ type SendParams struct {
 	Wait           *bool
 	WaitTimeoutMs  int
 	IdempotencyKey string
+	// ScheduledAt is an optional future execution time. When set, the
+	// send is recorded with status "scheduled" and executed at the
+	// requested time instead of immediately. Server-enforced bounds:
+	// strictly in the future, at most 30 days out. Incompatible with
+	// Wait (a scheduled send resolves after this request completes).
+	// Reschedule via RescheduleSentEmail; cancel via CancelSentEmail
+	// on the generated client.
+	ScheduledAt time.Time
 }
 
 // ReplyParams is the input shape for [Client.Reply].
@@ -84,6 +93,9 @@ type SendResult struct {
 	DeliveryStatus   primitiveapi.OptDeliveryStatus
 	SMTPResponseCode primitiveapi.OptNilInt
 	SMTPResponseText primitiveapi.OptString
+	// ScheduledAt echoes the requested execution time on a
+	// "scheduled" response. Unset on immediate sends.
+	ScheduledAt primitiveapi.OptDateTime
 }
 
 type APIError struct {
@@ -212,6 +224,12 @@ func validateSendParams(params SendParams) error {
 	}
 	if params.WaitTimeoutMs != 0 && (params.WaitTimeoutMs < 1000 || params.WaitTimeoutMs > 30000) {
 		return fmt.Errorf("wait timeout ms must be between 1000 and 30000")
+	}
+	// Time-window bounds (future, <= 30 days) are left to the server so
+	// a skewed client clock can't reject a valid request; the structural
+	// incompatibility below is clock-independent.
+	if !params.ScheduledAt.IsZero() && params.Wait != nil && *params.Wait {
+		return fmt.Errorf("wait cannot be combined with scheduled at (a scheduled send resolves after this request completes)")
 	}
 	return nil
 }
@@ -419,6 +437,9 @@ func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error
 	if params.WaitTimeoutMs != 0 {
 		request.WaitTimeoutMs = primitiveapi.NewOptInt(params.WaitTimeoutMs)
 	}
+	if !params.ScheduledAt.IsZero() {
+		request.ScheduledAt = primitiveapi.NewOptDateTime(params.ScheduledAt)
+	}
 
 	apiParams := primitiveapi.SendEmailParams{}
 	if params.IdempotencyKey != "" {
@@ -461,6 +482,7 @@ func mapSendMailResult(data primitiveapi.SendMailResult) SendResult {
 		DeliveryStatus:       data.DeliveryStatus,
 		SMTPResponseCode:     data.SMTPResponseCode,
 		SMTPResponseText:     data.SMTPResponseText,
+		ScheduledAt:          data.ScheduledAt,
 	}
 }
 

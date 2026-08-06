@@ -222,6 +222,9 @@ class SendResult:
     delivery_status: str | None = None
     smtp_response_code: int | None = None
     smtp_response_text: str | None = None
+    # Echoed requested execution time on a ``scheduled`` response
+    # (ISO 8601). None on immediate sends.
+    scheduled_at: str | None = None
 
 
 class PrimitiveAPIError(Exception):
@@ -324,6 +327,7 @@ def _build_send_input(
     thread: SendThread | None = None,
     wait: bool | None = None,
     wait_timeout_ms: int | None = None,
+    scheduled_at: str | None = None,
 ) -> ApiSendMailInput:
     _validate_address_header("from", from_email)
     _validate_address_header("to", to)
@@ -337,6 +341,15 @@ def _build_send_input(
 
     if wait_timeout_ms is not None and not 1000 <= wait_timeout_ms <= 30000:
         raise ValueError("wait_timeout_ms must be between 1000 and 30000")
+
+    # Time-window bounds (future, <= 30 days) are left to the server so a
+    # skewed client clock can't reject a valid request; the structural
+    # incompatibility below is clock-independent.
+    if scheduled_at is not None and wait:
+        raise ValueError(
+            "wait cannot be combined with scheduled_at "
+            "(a scheduled send resolves after this request completes)"
+        )
 
     payload: dict[str, Any] = {
         "from": from_email,
@@ -357,6 +370,8 @@ def _build_send_input(
         payload["wait"] = wait
     if wait_timeout_ms is not None:
         payload["wait_timeout_ms"] = wait_timeout_ms
+    if scheduled_at is not None:
+        payload["scheduled_at"] = scheduled_at
 
     return ApiSendMailInput.from_dict(payload)
 
@@ -470,6 +485,11 @@ def _map_send_result(result: ApiSendMailResult) -> SendResult:
         if result.smtp_response_text is UNSET
         else cast(str, result.smtp_response_text)
     )
+    scheduled_at: str | None = (
+        None
+        if result.scheduled_at is UNSET
+        else cast(Any, result.scheduled_at).isoformat()
+    )
     return SendResult(
         id=result.id,
         status=result.status.value,
@@ -483,6 +503,7 @@ def _map_send_result(result: ApiSendMailResult) -> SendResult:
         delivery_status=delivery_status,
         smtp_response_code=smtp_response_code,
         smtp_response_text=smtp_response_text,
+        scheduled_at=scheduled_at,
     )
 
 
@@ -725,6 +746,7 @@ class PrimitiveClient:
         thread: SendThread | None = None,
         wait: bool | None = None,
         wait_timeout_ms: int | None = None,
+        scheduled_at: str | None = None,
         idempotency_key: str | None = None,
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
@@ -751,6 +773,7 @@ class PrimitiveClient:
                     thread=thread,
                     wait=wait,
                     wait_timeout_ms=wait_timeout_ms,
+                    scheduled_at=scheduled_at,
                 ),
             )
         finally:
@@ -782,6 +805,7 @@ class PrimitiveClient:
         thread: SendThread | None = None,
         wait: bool | None = None,
         wait_timeout_ms: int | None = None,
+        scheduled_at: str | None = None,
         idempotency_key: str | None = None,
         timeout: float | None = None,
         extra_headers: dict[str, str] | None = None,
@@ -805,6 +829,7 @@ class PrimitiveClient:
                     thread=thread,
                     wait=wait,
                     wait_timeout_ms=wait_timeout_ms,
+                    scheduled_at=scheduled_at,
                 ),
             )
         finally:
