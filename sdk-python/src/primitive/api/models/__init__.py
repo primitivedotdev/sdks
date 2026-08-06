@@ -20,6 +20,8 @@ from .agent_signup_verify_result_auth_method import AgentSignupVerifyResultAuthM
 from .agent_signup_verify_result_token_type import AgentSignupVerifyResultTokenType
 from .await_reply_response_200 import AwaitReplyResponse200
 from .await_reply_result import AwaitReplyResult
+from .cancel_sent_email_response_200 import CancelSentEmailResponse200
+from .check_domain_dns_response_200 import CheckDomainDnsResponse200
 from .cli_login_poll_result import CliLoginPollResult
 from .cli_login_poll_result_auth_method import CliLoginPollResultAuthMethod
 from .cli_login_poll_result_token_type import CliLoginPollResultTokenType
@@ -111,6 +113,11 @@ from .delivery_summary_status import DeliverySummaryStatus
 from .discard_content_result import DiscardContentResult
 from .discard_email_content_response_200 import DiscardEmailContentResponse200
 from .dkim_signature import DkimSignature
+from .domain_dns_health_check import DomainDnsHealthCheck
+from .domain_dns_health_check_scopes import DomainDnsHealthCheckScopes
+from .domain_dns_health_scope import DomainDnsHealthScope
+from .domain_dns_health_scope_scope import DomainDnsHealthScopeScope
+from .domain_dns_health_status import DomainDnsHealthStatus
 from .domain_dns_record import DomainDnsRecord
 from .domain_dns_record_purpose import DomainDnsRecordPurpose
 from .domain_dns_record_status import DomainDnsRecordStatus
@@ -190,6 +197,7 @@ from .get_inbox_status_response_200 import GetInboxStatusResponse200
 from .get_memory_response_200 import GetMemoryResponse200
 from .get_memory_scope_type import GetMemoryScopeType
 from .get_org_routing_topology_response_200 import GetOrgRoutingTopologyResponse200
+from .get_outbound_status_response_200 import GetOutboundStatusResponse200
 from .get_registry_response_200 import GetRegistryResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
@@ -248,6 +256,10 @@ from .memory_scope_type_1 import MemoryScopeType1
 from .memory_scope_type_1_type import MemoryScopeType1Type
 from .org_secret_list_item import OrgSecretListItem
 from .org_secret_write_result import OrgSecretWriteResult
+from .outbound_status import OutboundStatus
+from .outbound_status_domain import OutboundStatusDomain
+from .outbound_status_domain_status import OutboundStatusDomainStatus
+from .outbound_status_next_actions_item import OutboundStatusNextActionsItem
 from .pagination_meta import PaginationMeta
 from .parsed_email_data import ParsedEmailData
 from .parsed_email_data_error_type_0 import ParsedEmailDataErrorType0
@@ -280,6 +292,7 @@ from .replay_result import ReplayResult
 from .reply_email import ReplyEmail
 from .reply_input import ReplyInput
 from .reply_to_email_response_200 import ReplyToEmailResponse200
+from .reschedule_sent_email_response_200 import RescheduleSentEmailResponse200
 from .resend_agent_signup_verification_input import ResendAgentSignupVerificationInput
 from .resend_agent_signup_verification_response_200 import ResendAgentSignupVerificationResponse200
 from .resend_cli_signup_verification_input import ResendCliSignupVerificationInput
@@ -332,6 +345,7 @@ from .send_permission_your_domain import SendPermissionYourDomain
 from .send_permission_your_domain_type import SendPermissionYourDomainType
 from .send_permissions_meta import SendPermissionsMeta
 from .sent_email_detail import SentEmailDetail
+from .sent_email_reschedule_input import SentEmailRescheduleInput
 from .sent_email_status import SentEmailStatus
 from .sent_email_summary import SentEmailSummary
 from .set_function_route_response_200 import SetFunctionRouteResponse200
@@ -386,6 +400,10 @@ from .template_variable import TemplateVariable
 from .template_variable_type import TemplateVariableType
 from .template_variable_validation import TemplateVariableValidation
 from .test_endpoint_response_200 import TestEndpointResponse200
+from .test_endpoint_rules_input import TestEndpointRulesInput
+from .test_endpoint_rules_response_200 import TestEndpointRulesResponse200
+from .test_endpoint_rules_result import TestEndpointRulesResult
+from .test_endpoint_rules_result_evaluated import TestEndpointRulesResultEvaluated
 from .test_function_body import TestFunctionBody
 from .test_function_response_200 import TestFunctionResponse200
 from .test_invocation_result import TestInvocationResult
@@ -478,6 +496,8 @@ __all__ = (
     "AgentSignupVerifyResultTokenType",
     "AwaitReplyResponse200",
     "AwaitReplyResult",
+    "CancelSentEmailResponse200",
+    "CheckDomainDnsResponse200",
     "CliLoginPollResult",
     "CliLoginPollResultAuthMethod",
     "CliLoginPollResultTokenType",
@@ -569,6 +589,11 @@ __all__ = (
     "DiscardContentResult",
     "DiscardEmailContentResponse200",
     "DkimSignature",
+    "DomainDnsHealthCheck",
+    "DomainDnsHealthCheckScopes",
+    "DomainDnsHealthScope",
+    "DomainDnsHealthScopeScope",
+    "DomainDnsHealthStatus",
     "DomainDnsRecord",
     "DomainDnsRecordPurpose",
     "DomainDnsRecordStatus",
@@ -648,6 +673,7 @@ __all__ = (
     "GetMemoryResponse200",
     "GetMemoryScopeType",
     "GetOrgRoutingTopologyResponse200",
+    "GetOutboundStatusResponse200",
     "GetRegistryResponse200",
     "GetSendPermissionsResponse200",
     "GetSentEmailResponse200",
@@ -706,6 +732,10 @@ __all__ = (
     "MemoryScopeType1Type",
     "OrgSecretListItem",
     "OrgSecretWriteResult",
+    "OutboundStatus",
+    "OutboundStatusDomain",
+    "OutboundStatusDomainStatus",
+    "OutboundStatusNextActionsItem",
     "PaginationMeta",
     "ParsedEmailData",
     "ParsedEmailDataErrorType0",
@@ -738,6 +768,7 @@ __all__ = (
     "ReplyEmail",
     "ReplyInput",
     "ReplyToEmailResponse200",
+    "RescheduleSentEmailResponse200",
     "ResendAgentSignupVerificationInput",
     "ResendAgentSignupVerificationResponse200",
     "ResendCliSignupVerificationInput",
@@ -790,6 +821,7 @@ __all__ = (
     "SendPermissionYourDomain",
     "SendPermissionYourDomainType",
     "SentEmailDetail",
+    "SentEmailRescheduleInput",
     "SentEmailStatus",
     "SentEmailSummary",
     "SetFunctionRouteResponse200",
@@ -844,6 +876,10 @@ __all__ = (
     "TemplateVariableType",
     "TemplateVariableValidation",
     "TestEndpointResponse200",
+    "TestEndpointRulesInput",
+    "TestEndpointRulesResponse200",
+    "TestEndpointRulesResult",
+    "TestEndpointRulesResultEvaluated",
     "TestFunctionBody",
     "TestFunctionResponse200",
     "TestInvocationResult",

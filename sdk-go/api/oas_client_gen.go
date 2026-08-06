@@ -57,6 +57,39 @@ type Invoker interface {
 	//
 	// GET /sent-emails/{id}/reply
 	AwaitReply(ctx context.Context, params AwaitReplyParams) (AwaitReplyRes, error)
+	// CancelSentEmail invokes cancelSentEmail operation.
+	//
+	// Cancels a STILL-SCHEDULED send (status `scheduled`), moving it
+	// to the terminal `canceled` status. Nothing is dispatched and
+	// the row is kept for historical lookup with `canceled_at` set.
+	// Uses the same compare-and-swap guard as reschedule: once the
+	// scheduler has claimed the row for execution, or it was already
+	// canceled or executed, the call returns a 409 `not_scheduled`
+	// conflict naming the row's current status. Canceling can
+	// therefore never race an in-progress execution; a send that
+	// reports `canceled` was never handed to the delivery path.
+	// Returns the full updated sent-email record on success.
+	//
+	// POST /sent-emails/{id}/cancel
+	CancelSentEmail(ctx context.Context, params CancelSentEmailParams) (CancelSentEmailRes, error)
+	// CheckDomainDns invokes checkDomainDns operation.
+	//
+	// Re-checks the domain's DNS records and persists the result as
+	// the domain's current DNS health state. This is the on-demand
+	// counterpart of the scheduled background checker: the response
+	// mirrors what the checker records, broken down per scope
+	// (`ownership`, `inbound`, `outbound`) with the exact records
+	// inspected and each record's individual status.
+	// Unlike /domains/{id}/verify, this call never promotes an
+	// unverified domain; it only re-evaluates and records health for
+	// an existing claim. Managed (Primitive-operated) domains are
+	// rejected with a validation error because their DNS is not
+	// customer-published.
+	// Rate limited per organization; a `Retry-After` header
+	// accompanies 429 responses.
+	//
+	// POST /domains/{id}/dns/check
+	CheckDomainDns(ctx context.Context, params CheckDomainDnsParams) (CheckDomainDnsRes, error)
 	// CliLogout invokes cliLogout operation.
 	//
 	// Revokes the OAuth grant used to authenticate the request. API-key
@@ -499,6 +532,24 @@ type Invoker interface {
 	//
 	// GET /functions/routing-topology
 	GetOrgRoutingTopology(ctx context.Context) (GetOrgRoutingTopologyRes, error)
+	// GetOutboundStatus invokes getOutboundStatus operation.
+	//
+	// The "what can I send From?" bootstrap, the outbound mirror of
+	// /inbox/status. Returns per-domain sending readiness for every
+	// domain in the caller's org, plus the flat `sendable_domains`
+	// list of From-domains the org may send from right now. That
+	// list is the same set echoed in a `cannot_send_from_domain`
+	// error's details, so orienting here before a send and
+	// recovering from that error use identical data.
+	// Each domain's `status` collapses the sending prerequisites
+	// into one actionable state: `sendable`, `pending_ownership`
+	// (ownership TXT not verified), `pending_outbound_dns`
+	// (SPF/DKIM/DMARC not verified), or `inactive` (domain
+	// deactivated). `next_actions` lists concrete remediation steps,
+	// each with a suggested CLI command where one exists.
+	//
+	// GET /outbound/status
+	GetOutboundStatus(ctx context.Context) (GetOutboundStatusRes, error)
 	// GetRegistry invokes getRegistry operation.
 	//
 	// Get a public registry's metadata.
@@ -890,6 +941,22 @@ type Invoker interface {
 	//
 	// POST /emails/{id}/reply
 	ReplyToEmail(ctx context.Context, request *ReplyInput, params ReplyToEmailParams) (ReplyToEmailRes, error)
+	// RescheduleSentEmail invokes rescheduleSentEmail operation.
+	//
+	// Moves a STILL-SCHEDULED send (status `scheduled`) to a new
+	// execution time. The new `scheduled_at` must be in the future
+	// and at most 30 days out, the same bounds as the create-time
+	// field on /send-mail.
+	// The update is a compare-and-swap on `status = 'scheduled'`:
+	// once the scheduler has claimed the row for execution, or it
+	// was already canceled or executed, the update loses and the
+	// call returns a 409 `not_scheduled` conflict naming the row's
+	// current status. A due send can therefore never be moved out
+	// from under an in-progress execution.
+	// Returns the full updated sent-email record on success.
+	//
+	// PATCH /sent-emails/{id}
+	RescheduleSentEmail(ctx context.Context, request *SentEmailRescheduleInput, params RescheduleSentEmailParams) (RescheduleSentEmailRes, error)
 	// ResendAgentSignupVerification invokes resendAgentSignupVerification operation.
 	//
 	// Sends a new email verification code for a pending agent signup session.
@@ -1090,6 +1157,29 @@ type Invoker interface {
 	//
 	// POST /endpoints/{id}/test
 	TestEndpoint(ctx context.Context, params TestEndpointParams) (TestEndpointRes, error)
+	// TestEndpointRules invokes testEndpointRules operation.
+	//
+	// Evaluates the endpoint's filtering rules against an
+	// already-received email WITHOUT delivering anything. The same
+	// shared matcher the live delivery paths use produces the
+	// verdict, so the response explains exactly why a webhook fired
+	// or was suppressed for that message.
+	// When delivery would be suppressed, `rule` names the failing
+	// rule and `reason` carries a human-readable explanation; both
+	// are null when the message matches. `evaluated` echoes the
+	// message metadata the matcher compared (size, attachments, and
+	// the authenticated From identity versus the raw envelope
+	// sender), so a surprising verdict can be traced to its inputs.
+	// Two independent gates are surfaced separately:
+	// `subscribed_to_event` reports the endpoint's event-type
+	// subscription (checked before message matching), and
+	// `rules_valid` reports whether the stored rules blob parsed at
+	// all. Delivery fails OPEN on an invalid blob (the message is
+	// delivered as if unfiltered), so `rules_valid: false` exposes a
+	// misconfiguration that is otherwise silent.
+	//
+	// POST /endpoints/{id}/rules/test
+	TestEndpointRules(ctx context.Context, request *TestEndpointRulesInput, params TestEndpointRulesParams) (TestEndpointRulesRes, error)
 	// TestFunction invokes testFunction operation.
 	//
 	// Sends a real test email from a Primitive-controlled sender to a
@@ -1579,6 +1669,279 @@ func (c *Client) sendAwaitReply(ctx context.Context, params AwaitReplyParams) (r
 
 	stage = "DecodeResponse"
 	result, err := decodeAwaitReplyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CancelSentEmail invokes cancelSentEmail operation.
+//
+// Cancels a STILL-SCHEDULED send (status `scheduled`), moving it
+// to the terminal `canceled` status. Nothing is dispatched and
+// the row is kept for historical lookup with `canceled_at` set.
+// Uses the same compare-and-swap guard as reschedule: once the
+// scheduler has claimed the row for execution, or it was already
+// canceled or executed, the call returns a 409 `not_scheduled`
+// conflict naming the row's current status. Canceling can
+// therefore never race an in-progress execution; a send that
+// reports `canceled` was never handed to the delivery path.
+// Returns the full updated sent-email record on success.
+//
+// POST /sent-emails/{id}/cancel
+func (c *Client) CancelSentEmail(ctx context.Context, params CancelSentEmailParams) (CancelSentEmailRes, error) {
+	res, err := c.sendCancelSentEmail(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendCancelSentEmail(ctx context.Context, params CancelSentEmailParams) (res CancelSentEmailRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("cancelSentEmail"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/sent-emails/{id}/cancel"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CancelSentEmailOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/sent-emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/cancel"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CancelSentEmailOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCancelSentEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CheckDomainDns invokes checkDomainDns operation.
+//
+// Re-checks the domain's DNS records and persists the result as
+// the domain's current DNS health state. This is the on-demand
+// counterpart of the scheduled background checker: the response
+// mirrors what the checker records, broken down per scope
+// (`ownership`, `inbound`, `outbound`) with the exact records
+// inspected and each record's individual status.
+// Unlike /domains/{id}/verify, this call never promotes an
+// unverified domain; it only re-evaluates and records health for
+// an existing claim. Managed (Primitive-operated) domains are
+// rejected with a validation error because their DNS is not
+// customer-published.
+// Rate limited per organization; a `Retry-After` header
+// accompanies 429 responses.
+//
+// POST /domains/{id}/dns/check
+func (c *Client) CheckDomainDns(ctx context.Context, params CheckDomainDnsParams) (CheckDomainDnsRes, error) {
+	res, err := c.sendCheckDomainDns(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendCheckDomainDns(ctx context.Context, params CheckDomainDnsParams) (res CheckDomainDnsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("checkDomainDns"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/domains/{id}/dns/check"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CheckDomainDnsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/domains/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/dns/check"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CheckDomainDnsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCheckDomainDnsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -7112,6 +7475,125 @@ func (c *Client) sendGetOrgRoutingTopology(ctx context.Context) (res GetOrgRouti
 	return result, nil
 }
 
+// GetOutboundStatus invokes getOutboundStatus operation.
+//
+// The "what can I send From?" bootstrap, the outbound mirror of
+// /inbox/status. Returns per-domain sending readiness for every
+// domain in the caller's org, plus the flat `sendable_domains`
+// list of From-domains the org may send from right now. That
+// list is the same set echoed in a `cannot_send_from_domain`
+// error's details, so orienting here before a send and
+// recovering from that error use identical data.
+// Each domain's `status` collapses the sending prerequisites
+// into one actionable state: `sendable`, `pending_ownership`
+// (ownership TXT not verified), `pending_outbound_dns`
+// (SPF/DKIM/DMARC not verified), or `inactive` (domain
+// deactivated). `next_actions` lists concrete remediation steps,
+// each with a suggested CLI command where one exists.
+//
+// GET /outbound/status
+func (c *Client) GetOutboundStatus(ctx context.Context) (GetOutboundStatusRes, error) {
+	res, err := c.sendGetOutboundStatus(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetOutboundStatus(ctx context.Context) (res GetOutboundStatusRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getOutboundStatus"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/outbound/status"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetOutboundStatusOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/outbound/status"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetOutboundStatusOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetOutboundStatusResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetRegistry invokes getRegistry operation.
 //
 // Get a public registry's metadata.
@@ -12193,6 +12675,144 @@ func (c *Client) sendReplyToEmail(ctx context.Context, request *ReplyInput, para
 	return result, nil
 }
 
+// RescheduleSentEmail invokes rescheduleSentEmail operation.
+//
+// Moves a STILL-SCHEDULED send (status `scheduled`) to a new
+// execution time. The new `scheduled_at` must be in the future
+// and at most 30 days out, the same bounds as the create-time
+// field on /send-mail.
+// The update is a compare-and-swap on `status = 'scheduled'`:
+// once the scheduler has claimed the row for execution, or it
+// was already canceled or executed, the update loses and the
+// call returns a 409 `not_scheduled` conflict naming the row's
+// current status. A due send can therefore never be moved out
+// from under an in-progress execution.
+// Returns the full updated sent-email record on success.
+//
+// PATCH /sent-emails/{id}
+func (c *Client) RescheduleSentEmail(ctx context.Context, request *SentEmailRescheduleInput, params RescheduleSentEmailParams) (RescheduleSentEmailRes, error) {
+	res, err := c.sendRescheduleSentEmail(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendRescheduleSentEmail(ctx context.Context, request *SentEmailRescheduleInput, params RescheduleSentEmailParams) (res RescheduleSentEmailRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("rescheduleSentEmail"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.URLTemplateKey.String("/sent-emails/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RescheduleSentEmailOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/sent-emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeRescheduleSentEmailRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RescheduleSentEmailOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRescheduleSentEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ResendAgentSignupVerification invokes resendAgentSignupVerification operation.
 //
 // Sends a new email verification code for a pending agent signup session.
@@ -14796,6 +15416,152 @@ func (c *Client) sendTestEndpoint(ctx context.Context, params TestEndpointParams
 
 	stage = "DecodeResponse"
 	result, err := decodeTestEndpointResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// TestEndpointRules invokes testEndpointRules operation.
+//
+// Evaluates the endpoint's filtering rules against an
+// already-received email WITHOUT delivering anything. The same
+// shared matcher the live delivery paths use produces the
+// verdict, so the response explains exactly why a webhook fired
+// or was suppressed for that message.
+// When delivery would be suppressed, `rule` names the failing
+// rule and `reason` carries a human-readable explanation; both
+// are null when the message matches. `evaluated` echoes the
+// message metadata the matcher compared (size, attachments, and
+// the authenticated From identity versus the raw envelope
+// sender), so a surprising verdict can be traced to its inputs.
+// Two independent gates are surfaced separately:
+// `subscribed_to_event` reports the endpoint's event-type
+// subscription (checked before message matching), and
+// `rules_valid` reports whether the stored rules blob parsed at
+// all. Delivery fails OPEN on an invalid blob (the message is
+// delivered as if unfiltered), so `rules_valid: false` exposes a
+// misconfiguration that is otherwise silent.
+//
+// POST /endpoints/{id}/rules/test
+func (c *Client) TestEndpointRules(ctx context.Context, request *TestEndpointRulesInput, params TestEndpointRulesParams) (TestEndpointRulesRes, error) {
+	res, err := c.sendTestEndpointRules(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendTestEndpointRules(ctx context.Context, request *TestEndpointRulesInput, params TestEndpointRulesParams) (res TestEndpointRulesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("testEndpointRules"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/endpoints/{id}/rules/test"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, TestEndpointRulesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/endpoints/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/rules/test"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeTestEndpointRulesRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, TestEndpointRulesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeTestEndpointRulesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

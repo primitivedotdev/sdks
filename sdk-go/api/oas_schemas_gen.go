@@ -1141,6 +1141,94 @@ func (s *BearerAuth) SetRoles(val []string) {
 	s.Roles = val
 }
 
+type CancelSentEmailBadRequest ErrorResponse
+
+func (*CancelSentEmailBadRequest) cancelSentEmailRes() {}
+
+type CancelSentEmailConflict ErrorResponse
+
+func (*CancelSentEmailConflict) cancelSentEmailRes() {}
+
+type CancelSentEmailNotFound ErrorResponse
+
+func (*CancelSentEmailNotFound) cancelSentEmailRes() {}
+
+// Merged schema.
+type CancelSentEmailOK struct {
+	Success bool            `json:"success"`
+	Data    SentEmailDetail `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CancelSentEmailOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CancelSentEmailOK) GetData() SentEmailDetail {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CancelSentEmailOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CancelSentEmailOK) SetData(val SentEmailDetail) {
+	s.Data = val
+}
+
+func (*CancelSentEmailOK) cancelSentEmailRes() {}
+
+type CancelSentEmailUnauthorized ErrorResponse
+
+func (*CancelSentEmailUnauthorized) cancelSentEmailRes() {}
+
+type CheckDomainDnsBadRequest ErrorResponse
+
+func (*CheckDomainDnsBadRequest) checkDomainDnsRes() {}
+
+type CheckDomainDnsConflict ErrorResponse
+
+func (*CheckDomainDnsConflict) checkDomainDnsRes() {}
+
+type CheckDomainDnsNotFound ErrorResponse
+
+func (*CheckDomainDnsNotFound) checkDomainDnsRes() {}
+
+// Merged schema.
+type CheckDomainDnsOK struct {
+	Success bool                 `json:"success"`
+	Data    DomainDnsHealthCheck `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CheckDomainDnsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CheckDomainDnsOK) GetData() DomainDnsHealthCheck {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CheckDomainDnsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CheckDomainDnsOK) SetData(val DomainDnsHealthCheck) {
+	s.Data = val
+}
+
+func (*CheckDomainDnsOK) checkDomainDnsRes() {}
+
+type CheckDomainDnsUnauthorized ErrorResponse
+
+func (*CheckDomainDnsUnauthorized) checkDomainDnsRes() {}
+
 // Ref: #/components/schemas/CliLoginPollResult
 type CliLoginPollResult struct {
 	// Legacy alias for access_token. New CLI builds should persist access_token and refresh_token.
@@ -4951,6 +5039,398 @@ func NewUnverifiedDomainDomain(v UnverifiedDomain) Domain {
 	return s
 }
 
+// Result of a DNS health check, as returned by
+// /domains/{id}/dns/check and recorded as the domain's current
+// health state. The top-level fields summarize the domain
+// overall; `scopes` breaks the same check down per capability.
+// Ref: #/components/schemas/DomainDnsHealthCheck
+type DomainDnsHealthCheck struct {
+	DomainID uuid.UUID `json:"domain_id"`
+	// Active outbound DKIM key the outbound scope was checked against, when one exists.
+	KeyID  OptUUID `json:"key_id"`
+	Domain string  `json:"domain"`
+	// Whether every required scope is currently verified.
+	Verified  bool                  `json:"verified"`
+	Status    DomainDnsHealthStatus `json:"status"`
+	CheckedAt time.Time             `json:"checked_at"`
+	// Next scheduled background check, or null when none is planned.
+	NextCheckAt NilDateTime `json:"next_check_at"`
+	// When outbound DNS was first verified, or null if it never has been.
+	OutboundVerifiedAt  NilDateTime `json:"outbound_verified_at"`
+	ConsecutiveFailures int         `json:"consecutive_failures"`
+	// All records inspected across scopes, each with its own status.
+	Records []DomainDnsRecord          `json:"records"`
+	Scopes  DomainDnsHealthCheckScopes `json:"scopes"`
+	// Human-readable failure reason when the check errored.
+	Error OptString `json:"error"`
+}
+
+// GetDomainID returns the value of DomainID.
+func (s *DomainDnsHealthCheck) GetDomainID() uuid.UUID {
+	return s.DomainID
+}
+
+// GetKeyID returns the value of KeyID.
+func (s *DomainDnsHealthCheck) GetKeyID() OptUUID {
+	return s.KeyID
+}
+
+// GetDomain returns the value of Domain.
+func (s *DomainDnsHealthCheck) GetDomain() string {
+	return s.Domain
+}
+
+// GetVerified returns the value of Verified.
+func (s *DomainDnsHealthCheck) GetVerified() bool {
+	return s.Verified
+}
+
+// GetStatus returns the value of Status.
+func (s *DomainDnsHealthCheck) GetStatus() DomainDnsHealthStatus {
+	return s.Status
+}
+
+// GetCheckedAt returns the value of CheckedAt.
+func (s *DomainDnsHealthCheck) GetCheckedAt() time.Time {
+	return s.CheckedAt
+}
+
+// GetNextCheckAt returns the value of NextCheckAt.
+func (s *DomainDnsHealthCheck) GetNextCheckAt() NilDateTime {
+	return s.NextCheckAt
+}
+
+// GetOutboundVerifiedAt returns the value of OutboundVerifiedAt.
+func (s *DomainDnsHealthCheck) GetOutboundVerifiedAt() NilDateTime {
+	return s.OutboundVerifiedAt
+}
+
+// GetConsecutiveFailures returns the value of ConsecutiveFailures.
+func (s *DomainDnsHealthCheck) GetConsecutiveFailures() int {
+	return s.ConsecutiveFailures
+}
+
+// GetRecords returns the value of Records.
+func (s *DomainDnsHealthCheck) GetRecords() []DomainDnsRecord {
+	return s.Records
+}
+
+// GetScopes returns the value of Scopes.
+func (s *DomainDnsHealthCheck) GetScopes() DomainDnsHealthCheckScopes {
+	return s.Scopes
+}
+
+// GetError returns the value of Error.
+func (s *DomainDnsHealthCheck) GetError() OptString {
+	return s.Error
+}
+
+// SetDomainID sets the value of DomainID.
+func (s *DomainDnsHealthCheck) SetDomainID(val uuid.UUID) {
+	s.DomainID = val
+}
+
+// SetKeyID sets the value of KeyID.
+func (s *DomainDnsHealthCheck) SetKeyID(val OptUUID) {
+	s.KeyID = val
+}
+
+// SetDomain sets the value of Domain.
+func (s *DomainDnsHealthCheck) SetDomain(val string) {
+	s.Domain = val
+}
+
+// SetVerified sets the value of Verified.
+func (s *DomainDnsHealthCheck) SetVerified(val bool) {
+	s.Verified = val
+}
+
+// SetStatus sets the value of Status.
+func (s *DomainDnsHealthCheck) SetStatus(val DomainDnsHealthStatus) {
+	s.Status = val
+}
+
+// SetCheckedAt sets the value of CheckedAt.
+func (s *DomainDnsHealthCheck) SetCheckedAt(val time.Time) {
+	s.CheckedAt = val
+}
+
+// SetNextCheckAt sets the value of NextCheckAt.
+func (s *DomainDnsHealthCheck) SetNextCheckAt(val NilDateTime) {
+	s.NextCheckAt = val
+}
+
+// SetOutboundVerifiedAt sets the value of OutboundVerifiedAt.
+func (s *DomainDnsHealthCheck) SetOutboundVerifiedAt(val NilDateTime) {
+	s.OutboundVerifiedAt = val
+}
+
+// SetConsecutiveFailures sets the value of ConsecutiveFailures.
+func (s *DomainDnsHealthCheck) SetConsecutiveFailures(val int) {
+	s.ConsecutiveFailures = val
+}
+
+// SetRecords sets the value of Records.
+func (s *DomainDnsHealthCheck) SetRecords(val []DomainDnsRecord) {
+	s.Records = val
+}
+
+// SetScopes sets the value of Scopes.
+func (s *DomainDnsHealthCheck) SetScopes(val DomainDnsHealthCheckScopes) {
+	s.Scopes = val
+}
+
+// SetError sets the value of Error.
+func (s *DomainDnsHealthCheck) SetError(val OptString) {
+	s.Error = val
+}
+
+type DomainDnsHealthCheckScopes struct {
+	Ownership DomainDnsHealthScope `json:"ownership"`
+	Inbound   DomainDnsHealthScope `json:"inbound"`
+	// Absent when the domain has no active outbound key to check against.
+	Outbound OptDomainDnsHealthScope `json:"outbound"`
+}
+
+// GetOwnership returns the value of Ownership.
+func (s *DomainDnsHealthCheckScopes) GetOwnership() DomainDnsHealthScope {
+	return s.Ownership
+}
+
+// GetInbound returns the value of Inbound.
+func (s *DomainDnsHealthCheckScopes) GetInbound() DomainDnsHealthScope {
+	return s.Inbound
+}
+
+// GetOutbound returns the value of Outbound.
+func (s *DomainDnsHealthCheckScopes) GetOutbound() OptDomainDnsHealthScope {
+	return s.Outbound
+}
+
+// SetOwnership sets the value of Ownership.
+func (s *DomainDnsHealthCheckScopes) SetOwnership(val DomainDnsHealthScope) {
+	s.Ownership = val
+}
+
+// SetInbound sets the value of Inbound.
+func (s *DomainDnsHealthCheckScopes) SetInbound(val DomainDnsHealthScope) {
+	s.Inbound = val
+}
+
+// SetOutbound sets the value of Outbound.
+func (s *DomainDnsHealthCheckScopes) SetOutbound(val OptDomainDnsHealthScope) {
+	s.Outbound = val
+}
+
+// Health of one DNS scope: `ownership` (verification TXT),
+// `inbound` (MX), or `outbound` (SPF, DKIM, DMARC, TLS-RPT).
+// Ref: #/components/schemas/DomainDnsHealthScope
+type DomainDnsHealthScope struct {
+	Scope DomainDnsHealthScopeScope `json:"scope"`
+	// Whether this scope's required records are currently verified.
+	Verified bool                  `json:"verified"`
+	Status   DomainDnsHealthStatus `json:"status"`
+	// When this scope was last checked.
+	CheckedAt time.Time `json:"checked_at"`
+	// Next scheduled background check, or null when none is planned.
+	NextCheckAt NilDateTime `json:"next_check_at"`
+	// Number of consecutive failed checks for this scope.
+	ConsecutiveFailures int `json:"consecutive_failures"`
+	// The exact records inspected for this scope, each with its own status.
+	Records []DomainDnsRecord `json:"records"`
+	// Human-readable failure reason when the scope check errored.
+	Error OptString `json:"error"`
+}
+
+// GetScope returns the value of Scope.
+func (s *DomainDnsHealthScope) GetScope() DomainDnsHealthScopeScope {
+	return s.Scope
+}
+
+// GetVerified returns the value of Verified.
+func (s *DomainDnsHealthScope) GetVerified() bool {
+	return s.Verified
+}
+
+// GetStatus returns the value of Status.
+func (s *DomainDnsHealthScope) GetStatus() DomainDnsHealthStatus {
+	return s.Status
+}
+
+// GetCheckedAt returns the value of CheckedAt.
+func (s *DomainDnsHealthScope) GetCheckedAt() time.Time {
+	return s.CheckedAt
+}
+
+// GetNextCheckAt returns the value of NextCheckAt.
+func (s *DomainDnsHealthScope) GetNextCheckAt() NilDateTime {
+	return s.NextCheckAt
+}
+
+// GetConsecutiveFailures returns the value of ConsecutiveFailures.
+func (s *DomainDnsHealthScope) GetConsecutiveFailures() int {
+	return s.ConsecutiveFailures
+}
+
+// GetRecords returns the value of Records.
+func (s *DomainDnsHealthScope) GetRecords() []DomainDnsRecord {
+	return s.Records
+}
+
+// GetError returns the value of Error.
+func (s *DomainDnsHealthScope) GetError() OptString {
+	return s.Error
+}
+
+// SetScope sets the value of Scope.
+func (s *DomainDnsHealthScope) SetScope(val DomainDnsHealthScopeScope) {
+	s.Scope = val
+}
+
+// SetVerified sets the value of Verified.
+func (s *DomainDnsHealthScope) SetVerified(val bool) {
+	s.Verified = val
+}
+
+// SetStatus sets the value of Status.
+func (s *DomainDnsHealthScope) SetStatus(val DomainDnsHealthStatus) {
+	s.Status = val
+}
+
+// SetCheckedAt sets the value of CheckedAt.
+func (s *DomainDnsHealthScope) SetCheckedAt(val time.Time) {
+	s.CheckedAt = val
+}
+
+// SetNextCheckAt sets the value of NextCheckAt.
+func (s *DomainDnsHealthScope) SetNextCheckAt(val NilDateTime) {
+	s.NextCheckAt = val
+}
+
+// SetConsecutiveFailures sets the value of ConsecutiveFailures.
+func (s *DomainDnsHealthScope) SetConsecutiveFailures(val int) {
+	s.ConsecutiveFailures = val
+}
+
+// SetRecords sets the value of Records.
+func (s *DomainDnsHealthScope) SetRecords(val []DomainDnsRecord) {
+	s.Records = val
+}
+
+// SetError sets the value of Error.
+func (s *DomainDnsHealthScope) SetError(val OptString) {
+	s.Error = val
+}
+
+type DomainDnsHealthScopeScope string
+
+const (
+	DomainDnsHealthScopeScopeOwnership DomainDnsHealthScopeScope = "ownership"
+	DomainDnsHealthScopeScopeInbound   DomainDnsHealthScopeScope = "inbound"
+	DomainDnsHealthScopeScopeOutbound  DomainDnsHealthScopeScope = "outbound"
+)
+
+// AllValues returns all DomainDnsHealthScopeScope values.
+func (DomainDnsHealthScopeScope) AllValues() []DomainDnsHealthScopeScope {
+	return []DomainDnsHealthScopeScope{
+		DomainDnsHealthScopeScopeOwnership,
+		DomainDnsHealthScopeScopeInbound,
+		DomainDnsHealthScopeScopeOutbound,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s DomainDnsHealthScopeScope) MarshalText() ([]byte, error) {
+	switch s {
+	case DomainDnsHealthScopeScopeOwnership:
+		return []byte(s), nil
+	case DomainDnsHealthScopeScopeInbound:
+		return []byte(s), nil
+	case DomainDnsHealthScopeScopeOutbound:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *DomainDnsHealthScopeScope) UnmarshalText(data []byte) error {
+	switch DomainDnsHealthScopeScope(data) {
+	case DomainDnsHealthScopeScopeOwnership:
+		*s = DomainDnsHealthScopeScopeOwnership
+		return nil
+	case DomainDnsHealthScopeScopeInbound:
+		*s = DomainDnsHealthScopeScopeInbound
+		return nil
+	case DomainDnsHealthScopeScopeOutbound:
+		*s = DomainDnsHealthScopeScopeOutbound
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Rollup DNS health state. `pending` means never successfully
+// checked, `healthy` means all required records verified,
+// `degraded` means a previously-verified record has regressed,
+// and `suspended` means the failure persisted long enough that
+// the affected capability was disabled.
+// Ref: #/components/schemas/DomainDnsHealthStatus
+type DomainDnsHealthStatus string
+
+const (
+	DomainDnsHealthStatusPending   DomainDnsHealthStatus = "pending"
+	DomainDnsHealthStatusHealthy   DomainDnsHealthStatus = "healthy"
+	DomainDnsHealthStatusDegraded  DomainDnsHealthStatus = "degraded"
+	DomainDnsHealthStatusSuspended DomainDnsHealthStatus = "suspended"
+)
+
+// AllValues returns all DomainDnsHealthStatus values.
+func (DomainDnsHealthStatus) AllValues() []DomainDnsHealthStatus {
+	return []DomainDnsHealthStatus{
+		DomainDnsHealthStatusPending,
+		DomainDnsHealthStatusHealthy,
+		DomainDnsHealthStatusDegraded,
+		DomainDnsHealthStatusSuspended,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s DomainDnsHealthStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case DomainDnsHealthStatusPending:
+		return []byte(s), nil
+	case DomainDnsHealthStatusHealthy:
+		return []byte(s), nil
+	case DomainDnsHealthStatusDegraded:
+		return []byte(s), nil
+	case DomainDnsHealthStatusSuspended:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *DomainDnsHealthStatus) UnmarshalText(data []byte) error {
+	switch DomainDnsHealthStatus(data) {
+	case DomainDnsHealthStatusPending:
+		*s = DomainDnsHealthStatusPending
+		return nil
+	case DomainDnsHealthStatusHealthy:
+		*s = DomainDnsHealthStatusHealthy
+		return nil
+	case DomainDnsHealthStatusDegraded:
+		*s = DomainDnsHealthStatusDegraded
+		return nil
+	case DomainDnsHealthStatusSuspended:
+		*s = DomainDnsHealthStatusSuspended
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/DomainDnsRecord
 type DomainDnsRecord struct {
 	// DNS record type.
@@ -7554,6 +8034,7 @@ func (s *ErrorResponse) SetError(val ErrorResponseError) {
 func (*ErrorResponse) createAgentAccountRes()            {}
 func (*ErrorResponse) getAgentRes()                      {}
 func (*ErrorResponse) getInboxStatusRes()                {}
+func (*ErrorResponse) getOutboundStatusRes()             {}
 func (*ErrorResponse) getRegistryRes()                   {}
 func (*ErrorResponse) getSendPermissionsRes()            {}
 func (*ErrorResponse) listDomainsRes()                   {}
@@ -7649,6 +8130,7 @@ const (
 	ErrorResponseErrorCodeInternalError                 ErrorResponseErrorCode = "internal_error"
 	ErrorResponseErrorCodeConflict                      ErrorResponseErrorCode = "conflict"
 	ErrorResponseErrorCodeMxConflict                    ErrorResponseErrorCode = "mx_conflict"
+	ErrorResponseErrorCodeNotScheduled                  ErrorResponseErrorCode = "not_scheduled"
 	ErrorResponseErrorCodeOutboundDisabled              ErrorResponseErrorCode = "outbound_disabled"
 	ErrorResponseErrorCodeCannotSendFromDomain          ErrorResponseErrorCode = "cannot_send_from_domain"
 	ErrorResponseErrorCodeRecipientNotAllowed           ErrorResponseErrorCode = "recipient_not_allowed"
@@ -7705,6 +8187,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeInternalError,
 		ErrorResponseErrorCodeConflict,
 		ErrorResponseErrorCodeMxConflict,
+		ErrorResponseErrorCodeNotScheduled,
 		ErrorResponseErrorCodeOutboundDisabled,
 		ErrorResponseErrorCodeCannotSendFromDomain,
 		ErrorResponseErrorCodeRecipientNotAllowed,
@@ -7769,6 +8252,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeConflict:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeMxConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNotScheduled:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		return []byte(s), nil
@@ -7887,6 +8372,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeMxConflict:
 		*s = ErrorResponseErrorCodeMxConflict
+		return nil
+	case ErrorResponseErrorCodeNotScheduled:
+		*s = ErrorResponseErrorCodeNotScheduled
 		return nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		*s = ErrorResponseErrorCodeOutboundDisabled
@@ -10906,6 +11394,34 @@ func (*GetOrgRoutingTopologyOK) getOrgRoutingTopologyRes() {}
 type GetOrgRoutingTopologyUnauthorized ErrorResponse
 
 func (*GetOrgRoutingTopologyUnauthorized) getOrgRoutingTopologyRes() {}
+
+// Merged schema.
+type GetOutboundStatusOK struct {
+	Success bool           `json:"success"`
+	Data    OutboundStatus `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetOutboundStatusOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetOutboundStatusOK) GetData() OutboundStatus {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetOutboundStatusOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetOutboundStatusOK) SetData(val OutboundStatus) {
+	s.Data = val
+}
+
+func (*GetOutboundStatusOK) getOutboundStatusRes() {}
 
 // Merged schema.
 type GetRegistryOK struct {
@@ -14689,6 +15205,52 @@ func (o OptDeliveryStatus) Or(d DeliveryStatus) DeliveryStatus {
 	return d
 }
 
+// NewOptDomainDnsHealthScope returns new OptDomainDnsHealthScope with value set to v.
+func NewOptDomainDnsHealthScope(v DomainDnsHealthScope) OptDomainDnsHealthScope {
+	return OptDomainDnsHealthScope{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptDomainDnsHealthScope is optional DomainDnsHealthScope.
+type OptDomainDnsHealthScope struct {
+	Value DomainDnsHealthScope
+	Set   bool
+}
+
+// IsSet returns true if OptDomainDnsHealthScope was set.
+func (o OptDomainDnsHealthScope) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptDomainDnsHealthScope) Reset() {
+	var v DomainDnsHealthScope
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptDomainDnsHealthScope) SetTo(v DomainDnsHealthScope) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptDomainDnsHealthScope) Get() (v DomainDnsHealthScope, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptDomainDnsHealthScope) Or(d DomainDnsHealthScope) DomainDnsHealthScope {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptEmailSearchFacets returns new OptEmailSearchFacets with value set to v.
 func NewOptEmailSearchFacets(v EmailSearchFacets) OptEmailSearchFacets {
 	return OptEmailSearchFacets{
@@ -17702,6 +18264,264 @@ func (s *OrgSecretWriteResult) SetCreated(val bool) {
 	s.Created = val
 }
 
+// Outbound sending readiness for the caller's org, the outbound
+// mirror of InboxStatus.
+// Ref: #/components/schemas/OutboundStatus
+type OutboundStatus struct {
+	// True when at least one domain is sendable right now.
+	Ready bool `json:"ready"`
+	// Short human-readable status summary.
+	Summary string `json:"summary"`
+	// Flat, sorted list of From-domains the org may send from
+	// right now. The same set echoed in a
+	// `cannot_send_from_domain` error's `details.valid_senders`,
+	// so recovery from that error and orientation here agree.
+	SendableDomains []string               `json:"sendable_domains"`
+	Domains         []OutboundStatusDomain `json:"domains"`
+	// Concrete remediation steps for domains that are not yet
+	// sendable. The server contract leaves entries open-ended;
+	// in practice each carries a `kind`, a human-readable
+	// `message`, and, when there is an obvious next step, a
+	// suggested CLI `command`.
+	NextActions []OutboundStatusNextActionsItem `json:"next_actions"`
+}
+
+// GetReady returns the value of Ready.
+func (s *OutboundStatus) GetReady() bool {
+	return s.Ready
+}
+
+// GetSummary returns the value of Summary.
+func (s *OutboundStatus) GetSummary() string {
+	return s.Summary
+}
+
+// GetSendableDomains returns the value of SendableDomains.
+func (s *OutboundStatus) GetSendableDomains() []string {
+	return s.SendableDomains
+}
+
+// GetDomains returns the value of Domains.
+func (s *OutboundStatus) GetDomains() []OutboundStatusDomain {
+	return s.Domains
+}
+
+// GetNextActions returns the value of NextActions.
+func (s *OutboundStatus) GetNextActions() []OutboundStatusNextActionsItem {
+	return s.NextActions
+}
+
+// SetReady sets the value of Ready.
+func (s *OutboundStatus) SetReady(val bool) {
+	s.Ready = val
+}
+
+// SetSummary sets the value of Summary.
+func (s *OutboundStatus) SetSummary(val string) {
+	s.Summary = val
+}
+
+// SetSendableDomains sets the value of SendableDomains.
+func (s *OutboundStatus) SetSendableDomains(val []string) {
+	s.SendableDomains = val
+}
+
+// SetDomains sets the value of Domains.
+func (s *OutboundStatus) SetDomains(val []OutboundStatusDomain) {
+	s.Domains = val
+}
+
+// SetNextActions sets the value of NextActions.
+func (s *OutboundStatus) SetNextActions(val []OutboundStatusNextActionsItem) {
+	s.NextActions = val
+}
+
+// Per-domain outbound (sending) readiness.
+// Ref: #/components/schemas/OutboundStatusDomain
+type OutboundStatusDomain struct {
+	ID     uuid.UUID `json:"id"`
+	Domain string    `json:"domain"`
+	// Single actionable state collapsing the sending
+	// prerequisites: `sendable` (you may send From this domain
+	// now), `pending_ownership` (ownership TXT not verified),
+	// `pending_outbound_dns` (ownership done, SPF/DKIM/DMARC
+	// not verified), or `inactive` (domain deactivated;
+	// re-adding it, not publishing DNS, is the fix).
+	Status            OutboundStatusDomainStatus `json:"status"`
+	OwnershipVerified bool                       `json:"ownership_verified"`
+	// Whether the domain has an active outbound key with verified outbound DNS.
+	OutboundVerified bool `json:"outbound_verified"`
+}
+
+// GetID returns the value of ID.
+func (s *OutboundStatusDomain) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetDomain returns the value of Domain.
+func (s *OutboundStatusDomain) GetDomain() string {
+	return s.Domain
+}
+
+// GetStatus returns the value of Status.
+func (s *OutboundStatusDomain) GetStatus() OutboundStatusDomainStatus {
+	return s.Status
+}
+
+// GetOwnershipVerified returns the value of OwnershipVerified.
+func (s *OutboundStatusDomain) GetOwnershipVerified() bool {
+	return s.OwnershipVerified
+}
+
+// GetOutboundVerified returns the value of OutboundVerified.
+func (s *OutboundStatusDomain) GetOutboundVerified() bool {
+	return s.OutboundVerified
+}
+
+// SetID sets the value of ID.
+func (s *OutboundStatusDomain) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetDomain sets the value of Domain.
+func (s *OutboundStatusDomain) SetDomain(val string) {
+	s.Domain = val
+}
+
+// SetStatus sets the value of Status.
+func (s *OutboundStatusDomain) SetStatus(val OutboundStatusDomainStatus) {
+	s.Status = val
+}
+
+// SetOwnershipVerified sets the value of OwnershipVerified.
+func (s *OutboundStatusDomain) SetOwnershipVerified(val bool) {
+	s.OwnershipVerified = val
+}
+
+// SetOutboundVerified sets the value of OutboundVerified.
+func (s *OutboundStatusDomain) SetOutboundVerified(val bool) {
+	s.OutboundVerified = val
+}
+
+// Single actionable state collapsing the sending
+// prerequisites: `sendable` (you may send From this domain
+// now), `pending_ownership` (ownership TXT not verified),
+// `pending_outbound_dns` (ownership done, SPF/DKIM/DMARC
+// not verified), or `inactive` (domain deactivated;
+// re-adding it, not publishing DNS, is the fix).
+type OutboundStatusDomainStatus string
+
+const (
+	OutboundStatusDomainStatusSendable           OutboundStatusDomainStatus = "sendable"
+	OutboundStatusDomainStatusPendingOutboundDNS OutboundStatusDomainStatus = "pending_outbound_dns"
+	OutboundStatusDomainStatusPendingOwnership   OutboundStatusDomainStatus = "pending_ownership"
+	OutboundStatusDomainStatusInactive           OutboundStatusDomainStatus = "inactive"
+)
+
+// AllValues returns all OutboundStatusDomainStatus values.
+func (OutboundStatusDomainStatus) AllValues() []OutboundStatusDomainStatus {
+	return []OutboundStatusDomainStatus{
+		OutboundStatusDomainStatusSendable,
+		OutboundStatusDomainStatusPendingOutboundDNS,
+		OutboundStatusDomainStatusPendingOwnership,
+		OutboundStatusDomainStatusInactive,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s OutboundStatusDomainStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case OutboundStatusDomainStatusSendable:
+		return []byte(s), nil
+	case OutboundStatusDomainStatusPendingOutboundDNS:
+		return []byte(s), nil
+	case OutboundStatusDomainStatusPendingOwnership:
+		return []byte(s), nil
+	case OutboundStatusDomainStatusInactive:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *OutboundStatusDomainStatus) UnmarshalText(data []byte) error {
+	switch OutboundStatusDomainStatus(data) {
+	case OutboundStatusDomainStatusSendable:
+		*s = OutboundStatusDomainStatusSendable
+		return nil
+	case OutboundStatusDomainStatusPendingOutboundDNS:
+		*s = OutboundStatusDomainStatusPendingOutboundDNS
+		return nil
+	case OutboundStatusDomainStatusPendingOwnership:
+		*s = OutboundStatusDomainStatusPendingOwnership
+		return nil
+	case OutboundStatusDomainStatusInactive:
+		*s = OutboundStatusDomainStatusInactive
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type OutboundStatusNextActionsItem struct {
+	Kind            OptString `json:"kind"`
+	Message         OptString `json:"message"`
+	Command         OptString `json:"command"`
+	AdditionalProps OutboundStatusNextActionsItemAdditional
+}
+
+// GetKind returns the value of Kind.
+func (s *OutboundStatusNextActionsItem) GetKind() OptString {
+	return s.Kind
+}
+
+// GetMessage returns the value of Message.
+func (s *OutboundStatusNextActionsItem) GetMessage() OptString {
+	return s.Message
+}
+
+// GetCommand returns the value of Command.
+func (s *OutboundStatusNextActionsItem) GetCommand() OptString {
+	return s.Command
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *OutboundStatusNextActionsItem) GetAdditionalProps() OutboundStatusNextActionsItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetKind sets the value of Kind.
+func (s *OutboundStatusNextActionsItem) SetKind(val OptString) {
+	s.Kind = val
+}
+
+// SetMessage sets the value of Message.
+func (s *OutboundStatusNextActionsItem) SetMessage(val OptString) {
+	s.Message = val
+}
+
+// SetCommand sets the value of Command.
+func (s *OutboundStatusNextActionsItem) SetCommand(val OptString) {
+	s.Command = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *OutboundStatusNextActionsItem) SetAdditionalProps(val OutboundStatusNextActionsItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type OutboundStatusNextActionsItemAdditional map[string]jx.Raw
+
+func (s *OutboundStatusNextActionsItemAdditional) init() OutboundStatusNextActionsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
 // Ref: #/components/schemas/PaginationMeta
 type PaginationMeta struct {
 	// Total number of matching records.
@@ -18520,6 +19340,7 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
+func (*RateLimitedHeaders) checkDomainDnsRes()         {}
 func (*RateLimitedHeaders) createAgentAccountRes()     {}
 func (*RateLimitedHeaders) createAgentClaimLinkRes()   {}
 func (*RateLimitedHeaders) createChallengeRes()        {}
@@ -19570,6 +20391,50 @@ func (*ReplyToEmailUnauthorized) replyToEmailRes() {}
 type ReplyToEmailUnprocessableEntity ErrorResponse
 
 func (*ReplyToEmailUnprocessableEntity) replyToEmailRes() {}
+
+type RescheduleSentEmailBadRequest ErrorResponse
+
+func (*RescheduleSentEmailBadRequest) rescheduleSentEmailRes() {}
+
+type RescheduleSentEmailConflict ErrorResponse
+
+func (*RescheduleSentEmailConflict) rescheduleSentEmailRes() {}
+
+type RescheduleSentEmailNotFound ErrorResponse
+
+func (*RescheduleSentEmailNotFound) rescheduleSentEmailRes() {}
+
+// Merged schema.
+type RescheduleSentEmailOK struct {
+	Success bool            `json:"success"`
+	Data    SentEmailDetail `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *RescheduleSentEmailOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *RescheduleSentEmailOK) GetData() SentEmailDetail {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *RescheduleSentEmailOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *RescheduleSentEmailOK) SetData(val SentEmailDetail) {
+	s.Data = val
+}
+
+func (*RescheduleSentEmailOK) rescheduleSentEmailRes() {}
+
+type RescheduleSentEmailUnauthorized ErrorResponse
+
+func (*RescheduleSentEmailUnauthorized) rescheduleSentEmailRes() {}
 
 // Ref: #/components/schemas/ResendAgentSignupVerificationInput
 type ResendAgentSignupVerificationInput struct {
@@ -21455,6 +22320,15 @@ type SendMailInput struct {
 	Wait OptBool `json:"wait"`
 	// Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
 	WaitTimeoutMs OptInt `json:"wait_timeout_ms"`
+	// Optional future execution time (ISO 8601). When set, the
+	// send is recorded with status `scheduled` and executed at
+	// the requested time instead of immediately. Must be in the
+	// future and at most 30 days out. Incompatible with `wait`
+	// (a scheduled send resolves after this request completes)
+	// and with `attachments` / `payload_attachments` (not yet
+	// supported on scheduled sends). Reschedule via PATCH
+	// /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
+	ScheduledAt OptDateTime `json:"scheduled_at"`
 }
 
 // GetFrom returns the value of From.
@@ -21522,6 +22396,11 @@ func (s *SendMailInput) GetWaitTimeoutMs() OptInt {
 	return s.WaitTimeoutMs
 }
 
+// GetScheduledAt returns the value of ScheduledAt.
+func (s *SendMailInput) GetScheduledAt() OptDateTime {
+	return s.ScheduledAt
+}
+
 // SetFrom sets the value of From.
 func (s *SendMailInput) SetFrom(val string) {
 	s.From = val
@@ -21585,6 +22464,11 @@ func (s *SendMailInput) SetWait(val OptBool) {
 // SetWaitTimeoutMs sets the value of WaitTimeoutMs.
 func (s *SendMailInput) SetWaitTimeoutMs(val OptInt) {
 	s.WaitTimeoutMs = val
+}
+
+// SetScheduledAt sets the value of ScheduledAt.
+func (s *SendMailInput) SetScheduledAt(val OptDateTime) {
+	s.ScheduledAt = val
 }
 
 // Blind-carbon-copy recipients. Either a single address or an array of addresses. Each entry must be
@@ -21827,6 +22711,11 @@ type SendMailResult struct {
 	// responses. Lets callers branch on cache state without
 	// diffing fields.
 	IdempotentReplay bool `json:"idempotent_replay"`
+	// Echoed requested execution time on a `scheduled`
+	// response. On scheduled creates, nothing is dispatched
+	// yet: `queue_id` is null and `accepted` / `rejected` are
+	// empty. Absent on immediate sends.
+	ScheduledAt OptDateTime `json:"scheduled_at"`
 }
 
 // GetID returns the value of ID.
@@ -21894,6 +22783,11 @@ func (s *SendMailResult) GetIdempotentReplay() bool {
 	return s.IdempotentReplay
 }
 
+// GetScheduledAt returns the value of ScheduledAt.
+func (s *SendMailResult) GetScheduledAt() OptDateTime {
+	return s.ScheduledAt
+}
+
 // SetID sets the value of ID.
 func (s *SendMailResult) SetID(val string) {
 	s.ID = val
@@ -21957,6 +22851,11 @@ func (s *SendMailResult) SetSMTPResponseText(val OptString) {
 // SetIdempotentReplay sets the value of IdempotentReplay.
 func (s *SendMailResult) SetIdempotentReplay(val bool) {
 	s.IdempotentReplay = val
+}
+
+// SetScheduledAt sets the value of ScheduledAt.
+func (s *SendMailResult) SetScheduledAt(val OptDateTime) {
+	s.ScheduledAt = val
 }
 
 // The caller can send to a specific address that has
@@ -22562,6 +23461,13 @@ type SentEmailDetail struct {
 	// response header on the live send and recorded here
 	// for support escalation.
 	RequestID OptNilString `json:"request_id"`
+	// Requested execution time for a scheduled send. Kept
+	// after execution as the historical schedule; null on
+	// ordinary immediate sends.
+	ScheduledAt OptNilDateTime `json:"scheduled_at"`
+	// When a scheduled send was canceled. Null unless the row
+	// reached the `canceled` status.
+	CanceledAt OptNilDateTime `json:"canceled_at"`
 	// Plain-text body sent on the wire. Null when the
 	// send carried only an HTML body, or when bodies have
 	// been discarded post-send (`content_discarded_at`
@@ -22716,6 +23622,16 @@ func (s *SentEmailDetail) GetGates() OptNilGateDenialArray {
 // GetRequestID returns the value of RequestID.
 func (s *SentEmailDetail) GetRequestID() OptNilString {
 	return s.RequestID
+}
+
+// GetScheduledAt returns the value of ScheduledAt.
+func (s *SentEmailDetail) GetScheduledAt() OptNilDateTime {
+	return s.ScheduledAt
+}
+
+// GetCanceledAt returns the value of CanceledAt.
+func (s *SentEmailDetail) GetCanceledAt() OptNilDateTime {
+	return s.CanceledAt
 }
 
 // GetBodyText returns the value of BodyText.
@@ -22873,6 +23789,16 @@ func (s *SentEmailDetail) SetRequestID(val OptNilString) {
 	s.RequestID = val
 }
 
+// SetScheduledAt sets the value of ScheduledAt.
+func (s *SentEmailDetail) SetScheduledAt(val OptNilDateTime) {
+	s.ScheduledAt = val
+}
+
+// SetCanceledAt sets the value of CanceledAt.
+func (s *SentEmailDetail) SetCanceledAt(val OptNilDateTime) {
+	s.CanceledAt = val
+}
+
 // SetBodyText sets the value of BodyText.
 func (s *SentEmailDetail) SetBodyText(val OptNilString) {
 	s.BodyText = val
@@ -22881,6 +23807,24 @@ func (s *SentEmailDetail) SetBodyText(val OptNilString) {
 // SetBodyHTML sets the value of BodyHTML.
 func (s *SentEmailDetail) SetBodyHTML(val OptNilString) {
 	s.BodyHTML = val
+}
+
+// Ref: #/components/schemas/SentEmailRescheduleInput
+type SentEmailRescheduleInput struct {
+	// New execution time (ISO 8601). Must be in the future and
+	// at most 30 days out, the same bounds as the create-time
+	// field on /send-mail.
+	ScheduledAt time.Time `json:"scheduled_at"`
+}
+
+// GetScheduledAt returns the value of ScheduledAt.
+func (s *SentEmailRescheduleInput) GetScheduledAt() time.Time {
+	return s.ScheduledAt
+}
+
+// SetScheduledAt sets the value of ScheduledAt.
+func (s *SentEmailRescheduleInput) SetScheduledAt(val time.Time) {
+	s.ScheduledAt = val
 }
 
 // Lifecycle status of a sent_emails row. Possible values:
@@ -22899,6 +23843,14 @@ func (s *SentEmailDetail) SetBodyHTML(val OptNilString) {
 // poller couldn't classify the receiver's response.
 // - `delivered` / `bounced` / `deferred` / `wait_timeout`:
 // terminal delivery outcomes (see DeliveryStatus).
+// - `scheduled`: created with a future `scheduled_at` and
+// not yet executed; `scheduled_at` carries the pending
+// execution time. Reschedulable via PATCH
+// /sent-emails/{id} and cancelable via
+// /sent-emails/{id}/cancel while in this status.
+// - `canceled`: terminal; a scheduled send canceled before
+// execution. `canceled_at` carries the cancellation time
+// and nothing was dispatched.
 // Ref: #/components/schemas/SentEmailStatus
 type SentEmailStatus string
 
@@ -22912,6 +23864,8 @@ const (
 	SentEmailStatusBounced          SentEmailStatus = "bounced"
 	SentEmailStatusDeferred         SentEmailStatus = "deferred"
 	SentEmailStatusWaitTimeout      SentEmailStatus = "wait_timeout"
+	SentEmailStatusScheduled        SentEmailStatus = "scheduled"
+	SentEmailStatusCanceled         SentEmailStatus = "canceled"
 )
 
 // AllValues returns all SentEmailStatus values.
@@ -22926,6 +23880,8 @@ func (SentEmailStatus) AllValues() []SentEmailStatus {
 		SentEmailStatusBounced,
 		SentEmailStatusDeferred,
 		SentEmailStatusWaitTimeout,
+		SentEmailStatusScheduled,
+		SentEmailStatusCanceled,
 	}
 }
 
@@ -22949,6 +23905,10 @@ func (s SentEmailStatus) MarshalText() ([]byte, error) {
 	case SentEmailStatusDeferred:
 		return []byte(s), nil
 	case SentEmailStatusWaitTimeout:
+		return []byte(s), nil
+	case SentEmailStatusScheduled:
+		return []byte(s), nil
+	case SentEmailStatusCanceled:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -22984,6 +23944,12 @@ func (s *SentEmailStatus) UnmarshalText(data []byte) error {
 		return nil
 	case SentEmailStatusWaitTimeout:
 		*s = SentEmailStatusWaitTimeout
+		return nil
+	case SentEmailStatusScheduled:
+		*s = SentEmailStatusScheduled
+		return nil
+	case SentEmailStatusCanceled:
+		*s = SentEmailStatusCanceled
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -23100,6 +24066,13 @@ type SentEmailSummary struct {
 	// response header on the live send and recorded here
 	// for support escalation.
 	RequestID OptNilString `json:"request_id"`
+	// Requested execution time for a scheduled send. Kept
+	// after execution as the historical schedule; null on
+	// ordinary immediate sends.
+	ScheduledAt OptNilDateTime `json:"scheduled_at"`
+	// When a scheduled send was canceled. Null unless the row
+	// reached the `canceled` status.
+	CanceledAt OptNilDateTime `json:"canceled_at"`
 }
 
 // GetID returns the value of ID.
@@ -23247,6 +24220,16 @@ func (s *SentEmailSummary) GetRequestID() OptNilString {
 	return s.RequestID
 }
 
+// GetScheduledAt returns the value of ScheduledAt.
+func (s *SentEmailSummary) GetScheduledAt() OptNilDateTime {
+	return s.ScheduledAt
+}
+
+// GetCanceledAt returns the value of CanceledAt.
+func (s *SentEmailSummary) GetCanceledAt() OptNilDateTime {
+	return s.CanceledAt
+}
+
 // SetID sets the value of ID.
 func (s *SentEmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -23390,6 +24373,16 @@ func (s *SentEmailSummary) SetGates(val OptNilGateDenialArray) {
 // SetRequestID sets the value of RequestID.
 func (s *SentEmailSummary) SetRequestID(val OptNilString) {
 	s.RequestID = val
+}
+
+// SetScheduledAt sets the value of ScheduledAt.
+func (s *SentEmailSummary) SetScheduledAt(val OptNilDateTime) {
+	s.ScheduledAt = val
+}
+
+// SetCanceledAt sets the value of CanceledAt.
+func (s *SentEmailSummary) SetCanceledAt(val OptNilDateTime) {
+	s.CanceledAt = val
 }
 
 type SetFunctionRouteBadRequest ErrorResponse
@@ -25858,6 +26851,253 @@ func (s *TestEndpointOK) SetData(val TestResult) {
 }
 
 func (*TestEndpointOK) testEndpointRes() {}
+
+type TestEndpointRulesBadRequest ErrorResponse
+
+func (*TestEndpointRulesBadRequest) testEndpointRulesRes() {}
+
+// Ref: #/components/schemas/TestEndpointRulesInput
+type TestEndpointRulesInput struct {
+	// Id of an already-received email (in your org) to evaluate the rules against.
+	EmailID uuid.UUID `json:"email_id"`
+}
+
+// GetEmailID returns the value of EmailID.
+func (s *TestEndpointRulesInput) GetEmailID() uuid.UUID {
+	return s.EmailID
+}
+
+// SetEmailID sets the value of EmailID.
+func (s *TestEndpointRulesInput) SetEmailID(val uuid.UUID) {
+	s.EmailID = val
+}
+
+type TestEndpointRulesNotFound ErrorResponse
+
+func (*TestEndpointRulesNotFound) testEndpointRulesRes() {}
+
+// Merged schema.
+type TestEndpointRulesOK struct {
+	Success bool                    `json:"success"`
+	Data    TestEndpointRulesResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *TestEndpointRulesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *TestEndpointRulesOK) GetData() TestEndpointRulesResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *TestEndpointRulesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *TestEndpointRulesOK) SetData(val TestEndpointRulesResult) {
+	s.Data = val
+}
+
+func (*TestEndpointRulesOK) testEndpointRulesRes() {}
+
+// Verdict of a dry-run rule evaluation. Produced by the same
+// shared matcher the live delivery paths use.
+// Ref: #/components/schemas/TestEndpointRulesResult
+type TestEndpointRulesResult struct {
+	// Whether the delivery path would deliver this email to the endpoint.
+	WouldDeliver bool `json:"would_deliver"`
+	// Name of the failing rule when delivery would be
+	// suppressed; null when the message matches and the
+	// endpoint is subscribed to the event type.
+	Rule NilString `json:"rule"`
+	// Human-readable explanation of the failing rule; null when the message matches.
+	Reason NilString `json:"reason"`
+	// False when the endpoint's stored rules blob failed
+	// validation. Delivery fails OPEN on an invalid blob
+	// (delivers as if unfiltered), so false here surfaces a
+	// misconfiguration that is otherwise silent.
+	RulesValid bool `json:"rules_valid"`
+	// Whether the endpoint's event-type subscription includes
+	// this email's event type. A separate gate applied before
+	// message matching, surfaced independently so an
+	// unsubscribed endpoint is distinguishable from a rule
+	// rejection.
+	SubscribedToEvent bool `json:"subscribed_to_event"`
+	// The event type this email would be delivered as.
+	EventType string `json:"event_type"`
+	// The message metadata the matcher compared, so the caller
+	// can see WHAT was evaluated (in particular the
+	// authenticated From identity versus the raw envelope
+	// sender).
+	Evaluated TestEndpointRulesResultEvaluated `json:"evaluated"`
+}
+
+// GetWouldDeliver returns the value of WouldDeliver.
+func (s *TestEndpointRulesResult) GetWouldDeliver() bool {
+	return s.WouldDeliver
+}
+
+// GetRule returns the value of Rule.
+func (s *TestEndpointRulesResult) GetRule() NilString {
+	return s.Rule
+}
+
+// GetReason returns the value of Reason.
+func (s *TestEndpointRulesResult) GetReason() NilString {
+	return s.Reason
+}
+
+// GetRulesValid returns the value of RulesValid.
+func (s *TestEndpointRulesResult) GetRulesValid() bool {
+	return s.RulesValid
+}
+
+// GetSubscribedToEvent returns the value of SubscribedToEvent.
+func (s *TestEndpointRulesResult) GetSubscribedToEvent() bool {
+	return s.SubscribedToEvent
+}
+
+// GetEventType returns the value of EventType.
+func (s *TestEndpointRulesResult) GetEventType() string {
+	return s.EventType
+}
+
+// GetEvaluated returns the value of Evaluated.
+func (s *TestEndpointRulesResult) GetEvaluated() TestEndpointRulesResultEvaluated {
+	return s.Evaluated
+}
+
+// SetWouldDeliver sets the value of WouldDeliver.
+func (s *TestEndpointRulesResult) SetWouldDeliver(val bool) {
+	s.WouldDeliver = val
+}
+
+// SetRule sets the value of Rule.
+func (s *TestEndpointRulesResult) SetRule(val NilString) {
+	s.Rule = val
+}
+
+// SetReason sets the value of Reason.
+func (s *TestEndpointRulesResult) SetReason(val NilString) {
+	s.Reason = val
+}
+
+// SetRulesValid sets the value of RulesValid.
+func (s *TestEndpointRulesResult) SetRulesValid(val bool) {
+	s.RulesValid = val
+}
+
+// SetSubscribedToEvent sets the value of SubscribedToEvent.
+func (s *TestEndpointRulesResult) SetSubscribedToEvent(val bool) {
+	s.SubscribedToEvent = val
+}
+
+// SetEventType sets the value of EventType.
+func (s *TestEndpointRulesResult) SetEventType(val string) {
+	s.EventType = val
+}
+
+// SetEvaluated sets the value of Evaluated.
+func (s *TestEndpointRulesResult) SetEvaluated(val TestEndpointRulesResultEvaluated) {
+	s.Evaluated = val
+}
+
+// The message metadata the matcher compared, so the caller
+// can see WHAT was evaluated (in particular the
+// authenticated From identity versus the raw envelope
+// sender).
+type TestEndpointRulesResultEvaluated struct {
+	SizeBytes           int  `json:"size_bytes"`
+	HasAttachments      bool `json:"has_attachments"`
+	AttachmentSizeBytes int  `json:"attachment_size_bytes"`
+	// Raw envelope sender the blacklist matches against.
+	Sender string `json:"sender"`
+	// Bare From-header address, when one was present.
+	FromAddress NilString `json:"from_address"`
+	// Whether the sender identity passed authentication (the whitelist matches only authenticated
+	// identities).
+	SenderAuthenticated bool `json:"sender_authenticated"`
+	// Which signal established (or failed to establish) the sender identity.
+	SenderTrustBasis string `json:"sender_trust_basis"`
+}
+
+// GetSizeBytes returns the value of SizeBytes.
+func (s *TestEndpointRulesResultEvaluated) GetSizeBytes() int {
+	return s.SizeBytes
+}
+
+// GetHasAttachments returns the value of HasAttachments.
+func (s *TestEndpointRulesResultEvaluated) GetHasAttachments() bool {
+	return s.HasAttachments
+}
+
+// GetAttachmentSizeBytes returns the value of AttachmentSizeBytes.
+func (s *TestEndpointRulesResultEvaluated) GetAttachmentSizeBytes() int {
+	return s.AttachmentSizeBytes
+}
+
+// GetSender returns the value of Sender.
+func (s *TestEndpointRulesResultEvaluated) GetSender() string {
+	return s.Sender
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *TestEndpointRulesResultEvaluated) GetFromAddress() NilString {
+	return s.FromAddress
+}
+
+// GetSenderAuthenticated returns the value of SenderAuthenticated.
+func (s *TestEndpointRulesResultEvaluated) GetSenderAuthenticated() bool {
+	return s.SenderAuthenticated
+}
+
+// GetSenderTrustBasis returns the value of SenderTrustBasis.
+func (s *TestEndpointRulesResultEvaluated) GetSenderTrustBasis() string {
+	return s.SenderTrustBasis
+}
+
+// SetSizeBytes sets the value of SizeBytes.
+func (s *TestEndpointRulesResultEvaluated) SetSizeBytes(val int) {
+	s.SizeBytes = val
+}
+
+// SetHasAttachments sets the value of HasAttachments.
+func (s *TestEndpointRulesResultEvaluated) SetHasAttachments(val bool) {
+	s.HasAttachments = val
+}
+
+// SetAttachmentSizeBytes sets the value of AttachmentSizeBytes.
+func (s *TestEndpointRulesResultEvaluated) SetAttachmentSizeBytes(val int) {
+	s.AttachmentSizeBytes = val
+}
+
+// SetSender sets the value of Sender.
+func (s *TestEndpointRulesResultEvaluated) SetSender(val string) {
+	s.Sender = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *TestEndpointRulesResultEvaluated) SetFromAddress(val NilString) {
+	s.FromAddress = val
+}
+
+// SetSenderAuthenticated sets the value of SenderAuthenticated.
+func (s *TestEndpointRulesResultEvaluated) SetSenderAuthenticated(val bool) {
+	s.SenderAuthenticated = val
+}
+
+// SetSenderTrustBasis sets the value of SenderTrustBasis.
+func (s *TestEndpointRulesResultEvaluated) SetSenderTrustBasis(val string) {
+	s.SenderTrustBasis = val
+}
+
+type TestEndpointRulesUnauthorized ErrorResponse
+
+func (*TestEndpointRulesUnauthorized) testEndpointRulesRes() {}
 
 type TestEndpointUnauthorized ErrorResponse
 

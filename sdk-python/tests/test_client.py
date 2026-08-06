@@ -970,6 +970,25 @@ def test_reply_threads_idempotency_key_through_to_request() -> None:
     assert captured[0].headers.get("Idempotency-Key") == "reply-key"
 
 
+def test_forward_threads_scheduled_at_through_to_request() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
+    _install_capturing_transport(client, captured)
+
+    client.forward(
+        RECEIVED_EMAIL,
+        to="ops@example.com",
+        body_text="FYI",
+        scheduled_at="2100-01-02T03:04:05Z",
+    )
+
+    assert len(captured) == 1
+    body = json.loads(captured[0].content)
+    # The generated model parses the string to a datetime and re-serializes
+    # with an explicit UTC offset; both spellings are the same instant.
+    assert body["scheduled_at"] == "2100-01-02T03:04:05+00:00"
+
+
 def test_forward_threads_idempotency_key_through_to_request() -> None:
     captured: list[httpx.Request] = []
     client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)

@@ -221,6 +221,138 @@ func decodeAwaitReplyParams(args [1]string, argsEscaped bool, r *http.Request) (
 	return params, nil
 }
 
+// CancelSentEmailParams is parameters of cancelSentEmail operation.
+type CancelSentEmailParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackCancelSentEmailParams(packed middleware.Parameters) (params CancelSentEmailParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeCancelSentEmailParams(args [1]string, argsEscaped bool, r *http.Request) (params CancelSentEmailParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// CheckDomainDnsParams is parameters of checkDomainDns operation.
+type CheckDomainDnsParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackCheckDomainDnsParams(packed middleware.Parameters) (params CheckDomainDnsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeCheckDomainDnsParams(args [1]string, argsEscaped bool, r *http.Request) (params CheckDomainDnsParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // CreateEmailChallengeParams is parameters of createEmailChallenge operation.
 type CreateEmailChallengeParams struct {
 	// Optional idempotency key. Retrying a request with the same key returns
@@ -6217,6 +6349,72 @@ func decodeReplyToEmailParams(args [1]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
+// RescheduleSentEmailParams is parameters of rescheduleSentEmail operation.
+type RescheduleSentEmailParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackRescheduleSentEmailParams(packed middleware.Parameters) (params RescheduleSentEmailParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeRescheduleSentEmailParams(args [1]string, argsEscaped bool, r *http.Request) (params RescheduleSentEmailParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // ResolveRegistryHandleParams is parameters of resolveRegistryHandle operation.
 type ResolveRegistryHandleParams struct {
 	// The registry slug.
@@ -8745,6 +8943,72 @@ func unpackTestEndpointParams(packed middleware.Parameters) (params TestEndpoint
 }
 
 func decodeTestEndpointParams(args [1]string, argsEscaped bool, r *http.Request) (params TestEndpointParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// TestEndpointRulesParams is parameters of testEndpointRules operation.
+type TestEndpointRulesParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackTestEndpointRulesParams(packed middleware.Parameters) (params TestEndpointRulesParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeTestEndpointRulesParams(args [1]string, argsEscaped bool, r *http.Request) (params TestEndpointRulesParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]

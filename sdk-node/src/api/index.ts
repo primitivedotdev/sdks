@@ -175,6 +175,15 @@ export interface SendInput {
   payloadAttachments?: SendPayloadReference[];
   wait?: boolean;
   waitTimeoutMs?: number;
+  /**
+   * Optional future execution time (ISO 8601). When set, the send is recorded
+   * with status `scheduled` and executed at the requested time instead of
+   * immediately. Server-enforced bounds: strictly in the future, at most 30
+   * days out. Incompatible with `wait`, `attachments`, and
+   * `payloadAttachments`. Reschedule via PATCH /sent-emails/{id}; cancel via
+   * POST /sent-emails/{id}/cancel.
+   */
+  scheduledAt?: string;
 }
 
 /** Attachments at or below this size are sent inline; larger ones are uploaded + referenced. */
@@ -258,6 +267,12 @@ export interface ForwardInput {
   bodyText?: string;
   subject?: string;
   from?: string;
+  /**
+   * Optional future execution time (ISO 8601), forwarded through to the
+   * underlying send. Same semantics and server-enforced bounds as
+   * {@link SendInput.scheduledAt}.
+   */
+  scheduledAt?: string;
 }
 
 export interface SendResult {
@@ -284,6 +299,11 @@ export interface SendResult {
   deliveryStatus?: GeneratedSendMailResult["delivery_status"];
   smtpResponseCode?: number | null;
   smtpResponseText?: string;
+  /**
+   * Echoed requested execution time on a `scheduled` response (ISO 8601).
+   * Absent on immediate sends.
+   */
+  scheduledAt?: string;
 }
 
 /**
@@ -397,6 +417,25 @@ function validateSendInput(input: SendInput): void {
     }
     if (input.waitTimeoutMs < 1000 || input.waitTimeoutMs > 30000) {
       throw new TypeError("waitTimeoutMs must be between 1000 and 30000");
+    }
+  }
+
+  if (input.scheduledAt !== undefined) {
+    // Time-window bounds (future, <= 30 days) are left to the server so a
+    // skewed client clock can't reject a valid request. The structural
+    // incompatibilities below are clock-independent, so fail them fast.
+    if (Number.isNaN(Date.parse(input.scheduledAt))) {
+      throw new TypeError("scheduledAt must be an ISO 8601 date-time string");
+    }
+    if (input.wait === true) {
+      throw new TypeError(
+        "wait cannot be combined with scheduledAt (a scheduled send resolves after this request completes)",
+      );
+    }
+    if (input.attachments?.length || input.payloadAttachments?.length) {
+      throw new TypeError(
+        "attachments are not supported on scheduled sends yet; use an immediate send",
+      );
     }
   }
 }
@@ -1106,6 +1145,9 @@ export class PrimitiveClient extends PrimitiveApiClient {
       ...(input.waitTimeoutMs !== undefined
         ? { wait_timeout_ms: input.waitTimeoutMs }
         : {}),
+      ...(input.scheduledAt !== undefined
+        ? { scheduled_at: input.scheduledAt }
+        : {}),
     };
 
     const result = await generatedOperations.sendEmail({
@@ -1297,6 +1339,9 @@ export class PrimitiveClient extends PrimitiveApiClient {
         to: input.to,
         subject: input.subject ?? email.forwardSubject,
         bodyText: buildForwardText(email, input.bodyText),
+        ...(input.scheduledAt !== undefined
+          ? { scheduledAt: input.scheduledAt }
+          : {}),
       },
       options,
     );
@@ -1392,6 +1437,9 @@ function mapSendResult(result: GeneratedSendMailResult): SendResult {
       : {}),
     ...(result.smtp_response_text !== undefined
       ? { smtpResponseText: result.smtp_response_text }
+      : {}),
+    ...(result.scheduled_at !== undefined
+      ? { scheduledAt: result.scheduled_at }
       : {}),
   };
 }

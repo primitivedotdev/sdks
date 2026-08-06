@@ -8,7 +8,9 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from dateutil.parser import isoparse
 from typing import cast
+import datetime
 
 if TYPE_CHECKING:
   from ..models.send_mail_attachment import SendMailAttachment
@@ -49,6 +51,14 @@ class SendMailInput:
                 Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.
             wait (bool | Unset): When true, wait for the first downstream SMTP delivery outcome before returning.
             wait_timeout_ms (int | Unset): Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
+            scheduled_at (datetime.datetime | Unset): Optional future execution time (ISO 8601). When set, the
+                send is recorded with status `scheduled` and executed at
+                the requested time instead of immediately. Must be in the
+                future and at most 30 days out. Incompatible with `wait`
+                (a scheduled send resolves after this request completes)
+                and with `attachments` / `payload_attachments` (not yet
+                supported on scheduled sends). Reschedule via PATCH
+                /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
      """
 
     from_: str
@@ -64,6 +74,7 @@ class SendMailInput:
     payload_attachments: list[SendMailPayloadRef] | Unset = UNSET
     wait: bool | Unset = UNSET
     wait_timeout_ms: int | Unset = UNSET
+    scheduled_at: datetime.datetime | Unset = UNSET
 
 
 
@@ -132,6 +143,10 @@ class SendMailInput:
 
         wait_timeout_ms = self.wait_timeout_ms
 
+        scheduled_at: str | Unset = UNSET
+        if not isinstance(self.scheduled_at, Unset):
+            scheduled_at = self.scheduled_at.isoformat()
+
 
         field_dict: dict[str, Any] = {}
 
@@ -160,6 +175,8 @@ class SendMailInput:
             field_dict["wait"] = wait
         if wait_timeout_ms is not UNSET:
             field_dict["wait_timeout_ms"] = wait_timeout_ms
+        if scheduled_at is not UNSET:
+            field_dict["scheduled_at"] = scheduled_at
 
         return field_dict
 
@@ -245,6 +262,16 @@ class SendMailInput:
 
         wait_timeout_ms = d.pop("wait_timeout_ms", UNSET)
 
+        _scheduled_at = d.pop("scheduled_at", UNSET)
+        scheduled_at: datetime.datetime | Unset
+        if isinstance(_scheduled_at,  Unset):
+            scheduled_at = UNSET
+        else:
+            scheduled_at = isoparse(_scheduled_at)
+
+
+
+
         send_mail_input = cls(
             from_=from_,
             to=to,
@@ -259,6 +286,7 @@ class SendMailInput:
             payload_attachments=payload_attachments,
             wait=wait,
             wait_timeout_ms=wait_timeout_ms,
+            scheduled_at=scheduled_at,
         )
 
         return send_mail_input

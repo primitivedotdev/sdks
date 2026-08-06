@@ -354,6 +354,20 @@ func encodeReplyToEmailRequest(
 	return nil
 }
 
+func encodeRescheduleSentEmailRequest(
+	req *SentEmailRescheduleInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeResendAgentSignupVerificationRequest(
 	req *ResendAgentSignupVerificationInput,
 	r *http.Request,
@@ -530,6 +544,20 @@ func encodeStartCliLoginRequest(
 
 func encodeStartCliSignupRequest(
 	req *StartCliSignupInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeTestEndpointRulesRequest(
+	req *TestEndpointRulesInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

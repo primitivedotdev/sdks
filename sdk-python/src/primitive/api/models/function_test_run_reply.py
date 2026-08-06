@@ -45,6 +45,14 @@ class FunctionTestRunReply:
                     poller couldn't classify the receiver's response.
                   - `delivered` / `bounced` / `deferred` / `wait_timeout`:
                     terminal delivery outcomes (see DeliveryStatus).
+                  - `scheduled`: created with a future `scheduled_at` and
+                    not yet executed; `scheduled_at` carries the pending
+                    execution time. Reschedulable via PATCH
+                    /sent-emails/{id} and cancelable via
+                    /sent-emails/{id}/cancel while in this status.
+                  - `canceled`: terminal; a scheduled send canceled before
+                    execution. `canceled_at` carries the cancellation time
+                    and nothing was dispatched.
             to (str):
             subject (str):
             queue_id (None | str):

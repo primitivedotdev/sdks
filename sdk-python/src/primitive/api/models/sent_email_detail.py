@@ -49,6 +49,14 @@ class SentEmailDetail:
                     poller couldn't classify the receiver's response.
                   - `delivered` / `bounced` / `deferred` / `wait_timeout`:
                     terminal delivery outcomes (see DeliveryStatus).
+                  - `scheduled`: created with a future `scheduled_at` and
+                    not yet executed; `scheduled_at` carries the pending
+                    execution time. Reschedulable via PATCH
+                    /sent-emails/{id} and cancelable via
+                    /sent-emails/{id}/cancel while in this status.
+                  - `canceled`: terminal; a scheduled send canceled before
+                    execution. `canceled_at` carries the cancellation time
+                    and nothing was dispatched.
             status_changed_at (datetime.datetime): Timestamp of the most recent status transition.
                 Polling clients should treat `status='queued'` AND
                 `status_changed_at` older than 5 minutes as
@@ -127,6 +135,11 @@ class SentEmailDetail:
                 /send-mail call. Surfaced as the `X-Request-Id`
                 response header on the live send and recorded here
                 for support escalation.
+            scheduled_at (datetime.datetime | None | Unset): Requested execution time for a scheduled send. Kept
+                after execution as the historical schedule; null on
+                ordinary immediate sends.
+            canceled_at (datetime.datetime | None | Unset): When a scheduled send was canceled. Null unless the row
+                reached the `canceled` status.
             body_text (None | str | Unset): Plain-text body sent on the wire. Null when the
                 send carried only an HTML body, or when bodies have
                 been discarded post-send (`content_discarded_at`
@@ -165,6 +178,8 @@ class SentEmailDetail:
     error_message: None | str | Unset = UNSET
     gates: list[GateDenial] | None | Unset = UNSET
     request_id: None | str | Unset = UNSET
+    scheduled_at: datetime.datetime | None | Unset = UNSET
+    canceled_at: datetime.datetime | None | Unset = UNSET
     body_text: None | str | Unset = UNSET
     body_html: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -314,6 +329,22 @@ class SentEmailDetail:
         else:
             request_id = self.request_id
 
+        scheduled_at: None | str | Unset
+        if isinstance(self.scheduled_at, Unset):
+            scheduled_at = UNSET
+        elif isinstance(self.scheduled_at, datetime.datetime):
+            scheduled_at = self.scheduled_at.isoformat()
+        else:
+            scheduled_at = self.scheduled_at
+
+        canceled_at: None | str | Unset
+        if isinstance(self.canceled_at, Unset):
+            canceled_at = UNSET
+        elif isinstance(self.canceled_at, datetime.datetime):
+            canceled_at = self.canceled_at.isoformat()
+        else:
+            canceled_at = self.canceled_at
+
         body_text: None | str | Unset
         if isinstance(self.body_text, Unset):
             body_text = UNSET
@@ -377,6 +408,10 @@ class SentEmailDetail:
             field_dict["gates"] = gates
         if request_id is not UNSET:
             field_dict["request_id"] = request_id
+        if scheduled_at is not UNSET:
+            field_dict["scheduled_at"] = scheduled_at
+        if canceled_at is not UNSET:
+            field_dict["canceled_at"] = canceled_at
         if body_text is not UNSET:
             field_dict["body_text"] = body_text
         if body_html is not UNSET:
@@ -644,6 +679,46 @@ class SentEmailDetail:
         request_id = _parse_request_id(d.pop("request_id", UNSET))
 
 
+        def _parse_scheduled_at(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                scheduled_at_type_0 = isoparse(data)
+
+
+
+                return scheduled_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        scheduled_at = _parse_scheduled_at(d.pop("scheduled_at", UNSET))
+
+
+        def _parse_canceled_at(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                canceled_at_type_0 = isoparse(data)
+
+
+
+                return canceled_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        canceled_at = _parse_canceled_at(d.pop("canceled_at", UNSET))
+
+
         def _parse_body_text(data: object) -> None | str | Unset:
             if data is None:
                 return data
@@ -694,6 +769,8 @@ class SentEmailDetail:
             error_message=error_message,
             gates=gates,
             request_id=request_id,
+            scheduled_at=scheduled_at,
+            canceled_at=canceled_at,
             body_text=body_text,
             body_html=body_html,
         )

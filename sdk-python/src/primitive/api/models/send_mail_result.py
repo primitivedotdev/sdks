@@ -10,7 +10,9 @@ from ..types import UNSET, Unset
 
 from ..models.delivery_status import DeliveryStatus
 from ..models.sent_email_status import SentEmailStatus
+from dateutil.parser import isoparse
 from typing import cast
+import datetime
 
 
 
@@ -43,6 +45,14 @@ class SendMailResult:
                     poller couldn't classify the receiver's response.
                   - `delivered` / `bounced` / `deferred` / `wait_timeout`:
                     terminal delivery outcomes (see DeliveryStatus).
+                  - `scheduled`: created with a future `scheduled_at` and
+                    not yet executed; `scheduled_at` carries the pending
+                    execution time. Reschedulable via PATCH
+                    /sent-emails/{id} and cancelable via
+                    /sent-emails/{id}/cancel while in this status.
+                  - `canceled`: terminal; a scheduled send canceled before
+                    execution. `canceled_at` carries the cancellation time
+                    and nothing was dispatched.
             from_ (str): Bare from-address actually written on the wire. Echoed
                 on every success branch so callers can confirm what
                 went out, particularly useful for the /emails/{id}/reply
@@ -97,6 +107,10 @@ class SendMailResult:
                 is true.
             smtp_response_text (str | Unset): SMTP response text from the first downstream delivery outcome when wait is
                 true.
+            scheduled_at (datetime.datetime | Unset): Echoed requested execution time on a `scheduled`
+                response. On scheduled creates, nothing is dispatched
+                yet: `queue_id` is null and `accepted` / `rejected` are
+                empty. Absent on immediate sends.
      """
 
     id: str
@@ -112,6 +126,7 @@ class SendMailResult:
     delivery_status: DeliveryStatus | Unset = UNSET
     smtp_response_code: int | None | Unset = UNSET
     smtp_response_text: str | Unset = UNSET
+    scheduled_at: datetime.datetime | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -157,6 +172,10 @@ class SendMailResult:
 
         smtp_response_text = self.smtp_response_text
 
+        scheduled_at: str | Unset = UNSET
+        if not isinstance(self.scheduled_at, Unset):
+            scheduled_at = self.scheduled_at.isoformat()
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -178,6 +197,8 @@ class SendMailResult:
             field_dict["smtp_response_code"] = smtp_response_code
         if smtp_response_text is not UNSET:
             field_dict["smtp_response_text"] = smtp_response_text
+        if scheduled_at is not UNSET:
+            field_dict["scheduled_at"] = scheduled_at
 
         return field_dict
 
@@ -239,6 +260,16 @@ class SendMailResult:
 
         smtp_response_text = d.pop("smtp_response_text", UNSET)
 
+        _scheduled_at = d.pop("scheduled_at", UNSET)
+        scheduled_at: datetime.datetime | Unset
+        if isinstance(_scheduled_at,  Unset):
+            scheduled_at = UNSET
+        else:
+            scheduled_at = isoparse(_scheduled_at)
+
+
+
+
         send_mail_result = cls(
             id=id,
             status=status,
@@ -253,6 +284,7 @@ class SendMailResult:
             delivery_status=delivery_status,
             smtp_response_code=smtp_response_code,
             smtp_response_text=smtp_response_text,
+            scheduled_at=scheduled_at,
         )
 
 

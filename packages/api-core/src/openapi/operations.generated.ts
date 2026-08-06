@@ -1614,6 +1614,594 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "check-domain-dns",
+    "description": "Re-checks the domain's DNS records and persists the result as\nthe domain's current DNS health state. This is the on-demand\ncounterpart of the scheduled background checker: the response\nmirrors what the checker records, broken down per scope\n(`ownership`, `inbound`, `outbound`) with the exact records\ninspected and each record's individual status.\n\nUnlike /domains/{id}/verify, this call never promotes an\nunverified domain; it only re-evaluates and records health for\nan existing claim. Managed (Primitive-operated) domains are\nrejected with a validation error because their DNS is not\ncustomer-published.\n\nRate limited per organization; a `Retry-After` header\naccompanies 429 responses.\n",
+    "hasJsonBody": false,
+    "method": "POST",
+    "operationId": "checkDomainDns",
+    "path": "/domains/{id}/dns/check",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "Result of a DNS health check, as returned by\n/domains/{id}/dns/check and recorded as the domain's current\nhealth state. The top-level fields summarize the domain\noverall; `scopes` breaks the same check down per capability.\n",
+      "properties": {
+        "domain_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "key_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Active outbound DKIM key the outbound scope was checked against, when one exists."
+        },
+        "domain": {
+          "type": "string"
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "Whether every required scope is currently verified."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "healthy",
+            "degraded",
+            "suspended"
+          ],
+          "description": "Rollup DNS health state. `pending` means never successfully\nchecked, `healthy` means all required records verified,\n`degraded` means a previously-verified record has regressed,\nand `suspended` means the failure persisted long enough that\nthe affected capability was disabled.\n"
+        },
+        "checked_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "next_check_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Next scheduled background check, or null when none is planned."
+        },
+        "outbound_verified_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When outbound DNS was first verified, or null if it never has been."
+        },
+        "consecutive_failures": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "records": {
+          "type": "array",
+          "description": "All records inspected across scopes, each with its own status.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "MX",
+                  "TXT"
+                ],
+                "description": "DNS record type."
+              },
+              "name": {
+                "type": "string",
+                "description": "DNS-provider host/name value relative to the managed root zone."
+              },
+              "fqdn": {
+                "type": "string",
+                "description": "Fully-qualified DNS record name."
+              },
+              "value": {
+                "type": "string",
+                "description": "Exact value to publish."
+              },
+              "priority": {
+                "type": "integer",
+                "description": "MX priority. Present only for MX records."
+              },
+              "ttl": {
+                "type": "integer",
+                "description": "Suggested TTL in seconds when the API can provide one."
+              },
+              "required": {
+                "type": "boolean",
+                "const": true
+              },
+              "purpose": {
+                "type": "string",
+                "enum": [
+                  "inbound_mx",
+                  "ownership_verification",
+                  "spf",
+                  "dkim",
+                  "dmarc",
+                  "tls_reporting"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "found",
+                  "missing",
+                  "incorrect"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "description": "Short explanation of why this record is needed."
+              }
+            },
+            "required": [
+              "type",
+              "name",
+              "fqdn",
+              "value",
+              "required",
+              "purpose",
+              "status"
+            ]
+          }
+        },
+        "scopes": {
+          "type": "object",
+          "properties": {
+            "ownership": {
+              "type": "object",
+              "description": "Health of one DNS scope: `ownership` (verification TXT),\n`inbound` (MX), or `outbound` (SPF, DKIM, DMARC, TLS-RPT).\n",
+              "properties": {
+                "scope": {
+                  "type": "string",
+                  "enum": [
+                    "ownership",
+                    "inbound",
+                    "outbound"
+                  ]
+                },
+                "verified": {
+                  "type": "boolean",
+                  "description": "Whether this scope's required records are currently verified."
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "healthy",
+                    "degraded",
+                    "suspended"
+                  ],
+                  "description": "Rollup DNS health state. `pending` means never successfully\nchecked, `healthy` means all required records verified,\n`degraded` means a previously-verified record has regressed,\nand `suspended` means the failure persisted long enough that\nthe affected capability was disabled.\n"
+                },
+                "checked_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When this scope was last checked."
+                },
+                "next_check_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "Next scheduled background check, or null when none is planned."
+                },
+                "consecutive_failures": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Number of consecutive failed checks for this scope."
+                },
+                "records": {
+                  "type": "array",
+                  "description": "The exact records inspected for this scope, each with its own status.",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "MX",
+                          "TXT"
+                        ],
+                        "description": "DNS record type."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "DNS-provider host/name value relative to the managed root zone."
+                      },
+                      "fqdn": {
+                        "type": "string",
+                        "description": "Fully-qualified DNS record name."
+                      },
+                      "value": {
+                        "type": "string",
+                        "description": "Exact value to publish."
+                      },
+                      "priority": {
+                        "type": "integer",
+                        "description": "MX priority. Present only for MX records."
+                      },
+                      "ttl": {
+                        "type": "integer",
+                        "description": "Suggested TTL in seconds when the API can provide one."
+                      },
+                      "required": {
+                        "type": "boolean",
+                        "const": true
+                      },
+                      "purpose": {
+                        "type": "string",
+                        "enum": [
+                          "inbound_mx",
+                          "ownership_verification",
+                          "spf",
+                          "dkim",
+                          "dmarc",
+                          "tls_reporting"
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "pending",
+                          "found",
+                          "missing",
+                          "incorrect"
+                        ]
+                      },
+                      "message": {
+                        "type": "string",
+                        "description": "Short explanation of why this record is needed."
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "name",
+                      "fqdn",
+                      "value",
+                      "required",
+                      "purpose",
+                      "status"
+                    ]
+                  }
+                },
+                "error": {
+                  "type": "string",
+                  "description": "Human-readable failure reason when the scope check errored."
+                }
+              },
+              "required": [
+                "scope",
+                "verified",
+                "status",
+                "checked_at",
+                "next_check_at",
+                "consecutive_failures",
+                "records"
+              ]
+            },
+            "inbound": {
+              "type": "object",
+              "description": "Health of one DNS scope: `ownership` (verification TXT),\n`inbound` (MX), or `outbound` (SPF, DKIM, DMARC, TLS-RPT).\n",
+              "properties": {
+                "scope": {
+                  "type": "string",
+                  "enum": [
+                    "ownership",
+                    "inbound",
+                    "outbound"
+                  ]
+                },
+                "verified": {
+                  "type": "boolean",
+                  "description": "Whether this scope's required records are currently verified."
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "healthy",
+                    "degraded",
+                    "suspended"
+                  ],
+                  "description": "Rollup DNS health state. `pending` means never successfully\nchecked, `healthy` means all required records verified,\n`degraded` means a previously-verified record has regressed,\nand `suspended` means the failure persisted long enough that\nthe affected capability was disabled.\n"
+                },
+                "checked_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When this scope was last checked."
+                },
+                "next_check_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "Next scheduled background check, or null when none is planned."
+                },
+                "consecutive_failures": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Number of consecutive failed checks for this scope."
+                },
+                "records": {
+                  "type": "array",
+                  "description": "The exact records inspected for this scope, each with its own status.",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "MX",
+                          "TXT"
+                        ],
+                        "description": "DNS record type."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "DNS-provider host/name value relative to the managed root zone."
+                      },
+                      "fqdn": {
+                        "type": "string",
+                        "description": "Fully-qualified DNS record name."
+                      },
+                      "value": {
+                        "type": "string",
+                        "description": "Exact value to publish."
+                      },
+                      "priority": {
+                        "type": "integer",
+                        "description": "MX priority. Present only for MX records."
+                      },
+                      "ttl": {
+                        "type": "integer",
+                        "description": "Suggested TTL in seconds when the API can provide one."
+                      },
+                      "required": {
+                        "type": "boolean",
+                        "const": true
+                      },
+                      "purpose": {
+                        "type": "string",
+                        "enum": [
+                          "inbound_mx",
+                          "ownership_verification",
+                          "spf",
+                          "dkim",
+                          "dmarc",
+                          "tls_reporting"
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "pending",
+                          "found",
+                          "missing",
+                          "incorrect"
+                        ]
+                      },
+                      "message": {
+                        "type": "string",
+                        "description": "Short explanation of why this record is needed."
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "name",
+                      "fqdn",
+                      "value",
+                      "required",
+                      "purpose",
+                      "status"
+                    ]
+                  }
+                },
+                "error": {
+                  "type": "string",
+                  "description": "Human-readable failure reason when the scope check errored."
+                }
+              },
+              "required": [
+                "scope",
+                "verified",
+                "status",
+                "checked_at",
+                "next_check_at",
+                "consecutive_failures",
+                "records"
+              ]
+            },
+            "outbound": {
+              "allOf": [
+                {
+                  "type": "object",
+                  "description": "Health of one DNS scope: `ownership` (verification TXT),\n`inbound` (MX), or `outbound` (SPF, DKIM, DMARC, TLS-RPT).\n",
+                  "properties": {
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "ownership",
+                        "inbound",
+                        "outbound"
+                      ]
+                    },
+                    "verified": {
+                      "type": "boolean",
+                      "description": "Whether this scope's required records are currently verified."
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "healthy",
+                        "degraded",
+                        "suspended"
+                      ],
+                      "description": "Rollup DNS health state. `pending` means never successfully\nchecked, `healthy` means all required records verified,\n`degraded` means a previously-verified record has regressed,\nand `suspended` means the failure persisted long enough that\nthe affected capability was disabled.\n"
+                    },
+                    "checked_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When this scope was last checked."
+                    },
+                    "next_check_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time",
+                      "description": "Next scheduled background check, or null when none is planned."
+                    },
+                    "consecutive_failures": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Number of consecutive failed checks for this scope."
+                    },
+                    "records": {
+                      "type": "array",
+                      "description": "The exact records inspected for this scope, each with its own status.",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "MX",
+                              "TXT"
+                            ],
+                            "description": "DNS record type."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "DNS-provider host/name value relative to the managed root zone."
+                          },
+                          "fqdn": {
+                            "type": "string",
+                            "description": "Fully-qualified DNS record name."
+                          },
+                          "value": {
+                            "type": "string",
+                            "description": "Exact value to publish."
+                          },
+                          "priority": {
+                            "type": "integer",
+                            "description": "MX priority. Present only for MX records."
+                          },
+                          "ttl": {
+                            "type": "integer",
+                            "description": "Suggested TTL in seconds when the API can provide one."
+                          },
+                          "required": {
+                            "type": "boolean",
+                            "const": true
+                          },
+                          "purpose": {
+                            "type": "string",
+                            "enum": [
+                              "inbound_mx",
+                              "ownership_verification",
+                              "spf",
+                              "dkim",
+                              "dmarc",
+                              "tls_reporting"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "found",
+                              "missing",
+                              "incorrect"
+                            ]
+                          },
+                          "message": {
+                            "type": "string",
+                            "description": "Short explanation of why this record is needed."
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "name",
+                          "fqdn",
+                          "value",
+                          "required",
+                          "purpose",
+                          "status"
+                        ]
+                      }
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Human-readable failure reason when the scope check errored."
+                    }
+                  },
+                  "required": [
+                    "scope",
+                    "verified",
+                    "status",
+                    "checked_at",
+                    "next_check_at",
+                    "consecutive_failures",
+                    "records"
+                  ]
+                }
+              ],
+              "description": "Absent when the domain has no active outbound key to check against."
+            }
+          },
+          "required": [
+            "ownership",
+            "inbound"
+          ]
+        },
+        "error": {
+          "type": "string",
+          "description": "Human-readable failure reason when the check errored."
+        }
+      },
+      "required": [
+        "domain_id",
+        "domain",
+        "verified",
+        "status",
+        "checked_at",
+        "next_check_at",
+        "outbound_verified_at",
+        "consecutive_failures",
+        "records",
+        "scopes"
+      ]
+    },
+    "sdkName": "checkDomainDns",
+    "summary": "Run an on-demand DNS health check",
+    "tag": "Domains",
+    "tagCommand": "domains"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "delete-domain",
     "description": "Deletes a verified or unverified domain claim.",
     "hasJsonBody": false,
@@ -2680,7 +3268,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "status": {
                 "type": "string",
-                "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+                "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
                 "enum": [
                   "queued",
                   "submitted_to_agent",
@@ -2690,7 +3278,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "delivered",
                   "bounced",
                   "deferred",
-                  "wait_timeout"
+                  "wait_timeout",
+                  "scheduled",
+                  "canceled"
                 ]
               },
               "to_address": {
@@ -4045,6 +4635,132 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": true,
+    "command": "test-endpoint-rules",
+    "description": "Evaluates the endpoint's filtering rules against an\nalready-received email WITHOUT delivering anything. The same\nshared matcher the live delivery paths use produces the\nverdict, so the response explains exactly why a webhook fired\nor was suppressed for that message.\n\nWhen delivery would be suppressed, `rule` names the failing\nrule and `reason` carries a human-readable explanation; both\nare null when the message matches. `evaluated` echoes the\nmessage metadata the matcher compared (size, attachments, and\nthe authenticated From identity versus the raw envelope\nsender), so a surprising verdict can be traced to its inputs.\n\nTwo independent gates are surfaced separately:\n`subscribed_to_event` reports the endpoint's event-type\nsubscription (checked before message matching), and\n`rules_valid` reports whether the stored rules blob parsed at\nall. Delivery fails OPEN on an invalid blob (the message is\ndelivered as if unfiltered), so `rules_valid: false` exposes a\nmisconfiguration that is otherwise silent.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "testEndpointRules",
+    "path": "/endpoints/{id}/rules/test",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "email_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Id of an already-received email (in your org) to evaluate the rules against."
+        }
+      },
+      "required": [
+        "email_id"
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "Verdict of a dry-run rule evaluation. Produced by the same\nshared matcher the live delivery paths use.\n",
+      "properties": {
+        "would_deliver": {
+          "type": "boolean",
+          "description": "Whether the delivery path would deliver this email to the endpoint."
+        },
+        "rule": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Name of the failing rule when delivery would be\nsuppressed; null when the message matches and the\nendpoint is subscribed to the event type.\n"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Human-readable explanation of the failing rule; null when the message matches."
+        },
+        "rules_valid": {
+          "type": "boolean",
+          "description": "False when the endpoint's stored rules blob failed\nvalidation. Delivery fails OPEN on an invalid blob\n(delivers as if unfiltered), so false here surfaces a\nmisconfiguration that is otherwise silent.\n"
+        },
+        "subscribed_to_event": {
+          "type": "boolean",
+          "description": "Whether the endpoint's event-type subscription includes\nthis email's event type. A separate gate applied before\nmessage matching, surfaced independently so an\nunsubscribed endpoint is distinguishable from a rule\nrejection.\n"
+        },
+        "event_type": {
+          "type": "string",
+          "description": "The event type this email would be delivered as."
+        },
+        "evaluated": {
+          "type": "object",
+          "description": "The message metadata the matcher compared, so the caller\ncan see WHAT was evaluated (in particular the\nauthenticated From identity versus the raw envelope\nsender).\n",
+          "properties": {
+            "size_bytes": {
+              "type": "integer"
+            },
+            "has_attachments": {
+              "type": "boolean"
+            },
+            "attachment_size_bytes": {
+              "type": "integer"
+            },
+            "sender": {
+              "type": "string",
+              "description": "Raw envelope sender the blacklist matches against."
+            },
+            "from_address": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Bare From-header address, when one was present."
+            },
+            "sender_authenticated": {
+              "type": "boolean",
+              "description": "Whether the sender identity passed authentication (the whitelist matches only authenticated identities)."
+            },
+            "sender_trust_basis": {
+              "type": "string",
+              "description": "Which signal established (or failed to establish) the sender identity."
+            }
+          },
+          "required": [
+            "size_bytes",
+            "has_attachments",
+            "attachment_size_bytes",
+            "sender",
+            "from_address",
+            "sender_authenticated",
+            "sender_trust_basis"
+          ]
+        }
+      },
+      "required": [
+        "would_deliver",
+        "rule",
+        "reason",
+        "rules_valid",
+        "subscribed_to_event",
+        "event_type",
+        "evaluated"
+      ]
+    },
+    "sdkName": "testEndpointRules",
+    "summary": "Dry-run endpoint rules against a received email",
+    "tag": "Endpoints",
+    "tagCommand": "endpoints"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
     "command": "update-endpoint",
     "description": "Updates an active webhook endpoint. If the URL is changed, the old\nendpoint is deactivated and a new one is created (or an existing\ndeactivated endpoint with the new URL is reactivated).\n",
     "hasJsonBody": true,
@@ -5081,7 +5797,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "status": {
               "type": "string",
-              "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+              "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
               "enum": [
                 "queued",
                 "submitted_to_agent",
@@ -5091,7 +5807,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "delivered",
                 "bounced",
                 "deferred",
-                "wait_timeout"
+                "wait_timeout",
+                "scheduled",
+                "canceled"
               ]
             },
             "queue_id": {
@@ -5482,7 +6200,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               },
               "status": {
                 "type": "string",
-                "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+                "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
                 "enum": [
                   "queued",
                   "submitted_to_agent",
@@ -5492,7 +6210,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "delivered",
                   "bounced",
                   "deferred",
-                  "wait_timeout"
+                  "wait_timeout",
+                  "scheduled",
+                  "canceled"
                 ]
               },
               "to": {
@@ -10692,152 +11412,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
-    "command": "get-send-permissions",
-    "description": "Returns a flat list of rules describing every recipient the\ncaller may send to. Each rule has a `type`, a kind-specific\npayload, and a human-readable `description`. If any rule\nmatches the recipient, /send-mail will accept the send under\nthe recipient-scope check.\n\nThe endpoint is the answer to \"where can I send\" without\nexposing internal entitlement names. Agents that don't\nrecognize a `type` can still read the `description` prose\nand act on it.\n\nRule kinds, ordered broadest-first so an agent can stop\nscanning at the first match:\n\n  1. `any_recipient` (one entry, only when the org can send\n     anywhere): every other rule below it is redundant.\n  2. `managed_zone` (always emitted, one per Primitive-managed\n     zone): sends to any address at *.primitive.email or\n     *.email.works always succeed; no entitlement required.\n  3. `your_domain` (one per active verified outbound domain\n     owned by the org): sends to that domain are approved.\n  4. `address` (one per address that has authenticated\n     inbound mail to the org, capped at `meta.address_cap`):\n     sends to that exact address are approved.\n\nThe list is informational, not an authorization check.\n/send-mail remains the source of truth on whether an\nindividual send will succeed (it also enforces the\nfrom-address and the `send_mail` entitlement, which are\nnot recipient-scope concerns and are not represented here).\n",
+    "command": "cancel-sent-email",
+    "description": "Cancels a STILL-SCHEDULED send (status `scheduled`), moving it\nto the terminal `canceled` status. Nothing is dispatched and\nthe row is kept for historical lookup with `canceled_at` set.\n\nUses the same compare-and-swap guard as reschedule: once the\nscheduler has claimed the row for execution, or it was already\ncanceled or executed, the call returns a 409 `not_scheduled`\nconflict naming the row's current status. Canceling can\ntherefore never race an in-progress execution; a send that\nreports `canceled` was never handed to the delivery path.\n\nReturns the full updated sent-email record on success.\n",
     "hasJsonBody": false,
-    "method": "GET",
-    "operationId": "getSendPermissions",
-    "path": "/send-permissions",
-    "pathParams": [],
-    "queryParams": [],
-    "requestSchema": null,
-    "responseSchema": {
-      "type": "array",
-      "items": {
-        "description": "One recipient-scope rule describing a destination the caller\nmay send to. Discriminated on `type`. Each rule carries a\nhuman-prose `description` field intended for display.\n\nRule kinds are stable within an SDK release. A response\ncontaining a `type` value not enumerated in this schema\nmeans the server is running a newer version than the SDK;\nupgrade the SDK to the release that matches the server's\nschema. Strict-parsing SDKs (Go, Python) will raise a\ndecode error in that case rather than silently dropping\nthe unknown rule, since silent drops would let an outbound\nagent reason from an incomplete view of its own permissions.\n",
-        "discriminator": {
-          "propertyName": "type",
-          "mapping": {
-            "any_recipient": "#/components/schemas/SendPermissionAnyRecipient",
-            "managed_zone": "#/components/schemas/SendPermissionManagedZone",
-            "your_domain": "#/components/schemas/SendPermissionYourDomain",
-            "address": "#/components/schemas/SendPermissionAddress"
-          }
-        },
-        "oneOf": [
-          {
-            "type": "object",
-            "description": "The caller can send to any recipient. When this rule is\npresent, every other rule in the response is redundant.\n",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "any_recipient"
-                ]
-              },
-              "description": {
-                "type": "string",
-                "description": "Human-prose summary of the rule."
-              }
-            },
-            "required": [
-              "type",
-              "description"
-            ]
-          },
-          {
-            "type": "object",
-            "description": "The caller can send to any address at the named\nPrimitive-managed zone. Always emitted (no entitlement\nrequired) because Primitive owns the zone and every mailbox\nbelongs to a Primitive customer by construction.\n",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "managed_zone"
-                ]
-              },
-              "zone": {
-                "type": "string",
-                "description": "The managed apex domain. Sends are accepted to any\naddress at the apex itself or any subdomain (e.g.\n`alice@primitive.email` and `alice@acme.primitive.email`\nboth match the `primitive.email` zone rule).\n"
-              },
-              "description": {
-                "type": "string",
-                "description": "Human-prose summary of the rule."
-              }
-            },
-            "required": [
-              "type",
-              "zone",
-              "description"
-            ]
-          },
-          {
-            "type": "object",
-            "description": "The caller can send to any address at one of their own\nverified outbound domains. Emitted once per active row in\nthe org's `domains` table.\n",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "your_domain"
-                ]
-              },
-              "domain": {
-                "type": "string",
-                "description": "A verified outbound domain owned by the caller's org."
-              },
-              "description": {
-                "type": "string",
-                "description": "Human-prose summary of the rule."
-              }
-            },
-            "required": [
-              "type",
-              "domain",
-              "description"
-            ]
-          },
-          {
-            "type": "object",
-            "description": "The caller can send to a specific address that has\nauthenticated inbound mail to the org. Emitted once per row\nin the org's `known_send_addresses` table, capped at\n`meta.address_cap`.\n",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": [
-                  "address"
-                ]
-              },
-              "address": {
-                "type": "string",
-                "description": "The bare email address this rule grants sends to."
-              },
-              "last_received_at": {
-                "type": "string",
-                "format": "date-time",
-                "description": "Most recent inbound email from this address that\nauthenticated successfully (DMARC pass + DKIM/SPF\nalignment). Updated on each new authenticated receipt.\n"
-              },
-              "received_count": {
-                "type": "integer",
-                "description": "Total number of authenticated inbound emails from this\naddress. Increments only when `last_received_at` advances.\n"
-              },
-              "description": {
-                "type": "string",
-                "description": "Human-prose summary of the rule."
-              }
-            },
-            "required": [
-              "type",
-              "address",
-              "last_received_at",
-              "received_count",
-              "description"
-            ]
-          }
-        ]
-      }
-    },
-    "sdkName": "getSendPermissions",
-    "summary": "List send-permission rules",
-    "tag": "Sending",
-    "tagCommand": "sending"
-  },
-  {
-    "binaryResponse": false,
-    "bodyRequired": false,
-    "command": "get-sent-email",
-    "description": "Returns the full sent-email record by id, including\n`body_text` and `body_html` (omitted from the listing\nendpoint to keep paginated responses small). Use this when\ndiagnosing a specific send, e.g. inspecting the receiver's\nSMTP response on a `bounced` row or pulling the gate\ndenial detail on a `gate_denied` row.\n",
-    "hasJsonBody": false,
-    "method": "GET",
-    "operationId": "getSentEmail",
-    "path": "/sent-emails/{id}",
+    "method": "POST",
+    "operationId": "cancelSentEmail",
+    "path": "/sent-emails/{id}/cancel",
     "pathParams": [
       {
         "description": "Resource UUID",
@@ -10862,7 +11442,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "status": {
               "type": "string",
-              "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+              "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
               "enum": [
                 "queued",
                 "submitted_to_agent",
@@ -10872,7 +11452,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "delivered",
                 "bounced",
                 "deferred",
-                "wait_timeout"
+                "wait_timeout",
+                "scheduled",
+                "canceled"
               ]
             },
             "status_changed_at": {
@@ -11098,6 +11680,598 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "null"
               ],
               "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n"
+            },
+            "scheduled_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Requested execution time for a scheduled send. Kept\nafter execution as the historical schedule; null on\nordinary immediate sends.\n"
+            },
+            "canceled_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
+            }
+          },
+          "required": [
+            "id",
+            "status",
+            "status_changed_at",
+            "created_at",
+            "updated_at",
+            "content_hash",
+            "from_header",
+            "from_address",
+            "to_header",
+            "to_address",
+            "subject",
+            "body_size_bytes"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+            },
+            "body_html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            }
+          }
+        }
+      ]
+    },
+    "sdkName": "cancelSentEmail",
+    "summary": "Cancel a scheduled send",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-outbound-status",
+    "description": "The \"what can I send From?\" bootstrap, the outbound mirror of\n/inbox/status. Returns per-domain sending readiness for every\ndomain in the caller's org, plus the flat `sendable_domains`\nlist of From-domains the org may send from right now. That\nlist is the same set echoed in a `cannot_send_from_domain`\nerror's details, so orienting here before a send and\nrecovering from that error use identical data.\n\nEach domain's `status` collapses the sending prerequisites\ninto one actionable state: `sendable`, `pending_ownership`\n(ownership TXT not verified), `pending_outbound_dns`\n(SPF/DKIM/DMARC not verified), or `inactive` (domain\ndeactivated). `next_actions` lists concrete remediation steps,\neach with a suggested CLI command where one exists.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getOutboundStatus",
+    "path": "/outbound/status",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Outbound sending readiness for the caller's org, the outbound\nmirror of InboxStatus.\n",
+      "properties": {
+        "ready": {
+          "type": "boolean",
+          "description": "True when at least one domain is sendable right now."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short human-readable status summary."
+        },
+        "sendable_domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Flat, sorted list of From-domains the org may send from\nright now. The same set echoed in a\n`cannot_send_from_domain` error's `details.valid_senders`,\nso recovery from that error and orientation here agree.\n"
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "Per-domain outbound (sending) readiness.",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "domain": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "sendable",
+                  "pending_outbound_dns",
+                  "pending_ownership",
+                  "inactive"
+                ],
+                "description": "Single actionable state collapsing the sending\nprerequisites: `sendable` (you may send From this domain\nnow), `pending_ownership` (ownership TXT not verified),\n`pending_outbound_dns` (ownership done, SPF/DKIM/DMARC\nnot verified), or `inactive` (domain deactivated;\nre-adding it, not publishing DNS, is the fix).\n"
+              },
+              "ownership_verified": {
+                "type": "boolean"
+              },
+              "outbound_verified": {
+                "type": "boolean",
+                "description": "Whether the domain has an active outbound key with verified outbound DNS."
+              }
+            },
+            "required": [
+              "id",
+              "domain",
+              "status",
+              "ownership_verified",
+              "outbound_verified"
+            ]
+          }
+        },
+        "next_actions": {
+          "type": "array",
+          "description": "Concrete remediation steps for domains that are not yet\nsendable. The server contract leaves entries open-ended;\nin practice each carries a `kind`, a human-readable\n`message`, and, when there is an obvious next step, a\nsuggested CLI `command`.\n",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": [
+        "ready",
+        "summary",
+        "sendable_domains",
+        "domains",
+        "next_actions"
+      ]
+    },
+    "sdkName": "getOutboundStatus",
+    "summary": "Get outbound sending readiness",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-send-permissions",
+    "description": "Returns a flat list of rules describing every recipient the\ncaller may send to. Each rule has a `type`, a kind-specific\npayload, and a human-readable `description`. If any rule\nmatches the recipient, /send-mail will accept the send under\nthe recipient-scope check.\n\nThe endpoint is the answer to \"where can I send\" without\nexposing internal entitlement names. Agents that don't\nrecognize a `type` can still read the `description` prose\nand act on it.\n\nRule kinds, ordered broadest-first so an agent can stop\nscanning at the first match:\n\n  1. `any_recipient` (one entry, only when the org can send\n     anywhere): every other rule below it is redundant.\n  2. `managed_zone` (always emitted, one per Primitive-managed\n     zone): sends to any address at *.primitive.email or\n     *.email.works always succeed; no entitlement required.\n  3. `your_domain` (one per active verified outbound domain\n     owned by the org): sends to that domain are approved.\n  4. `address` (one per address that has authenticated\n     inbound mail to the org, capped at `meta.address_cap`):\n     sends to that exact address are approved.\n\nThe list is informational, not an authorization check.\n/send-mail remains the source of truth on whether an\nindividual send will succeed (it also enforces the\nfrom-address and the `send_mail` entitlement, which are\nnot recipient-scope concerns and are not represented here).\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getSendPermissions",
+    "path": "/send-permissions",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "description": "One recipient-scope rule describing a destination the caller\nmay send to. Discriminated on `type`. Each rule carries a\nhuman-prose `description` field intended for display.\n\nRule kinds are stable within an SDK release. A response\ncontaining a `type` value not enumerated in this schema\nmeans the server is running a newer version than the SDK;\nupgrade the SDK to the release that matches the server's\nschema. Strict-parsing SDKs (Go, Python) will raise a\ndecode error in that case rather than silently dropping\nthe unknown rule, since silent drops would let an outbound\nagent reason from an incomplete view of its own permissions.\n",
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "any_recipient": "#/components/schemas/SendPermissionAnyRecipient",
+            "managed_zone": "#/components/schemas/SendPermissionManagedZone",
+            "your_domain": "#/components/schemas/SendPermissionYourDomain",
+            "address": "#/components/schemas/SendPermissionAddress"
+          }
+        },
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "The caller can send to any recipient. When this rule is\npresent, every other rule in the response is redundant.\n",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "any_recipient"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-prose summary of the rule."
+              }
+            },
+            "required": [
+              "type",
+              "description"
+            ]
+          },
+          {
+            "type": "object",
+            "description": "The caller can send to any address at the named\nPrimitive-managed zone. Always emitted (no entitlement\nrequired) because Primitive owns the zone and every mailbox\nbelongs to a Primitive customer by construction.\n",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "managed_zone"
+                ]
+              },
+              "zone": {
+                "type": "string",
+                "description": "The managed apex domain. Sends are accepted to any\naddress at the apex itself or any subdomain (e.g.\n`alice@primitive.email` and `alice@acme.primitive.email`\nboth match the `primitive.email` zone rule).\n"
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-prose summary of the rule."
+              }
+            },
+            "required": [
+              "type",
+              "zone",
+              "description"
+            ]
+          },
+          {
+            "type": "object",
+            "description": "The caller can send to any address at one of their own\nverified outbound domains. Emitted once per active row in\nthe org's `domains` table.\n",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "your_domain"
+                ]
+              },
+              "domain": {
+                "type": "string",
+                "description": "A verified outbound domain owned by the caller's org."
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-prose summary of the rule."
+              }
+            },
+            "required": [
+              "type",
+              "domain",
+              "description"
+            ]
+          },
+          {
+            "type": "object",
+            "description": "The caller can send to a specific address that has\nauthenticated inbound mail to the org. Emitted once per row\nin the org's `known_send_addresses` table, capped at\n`meta.address_cap`.\n",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "address"
+                ]
+              },
+              "address": {
+                "type": "string",
+                "description": "The bare email address this rule grants sends to."
+              },
+              "last_received_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Most recent inbound email from this address that\nauthenticated successfully (DMARC pass + DKIM/SPF\nalignment). Updated on each new authenticated receipt.\n"
+              },
+              "received_count": {
+                "type": "integer",
+                "description": "Total number of authenticated inbound emails from this\naddress. Increments only when `last_received_at` advances.\n"
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-prose summary of the rule."
+              }
+            },
+            "required": [
+              "type",
+              "address",
+              "last_received_at",
+              "received_count",
+              "description"
+            ]
+          }
+        ]
+      }
+    },
+    "sdkName": "getSendPermissions",
+    "summary": "List send-permission rules",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-sent-email",
+    "description": "Returns the full sent-email record by id, including\n`body_text` and `body_html` (omitted from the listing\nendpoint to keep paginated responses small). Use this when\ndiagnosing a specific send, e.g. inspecting the receiver's\nSMTP response on a `bounced` row or pulling the gate\ndenial detail on a `gate_denied` row.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getSentEmail",
+    "path": "/sent-emails/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
+      "allOf": [
+        {
+          "type": "object",
+          "description": "List-row projection of a sent-email record. Drops\n`body_text` and `body_html` to keep paginated responses\nsmall; fetch /sent-emails/{id} for the full record with\nbodies.\n",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
+              "enum": [
+                "queued",
+                "submitted_to_agent",
+                "agent_failed",
+                "gate_denied",
+                "unknown",
+                "delivered",
+                "bounced",
+                "deferred",
+                "wait_timeout",
+                "scheduled",
+                "canceled"
+              ]
+            },
+            "status_changed_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Timestamp of the most recent status transition.\nPolling clients should treat `status='queued'` AND\n`status_changed_at` older than 5 minutes as\n\"stuck-queued\" (the post-tx UPDATE failed and the\nactual delivery state is recoverable from on-box logs\nvia `queue_id` when populated, or `request_id`).\n"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "client_idempotency_key": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Effective idempotency key used for this send. If the\ncaller passed the `Idempotency-Key` header, this is\nthat value; otherwise it's a server-derived hash of\nthe canonical request payload.\n"
+            },
+            "content_hash": {
+              "type": "string",
+              "description": "Stable hash of the canonical send payload."
+            },
+            "from_header": {
+              "type": "string",
+              "description": "Raw `From:` header as sent on the wire, including any\ndisplay name (e.g. `\"Acme Support\" <agent@acme.test>`).\n"
+            },
+            "from_address": {
+              "type": "string",
+              "description": "Bare email address parsed from `from_header`."
+            },
+            "to_header": {
+              "type": "string",
+              "description": "Raw `To:` header as sent on the wire, including any\ndisplay name.\n"
+            },
+            "to_address": {
+              "type": "string",
+              "description": "Bare email address parsed from `to_header`."
+            },
+            "subject": {
+              "type": "string"
+            },
+            "body_size_bytes": {
+              "type": "integer",
+              "description": "Total UTF-8 byte length of `body_text` + `body_html`.\nSurfaced on the list endpoint so callers can see \"this\nrow has a 4MB body\" without fetching it.\n"
+            },
+            "content_discarded_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Timestamp at which the bodies were discarded by an\nentitlement-driven retention policy. Null when bodies\nare still present. The detail endpoint returns\nnull-valued `body_text`/`body_html` for discarded rows.\n"
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level Message-ID assigned to the outbound message\n(RFC 5322). Null on rows that never reached signing\n(queued, gate_denied, agent_failed before signing).\n"
+            },
+            "in_reply_to": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level In-Reply-To header value, when this send\nwas a reply.\n"
+            },
+            "email_references": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level References header value, when this send\nwas a reply.\n"
+            },
+            "in_reply_to_email_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Reference to the inbound `emails.id` that this send\nreplied to, when known. Populated when the caller used\n/emails/{id}/reply or when /send-mail's `in_reply_to`\nmatched a stored inbound message_id in the same org.\n"
+            },
+            "thread_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Conversation thread this send belongs to. A reply inherits\nthe thread of the inbound it answers; a fresh send starts a\nnew thread. Fetch `/threads/{thread_id}` for the full\nordered thread (inbound + outbound interleaved). NULL on\ngate-denied sends and on sends created before threading was\nenabled.\n"
+            },
+            "queue_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Message identifier assigned by Primitive's outbound\nrelay once the agent accepts the message. Null on\nqueued, gate_denied, and agent_failed rows.\n"
+            },
+            "smtp_response_code": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Receiver's 3-digit SMTP code (e.g. 250, 550, 451).\nPopulated on terminal delivery statuses; may be null\non a deferred where the agent never got an SMTP-level\nresponse (TCP refused, DNS failed, TLS handshake\nfailed). `smtp_response_text` still carries Postfix's\ndescriptive text in those cases.\n"
+            },
+            "smtp_response_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Free-form text portion of the receiver's SMTP\nresponse. The most useful debugging signal on a\n`bounced` or `deferred` row.\n"
+            },
+            "smtp_enhanced_status_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "RFC 3463 enhanced status code (e.g. `5.1.1` for \"Bad\ndestination mailbox address\"). Distinct from\n`smtp_response_code`: the basic 3-digit code is coarse\n(550 = \"permanent failure\"), the enhanced code is\nfiner-grained.\n"
+            },
+            "dkim_selector": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "DKIM selector used to sign the outbound message.\nPublic DNS data; useful for diagnosing why a downstream\nverifier rejected the signature.\n"
+            },
+            "dkim_domain": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "DKIM signing domain."
+            },
+            "error_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Stable public error code on `agent_failed` rows. The\nagent's internal codes are remapped to a stable public\ntaxonomy (see `publicAgentError` in the server) so this\nfield is safe to branch on across agent versions.\n"
+            },
+            "error_message": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Free-form error message accompanying `error_code`."
+            },
+            "gates": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "enum": [
+                      "send_to_confirmed_domains",
+                      "send_to_known_addresses"
+                    ],
+                    "description": "Public recipient-scope gate name that denied the send."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "domain_not_confirmed",
+                      "recipient_unauthenticated",
+                      "recipient_not_known"
+                    ],
+                    "description": "Stable machine-readable denial reason."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Human-readable explanation of the gate denial."
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "Domain or address the gate evaluated."
+                  },
+                  "fix": {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "confirm_domain",
+                          "sender_must_fix_authentication",
+                          "wait_for_inbound"
+                        ],
+                        "description": "Suggested next action for the caller."
+                      },
+                      "subject": {
+                        "type": "string",
+                        "description": "Entity the action applies to."
+                      }
+                    },
+                    "required": [
+                      "action",
+                      "subject"
+                    ]
+                  },
+                  "docs_url": {
+                    "type": "string",
+                    "description": "Public docs URL with more context."
+                  }
+                },
+                "required": [
+                  "name",
+                  "reason",
+                  "message",
+                  "subject"
+                ]
+              },
+              "description": "Gate-denial detail on `gate_denied` rows. Mirrors the\nsynchronous /send-mail 403 contract so a caller's\nGateDenial handler is the same across live denies and\nhistorical lookups. Null on every other status.\n"
+            },
+            "request_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n"
+            },
+            "scheduled_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Requested execution time for a scheduled send. Kept\nafter execution as the historical schedule; null on\nordinary immediate sends.\n"
+            },
+            "canceled_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
             }
           },
           "required": [
@@ -11218,7 +12392,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "status": {
             "type": "string",
-            "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+            "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
             "enum": [
               "queued",
               "submitted_to_agent",
@@ -11228,7 +12402,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "delivered",
               "bounced",
               "deferred",
-              "wait_timeout"
+              "wait_timeout",
+              "scheduled",
+              "canceled"
             ]
           },
           "status_changed_at": {
@@ -11454,6 +12630,22 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "null"
             ],
             "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n"
+          },
+          "scheduled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Requested execution time for a scheduled send. Kept\nafter execution as the historical schedule; null on\nordinary immediate sends.\n"
+          },
+          "canceled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
           }
         },
         "required": [
@@ -11563,7 +12755,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "status": {
           "type": "string",
-          "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+          "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
           "enum": [
             "queued",
             "submitted_to_agent",
@@ -11573,7 +12765,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "delivered",
             "bounced",
             "deferred",
-            "wait_timeout"
+            "wait_timeout",
+            "scheduled",
+            "canceled"
           ]
         },
         "from": {
@@ -11637,6 +12831,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "idempotent_replay": {
           "type": "boolean",
           "description": "True when the response replays a previously-recorded send\nkeyed by `client_idempotency_key` (same key, same canonical\npayload). False on a fresh send and on gate-denied\nresponses. Lets callers branch on cache state without\ndiffing fields.\n"
+        },
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Echoed requested execution time on a `scheduled`\nresponse. On scheduled creates, nothing is dispatched\nyet: `queue_id` is null and `accepted` / `rejected` are\nempty. Absent on immediate sends.\n"
         }
       },
       "required": [
@@ -11654,6 +12853,349 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "replyToEmail",
     "summary": "Reply to an inbound email",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "reschedule-sent-email",
+    "description": "Moves a STILL-SCHEDULED send (status `scheduled`) to a new\nexecution time. The new `scheduled_at` must be in the future\nand at most 30 days out, the same bounds as the create-time\nfield on /send-mail.\n\nThe update is a compare-and-swap on `status = 'scheduled'`:\nonce the scheduler has claimed the row for execution, or it\nwas already canceled or executed, the update loses and the\ncall returns a 409 `not_scheduled` conflict naming the row's\ncurrent status. A due send can therefore never be moved out\nfrom under an in-progress execution.\n\nReturns the full updated sent-email record on success.\n",
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "rescheduleSentEmail",
+    "path": "/sent-emails/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "New execution time (ISO 8601). Must be in the future and\nat most 30 days out, the same bounds as the create-time\nfield on /send-mail.\n"
+        }
+      },
+      "required": [
+        "scheduled_at"
+      ]
+    },
+    "responseSchema": {
+      "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
+      "allOf": [
+        {
+          "type": "object",
+          "description": "List-row projection of a sent-email record. Drops\n`body_text` and `body_html` to keep paginated responses\nsmall; fetch /sent-emails/{id} for the full record with\nbodies.\n",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
+              "enum": [
+                "queued",
+                "submitted_to_agent",
+                "agent_failed",
+                "gate_denied",
+                "unknown",
+                "delivered",
+                "bounced",
+                "deferred",
+                "wait_timeout",
+                "scheduled",
+                "canceled"
+              ]
+            },
+            "status_changed_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Timestamp of the most recent status transition.\nPolling clients should treat `status='queued'` AND\n`status_changed_at` older than 5 minutes as\n\"stuck-queued\" (the post-tx UPDATE failed and the\nactual delivery state is recoverable from on-box logs\nvia `queue_id` when populated, or `request_id`).\n"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "client_idempotency_key": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Effective idempotency key used for this send. If the\ncaller passed the `Idempotency-Key` header, this is\nthat value; otherwise it's a server-derived hash of\nthe canonical request payload.\n"
+            },
+            "content_hash": {
+              "type": "string",
+              "description": "Stable hash of the canonical send payload."
+            },
+            "from_header": {
+              "type": "string",
+              "description": "Raw `From:` header as sent on the wire, including any\ndisplay name (e.g. `\"Acme Support\" <agent@acme.test>`).\n"
+            },
+            "from_address": {
+              "type": "string",
+              "description": "Bare email address parsed from `from_header`."
+            },
+            "to_header": {
+              "type": "string",
+              "description": "Raw `To:` header as sent on the wire, including any\ndisplay name.\n"
+            },
+            "to_address": {
+              "type": "string",
+              "description": "Bare email address parsed from `to_header`."
+            },
+            "subject": {
+              "type": "string"
+            },
+            "body_size_bytes": {
+              "type": "integer",
+              "description": "Total UTF-8 byte length of `body_text` + `body_html`.\nSurfaced on the list endpoint so callers can see \"this\nrow has a 4MB body\" without fetching it.\n"
+            },
+            "content_discarded_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Timestamp at which the bodies were discarded by an\nentitlement-driven retention policy. Null when bodies\nare still present. The detail endpoint returns\nnull-valued `body_text`/`body_html` for discarded rows.\n"
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level Message-ID assigned to the outbound message\n(RFC 5322). Null on rows that never reached signing\n(queued, gate_denied, agent_failed before signing).\n"
+            },
+            "in_reply_to": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level In-Reply-To header value, when this send\nwas a reply.\n"
+            },
+            "email_references": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level References header value, when this send\nwas a reply.\n"
+            },
+            "in_reply_to_email_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Reference to the inbound `emails.id` that this send\nreplied to, when known. Populated when the caller used\n/emails/{id}/reply or when /send-mail's `in_reply_to`\nmatched a stored inbound message_id in the same org.\n"
+            },
+            "thread_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Conversation thread this send belongs to. A reply inherits\nthe thread of the inbound it answers; a fresh send starts a\nnew thread. Fetch `/threads/{thread_id}` for the full\nordered thread (inbound + outbound interleaved). NULL on\ngate-denied sends and on sends created before threading was\nenabled.\n"
+            },
+            "queue_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Message identifier assigned by Primitive's outbound\nrelay once the agent accepts the message. Null on\nqueued, gate_denied, and agent_failed rows.\n"
+            },
+            "smtp_response_code": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Receiver's 3-digit SMTP code (e.g. 250, 550, 451).\nPopulated on terminal delivery statuses; may be null\non a deferred where the agent never got an SMTP-level\nresponse (TCP refused, DNS failed, TLS handshake\nfailed). `smtp_response_text` still carries Postfix's\ndescriptive text in those cases.\n"
+            },
+            "smtp_response_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Free-form text portion of the receiver's SMTP\nresponse. The most useful debugging signal on a\n`bounced` or `deferred` row.\n"
+            },
+            "smtp_enhanced_status_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "RFC 3463 enhanced status code (e.g. `5.1.1` for \"Bad\ndestination mailbox address\"). Distinct from\n`smtp_response_code`: the basic 3-digit code is coarse\n(550 = \"permanent failure\"), the enhanced code is\nfiner-grained.\n"
+            },
+            "dkim_selector": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "DKIM selector used to sign the outbound message.\nPublic DNS data; useful for diagnosing why a downstream\nverifier rejected the signature.\n"
+            },
+            "dkim_domain": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "DKIM signing domain."
+            },
+            "error_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Stable public error code on `agent_failed` rows. The\nagent's internal codes are remapped to a stable public\ntaxonomy (see `publicAgentError` in the server) so this\nfield is safe to branch on across agent versions.\n"
+            },
+            "error_message": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Free-form error message accompanying `error_code`."
+            },
+            "gates": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "enum": [
+                      "send_to_confirmed_domains",
+                      "send_to_known_addresses"
+                    ],
+                    "description": "Public recipient-scope gate name that denied the send."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "domain_not_confirmed",
+                      "recipient_unauthenticated",
+                      "recipient_not_known"
+                    ],
+                    "description": "Stable machine-readable denial reason."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Human-readable explanation of the gate denial."
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "Domain or address the gate evaluated."
+                  },
+                  "fix": {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "confirm_domain",
+                          "sender_must_fix_authentication",
+                          "wait_for_inbound"
+                        ],
+                        "description": "Suggested next action for the caller."
+                      },
+                      "subject": {
+                        "type": "string",
+                        "description": "Entity the action applies to."
+                      }
+                    },
+                    "required": [
+                      "action",
+                      "subject"
+                    ]
+                  },
+                  "docs_url": {
+                    "type": "string",
+                    "description": "Public docs URL with more context."
+                  }
+                },
+                "required": [
+                  "name",
+                  "reason",
+                  "message",
+                  "subject"
+                ]
+              },
+              "description": "Gate-denial detail on `gate_denied` rows. Mirrors the\nsynchronous /send-mail 403 contract so a caller's\nGateDenial handler is the same across live denies and\nhistorical lookups. Null on every other status.\n"
+            },
+            "request_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n"
+            },
+            "scheduled_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Requested execution time for a scheduled send. Kept\nafter execution as the historical schedule; null on\nordinary immediate sends.\n"
+            },
+            "canceled_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
+            }
+          },
+          "required": [
+            "id",
+            "status",
+            "status_changed_at",
+            "created_at",
+            "updated_at",
+            "content_hash",
+            "from_header",
+            "from_address",
+            "to_header",
+            "to_address",
+            "subject",
+            "body_size_bytes"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+            },
+            "body_html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            }
+          }
+        }
+      ]
+    },
+    "sdkName": "rescheduleSentEmail",
+    "summary": "Reschedule a scheduled send",
     "tag": "Sending",
     "tagCommand": "sending"
   },
@@ -11833,6 +13375,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "minimum": 1000,
           "maximum": 30000,
           "description": "Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000."
+        },
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional future execution time (ISO 8601). When set, the\nsend is recorded with status `scheduled` and executed at\nthe requested time instead of immediately. Must be in the\nfuture and at most 30 days out. Incompatible with `wait`\n(a scheduled send resolves after this request completes)\nand with `attachments` / `payload_attachments` (not yet\nsupported on scheduled sends). Reschedule via PATCH\n/sent-emails/{id}; cancel via /sent-emails/{id}/cancel.\n"
         }
       },
       "required": [
@@ -11850,7 +13397,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "status": {
           "type": "string",
-          "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+          "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
           "enum": [
             "queued",
             "submitted_to_agent",
@@ -11860,7 +13407,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "delivered",
             "bounced",
             "deferred",
-            "wait_timeout"
+            "wait_timeout",
+            "scheduled",
+            "canceled"
           ]
         },
         "from": {
@@ -11924,6 +13473,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "idempotent_replay": {
           "type": "boolean",
           "description": "True when the response replays a previously-recorded send\nkeyed by `client_idempotency_key` (same key, same canonical\npayload). False on a fresh send and on gate-denied\nresponses. Lets callers branch on cache state without\ndiffing fields.\n"
+        },
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Echoed requested execution time on a `scheduled`\nresponse. On scheduled creates, nothing is dispatched\nyet: `queue_id` is null and `accepted` / `rejected` are\nempty. Absent on immediate sends.\n"
         }
       },
       "required": [

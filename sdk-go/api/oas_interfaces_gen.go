@@ -9,6 +9,14 @@ type AwaitReplyRes interface {
 	awaitReplyRes()
 }
 
+type CancelSentEmailRes interface {
+	cancelSentEmailRes()
+}
+
+type CheckDomainDnsRes interface {
+	checkDomainDnsRes()
+}
+
 type CliLogoutRes interface {
 	cliLogoutRes()
 }
@@ -181,6 +189,10 @@ type GetOrgRoutingTopologyRes interface {
 	getOrgRoutingTopologyRes()
 }
 
+type GetOutboundStatusRes interface {
+	getOutboundStatusRes()
+}
+
 type GetRegistryRes interface {
 	getRegistryRes()
 }
@@ -333,6 +345,10 @@ type ReplyToEmailRes interface {
 	replyToEmailRes()
 }
 
+type RescheduleSentEmailRes interface {
+	rescheduleSentEmailRes()
+}
+
 type ResendAgentSignupVerificationRes interface {
 	resendAgentSignupVerificationRes()
 }
@@ -407,6 +423,10 @@ type StartCliSignupRes interface {
 
 type TestEndpointRes interface {
 	testEndpointRes()
+}
+
+type TestEndpointRulesRes interface {
+	testEndpointRulesRes()
 }
 
 type TestFunctionRes interface {

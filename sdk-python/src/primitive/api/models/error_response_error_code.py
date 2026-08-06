@@ -27,6 +27,7 @@ class ErrorResponseErrorCode(str, Enum):
     MX_CONFLICT = "mx_conflict"
     NAME_EXHAUSTED = "name_exhausted"
     NOT_FOUND = "not_found"
+    NOT_SCHEDULED = "not_scheduled"
     NO_INBOUND_DOMAIN = "no_inbound_domain"
     NO_ORGS_FOR_USER = "no_orgs_for_user"
     NO_PAYOUT_ADDRESS = "no_payout_address"
