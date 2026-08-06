@@ -1302,6 +1302,97 @@ export type DomainVerifyResult = {
     error: string;
 };
 
+/**
+ * Rollup DNS health state. `pending` means never successfully
+ * checked, `healthy` means all required records verified,
+ * `degraded` means a previously-verified record has regressed,
+ * and `suspended` means the failure persisted long enough that
+ * the affected capability was disabled.
+ *
+ */
+export type DomainDnsHealthStatus = 'pending' | 'healthy' | 'degraded' | 'suspended';
+
+/**
+ * Health of one DNS scope: `ownership` (verification TXT),
+ * `inbound` (MX), or `outbound` (SPF, DKIM, DMARC, TLS-RPT).
+ *
+ */
+export type DomainDnsHealthScope = {
+    scope: 'ownership' | 'inbound' | 'outbound';
+    /**
+     * Whether this scope's required records are currently verified.
+     */
+    verified: boolean;
+    status: DomainDnsHealthStatus;
+    /**
+     * When this scope was last checked.
+     */
+    checked_at: string;
+    /**
+     * Next scheduled background check, or null when none is planned.
+     */
+    next_check_at: string | null;
+    /**
+     * Number of consecutive failed checks for this scope.
+     */
+    consecutive_failures: number;
+    /**
+     * The exact records inspected for this scope, each with its own status.
+     */
+    records: Array<DomainDnsRecord>;
+    /**
+     * Human-readable failure reason when the scope check errored.
+     */
+    error?: string;
+};
+
+/**
+ * Result of a DNS health check, as returned by
+ * /domains/{id}/dns/check and recorded as the domain's current
+ * health state. The top-level fields summarize the domain
+ * overall; `scopes` breaks the same check down per capability.
+ *
+ */
+export type DomainDnsHealthCheck = {
+    domain_id: string;
+    /**
+     * Active outbound DKIM key the outbound scope was checked against, when one exists.
+     */
+    key_id?: string;
+    domain: string;
+    /**
+     * Whether every required scope is currently verified.
+     */
+    verified: boolean;
+    status: DomainDnsHealthStatus;
+    checked_at: string;
+    /**
+     * Next scheduled background check, or null when none is planned.
+     */
+    next_check_at: string | null;
+    /**
+     * When outbound DNS was first verified, or null if it never has been.
+     */
+    outbound_verified_at: string | null;
+    consecutive_failures: number;
+    /**
+     * All records inspected across scopes, each with its own status.
+     */
+    records: Array<DomainDnsRecord>;
+    scopes: {
+        ownership: DomainDnsHealthScope;
+        inbound: DomainDnsHealthScope;
+        /**
+         * Absent when the domain has no active outbound key to check against.
+         */
+        outbound?: DomainDnsHealthScope;
+    };
+    /**
+     * Human-readable failure reason when the check errored.
+     */
+    error?: string;
+};
+
 export type EmailSummary = {
     id: string;
     message_id?: string | null;
@@ -1935,6 +2026,18 @@ export type SendMailInput = {
      * Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
      */
     wait_timeout_ms?: number;
+    /**
+     * Optional future execution time (ISO 8601). When set, the
+     * send is recorded with status `scheduled` and executed at
+     * the requested time instead of immediately. Must be in the
+     * future and at most 30 days out. Incompatible with `wait`
+     * (a scheduled send resolves after this request completes)
+     * and with `attachments` / `payload_attachments` (not yet
+     * supported on scheduled sends). Reschedule via PATCH
+     * /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
+     *
+     */
+    scheduled_at?: string;
 };
 
 /**
@@ -2014,9 +2117,17 @@ export type EmailWebhookStatus = 'pending' | 'in_flight' | 'fired' | 'failed' | 
  * poller couldn't classify the receiver's response.
  * - `delivered` / `bounced` / `deferred` / `wait_timeout`:
  * terminal delivery outcomes (see DeliveryStatus).
+ * - `scheduled`: created with a future `scheduled_at` and
+ * not yet executed; `scheduled_at` carries the pending
+ * execution time. Reschedulable via PATCH
+ * /sent-emails/{id} and cancelable via
+ * /sent-emails/{id}/cancel while in this status.
+ * - `canceled`: terminal; a scheduled send canceled before
+ * execution. `canceled_at` carries the cancellation time
+ * and nothing was dispatched.
  *
  */
-export type SentEmailStatus = 'queued' | 'submitted_to_agent' | 'agent_failed' | 'gate_denied' | 'unknown' | 'delivered' | 'bounced' | 'deferred' | 'wait_timeout';
+export type SentEmailStatus = 'queued' | 'submitted_to_agent' | 'agent_failed' | 'gate_denied' | 'unknown' | 'delivered' | 'bounced' | 'deferred' | 'wait_timeout' | 'scheduled' | 'canceled';
 
 /**
  * Narrower enum covering only the four terminal delivery
@@ -2218,6 +2329,19 @@ export type SentEmailSummary = {
      *
      */
     request_id?: string | null;
+    /**
+     * Requested execution time for a scheduled send. Kept
+     * after execution as the historical schedule; null on
+     * ordinary immediate sends.
+     *
+     */
+    scheduled_at?: string | null;
+    /**
+     * When a scheduled send was canceled. Null unless the row
+     * reached the `canceled` status.
+     *
+     */
+    canceled_at?: string | null;
 };
 
 /**
@@ -2475,6 +2599,78 @@ export type AwaitReplyResult = {
 };
 
 /**
+ * Per-domain outbound (sending) readiness.
+ */
+export type OutboundStatusDomain = {
+    id: string;
+    domain: string;
+    /**
+     * Single actionable state collapsing the sending
+     * prerequisites: `sendable` (you may send From this domain
+     * now), `pending_ownership` (ownership TXT not verified),
+     * `pending_outbound_dns` (ownership done, SPF/DKIM/DMARC
+     * not verified), or `inactive` (domain deactivated;
+     * re-adding it, not publishing DNS, is the fix).
+     *
+     */
+    status: 'sendable' | 'pending_outbound_dns' | 'pending_ownership' | 'inactive';
+    ownership_verified: boolean;
+    /**
+     * Whether the domain has an active outbound key with verified outbound DNS.
+     */
+    outbound_verified: boolean;
+};
+
+/**
+ * Outbound sending readiness for the caller's org, the outbound
+ * mirror of InboxStatus.
+ *
+ */
+export type OutboundStatus = {
+    /**
+     * True when at least one domain is sendable right now.
+     */
+    ready: boolean;
+    /**
+     * Short human-readable status summary.
+     */
+    summary: string;
+    /**
+     * Flat, sorted list of From-domains the org may send from
+     * right now. The same set echoed in a
+     * `cannot_send_from_domain` error's `details.valid_senders`,
+     * so recovery from that error and orientation here agree.
+     *
+     */
+    sendable_domains: Array<string>;
+    domains: Array<OutboundStatusDomain>;
+    /**
+     * Concrete remediation steps for domains that are not yet
+     * sendable. The server contract leaves entries open-ended;
+     * in practice each carries a `kind`, a human-readable
+     * `message`, and, when there is an obvious next step, a
+     * suggested CLI `command`.
+     *
+     */
+    next_actions: Array<{
+        kind?: string;
+        message?: string;
+        command?: string;
+        [key: string]: unknown;
+    }>;
+};
+
+export type SentEmailRescheduleInput = {
+    /**
+     * New execution time (ISO 8601). Must be in the future and
+     * at most 30 days out, the same bounds as the create-time
+     * field on /send-mail.
+     *
+     */
+    scheduled_at: string;
+};
+
+/**
  * Body shape for `/emails/{id}/reply`. Intentionally narrow:
  * recipients (`to`), subject, and threading headers
  * (`in_reply_to`, `references`) are derived server-side from
@@ -2593,6 +2789,14 @@ export type SendMailResult = {
      *
      */
     idempotent_replay: boolean;
+    /**
+     * Echoed requested execution time on a `scheduled`
+     * response. On scheduled creates, nothing is dispatched
+     * yet: `queue_id` is null and `accepted` / `rejected` are
+     * empty. Absent on immediate sends.
+     *
+     */
+    scheduled_at?: string;
 };
 
 /**
@@ -2845,6 +3049,85 @@ export type TestResult = {
      * The signature header value sent (if webhook secret is configured)
      */
     signature?: string;
+};
+
+export type TestEndpointRulesInput = {
+    /**
+     * Id of an already-received email (in your org) to evaluate the rules against.
+     */
+    email_id: string;
+};
+
+/**
+ * Verdict of a dry-run rule evaluation. Produced by the same
+ * shared matcher the live delivery paths use.
+ *
+ */
+export type TestEndpointRulesResult = {
+    /**
+     * Whether the delivery path would deliver this email to the endpoint.
+     */
+    would_deliver: boolean;
+    /**
+     * Name of the failing rule when delivery would be
+     * suppressed; null when the message matches and the
+     * endpoint is subscribed to the event type.
+     *
+     */
+    rule: string | null;
+    /**
+     * Human-readable explanation of the failing rule; null when the message matches.
+     */
+    reason: string | null;
+    /**
+     * False when the endpoint's stored rules blob failed
+     * validation. Delivery fails OPEN on an invalid blob
+     * (delivers as if unfiltered), so false here surfaces a
+     * misconfiguration that is otherwise silent.
+     *
+     */
+    rules_valid: boolean;
+    /**
+     * Whether the endpoint's event-type subscription includes
+     * this email's event type. A separate gate applied before
+     * message matching, surfaced independently so an
+     * unsubscribed endpoint is distinguishable from a rule
+     * rejection.
+     *
+     */
+    subscribed_to_event: boolean;
+    /**
+     * The event type this email would be delivered as.
+     */
+    event_type: string;
+    /**
+     * The message metadata the matcher compared, so the caller
+     * can see WHAT was evaluated (in particular the
+     * authenticated From identity versus the raw envelope
+     * sender).
+     *
+     */
+    evaluated: {
+        size_bytes: number;
+        has_attachments: boolean;
+        attachment_size_bytes: number;
+        /**
+         * Raw envelope sender the blacklist matches against.
+         */
+        sender: string;
+        /**
+         * Bare From-header address, when one was present.
+         */
+        from_address: string | null;
+        /**
+         * Whether the sender identity passed authentication (the whitelist matches only authenticated identities).
+         */
+        sender_authenticated: boolean;
+        /**
+         * Which signal established (or failed to establish) the sender identity.
+         */
+        sender_trust_basis: string;
+    };
 };
 
 export type Filter = {
@@ -4890,6 +5173,56 @@ export type VerifyDomainResponses = {
 
 export type VerifyDomainResponse = VerifyDomainResponses[keyof VerifyDomainResponses];
 
+export type CheckDomainDnsData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/domains/{id}/dns/check';
+};
+
+export type CheckDomainDnsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The domain's active outbound key changed while the check
+     * was running. Nothing was recorded; retry the check.
+     *
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type CheckDomainDnsError = CheckDomainDnsErrors[keyof CheckDomainDnsErrors];
+
+export type CheckDomainDnsResponses = {
+    /**
+     * DNS health check result
+     */
+    200: SuccessEnvelope & {
+        data?: DomainDnsHealthCheck;
+    };
+};
+
+export type CheckDomainDnsResponse = CheckDomainDnsResponses[keyof CheckDomainDnsResponses];
+
 export type DownloadDomainZoneFileData = {
     body?: never;
     path: {
@@ -5736,6 +6069,49 @@ export type TestEndpointResponses = {
 };
 
 export type TestEndpointResponse = TestEndpointResponses[keyof TestEndpointResponses];
+
+export type TestEndpointRulesData = {
+    body: TestEndpointRulesInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/endpoints/{id}/rules/test';
+};
+
+export type TestEndpointRulesErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Endpoint or email not found. Both the endpoint id (path)
+     * and `email_id` (body) must belong to the caller's org; the
+     * endpoint must be active (not deleted).
+     *
+     */
+    404: ErrorResponse;
+};
+
+export type TestEndpointRulesError = TestEndpointRulesErrors[keyof TestEndpointRulesErrors];
+
+export type TestEndpointRulesResponses = {
+    /**
+     * Rule evaluation verdict
+     */
+    200: SuccessEnvelope & {
+        data?: TestEndpointRulesResult;
+    };
+};
+
+export type TestEndpointRulesResponse = TestEndpointRulesResponses[keyof TestEndpointRulesResponses];
 
 export type ListFiltersData = {
     body?: never;
@@ -6732,6 +7108,33 @@ export type SemanticSearchResponses = {
 
 export type SemanticSearchResponse = SemanticSearchResponses[keyof SemanticSearchResponses];
 
+export type GetOutboundStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/outbound/status';
+};
+
+export type GetOutboundStatusErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+};
+
+export type GetOutboundStatusError = GetOutboundStatusErrors[keyof GetOutboundStatusErrors];
+
+export type GetOutboundStatusResponses = {
+    /**
+     * Outbound readiness summary
+     */
+    200: SuccessEnvelope & {
+        data?: OutboundStatus;
+    };
+};
+
+export type GetOutboundStatusResponse = GetOutboundStatusResponses[keyof GetOutboundStatusResponses];
+
 export type ListSentEmailsData = {
     body?: never;
     path?: never;
@@ -6848,6 +7251,100 @@ export type GetSentEmailResponses = {
 };
 
 export type GetSentEmailResponse = GetSentEmailResponses[keyof GetSentEmailResponses];
+
+export type RescheduleSentEmailData = {
+    body: SentEmailRescheduleInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/sent-emails/{id}';
+};
+
+export type RescheduleSentEmailErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The send exists but is no longer in `scheduled` status,
+     * so it cannot be rescheduled. `error.details` carries the
+     * row's `sent_email_id` and current `status`.
+     *
+     */
+    409: ErrorResponse;
+};
+
+export type RescheduleSentEmailError = RescheduleSentEmailErrors[keyof RescheduleSentEmailErrors];
+
+export type RescheduleSentEmailResponses = {
+    /**
+     * Rescheduled sent-email detail
+     */
+    200: SuccessEnvelope & {
+        data?: SentEmailDetail;
+    };
+};
+
+export type RescheduleSentEmailResponse = RescheduleSentEmailResponses[keyof RescheduleSentEmailResponses];
+
+export type CancelSentEmailData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/sent-emails/{id}/cancel';
+};
+
+export type CancelSentEmailErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The send exists but is no longer in `scheduled` status,
+     * so it cannot be canceled. `error.details` carries the
+     * row's `sent_email_id` and current `status`.
+     *
+     */
+    409: ErrorResponse;
+};
+
+export type CancelSentEmailError = CancelSentEmailErrors[keyof CancelSentEmailErrors];
+
+export type CancelSentEmailResponses = {
+    /**
+     * Canceled sent-email detail
+     */
+    200: SuccessEnvelope & {
+        data?: SentEmailDetail;
+    };
+};
+
+export type CancelSentEmailResponse = CancelSentEmailResponses[keyof CancelSentEmailResponses];
 
 export type AwaitReplyData = {
     body?: never;

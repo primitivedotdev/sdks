@@ -48,6 +48,45 @@ func (UnimplementedHandler) AwaitReply(ctx context.Context, params AwaitReplyPar
 	return r, ht.ErrNotImplemented
 }
 
+// CancelSentEmail implements cancelSentEmail operation.
+//
+// Cancels a STILL-SCHEDULED send (status `scheduled`), moving it
+// to the terminal `canceled` status. Nothing is dispatched and
+// the row is kept for historical lookup with `canceled_at` set.
+// Uses the same compare-and-swap guard as reschedule: once the
+// scheduler has claimed the row for execution, or it was already
+// canceled or executed, the call returns a 409 `not_scheduled`
+// conflict naming the row's current status. Canceling can
+// therefore never race an in-progress execution; a send that
+// reports `canceled` was never handed to the delivery path.
+// Returns the full updated sent-email record on success.
+//
+// POST /sent-emails/{id}/cancel
+func (UnimplementedHandler) CancelSentEmail(ctx context.Context, params CancelSentEmailParams) (r CancelSentEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CheckDomainDns implements checkDomainDns operation.
+//
+// Re-checks the domain's DNS records and persists the result as
+// the domain's current DNS health state. This is the on-demand
+// counterpart of the scheduled background checker: the response
+// mirrors what the checker records, broken down per scope
+// (`ownership`, `inbound`, `outbound`) with the exact records
+// inspected and each record's individual status.
+// Unlike /domains/{id}/verify, this call never promotes an
+// unverified domain; it only re-evaluates and records health for
+// an existing claim. Managed (Primitive-operated) domains are
+// rejected with a validation error because their DNS is not
+// customer-published.
+// Rate limited per organization; a `Retry-After` header
+// accompanies 429 responses.
+//
+// POST /domains/{id}/dns/check
+func (UnimplementedHandler) CheckDomainDns(ctx context.Context, params CheckDomainDnsParams) (r CheckDomainDnsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CliLogout implements cliLogout operation.
 //
 // Revokes the OAuth grant used to authenticate the request. API-key
@@ -619,6 +658,27 @@ func (UnimplementedHandler) GetOrgRoutingTopology(ctx context.Context) (r GetOrg
 	return r, ht.ErrNotImplemented
 }
 
+// GetOutboundStatus implements getOutboundStatus operation.
+//
+// The "what can I send From?" bootstrap, the outbound mirror of
+// /inbox/status. Returns per-domain sending readiness for every
+// domain in the caller's org, plus the flat `sendable_domains`
+// list of From-domains the org may send from right now. That
+// list is the same set echoed in a `cannot_send_from_domain`
+// error's details, so orienting here before a send and
+// recovering from that error use identical data.
+// Each domain's `status` collapses the sending prerequisites
+// into one actionable state: `sendable`, `pending_ownership`
+// (ownership TXT not verified), `pending_outbound_dns`
+// (SPF/DKIM/DMARC not verified), or `inactive` (domain
+// deactivated). `next_actions` lists concrete remediation steps,
+// each with a suggested CLI command where one exists.
+//
+// GET /outbound/status
+func (UnimplementedHandler) GetOutboundStatus(ctx context.Context) (r GetOutboundStatusRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetRegistry implements getRegistry operation.
 //
 // Get a public registry's metadata.
@@ -1127,6 +1187,25 @@ func (UnimplementedHandler) ReplyToEmail(ctx context.Context, req *ReplyInput, p
 	return r, ht.ErrNotImplemented
 }
 
+// RescheduleSentEmail implements rescheduleSentEmail operation.
+//
+// Moves a STILL-SCHEDULED send (status `scheduled`) to a new
+// execution time. The new `scheduled_at` must be in the future
+// and at most 30 days out, the same bounds as the create-time
+// field on /send-mail.
+// The update is a compare-and-swap on `status = 'scheduled'`:
+// once the scheduler has claimed the row for execution, or it
+// was already canceled or executed, the update loses and the
+// call returns a 409 `not_scheduled` conflict naming the row's
+// current status. A due send can therefore never be moved out
+// from under an in-progress execution.
+// Returns the full updated sent-email record on success.
+//
+// PATCH /sent-emails/{id}
+func (UnimplementedHandler) RescheduleSentEmail(ctx context.Context, req *SentEmailRescheduleInput, params RescheduleSentEmailParams) (r RescheduleSentEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ResendAgentSignupVerification implements resendAgentSignupVerification operation.
 //
 // Sends a new email verification code for a pending agent signup session.
@@ -1381,6 +1460,32 @@ func (UnimplementedHandler) StartCliSignup(ctx context.Context, req *StartCliSig
 //
 // POST /endpoints/{id}/test
 func (UnimplementedHandler) TestEndpoint(ctx context.Context, params TestEndpointParams) (r TestEndpointRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// TestEndpointRules implements testEndpointRules operation.
+//
+// Evaluates the endpoint's filtering rules against an
+// already-received email WITHOUT delivering anything. The same
+// shared matcher the live delivery paths use produces the
+// verdict, so the response explains exactly why a webhook fired
+// or was suppressed for that message.
+// When delivery would be suppressed, `rule` names the failing
+// rule and `reason` carries a human-readable explanation; both
+// are null when the message matches. `evaluated` echoes the
+// message metadata the matcher compared (size, attachments, and
+// the authenticated From identity versus the raw envelope
+// sender), so a surprising verdict can be traced to its inputs.
+// Two independent gates are surfaced separately:
+// `subscribed_to_event` reports the endpoint's event-type
+// subscription (checked before message matching), and
+// `rules_valid` reports whether the stored rules blob parsed at
+// all. Delivery fails OPEN on an invalid blob (the message is
+// delivered as if unfiltered), so `rules_valid: false` exposes a
+// misconfiguration that is otherwise silent.
+//
+// POST /endpoints/{id}/rules/test
+func (UnimplementedHandler) TestEndpointRules(ctx context.Context, req *TestEndpointRulesInput, params TestEndpointRulesParams) (r TestEndpointRulesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

@@ -37,6 +37,39 @@ type Handler interface {
 	//
 	// GET /sent-emails/{id}/reply
 	AwaitReply(ctx context.Context, params AwaitReplyParams) (AwaitReplyRes, error)
+	// CancelSentEmail implements cancelSentEmail operation.
+	//
+	// Cancels a STILL-SCHEDULED send (status `scheduled`), moving it
+	// to the terminal `canceled` status. Nothing is dispatched and
+	// the row is kept for historical lookup with `canceled_at` set.
+	// Uses the same compare-and-swap guard as reschedule: once the
+	// scheduler has claimed the row for execution, or it was already
+	// canceled or executed, the call returns a 409 `not_scheduled`
+	// conflict naming the row's current status. Canceling can
+	// therefore never race an in-progress execution; a send that
+	// reports `canceled` was never handed to the delivery path.
+	// Returns the full updated sent-email record on success.
+	//
+	// POST /sent-emails/{id}/cancel
+	CancelSentEmail(ctx context.Context, params CancelSentEmailParams) (CancelSentEmailRes, error)
+	// CheckDomainDns implements checkDomainDns operation.
+	//
+	// Re-checks the domain's DNS records and persists the result as
+	// the domain's current DNS health state. This is the on-demand
+	// counterpart of the scheduled background checker: the response
+	// mirrors what the checker records, broken down per scope
+	// (`ownership`, `inbound`, `outbound`) with the exact records
+	// inspected and each record's individual status.
+	// Unlike /domains/{id}/verify, this call never promotes an
+	// unverified domain; it only re-evaluates and records health for
+	// an existing claim. Managed (Primitive-operated) domains are
+	// rejected with a validation error because their DNS is not
+	// customer-published.
+	// Rate limited per organization; a `Retry-After` header
+	// accompanies 429 responses.
+	//
+	// POST /domains/{id}/dns/check
+	CheckDomainDns(ctx context.Context, params CheckDomainDnsParams) (CheckDomainDnsRes, error)
 	// CliLogout implements cliLogout operation.
 	//
 	// Revokes the OAuth grant used to authenticate the request. API-key
@@ -479,6 +512,24 @@ type Handler interface {
 	//
 	// GET /functions/routing-topology
 	GetOrgRoutingTopology(ctx context.Context) (GetOrgRoutingTopologyRes, error)
+	// GetOutboundStatus implements getOutboundStatus operation.
+	//
+	// The "what can I send From?" bootstrap, the outbound mirror of
+	// /inbox/status. Returns per-domain sending readiness for every
+	// domain in the caller's org, plus the flat `sendable_domains`
+	// list of From-domains the org may send from right now. That
+	// list is the same set echoed in a `cannot_send_from_domain`
+	// error's details, so orienting here before a send and
+	// recovering from that error use identical data.
+	// Each domain's `status` collapses the sending prerequisites
+	// into one actionable state: `sendable`, `pending_ownership`
+	// (ownership TXT not verified), `pending_outbound_dns`
+	// (SPF/DKIM/DMARC not verified), or `inactive` (domain
+	// deactivated). `next_actions` lists concrete remediation steps,
+	// each with a suggested CLI command where one exists.
+	//
+	// GET /outbound/status
+	GetOutboundStatus(ctx context.Context) (GetOutboundStatusRes, error)
 	// GetRegistry implements getRegistry operation.
 	//
 	// Get a public registry's metadata.
@@ -870,6 +921,22 @@ type Handler interface {
 	//
 	// POST /emails/{id}/reply
 	ReplyToEmail(ctx context.Context, req *ReplyInput, params ReplyToEmailParams) (ReplyToEmailRes, error)
+	// RescheduleSentEmail implements rescheduleSentEmail operation.
+	//
+	// Moves a STILL-SCHEDULED send (status `scheduled`) to a new
+	// execution time. The new `scheduled_at` must be in the future
+	// and at most 30 days out, the same bounds as the create-time
+	// field on /send-mail.
+	// The update is a compare-and-swap on `status = 'scheduled'`:
+	// once the scheduler has claimed the row for execution, or it
+	// was already canceled or executed, the update loses and the
+	// call returns a 409 `not_scheduled` conflict naming the row's
+	// current status. A due send can therefore never be moved out
+	// from under an in-progress execution.
+	// Returns the full updated sent-email record on success.
+	//
+	// PATCH /sent-emails/{id}
+	RescheduleSentEmail(ctx context.Context, req *SentEmailRescheduleInput, params RescheduleSentEmailParams) (RescheduleSentEmailRes, error)
 	// ResendAgentSignupVerification implements resendAgentSignupVerification operation.
 	//
 	// Sends a new email verification code for a pending agent signup session.
@@ -1070,6 +1137,29 @@ type Handler interface {
 	//
 	// POST /endpoints/{id}/test
 	TestEndpoint(ctx context.Context, params TestEndpointParams) (TestEndpointRes, error)
+	// TestEndpointRules implements testEndpointRules operation.
+	//
+	// Evaluates the endpoint's filtering rules against an
+	// already-received email WITHOUT delivering anything. The same
+	// shared matcher the live delivery paths use produces the
+	// verdict, so the response explains exactly why a webhook fired
+	// or was suppressed for that message.
+	// When delivery would be suppressed, `rule` names the failing
+	// rule and `reason` carries a human-readable explanation; both
+	// are null when the message matches. `evaluated` echoes the
+	// message metadata the matcher compared (size, attachments, and
+	// the authenticated From identity versus the raw envelope
+	// sender), so a surprising verdict can be traced to its inputs.
+	// Two independent gates are surfaced separately:
+	// `subscribed_to_event` reports the endpoint's event-type
+	// subscription (checked before message matching), and
+	// `rules_valid` reports whether the stored rules blob parsed at
+	// all. Delivery fails OPEN on an invalid blob (the message is
+	// delivered as if unfiltered), so `rules_valid: false` exposes a
+	// misconfiguration that is otherwise silent.
+	//
+	// POST /endpoints/{id}/rules/test
+	TestEndpointRules(ctx context.Context, req *TestEndpointRulesInput, params TestEndpointRulesParams) (TestEndpointRulesRes, error)
 	// TestFunction implements testFunction operation.
 	//
 	// Sends a real test email from a Primitive-controlled sender to a

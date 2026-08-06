@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, AwaitReplyData, AwaitReplyErrors, AwaitReplyResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateChallengeData, CreateChallengeErrors, CreateChallengeResponses, CreateEmailChallengeData, CreateEmailChallengeErrors, CreateEmailChallengeResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, CreateRegistryData, CreateRegistryErrors, CreateRegistryResponses, CreateRouteData, CreateRouteErrors, CreateRouteResponses, CreateWakeAuthorizationData, CreateWakeAuthorizationErrors, CreateWakeAuthorizationResponses, CreateWakeScheduleData, CreateWakeScheduleErrors, CreateWakeScheduleResponses, DecideRegistryRequestData, DecideRegistryRequestErrors, DecideRegistryRequestResponses, DefineAgentData, DefineAgentErrors, DefineAgentResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteMemoryData, DeleteMemoryErrors, DeleteMemoryResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DeleteRegistryData, DeleteRegistryErrors, DeleteRegistryResponses, DeleteRouteData, DeleteRouteErrors, DeleteRouteResponses, DeleteWakeAuthorizationData, DeleteWakeAuthorizationErrors, DeleteWakeAuthorizationResponses, DeleteWakeScheduleData, DeleteWakeScheduleErrors, DeleteWakeScheduleResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetAgentData, GetAgentErrors, GetAgentResponses, GetChallengeData, GetChallengeErrors, GetChallengeResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetMemoryData, GetMemoryErrors, GetMemoryResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetRegistryData, GetRegistryErrors, GetRegistryResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetSpendPolicyData, GetSpendPolicyErrors, GetSpendPolicyResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetTemplateData, GetTemplateErrors, GetTemplateInstallData, GetTemplateInstallErrors, GetTemplateInstallResponses, GetTemplateResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWakeScheduleData, GetWakeScheduleErrors, GetWakeScheduleResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, InstallTemplateData, InstallTemplateErrors, InstallTemplateResponses, ListDeclinedPaymentsData, ListDeclinedPaymentsErrors, ListDeclinedPaymentsResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListPayoutAddressesData, ListPayoutAddressesErrors, ListPayoutAddressesResponses, ListRegistriesData, ListRegistriesErrors, ListRegistriesResponses, ListRegistryAgentsData, ListRegistryAgentsResponses, ListRegistryRequestsData, ListRegistryRequestsErrors, ListRegistryRequestsResponses, ListRoutesData, ListRoutesErrors, ListRoutesResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, ListTemplatesData, ListTemplatesErrors, ListTemplatesResponses, ListWakeAuthorizationsData, ListWakeAuthorizationsErrors, ListWakeAuthorizationsResponses, ListWakeDispatchesData, ListWakeDispatchesErrors, ListWakeDispatchesResponses, ListWakeSchedulesData, ListWakeSchedulesErrors, ListWakeSchedulesResponses, PayChallengeData, PayChallengeErrors, PayChallengeResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, PublishAgentData, PublishAgentErrors, PublishAgentResponses, RegisterPayoutAddressData, RegisterPayoutAddressErrors, RegisterPayoutAddressResponses, ReorderRoutesData, ReorderRoutesErrors, ReorderRoutesResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, ResolveRegistryHandleData, ResolveRegistryHandleErrors, ResolveRegistryHandleResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, RunWakeScheduleData, RunWakeScheduleErrors, RunWakeScheduleResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SearchMemoriesData, SearchMemoriesErrors, SearchMemoriesResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetMemoryData, SetMemoryErrors, SetMemoryResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, SimulateRouteData, SimulateRouteErrors, SimulateRouteResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnpublishAgentData, UnpublishAgentErrors, UnpublishAgentResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, UpdateRegistryData, UpdateRegistryErrors, UpdateRegistryResponses, UpdateRouteData, UpdateRouteErrors, UpdateRouteResponses, UpdateSpendPolicyData, UpdateSpendPolicyErrors, UpdateSpendPolicyResponses, UpdateWakeAuthorizationData, UpdateWakeAuthorizationErrors, UpdateWakeAuthorizationResponses, UpdateWakeScheduleData, UpdateWakeScheduleErrors, UpdateWakeScheduleResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDomainData, AddDomainErrors, AddDomainResponses, AwaitReplyData, AwaitReplyErrors, AwaitReplyResponses, CancelSentEmailData, CancelSentEmailErrors, CancelSentEmailResponses, CheckDomainDnsData, CheckDomainDnsErrors, CheckDomainDnsResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateChallengeData, CreateChallengeErrors, CreateChallengeResponses, CreateEmailChallengeData, CreateEmailChallengeErrors, CreateEmailChallengeResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, CreateRegistryData, CreateRegistryErrors, CreateRegistryResponses, CreateRouteData, CreateRouteErrors, CreateRouteResponses, CreateWakeAuthorizationData, CreateWakeAuthorizationErrors, CreateWakeAuthorizationResponses, CreateWakeScheduleData, CreateWakeScheduleErrors, CreateWakeScheduleResponses, DecideRegistryRequestData, DecideRegistryRequestErrors, DecideRegistryRequestResponses, DefineAgentData, DefineAgentErrors, DefineAgentResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteMemoryData, DeleteMemoryErrors, DeleteMemoryResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DeleteRegistryData, DeleteRegistryErrors, DeleteRegistryResponses, DeleteRouteData, DeleteRouteErrors, DeleteRouteResponses, DeleteWakeAuthorizationData, DeleteWakeAuthorizationErrors, DeleteWakeAuthorizationResponses, DeleteWakeScheduleData, DeleteWakeScheduleErrors, DeleteWakeScheduleResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetAgentData, GetAgentErrors, GetAgentResponses, GetChallengeData, GetChallengeErrors, GetChallengeResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetMemoryData, GetMemoryErrors, GetMemoryResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetOutboundStatusData, GetOutboundStatusErrors, GetOutboundStatusResponses, GetRegistryData, GetRegistryErrors, GetRegistryResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetSpendPolicyData, GetSpendPolicyErrors, GetSpendPolicyResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetTemplateData, GetTemplateErrors, GetTemplateInstallData, GetTemplateInstallErrors, GetTemplateInstallResponses, GetTemplateResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWakeScheduleData, GetWakeScheduleErrors, GetWakeScheduleResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, InstallTemplateData, InstallTemplateErrors, InstallTemplateResponses, ListDeclinedPaymentsData, ListDeclinedPaymentsErrors, ListDeclinedPaymentsResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListPayoutAddressesData, ListPayoutAddressesErrors, ListPayoutAddressesResponses, ListRegistriesData, ListRegistriesErrors, ListRegistriesResponses, ListRegistryAgentsData, ListRegistryAgentsResponses, ListRegistryRequestsData, ListRegistryRequestsErrors, ListRegistryRequestsResponses, ListRoutesData, ListRoutesErrors, ListRoutesResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, ListTemplatesData, ListTemplatesErrors, ListTemplatesResponses, ListWakeAuthorizationsData, ListWakeAuthorizationsErrors, ListWakeAuthorizationsResponses, ListWakeDispatchesData, ListWakeDispatchesErrors, ListWakeDispatchesResponses, ListWakeSchedulesData, ListWakeSchedulesErrors, ListWakeSchedulesResponses, PayChallengeData, PayChallengeErrors, PayChallengeResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, PublishAgentData, PublishAgentErrors, PublishAgentResponses, RegisterPayoutAddressData, RegisterPayoutAddressErrors, RegisterPayoutAddressResponses, ReorderRoutesData, ReorderRoutesErrors, ReorderRoutesResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RescheduleSentEmailData, RescheduleSentEmailErrors, RescheduleSentEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, ResolveRegistryHandleData, ResolveRegistryHandleErrors, ResolveRegistryHandleResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, RunWakeScheduleData, RunWakeScheduleErrors, RunWakeScheduleResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SearchMemoriesData, SearchMemoriesErrors, SearchMemoriesResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetMemoryData, SetMemoryErrors, SetMemoryResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, SimulateRouteData, SimulateRouteErrors, SimulateRouteResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestEndpointRulesData, TestEndpointRulesErrors, TestEndpointRulesResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnpublishAgentData, UnpublishAgentErrors, UnpublishAgentResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, UpdateRegistryData, UpdateRegistryErrors, UpdateRegistryResponses, UpdateRouteData, UpdateRouteErrors, UpdateRouteResponses, UpdateSpendPolicyData, UpdateSpendPolicyErrors, UpdateSpendPolicyResponses, UpdateWakeAuthorizationData, UpdateWakeAuthorizationErrors, UpdateWakeAuthorizationResponses, UpdateWakeScheduleData, UpdateWakeScheduleErrors, UpdateWakeScheduleResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -421,6 +421,32 @@ export const verifyDomain = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
+ * Run an on-demand DNS health check
+ *
+ * Re-checks the domain's DNS records and persists the result as
+ * the domain's current DNS health state. This is the on-demand
+ * counterpart of the scheduled background checker: the response
+ * mirrors what the checker records, broken down per scope
+ * (`ownership`, `inbound`, `outbound`) with the exact records
+ * inspected and each record's individual status.
+ *
+ * Unlike /domains/{id}/verify, this call never promotes an
+ * unverified domain; it only re-evaluates and records health for
+ * an existing claim. Managed (Primitive-operated) domains are
+ * rejected with a validation error because their DNS is not
+ * customer-published.
+ *
+ * Rate limited per organization; a `Retry-After` header
+ * accompanies 429 responses.
+ *
+ */
+export const checkDomainDns = <ThrowOnError extends boolean = false>(options: Options<CheckDomainDnsData, ThrowOnError>) => (options.client ?? client).post<CheckDomainDnsResponses, CheckDomainDnsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/domains/{id}/dns/check',
+    ...options
+});
+
+/**
  * Download domain DNS zone file
  *
  * Downloads a BIND-format DNS zone file containing the DNS records
@@ -763,6 +789,41 @@ export const testEndpoint = <ThrowOnError extends boolean = false>(options: Opti
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/endpoints/{id}/test',
     ...options
+});
+
+/**
+ * Dry-run endpoint rules against a received email
+ *
+ * Evaluates the endpoint's filtering rules against an
+ * already-received email WITHOUT delivering anything. The same
+ * shared matcher the live delivery paths use produces the
+ * verdict, so the response explains exactly why a webhook fired
+ * or was suppressed for that message.
+ *
+ * When delivery would be suppressed, `rule` names the failing
+ * rule and `reason` carries a human-readable explanation; both
+ * are null when the message matches. `evaluated` echoes the
+ * message metadata the matcher compared (size, attachments, and
+ * the authenticated From identity versus the raw envelope
+ * sender), so a surprising verdict can be traced to its inputs.
+ *
+ * Two independent gates are surfaced separately:
+ * `subscribed_to_event` reports the endpoint's event-type
+ * subscription (checked before message matching), and
+ * `rules_valid` reports whether the stored rules blob parsed at
+ * all. Delivery fails OPEN on an invalid blob (the message is
+ * delivered as if unfiltered), so `rules_valid: false` exposes a
+ * misconfiguration that is otherwise silent.
+ *
+ */
+export const testEndpointRules = <ThrowOnError extends boolean = false>(options: Options<TestEndpointRulesData, ThrowOnError>) => (options.client ?? client).post<TestEndpointRulesResponses, TestEndpointRulesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/endpoints/{id}/rules/test',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
 });
 
 /**
@@ -1180,6 +1241,31 @@ export const semanticSearch = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
+ * Get outbound sending readiness
+ *
+ * The "what can I send From?" bootstrap, the outbound mirror of
+ * /inbox/status. Returns per-domain sending readiness for every
+ * domain in the caller's org, plus the flat `sendable_domains`
+ * list of From-domains the org may send from right now. That
+ * list is the same set echoed in a `cannot_send_from_domain`
+ * error's details, so orienting here before a send and
+ * recovering from that error use identical data.
+ *
+ * Each domain's `status` collapses the sending prerequisites
+ * into one actionable state: `sendable`, `pending_ownership`
+ * (ownership TXT not verified), `pending_outbound_dns`
+ * (SPF/DKIM/DMARC not verified), or `inactive` (domain
+ * deactivated). `next_actions` lists concrete remediation steps,
+ * each with a suggested CLI command where one exists.
+ *
+ */
+export const getOutboundStatus = <ThrowOnError extends boolean = false>(options?: Options<GetOutboundStatusData, ThrowOnError>) => (options?.client ?? client).get<GetOutboundStatusResponses, GetOutboundStatusErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/outbound/status',
+    ...options
+});
+
+/**
  * List outbound sent emails
  *
  * Returns a paginated list of OUTBOUND emails the caller's
@@ -1221,6 +1307,57 @@ export const listSentEmails = <ThrowOnError extends boolean = false>(options?: O
 export const getSentEmail = <ThrowOnError extends boolean = false>(options: Options<GetSentEmailData, ThrowOnError>) => (options.client ?? client).get<GetSentEmailResponses, GetSentEmailErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/sent-emails/{id}',
+    ...options
+});
+
+/**
+ * Reschedule a scheduled send
+ *
+ * Moves a STILL-SCHEDULED send (status `scheduled`) to a new
+ * execution time. The new `scheduled_at` must be in the future
+ * and at most 30 days out, the same bounds as the create-time
+ * field on /send-mail.
+ *
+ * The update is a compare-and-swap on `status = 'scheduled'`:
+ * once the scheduler has claimed the row for execution, or it
+ * was already canceled or executed, the update loses and the
+ * call returns a 409 `not_scheduled` conflict naming the row's
+ * current status. A due send can therefore never be moved out
+ * from under an in-progress execution.
+ *
+ * Returns the full updated sent-email record on success.
+ *
+ */
+export const rescheduleSentEmail = <ThrowOnError extends boolean = false>(options: Options<RescheduleSentEmailData, ThrowOnError>) => (options.client ?? client).patch<RescheduleSentEmailResponses, RescheduleSentEmailErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/sent-emails/{id}',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Cancel a scheduled send
+ *
+ * Cancels a STILL-SCHEDULED send (status `scheduled`), moving it
+ * to the terminal `canceled` status. Nothing is dispatched and
+ * the row is kept for historical lookup with `canceled_at` set.
+ *
+ * Uses the same compare-and-swap guard as reschedule: once the
+ * scheduler has claimed the row for execution, or it was already
+ * canceled or executed, the call returns a 409 `not_scheduled`
+ * conflict naming the row's current status. Canceling can
+ * therefore never race an in-progress execution; a send that
+ * reports `canceled` was never handed to the delivery path.
+ *
+ * Returns the full updated sent-email record on success.
+ *
+ */
+export const cancelSentEmail = <ThrowOnError extends boolean = false>(options: Options<CancelSentEmailData, ThrowOnError>) => (options.client ?? client).post<CancelSentEmailResponses, CancelSentEmailErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/sent-emails/{id}/cancel',
     ...options
 });
 

@@ -1540,6 +1540,74 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/domains/{id}/dns/check": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "operationId": "checkDomainDns",
+        "summary": "Run an on-demand DNS health check",
+        "description": "Re-checks the domain's DNS records and persists the result as\nthe domain's current DNS health state. This is the on-demand\ncounterpart of the scheduled background checker: the response\nmirrors what the checker records, broken down per scope\n(`ownership`, `inbound`, `outbound`) with the exact records\ninspected and each record's individual status.\n\nUnlike /domains/{id}/verify, this call never promotes an\nunverified domain; it only re-evaluates and records health for\nan existing claim. Managed (Primitive-operated) domains are\nrejected with a validation error because their DNS is not\ncustomer-published.\n\nRate limited per organization; a `Retry-After` header\naccompanies 429 responses.\n",
+        "tags": [
+          "Domains"
+        ],
+        "responses": {
+          "200": {
+            "description": "DNS health check result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/DomainDnsHealthCheck"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "The domain's active outbound key changed while the check\nwas running. Nothing was recorded; retry the check.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "Outbound key changed during DNS verification. Please retry."
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
     "/domains/{id}/zone-file": {
       "parameters": [
         {
@@ -2672,6 +2740,78 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/endpoints/{id}/rules/test": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "operationId": "testEndpointRules",
+        "summary": "Dry-run endpoint rules against a received email",
+        "description": "Evaluates the endpoint's filtering rules against an\nalready-received email WITHOUT delivering anything. The same\nshared matcher the live delivery paths use produces the\nverdict, so the response explains exactly why a webhook fired\nor was suppressed for that message.\n\nWhen delivery would be suppressed, `rule` names the failing\nrule and `reason` carries a human-readable explanation; both\nare null when the message matches. `evaluated` echoes the\nmessage metadata the matcher compared (size, attachments, and\nthe authenticated From identity versus the raw envelope\nsender), so a surprising verdict can be traced to its inputs.\n\nTwo independent gates are surfaced separately:\n`subscribed_to_event` reports the endpoint's event-type\nsubscription (checked before message matching), and\n`rules_valid` reports whether the stored rules blob parsed at\nall. Delivery fails OPEN on an invalid blob (the message is\ndelivered as if unfiltered), so `rules_valid: false` exposes a\nmisconfiguration that is otherwise silent.\n",
+        "tags": [
+          "Endpoints"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestEndpointRulesInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rule evaluation verdict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/TestEndpointRulesResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Endpoint or email not found. Both the endpoint id (path)\nand `email_id` (body) must belong to the caller's org; the\nendpoint must be active (not deleted).\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Email not found"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -3977,6 +4117,43 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/outbound/status": {
+      "get": {
+        "operationId": "getOutboundStatus",
+        "summary": "Get outbound sending readiness",
+        "description": "The \"what can I send From?\" bootstrap, the outbound mirror of\n/inbox/status. Returns per-domain sending readiness for every\ndomain in the caller's org, plus the flat `sendable_domains`\nlist of From-domains the org may send from right now. That\nlist is the same set echoed in a `cannot_send_from_domain`\nerror's details, so orienting here before a send and\nrecovering from that error use identical data.\n\nEach domain's `status` collapses the sending prerequisites\ninto one actionable state: `sendable`, `pending_ownership`\n(ownership TXT not verified), `pending_outbound_dns`\n(SPF/DKIM/DMARC not verified), or `inactive` (domain\ndeactivated). `next_actions` lists concrete remediation steps,\neach with a suggested CLI command where one exists.\n",
+        "tags": [
+          "Sending"
+        ],
+        "responses": {
+          "200": {
+            "description": "Outbound readiness summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/OutboundStatus"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
     "/sent-emails": {
       "get": {
         "operationId": "listSentEmails",
@@ -4117,6 +4294,152 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "rescheduleSentEmail",
+        "summary": "Reschedule a scheduled send",
+        "description": "Moves a STILL-SCHEDULED send (status `scheduled`) to a new\nexecution time. The new `scheduled_at` must be in the future\nand at most 30 days out, the same bounds as the create-time\nfield on /send-mail.\n\nThe update is a compare-and-swap on `status = 'scheduled'`:\nonce the scheduler has claimed the row for execution, or it\nwas already canceled or executed, the update loses and the\ncall returns a 409 `not_scheduled` conflict naming the row's\ncurrent status. A due send can therefore never be moved out\nfrom under an in-progress execution.\n\nReturns the full updated sent-email record on success.\n",
+        "tags": [
+          "Sending"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ResourceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SentEmailRescheduleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rescheduled sent-email detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SentEmailDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "The send exists but is no longer in `scheduled` status,\nso it cannot be rescheduled. `error.details` carries the\nrow's `sent_email_id` and current `status`.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_scheduled",
+                    "message": "cannot reschedule: this sent email is no longer scheduled (status: delivered)",
+                    "details": {
+                      "sent_email_id": "7f9c24e8-3b1a-4b6e-9c11-0d5f8a2e6c3d",
+                      "status": "delivered"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sent-emails/{id}/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "operationId": "cancelSentEmail",
+        "summary": "Cancel a scheduled send",
+        "description": "Cancels a STILL-SCHEDULED send (status `scheduled`), moving it\nto the terminal `canceled` status. Nothing is dispatched and\nthe row is kept for historical lookup with `canceled_at` set.\n\nUses the same compare-and-swap guard as reschedule: once the\nscheduler has claimed the row for execution, or it was already\ncanceled or executed, the call returns a 409 `not_scheduled`\nconflict naming the row's current status. Canceling can\ntherefore never race an in-progress execution; a send that\nreports `canceled` was never handed to the delivery path.\n\nReturns the full updated sent-email record on success.\n",
+        "tags": [
+          "Sending"
+        ],
+        "responses": {
+          "200": {
+            "description": "Canceled sent-email detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SentEmailDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "The send exists but is no longer in `scheduled` status,\nso it cannot be canceled. `error.details` carries the\nrow's `sent_email_id` and current `status`.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_scheduled",
+                    "message": "cannot cancel: this sent email is no longer scheduled (status: delivered)",
+                    "details": {
+                      "sent_email_id": "7f9c24e8-3b1a-4b6e-9c11-0d5f8a2e6c3d",
+                      "status": "delivered"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -10498,6 +10821,170 @@ export const openapiDocument: Record<string, unknown> = {
           }
         ]
       },
+      "DomainDnsHealthStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "healthy",
+          "degraded",
+          "suspended"
+        ],
+        "description": "Rollup DNS health state. `pending` means never successfully\nchecked, `healthy` means all required records verified,\n`degraded` means a previously-verified record has regressed,\nand `suspended` means the failure persisted long enough that\nthe affected capability was disabled.\n"
+      },
+      "DomainDnsHealthScope": {
+        "type": "object",
+        "description": "Health of one DNS scope: `ownership` (verification TXT),\n`inbound` (MX), or `outbound` (SPF, DKIM, DMARC, TLS-RPT).\n",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "ownership",
+              "inbound",
+              "outbound"
+            ]
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Whether this scope's required records are currently verified."
+          },
+          "status": {
+            "$ref": "#/components/schemas/DomainDnsHealthStatus"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When this scope was last checked."
+          },
+          "next_check_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Next scheduled background check, or null when none is planned."
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of consecutive failed checks for this scope."
+          },
+          "records": {
+            "type": "array",
+            "description": "The exact records inspected for this scope, each with its own status.",
+            "items": {
+              "$ref": "#/components/schemas/DomainDnsRecord"
+            }
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable failure reason when the scope check errored."
+          }
+        },
+        "required": [
+          "scope",
+          "verified",
+          "status",
+          "checked_at",
+          "next_check_at",
+          "consecutive_failures",
+          "records"
+        ]
+      },
+      "DomainDnsHealthCheck": {
+        "type": "object",
+        "description": "Result of a DNS health check, as returned by\n/domains/{id}/dns/check and recorded as the domain's current\nhealth state. The top-level fields summarize the domain\noverall; `scopes` breaks the same check down per capability.\n",
+        "properties": {
+          "domain_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Active outbound DKIM key the outbound scope was checked against, when one exists."
+          },
+          "domain": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Whether every required scope is currently verified."
+          },
+          "status": {
+            "$ref": "#/components/schemas/DomainDnsHealthStatus"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "next_check_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Next scheduled background check, or null when none is planned."
+          },
+          "outbound_verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When outbound DNS was first verified, or null if it never has been."
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "records": {
+            "type": "array",
+            "description": "All records inspected across scopes, each with its own status.",
+            "items": {
+              "$ref": "#/components/schemas/DomainDnsRecord"
+            }
+          },
+          "scopes": {
+            "type": "object",
+            "properties": {
+              "ownership": {
+                "$ref": "#/components/schemas/DomainDnsHealthScope"
+              },
+              "inbound": {
+                "$ref": "#/components/schemas/DomainDnsHealthScope"
+              },
+              "outbound": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/DomainDnsHealthScope"
+                  }
+                ],
+                "description": "Absent when the domain has no active outbound key to check against."
+              }
+            },
+            "required": [
+              "ownership",
+              "inbound"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable failure reason when the check errored."
+          }
+        },
+        "required": [
+          "domain_id",
+          "domain",
+          "verified",
+          "status",
+          "checked_at",
+          "next_check_at",
+          "outbound_verified_at",
+          "consecutive_failures",
+          "records",
+          "scopes"
+        ]
+      },
       "EmailSummary": {
         "type": "object",
         "properties": {
@@ -11691,6 +12178,11 @@ export const openapiDocument: Record<string, unknown> = {
             "minimum": 1000,
             "maximum": 30000,
             "description": "Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000."
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Optional future execution time (ISO 8601). When set, the\nsend is recorded with status `scheduled` and executed at\nthe requested time instead of immediately. Must be in the\nfuture and at most 30 days out. Incompatible with `wait`\n(a scheduled send resolves after this request completes)\nand with `attachments` / `payload_attachments` (not yet\nsupported on scheduled sends). Reschedule via PATCH\n/sent-emails/{id}; cancel via /sent-emails/{id}/cancel.\n"
           }
         },
         "required": [
@@ -11726,7 +12218,7 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "SentEmailStatus": {
         "type": "string",
-        "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n",
+        "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
         "enum": [
           "queued",
           "submitted_to_agent",
@@ -11736,7 +12228,9 @@ export const openapiDocument: Record<string, unknown> = {
           "delivered",
           "bounced",
           "deferred",
-          "wait_timeout"
+          "wait_timeout",
+          "scheduled",
+          "canceled"
         ]
       },
       "DeliveryStatus": {
@@ -11924,6 +12418,22 @@ export const openapiDocument: Record<string, unknown> = {
               "null"
             ],
             "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n"
+          },
+          "scheduled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Requested execution time for a scheduled send. Kept\nafter execution as the historical schedule; null on\nordinary immediate sends.\n"
+          },
+          "canceled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
           }
         },
         "required": [
@@ -12391,6 +12901,112 @@ export const openapiDocument: Record<string, unknown> = {
         ],
         "additionalProperties": false
       },
+      "OutboundStatusDomain": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Per-domain outbound (sending) readiness.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sendable",
+              "pending_outbound_dns",
+              "pending_ownership",
+              "inactive"
+            ],
+            "description": "Single actionable state collapsing the sending\nprerequisites: `sendable` (you may send From this domain\nnow), `pending_ownership` (ownership TXT not verified),\n`pending_outbound_dns` (ownership done, SPF/DKIM/DMARC\nnot verified), or `inactive` (domain deactivated;\nre-adding it, not publishing DNS, is the fix).\n"
+          },
+          "ownership_verified": {
+            "type": "boolean"
+          },
+          "outbound_verified": {
+            "type": "boolean",
+            "description": "Whether the domain has an active outbound key with verified outbound DNS."
+          }
+        },
+        "required": [
+          "id",
+          "domain",
+          "status",
+          "ownership_verified",
+          "outbound_verified"
+        ]
+      },
+      "OutboundStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Outbound sending readiness for the caller's org, the outbound\nmirror of InboxStatus.\n",
+        "properties": {
+          "ready": {
+            "type": "boolean",
+            "description": "True when at least one domain is sendable right now."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Short human-readable status summary."
+          },
+          "sendable_domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Flat, sorted list of From-domains the org may send from\nright now. The same set echoed in a\n`cannot_send_from_domain` error's `details.valid_senders`,\nso recovery from that error and orientation here agree.\n"
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutboundStatusDomain"
+            }
+          },
+          "next_actions": {
+            "type": "array",
+            "description": "Concrete remediation steps for domains that are not yet\nsendable. The server contract leaves entries open-ended;\nin practice each carries a `kind`, a human-readable\n`message`, and, when there is an obvious next step, a\nsuggested CLI `command`.\n",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "ready",
+          "summary",
+          "sendable_domains",
+          "domains",
+          "next_actions"
+        ]
+      },
+      "SentEmailRescheduleInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "New execution time (ISO 8601). Must be in the future and\nat most 30 days out, the same bounds as the create-time\nfield on /send-mail.\n"
+          }
+        },
+        "required": [
+          "scheduled_at"
+        ]
+      },
       "ReplyInput": {
         "type": "object",
         "additionalProperties": false,
@@ -12488,6 +13104,11 @@ export const openapiDocument: Record<string, unknown> = {
           "idempotent_replay": {
             "type": "boolean",
             "description": "True when the response replays a previously-recorded send\nkeyed by `client_idempotency_key` (same key, same canonical\npayload). False on a fresh send and on gate-denied\nresponses. Lets callers branch on cache state without\ndiffing fields.\n"
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Echoed requested execution time on a `scheduled`\nresponse. On scheduled creates, nothing is dispatched\nyet: `queue_id` is null and `accepted` / `rejected` are\nempty. Absent on immediate sends.\n"
           }
         },
         "required": [
@@ -12862,6 +13483,108 @@ export const openapiDocument: Record<string, unknown> = {
         "required": [
           "status",
           "body"
+        ]
+      },
+      "TestEndpointRulesInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "email_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Id of an already-received email (in your org) to evaluate the rules against."
+          }
+        },
+        "required": [
+          "email_id"
+        ]
+      },
+      "TestEndpointRulesResult": {
+        "type": "object",
+        "description": "Verdict of a dry-run rule evaluation. Produced by the same\nshared matcher the live delivery paths use.\n",
+        "properties": {
+          "would_deliver": {
+            "type": "boolean",
+            "description": "Whether the delivery path would deliver this email to the endpoint."
+          },
+          "rule": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Name of the failing rule when delivery would be\nsuppressed; null when the message matches and the\nendpoint is subscribed to the event type.\n"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Human-readable explanation of the failing rule; null when the message matches."
+          },
+          "rules_valid": {
+            "type": "boolean",
+            "description": "False when the endpoint's stored rules blob failed\nvalidation. Delivery fails OPEN on an invalid blob\n(delivers as if unfiltered), so false here surfaces a\nmisconfiguration that is otherwise silent.\n"
+          },
+          "subscribed_to_event": {
+            "type": "boolean",
+            "description": "Whether the endpoint's event-type subscription includes\nthis email's event type. A separate gate applied before\nmessage matching, surfaced independently so an\nunsubscribed endpoint is distinguishable from a rule\nrejection.\n"
+          },
+          "event_type": {
+            "type": "string",
+            "description": "The event type this email would be delivered as."
+          },
+          "evaluated": {
+            "type": "object",
+            "description": "The message metadata the matcher compared, so the caller\ncan see WHAT was evaluated (in particular the\nauthenticated From identity versus the raw envelope\nsender).\n",
+            "properties": {
+              "size_bytes": {
+                "type": "integer"
+              },
+              "has_attachments": {
+                "type": "boolean"
+              },
+              "attachment_size_bytes": {
+                "type": "integer"
+              },
+              "sender": {
+                "type": "string",
+                "description": "Raw envelope sender the blacklist matches against."
+              },
+              "from_address": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Bare From-header address, when one was present."
+              },
+              "sender_authenticated": {
+                "type": "boolean",
+                "description": "Whether the sender identity passed authentication (the whitelist matches only authenticated identities)."
+              },
+              "sender_trust_basis": {
+                "type": "string",
+                "description": "Which signal established (or failed to establish) the sender identity."
+              }
+            },
+            "required": [
+              "size_bytes",
+              "has_attachments",
+              "attachment_size_bytes",
+              "sender",
+              "from_address",
+              "sender_authenticated",
+              "sender_trust_basis"
+            ]
+          }
+        },
+        "required": [
+          "would_deliver",
+          "rule",
+          "reason",
+          "rules_valid",
+          "subscribed_to_event",
+          "event_type",
+          "evaluated"
         ]
       },
       "Filter": {
