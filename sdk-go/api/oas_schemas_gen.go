@@ -8130,6 +8130,7 @@ const (
 	ErrorResponseErrorCodeInternalError                 ErrorResponseErrorCode = "internal_error"
 	ErrorResponseErrorCodeConflict                      ErrorResponseErrorCode = "conflict"
 	ErrorResponseErrorCodeMxConflict                    ErrorResponseErrorCode = "mx_conflict"
+	ErrorResponseErrorCodeNotScheduled                  ErrorResponseErrorCode = "not_scheduled"
 	ErrorResponseErrorCodeOutboundDisabled              ErrorResponseErrorCode = "outbound_disabled"
 	ErrorResponseErrorCodeCannotSendFromDomain          ErrorResponseErrorCode = "cannot_send_from_domain"
 	ErrorResponseErrorCodeRecipientNotAllowed           ErrorResponseErrorCode = "recipient_not_allowed"
@@ -8186,6 +8187,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeInternalError,
 		ErrorResponseErrorCodeConflict,
 		ErrorResponseErrorCodeMxConflict,
+		ErrorResponseErrorCodeNotScheduled,
 		ErrorResponseErrorCodeOutboundDisabled,
 		ErrorResponseErrorCodeCannotSendFromDomain,
 		ErrorResponseErrorCodeRecipientNotAllowed,
@@ -8250,6 +8252,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeConflict:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeMxConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNotScheduled:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		return []byte(s), nil
@@ -8368,6 +8372,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeMxConflict:
 		*s = ErrorResponseErrorCodeMxConflict
+		return nil
+	case ErrorResponseErrorCodeNotScheduled:
+		*s = ErrorResponseErrorCodeNotScheduled
 		return nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		*s = ErrorResponseErrorCodeOutboundDisabled

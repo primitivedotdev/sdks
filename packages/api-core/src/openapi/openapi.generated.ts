@@ -9069,6 +9069,7 @@ export const openapiDocument: Record<string, unknown> = {
                   "internal_error",
                   "conflict",
                   "mx_conflict",
+                  "not_scheduled",
                   "outbound_disabled",
                   "cannot_send_from_domain",
                   "recipient_not_allowed",

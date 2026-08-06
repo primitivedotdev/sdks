@@ -21239,6 +21239,8 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeConflict
 	case ErrorResponseErrorCodeMxConflict:
 		*s = ErrorResponseErrorCodeMxConflict
+	case ErrorResponseErrorCodeNotScheduled:
+		*s = ErrorResponseErrorCodeNotScheduled
 	case ErrorResponseErrorCodeOutboundDisabled:
 		*s = ErrorResponseErrorCodeOutboundDisabled
 	case ErrorResponseErrorCodeCannotSendFromDomain:
