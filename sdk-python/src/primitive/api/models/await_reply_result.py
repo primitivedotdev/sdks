@@ -86,11 +86,11 @@ class AwaitReplyResult:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                reply_type_0 = ReplyEmail.from_dict(data)
+                reply_type_1 = ReplyEmail.from_dict(data)
 
 
 
-                return reply_type_0
+                return reply_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(None | ReplyEmail, data)

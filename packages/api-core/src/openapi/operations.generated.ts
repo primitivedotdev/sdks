@@ -10585,7 +10585,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "The send this lookup was keyed on (echoes the path id)."
         },
         "reply": {
-          "oneOf": [
+          "allOf": [
             {
               "type": "object",
               "description": "A threaded inbound reply to one of the org's sends, keyed by\nthe inbound email's `reply_to_sent_email_id`. Compact on\npurpose: enough to read the reply and decide what to do\nnext, with `/emails/{id}` available for the fully parsed\ndetail.\n",
@@ -10663,11 +10663,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "received_at",
                 "status"
               ]
-            },
-            {
-              "type": "null"
             }
-          ]
+          ],
+          "nullable": true
         },
         "waited": {
           "type": "boolean",

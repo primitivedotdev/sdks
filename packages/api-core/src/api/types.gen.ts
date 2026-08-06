@@ -2463,7 +2463,7 @@ export type AwaitReplyResult = {
      * The send this lookup was keyed on (echoes the path id).
      */
     sent_email_id: string;
-    reply: ReplyEmail | unknown;
+    reply: ReplyEmail | null;
     /**
      * Whether the call ran in long-poll mode (`wait=true`).
      */

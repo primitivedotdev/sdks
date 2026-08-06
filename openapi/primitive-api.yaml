@@ -8659,9 +8659,9 @@ components:
           format: uuid
           description: The send this lookup was keyed on (echoes the path id).
         reply:
-          oneOf:
+          allOf:
             - $ref: '#/components/schemas/ReplyEmail'
-            - type: 'null'
+          nullable: true
         waited:
           type: boolean
           description: Whether the call ran in long-poll mode (`wait=true`).

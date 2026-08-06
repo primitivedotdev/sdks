@@ -12367,14 +12367,12 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "The send this lookup was keyed on (echoes the path id)."
           },
           "reply": {
-            "oneOf": [
+            "allOf": [
               {
                 "$ref": "#/components/schemas/ReplyEmail"
-              },
-              {
-                "type": "null"
               }
-            ]
+            ],
+            "nullable": true
           },
           "waited": {
             "type": "boolean",
