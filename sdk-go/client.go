@@ -74,6 +74,10 @@ type ForwardParams struct {
 	Subject        string
 	From           string
 	IdempotencyKey string
+	// ScheduledAt is an optional future execution time, forwarded
+	// through to the underlying send. Same semantics and
+	// server-enforced bounds as SendParams.ScheduledAt.
+	ScheduledAt time.Time
 }
 
 type SendResult struct {
@@ -553,6 +557,7 @@ func (c *Client) Forward(ctx context.Context, email *ReceivedEmail, input Forwar
 		Subject:        firstNonEmpty(input.Subject, email.ForwardSubject),
 		BodyText:       buildForwardText(*email, input.BodyText),
 		IdempotencyKey: input.IdempotencyKey,
+		ScheduledAt:    input.ScheduledAt,
 	})
 }
 

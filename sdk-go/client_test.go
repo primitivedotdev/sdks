@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
 )
@@ -370,6 +371,26 @@ func TestClientForwardThreadsIdempotencyKeyToSend(t *testing.T) {
 	}
 	if value, ok := stub.params.IdempotencyKey.Get(); !ok || value != "fwd-key-123" {
 		t.Fatalf("unexpected idempotency key: %#v", stub.params.IdempotencyKey)
+	}
+}
+
+func TestClientForwardThreadsScheduledAtToSend(t *testing.T) {
+	stub := &stubSendAPI{
+		result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()},
+	}
+	client := NewClientFromAPI(stub)
+
+	scheduledAt := time.Date(2100, 1, 2, 3, 4, 5, 0, time.UTC)
+	_, err := client.Forward(context.Background(), receivedEmailFixture(), ForwardParams{
+		To:          "ops@example.com",
+		BodyText:    "Can you take this one?",
+		ScheduledAt: scheduledAt,
+	})
+	if err != nil {
+		t.Fatalf("Forward returned error: %v", err)
+	}
+	if value, ok := stub.request.ScheduledAt.Get(); !ok || !value.Equal(scheduledAt) {
+		t.Fatalf("unexpected scheduled at: %#v", stub.request.ScheduledAt)
 	}
 }
 

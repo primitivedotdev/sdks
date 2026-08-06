@@ -675,6 +675,43 @@ describe("PrimitiveClient", () => {
     });
   });
 
+  it("forward threads scheduledAt through to the send payload", async () => {
+    const scheduledAt = "2100-01-02T03:04:05.000Z";
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: vi.fn<typeof fetch>(async (input) => {
+        const request = input as Request;
+        const payload = await request.json();
+
+        expect(payload.scheduled_at).toBe(scheduledAt);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              ...SEND_RESULT,
+              status: "scheduled",
+              queue_id: null,
+              accepted: [],
+              rejected: [],
+              scheduled_at: scheduledAt,
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }) as typeof fetch,
+    });
+
+    const result = await client.forward(RECEIVED_EMAIL, {
+      to: "ops@example.com",
+      bodyText: "Can you take this one?",
+      scheduledAt,
+    });
+    expect(result.status).toBe("scheduled");
+    expect(result.scheduledAt).toBe(scheduledAt);
+  });
+
   it("wraps API failures in PrimitiveApiError", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",

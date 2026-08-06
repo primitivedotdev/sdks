@@ -267,6 +267,12 @@ export interface ForwardInput {
   bodyText?: string;
   subject?: string;
   from?: string;
+  /**
+   * Optional future execution time (ISO 8601), forwarded through to the
+   * underlying send. Same semantics and server-enforced bounds as
+   * {@link SendInput.scheduledAt}.
+   */
+  scheduledAt?: string;
 }
 
 export interface SendResult {
@@ -1333,6 +1339,9 @@ export class PrimitiveClient extends PrimitiveApiClient {
         to: input.to,
         subject: input.subject ?? email.forwardSubject,
         bodyText: buildForwardText(email, input.bodyText),
+        ...(input.scheduledAt !== undefined
+          ? { scheduledAt: input.scheduledAt }
+          : {}),
       },
       options,
     );
