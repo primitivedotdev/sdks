@@ -53,7 +53,7 @@
     "render:combined-all": "npm run render:combined-webm && npm run render:combined-landscape && npm run render:combined-square && npm run render:combined-vertical"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.474",
+    "@remotion/cli": "4.0.506",
     "@remotion/google-fonts": "4.0.474",
     "react": "19.0.0",
     "react-dom": "19.0.0",
