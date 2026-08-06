@@ -4121,6 +4121,72 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/sent-emails/{id}/reply": {
+      "get": {
+        "operationId": "awaitReply",
+        "summary": "Get (or wait for) the reply to a sent email",
+        "description": "Returns the first threaded inbound reply to a send, keyed by\nthe inbound email's `reply_to_sent_email_id`. This is the\ncanonical \"did a reply arrive for this send?\" call: after\n/send-mail, poll (or long-poll) here instead of hand-rolling\nan /emails/search loop.\n\nBy default the call returns immediately with `reply: null`\nwhen nothing has arrived yet. Set `wait=true` to long-poll:\nthe server holds the request up to `wait_timeout_ms`\n(default 10000, max 30000), returning as soon as the first\nreply lands. On a wait that elapses with no reply, the\nresponse has `reply: null` and `timed_out: true`.\n\nThe reply object is compact (headers plus bodies); fetch\n`/emails/{id}` with `reply.id` for the fully parsed record,\nor `/threads/{thread_id}` for the whole back-and-forth.\n",
+        "tags": [
+          "Sending"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ResourceId"
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "When true, long-poll up to `wait_timeout_ms` for the\nfirst reply to arrive instead of returning immediately.\nMirrors send-mail's server-side `wait` semantics. The\nserver accepts only the literal strings `true` / `false`\n(standard boolean query serialization); omitted means\nno wait.\n"
+          },
+          {
+            "name": "wait_timeout_ms",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 30000
+            },
+            "description": "Maximum time to hold the request when `wait=true`.\nServer default is 10000. NOT given an OpenAPI `default`\non purpose, matching the `/emails` `wait` parameter: a\ndefault makes some generators send the value on every\ncall.\n"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reply status for the send (reply may be null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AwaitReplyResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
     "/threads/{id}": {
       "parameters": [
         {
@@ -12212,6 +12278,118 @@ export const openapiDocument: Record<string, unknown> = {
             }
           }
         ]
+      },
+      "ReplyEmail": {
+        "type": "object",
+        "description": "A threaded inbound reply to one of the org's sends, keyed by\nthe inbound email's `reply_to_sent_email_id`. Compact on\npurpose: enough to read the reply and decide what to do\nnext, with `/emails/{id}` available for the fully parsed\ndetail.\n",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Inbound email row id; usable with `/emails/{id}`."
+          },
+          "thread_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Conversation thread id; usable with `/threads/{id}`."
+          },
+          "reply_to_sent_email_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The sent-email id this inbound message replied to."
+          },
+          "from_email": {
+            "type": "string",
+            "description": "Sender of the reply (From header when present, else envelope sender)."
+          },
+          "to_email": {
+            "type": "string",
+            "description": "Recipient address the reply arrived at."
+          },
+          "subject": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "body_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain-text body of the reply, when present."
+          },
+          "body_html": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "HTML body of the reply, when present."
+          },
+          "received_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "Inbound processing status of the reply row. Typically an\n`EmailStatus` value, but left as an open string here to\nmatch the server contract, which does not narrow it.\n"
+          }
+        },
+        "required": [
+          "id",
+          "thread_id",
+          "reply_to_sent_email_id",
+          "from_email",
+          "to_email",
+          "subject",
+          "body_text",
+          "body_html",
+          "received_at",
+          "status"
+        ]
+      },
+      "AwaitReplyResult": {
+        "type": "object",
+        "description": "Result of `/sent-emails/{id}/reply`. `reply` is null when no\nreply has arrived yet (no-wait call, or the wait timed out).\n",
+        "properties": {
+          "sent_email_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The send this lookup was keyed on (echoes the path id)."
+          },
+          "reply": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReplyEmail"
+              }
+            ],
+            "nullable": true
+          },
+          "waited": {
+            "type": "boolean",
+            "description": "Whether the call ran in long-poll mode (`wait=true`)."
+          },
+          "timed_out": {
+            "type": "boolean",
+            "description": "True only when a `wait=true` call elapsed its timeout with no reply."
+          }
+        },
+        "required": [
+          "sent_email_id",
+          "reply",
+          "waited",
+          "timed_out"
+        ],
+        "additionalProperties": false
       },
       "ReplyInput": {
         "type": "object",

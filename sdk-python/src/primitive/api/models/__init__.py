@@ -18,6 +18,8 @@ from .agent_signup_start_result import AgentSignupStartResult
 from .agent_signup_verify_result import AgentSignupVerifyResult
 from .agent_signup_verify_result_auth_method import AgentSignupVerifyResultAuthMethod
 from .agent_signup_verify_result_token_type import AgentSignupVerifyResultTokenType
+from .await_reply_response_200 import AwaitReplyResponse200
+from .await_reply_result import AwaitReplyResult
 from .cli_login_poll_result import CliLoginPollResult
 from .cli_login_poll_result_auth_method import CliLoginPollResultAuthMethod
 from .cli_login_poll_result_token_type import CliLoginPollResultTokenType
@@ -275,6 +277,7 @@ from .reorder_routes_response_200 import ReorderRoutesResponse200
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
 from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
+from .reply_email import ReplyEmail
 from .reply_input import ReplyInput
 from .reply_to_email_response_200 import ReplyToEmailResponse200
 from .resend_agent_signup_verification_input import ResendAgentSignupVerificationInput
@@ -473,6 +476,8 @@ __all__ = (
     "AgentSignupVerifyResult",
     "AgentSignupVerifyResultAuthMethod",
     "AgentSignupVerifyResultTokenType",
+    "AwaitReplyResponse200",
+    "AwaitReplyResult",
     "CliLoginPollResult",
     "CliLoginPollResultAuthMethod",
     "CliLoginPollResultTokenType",
@@ -730,6 +735,7 @@ __all__ = (
     "ReplayDeliveryResponse200",
     "ReplayEmailWebhooksResponse200",
     "ReplayResult",
+    "ReplyEmail",
     "ReplyInput",
     "ReplyToEmailResponse200",
     "ResendAgentSignupVerificationInput",

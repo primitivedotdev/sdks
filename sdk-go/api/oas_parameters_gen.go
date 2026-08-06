@@ -16,6 +16,211 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
+// AwaitReplyParams is parameters of awaitReply operation.
+type AwaitReplyParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+	// When true, long-poll up to `wait_timeout_ms` for the
+	// first reply to arrive instead of returning immediately.
+	// Mirrors send-mail's server-side `wait` semantics. The
+	// server accepts only the literal strings `true` / `false`
+	// (standard boolean query serialization); omitted means
+	// no wait.
+	Wait OptBool `json:",omitempty,omitzero"`
+	// Maximum time to hold the request when `wait=true`.
+	// Server default is 10000. NOT given an OpenAPI `default`
+	// on purpose, matching the `/emails` `wait` parameter: a
+	// default makes some generators send the value on every
+	// call.
+	WaitTimeoutMs OptInt `json:",omitempty,omitzero"`
+}
+
+func unpackAwaitReplyParams(packed middleware.Parameters) (params AwaitReplyParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "wait",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Wait = v.(OptBool)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "wait_timeout_ms",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.WaitTimeoutMs = v.(OptInt)
+		}
+	}
+	return params
+}
+
+func decodeAwaitReplyParams(args [1]string, argsEscaped bool, r *http.Request) (params AwaitReplyParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode query: wait.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "wait",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotWaitVal bool
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToBool(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotWaitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Wait.SetTo(paramsDotWaitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "wait",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: wait_timeout_ms.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "wait_timeout_ms",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotWaitTimeoutMsVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotWaitTimeoutMsVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.WaitTimeoutMs.SetTo(paramsDotWaitTimeoutMsVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.WaitTimeoutMs.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1000,
+							MaxSet:        true,
+							Max:           30000,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "wait_timeout_ms",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // CreateEmailChallengeParams is parameters of createEmailChallenge operation.
 type CreateEmailChallengeParams struct {
 	// Optional idempotency key. Retrying a request with the same key returns

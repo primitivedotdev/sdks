@@ -7,6 +7,7 @@ type OperationName = string
 
 const (
 	AddDomainOperation                     OperationName = "AddDomain"
+	AwaitReplyOperation                    OperationName = "AwaitReply"
 	CliLogoutOperation                     OperationName = "CliLogout"
 	CreateAgentAccountOperation            OperationName = "CreateAgentAccount"
 	CreateAgentClaimLinkOperation          OperationName = "CreateAgentClaimLink"

@@ -478,6 +478,30 @@ func (s AgentSignupVerifyResultTokenType) Validate() error {
 	}
 }
 
+func (s *AwaitReplyBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AwaitReplyNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AwaitReplyUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *CliLoginPollResult) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer

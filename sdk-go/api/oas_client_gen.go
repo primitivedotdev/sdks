@@ -38,6 +38,25 @@ type Invoker interface {
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, request *AddDomainInput) (AddDomainRes, error)
+	// AwaitReply invokes awaitReply operation.
+	//
+	// Returns the first threaded inbound reply to a send, keyed by
+	// the inbound email's `reply_to_sent_email_id`. This is the
+	// canonical "did a reply arrive for this send?" call: after
+	// /send-mail, poll (or long-poll) here instead of hand-rolling
+	// an /emails/search loop.
+	// By default the call returns immediately with `reply: null`
+	// when nothing has arrived yet. Set `wait=true` to long-poll:
+	// the server holds the request up to `wait_timeout_ms`
+	// (default 10000, max 30000), returning as soon as the first
+	// reply lands. On a wait that elapses with no reply, the
+	// response has `reply: null` and `timed_out: true`.
+	// The reply object is compact (headers plus bodies); fetch
+	// `/emails/{id}` with `reply.id` for the fully parsed record,
+	// or `/threads/{thread_id}` for the whole back-and-forth.
+	//
+	// GET /sent-emails/{id}/reply
+	AwaitReply(ctx context.Context, params AwaitReplyParams) (AwaitReplyRes, error)
 	// CliLogout invokes cliLogout operation.
 	//
 	// Revokes the OAuth grant used to authenticate the request. API-key
@@ -1383,6 +1402,183 @@ func (c *Client) sendAddDomain(ctx context.Context, request *AddDomainInput) (re
 
 	stage = "DecodeResponse"
 	result, err := decodeAddDomainResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// AwaitReply invokes awaitReply operation.
+//
+// Returns the first threaded inbound reply to a send, keyed by
+// the inbound email's `reply_to_sent_email_id`. This is the
+// canonical "did a reply arrive for this send?" call: after
+// /send-mail, poll (or long-poll) here instead of hand-rolling
+// an /emails/search loop.
+// By default the call returns immediately with `reply: null`
+// when nothing has arrived yet. Set `wait=true` to long-poll:
+// the server holds the request up to `wait_timeout_ms`
+// (default 10000, max 30000), returning as soon as the first
+// reply lands. On a wait that elapses with no reply, the
+// response has `reply: null` and `timed_out: true`.
+// The reply object is compact (headers plus bodies); fetch
+// `/emails/{id}` with `reply.id` for the fully parsed record,
+// or `/threads/{thread_id}` for the whole back-and-forth.
+//
+// GET /sent-emails/{id}/reply
+func (c *Client) AwaitReply(ctx context.Context, params AwaitReplyParams) (AwaitReplyRes, error) {
+	res, err := c.sendAwaitReply(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendAwaitReply(ctx context.Context, params AwaitReplyParams) (res AwaitReplyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("awaitReply"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/sent-emails/{id}/reply"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, AwaitReplyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/sent-emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/reply"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "wait" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "wait",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Wait.Get(); ok {
+				return e.EncodeValue(conv.BoolToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "wait_timeout_ms" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "wait_timeout_ms",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.WaitTimeoutMs.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, AwaitReplyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeAwaitReplyResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

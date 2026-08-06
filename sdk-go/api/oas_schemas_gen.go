@@ -1023,6 +1023,99 @@ func (s *AgentSignupVerifyResultTokenType) UnmarshalText(data []byte) error {
 	}
 }
 
+type AwaitReplyBadRequest ErrorResponse
+
+func (*AwaitReplyBadRequest) awaitReplyRes() {}
+
+type AwaitReplyNotFound ErrorResponse
+
+func (*AwaitReplyNotFound) awaitReplyRes() {}
+
+// Merged schema.
+type AwaitReplyOK struct {
+	Success bool             `json:"success"`
+	Data    AwaitReplyResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *AwaitReplyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *AwaitReplyOK) GetData() AwaitReplyResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *AwaitReplyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *AwaitReplyOK) SetData(val AwaitReplyResult) {
+	s.Data = val
+}
+
+func (*AwaitReplyOK) awaitReplyRes() {}
+
+// Result of `/sent-emails/{id}/reply`. `reply` is null when no
+// reply has arrived yet (no-wait call, or the wait timed out).
+// Ref: #/components/schemas/AwaitReplyResult
+type AwaitReplyResult struct {
+	// The send this lookup was keyed on (echoes the path id).
+	SentEmailID uuid.UUID     `json:"sent_email_id"`
+	Reply       NilReplyEmail `json:"reply"`
+	// Whether the call ran in long-poll mode (`wait=true`).
+	Waited bool `json:"waited"`
+	// True only when a `wait=true` call elapsed its timeout with no reply.
+	TimedOut bool `json:"timed_out"`
+}
+
+// GetSentEmailID returns the value of SentEmailID.
+func (s *AwaitReplyResult) GetSentEmailID() uuid.UUID {
+	return s.SentEmailID
+}
+
+// GetReply returns the value of Reply.
+func (s *AwaitReplyResult) GetReply() NilReplyEmail {
+	return s.Reply
+}
+
+// GetWaited returns the value of Waited.
+func (s *AwaitReplyResult) GetWaited() bool {
+	return s.Waited
+}
+
+// GetTimedOut returns the value of TimedOut.
+func (s *AwaitReplyResult) GetTimedOut() bool {
+	return s.TimedOut
+}
+
+// SetSentEmailID sets the value of SentEmailID.
+func (s *AwaitReplyResult) SetSentEmailID(val uuid.UUID) {
+	s.SentEmailID = val
+}
+
+// SetReply sets the value of Reply.
+func (s *AwaitReplyResult) SetReply(val NilReplyEmail) {
+	s.Reply = val
+}
+
+// SetWaited sets the value of Waited.
+func (s *AwaitReplyResult) SetWaited(val bool) {
+	s.Waited = val
+}
+
+// SetTimedOut sets the value of TimedOut.
+func (s *AwaitReplyResult) SetTimedOut(val bool) {
+	s.TimedOut = val
+}
+
+type AwaitReplyUnauthorized ErrorResponse
+
+func (*AwaitReplyUnauthorized) awaitReplyRes() {}
+
 type BearerAuth struct {
 	Token string
 	Roles []string
@@ -13912,6 +14005,51 @@ func (o NilInt) Or(d int) int {
 	return d
 }
 
+// NewNilReplyEmail returns new NilReplyEmail with value set to v.
+func NewNilReplyEmail(v ReplyEmail) NilReplyEmail {
+	return NilReplyEmail{
+		Value: v,
+	}
+}
+
+// NilReplyEmail is nullable ReplyEmail.
+type NilReplyEmail struct {
+	Value ReplyEmail
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilReplyEmail) SetTo(v ReplyEmail) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilReplyEmail) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilReplyEmail) SetToNull() {
+	o.Null = true
+	var v ReplyEmail
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilReplyEmail) Get() (v ReplyEmail, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilReplyEmail) Or(d ReplyEmail) ReplyEmail {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilRoutingTopologyDomainsItemRoutedFunction returns new NilRoutingTopologyDomainsItemRoutedFunction with value set to v.
 func NewNilRoutingTopologyDomainsItemRoutedFunction(v RoutingTopologyDomainsItemRoutedFunction) NilRoutingTopologyDomainsItemRoutedFunction {
 	return NilRoutingTopologyDomainsItemRoutedFunction{
@@ -19160,6 +19298,135 @@ func (s *ReplayResult) SetDelivered(val int) {
 // SetFailed sets the value of Failed.
 func (s *ReplayResult) SetFailed(val int) {
 	s.Failed = val
+}
+
+// A threaded inbound reply to one of the org's sends, keyed by
+// the inbound email's `reply_to_sent_email_id`. Compact on
+// purpose: enough to read the reply and decide what to do
+// next, with `/emails/{id}` available for the fully parsed
+// detail.
+// Ref: #/components/schemas/ReplyEmail
+type ReplyEmail struct {
+	// Inbound email row id; usable with `/emails/{id}`.
+	ID uuid.UUID `json:"id"`
+	// Conversation thread id; usable with `/threads/{id}`.
+	ThreadID NilUUID `json:"thread_id"`
+	// The sent-email id this inbound message replied to.
+	ReplyToSentEmailID NilUUID `json:"reply_to_sent_email_id"`
+	// Sender of the reply (From header when present, else envelope sender).
+	FromEmail string `json:"from_email"`
+	// Recipient address the reply arrived at.
+	ToEmail string    `json:"to_email"`
+	Subject NilString `json:"subject"`
+	// Plain-text body of the reply, when present.
+	BodyText NilString `json:"body_text"`
+	// HTML body of the reply, when present.
+	BodyHTML   NilString   `json:"body_html"`
+	ReceivedAt NilDateTime `json:"received_at"`
+	// Inbound processing status of the reply row. Typically an
+	// `EmailStatus` value, but left as an open string here to
+	// match the server contract, which does not narrow it.
+	Status string `json:"status"`
+}
+
+// GetID returns the value of ID.
+func (s *ReplyEmail) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetThreadID returns the value of ThreadID.
+func (s *ReplyEmail) GetThreadID() NilUUID {
+	return s.ThreadID
+}
+
+// GetReplyToSentEmailID returns the value of ReplyToSentEmailID.
+func (s *ReplyEmail) GetReplyToSentEmailID() NilUUID {
+	return s.ReplyToSentEmailID
+}
+
+// GetFromEmail returns the value of FromEmail.
+func (s *ReplyEmail) GetFromEmail() string {
+	return s.FromEmail
+}
+
+// GetToEmail returns the value of ToEmail.
+func (s *ReplyEmail) GetToEmail() string {
+	return s.ToEmail
+}
+
+// GetSubject returns the value of Subject.
+func (s *ReplyEmail) GetSubject() NilString {
+	return s.Subject
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *ReplyEmail) GetBodyText() NilString {
+	return s.BodyText
+}
+
+// GetBodyHTML returns the value of BodyHTML.
+func (s *ReplyEmail) GetBodyHTML() NilString {
+	return s.BodyHTML
+}
+
+// GetReceivedAt returns the value of ReceivedAt.
+func (s *ReplyEmail) GetReceivedAt() NilDateTime {
+	return s.ReceivedAt
+}
+
+// GetStatus returns the value of Status.
+func (s *ReplyEmail) GetStatus() string {
+	return s.Status
+}
+
+// SetID sets the value of ID.
+func (s *ReplyEmail) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetThreadID sets the value of ThreadID.
+func (s *ReplyEmail) SetThreadID(val NilUUID) {
+	s.ThreadID = val
+}
+
+// SetReplyToSentEmailID sets the value of ReplyToSentEmailID.
+func (s *ReplyEmail) SetReplyToSentEmailID(val NilUUID) {
+	s.ReplyToSentEmailID = val
+}
+
+// SetFromEmail sets the value of FromEmail.
+func (s *ReplyEmail) SetFromEmail(val string) {
+	s.FromEmail = val
+}
+
+// SetToEmail sets the value of ToEmail.
+func (s *ReplyEmail) SetToEmail(val string) {
+	s.ToEmail = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *ReplyEmail) SetSubject(val NilString) {
+	s.Subject = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *ReplyEmail) SetBodyText(val NilString) {
+	s.BodyText = val
+}
+
+// SetBodyHTML sets the value of BodyHTML.
+func (s *ReplyEmail) SetBodyHTML(val NilString) {
+	s.BodyHTML = val
+}
+
+// SetReceivedAt sets the value of ReceivedAt.
+func (s *ReplyEmail) SetReceivedAt(val NilDateTime) {
+	s.ReceivedAt = val
+}
+
+// SetStatus sets the value of Status.
+func (s *ReplyEmail) SetStatus(val string) {
+	s.Status = val
 }
 
 // Body shape for `/emails/{id}/reply`. Intentionally narrow:
