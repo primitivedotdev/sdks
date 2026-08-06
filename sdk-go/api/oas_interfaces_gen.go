@@ -5,6 +5,10 @@ type AddDomainRes interface {
 	addDomainRes()
 }
 
+type AwaitReplyRes interface {
+	awaitReplyRes()
+}
+
 type CliLogoutRes interface {
 	cliLogoutRes()
 }

@@ -2406,6 +2406,75 @@ export type SentEmailDetail = SentEmailSummary & {
 };
 
 /**
+ * A threaded inbound reply to one of the org's sends, keyed by
+ * the inbound email's `reply_to_sent_email_id`. Compact on
+ * purpose: enough to read the reply and decide what to do
+ * next, with `/emails/{id}` available for the fully parsed
+ * detail.
+ *
+ */
+export type ReplyEmail = {
+    /**
+     * Inbound email row id; usable with `/emails/{id}`.
+     */
+    id: string;
+    /**
+     * Conversation thread id; usable with `/threads/{id}`.
+     */
+    thread_id: string | null;
+    /**
+     * The sent-email id this inbound message replied to.
+     */
+    reply_to_sent_email_id: string | null;
+    /**
+     * Sender of the reply (From header when present, else envelope sender).
+     */
+    from_email: string;
+    /**
+     * Recipient address the reply arrived at.
+     */
+    to_email: string;
+    subject: string | null;
+    /**
+     * Plain-text body of the reply, when present.
+     */
+    body_text: string | null;
+    /**
+     * HTML body of the reply, when present.
+     */
+    body_html: string | null;
+    received_at: string | null;
+    /**
+     * Inbound processing status of the reply row. Typically an
+     * `EmailStatus` value, but left as an open string here to
+     * match the server contract, which does not narrow it.
+     *
+     */
+    status: string;
+};
+
+/**
+ * Result of `/sent-emails/{id}/reply`. `reply` is null when no
+ * reply has arrived yet (no-wait call, or the wait timed out).
+ *
+ */
+export type AwaitReplyResult = {
+    /**
+     * The send this lookup was keyed on (echoes the path id).
+     */
+    sent_email_id: string;
+    reply: ReplyEmail | unknown;
+    /**
+     * Whether the call ran in long-poll mode (`wait=true`).
+     */
+    waited: boolean;
+    /**
+     * True only when a `wait=true` call elapsed its timeout with no reply.
+     */
+    timed_out: boolean;
+};
+
+/**
  * Body shape for `/emails/{id}/reply`. Intentionally narrow:
  * recipients (`to`), subject, and threading headers
  * (`in_reply_to`, `references`) are derived server-side from
@@ -6779,6 +6848,66 @@ export type GetSentEmailResponses = {
 };
 
 export type GetSentEmailResponse = GetSentEmailResponses[keyof GetSentEmailResponses];
+
+export type AwaitReplyData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * When true, long-poll up to `wait_timeout_ms` for the
+         * first reply to arrive instead of returning immediately.
+         * Mirrors send-mail's server-side `wait` semantics. The
+         * server accepts only the literal strings `true` / `false`
+         * (standard boolean query serialization); omitted means
+         * no wait.
+         *
+         */
+        wait?: boolean;
+        /**
+         * Maximum time to hold the request when `wait=true`.
+         * Server default is 10000. NOT given an OpenAPI `default`
+         * on purpose, matching the `/emails` `wait` parameter: a
+         * default makes some generators send the value on every
+         * call.
+         *
+         */
+        wait_timeout_ms?: number;
+    };
+    url: '/sent-emails/{id}/reply';
+};
+
+export type AwaitReplyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type AwaitReplyError = AwaitReplyErrors[keyof AwaitReplyErrors];
+
+export type AwaitReplyResponses = {
+    /**
+     * Reply status for the send (reply may be null)
+     */
+    200: SuccessEnvelope & {
+        data?: AwaitReplyResult;
+    };
+};
+
+export type AwaitReplyResponse = AwaitReplyResponses[keyof AwaitReplyResponses];
 
 export type GetThreadData = {
     body?: never;

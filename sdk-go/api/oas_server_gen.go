@@ -18,6 +18,25 @@ type Handler interface {
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, req *AddDomainInput) (AddDomainRes, error)
+	// AwaitReply implements awaitReply operation.
+	//
+	// Returns the first threaded inbound reply to a send, keyed by
+	// the inbound email's `reply_to_sent_email_id`. This is the
+	// canonical "did a reply arrive for this send?" call: after
+	// /send-mail, poll (or long-poll) here instead of hand-rolling
+	// an /emails/search loop.
+	// By default the call returns immediately with `reply: null`
+	// when nothing has arrived yet. Set `wait=true` to long-poll:
+	// the server holds the request up to `wait_timeout_ms`
+	// (default 10000, max 30000), returning as soon as the first
+	// reply lands. On a wait that elapses with no reply, the
+	// response has `reply: null` and `timed_out: true`.
+	// The reply object is compact (headers plus bodies); fetch
+	// `/emails/{id}` with `reply.id` for the fully parsed record,
+	// or `/threads/{thread_id}` for the whole back-and-forth.
+	//
+	// GET /sent-emails/{id}/reply
+	AwaitReply(ctx context.Context, params AwaitReplyParams) (AwaitReplyRes, error)
 	// CliLogout implements cliLogout operation.
 	//
 	// Revokes the OAuth grant used to authenticate the request. API-key
