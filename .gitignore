@@ -18,3 +18,6 @@ sdk-python/**/__pycache__/
 .internal/
 .vite/
 dist/
+# The Remotion demo-video project is a local marketing asset, not part of the SDK.
+# It was committed by mistake; keep it out of the repo.
+demo/
