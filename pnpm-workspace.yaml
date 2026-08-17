@@ -15,6 +15,7 @@ overrides:
   vite@>=8.0.0 <8.0.16: 8.0.16
   nodemailer@>=8.0.0 <9.0.1: 9.0.1
   postcss@>=8.0.0 <8.5.23: 8.5.23
+  deepmerge-ts@<8.0.0: 8.0.0
 
 allowBuilds:
   esbuild: true
