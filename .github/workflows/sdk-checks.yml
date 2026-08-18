@@ -25,7 +25,7 @@ jobs:
       go: ${{ steps.full.outputs.go || steps.filter.outputs.go }}
       shared: ${{ steps.full.outputs.shared || steps.filter.outputs.shared }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - id: full
         if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' }}
@@ -76,7 +76,7 @@ jobs:
       matrix:
         node-version: [22, 24]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
         with:
@@ -116,7 +116,7 @@ jobs:
       matrix:
         node-version: [22, 24]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
         with:
@@ -156,7 +156,7 @@ jobs:
       matrix:
         python-version: ["3.10", "3.14"]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
         with:
@@ -187,7 +187,7 @@ jobs:
       matrix:
         go-version: ["1.25", "1.26"]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
@@ -213,7 +213,7 @@ jobs:
     if: ${{ needs.changes.outputs.shared == 'true' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
         with:
