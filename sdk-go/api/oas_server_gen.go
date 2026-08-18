@@ -1011,9 +1011,6 @@ type Handler interface {
 	// response's `meta.cursor` back as `cursor`.
 	// Requires the Pro plan and the `semantic_search_enabled`
 	// entitlement; callers without them receive `403`.
-	// Host routing: this operation is served only by the search host
-	// (`https://api.primitive.dev/v1`). The typed SDKs route it there
-	// automatically.
 	//
 	// POST /semantic-search
 	SemanticSearch(ctx context.Context, req *SemanticSearchInput) (SemanticSearchRes, error)
