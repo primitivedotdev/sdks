@@ -44,6 +44,20 @@ func encodeCliLogoutRequest(
 	return nil
 }
 
+func encodeCompleteWebhookEventRequest(
+	req CompleteWebhookInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCreateAgentAccountRequest(
 	req *CreateAgentAccountInput,
 	r *http.Request,
@@ -300,6 +314,20 @@ func encodePollCliLoginRequest(
 
 func encodePublishAgentRequest(
 	req *PublishAgentInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodePullWebhookEventRequest(
+	req *PullWebhookInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

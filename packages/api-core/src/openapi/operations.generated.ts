@@ -4244,8 +4244,266 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": true,
+    "command": "complete-webhook-event",
+    "description": "Report normalized handling evidence for the queue, attempt and lease. Required JSON fields: queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout includes write_succeeded; http includes status_code and optional transport_error, error_code, confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot finish a newer attempt. Exec success means durable input acceptance, not completion of agent reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content discard. Never send arbitrary handler output or HTTP response bodies.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "completeWebhookEvent",
+    "path": "/endpoints/{id}/complete",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "delivery_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "lease_token": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30000
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "http"
+              ]
+            },
+            "status_code": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 100,
+              "maximum": 599
+            },
+            "transport_error": {
+              "type": "string",
+              "enum": [
+                "timeout",
+                "network",
+                "response_too_large",
+                "io"
+              ]
+            },
+            "error_code": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_-]{1,128}$"
+            },
+            "confirmed": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "queue_id",
+            "delivery_id",
+            "lease_token",
+            "duration_ms",
+            "mode",
+            "status_code"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "delivery_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "lease_token": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30000
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "exec"
+              ]
+            },
+            "exit_code": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 255
+            },
+            "transport_error": {
+              "type": "string",
+              "enum": [
+                "timeout",
+                "io"
+              ]
+            }
+          },
+          "required": [
+            "queue_id",
+            "delivery_id",
+            "lease_token",
+            "duration_ms",
+            "mode",
+            "exit_code"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "delivery_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "lease_token": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30000
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "stdout"
+              ]
+            },
+            "write_succeeded": {
+              "type": "boolean"
+            },
+            "transport_error": {
+              "type": "string",
+              "enum": [
+                "io"
+              ]
+            }
+          },
+          "required": [
+            "queue_id",
+            "delivery_id",
+            "lease_token",
+            "duration_ms",
+            "mode",
+            "write_succeeded"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "discriminator": {
+        "propertyName": "mode",
+        "mapping": {
+          "http": "#/components/schemas/CompleteWebhookHttpInput",
+          "exec": "#/components/schemas/CompleteWebhookExecInput",
+          "stdout": "#/components/schemas/CompleteWebhookStdoutInput"
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "result": {
+              "type": "string",
+              "enum": [
+                "completed",
+                "already_completed"
+              ]
+            }
+          },
+          "required": [
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "number"
+            },
+            "total_capped": {
+              "type": "boolean"
+            },
+            "limit": {
+              "type": "number"
+            },
+            "cursor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ],
+      "additionalProperties": {}
+    },
+    "sdkName": "completeWebhookEvent",
+    "summary": "Report the outcome of a local webhook delivery attempt",
+    "tag": "Endpoints",
+    "tagCommand": "endpoints"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
     "command": "create-endpoint",
-    "description": "Creates a new webhook endpoint. If a deactivated endpoint\nwith the same URL and domain exists, it is reactivated\ninstead. Subject to plan limits on the number of active\nendpoints.\n\n**Signing is account-scoped, not per-endpoint.** This call\ndoes not return any signing material; every endpoint on the\naccount uses the same webhook secret, fetched via\n`GET /account/webhook-secret`. See the API-level \"Webhook\nsigning\" section for the full wire format (header name,\nsigned string, hash algo, secret format, tolerance) and a\nlanguage-agnostic verification recipe.\n\nAfter creating the endpoint, fire a test delivery against\nit via `POST /endpoints/{id}/test` to confirm your verifier\naccepts the signature.\n",
+    "description": "Creates a new webhook endpoint. If a deactivated endpoint\nwith the same URL and domain exists, it is reactivated\ninstead. Subject to plan limits on the number of active\nendpoints.\n\n**Signing is account-scoped, not per-endpoint.** This call\ndoes not return any signing material; every endpoint on the\naccount uses the same webhook secret, fetched via\n`GET /account/webhook-secret`. See the API-level \"Webhook\nsigning\" section for the full wire format (header name,\nsigned string, hash algo, secret format, tolerance) and a\nlanguage-agnostic verification recipe.\n\nAfter creating the endpoint, fire a test delivery against\nit via `POST /endpoints/{id}/test` to confirm your verifier\naccepts the signature.\n\n\nFor local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named creation resumes the same active destination; omitted filters preserve its selection, while conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently ready eligible event types. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull receiving.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEndpoint",
@@ -4260,10 +4518,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "enum": [
             "http",
-            "function"
+            "function",
+            "pull"
           ],
           "default": "http",
-          "description": "http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide function_id, omit url)."
+          "description": "http: deliver to url. function: invoke function_id. pull: receive locally using a stable name, without a URL."
         },
         "url": {
           "type": "string",
@@ -4277,7 +4536,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "enabled": {
           "type": "boolean",
-          "default": true,
           "description": "Whether the endpoint is active"
         },
         "domain_id": {
@@ -4290,12 +4548,28 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "rules": {
           "type": "object",
-          "description": "Endpoint-specific filtering rules"
+          "description": "Endpoint-specific filtering rules",
+          "additionalProperties": true,
+          "properties": {
+            "event_types": {
+              "minItems": 1,
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
         },
         "is_route_target": {
           "type": "boolean",
-          "default": false,
           "description": "Create this endpoint as a route-target: reachable only via an\nexplicit recipient route, never a domain's default destination, and\nexempt from the one-endpoint-per-domain rule.\n"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$",
+          "description": "Stable account-scoped name, required for kind=pull."
         }
       }
     },
@@ -4329,7 +4603,19 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "rules": {
           "type": "object",
-          "description": "Endpoint-specific filtering rules"
+          "description": "Endpoint-specific filtering rules",
+          "additionalProperties": true,
+          "properties": {
+            "event_types": {
+              "minItems": 1,
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
         },
         "created_at": {
           "type": "string",
@@ -4387,7 +4673,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "enum": [
             "http",
-            "function"
+            "function",
+            "pull"
           ],
           "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
         },
@@ -4402,6 +4689,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "is_route_target": {
           "type": "boolean",
           "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Stable name of a pull destination."
         }
       },
       "required": [
@@ -4492,7 +4786,19 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "rules": {
             "type": "object",
-            "description": "Endpoint-specific filtering rules"
+            "description": "Endpoint-specific filtering rules",
+            "additionalProperties": true,
+            "properties": {
+              "event_types": {
+                "minItems": 1,
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
           },
           "created_at": {
             "type": "string",
@@ -4550,7 +4856,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "type": "string",
             "enum": [
               "http",
-              "function"
+              "function",
+              "pull"
             ],
             "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
           },
@@ -4565,6 +4872,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "is_route_target": {
             "type": "boolean",
             "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Stable name of a pull destination."
           }
         },
         "required": [
@@ -4583,6 +4897,180 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "listEndpoints",
     "summary": "List webhook endpoints",
+    "tag": "Endpoints",
+    "tagCommand": "endpoints"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "pull-webhook-event",
+    "description": "Wait up to 30 seconds for one existing event. The body string preserves the exact webhook serialization; headers and canonical occurrence/type metadata travel alongside it. A fixed lease protects the attempt while a short handler accepts input. Retry may redeliver an occurrence: deduplicate event_id. Empty delivery means no offer now, not proof all input was delivered; inspect backlog and persistent gap_count/last_gap_reason. Queue retention is 24 hours and does not extend source-content retention. Disconnecting preserves pending work. Same named destination shares consumption; different destinations get independent copies.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "pullWebhookEvent",
+    "path": "/endpoints/{id}/pull",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "wait_seconds": {
+          "default": 25,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
+        }
+      },
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "delivery": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "queue_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "event_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "event_type": {
+                  "type": "string"
+                },
+                "delivery_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "lease_token": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "lease_expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "headers": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "queue_id",
+                "event_id",
+                "event_type",
+                "delivery_id",
+                "lease_token",
+                "lease_expires_at",
+                "body",
+                "headers"
+              ],
+              "additionalProperties": false
+            },
+            "backlog": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "gap_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "last_gap_reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retention_seconds": {
+              "type": "number",
+              "enum": [
+                86400
+              ]
+            },
+            "handler_timeout_seconds": {
+              "type": "number",
+              "enum": [
+                30
+              ]
+            }
+          },
+          "required": [
+            "delivery",
+            "backlog",
+            "gap_count",
+            "last_gap_reason",
+            "retention_seconds",
+            "handler_timeout_seconds"
+          ],
+          "additionalProperties": false
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "total": {
+              "type": "number"
+            },
+            "total_capped": {
+              "type": "boolean"
+            },
+            "limit": {
+              "type": "number"
+            },
+            "cursor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "success",
+        "data"
+      ],
+      "additionalProperties": {}
+    },
+    "sdkName": "pullWebhookEvent",
+    "summary": "Receive a pending webhook event without a public endpoint",
     "tag": "Endpoints",
     "tagCommand": "endpoints"
   },
@@ -4762,7 +5250,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "update-endpoint",
-    "description": "Updates an active webhook endpoint. If the URL is changed, the old\nendpoint is deactivated and a new one is created (or an existing\ndeactivated endpoint with the new URL is reactivated).\n",
+    "description": "Updates an active webhook endpoint. If the URL is changed, the old\nendpoint is deactivated and a new one is created (or an existing\ndeactivated endpoint with the new URL is reactivated).\n\n\nPull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint deletion disconnects the destination; creating a new destination does not backfill historical events.",
     "hasJsonBody": true,
     "method": "PATCH",
     "operationId": "updateEndpoint",
@@ -4797,7 +5285,19 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "format": "uuid"
         },
         "rules": {
-          "type": "object"
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "event_types": {
+              "minItems": 1,
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
         }
       },
       "minProperties": 1
@@ -4832,7 +5332,19 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "rules": {
           "type": "object",
-          "description": "Endpoint-specific filtering rules"
+          "description": "Endpoint-specific filtering rules",
+          "additionalProperties": true,
+          "properties": {
+            "event_types": {
+              "minItems": 1,
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
         },
         "created_at": {
           "type": "string",
@@ -4890,7 +5402,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "enum": [
             "http",
-            "function"
+            "function",
+            "pull"
           ],
           "description": "http: deliver to the webhook URL. function: invoke a Primitive Function."
         },
@@ -4905,6 +5418,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "is_route_target": {
           "type": "boolean",
           "description": "When true, this endpoint is reachable only via an explicit recipient\nroute, never as a domain's default destination, and is exempt from\nthe one-endpoint-per-domain rule (so many can share a domain).\n"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Stable name of a pull destination."
         }
       },
       "required": [

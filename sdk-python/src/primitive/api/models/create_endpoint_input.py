@@ -27,27 +27,28 @@ T = TypeVar("T", bound="CreateEndpointInput")
 class CreateEndpointInput:
     """ 
         Attributes:
-            kind (CreateEndpointInputKind | Unset): http: deliver to a webhook URL (provide url). function: invoke a
-                Primitive Function (provide function_id, omit url). Default: CreateEndpointInputKind.HTTP.
+            kind (CreateEndpointInputKind | Unset): http: deliver to url. function: invoke function_id. pull: receive
+                locally using a stable name, without a URL. Default: CreateEndpointInputKind.HTTP.
             url (str | Unset): The webhook URL to deliver events to. Required when kind is http; omit for function
                 endpoints.
             function_id (UUID | Unset): The Function to invoke. Required when kind is function.
-            enabled (bool | Unset): Whether the endpoint is active Default: True.
+            enabled (bool | Unset): Whether the endpoint is active
             domain_id (None | Unset | UUID): Restrict to emails from a specific domain
             rules (CreateEndpointInputRules | Unset): Endpoint-specific filtering rules
             is_route_target (bool | Unset): Create this endpoint as a route-target: reachable only via an
                 explicit recipient route, never a domain's default destination, and
                 exempt from the one-endpoint-per-domain rule.
-                 Default: False.
+            name (str | Unset): Stable account-scoped name, required for kind=pull.
      """
 
     kind: CreateEndpointInputKind | Unset = CreateEndpointInputKind.HTTP
     url: str | Unset = UNSET
     function_id: UUID | Unset = UNSET
-    enabled: bool | Unset = True
+    enabled: bool | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     rules: CreateEndpointInputRules | Unset = UNSET
-    is_route_target: bool | Unset = False
+    is_route_target: bool | Unset = UNSET
+    name: str | Unset = UNSET
 
 
 
@@ -82,6 +83,8 @@ class CreateEndpointInput:
 
         is_route_target = self.is_route_target
 
+        name = self.name
+
 
         field_dict: dict[str, Any] = {}
 
@@ -101,6 +104,8 @@ class CreateEndpointInput:
             field_dict["rules"] = rules
         if is_route_target is not UNSET:
             field_dict["is_route_target"] = is_route_target
+        if name is not UNSET:
+            field_dict["name"] = name
 
         return field_dict
 
@@ -166,6 +171,8 @@ class CreateEndpointInput:
 
         is_route_target = d.pop("is_route_target", UNSET)
 
+        name = d.pop("name", UNSET)
+
         create_endpoint_input = cls(
             kind=kind,
             url=url,
@@ -174,6 +181,7 @@ class CreateEndpointInput:
             domain_id=domain_id,
             rules=rules,
             is_route_target=is_route_target,
+            name=name,
         )
 
         return create_endpoint_input

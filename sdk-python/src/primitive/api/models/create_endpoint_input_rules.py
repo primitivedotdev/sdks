@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from typing import cast
 
 
 
@@ -22,8 +23,11 @@ T = TypeVar("T", bound="CreateEndpointInputRules")
 class CreateEndpointInputRules:
     """ Endpoint-specific filtering rules
 
+        Attributes:
+            event_types (list[str] | Unset):
      """
 
+    event_types: list[str] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -31,9 +35,19 @@ class CreateEndpointInputRules:
 
 
     def to_dict(self) -> dict[str, Any]:
-        
+        event_types: list[str] | Unset = UNSET
+        if not isinstance(self.event_types, Unset):
+            event_types = self.event_types
+
+
+
+
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
+        field_dict.update({
+        })
+        if event_types is not UNSET:
+            field_dict["event_types"] = event_types
 
         return field_dict
 
@@ -42,7 +56,11 @@ class CreateEndpointInputRules:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
+        event_types = cast(list[str], d.pop("event_types", UNSET))
+
+
         create_endpoint_input_rules = cls(
+            event_types=event_types,
         )
 
 

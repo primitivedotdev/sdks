@@ -21,6 +21,10 @@ type CliLogoutRes interface {
 	cliLogoutRes()
 }
 
+type CompleteWebhookEventRes interface {
+	completeWebhookEventRes()
+}
+
 type CreateAgentAccountRes interface {
 	createAgentAccountRes()
 }
@@ -323,6 +327,10 @@ type PollCliLoginRes interface {
 
 type PublishAgentRes interface {
 	publishAgentRes()
+}
+
+type PullWebhookEventRes interface {
+	pullWebhookEventRes()
 }
 
 type RegisterPayoutAddressRes interface {

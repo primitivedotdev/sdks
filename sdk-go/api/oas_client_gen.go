@@ -98,6 +98,19 @@ type Invoker interface {
 	//
 	// POST /cli/logout
 	CliLogout(ctx context.Context, request OptCliLogoutInput) (CliLogoutRes, error)
+	// CompleteWebhookEvent invokes completeWebhookEvent operation.
+	//
+	// Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
+	// queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout
+	// includes write_succeeded; http includes status_code and optional transport_error, error_code,
+	// confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server
+	// classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot
+	// finish a newer attempt. Exec success means durable input acceptance, not completion of agent
+	// reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content
+	// discard. Never send arbitrary handler output or HTTP response bodies.
+	//
+	// POST /endpoints/{id}/complete
+	CompleteWebhookEvent(ctx context.Context, request CompleteWebhookInput, params CompleteWebhookEventParams) (CompleteWebhookEventRes, error)
 	// CreateAgentAccount invokes createAgentAccount operation.
 	//
 	// Creates an emailless agent account without authentication and returns a
@@ -163,6 +176,11 @@ type Invoker interface {
 	// After creating the endpoint, fire a test delivery against
 	// it via `POST /endpoints/{id}/test` to confirm your verifier
 	// accepts the signature.
+	// For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+	// creation resumes the same active destination; omitted filters preserve its selection, while
+	// conflicting supplied configuration returns 409. New unfiltered destinations receive all
+	// subsequently ready eligible event types. Pull destinations do not occupy HTTP routing slots.
+	// Signing-secret setup and a test HTTP delivery are not required for pull receiving.
 	//
 	// POST /endpoints
 	CreateEndpoint(ctx context.Context, request *CreateEndpointInput) (CreateEndpointRes, error)
@@ -885,6 +903,18 @@ type Invoker interface {
 	//
 	// POST /registries/{slug}/agents
 	PublishAgent(ctx context.Context, request *PublishAgentInput, params PublishAgentParams) (PublishAgentRes, error)
+	// PullWebhookEvent invokes pullWebhookEvent operation.
+	//
+	// Wait up to 30 seconds for one existing event. The body string preserves the exact webhook
+	// serialization; headers and canonical occurrence/type metadata travel alongside it. A fixed lease
+	// protects the attempt while a short handler accepts input. Retry may redeliver an occurrence:
+	// deduplicate event_id. Empty delivery means no offer now, not proof all input was delivered;
+	// inspect backlog and persistent gap_count/last_gap_reason. Queue retention is 24 hours and does not
+	// extend source-content retention. Disconnecting preserves pending work. Same named destination
+	// shares consumption; different destinations get independent copies.
+	//
+	// POST /endpoints/{id}/pull
+	PullWebhookEvent(ctx context.Context, request *PullWebhookInput, params PullWebhookEventParams) (PullWebhookEventRes, error)
 	// RegisterPayoutAddress invokes registerPayoutAddress operation.
 	//
 	// Register (or update) the default payout address your org receives x402
@@ -1234,6 +1264,9 @@ type Invoker interface {
 	// Updates an active webhook endpoint. If the URL is changed, the old
 	// endpoint is deactivated and a new one is created (or an existing
 	// deactivated endpoint with the new URL is reactivated).
+	// Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing
+	// endpoint deletion disconnects the destination; creating a new destination does not backfill
+	// historical events.
 	//
 	// PATCH /endpoints/{id}
 	UpdateEndpoint(ctx context.Context, request *UpdateEndpointInput, params UpdateEndpointParams) (UpdateEndpointRes, error)
@@ -2058,6 +2091,142 @@ func (c *Client) sendCliLogout(ctx context.Context, request OptCliLogoutInput) (
 	return result, nil
 }
 
+// CompleteWebhookEvent invokes completeWebhookEvent operation.
+//
+// Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
+// queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout
+// includes write_succeeded; http includes status_code and optional transport_error, error_code,
+// confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server
+// classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot
+// finish a newer attempt. Exec success means durable input acceptance, not completion of agent
+// reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content
+// discard. Never send arbitrary handler output or HTTP response bodies.
+//
+// POST /endpoints/{id}/complete
+func (c *Client) CompleteWebhookEvent(ctx context.Context, request CompleteWebhookInput, params CompleteWebhookEventParams) (CompleteWebhookEventRes, error) {
+	res, err := c.sendCompleteWebhookEvent(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendCompleteWebhookEvent(ctx context.Context, request CompleteWebhookInput, params CompleteWebhookEventParams) (res CompleteWebhookEventRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("completeWebhookEvent"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/endpoints/{id}/complete"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CompleteWebhookEventOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/endpoints/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/complete"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCompleteWebhookEventRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CompleteWebhookEventOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCompleteWebhookEventResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // CreateAgentAccount invokes createAgentAccount operation.
 //
 // Creates an emailless agent account without authentication and returns a
@@ -2523,6 +2692,11 @@ func (c *Client) sendCreateEmailChallenge(ctx context.Context, request *CreateEm
 // After creating the endpoint, fire a test delivery against
 // it via `POST /endpoints/{id}/test` to confirm your verifier
 // accepts the signature.
+// For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+// creation resumes the same active destination; omitted filters preserve its selection, while
+// conflicting supplied configuration returns 409. New unfiltered destinations receive all
+// subsequently ready eligible event types. Pull destinations do not occupy HTTP routing slots.
+// Signing-secret setup and a test HTTP delivery are not required for pull receiving.
 //
 // POST /endpoints
 func (c *Client) CreateEndpoint(ctx context.Context, request *CreateEndpointInput) (CreateEndpointRes, error) {
@@ -12045,6 +12219,141 @@ func (c *Client) sendPublishAgent(ctx context.Context, request *PublishAgentInpu
 	return result, nil
 }
 
+// PullWebhookEvent invokes pullWebhookEvent operation.
+//
+// Wait up to 30 seconds for one existing event. The body string preserves the exact webhook
+// serialization; headers and canonical occurrence/type metadata travel alongside it. A fixed lease
+// protects the attempt while a short handler accepts input. Retry may redeliver an occurrence:
+// deduplicate event_id. Empty delivery means no offer now, not proof all input was delivered;
+// inspect backlog and persistent gap_count/last_gap_reason. Queue retention is 24 hours and does not
+// extend source-content retention. Disconnecting preserves pending work. Same named destination
+// shares consumption; different destinations get independent copies.
+//
+// POST /endpoints/{id}/pull
+func (c *Client) PullWebhookEvent(ctx context.Context, request *PullWebhookInput, params PullWebhookEventParams) (PullWebhookEventRes, error) {
+	res, err := c.sendPullWebhookEvent(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendPullWebhookEvent(ctx context.Context, request *PullWebhookInput, params PullWebhookEventParams) (res PullWebhookEventRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("pullWebhookEvent"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/endpoints/{id}/pull"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PullWebhookEventOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/endpoints/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/pull"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePullWebhookEventRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PullWebhookEventOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePullWebhookEventResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // RegisterPayoutAddress invokes registerPayoutAddress operation.
 //
 // Register (or update) the default payout address your org receives x402
@@ -16227,6 +16536,9 @@ func (c *Client) sendUpdateDomain(ctx context.Context, request *UpdateDomainInpu
 // Updates an active webhook endpoint. If the URL is changed, the old
 // endpoint is deactivated and a new one is created (or an existing
 // deactivated endpoint with the new URL is reactivated).
+// Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing
+// endpoint deletion disconnects the destination; creating a new destination does not backfill
+// historical events.
 //
 // PATCH /endpoints/{id}
 func (c *Client) UpdateEndpoint(ctx context.Context, request *UpdateEndpointInput, params UpdateEndpointParams) (UpdateEndpointRes, error) {
