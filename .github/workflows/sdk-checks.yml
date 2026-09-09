@@ -94,13 +94,9 @@ jobs:
       - name: Run node checks
         run: make node-check
 
-      - name: Build node package
-        run: make node-build
-
-      - name: Assert SDK tarball does not leak api-core or cli into dependencies
-        run: make node-tarball-isolation
-
-      - name: Smoke test packed node package
+      # node-smoke builds the SDK, checks tarball isolation, then tests an
+      # installed package. Keep these together so declarations build once.
+      - name: Build, check isolation, and smoke test packed node package
         run: make node-smoke
 
       - name: Collect node coverage
