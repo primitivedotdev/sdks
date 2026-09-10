@@ -78,7 +78,7 @@ jobs:
 
       - name: Upsert PR comment
         if: steps.gate.outputs.enabled == 'true' && steps.impact.outcome == 'success'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           IMPACT_BODY: ${{ steps.impact.outputs.body }}
         with:
