@@ -1,6 +1,6 @@
 {
   "name": "primitive",
-  "version": "1.22.0",
+  "version": "1.23.0",
   "description": "Official Primitive CLI: deploy Primitive Functions, send and inspect mail, manage endpoints, all from the terminal. Wraps the @primitivedotdev/sdk runtime client with one-shot commands.",
   "type": "module",
   "sideEffects": false,
