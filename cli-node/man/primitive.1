@@ -20,6 +20,42 @@ Most commands print human-readable output by default. Commands that expose JSON 
 .B --json
 flag or use generated operation output that can be piped into tools such as
 .BR jq (1).
+.SH LOCAL WEBHOOK EVENTS
+.PP
+.B primitive listen
+receives existing webhook events without a public endpoint. It prints complete
+JSONL bodies on stdout and status on stderr. Use saved login credentials or
+PRIMITIVE_API_KEY. A private default destination is saved per API host and account.
+.PP
+.B primitive listen init --language python
+creates a Python starter in a new primitive-listener directory. Generation is
+offline and refuses to overwrite files. Change into that directory and run
+.B primitive listen --subscription my-agent --exec 'python3 accept_event.py'
+to save each event durably. Exit 0 means input accepted. Run agent processing
+separately; hooks have a 30-second deadline and must not spawn a background agent.
+Exec requires macOS or Linux; Windows users can use a local HTTP acceptance
+handler with --forward-to.
+Deduplicate using PRIMITIVE_EVENT_ID, not the per-attempt PRIMITIVE_DELIVERY_ID.
+PRIMITIVE_EVENT_TYPE carries the canonical event type; stdin carries the body.
+.PP
+.B --forward-to http://localhost:3000/webhook
+forwards exact signed bytes and existing webhook headers to a local handler.
+Configure the existing webhook secret/verifier there. API credentials are not
+forwarded. Redirects are not followed. Responses must finish within 30 seconds
+and 1 MiB; existing confirmation headers preserve content-discard semantics.
+.PP
+.B --events email.received,interaction.ack.received
+selects events for a new destination. Omit it on resume to preserve selection.
+Ctrl-C keeps the destination; the same subscription name resumes pending work.
+Concurrent local consumption of one destination is rejected. Across machines,
+the same name shares consumption; distinct names receive independent copies.
+.PP
+.B --number N
+counts successful server-confirmed completions. Bare stdout does not prove a
+downstream consumer saved an event. Gaps are reported. Pending references expire
+after 24 hours and do not extend source-content or attachment-link retention.
+Remove a destination using
+.BR "primitive endpoints delete --id DESTINATION_ID" .
 .SH LOCAL WEBHOOK API
 .PP
 The generated commands

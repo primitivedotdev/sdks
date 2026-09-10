@@ -171,6 +171,28 @@ describe("COMMANDS / manifest coverage", () => {
     expect(zoneFileCommand.flags["outbound-only"]).toBeDefined();
   });
 
+  it("registers the listener and its offline Python starter", () => {
+    expect(COMMANDS.listen).toBeDefined();
+    expect(COMMANDS["listen:init"]).toBeDefined();
+    const listener = COMMANDS.listen as unknown as {
+      flags: Record<string, unknown>;
+    };
+    for (const flag of [
+      "subscription",
+      "events",
+      "exec",
+      "forward-to",
+      "number",
+    ]) {
+      expect(listener.flags[flag]).toBeDefined();
+    }
+    const starter = COMMANDS["listen:init"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(starter.flags.language).toBeDefined();
+    expect(starter.flags["out-dir"]).toBeDefined();
+  });
+
   it("registers inbox status commands", () => {
     expect(COMMANDS["inbox:setup"]).toBeDefined();
     expect(COMMANDS["inbox:status"]).toBeDefined();

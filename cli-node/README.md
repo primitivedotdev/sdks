@@ -28,6 +28,71 @@ This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@pri
 
 ## Quickstart
 
+### Receive webhook events without a public endpoint
+
+With an existing Primitive account and inbox, sign in or set `PRIMITIVE_API_KEY`.
+Run `primitive listen` to print existing webhook events as JSONL. Status goes to
+stderr. No public URL or separate destination setup is required.
+
+For an agent, use a short hook that saves each event into its durable inbox:
+
+```sh
+primitive listen init --language python
+cd primitive-listener
+primitive listen --subscription my-agent --exec 'python3 accept_event.py'
+```
+
+The starter works locally and refuses to overwrite an existing directory. Its
+SQLite inbox is application-owned example code. Replace `accept_event` with your
+agent's existing durable input function. Exit 0 means the input was saved; run
+model work separately so the listener can keep receiving while the agent thinks.
+The hook has a 30-second deadline. Do not spawn a background agent from the hook.
+`--exec` requires macOS or Linux for process-group cleanup. On Windows, use
+`--forward-to` with your agent's local HTTP acceptance handler.
+
+The CLI passes the unchanged event body on stdin, plus `PRIMITIVE_EVENT_ID`,
+`PRIMITIVE_DELIVERY_ID`, and `PRIMITIVE_EVENT_TYPE` in the hook environment.
+Deduplicate by `PRIMITIVE_EVENT_ID`, which stays the same on redelivery. Delivery
+IDs identify individual attempts. Related events need not contain an email or a
+body-level event ID. The generated processing example shows existing Python SDK
+conversation and reply calls; sending requires an explicit choice.
+
+To run an existing HTTP webhook handler locally:
+
+```sh
+primitive listen --subscription local-webhook --forward-to http://localhost:3000/webhook
+```
+
+This mode forwards the exact signed body and existing webhook headers. Configure
+the handler with your existing account webhook secret and normal signature
+verification. The CLI never forwards your API credentials. It does not follow
+redirects or disable TLS verification. A response must finish within 30 seconds
+and remain within 1 MiB. Existing confirmation headers retain their meaning,
+including account content-discard behavior; exec and stdout do not confirm
+content discard.
+
+Use `--events email.received,interaction.ack.received` to select events on a new
+subscription. Omitting `--events` when resuming preserves its selection. A
+conflicting selection requires a different subscription name. Ctrl-C disconnects
+without deleting the destination; restart with the same name to receive pending
+events. On the same machine, a second listener cannot consume that subscription
+while the first holds it. The same name on different machines shares consumption;
+different names receive independent copies. With no name, the CLI saves a private
+default identity scoped to your API host and account.
+
+`--number N` exits after N successful, server-confirmed completions. A crash after
+the hook saves input but before completion can redeliver it. Bare stdout is for
+inspection: a successful pipe write does not prove a downstream agent saved the
+event. Use the durable hook for ingestion.
+
+The server retains pending references for 24 hours, subject to source-content
+availability and queue capacity. The listener reports delivery gaps instead of
+silently claiming it is caught up. Saving download links does not preserve
+attachment bytes or extend their expiry. To remove a destination, use its ID from
+the readiness message: `primitive endpoints delete --id DESTINATION_ID`.
+
+### Low-level delivery API
+
 The generated `endpoints pull-webhook-event` and `endpoints complete-webhook-event`
 commands expose the local-delivery API when enabled on your API host. These are
 single API calls; a receive loop must retain the destination identity and report

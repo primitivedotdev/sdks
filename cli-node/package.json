@@ -121,6 +121,9 @@
       },
       "wake": {
         "description": "Schedule and send wake commands to your own functions over signed email, and manage which senders may wake them. Use `primitive wake schedules list|create|get|update|delete|run`, `primitive wake authorizations list|create|update|delete`, and `primitive wake dispatches list`."
+      },
+      "listen": {
+        "description": "Receive existing webhook events locally. Run primitive listen for JSONL, use --exec for a short durable acceptance hook, or --forward-to for an existing local webhook handler."
       }
     },
     "topicSeparator": " "

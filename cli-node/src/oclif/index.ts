@@ -31,6 +31,8 @@ import FunctionsTemplatesCommand from "./commands/functions-templates.js";
 import FunctionsTestFunctionCommand from "./commands/functions-test-function.js";
 import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
+import ListenCommand from "./commands/listen.js";
+import ListenInitCommand from "./commands/listen-init.js";
 import LogoutCommand from "./commands/logout.js";
 import {
   MemoriesDeleteCommand,
@@ -581,6 +583,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   // domain verification, endpoint/function processing, and recent mail into
   // the server-owned status API instead of making agents compose those lists.
   "inbox:setup": InboxSetupCommand,
+  listen: ListenCommand,
+  "listen:init": ListenInitCommand,
   "inbox:status": InboxStatusCommand,
   "inbox:get-inbox-status": InboxStatusCommand,
   // `functions:init` scaffolds a deployable Function project so a

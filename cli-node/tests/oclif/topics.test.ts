@@ -11,6 +11,7 @@ function normalize(value: string): string {
 const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   "chat",
   "login",
+  "listen",
   "otp",
   "signin",
   // Hand-rolled org-level secret commands; /v1/org/secrets is not a generated
