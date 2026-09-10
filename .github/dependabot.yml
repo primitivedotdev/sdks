@@ -7,6 +7,13 @@ updates:
       day: "monday"
     labels:
       - "dependencies"
+    groups:
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -26,6 +33,17 @@ updates:
       day: "monday"
     labels:
       - "dependencies"
+    groups:
+      python-runtime:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      python-dev:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "gomod"
     directory: "/sdk-go"
@@ -34,3 +52,10 @@ updates:
       day: "monday"
     labels:
       - "dependencies"
+    groups:
+      go-modules:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
