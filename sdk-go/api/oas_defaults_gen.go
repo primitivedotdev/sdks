@@ -3,18 +3,18 @@
 package api
 
 // setDefaults set default value of fields.
+func (s *CompleteWebhookHttpInput) setDefaults() {
+	{
+		val := bool(false)
+		s.Confirmed.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *CreateEndpointInput) setDefaults() {
 	{
 		val := CreateEndpointInputKind("http")
 		s.Kind.SetTo(val)
-	}
-	{
-		val := bool(true)
-		s.Enabled.SetTo(val)
-	}
-	{
-		val := bool(false)
-		s.IsRouteTarget.SetTo(val)
 	}
 }
 
@@ -23,6 +23,14 @@ func (s *CreateWakeScheduleInput) setDefaults() {
 	{
 		val := string("UTC")
 		s.Timezone.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *PullWebhookInput) setDefaults() {
+	{
+		val := int(25)
+		s.WaitSeconds.SetTo(val)
 	}
 }
 

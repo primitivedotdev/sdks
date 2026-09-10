@@ -73,6 +73,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_404
 
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -100,6 +107,11 @@ def sync_detailed(
      Updates an active webhook endpoint. If the URL is changed, the old
     endpoint is deactivated and a new one is created (or an existing
     deactivated endpoint with the new URL is reactivated).
+
+
+    Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
+    deletion disconnects the destination; creating a new destination does not backfill historical
+    events.
 
     Args:
         id (UUID):
@@ -139,6 +151,11 @@ def sync(
     endpoint is deactivated and a new one is created (or an existing
     deactivated endpoint with the new URL is reactivated).
 
+
+    Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
+    deletion disconnects the destination; creating a new destination does not backfill historical
+    events.
+
     Args:
         id (UUID):
         body (UpdateEndpointInput):
@@ -171,6 +188,11 @@ async def asyncio_detailed(
      Updates an active webhook endpoint. If the URL is changed, the old
     endpoint is deactivated and a new one is created (or an existing
     deactivated endpoint with the new URL is reactivated).
+
+
+    Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
+    deletion disconnects the destination; creating a new destination does not backfill historical
+    events.
 
     Args:
         id (UUID):
@@ -209,6 +231,11 @@ async def asyncio(
      Updates an active webhook endpoint. If the URL is changed, the old
     endpoint is deactivated and a new one is created (or an existing
     deactivated endpoint with the new URL is reactivated).
+
+
+    Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing endpoint
+    deletion disconnects the destination; creating a new destination does not backfill historical
+    events.
 
     Args:
         id (UUID):

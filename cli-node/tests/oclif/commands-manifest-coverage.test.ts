@@ -43,6 +43,10 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("registers generated pull and completion operations", () => {
+    expect(COMMANDS["endpoints:pull-webhook-event"]).toBeDefined();
+    expect(COMMANDS["endpoints:complete-webhook-event"]).toBeDefined();
+  });
   it("registers a command for every operation in the manifest", () => {
     const missing = operationManifest
       .map((op) => `${op.tagCommand}:${op.command}`)

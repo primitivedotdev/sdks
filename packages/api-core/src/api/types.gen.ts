@@ -502,7 +502,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -2934,6 +2934,96 @@ export type SendPermissionsMeta = {
     truncated: boolean;
 };
 
+export type PullWebhookInput = {
+    wait_seconds?: number;
+};
+
+export type PullWebhookResponse = {
+    success: true;
+    data: {
+        delivery: {
+            queue_id: string;
+            event_id: string;
+            event_type: string;
+            delivery_id: string;
+            lease_token: string;
+            lease_expires_at: string;
+            body: string;
+            headers: {
+                [key: string]: string;
+            };
+        } | null;
+        backlog: number;
+        gap_count: number;
+        last_gap_reason: string | null;
+        retention_seconds: 86400;
+        handler_timeout_seconds: 30;
+    };
+    meta?: {
+        total?: number;
+        total_capped?: boolean;
+        limit?: number;
+        cursor?: string | null;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
+
+export type CompleteWebhookInput = ({
+    mode: 'http';
+} & CompleteWebhookHttpInput) | ({
+    mode: 'exec';
+} & CompleteWebhookExecInput) | ({
+    mode: 'stdout';
+} & CompleteWebhookStdoutInput);
+
+export type CompleteWebhookHttpInput = {
+    queue_id: string;
+    delivery_id: string;
+    lease_token: string;
+    duration_ms: number;
+    mode: 'http';
+    status_code: number | null;
+    transport_error?: 'timeout' | 'network' | 'response_too_large' | 'io';
+    error_code?: string;
+    confirmed?: boolean;
+};
+
+export type CompleteWebhookExecInput = {
+    queue_id: string;
+    delivery_id: string;
+    lease_token: string;
+    duration_ms: number;
+    mode: 'exec';
+    exit_code: number | null;
+    transport_error?: 'timeout' | 'io';
+};
+
+export type CompleteWebhookStdoutInput = {
+    queue_id: string;
+    delivery_id: string;
+    lease_token: string;
+    duration_ms: number;
+    mode: 'stdout';
+    write_succeeded: boolean;
+    transport_error?: 'io';
+};
+
+export type CompleteWebhookResponse = {
+    success: true;
+    data: {
+        result: 'completed' | 'already_completed';
+    };
+    meta?: {
+        total?: number;
+        total_capped?: boolean;
+        limit?: number;
+        cursor?: string | null;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+};
+
 export type Endpoint = {
     id: string;
     org_id: string;
@@ -2947,6 +3037,7 @@ export type Endpoint = {
      * Endpoint-specific filtering rules
      */
     rules: {
+        event_types?: Array<string>;
         [key: string]: unknown;
     };
     created_at: string;
@@ -2974,7 +3065,7 @@ export type Endpoint = {
     /**
      * http: deliver to the webhook URL. function: invoke a Primitive Function.
      */
-    kind?: 'http' | 'function';
+    kind?: 'http' | 'function' | 'pull';
     /**
      * The Function this endpoint invokes, when kind is function.
      */
@@ -2986,13 +3077,17 @@ export type Endpoint = {
      *
      */
     is_route_target?: boolean;
+    /**
+     * Stable name of a pull destination.
+     */
+    name?: string | null;
 };
 
 export type CreateEndpointInput = {
     /**
-     * http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide function_id, omit url).
+     * http: deliver to url. function: invoke function_id. pull: receive locally using a stable name, without a URL.
      */
-    kind?: 'http' | 'function';
+    kind?: 'http' | 'function' | 'pull';
     /**
      * The webhook URL to deliver events to. Required when kind is http; omit for function endpoints.
      */
@@ -3013,6 +3108,7 @@ export type CreateEndpointInput = {
      * Endpoint-specific filtering rules
      */
     rules?: {
+        event_types?: Array<string>;
         [key: string]: unknown;
     };
     /**
@@ -3022,6 +3118,10 @@ export type CreateEndpointInput = {
      *
      */
     is_route_target?: boolean;
+    /**
+     * Stable account-scoped name, required for kind=pull.
+     */
+    name?: string;
 };
 
 export type UpdateEndpointInput = {
@@ -3032,6 +3132,7 @@ export type UpdateEndpointInput = {
     enabled?: boolean;
     domain_id?: string | null;
     rules?: {
+        event_types?: Array<string>;
         [key: string]: unknown;
     };
 };
@@ -5929,11 +6030,25 @@ export type CreateEndpointErrors = {
      * Invalid or missing API key
      */
     401: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Local receiving is unavailable
+     */
+    503: ErrorResponse;
 };
 
 export type CreateEndpointError = CreateEndpointErrors[keyof CreateEndpointErrors];
 
 export type CreateEndpointResponses = {
+    /**
+     * Existing named pull destination resumed
+     */
+    200: SuccessEnvelope & {
+        data?: Endpoint;
+    };
     /**
      * Endpoint created (or reactivated)
      */
@@ -6011,6 +6126,10 @@ export type UpdateEndpointErrors = {
      * Resource not found
      */
     404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
 };
 
 export type UpdateEndpointError = UpdateEndpointErrors[keyof UpdateEndpointErrors];
@@ -6025,6 +6144,130 @@ export type UpdateEndpointResponses = {
 };
 
 export type UpdateEndpointResponse = UpdateEndpointResponses[keyof UpdateEndpointResponses];
+
+export type PullWebhookEventData = {
+    body: PullWebhookInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/endpoints/{id}/pull';
+};
+
+export type PullWebhookEventErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Request was canceled
+     */
+    408: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Queued content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+    /**
+     * Local receiving is unavailable
+     */
+    503: ErrorResponse;
+};
+
+export type PullWebhookEventError = PullWebhookEventErrors[keyof PullWebhookEventErrors];
+
+export type PullWebhookEventResponses = {
+    /**
+     * Delivery operation result
+     */
+    200: PullWebhookResponse;
+};
+
+export type PullWebhookEventResponse = PullWebhookEventResponses[keyof PullWebhookEventResponses];
+
+export type CompleteWebhookEventData = {
+    body: CompleteWebhookInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/endpoints/{id}/complete';
+};
+
+export type CompleteWebhookEventErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Request was canceled
+     */
+    408: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Queued content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+    /**
+     * Local receiving is unavailable
+     */
+    503: ErrorResponse;
+};
+
+export type CompleteWebhookEventError = CompleteWebhookEventErrors[keyof CompleteWebhookEventErrors];
+
+export type CompleteWebhookEventResponses = {
+    /**
+     * Delivery operation result
+     */
+    200: CompleteWebhookResponse;
+};
+
+export type CompleteWebhookEventResponse = CompleteWebhookEventResponses[keyof CompleteWebhookEventResponses];
 
 export type TestEndpointData = {
     body?: never;

@@ -50,6 +50,7 @@ class Endpoint:
             is_route_target (bool | Unset): When true, this endpoint is reachable only via an explicit recipient
                 route, never as a domain's default destination, and is exempt from
                 the one-endpoint-per-domain rule (so many can share a domain).
+            name (None | str | Unset): Stable name of a pull destination.
      """
 
     id: UUID
@@ -71,6 +72,7 @@ class Endpoint:
     kind: EndpointKind | Unset = UNSET
     function_id: None | Unset | UUID = UNSET
     is_route_target: bool | Unset = UNSET
+    name: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -160,6 +162,12 @@ class Endpoint:
 
         is_route_target = self.is_route_target
 
+        name: None | str | Unset
+        if isinstance(self.name, Unset):
+            name = UNSET
+        else:
+            name = self.name
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -193,6 +201,8 @@ class Endpoint:
             field_dict["function_id"] = function_id
         if is_route_target is not UNSET:
             field_dict["is_route_target"] = is_route_target
+        if name is not UNSET:
+            field_dict["name"] = name
 
         return field_dict
 
@@ -379,6 +389,16 @@ class Endpoint:
 
         is_route_target = d.pop("is_route_target", UNSET)
 
+        def _parse_name(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        name = _parse_name(d.pop("name", UNSET))
+
+
         endpoint = cls(
             id=id,
             org_id=org_id,
@@ -399,6 +419,7 @@ class Endpoint:
             kind=kind,
             function_id=function_id,
             is_route_target=is_route_target,
+            name=name,
         )
 
 

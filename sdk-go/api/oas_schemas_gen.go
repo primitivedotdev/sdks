@@ -1940,6 +1940,830 @@ func (s *CliSignupVerifyResultTokenType) UnmarshalText(data []byte) error {
 	}
 }
 
+type CompleteWebhookEventBadRequest ErrorResponse
+
+func (*CompleteWebhookEventBadRequest) completeWebhookEventRes() {}
+
+type CompleteWebhookEventConflict ErrorResponse
+
+func (*CompleteWebhookEventConflict) completeWebhookEventRes() {}
+
+type CompleteWebhookEventForbidden ErrorResponse
+
+func (*CompleteWebhookEventForbidden) completeWebhookEventRes() {}
+
+type CompleteWebhookEventGone ErrorResponse
+
+func (*CompleteWebhookEventGone) completeWebhookEventRes() {}
+
+type CompleteWebhookEventNotFound ErrorResponse
+
+func (*CompleteWebhookEventNotFound) completeWebhookEventRes() {}
+
+type CompleteWebhookEventRequestTimeout ErrorResponse
+
+func (*CompleteWebhookEventRequestTimeout) completeWebhookEventRes() {}
+
+type CompleteWebhookEventServiceUnavailable ErrorResponse
+
+func (*CompleteWebhookEventServiceUnavailable) completeWebhookEventRes() {}
+
+type CompleteWebhookEventUnauthorized ErrorResponse
+
+func (*CompleteWebhookEventUnauthorized) completeWebhookEventRes() {}
+
+// Ref: #/components/schemas/CompleteWebhookExecInput
+type CompleteWebhookExecInput struct {
+	QueueID        uuid.UUID                                 `json:"queue_id"`
+	DeliveryID     uuid.UUID                                 `json:"delivery_id"`
+	LeaseToken     uuid.UUID                                 `json:"lease_token"`
+	DurationMs     int                                       `json:"duration_ms"`
+	Mode           CompleteWebhookExecInputMode              `json:"mode"`
+	ExitCode       NilInt                                    `json:"exit_code"`
+	TransportError OptCompleteWebhookExecInputTransportError `json:"transport_error"`
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *CompleteWebhookExecInput) GetQueueID() uuid.UUID {
+	return s.QueueID
+}
+
+// GetDeliveryID returns the value of DeliveryID.
+func (s *CompleteWebhookExecInput) GetDeliveryID() uuid.UUID {
+	return s.DeliveryID
+}
+
+// GetLeaseToken returns the value of LeaseToken.
+func (s *CompleteWebhookExecInput) GetLeaseToken() uuid.UUID {
+	return s.LeaseToken
+}
+
+// GetDurationMs returns the value of DurationMs.
+func (s *CompleteWebhookExecInput) GetDurationMs() int {
+	return s.DurationMs
+}
+
+// GetMode returns the value of Mode.
+func (s *CompleteWebhookExecInput) GetMode() CompleteWebhookExecInputMode {
+	return s.Mode
+}
+
+// GetExitCode returns the value of ExitCode.
+func (s *CompleteWebhookExecInput) GetExitCode() NilInt {
+	return s.ExitCode
+}
+
+// GetTransportError returns the value of TransportError.
+func (s *CompleteWebhookExecInput) GetTransportError() OptCompleteWebhookExecInputTransportError {
+	return s.TransportError
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *CompleteWebhookExecInput) SetQueueID(val uuid.UUID) {
+	s.QueueID = val
+}
+
+// SetDeliveryID sets the value of DeliveryID.
+func (s *CompleteWebhookExecInput) SetDeliveryID(val uuid.UUID) {
+	s.DeliveryID = val
+}
+
+// SetLeaseToken sets the value of LeaseToken.
+func (s *CompleteWebhookExecInput) SetLeaseToken(val uuid.UUID) {
+	s.LeaseToken = val
+}
+
+// SetDurationMs sets the value of DurationMs.
+func (s *CompleteWebhookExecInput) SetDurationMs(val int) {
+	s.DurationMs = val
+}
+
+// SetMode sets the value of Mode.
+func (s *CompleteWebhookExecInput) SetMode(val CompleteWebhookExecInputMode) {
+	s.Mode = val
+}
+
+// SetExitCode sets the value of ExitCode.
+func (s *CompleteWebhookExecInput) SetExitCode(val NilInt) {
+	s.ExitCode = val
+}
+
+// SetTransportError sets the value of TransportError.
+func (s *CompleteWebhookExecInput) SetTransportError(val OptCompleteWebhookExecInputTransportError) {
+	s.TransportError = val
+}
+
+type CompleteWebhookExecInputMode string
+
+const (
+	CompleteWebhookExecInputModeExec CompleteWebhookExecInputMode = "exec"
+)
+
+// AllValues returns all CompleteWebhookExecInputMode values.
+func (CompleteWebhookExecInputMode) AllValues() []CompleteWebhookExecInputMode {
+	return []CompleteWebhookExecInputMode{
+		CompleteWebhookExecInputModeExec,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CompleteWebhookExecInputMode) MarshalText() ([]byte, error) {
+	switch s {
+	case CompleteWebhookExecInputModeExec:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CompleteWebhookExecInputMode) UnmarshalText(data []byte) error {
+	switch CompleteWebhookExecInputMode(data) {
+	case CompleteWebhookExecInputModeExec:
+		*s = CompleteWebhookExecInputModeExec
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CompleteWebhookExecInputTransportError string
+
+const (
+	CompleteWebhookExecInputTransportErrorTimeout CompleteWebhookExecInputTransportError = "timeout"
+	CompleteWebhookExecInputTransportErrorIo      CompleteWebhookExecInputTransportError = "io"
+)
+
+// AllValues returns all CompleteWebhookExecInputTransportError values.
+func (CompleteWebhookExecInputTransportError) AllValues() []CompleteWebhookExecInputTransportError {
+	return []CompleteWebhookExecInputTransportError{
+		CompleteWebhookExecInputTransportErrorTimeout,
+		CompleteWebhookExecInputTransportErrorIo,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CompleteWebhookExecInputTransportError) MarshalText() ([]byte, error) {
+	switch s {
+	case CompleteWebhookExecInputTransportErrorTimeout:
+		return []byte(s), nil
+	case CompleteWebhookExecInputTransportErrorIo:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CompleteWebhookExecInputTransportError) UnmarshalText(data []byte) error {
+	switch CompleteWebhookExecInputTransportError(data) {
+	case CompleteWebhookExecInputTransportErrorTimeout:
+		*s = CompleteWebhookExecInputTransportErrorTimeout
+		return nil
+	case CompleteWebhookExecInputTransportErrorIo:
+		*s = CompleteWebhookExecInputTransportErrorIo
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/CompleteWebhookHttpInput
+type CompleteWebhookHttpInput struct {
+	QueueID        uuid.UUID                                 `json:"queue_id"`
+	DeliveryID     uuid.UUID                                 `json:"delivery_id"`
+	LeaseToken     uuid.UUID                                 `json:"lease_token"`
+	DurationMs     int                                       `json:"duration_ms"`
+	Mode           CompleteWebhookHttpInputMode              `json:"mode"`
+	StatusCode     NilInt                                    `json:"status_code"`
+	TransportError OptCompleteWebhookHttpInputTransportError `json:"transport_error"`
+	ErrorCode      OptString                                 `json:"error_code"`
+	Confirmed      OptBool                                   `json:"confirmed"`
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *CompleteWebhookHttpInput) GetQueueID() uuid.UUID {
+	return s.QueueID
+}
+
+// GetDeliveryID returns the value of DeliveryID.
+func (s *CompleteWebhookHttpInput) GetDeliveryID() uuid.UUID {
+	return s.DeliveryID
+}
+
+// GetLeaseToken returns the value of LeaseToken.
+func (s *CompleteWebhookHttpInput) GetLeaseToken() uuid.UUID {
+	return s.LeaseToken
+}
+
+// GetDurationMs returns the value of DurationMs.
+func (s *CompleteWebhookHttpInput) GetDurationMs() int {
+	return s.DurationMs
+}
+
+// GetMode returns the value of Mode.
+func (s *CompleteWebhookHttpInput) GetMode() CompleteWebhookHttpInputMode {
+	return s.Mode
+}
+
+// GetStatusCode returns the value of StatusCode.
+func (s *CompleteWebhookHttpInput) GetStatusCode() NilInt {
+	return s.StatusCode
+}
+
+// GetTransportError returns the value of TransportError.
+func (s *CompleteWebhookHttpInput) GetTransportError() OptCompleteWebhookHttpInputTransportError {
+	return s.TransportError
+}
+
+// GetErrorCode returns the value of ErrorCode.
+func (s *CompleteWebhookHttpInput) GetErrorCode() OptString {
+	return s.ErrorCode
+}
+
+// GetConfirmed returns the value of Confirmed.
+func (s *CompleteWebhookHttpInput) GetConfirmed() OptBool {
+	return s.Confirmed
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *CompleteWebhookHttpInput) SetQueueID(val uuid.UUID) {
+	s.QueueID = val
+}
+
+// SetDeliveryID sets the value of DeliveryID.
+func (s *CompleteWebhookHttpInput) SetDeliveryID(val uuid.UUID) {
+	s.DeliveryID = val
+}
+
+// SetLeaseToken sets the value of LeaseToken.
+func (s *CompleteWebhookHttpInput) SetLeaseToken(val uuid.UUID) {
+	s.LeaseToken = val
+}
+
+// SetDurationMs sets the value of DurationMs.
+func (s *CompleteWebhookHttpInput) SetDurationMs(val int) {
+	s.DurationMs = val
+}
+
+// SetMode sets the value of Mode.
+func (s *CompleteWebhookHttpInput) SetMode(val CompleteWebhookHttpInputMode) {
+	s.Mode = val
+}
+
+// SetStatusCode sets the value of StatusCode.
+func (s *CompleteWebhookHttpInput) SetStatusCode(val NilInt) {
+	s.StatusCode = val
+}
+
+// SetTransportError sets the value of TransportError.
+func (s *CompleteWebhookHttpInput) SetTransportError(val OptCompleteWebhookHttpInputTransportError) {
+	s.TransportError = val
+}
+
+// SetErrorCode sets the value of ErrorCode.
+func (s *CompleteWebhookHttpInput) SetErrorCode(val OptString) {
+	s.ErrorCode = val
+}
+
+// SetConfirmed sets the value of Confirmed.
+func (s *CompleteWebhookHttpInput) SetConfirmed(val OptBool) {
+	s.Confirmed = val
+}
+
+type CompleteWebhookHttpInputMode string
+
+const (
+	CompleteWebhookHttpInputModeHTTP CompleteWebhookHttpInputMode = "http"
+)
+
+// AllValues returns all CompleteWebhookHttpInputMode values.
+func (CompleteWebhookHttpInputMode) AllValues() []CompleteWebhookHttpInputMode {
+	return []CompleteWebhookHttpInputMode{
+		CompleteWebhookHttpInputModeHTTP,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CompleteWebhookHttpInputMode) MarshalText() ([]byte, error) {
+	switch s {
+	case CompleteWebhookHttpInputModeHTTP:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CompleteWebhookHttpInputMode) UnmarshalText(data []byte) error {
+	switch CompleteWebhookHttpInputMode(data) {
+	case CompleteWebhookHttpInputModeHTTP:
+		*s = CompleteWebhookHttpInputModeHTTP
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CompleteWebhookHttpInputTransportError string
+
+const (
+	CompleteWebhookHttpInputTransportErrorTimeout          CompleteWebhookHttpInputTransportError = "timeout"
+	CompleteWebhookHttpInputTransportErrorNetwork          CompleteWebhookHttpInputTransportError = "network"
+	CompleteWebhookHttpInputTransportErrorResponseTooLarge CompleteWebhookHttpInputTransportError = "response_too_large"
+	CompleteWebhookHttpInputTransportErrorIo               CompleteWebhookHttpInputTransportError = "io"
+)
+
+// AllValues returns all CompleteWebhookHttpInputTransportError values.
+func (CompleteWebhookHttpInputTransportError) AllValues() []CompleteWebhookHttpInputTransportError {
+	return []CompleteWebhookHttpInputTransportError{
+		CompleteWebhookHttpInputTransportErrorTimeout,
+		CompleteWebhookHttpInputTransportErrorNetwork,
+		CompleteWebhookHttpInputTransportErrorResponseTooLarge,
+		CompleteWebhookHttpInputTransportErrorIo,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CompleteWebhookHttpInputTransportError) MarshalText() ([]byte, error) {
+	switch s {
+	case CompleteWebhookHttpInputTransportErrorTimeout:
+		return []byte(s), nil
+	case CompleteWebhookHttpInputTransportErrorNetwork:
+		return []byte(s), nil
+	case CompleteWebhookHttpInputTransportErrorResponseTooLarge:
+		return []byte(s), nil
+	case CompleteWebhookHttpInputTransportErrorIo:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CompleteWebhookHttpInputTransportError) UnmarshalText(data []byte) error {
+	switch CompleteWebhookHttpInputTransportError(data) {
+	case CompleteWebhookHttpInputTransportErrorTimeout:
+		*s = CompleteWebhookHttpInputTransportErrorTimeout
+		return nil
+	case CompleteWebhookHttpInputTransportErrorNetwork:
+		*s = CompleteWebhookHttpInputTransportErrorNetwork
+		return nil
+	case CompleteWebhookHttpInputTransportErrorResponseTooLarge:
+		*s = CompleteWebhookHttpInputTransportErrorResponseTooLarge
+		return nil
+	case CompleteWebhookHttpInputTransportErrorIo:
+		*s = CompleteWebhookHttpInputTransportErrorIo
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/CompleteWebhookInput
+// CompleteWebhookInput represents sum type.
+type CompleteWebhookInput struct {
+	Type                       CompleteWebhookInputType // switch on this field
+	CompleteWebhookHttpInput   CompleteWebhookHttpInput
+	CompleteWebhookExecInput   CompleteWebhookExecInput
+	CompleteWebhookStdoutInput CompleteWebhookStdoutInput
+}
+
+// CompleteWebhookInputType is oneOf type of CompleteWebhookInput.
+type CompleteWebhookInputType string
+
+// Possible values for CompleteWebhookInputType.
+const (
+	CompleteWebhookHttpInputCompleteWebhookInput   CompleteWebhookInputType = "http"
+	CompleteWebhookExecInputCompleteWebhookInput   CompleteWebhookInputType = "exec"
+	CompleteWebhookStdoutInputCompleteWebhookInput CompleteWebhookInputType = "stdout"
+)
+
+// IsCompleteWebhookHttpInput reports whether CompleteWebhookInput is CompleteWebhookHttpInput.
+func (s CompleteWebhookInput) IsCompleteWebhookHttpInput() bool {
+	return s.Type == CompleteWebhookHttpInputCompleteWebhookInput
+}
+
+// IsCompleteWebhookExecInput reports whether CompleteWebhookInput is CompleteWebhookExecInput.
+func (s CompleteWebhookInput) IsCompleteWebhookExecInput() bool {
+	return s.Type == CompleteWebhookExecInputCompleteWebhookInput
+}
+
+// IsCompleteWebhookStdoutInput reports whether CompleteWebhookInput is CompleteWebhookStdoutInput.
+func (s CompleteWebhookInput) IsCompleteWebhookStdoutInput() bool {
+	return s.Type == CompleteWebhookStdoutInputCompleteWebhookInput
+}
+
+// SetCompleteWebhookHttpInput sets CompleteWebhookInput to CompleteWebhookHttpInput.
+func (s *CompleteWebhookInput) SetCompleteWebhookHttpInput(v CompleteWebhookHttpInput) {
+	s.Type = CompleteWebhookHttpInputCompleteWebhookInput
+	s.CompleteWebhookHttpInput = v
+}
+
+// GetCompleteWebhookHttpInput returns CompleteWebhookHttpInput and true boolean if CompleteWebhookInput is CompleteWebhookHttpInput.
+func (s CompleteWebhookInput) GetCompleteWebhookHttpInput() (v CompleteWebhookHttpInput, ok bool) {
+	if !s.IsCompleteWebhookHttpInput() {
+		return v, false
+	}
+	return s.CompleteWebhookHttpInput, true
+}
+
+// NewCompleteWebhookHttpInputCompleteWebhookInput returns new CompleteWebhookInput from CompleteWebhookHttpInput.
+func NewCompleteWebhookHttpInputCompleteWebhookInput(v CompleteWebhookHttpInput) CompleteWebhookInput {
+	var s CompleteWebhookInput
+	s.SetCompleteWebhookHttpInput(v)
+	return s
+}
+
+// SetCompleteWebhookExecInput sets CompleteWebhookInput to CompleteWebhookExecInput.
+func (s *CompleteWebhookInput) SetCompleteWebhookExecInput(v CompleteWebhookExecInput) {
+	s.Type = CompleteWebhookExecInputCompleteWebhookInput
+	s.CompleteWebhookExecInput = v
+}
+
+// GetCompleteWebhookExecInput returns CompleteWebhookExecInput and true boolean if CompleteWebhookInput is CompleteWebhookExecInput.
+func (s CompleteWebhookInput) GetCompleteWebhookExecInput() (v CompleteWebhookExecInput, ok bool) {
+	if !s.IsCompleteWebhookExecInput() {
+		return v, false
+	}
+	return s.CompleteWebhookExecInput, true
+}
+
+// NewCompleteWebhookExecInputCompleteWebhookInput returns new CompleteWebhookInput from CompleteWebhookExecInput.
+func NewCompleteWebhookExecInputCompleteWebhookInput(v CompleteWebhookExecInput) CompleteWebhookInput {
+	var s CompleteWebhookInput
+	s.SetCompleteWebhookExecInput(v)
+	return s
+}
+
+// SetCompleteWebhookStdoutInput sets CompleteWebhookInput to CompleteWebhookStdoutInput.
+func (s *CompleteWebhookInput) SetCompleteWebhookStdoutInput(v CompleteWebhookStdoutInput) {
+	s.Type = CompleteWebhookStdoutInputCompleteWebhookInput
+	s.CompleteWebhookStdoutInput = v
+}
+
+// GetCompleteWebhookStdoutInput returns CompleteWebhookStdoutInput and true boolean if CompleteWebhookInput is CompleteWebhookStdoutInput.
+func (s CompleteWebhookInput) GetCompleteWebhookStdoutInput() (v CompleteWebhookStdoutInput, ok bool) {
+	if !s.IsCompleteWebhookStdoutInput() {
+		return v, false
+	}
+	return s.CompleteWebhookStdoutInput, true
+}
+
+// NewCompleteWebhookStdoutInputCompleteWebhookInput returns new CompleteWebhookInput from CompleteWebhookStdoutInput.
+func NewCompleteWebhookStdoutInputCompleteWebhookInput(v CompleteWebhookStdoutInput) CompleteWebhookInput {
+	var s CompleteWebhookInput
+	s.SetCompleteWebhookStdoutInput(v)
+	return s
+}
+
+// Ref: #/components/schemas/CompleteWebhookResponse
+type CompleteWebhookResponse struct {
+	Success         CompleteWebhookResponseSuccess `json:"success"`
+	Data            CompleteWebhookResponseData    `json:"data"`
+	Meta            OptCompleteWebhookResponseMeta `json:"meta"`
+	AdditionalProps CompleteWebhookResponseAdditional
+}
+
+// GetSuccess returns the value of Success.
+func (s *CompleteWebhookResponse) GetSuccess() CompleteWebhookResponseSuccess {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CompleteWebhookResponse) GetData() CompleteWebhookResponseData {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *CompleteWebhookResponse) GetMeta() OptCompleteWebhookResponseMeta {
+	return s.Meta
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CompleteWebhookResponse) GetAdditionalProps() CompleteWebhookResponseAdditional {
+	return s.AdditionalProps
+}
+
+// SetSuccess sets the value of Success.
+func (s *CompleteWebhookResponse) SetSuccess(val CompleteWebhookResponseSuccess) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CompleteWebhookResponse) SetData(val CompleteWebhookResponseData) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *CompleteWebhookResponse) SetMeta(val OptCompleteWebhookResponseMeta) {
+	s.Meta = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CompleteWebhookResponse) SetAdditionalProps(val CompleteWebhookResponseAdditional) {
+	s.AdditionalProps = val
+}
+
+func (*CompleteWebhookResponse) completeWebhookEventRes() {}
+
+type CompleteWebhookResponseAdditional map[string]jx.Raw
+
+func (s *CompleteWebhookResponseAdditional) init() CompleteWebhookResponseAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CompleteWebhookResponseData struct {
+	Result CompleteWebhookResponseDataResult `json:"result"`
+}
+
+// GetResult returns the value of Result.
+func (s *CompleteWebhookResponseData) GetResult() CompleteWebhookResponseDataResult {
+	return s.Result
+}
+
+// SetResult sets the value of Result.
+func (s *CompleteWebhookResponseData) SetResult(val CompleteWebhookResponseDataResult) {
+	s.Result = val
+}
+
+type CompleteWebhookResponseDataResult string
+
+const (
+	CompleteWebhookResponseDataResultCompleted        CompleteWebhookResponseDataResult = "completed"
+	CompleteWebhookResponseDataResultAlreadyCompleted CompleteWebhookResponseDataResult = "already_completed"
+)
+
+// AllValues returns all CompleteWebhookResponseDataResult values.
+func (CompleteWebhookResponseDataResult) AllValues() []CompleteWebhookResponseDataResult {
+	return []CompleteWebhookResponseDataResult{
+		CompleteWebhookResponseDataResultCompleted,
+		CompleteWebhookResponseDataResultAlreadyCompleted,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CompleteWebhookResponseDataResult) MarshalText() ([]byte, error) {
+	switch s {
+	case CompleteWebhookResponseDataResultCompleted:
+		return []byte(s), nil
+	case CompleteWebhookResponseDataResultAlreadyCompleted:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CompleteWebhookResponseDataResult) UnmarshalText(data []byte) error {
+	switch CompleteWebhookResponseDataResult(data) {
+	case CompleteWebhookResponseDataResultCompleted:
+		*s = CompleteWebhookResponseDataResultCompleted
+		return nil
+	case CompleteWebhookResponseDataResultAlreadyCompleted:
+		*s = CompleteWebhookResponseDataResultAlreadyCompleted
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CompleteWebhookResponseMeta struct {
+	Total           OptFloat64   `json:"total"`
+	TotalCapped     OptBool      `json:"total_capped"`
+	Limit           OptFloat64   `json:"limit"`
+	Cursor          OptNilString `json:"cursor"`
+	AdditionalProps CompleteWebhookResponseMetaAdditional
+}
+
+// GetTotal returns the value of Total.
+func (s *CompleteWebhookResponseMeta) GetTotal() OptFloat64 {
+	return s.Total
+}
+
+// GetTotalCapped returns the value of TotalCapped.
+func (s *CompleteWebhookResponseMeta) GetTotalCapped() OptBool {
+	return s.TotalCapped
+}
+
+// GetLimit returns the value of Limit.
+func (s *CompleteWebhookResponseMeta) GetLimit() OptFloat64 {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *CompleteWebhookResponseMeta) GetCursor() OptNilString {
+	return s.Cursor
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CompleteWebhookResponseMeta) GetAdditionalProps() CompleteWebhookResponseMetaAdditional {
+	return s.AdditionalProps
+}
+
+// SetTotal sets the value of Total.
+func (s *CompleteWebhookResponseMeta) SetTotal(val OptFloat64) {
+	s.Total = val
+}
+
+// SetTotalCapped sets the value of TotalCapped.
+func (s *CompleteWebhookResponseMeta) SetTotalCapped(val OptBool) {
+	s.TotalCapped = val
+}
+
+// SetLimit sets the value of Limit.
+func (s *CompleteWebhookResponseMeta) SetLimit(val OptFloat64) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *CompleteWebhookResponseMeta) SetCursor(val OptNilString) {
+	s.Cursor = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CompleteWebhookResponseMeta) SetAdditionalProps(val CompleteWebhookResponseMetaAdditional) {
+	s.AdditionalProps = val
+}
+
+type CompleteWebhookResponseMetaAdditional map[string]jx.Raw
+
+func (s *CompleteWebhookResponseMetaAdditional) init() CompleteWebhookResponseMetaAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type CompleteWebhookResponseSuccess bool
+
+const (
+	CompleteWebhookResponseSuccessTrue CompleteWebhookResponseSuccess = true
+)
+
+// AllValues returns all CompleteWebhookResponseSuccess values.
+func (CompleteWebhookResponseSuccess) AllValues() []CompleteWebhookResponseSuccess {
+	return []CompleteWebhookResponseSuccess{
+		CompleteWebhookResponseSuccessTrue,
+	}
+}
+
+// Ref: #/components/schemas/CompleteWebhookStdoutInput
+type CompleteWebhookStdoutInput struct {
+	QueueID        uuid.UUID                                   `json:"queue_id"`
+	DeliveryID     uuid.UUID                                   `json:"delivery_id"`
+	LeaseToken     uuid.UUID                                   `json:"lease_token"`
+	DurationMs     int                                         `json:"duration_ms"`
+	Mode           CompleteWebhookStdoutInputMode              `json:"mode"`
+	WriteSucceeded bool                                        `json:"write_succeeded"`
+	TransportError OptCompleteWebhookStdoutInputTransportError `json:"transport_error"`
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *CompleteWebhookStdoutInput) GetQueueID() uuid.UUID {
+	return s.QueueID
+}
+
+// GetDeliveryID returns the value of DeliveryID.
+func (s *CompleteWebhookStdoutInput) GetDeliveryID() uuid.UUID {
+	return s.DeliveryID
+}
+
+// GetLeaseToken returns the value of LeaseToken.
+func (s *CompleteWebhookStdoutInput) GetLeaseToken() uuid.UUID {
+	return s.LeaseToken
+}
+
+// GetDurationMs returns the value of DurationMs.
+func (s *CompleteWebhookStdoutInput) GetDurationMs() int {
+	return s.DurationMs
+}
+
+// GetMode returns the value of Mode.
+func (s *CompleteWebhookStdoutInput) GetMode() CompleteWebhookStdoutInputMode {
+	return s.Mode
+}
+
+// GetWriteSucceeded returns the value of WriteSucceeded.
+func (s *CompleteWebhookStdoutInput) GetWriteSucceeded() bool {
+	return s.WriteSucceeded
+}
+
+// GetTransportError returns the value of TransportError.
+func (s *CompleteWebhookStdoutInput) GetTransportError() OptCompleteWebhookStdoutInputTransportError {
+	return s.TransportError
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *CompleteWebhookStdoutInput) SetQueueID(val uuid.UUID) {
+	s.QueueID = val
+}
+
+// SetDeliveryID sets the value of DeliveryID.
+func (s *CompleteWebhookStdoutInput) SetDeliveryID(val uuid.UUID) {
+	s.DeliveryID = val
+}
+
+// SetLeaseToken sets the value of LeaseToken.
+func (s *CompleteWebhookStdoutInput) SetLeaseToken(val uuid.UUID) {
+	s.LeaseToken = val
+}
+
+// SetDurationMs sets the value of DurationMs.
+func (s *CompleteWebhookStdoutInput) SetDurationMs(val int) {
+	s.DurationMs = val
+}
+
+// SetMode sets the value of Mode.
+func (s *CompleteWebhookStdoutInput) SetMode(val CompleteWebhookStdoutInputMode) {
+	s.Mode = val
+}
+
+// SetWriteSucceeded sets the value of WriteSucceeded.
+func (s *CompleteWebhookStdoutInput) SetWriteSucceeded(val bool) {
+	s.WriteSucceeded = val
+}
+
+// SetTransportError sets the value of TransportError.
+func (s *CompleteWebhookStdoutInput) SetTransportError(val OptCompleteWebhookStdoutInputTransportError) {
+	s.TransportError = val
+}
+
+type CompleteWebhookStdoutInputMode string
+
+const (
+	CompleteWebhookStdoutInputModeStdout CompleteWebhookStdoutInputMode = "stdout"
+)
+
+// AllValues returns all CompleteWebhookStdoutInputMode values.
+func (CompleteWebhookStdoutInputMode) AllValues() []CompleteWebhookStdoutInputMode {
+	return []CompleteWebhookStdoutInputMode{
+		CompleteWebhookStdoutInputModeStdout,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CompleteWebhookStdoutInputMode) MarshalText() ([]byte, error) {
+	switch s {
+	case CompleteWebhookStdoutInputModeStdout:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CompleteWebhookStdoutInputMode) UnmarshalText(data []byte) error {
+	switch CompleteWebhookStdoutInputMode(data) {
+	case CompleteWebhookStdoutInputModeStdout:
+		*s = CompleteWebhookStdoutInputModeStdout
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CompleteWebhookStdoutInputTransportError string
+
+const (
+	CompleteWebhookStdoutInputTransportErrorIo CompleteWebhookStdoutInputTransportError = "io"
+)
+
+// AllValues returns all CompleteWebhookStdoutInputTransportError values.
+func (CompleteWebhookStdoutInputTransportError) AllValues() []CompleteWebhookStdoutInputTransportError {
+	return []CompleteWebhookStdoutInputTransportError{
+		CompleteWebhookStdoutInputTransportErrorIo,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CompleteWebhookStdoutInputTransportError) MarshalText() ([]byte, error) {
+	switch s {
+	case CompleteWebhookStdoutInputTransportErrorIo:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CompleteWebhookStdoutInputTransportError) UnmarshalText(data []byte) error {
+	switch CompleteWebhookStdoutInputTransportError(data) {
+	case CompleteWebhookStdoutInputTransportErrorIo:
+		*s = CompleteWebhookStdoutInputTransportErrorIo
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // The full conversation an inbound email belongs to, as ordered,
 // ready-to-prompt turns with bodies. Resolves the thread from the
 // email and returns every message oldest-first, so an agent that
@@ -2758,6 +3582,10 @@ type CreateEndpointBadRequest ErrorResponse
 
 func (*CreateEndpointBadRequest) createEndpointRes() {}
 
+type CreateEndpointConflict ErrorResponse
+
+func (*CreateEndpointConflict) createEndpointRes() {}
+
 // Merged schema.
 type CreateEndpointCreated struct {
 	Success bool     `json:"success"`
@@ -2788,8 +3616,8 @@ func (*CreateEndpointCreated) createEndpointRes() {}
 
 // Ref: #/components/schemas/CreateEndpointInput
 type CreateEndpointInput struct {
-	// Http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide
-	// function_id, omit url).
+	// Http: deliver to url. function: invoke function_id. pull: receive locally using a stable name,
+	// without a URL.
 	Kind OptCreateEndpointInputKind `json:"kind"`
 	// The webhook URL to deliver events to. Required when kind is http; omit for function endpoints.
 	URL OptString `json:"url"`
@@ -2800,11 +3628,13 @@ type CreateEndpointInput struct {
 	// Restrict to emails from a specific domain.
 	DomainID OptNilUUID `json:"domain_id"`
 	// Endpoint-specific filtering rules.
-	Rules *CreateEndpointInputRules `json:"rules"`
+	Rules OptCreateEndpointInputRules `json:"rules"`
 	// Create this endpoint as a route-target: reachable only via an
 	// explicit recipient route, never a domain's default destination, and
 	// exempt from the one-endpoint-per-domain rule.
 	IsRouteTarget OptBool `json:"is_route_target"`
+	// Stable account-scoped name, required for kind=pull.
+	Name OptString `json:"name"`
 }
 
 // GetKind returns the value of Kind.
@@ -2833,13 +3663,18 @@ func (s *CreateEndpointInput) GetDomainID() OptNilUUID {
 }
 
 // GetRules returns the value of Rules.
-func (s *CreateEndpointInput) GetRules() *CreateEndpointInputRules {
+func (s *CreateEndpointInput) GetRules() OptCreateEndpointInputRules {
 	return s.Rules
 }
 
 // GetIsRouteTarget returns the value of IsRouteTarget.
 func (s *CreateEndpointInput) GetIsRouteTarget() OptBool {
 	return s.IsRouteTarget
+}
+
+// GetName returns the value of Name.
+func (s *CreateEndpointInput) GetName() OptString {
+	return s.Name
 }
 
 // SetKind sets the value of Kind.
@@ -2868,7 +3703,7 @@ func (s *CreateEndpointInput) SetDomainID(val OptNilUUID) {
 }
 
 // SetRules sets the value of Rules.
-func (s *CreateEndpointInput) SetRules(val *CreateEndpointInputRules) {
+func (s *CreateEndpointInput) SetRules(val OptCreateEndpointInputRules) {
 	s.Rules = val
 }
 
@@ -2877,13 +3712,19 @@ func (s *CreateEndpointInput) SetIsRouteTarget(val OptBool) {
 	s.IsRouteTarget = val
 }
 
-// Http: deliver to a webhook URL (provide url). function: invoke a Primitive Function (provide
-// function_id, omit url).
+// SetName sets the value of Name.
+func (s *CreateEndpointInput) SetName(val OptString) {
+	s.Name = val
+}
+
+// Http: deliver to url. function: invoke function_id. pull: receive locally using a stable name,
+// without a URL.
 type CreateEndpointInputKind string
 
 const (
 	CreateEndpointInputKindHTTP     CreateEndpointInputKind = "http"
 	CreateEndpointInputKindFunction CreateEndpointInputKind = "function"
+	CreateEndpointInputKindPull     CreateEndpointInputKind = "pull"
 )
 
 // AllValues returns all CreateEndpointInputKind values.
@@ -2891,6 +3732,7 @@ func (CreateEndpointInputKind) AllValues() []CreateEndpointInputKind {
 	return []CreateEndpointInputKind{
 		CreateEndpointInputKindHTTP,
 		CreateEndpointInputKindFunction,
+		CreateEndpointInputKindPull,
 	}
 }
 
@@ -2900,6 +3742,8 @@ func (s CreateEndpointInputKind) MarshalText() ([]byte, error) {
 	case CreateEndpointInputKindHTTP:
 		return []byte(s), nil
 	case CreateEndpointInputKindFunction:
+		return []byte(s), nil
+	case CreateEndpointInputKindPull:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -2915,13 +3759,82 @@ func (s *CreateEndpointInputKind) UnmarshalText(data []byte) error {
 	case CreateEndpointInputKindFunction:
 		*s = CreateEndpointInputKindFunction
 		return nil
+	case CreateEndpointInputKindPull:
+		*s = CreateEndpointInputKindPull
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
 // Endpoint-specific filtering rules.
-type CreateEndpointInputRules struct{}
+type CreateEndpointInputRules struct {
+	EventTypes      []string `json:"event_types"`
+	AdditionalProps CreateEndpointInputRulesAdditional
+}
+
+// GetEventTypes returns the value of EventTypes.
+func (s *CreateEndpointInputRules) GetEventTypes() []string {
+	return s.EventTypes
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *CreateEndpointInputRules) GetAdditionalProps() CreateEndpointInputRulesAdditional {
+	return s.AdditionalProps
+}
+
+// SetEventTypes sets the value of EventTypes.
+func (s *CreateEndpointInputRules) SetEventTypes(val []string) {
+	s.EventTypes = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *CreateEndpointInputRules) SetAdditionalProps(val CreateEndpointInputRulesAdditional) {
+	s.AdditionalProps = val
+}
+
+type CreateEndpointInputRulesAdditional map[string]jx.Raw
+
+func (s *CreateEndpointInputRulesAdditional) init() CreateEndpointInputRulesAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Merged schema.
+type CreateEndpointOK struct {
+	Success bool     `json:"success"`
+	Data    Endpoint `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateEndpointOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateEndpointOK) GetData() Endpoint {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateEndpointOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateEndpointOK) SetData(val Endpoint) {
+	s.Data = val
+}
+
+func (*CreateEndpointOK) createEndpointRes() {}
+
+type CreateEndpointServiceUnavailable ErrorResponse
+
+func (*CreateEndpointServiceUnavailable) createEndpointRes() {}
 
 type CreateEndpointUnauthorized ErrorResponse
 
@@ -7768,6 +8681,8 @@ type Endpoint struct {
 	// route, never as a domain's default destination, and is exempt from
 	// the one-endpoint-per-domain rule (so many can share a domain).
 	IsRouteTarget OptBool `json:"is_route_target"`
+	// Stable name of a pull destination.
+	Name OptNilString `json:"name"`
 }
 
 // GetID returns the value of ID.
@@ -7865,6 +8780,11 @@ func (s *Endpoint) GetIsRouteTarget() OptBool {
 	return s.IsRouteTarget
 }
 
+// GetName returns the value of Name.
+func (s *Endpoint) GetName() OptNilString {
+	return s.Name
+}
+
 // SetID sets the value of ID.
 func (s *Endpoint) SetID(val uuid.UUID) {
 	s.ID = val
@@ -7960,12 +8880,18 @@ func (s *Endpoint) SetIsRouteTarget(val OptBool) {
 	s.IsRouteTarget = val
 }
 
+// SetName sets the value of Name.
+func (s *Endpoint) SetName(val OptNilString) {
+	s.Name = val
+}
+
 // Http: deliver to the webhook URL. function: invoke a Primitive Function.
 type EndpointKind string
 
 const (
 	EndpointKindHTTP     EndpointKind = "http"
 	EndpointKindFunction EndpointKind = "function"
+	EndpointKindPull     EndpointKind = "pull"
 )
 
 // AllValues returns all EndpointKind values.
@@ -7973,6 +8899,7 @@ func (EndpointKind) AllValues() []EndpointKind {
 	return []EndpointKind{
 		EndpointKindHTTP,
 		EndpointKindFunction,
+		EndpointKindPull,
 	}
 }
 
@@ -7982,6 +8909,8 @@ func (s EndpointKind) MarshalText() ([]byte, error) {
 	case EndpointKindHTTP:
 		return []byte(s), nil
 	case EndpointKindFunction:
+		return []byte(s), nil
+	case EndpointKindPull:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -7997,13 +8926,50 @@ func (s *EndpointKind) UnmarshalText(data []byte) error {
 	case EndpointKindFunction:
 		*s = EndpointKindFunction
 		return nil
+	case EndpointKindPull:
+		*s = EndpointKindPull
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
 // Endpoint-specific filtering rules.
-type EndpointRules struct{}
+type EndpointRules struct {
+	EventTypes      []string `json:"event_types"`
+	AdditionalProps EndpointRulesAdditional
+}
+
+// GetEventTypes returns the value of EventTypes.
+func (s *EndpointRules) GetEventTypes() []string {
+	return s.EventTypes
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EndpointRules) GetAdditionalProps() EndpointRulesAdditional {
+	return s.AdditionalProps
+}
+
+// SetEventTypes sets the value of EventTypes.
+func (s *EndpointRules) SetEventTypes(val []string) {
+	s.EventTypes = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EndpointRules) SetAdditionalProps(val EndpointRulesAdditional) {
+	s.AdditionalProps = val
+}
+
+type EndpointRulesAdditional map[string]jx.Raw
+
+func (s *EndpointRulesAdditional) init() EndpointRulesAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
 // Ref: #/components/schemas/ErrorResponse
 type ErrorResponse struct {
@@ -8174,6 +9140,15 @@ const (
 	ErrorResponseErrorCodePaymentDeclined               ErrorResponseErrorCode = "payment_declined"
 	ErrorResponseErrorCodeChallengeExpired              ErrorResponseErrorCode = "challenge_expired"
 	ErrorResponseErrorCodeSettlementFailed              ErrorResponseErrorCode = "settlement_failed"
+	ErrorResponseErrorCodePullUnavailable               ErrorResponseErrorCode = "pull_unavailable"
+	ErrorResponseErrorCodeSubscriptionConflict          ErrorResponseErrorCode = "subscription_conflict"
+	ErrorResponseErrorCodeSubscriptionLimit             ErrorResponseErrorCode = "subscription_limit"
+	ErrorResponseErrorCodeSubscriptionDisabled          ErrorResponseErrorCode = "subscription_disabled"
+	ErrorResponseErrorCodeRequestAborted                ErrorResponseErrorCode = "request_aborted"
+	ErrorResponseErrorCodeEventContentUnavailable       ErrorResponseErrorCode = "event_content_unavailable"
+	ErrorResponseErrorCodeEventPreparationFailed        ErrorResponseErrorCode = "event_preparation_failed"
+	ErrorResponseErrorCodeSubscriptionUnavailable       ErrorResponseErrorCode = "subscription_unavailable"
+	ErrorResponseErrorCodeStaleDelivery                 ErrorResponseErrorCode = "stale_delivery"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -8231,6 +9206,15 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodePaymentDeclined,
 		ErrorResponseErrorCodeChallengeExpired,
 		ErrorResponseErrorCodeSettlementFailed,
+		ErrorResponseErrorCodePullUnavailable,
+		ErrorResponseErrorCodeSubscriptionConflict,
+		ErrorResponseErrorCodeSubscriptionLimit,
+		ErrorResponseErrorCodeSubscriptionDisabled,
+		ErrorResponseErrorCodeRequestAborted,
+		ErrorResponseErrorCodeEventContentUnavailable,
+		ErrorResponseErrorCodeEventPreparationFailed,
+		ErrorResponseErrorCodeSubscriptionUnavailable,
+		ErrorResponseErrorCodeStaleDelivery,
 	}
 }
 
@@ -8340,6 +9324,24 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeChallengeExpired:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeSettlementFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePullUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSubscriptionConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSubscriptionLimit:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSubscriptionDisabled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRequestAborted:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeEventContentUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeEventPreparationFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSubscriptionUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeStaleDelivery:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -8504,6 +9506,33 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeSettlementFailed:
 		*s = ErrorResponseErrorCodeSettlementFailed
+		return nil
+	case ErrorResponseErrorCodePullUnavailable:
+		*s = ErrorResponseErrorCodePullUnavailable
+		return nil
+	case ErrorResponseErrorCodeSubscriptionConflict:
+		*s = ErrorResponseErrorCodeSubscriptionConflict
+		return nil
+	case ErrorResponseErrorCodeSubscriptionLimit:
+		*s = ErrorResponseErrorCodeSubscriptionLimit
+		return nil
+	case ErrorResponseErrorCodeSubscriptionDisabled:
+		*s = ErrorResponseErrorCodeSubscriptionDisabled
+		return nil
+	case ErrorResponseErrorCodeRequestAborted:
+		*s = ErrorResponseErrorCodeRequestAborted
+		return nil
+	case ErrorResponseErrorCodeEventContentUnavailable:
+		*s = ErrorResponseErrorCodeEventContentUnavailable
+		return nil
+	case ErrorResponseErrorCodeEventPreparationFailed:
+		*s = ErrorResponseErrorCodeEventPreparationFailed
+		return nil
+	case ErrorResponseErrorCodeSubscriptionUnavailable:
+		*s = ErrorResponseErrorCodeSubscriptionUnavailable
+		return nil
+	case ErrorResponseErrorCodeStaleDelivery:
+		*s = ErrorResponseErrorCodeStaleDelivery
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -14521,6 +15550,51 @@ func (o NilInt) Or(d int) int {
 	return d
 }
 
+// NewNilPullWebhookResponseDataDelivery returns new NilPullWebhookResponseDataDelivery with value set to v.
+func NewNilPullWebhookResponseDataDelivery(v PullWebhookResponseDataDelivery) NilPullWebhookResponseDataDelivery {
+	return NilPullWebhookResponseDataDelivery{
+		Value: v,
+	}
+}
+
+// NilPullWebhookResponseDataDelivery is nullable PullWebhookResponseDataDelivery.
+type NilPullWebhookResponseDataDelivery struct {
+	Value PullWebhookResponseDataDelivery
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilPullWebhookResponseDataDelivery) SetTo(v PullWebhookResponseDataDelivery) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilPullWebhookResponseDataDelivery) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilPullWebhookResponseDataDelivery) SetToNull() {
+	o.Null = true
+	var v PullWebhookResponseDataDelivery
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilPullWebhookResponseDataDelivery) Get() (v PullWebhookResponseDataDelivery, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilPullWebhookResponseDataDelivery) Or(d PullWebhookResponseDataDelivery) PullWebhookResponseDataDelivery {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilReplyEmail returns new NilReplyEmail with value set to v.
 func NewNilReplyEmail(v ReplyEmail) NilReplyEmail {
 	return NilReplyEmail{
@@ -14975,6 +16049,190 @@ func (o OptCliLogoutInput) Or(d CliLogoutInput) CliLogoutInput {
 	return d
 }
 
+// NewOptCompleteWebhookExecInputTransportError returns new OptCompleteWebhookExecInputTransportError with value set to v.
+func NewOptCompleteWebhookExecInputTransportError(v CompleteWebhookExecInputTransportError) OptCompleteWebhookExecInputTransportError {
+	return OptCompleteWebhookExecInputTransportError{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCompleteWebhookExecInputTransportError is optional CompleteWebhookExecInputTransportError.
+type OptCompleteWebhookExecInputTransportError struct {
+	Value CompleteWebhookExecInputTransportError
+	Set   bool
+}
+
+// IsSet returns true if OptCompleteWebhookExecInputTransportError was set.
+func (o OptCompleteWebhookExecInputTransportError) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCompleteWebhookExecInputTransportError) Reset() {
+	var v CompleteWebhookExecInputTransportError
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCompleteWebhookExecInputTransportError) SetTo(v CompleteWebhookExecInputTransportError) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCompleteWebhookExecInputTransportError) Get() (v CompleteWebhookExecInputTransportError, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCompleteWebhookExecInputTransportError) Or(d CompleteWebhookExecInputTransportError) CompleteWebhookExecInputTransportError {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCompleteWebhookHttpInputTransportError returns new OptCompleteWebhookHttpInputTransportError with value set to v.
+func NewOptCompleteWebhookHttpInputTransportError(v CompleteWebhookHttpInputTransportError) OptCompleteWebhookHttpInputTransportError {
+	return OptCompleteWebhookHttpInputTransportError{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCompleteWebhookHttpInputTransportError is optional CompleteWebhookHttpInputTransportError.
+type OptCompleteWebhookHttpInputTransportError struct {
+	Value CompleteWebhookHttpInputTransportError
+	Set   bool
+}
+
+// IsSet returns true if OptCompleteWebhookHttpInputTransportError was set.
+func (o OptCompleteWebhookHttpInputTransportError) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCompleteWebhookHttpInputTransportError) Reset() {
+	var v CompleteWebhookHttpInputTransportError
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCompleteWebhookHttpInputTransportError) SetTo(v CompleteWebhookHttpInputTransportError) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCompleteWebhookHttpInputTransportError) Get() (v CompleteWebhookHttpInputTransportError, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCompleteWebhookHttpInputTransportError) Or(d CompleteWebhookHttpInputTransportError) CompleteWebhookHttpInputTransportError {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCompleteWebhookResponseMeta returns new OptCompleteWebhookResponseMeta with value set to v.
+func NewOptCompleteWebhookResponseMeta(v CompleteWebhookResponseMeta) OptCompleteWebhookResponseMeta {
+	return OptCompleteWebhookResponseMeta{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCompleteWebhookResponseMeta is optional CompleteWebhookResponseMeta.
+type OptCompleteWebhookResponseMeta struct {
+	Value CompleteWebhookResponseMeta
+	Set   bool
+}
+
+// IsSet returns true if OptCompleteWebhookResponseMeta was set.
+func (o OptCompleteWebhookResponseMeta) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCompleteWebhookResponseMeta) Reset() {
+	var v CompleteWebhookResponseMeta
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCompleteWebhookResponseMeta) SetTo(v CompleteWebhookResponseMeta) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCompleteWebhookResponseMeta) Get() (v CompleteWebhookResponseMeta, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCompleteWebhookResponseMeta) Or(d CompleteWebhookResponseMeta) CompleteWebhookResponseMeta {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCompleteWebhookStdoutInputTransportError returns new OptCompleteWebhookStdoutInputTransportError with value set to v.
+func NewOptCompleteWebhookStdoutInputTransportError(v CompleteWebhookStdoutInputTransportError) OptCompleteWebhookStdoutInputTransportError {
+	return OptCompleteWebhookStdoutInputTransportError{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCompleteWebhookStdoutInputTransportError is optional CompleteWebhookStdoutInputTransportError.
+type OptCompleteWebhookStdoutInputTransportError struct {
+	Value CompleteWebhookStdoutInputTransportError
+	Set   bool
+}
+
+// IsSet returns true if OptCompleteWebhookStdoutInputTransportError was set.
+func (o OptCompleteWebhookStdoutInputTransportError) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCompleteWebhookStdoutInputTransportError) Reset() {
+	var v CompleteWebhookStdoutInputTransportError
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCompleteWebhookStdoutInputTransportError) SetTo(v CompleteWebhookStdoutInputTransportError) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCompleteWebhookStdoutInputTransportError) Get() (v CompleteWebhookStdoutInputTransportError, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCompleteWebhookStdoutInputTransportError) Or(d CompleteWebhookStdoutInputTransportError) CompleteWebhookStdoutInputTransportError {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptCreateEndpointInputKind returns new OptCreateEndpointInputKind with value set to v.
 func NewOptCreateEndpointInputKind(v CreateEndpointInputKind) OptCreateEndpointInputKind {
 	return OptCreateEndpointInputKind{
@@ -15015,6 +16273,52 @@ func (o OptCreateEndpointInputKind) Get() (v CreateEndpointInputKind, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptCreateEndpointInputKind) Or(d CreateEndpointInputKind) CreateEndpointInputKind {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptCreateEndpointInputRules returns new OptCreateEndpointInputRules with value set to v.
+func NewOptCreateEndpointInputRules(v CreateEndpointInputRules) OptCreateEndpointInputRules {
+	return OptCreateEndpointInputRules{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCreateEndpointInputRules is optional CreateEndpointInputRules.
+type OptCreateEndpointInputRules struct {
+	Value CreateEndpointInputRules
+	Set   bool
+}
+
+// IsSet returns true if OptCreateEndpointInputRules was set.
+func (o OptCreateEndpointInputRules) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCreateEndpointInputRules) Reset() {
+	var v CreateEndpointInputRules
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCreateEndpointInputRules) SetTo(v CreateEndpointInputRules) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCreateEndpointInputRules) Get() (v CreateEndpointInputRules, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCreateEndpointInputRules) Or(d CreateEndpointInputRules) CreateEndpointInputRules {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -17024,6 +18328,52 @@ func (o OptPublishPolicy) Or(d PublishPolicy) PublishPolicy {
 	return d
 }
 
+// NewOptPullWebhookResponseMeta returns new OptPullWebhookResponseMeta with value set to v.
+func NewOptPullWebhookResponseMeta(v PullWebhookResponseMeta) OptPullWebhookResponseMeta {
+	return OptPullWebhookResponseMeta{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptPullWebhookResponseMeta is optional PullWebhookResponseMeta.
+type OptPullWebhookResponseMeta struct {
+	Value PullWebhookResponseMeta
+	Set   bool
+}
+
+// IsSet returns true if OptPullWebhookResponseMeta was set.
+func (o OptPullWebhookResponseMeta) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptPullWebhookResponseMeta) Reset() {
+	var v PullWebhookResponseMeta
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptPullWebhookResponseMeta) SetTo(v PullWebhookResponseMeta) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptPullWebhookResponseMeta) Get() (v PullWebhookResponseMeta, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptPullWebhookResponseMeta) Or(d PullWebhookResponseMeta) PullWebhookResponseMeta {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptRecipientRouteMatchType returns new OptRecipientRouteMatchType with value set to v.
 func NewOptRecipientRouteMatchType(v RecipientRouteMatchType) OptRecipientRouteMatchType {
 	return OptRecipientRouteMatchType{
@@ -17938,6 +19288,52 @@ func (o OptUUID) Get() (v uuid.UUID, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUUID) Or(d uuid.UUID) uuid.UUID {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdateEndpointInputRules returns new OptUpdateEndpointInputRules with value set to v.
+func NewOptUpdateEndpointInputRules(v UpdateEndpointInputRules) OptUpdateEndpointInputRules {
+	return OptUpdateEndpointInputRules{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdateEndpointInputRules is optional UpdateEndpointInputRules.
+type OptUpdateEndpointInputRules struct {
+	Value UpdateEndpointInputRules
+	Set   bool
+}
+
+// IsSet returns true if OptUpdateEndpointInputRules was set.
+func (o OptUpdateEndpointInputRules) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdateEndpointInputRules) Reset() {
+	var v UpdateEndpointInputRules
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdateEndpointInputRules) SetTo(v UpdateEndpointInputRules) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdateEndpointInputRules) Get() (v UpdateEndpointInputRules, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdateEndpointInputRules) Or(d UpdateEndpointInputRules) UpdateEndpointInputRules {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -19314,6 +20710,393 @@ func (s *PublishPolicy) UnmarshalText(data []byte) error {
 	}
 }
 
+type PullWebhookEventBadRequest ErrorResponse
+
+func (*PullWebhookEventBadRequest) pullWebhookEventRes() {}
+
+type PullWebhookEventConflict ErrorResponse
+
+func (*PullWebhookEventConflict) pullWebhookEventRes() {}
+
+type PullWebhookEventForbidden ErrorResponse
+
+func (*PullWebhookEventForbidden) pullWebhookEventRes() {}
+
+type PullWebhookEventGone ErrorResponse
+
+func (*PullWebhookEventGone) pullWebhookEventRes() {}
+
+type PullWebhookEventNotFound ErrorResponse
+
+func (*PullWebhookEventNotFound) pullWebhookEventRes() {}
+
+type PullWebhookEventRequestTimeout ErrorResponse
+
+func (*PullWebhookEventRequestTimeout) pullWebhookEventRes() {}
+
+type PullWebhookEventServiceUnavailable ErrorResponse
+
+func (*PullWebhookEventServiceUnavailable) pullWebhookEventRes() {}
+
+type PullWebhookEventUnauthorized ErrorResponse
+
+func (*PullWebhookEventUnauthorized) pullWebhookEventRes() {}
+
+// Ref: #/components/schemas/PullWebhookInput
+type PullWebhookInput struct {
+	WaitSeconds OptInt `json:"wait_seconds"`
+}
+
+// GetWaitSeconds returns the value of WaitSeconds.
+func (s *PullWebhookInput) GetWaitSeconds() OptInt {
+	return s.WaitSeconds
+}
+
+// SetWaitSeconds sets the value of WaitSeconds.
+func (s *PullWebhookInput) SetWaitSeconds(val OptInt) {
+	s.WaitSeconds = val
+}
+
+// Ref: #/components/schemas/PullWebhookResponse
+type PullWebhookResponse struct {
+	Success         PullWebhookResponseSuccess `json:"success"`
+	Data            PullWebhookResponseData    `json:"data"`
+	Meta            OptPullWebhookResponseMeta `json:"meta"`
+	AdditionalProps PullWebhookResponseAdditional
+}
+
+// GetSuccess returns the value of Success.
+func (s *PullWebhookResponse) GetSuccess() PullWebhookResponseSuccess {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *PullWebhookResponse) GetData() PullWebhookResponseData {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *PullWebhookResponse) GetMeta() OptPullWebhookResponseMeta {
+	return s.Meta
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *PullWebhookResponse) GetAdditionalProps() PullWebhookResponseAdditional {
+	return s.AdditionalProps
+}
+
+// SetSuccess sets the value of Success.
+func (s *PullWebhookResponse) SetSuccess(val PullWebhookResponseSuccess) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *PullWebhookResponse) SetData(val PullWebhookResponseData) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *PullWebhookResponse) SetMeta(val OptPullWebhookResponseMeta) {
+	s.Meta = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *PullWebhookResponse) SetAdditionalProps(val PullWebhookResponseAdditional) {
+	s.AdditionalProps = val
+}
+
+func (*PullWebhookResponse) pullWebhookEventRes() {}
+
+type PullWebhookResponseAdditional map[string]jx.Raw
+
+func (s *PullWebhookResponseAdditional) init() PullWebhookResponseAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type PullWebhookResponseData struct {
+	Delivery              NilPullWebhookResponseDataDelivery           `json:"delivery"`
+	Backlog               int                                          `json:"backlog"`
+	GapCount              int                                          `json:"gap_count"`
+	LastGapReason         NilString                                    `json:"last_gap_reason"`
+	RetentionSeconds      PullWebhookResponseDataRetentionSeconds      `json:"retention_seconds"`
+	HandlerTimeoutSeconds PullWebhookResponseDataHandlerTimeoutSeconds `json:"handler_timeout_seconds"`
+}
+
+// GetDelivery returns the value of Delivery.
+func (s *PullWebhookResponseData) GetDelivery() NilPullWebhookResponseDataDelivery {
+	return s.Delivery
+}
+
+// GetBacklog returns the value of Backlog.
+func (s *PullWebhookResponseData) GetBacklog() int {
+	return s.Backlog
+}
+
+// GetGapCount returns the value of GapCount.
+func (s *PullWebhookResponseData) GetGapCount() int {
+	return s.GapCount
+}
+
+// GetLastGapReason returns the value of LastGapReason.
+func (s *PullWebhookResponseData) GetLastGapReason() NilString {
+	return s.LastGapReason
+}
+
+// GetRetentionSeconds returns the value of RetentionSeconds.
+func (s *PullWebhookResponseData) GetRetentionSeconds() PullWebhookResponseDataRetentionSeconds {
+	return s.RetentionSeconds
+}
+
+// GetHandlerTimeoutSeconds returns the value of HandlerTimeoutSeconds.
+func (s *PullWebhookResponseData) GetHandlerTimeoutSeconds() PullWebhookResponseDataHandlerTimeoutSeconds {
+	return s.HandlerTimeoutSeconds
+}
+
+// SetDelivery sets the value of Delivery.
+func (s *PullWebhookResponseData) SetDelivery(val NilPullWebhookResponseDataDelivery) {
+	s.Delivery = val
+}
+
+// SetBacklog sets the value of Backlog.
+func (s *PullWebhookResponseData) SetBacklog(val int) {
+	s.Backlog = val
+}
+
+// SetGapCount sets the value of GapCount.
+func (s *PullWebhookResponseData) SetGapCount(val int) {
+	s.GapCount = val
+}
+
+// SetLastGapReason sets the value of LastGapReason.
+func (s *PullWebhookResponseData) SetLastGapReason(val NilString) {
+	s.LastGapReason = val
+}
+
+// SetRetentionSeconds sets the value of RetentionSeconds.
+func (s *PullWebhookResponseData) SetRetentionSeconds(val PullWebhookResponseDataRetentionSeconds) {
+	s.RetentionSeconds = val
+}
+
+// SetHandlerTimeoutSeconds sets the value of HandlerTimeoutSeconds.
+func (s *PullWebhookResponseData) SetHandlerTimeoutSeconds(val PullWebhookResponseDataHandlerTimeoutSeconds) {
+	s.HandlerTimeoutSeconds = val
+}
+
+type PullWebhookResponseDataDelivery struct {
+	QueueID        uuid.UUID                              `json:"queue_id"`
+	EventID        uuid.UUID                              `json:"event_id"`
+	EventType      string                                 `json:"event_type"`
+	DeliveryID     uuid.UUID                              `json:"delivery_id"`
+	LeaseToken     uuid.UUID                              `json:"lease_token"`
+	LeaseExpiresAt time.Time                              `json:"lease_expires_at"`
+	Body           string                                 `json:"body"`
+	Headers        PullWebhookResponseDataDeliveryHeaders `json:"headers"`
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *PullWebhookResponseDataDelivery) GetQueueID() uuid.UUID {
+	return s.QueueID
+}
+
+// GetEventID returns the value of EventID.
+func (s *PullWebhookResponseDataDelivery) GetEventID() uuid.UUID {
+	return s.EventID
+}
+
+// GetEventType returns the value of EventType.
+func (s *PullWebhookResponseDataDelivery) GetEventType() string {
+	return s.EventType
+}
+
+// GetDeliveryID returns the value of DeliveryID.
+func (s *PullWebhookResponseDataDelivery) GetDeliveryID() uuid.UUID {
+	return s.DeliveryID
+}
+
+// GetLeaseToken returns the value of LeaseToken.
+func (s *PullWebhookResponseDataDelivery) GetLeaseToken() uuid.UUID {
+	return s.LeaseToken
+}
+
+// GetLeaseExpiresAt returns the value of LeaseExpiresAt.
+func (s *PullWebhookResponseDataDelivery) GetLeaseExpiresAt() time.Time {
+	return s.LeaseExpiresAt
+}
+
+// GetBody returns the value of Body.
+func (s *PullWebhookResponseDataDelivery) GetBody() string {
+	return s.Body
+}
+
+// GetHeaders returns the value of Headers.
+func (s *PullWebhookResponseDataDelivery) GetHeaders() PullWebhookResponseDataDeliveryHeaders {
+	return s.Headers
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *PullWebhookResponseDataDelivery) SetQueueID(val uuid.UUID) {
+	s.QueueID = val
+}
+
+// SetEventID sets the value of EventID.
+func (s *PullWebhookResponseDataDelivery) SetEventID(val uuid.UUID) {
+	s.EventID = val
+}
+
+// SetEventType sets the value of EventType.
+func (s *PullWebhookResponseDataDelivery) SetEventType(val string) {
+	s.EventType = val
+}
+
+// SetDeliveryID sets the value of DeliveryID.
+func (s *PullWebhookResponseDataDelivery) SetDeliveryID(val uuid.UUID) {
+	s.DeliveryID = val
+}
+
+// SetLeaseToken sets the value of LeaseToken.
+func (s *PullWebhookResponseDataDelivery) SetLeaseToken(val uuid.UUID) {
+	s.LeaseToken = val
+}
+
+// SetLeaseExpiresAt sets the value of LeaseExpiresAt.
+func (s *PullWebhookResponseDataDelivery) SetLeaseExpiresAt(val time.Time) {
+	s.LeaseExpiresAt = val
+}
+
+// SetBody sets the value of Body.
+func (s *PullWebhookResponseDataDelivery) SetBody(val string) {
+	s.Body = val
+}
+
+// SetHeaders sets the value of Headers.
+func (s *PullWebhookResponseDataDelivery) SetHeaders(val PullWebhookResponseDataDeliveryHeaders) {
+	s.Headers = val
+}
+
+type PullWebhookResponseDataDeliveryHeaders map[string]string
+
+func (s *PullWebhookResponseDataDeliveryHeaders) init() PullWebhookResponseDataDeliveryHeaders {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
+}
+
+type PullWebhookResponseDataHandlerTimeoutSeconds float64
+
+const (
+	PullWebhookResponseDataHandlerTimeoutSeconds30 PullWebhookResponseDataHandlerTimeoutSeconds = 30
+)
+
+// AllValues returns all PullWebhookResponseDataHandlerTimeoutSeconds values.
+func (PullWebhookResponseDataHandlerTimeoutSeconds) AllValues() []PullWebhookResponseDataHandlerTimeoutSeconds {
+	return []PullWebhookResponseDataHandlerTimeoutSeconds{
+		PullWebhookResponseDataHandlerTimeoutSeconds30,
+	}
+}
+
+type PullWebhookResponseDataRetentionSeconds float64
+
+const (
+	PullWebhookResponseDataRetentionSeconds86400 PullWebhookResponseDataRetentionSeconds = 86400
+)
+
+// AllValues returns all PullWebhookResponseDataRetentionSeconds values.
+func (PullWebhookResponseDataRetentionSeconds) AllValues() []PullWebhookResponseDataRetentionSeconds {
+	return []PullWebhookResponseDataRetentionSeconds{
+		PullWebhookResponseDataRetentionSeconds86400,
+	}
+}
+
+type PullWebhookResponseMeta struct {
+	Total           OptFloat64   `json:"total"`
+	TotalCapped     OptBool      `json:"total_capped"`
+	Limit           OptFloat64   `json:"limit"`
+	Cursor          OptNilString `json:"cursor"`
+	AdditionalProps PullWebhookResponseMetaAdditional
+}
+
+// GetTotal returns the value of Total.
+func (s *PullWebhookResponseMeta) GetTotal() OptFloat64 {
+	return s.Total
+}
+
+// GetTotalCapped returns the value of TotalCapped.
+func (s *PullWebhookResponseMeta) GetTotalCapped() OptBool {
+	return s.TotalCapped
+}
+
+// GetLimit returns the value of Limit.
+func (s *PullWebhookResponseMeta) GetLimit() OptFloat64 {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *PullWebhookResponseMeta) GetCursor() OptNilString {
+	return s.Cursor
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *PullWebhookResponseMeta) GetAdditionalProps() PullWebhookResponseMetaAdditional {
+	return s.AdditionalProps
+}
+
+// SetTotal sets the value of Total.
+func (s *PullWebhookResponseMeta) SetTotal(val OptFloat64) {
+	s.Total = val
+}
+
+// SetTotalCapped sets the value of TotalCapped.
+func (s *PullWebhookResponseMeta) SetTotalCapped(val OptBool) {
+	s.TotalCapped = val
+}
+
+// SetLimit sets the value of Limit.
+func (s *PullWebhookResponseMeta) SetLimit(val OptFloat64) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *PullWebhookResponseMeta) SetCursor(val OptNilString) {
+	s.Cursor = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *PullWebhookResponseMeta) SetAdditionalProps(val PullWebhookResponseMetaAdditional) {
+	s.AdditionalProps = val
+}
+
+type PullWebhookResponseMetaAdditional map[string]jx.Raw
+
+func (s *PullWebhookResponseMetaAdditional) init() PullWebhookResponseMetaAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type PullWebhookResponseSuccess bool
+
+const (
+	PullWebhookResponseSuccessTrue PullWebhookResponseSuccess = true
+)
+
+// AllValues returns all PullWebhookResponseSuccess values.
+func (PullWebhookResponseSuccess) AllValues() []PullWebhookResponseSuccess {
+	return []PullWebhookResponseSuccess{
+		PullWebhookResponseSuccessTrue,
+	}
+}
+
 // RateLimitedHeaders wraps ErrorResponse with response headers.
 type RateLimitedHeaders struct {
 	RetryAfter OptInt
@@ -19341,6 +21124,7 @@ func (s *RateLimitedHeaders) SetResponse(val ErrorResponse) {
 }
 
 func (*RateLimitedHeaders) checkDomainDnsRes()         {}
+func (*RateLimitedHeaders) completeWebhookEventRes()   {}
 func (*RateLimitedHeaders) createAgentAccountRes()     {}
 func (*RateLimitedHeaders) createAgentClaimLinkRes()   {}
 func (*RateLimitedHeaders) createChallengeRes()        {}
@@ -19359,6 +21143,7 @@ func (*RateLimitedHeaders) listDeclinedPaymentsRes()   {}
 func (*RateLimitedHeaders) listPayoutAddressesRes()    {}
 func (*RateLimitedHeaders) listTemplatesRes()          {}
 func (*RateLimitedHeaders) payChallengeRes()           {}
+func (*RateLimitedHeaders) pullWebhookEventRes()       {}
 func (*RateLimitedHeaders) registerPayoutAddressRes()  {}
 func (*RateLimitedHeaders) replayDeliveryRes()         {}
 func (*RateLimitedHeaders) replayEmailWebhooksRes()    {}
@@ -27876,13 +29661,17 @@ type UpdateEndpointBadRequest ErrorResponse
 
 func (*UpdateEndpointBadRequest) updateEndpointRes() {}
 
+type UpdateEndpointConflict ErrorResponse
+
+func (*UpdateEndpointConflict) updateEndpointRes() {}
+
 // Ref: #/components/schemas/UpdateEndpointInput
 type UpdateEndpointInput struct {
 	// New webhook URL (triggers endpoint rotation).
-	URL      OptString                 `json:"url"`
-	Enabled  OptBool                   `json:"enabled"`
-	DomainID OptNilUUID                `json:"domain_id"`
-	Rules    *UpdateEndpointInputRules `json:"rules"`
+	URL      OptString                   `json:"url"`
+	Enabled  OptBool                     `json:"enabled"`
+	DomainID OptNilUUID                  `json:"domain_id"`
+	Rules    OptUpdateEndpointInputRules `json:"rules"`
 }
 
 // GetURL returns the value of URL.
@@ -27901,7 +29690,7 @@ func (s *UpdateEndpointInput) GetDomainID() OptNilUUID {
 }
 
 // GetRules returns the value of Rules.
-func (s *UpdateEndpointInput) GetRules() *UpdateEndpointInputRules {
+func (s *UpdateEndpointInput) GetRules() OptUpdateEndpointInputRules {
 	return s.Rules
 }
 
@@ -27921,11 +29710,45 @@ func (s *UpdateEndpointInput) SetDomainID(val OptNilUUID) {
 }
 
 // SetRules sets the value of Rules.
-func (s *UpdateEndpointInput) SetRules(val *UpdateEndpointInputRules) {
+func (s *UpdateEndpointInput) SetRules(val OptUpdateEndpointInputRules) {
 	s.Rules = val
 }
 
-type UpdateEndpointInputRules struct{}
+type UpdateEndpointInputRules struct {
+	EventTypes      []string `json:"event_types"`
+	AdditionalProps UpdateEndpointInputRulesAdditional
+}
+
+// GetEventTypes returns the value of EventTypes.
+func (s *UpdateEndpointInputRules) GetEventTypes() []string {
+	return s.EventTypes
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *UpdateEndpointInputRules) GetAdditionalProps() UpdateEndpointInputRulesAdditional {
+	return s.AdditionalProps
+}
+
+// SetEventTypes sets the value of EventTypes.
+func (s *UpdateEndpointInputRules) SetEventTypes(val []string) {
+	s.EventTypes = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *UpdateEndpointInputRules) SetAdditionalProps(val UpdateEndpointInputRulesAdditional) {
+	s.AdditionalProps = val
+}
+
+type UpdateEndpointInputRulesAdditional map[string]jx.Raw
+
+func (s *UpdateEndpointInputRulesAdditional) init() UpdateEndpointInputRulesAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
 
 type UpdateEndpointNotFound ErrorResponse
 

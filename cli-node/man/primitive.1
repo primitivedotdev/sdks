@@ -20,7 +20,18 @@ Most commands print human-readable output by default. Commands that expose JSON 
 .B --json
 flag or use generated operation output that can be piped into tools such as
 .BR jq (1).
+.SH LOCAL WEBHOOK API
+.PP
+The generated commands
+.B endpoints pull-webhook-event
+and
+.B endpoints complete-webhook-event
+expose local webhook delivery on API hosts where it is enabled. Each command
+makes one API request. Use their --help output for the input fields. Consumers
+deduplicate event IDs and report the outcome with the returned attempt and lease.
+Queue retention does not extend source-content retention; inspect gap counts.
 .SH AUTHENTICATION
+.PP
 Commands use saved OAuth credentials from
 .B primitive signin
 or

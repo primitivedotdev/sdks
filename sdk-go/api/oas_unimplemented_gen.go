@@ -98,6 +98,22 @@ func (UnimplementedHandler) CliLogout(ctx context.Context, req OptCliLogoutInput
 	return r, ht.ErrNotImplemented
 }
 
+// CompleteWebhookEvent implements completeWebhookEvent operation.
+//
+// Report normalized handling evidence for the queue, attempt and lease. Required JSON fields:
+// queue_id, delivery_id, lease_token, mode, duration_ms. For mode=exec include exit_code; stdout
+// includes write_succeeded; http includes status_code and optional transport_error, error_code,
+// confirmed. Supply this discriminated request with --raw-body in the generated CLI. The server
+// classifies success and retry. Duplicate identical completion is idempotent; a stale lease cannot
+// finish a newer attempt. Exec success means durable input acceptance, not completion of agent
+// reasoning. Only successful HTTP handling with recognized confirmation evidence can confirm content
+// discard. Never send arbitrary handler output or HTTP response bodies.
+//
+// POST /endpoints/{id}/complete
+func (UnimplementedHandler) CompleteWebhookEvent(ctx context.Context, req CompleteWebhookInput, params CompleteWebhookEventParams) (r CompleteWebhookEventRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreateAgentAccount implements createAgentAccount operation.
 //
 // Creates an emailless agent account without authentication and returns a
@@ -175,6 +191,11 @@ func (UnimplementedHandler) CreateEmailChallenge(ctx context.Context, req *Creat
 // After creating the endpoint, fire a test delivery against
 // it via `POST /endpoints/{id}/test` to confirm your verifier
 // accepts the signature.
+// For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+// creation resumes the same active destination; omitted filters preserve its selection, while
+// conflicting supplied configuration returns 409. New unfiltered destinations receive all
+// subsequently ready eligible event types. Pull destinations do not occupy HTTP routing slots.
+// Signing-secret setup and a test HTTP delivery are not required for pull receiving.
 //
 // POST /endpoints
 func (UnimplementedHandler) CreateEndpoint(ctx context.Context, req *CreateEndpointInput) (r CreateEndpointRes, _ error) {
@@ -1116,6 +1137,21 @@ func (UnimplementedHandler) PublishAgent(ctx context.Context, req *PublishAgentI
 	return r, ht.ErrNotImplemented
 }
 
+// PullWebhookEvent implements pullWebhookEvent operation.
+//
+// Wait up to 30 seconds for one existing event. The body string preserves the exact webhook
+// serialization; headers and canonical occurrence/type metadata travel alongside it. A fixed lease
+// protects the attempt while a short handler accepts input. Retry may redeliver an occurrence:
+// deduplicate event_id. Empty delivery means no offer now, not proof all input was delivered;
+// inspect backlog and persistent gap_count/last_gap_reason. Queue retention is 24 hours and does not
+// extend source-content retention. Disconnecting preserves pending work. Same named destination
+// shares consumption; different destinations get independent copies.
+//
+// POST /endpoints/{id}/pull
+func (UnimplementedHandler) PullWebhookEvent(ctx context.Context, req *PullWebhookInput, params PullWebhookEventParams) (r PullWebhookEventRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // RegisterPayoutAddress implements registerPayoutAddress operation.
 //
 // Register (or update) the default payout address your org receives x402
@@ -1558,6 +1594,9 @@ func (UnimplementedHandler) UpdateDomain(ctx context.Context, req *UpdateDomainI
 // Updates an active webhook endpoint. If the URL is changed, the old
 // endpoint is deactivated and a new one is created (or an existing
 // deactivated endpoint with the new URL is reactivated).
+// Pull destinations cannot be assigned a URL, function or recipient-routing domain. Existing
+// endpoint deletion disconnects the destination; creating a new destination does not backfill
+// historical events.
 //
 // PATCH /endpoints/{id}
 func (UnimplementedHandler) UpdateEndpoint(ctx context.Context, req *UpdateEndpointInput, params UpdateEndpointParams) (r UpdateEndpointRes, _ error) {

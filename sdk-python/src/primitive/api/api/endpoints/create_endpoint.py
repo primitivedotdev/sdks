@@ -9,6 +9,7 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.create_endpoint_input import CreateEndpointInput
+from ...models.create_endpoint_response_200 import CreateEndpointResponse200
 from ...models.create_endpoint_response_201 import CreateEndpointResponse201
 from ...models.error_response import ErrorResponse
 from typing import cast
@@ -42,7 +43,14 @@ def _get_kwargs(
 
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> CreateEndpointResponse201 | ErrorResponse | None:
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
+    if response.status_code == 200:
+        response_200 = CreateEndpointResponse200.from_dict(response.json())
+
+
+
+        return response_200
+
     if response.status_code == 201:
         response_201 = CreateEndpointResponse201.from_dict(response.json())
 
@@ -64,13 +72,27 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_401
 
+    if response.status_code == 409:
+        response_409 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_409
+
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[CreateEndpointResponse201 | ErrorResponse]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -84,7 +106,7 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
 
-) -> Response[CreateEndpointResponse201 | ErrorResponse]:
+) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
     r""" Create a webhook endpoint
 
      Creates a new webhook endpoint. If a deactivated endpoint
@@ -104,6 +126,13 @@ def sync_detailed(
     it via `POST /endpoints/{id}/test` to confirm your verifier
     accepts the signature.
 
+
+    For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+    creation resumes the same active destination; omitted filters preserve its selection, while
+    conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently
+    ready eligible event types. Pull destinations do not occupy HTTP routing slots. Signing-secret setup
+    and a test HTTP delivery are not required for pull receiving.
+
     Args:
         body (CreateEndpointInput):
 
@@ -112,7 +141,7 @@ def sync_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[CreateEndpointResponse201 | ErrorResponse]
+        Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]
      """
 
 
@@ -132,7 +161,7 @@ def sync(
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
 
-) -> CreateEndpointResponse201 | ErrorResponse | None:
+) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
     r""" Create a webhook endpoint
 
      Creates a new webhook endpoint. If a deactivated endpoint
@@ -152,6 +181,13 @@ def sync(
     it via `POST /endpoints/{id}/test` to confirm your verifier
     accepts the signature.
 
+
+    For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+    creation resumes the same active destination; omitted filters preserve its selection, while
+    conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently
+    ready eligible event types. Pull destinations do not occupy HTTP routing slots. Signing-secret setup
+    and a test HTTP delivery are not required for pull receiving.
+
     Args:
         body (CreateEndpointInput):
 
@@ -160,7 +196,7 @@ def sync(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        CreateEndpointResponse201 | ErrorResponse
+        CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse
      """
 
 
@@ -175,7 +211,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
 
-) -> Response[CreateEndpointResponse201 | ErrorResponse]:
+) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
     r""" Create a webhook endpoint
 
      Creates a new webhook endpoint. If a deactivated endpoint
@@ -195,6 +231,13 @@ async def asyncio_detailed(
     it via `POST /endpoints/{id}/test` to confirm your verifier
     accepts the signature.
 
+
+    For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+    creation resumes the same active destination; omitted filters preserve its selection, while
+    conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently
+    ready eligible event types. Pull destinations do not occupy HTTP routing slots. Signing-secret setup
+    and a test HTTP delivery are not required for pull receiving.
+
     Args:
         body (CreateEndpointInput):
 
@@ -203,7 +246,7 @@ async def asyncio_detailed(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[CreateEndpointResponse201 | ErrorResponse]
+        Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]
      """
 
 
@@ -223,7 +266,7 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     body: CreateEndpointInput,
 
-) -> CreateEndpointResponse201 | ErrorResponse | None:
+) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
     r""" Create a webhook endpoint
 
      Creates a new webhook endpoint. If a deactivated endpoint
@@ -243,6 +286,13 @@ async def asyncio(
     it via `POST /endpoints/{id}/test` to confirm your verifier
     accepts the signature.
 
+
+    For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
+    creation resumes the same active destination; omitted filters preserve its selection, while
+    conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently
+    ready eligible event types. Pull destinations do not occupy HTTP routing slots. Signing-secret setup
+    and a test HTTP delivery are not required for pull receiving.
+
     Args:
         body (CreateEndpointInput):
 
@@ -251,7 +301,7 @@ async def asyncio(
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        CreateEndpointResponse201 | ErrorResponse
+        CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse
      """
 
 

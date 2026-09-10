@@ -381,6 +381,163 @@ func encodeCliLogoutResponse(response CliLogoutRes, w http.ResponseWriter, span 
 	}
 }
 
+func encodeCompleteWebhookEventResponse(response CompleteWebhookEventRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *CompleteWebhookResponse:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+		span.SetStatus(codes.Ok, http.StatusText(200))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CompleteWebhookEventBadRequest:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(400)
+		span.SetStatus(codes.Error, http.StatusText(400))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CompleteWebhookEventUnauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CompleteWebhookEventForbidden:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(403)
+		span.SetStatus(codes.Error, http.StatusText(403))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CompleteWebhookEventNotFound:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(404)
+		span.SetStatus(codes.Error, http.StatusText(404))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CompleteWebhookEventRequestTimeout:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(408)
+		span.SetStatus(codes.Error, http.StatusText(408))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CompleteWebhookEventConflict:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(409)
+		span.SetStatus(codes.Error, http.StatusText(409))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CompleteWebhookEventGone:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(410)
+		span.SetStatus(codes.Error, http.StatusText(410))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *RateLimitedHeaders:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		// Encoding response headers.
+		{
+			h := uri.NewHeaderEncoder(w.Header())
+			// Encode "Retry-After" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Retry-After",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RetryAfter.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+		}
+		w.WriteHeader(429)
+		span.SetStatus(codes.Error, http.StatusText(429))
+
+		e := new(jx.Encoder)
+		response.Response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CompleteWebhookEventServiceUnavailable:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(503)
+		span.SetStatus(codes.Error, http.StatusText(503))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
 func encodeCreateAgentAccountResponse(response CreateAgentAccountRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
 	case *CreateAgentAccountOKHeaders:
@@ -815,6 +972,19 @@ func encodeCreateEmailChallengeResponse(response CreateEmailChallengeRes, w http
 
 func encodeCreateEndpointResponse(response CreateEndpointRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
+	case *CreateEndpointOK:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+		span.SetStatus(codes.Ok, http.StatusText(200))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *CreateEndpointCreated:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(201)
@@ -845,6 +1015,32 @@ func encodeCreateEndpointResponse(response CreateEndpointRes, w http.ResponseWri
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CreateEndpointConflict:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(409)
+		span.SetStatus(codes.Error, http.StatusText(409))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *CreateEndpointServiceUnavailable:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(503)
+		span.SetStatus(codes.Error, http.StatusText(503))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -5322,6 +5518,163 @@ func encodePublishAgentResponse(response PublishAgentRes, w http.ResponseWriter,
 	}
 }
 
+func encodePullWebhookEventResponse(response PullWebhookEventRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *PullWebhookResponse:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(200)
+		span.SetStatus(codes.Ok, http.StatusText(200))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *PullWebhookEventBadRequest:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(400)
+		span.SetStatus(codes.Error, http.StatusText(400))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *PullWebhookEventUnauthorized:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(401)
+		span.SetStatus(codes.Error, http.StatusText(401))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *PullWebhookEventForbidden:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(403)
+		span.SetStatus(codes.Error, http.StatusText(403))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *PullWebhookEventNotFound:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(404)
+		span.SetStatus(codes.Error, http.StatusText(404))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *PullWebhookEventRequestTimeout:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(408)
+		span.SetStatus(codes.Error, http.StatusText(408))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *PullWebhookEventConflict:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(409)
+		span.SetStatus(codes.Error, http.StatusText(409))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *PullWebhookEventGone:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(410)
+		span.SetStatus(codes.Error, http.StatusText(410))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *RateLimitedHeaders:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		// Encoding response headers.
+		{
+			h := uri.NewHeaderEncoder(w.Header())
+			// Encode "Retry-After" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Retry-After",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RetryAfter.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+		}
+		w.WriteHeader(429)
+		span.SetStatus(codes.Error, http.StatusText(429))
+
+		e := new(jx.Encoder)
+		response.Response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *PullWebhookEventServiceUnavailable:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(503)
+		span.SetStatus(codes.Error, http.StatusText(503))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
+}
+
 func encodeRegisterPayoutAddressResponse(response RegisterPayoutAddressRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
 	case *RegisterPayoutAddressCreated:
@@ -7903,6 +8256,19 @@ func encodeUpdateEndpointResponse(response UpdateEndpointRes, w http.ResponseWri
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(404)
 		span.SetStatus(codes.Error, http.StatusText(404))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *UpdateEndpointConflict:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(409)
+		span.SetStatus(codes.Error, http.StatusText(409))
 
 		e := new(jx.Encoder)
 		response.Encode(e)

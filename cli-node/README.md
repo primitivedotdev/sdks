@@ -28,6 +28,33 @@ This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@pri
 
 ## Quickstart
 
+The generated `endpoints pull-webhook-event` and `endpoints complete-webhook-event`
+commands expose the local-delivery API when enabled on your API host. These are
+single API calls; a receive loop must retain the destination identity and report
+each attempt's outcome. Use `--help` to inspect the request fields:
+
+```sh
+primitive endpoints pull-webhook-event --help
+primitive endpoints complete-webhook-event --help
+```
+
+Completion uses a mode-specific JSON body. For a successful process handler:
+
+```sh
+primitive endpoints complete-webhook-event --id ENDPOINT_ID --raw-body '{"queue_id":"QUEUE_ID","delivery_id":"DELIVERY_ID","lease_token":"LEASE_TOKEN","mode":"exec","exit_code":0,"duration_ms":12}'
+```
+
+Use the IDs and lease token returned by pull. HTTP forwarding reports
+`mode: "http"` with `status_code`; stdout reports `mode: "stdout"` with
+`write_succeeded`. Transport failures must also be reported. Successful handler
+acceptance is separate from any later agent reasoning.
+
+Pull delivery preserves existing webhook bodies and supplies canonical event and
+attempt IDs separately. Deduplicate by event ID. A successful completion can be
+retried with the same queue, attempt, token, and outcome. Check the returned gap
+count as well as the backlog; queue retention does not extend email-content
+retention. Conversation retrieval and threaded replies use the existing SDK API.
+
 ```bash
 primitive signin
 primitive whoami
