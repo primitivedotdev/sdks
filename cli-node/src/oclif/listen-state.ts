@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
@@ -14,7 +15,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, win32 } from "node:path";
 
 export class ListenStateError extends Error {}
 
@@ -56,6 +57,127 @@ function processAlive(pid: number): boolean {
   }
 }
 
+// Process IDs can be reused while a crashed listener's lock remains on disk.
+// Read only OS lifecycle metadata, never command lines or process environments.
+export function listenProcessIdentity(pid: number): string | null {
+  if (!Number.isSafeInteger(pid) || pid < 1) return null;
+  try {
+    if (process.platform === "linux") {
+      const boot = readFileSync(
+        "/proc/sys/kernel/random/boot_id",
+        "utf8",
+      ).trim();
+      const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+      // comm can contain spaces and parentheses. Fields after its last closing
+      // parenthesis start at field 3; starttime is field 22.
+      const end = stat.lastIndexOf(")");
+      const started = stat
+        .slice(end + 1)
+        .trim()
+        .split(/\s+/)[19];
+      if (
+        !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(boot) ||
+        !stat.startsWith(`${pid} (`) ||
+        end < 0 ||
+        !started ||
+        !/^\d+$/.test(started)
+      )
+        return null;
+      return `linux:${boot}:${started}`;
+    }
+    if (process.platform === "darwin") {
+      const options = {
+        encoding: "utf8" as const,
+        timeout: 1000,
+        maxBuffer: 4096,
+        stdio: ["ignore", "pipe", "ignore"] as ["ignore", "pipe", "ignore"],
+        env: { LC_ALL: "C", TZ: "UTC", PATH: "/usr/bin:/bin:/usr/sbin:/sbin" },
+      };
+      const boot = execFileSync(
+        "/usr/sbin/sysctl",
+        ["-n", "kern.boottime"],
+        options,
+      );
+      const bootMatch = /\{\s*sec\s*=\s*(\d+),\s*usec\s*=\s*(\d+)\s*\}/.exec(
+        boot,
+      );
+      const started = execFileSync(
+        "/bin/ps",
+        ["-p", String(pid), "-o", "lstart="],
+        options,
+      )
+        .trim()
+        .replace(/\s+/g, " ");
+      if (
+        !bootMatch ||
+        !/^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{2}:\d{2}:\d{2} \d{4}$/.test(
+          started,
+        )
+      )
+        return null;
+      return `darwin:${bootMatch[1]}:${bootMatch[2]}:${started}`;
+    }
+    if (process.platform === "win32") {
+      const root = process.env.SystemRoot;
+      if (!root || !win32.isAbsolute(root)) return null;
+      const started = execFileSync(
+        win32.join(
+          root,
+          "System32",
+          "WindowsPowerShell",
+          "v1.0",
+          "powershell.exe",
+        ),
+        [
+          "-NoLogo",
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          `$ErrorActionPreference='Stop'; (Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().Ticks.ToString([System.Globalization.CultureInfo]::InvariantCulture)`,
+        ],
+        {
+          encoding: "utf8",
+          timeout: 2000,
+          maxBuffer: 4096,
+          windowsHide: true,
+          stdio: ["ignore", "pipe", "ignore"],
+        },
+      ).trim();
+      return /^\d{1,20}$/.test(started) ? `win32:${started}` : null;
+    }
+  } catch {
+    // An unavailable OS reader never authorizes stealing a live process's lock.
+  }
+  return null;
+}
+
+function ownerIdentity(path: string): string | null {
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1024)
+      return null;
+    const saved: unknown = JSON.parse(readFileSync(path, "utf8"));
+    if (
+      !saved ||
+      typeof saved !== "object" ||
+      !("version" in saved) ||
+      saved.version !== 1 ||
+      !("identity" in saved) ||
+      typeof saved.identity !== "string"
+    )
+      return null;
+    // Unrecognized records (including blank files from older releases) cannot
+    // establish a mismatch with a process that is still alive.
+    return /^(?:linux:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}:\d+|darwin:\d+:\d+:[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{2}:\d{2}:\d{2} \d{4}|win32:\d{1,20})$/.test(
+      saved.identity,
+    )
+      ? saved.identity
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function removeOwner(path: string, owner: string): void {
   try {
     unlinkSync(join(path, owner));
@@ -86,7 +208,14 @@ export function acquireListenLock(
   const owner = `${process.pid}-${randomUUID()}`;
   const candidate = mkdtempSync(join(directory, ".claim-"));
   chmodSync(candidate, 0o700);
-  writeFileSync(join(candidate, owner), "", { mode: 0o600, flag: "wx" });
+  writeFileSync(
+    join(candidate, owner),
+    JSON.stringify({
+      version: 1,
+      identity: listenProcessIdentity(process.pid),
+    }),
+    { mode: 0o600, flag: "wx" },
+  );
   let installed = false;
   try {
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -114,9 +243,17 @@ export function acquireListenLock(
         entries.length === 1
           ? /^(\d+)-[a-f0-9-]{36}$/.exec(entries[0] ?? "")
           : null;
-      if (!match || processAlive(Number(match[1])))
+      const pid = match ? Number(match[1]) : null;
+      let stale = pid !== null && !processAlive(pid);
+      if (!stale && pid !== null) {
+        const saved = ownerIdentity(join(path, entries[0] ?? ""));
+        const current = saved === null ? null : listenProcessIdentity(pid);
+        stale = saved !== null && current !== null && saved !== current;
+      }
+      if (!stale)
         throw new ListenStateError(
-          "Another listener is using this subscription. Stop it before reconnecting.",
+          "Another listener is using this subscription, or its owner cannot be verified. Stop the original listener before reconnecting. To use a separate subscription instead, run: primitive listen --subscription local-" +
+            randomUUID(),
         );
       removeOwner(path, entries[0] ?? "");
     }
