@@ -34,13 +34,9 @@ updates:
     labels:
       - "dependencies"
     groups:
-      python-runtime:
-        dependency-type: "production"
-        update-types:
-          - "minor"
-          - "patch"
-      python-dev:
-        dependency-type: "development"
+      python:
+        patterns:
+          - "*"
         update-types:
           - "minor"
           - "patch"
