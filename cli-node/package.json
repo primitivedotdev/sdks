@@ -172,12 +172,12 @@
     "@primitivedotdev/api-core": "workspace:*",
     "@primitivedotdev/sdk": "workspace:*",
     "@types/node": "^22.10.2",
-    "@vitest/coverage-v8": "^4.1.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "oclif": "^4.23.0",
     "tsdown": "^0.21.10",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^8.0.8",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.11"
   }
 }

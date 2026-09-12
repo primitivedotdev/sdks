@@ -98,7 +98,7 @@
   "dependencies": {
     "ajv": "^8.17.1",
     "mailparser": "^3.9.14",
-    "nodemailer": "^9.0.1",
+    "nodemailer": "^9.1.1",
     "sanitize-html": "^2.17.5",
     "tar-stream": "^3.1.8",
     "validator": "^13.15.35",
@@ -114,13 +114,13 @@
     "@types/sanitize-html": "^2.13.0",
     "@types/tar-stream": "^3.1.4",
     "@types/validator": "^13.15.10",
-    "@vitest/coverage-v8": "^4.1.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "esbuild": "^0.27.0",
     "json-schema-to-typescript": "^15.0.4",
     "tsdown": "^0.21.10",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "vite": "^8.0.8",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.11"
   }
 }
