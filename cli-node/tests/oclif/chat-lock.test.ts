@@ -1,16 +1,20 @@
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   _resetChatLockForTests,
   acquireChatLock,
+  acquireChatStateLock,
   ChatLockContentionError,
 } from "../../src/oclif/chat-lock.js";
 
@@ -22,6 +26,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   _resetChatLockForTests();
   rmSync(configDir, { force: true, recursive: true });
 });
@@ -77,18 +82,16 @@ describe("acquireChatLock", () => {
     }
   });
 
-  it("steals a lock file with malformed PID contents", () => {
-    writeFileSync(join(configDir, "chat-state.lock"), "not-a-pid\n");
-    const release = acquireChatLock(configDir);
-    try {
-      const contents = readFileSync(
-        join(configDir, "chat-state.lock"),
-        "utf8",
-      ).trim();
-      expect(Number.parseInt(contents, 10)).toBe(process.pid);
-    } finally {
-      release();
-    }
+  it.each([
+    "",
+    "not-a-pid\n",
+    "123garbage\n",
+  ])("preserves an ambiguous lock %j", (contents) => {
+    const path = join(configDir, "chat-state.lock");
+    writeFileSync(path, contents);
+    expect(() => acquireChatLock(configDir)).toThrow(ChatLockContentionError);
+    expect(readFileSync(path, "utf8")).toBe(contents);
+    expect(readdirSync(configDir)).toEqual(["chat-state.lock"]);
   });
 
   it("throws ChatLockContentionError when a live process holds the lock", () => {
@@ -127,5 +130,129 @@ describe("acquireChatLock", () => {
     } finally {
       release();
     }
+  });
+});
+
+describe("scoped chat locks", () => {
+  it("allows independent scopes and the default state lock to coexist", () => {
+    const first = acquireChatLock(configDir, "first@example.test");
+    const second = acquireChatLock(configDir, "second@example.test");
+    const state = acquireChatLock(configDir);
+    expect(readdirSync(configDir)).toHaveLength(3);
+    expect(readdirSync(configDir).join(" ")).not.toContain("example.test");
+    first();
+    expect(readdirSync(configDir)).toHaveLength(2);
+    second();
+    expect(readdirSync(configDir)).toEqual(["chat-state.lock"]);
+    state();
+    expect(readdirSync(configDir)).toEqual([]);
+  });
+
+  it("releases a reentrant scope only after all holders release, in either order", () => {
+    const outer = acquireChatLock(configDir, "same");
+    const inner = acquireChatLock(configDir, "same");
+    expect(readdirSync(configDir)).toHaveLength(1);
+    outer();
+    expect(readdirSync(configDir)).toHaveLength(1);
+    outer();
+    inner();
+    expect(readdirSync(configDir)).toEqual([]);
+  });
+
+  it("keeps independent config directories tracked until each is released", () => {
+    const nested = join(configDir, "other");
+    const first = acquireChatLock(configDir);
+    const second = acquireChatLock(nested);
+    first();
+    expect(existsSync(join(configDir, "chat-state.lock"))).toBe(false);
+    expect(existsSync(join(nested, "chat-state.lock"))).toBe(true);
+    second();
+    expect(existsSync(join(nested, "chat-state.lock"))).toBe(false);
+  });
+
+  it("does not remove a replacement lock on release or stale release callbacks", () => {
+    const path = join(configDir, "chat-state.lock");
+    const original = acquireChatLock(configDir);
+    unlinkSync(path);
+    writeFileSync(path, `${process.pid}\n`);
+    original();
+    expect(readFileSync(path, "utf8")).toBe(`${process.pid}\n`);
+    unlinkSync(path);
+    const current = acquireChatLock(configDir);
+    original();
+    expect(existsSync(path)).toBe(true);
+    current();
+    expect(existsSync(path)).toBe(false);
+  });
+
+  it("refuses to reenter a lock whose ownership record changed", () => {
+    const release = acquireChatLock(configDir, "scope");
+    const path = join(configDir, readdirSync(configDir)[0] ?? "missing");
+    writeFileSync(path, `${process.pid}\n`);
+    expect(() => acquireChatLock(configDir, "scope")).toThrow(
+      ChatLockContentionError,
+    );
+    release();
+    expect(existsSync(path)).toBe(true);
+  });
+
+  it("preserves an ambiguous stale reclamation instead of deleting its guard", () => {
+    const path = join(configDir, "chat-state.lock");
+    writeFileSync(path, "999999\n");
+    mkdirSync(`${path}.reclaim`);
+    expect(() => acquireChatLock(configDir)).toThrow(ChatLockContentionError);
+    expect(readFileSync(path, "utf8")).toBe("999999\n");
+    expect(existsSync(`${path}.reclaim`)).toBe(true);
+  });
+});
+
+describe("acquireChatStateLock", () => {
+  it("waits for another state transaction in the same process", async () => {
+    const first = await acquireChatStateLock(configDir);
+    let entered = false;
+    const next = acquireChatStateLock(configDir).then((release) => {
+      entered = true;
+      return release;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 35));
+    expect(entered).toBe(false);
+    first();
+    const second = await next;
+    expect(entered).toBe(true);
+    second();
+    expect(existsSync(join(configDir, "chat-state.lock"))).toBe(false);
+  });
+
+  it("retries a foreign live lock and acquires after it releases", async () => {
+    const path = join(configDir, "chat-state.lock");
+    writeFileSync(path, `${process.pid}\n`);
+    const timer = setTimeout(() => unlinkSync(path), 35);
+    try {
+      const release = await acquireChatStateLock(configDir);
+      expect(readFileSync(path, "utf8")).toContain(`${process.pid}\n`);
+      release();
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+
+  it("does not wait for an independent conversation lock", async () => {
+    const conversation = acquireChatLock(configDir, "conversation");
+    const state = await acquireChatStateLock(configDir);
+    expect(readdirSync(configDir)).toHaveLength(2);
+    state();
+    expect(readdirSync(configDir)).toHaveLength(1);
+    conversation();
+  });
+
+  it("bounds waiting and preserves an ambiguous lock on timeout", async () => {
+    const path = join(configDir, "chat-state.lock");
+    writeFileSync(path, "");
+    vi.spyOn(performance, "now").mockReturnValueOnce(0).mockReturnValue(5_001);
+    await expect(acquireChatStateLock(configDir)).rejects.toBeInstanceOf(
+      ChatLockContentionError,
+    );
+    expect(readFileSync(path, "utf8")).toBe("");
+    expect(readdirSync(configDir)).toEqual(["chat-state.lock"]);
   });
 });

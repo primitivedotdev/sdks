@@ -20,8 +20,18 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
-import { acquireChatLock, ChatLockContentionError } from "../chat-lock.js";
 import {
+  acquireChatLock,
+  acquireChatStateLock,
+  ChatLockContentionError,
+} from "../chat-lock.js";
+import {
+  beginChatReceipt,
+  chatRequestHash,
+  saveChatReceipt,
+} from "../chat-receipt.js";
+import {
+  type ChatConversationState,
   loadActiveChatState,
   loadChatConversationByLocalId,
   saveActiveChatState,
@@ -671,12 +681,13 @@ export function buildChatJsonEnvelope(context: ChatOutputContext): {
   };
 }
 
-function persistActiveChat(params: {
+async function persistActiveChat(params: {
   configDir: string;
   context: ChatOutputContext;
   preferredLocalId?: number;
   writeWarning?: (message: string) => void;
-}): number | null {
+}): Promise<number | null> {
+  const release = await acquireChatStateLock(params.configDir);
   try {
     const saved = saveActiveChatState(
       params.configDir,
@@ -700,6 +711,8 @@ function persistActiveChat(params: {
       `Warning: could not save local chat state: ${detail}\n`,
     );
     return null;
+  } finally {
+    release();
   }
 }
 
@@ -939,7 +952,12 @@ class ChatCommand extends Command {
   is less exact than strict matching. Use --strict-only when matching
   the wrong reply is worse than timing out. Progress is written to
   stderr while the CLI waits. Exits non-zero on timeout and prints
-  recovery commands when the send succeeded but no reply was returned.`;
+  recovery commands when the send succeeded but no reply was returned.
+
+  Independent addressed chats can run concurrently. Replies reserve their
+  selected local chat. The last successfully saved reply becomes active.
+  Retrying an interrupted or timed-out request resumes its recorded send;
+  an uncertain send outcome requires inspection instead of a blind resend.`;
 
   static summary =
     "Chat with an agent over email (send and wait for the reply)";
@@ -1091,22 +1109,7 @@ class ChatCommand extends Command {
     }
 
     await runWithTiming(flags.time, async () => {
-      // Acquire the chat-state mutex for the duration of the
-      // send-and-wait cycle. ChatReplyCommand also acquires this
-      // around its load→ChatCommand.run, so this call is re-entrant
-      // within the same process and a no-op there. On a direct
-      // `primitive chat <recipient> <message>` invocation it ensures
-      // no other chat command can interleave its persist step.
-      // See chat-lock.ts.
-      let releaseLock: () => void;
-      try {
-        releaseLock = acquireChatLock(this.config.configDir);
-      } catch (err) {
-        if (err instanceof ChatLockContentionError) {
-          throw cliError(err.message);
-        }
-        throw err;
-      }
+      let releaseLock: (() => void) | undefined;
       try {
         const { apiClient, auth, baseUrlOverridden } =
           await createAuthenticatedCliApiClient({
@@ -1190,47 +1193,105 @@ class ChatCommand extends Command {
           subject = flags.subject ?? deriveSubject(message);
         }
 
-        // Capture send time BEFORE issuing the send so the inbound
-        // poll's `since` filter cannot miss a reply that races back
-        // faster than we record the timestamp. A few ms of overlap
-        // with our own outbound row is fine: the search is scoped to
-        // inbound by endpoint (`/emails`), not outbound.
-        const sentAtIso = new Date().toISOString();
-
-        if (replyMode) {
+        const requestHash = chatRequestHash({
+          api: auth.apiBaseUrl,
+          account: auth.credentials?.org_id ?? auth.apiKey,
+          from,
+          recipient: args.recipient,
+          subject,
+          message,
+          parent: parentReply?.id ?? flags["in-reply-to"],
+          attachments,
+        });
+        const scope = parentReply
+          ? chatRequestHash({
+              api: auth.apiBaseUrl,
+              from,
+              parent: parentReply.id,
+            })
+          : requestHash;
+        try {
+          releaseLock = acquireChatLock(this.config.configDir, scope);
+        } catch (error) {
+          if (error instanceof ChatLockContentionError)
+            throw cliError(error.message);
+          throw error;
+        }
+        if (flags["chat-local-id"] !== undefined) {
+          const releaseState = await acquireChatStateLock(
+            this.config.configDir,
+          );
+          try {
+            const current = loadChatConversationByLocalId(
+              this.config.configDir,
+              flags["chat-local-id"],
+            );
+            if (!current || current.last_reply_email_id !== parentReply?.id) {
+              throw cliError(
+                "This local chat advanced while preparing the reply. Retry to use its latest reply.",
+              );
+            }
+          } finally {
+            releaseState();
+          }
+        }
+        const receipt = beginChatReceipt(
+          this.config.configDir,
+          scope,
+          requestHash,
+        );
+        const sentAtIso = receipt.data.sent_at;
+        process.stderr.write(`Chat receipt: ${receipt.path}\n`);
+        const resumed = receipt.data.sent !== null;
+        if (resumed) {
+          progress?.start("Resuming the recorded send without sending again");
+        } else if (replyMode) {
           progress?.update(`Sending reply to ${args.recipient}`);
         } else {
           progress?.start(`Sending message to ${args.recipient}`);
         }
 
         const sendResult =
-          parentReply !== undefined
-            ? await replyToEmail({
-                body: {
-                  body_text: message,
-                  from,
-                  ...(attachments !== undefined ? { attachments } : {}),
-                },
-                client: apiClient.client,
-                path: { id: parentReply.id },
-                responseStyle: "fields",
-              })
-            : await sendEmail({
-                body: {
-                  from,
-                  to: args.recipient,
-                  subject,
-                  body_text: message,
-                  ...(flags["in-reply-to"] !== undefined
-                    ? { in_reply_to: flags["in-reply-to"] }
-                    : {}),
-                  ...(attachments !== undefined ? { attachments } : {}),
-                },
-                client: apiClient.client,
-                responseStyle: "fields",
-              });
+          receipt.data.sent !== null
+            ? { data: { data: receipt.data.sent }, error: undefined }
+            : parentReply !== undefined
+              ? await replyToEmail({
+                  body: {
+                    body_text: message,
+                    from,
+                    ...(attachments !== undefined ? { attachments } : {}),
+                  },
+                  client: apiClient.client,
+                  path: { id: parentReply.id },
+                  responseStyle: "fields",
+                })
+              : await sendEmail({
+                  body: {
+                    from,
+                    to: args.recipient,
+                    subject,
+                    body_text: message,
+                    ...(flags["in-reply-to"] !== undefined
+                      ? { in_reply_to: flags["in-reply-to"] }
+                      : {}),
+                    ...(attachments !== undefined ? { attachments } : {}),
+                  },
+                  client: apiClient.client,
+                  responseStyle: "fields",
+                });
 
         if (sendResult.error) {
+          // These HTTP statuses reject the request before sending. Transport
+          // failures, conflicts, timeouts and server errors remain uncertain.
+          const status =
+            "response" in sendResult ? sendResult.response?.status : undefined;
+          if (
+            status !== undefined &&
+            [400, 401, 403, 404, 413, 422, 429].includes(status)
+          ) {
+            receipt.data.completed = true;
+            saveChatReceipt(receipt);
+          }
           progress?.fail(
             replyMode ? "Reply send failed." : "Message send failed.",
           );
@@ -1253,6 +1314,8 @@ class ChatCommand extends Command {
           throw cliError("Send succeeded but the API returned no data.");
         }
 
+        receipt.data.sent = sent;
+        saveChatReceipt(receipt);
         const replyAddress = sent.from || from;
 
         const baseContext: ChatBaseContext = {
@@ -1284,7 +1347,7 @@ class ChatCommand extends Command {
         // server — that gate still protects against accidental
         // double-sends — but we make the CLI explain what happened
         // instead of hanging.
-        if (sent.idempotent_replay) {
+        if (sent.idempotent_replay && !resumed) {
           progress?.update(
             "Server returned idempotent_replay: looking up the existing reply",
           );
@@ -1337,7 +1400,7 @@ class ChatCommand extends Command {
               matchStrategy: "strict",
               reply: detail,
             };
-            const localChatId = persistActiveChat({
+            const localChatId = await persistActiveChat({
               configDir: this.config.configDir,
               context: outputContext,
               preferredLocalId: flags["chat-local-id"],
@@ -1346,6 +1409,8 @@ class ChatCommand extends Command {
             if (localChatId !== null) {
               outputContext = { ...outputContext, localChatId };
             }
+            receipt.data.completed = localChatId !== null;
+            saveChatReceipt(receipt);
             if (flags.json) {
               this.log(
                 JSON.stringify(buildChatJsonEnvelope(outputContext), null, 2),
@@ -1428,7 +1493,7 @@ class ChatCommand extends Command {
           reply: replyResult.reply,
         };
 
-        const localChatId = persistActiveChat({
+        const localChatId = await persistActiveChat({
           configDir: this.config.configDir,
           context: outputContext,
           preferredLocalId: flags["chat-local-id"],
@@ -1438,6 +1503,8 @@ class ChatCommand extends Command {
           outputContext = { ...outputContext, localChatId };
         }
 
+        receipt.data.completed = localChatId !== null;
+        saveChatReceipt(receipt);
         if (flags.json) {
           this.log(
             JSON.stringify(buildChatJsonEnvelope(outputContext), null, 2),
@@ -1446,7 +1513,7 @@ class ChatCommand extends Command {
           this.log(formatChatResponse(outputContext));
         }
       } finally {
-        releaseLock();
+        releaseLock?.();
       }
     });
   }
@@ -1570,30 +1637,31 @@ export class ChatReplyCommand extends Command {
       );
     }
 
-    // Acquire the chat-state mutex BEFORE loading state. Holding it
-    // across the inner ChatCommand.run call guarantees a single
-    // load→POST→save sequence per config-dir at a time and stops a
-    // racing `primitive chat reply` from re-sending to a stale
-    // last_reply_email_id (which the server would dedup, leaving the
-    // second invocation polling forever). See chat-lock.ts.
-    let release: () => void;
-    try {
-      release = acquireChatLock(this.config.configDir);
-    } catch (err) {
-      if (err instanceof ChatLockContentionError) {
-        throw cliError(err.message);
-      }
-      throw err;
-    }
-
+    let release: (() => void) | undefined;
     try {
       const localId: number | undefined =
         flags.id ??
         (typeof positionalLocalId === "number" ? positionalLocalId : undefined);
-      const state =
-        localId === undefined
-          ? loadActiveChatState(this.config.configDir)
-          : loadChatConversationByLocalId(this.config.configDir, localId);
+      // Select the active chat once, then reserve only that local chat.
+      const releaseState = await acquireChatStateLock(this.config.configDir);
+      let state: ChatConversationState | null;
+      try {
+        state =
+          localId === undefined
+            ? loadActiveChatState(this.config.configDir)
+            : loadChatConversationByLocalId(this.config.configDir, localId);
+        if (state)
+          release = acquireChatLock(
+            this.config.configDir,
+            `local:${state.local_id}`,
+          );
+      } catch (error) {
+        if (error instanceof ChatLockContentionError)
+          throw cliError(error.message);
+        throw error;
+      } finally {
+        releaseState();
+      }
       if (!state) {
         throw cliError(
           localId === undefined
@@ -1650,7 +1718,7 @@ export class ChatReplyCommand extends Command {
 
       await ChatCommand.run(argv, { root: this.config.root });
     } finally {
-      release();
+      release?.();
     }
   }
 }
