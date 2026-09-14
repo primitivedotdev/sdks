@@ -58,6 +58,7 @@ cli-tarball-isolation:
 cli-smoke: cli-build cli-tarball-isolation
 	pull_smoke_script="$$(pwd)/scripts/smoke-pull-commands.mjs" && \
 	listen_smoke_script="$$(pwd)/scripts/smoke-listen.mjs" && \
+	chat_smoke_script="$$(pwd)/scripts/smoke-concurrent-chats.mjs" && \
 	pack_dir=$$(mktemp -d) && \
 	smoke_dir=$$(mktemp -d) && \
 	tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && \
@@ -72,6 +73,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
 	node "$$pull_smoke_script" "$$bin" && \
 	node "$$listen_smoke_script" "$$bin" && \
+	node "$$chat_smoke_script" "$$bin" && \
 	"$$bin" list-operations >/dev/null && \
 	"$$bin" completion fish >/dev/null && \
 	"$$bin" completion bash >/dev/null && \
