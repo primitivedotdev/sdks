@@ -27,6 +27,7 @@ import {
 } from "../chat-lock.js";
 import {
   beginChatReceipt,
+  chatCredentialIdentity,
   chatRequestHash,
   saveChatReceipt,
 } from "../chat-receipt.js";
@@ -1195,7 +1196,9 @@ class ChatCommand extends Command {
 
         const requestHash = chatRequestHash({
           api: auth.apiBaseUrl,
-          account: auth.credentials?.org_id ?? auth.apiKey,
+          account:
+            auth.credentials?.org_id ??
+            chatCredentialIdentity(auth.apiKey, auth.apiBaseUrl),
           from,
           recipient: args.recipient,
           subject,
@@ -1287,7 +1290,7 @@ class ChatCommand extends Command {
             "response" in sendResult ? sendResult.response?.status : undefined;
           if (
             status !== undefined &&
-            [400, 401, 403, 404, 413, 422, 429].includes(status)
+            [400, 401, 402, 403, 404, 413, 422, 429].includes(status)
           ) {
             receipt.data.completed = true;
             saveChatReceipt(receipt);
@@ -1347,7 +1350,7 @@ class ChatCommand extends Command {
         // server — that gate still protects against accidental
         // double-sends — but we make the CLI explain what happened
         // instead of hanging.
-        if (sent.idempotent_replay && !resumed) {
+        if (sent.idempotent_replay) {
           progress?.update(
             "Server returned idempotent_replay: looking up the existing reply",
           );

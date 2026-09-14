@@ -8,7 +8,6 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
-  rmdirSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -116,6 +115,62 @@ function holderPid(snapshot: Snapshot | null): number | null {
   return Number.isSafeInteger(pid) && pid > 0 ? pid : null;
 }
 
+function reclaimStaleLock(
+  path: string,
+  previous: Snapshot,
+  temporary: string,
+  contender: Snapshot,
+): void {
+  const guards: Array<{ path: string; snapshot: Snapshot }> = [];
+  const visited = new Set<string>();
+  let target = previous;
+  // Each successor is elected against an immutable record. Never unlink a dead
+  // guard to take it over: that would recreate the stale-lock deletion race.
+  // A crashed successor is recovered in exactly the same way on the next try.
+  for (;;) {
+    const identity = createHash("sha256")
+      .update(`${target.device}:${target.inode}:${target.contents}`)
+      .digest("hex");
+    const guardPath = `${path}.reclaim-${identity}`;
+    if (visited.has(guardPath)) throw new ChatLockContentionError(0);
+    visited.add(guardPath);
+    try {
+      linkSync(temporary, guardPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      const guard = readSnapshot(guardPath);
+      const pid = holderPid(guard);
+      if (!guard || pid === null || pidIsAlive(pid))
+        throw new ChatLockContentionError(pid ?? 0);
+      guards.push({ path: guardPath, snapshot: guard });
+      target = guard;
+      continue;
+    }
+    guards.push({ path: guardPath, snapshot: contender });
+    let removed = false;
+    try {
+      const pid = holderPid(previous);
+      if (matchesSnapshot(path, previous) && pid !== null && !pidIsAlive(pid))
+        unlinkSync(path);
+      // Cleanup is safe only once the original record is gone. New lock
+      // generations use different guards; delayed contenders must recheck it.
+      removed = !matchesSnapshot(path, previous);
+    } finally {
+      if (removed) {
+        for (const guard of guards) {
+          try {
+            if (matchesSnapshot(guard.path, guard.snapshot))
+              unlinkSync(guard.path);
+          } catch {
+            // Leftover records contain a PID and remain recoverable after exit.
+          }
+        }
+      }
+    }
+    return;
+  }
+}
+
 export class ChatLockContentionError extends Error {
   constructor(public readonly holderPid: number) {
     super(
@@ -190,34 +245,8 @@ export function acquireChatLock(configDir: string, scope?: string): () => void {
         throw new ChatLockContentionError(pid ?? 0);
       }
 
-      // Serialize stale-file reclamation: two readers of the same dead PID
-      // must not both unlink, with the second deleting a new owner's lock.
-      // An abandoned reclamation directory is ambiguous and fails closed.
-      const reclaimPath = `${path}.reclaim`;
-      try {
-        mkdirSync(reclaimPath, { mode: 0o700 });
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "EEXIST")
-          throw new ChatLockContentionError(0);
-        throw error;
-      }
-      const reclaimIdentity = lstatSync(reclaimPath);
-      try {
-        if (matchesSnapshot(path, previous) && !pidIsAlive(pid))
-          unlinkSync(path);
-        acquired = publish();
-      } finally {
-        try {
-          const current = lstatSync(reclaimPath);
-          if (
-            current.dev === reclaimIdentity.dev &&
-            current.ino === reclaimIdentity.ino
-          )
-            rmdirSync(reclaimPath);
-        } catch {
-          // A cleanup failure must not discard a successfully acquired lock.
-        }
-      }
+      reclaimStaleLock(path, previous, temporary, snapshot);
+      acquired = publish();
       if (!acquired)
         throw new ChatLockContentionError(holderPid(readSnapshot(path)) ?? 0);
     }

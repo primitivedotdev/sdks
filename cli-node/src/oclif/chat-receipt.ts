@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID, scryptSync } from "node:crypto";
 import {
   mkdirSync,
   readFileSync,
@@ -19,6 +19,16 @@ type ReceiptData = {
   completed: boolean;
 };
 export type ChatReceipt = { path: string; data: ReceiptData };
+
+/** Keep API credentials out of request fingerprints, including low-entropy local keys. */
+export function chatCredentialIdentity(
+  key: string | undefined,
+  apiOrigin: string,
+): string | undefined {
+  return key === undefined
+    ? undefined
+    : scryptSync(key, apiOrigin, 32).toString("hex");
+}
 
 export function chatRequestHash(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");

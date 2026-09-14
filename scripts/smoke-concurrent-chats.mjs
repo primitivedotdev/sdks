@@ -52,10 +52,10 @@ const server = createServer(async (request, response) => {
       const recipient = parent?.from_email ?? input.to;
       const sentId = randomUUID();
       const replyId = randomUUID();
-      const now = new Date().toISOString();
+      const now = current.replayed ? "2020-01-01T00:00:00.000Z" : new Date().toISOString();
       const thread = parent?.thread_id ?? randomUUID();
       const sent = { id: sentId, from: owner, to: recipient, status: "delivered", delivery_status: "delivered",
-        idempotent_replay: false, accepted: [recipient], rejected: [], request_id: randomUUID(),
+        idempotent_replay: current.replayed ?? false, accepted: [recipient], rejected: [], request_id: randomUUID(),
         queue_id: randomUUID(), content_hash: "fixture-content", message_id: `<${sentId}@example.test>` };
       const reply = { id: replyId, from_email: recipient, sender: recipient, to_email: owner, recipient: owner,
         subject: `Re: ${input.subject ?? parent?.subject ?? "Chat"}`, body_text: `Reply to ${input.body_text}`,
@@ -75,6 +75,7 @@ const server = createServer(async (request, response) => {
       assert.ok(sentId, "Every reply search must remain strictly scoped to its own send");
       const record = sends.get(sentId);
       assert.ok(record, "Reply search must name a known send");
+      if (record.sent.idempotent_replay) assert.equal(url.searchParams.has("date_from"), false, "Replay recovery must find replies older than the attempt receipt");
       json(response, record.phase.released && record.phase.repliesReady ? [record.reply] : []);
       return;
     }
@@ -216,6 +217,15 @@ try {
   timedOut.repliesReady = true;
   successful(await fresh(...timeoutArgs).result, timedOut, timeoutArgs[1]);
   assert.equal(timedOut.posts.length, 1, "Timeout retry must poll the acknowledged send without POSTing again");
+
+  const replayed = beginPhase(1, false, false);
+  replayed.replayed = true;
+  const replayArgs = ["replay@example.test", "Recover existing replay"];
+  assert.notEqual((await fresh(...replayArgs).result).code, 0);
+  await waitForAcknowledgedReceipt(replayed.posts[0].sent.id);
+  replayed.repliesReady = true;
+  successful(await fresh(...replayArgs).result, replayed, replayArgs[1]);
+  assert.equal(replayed.posts.length, 1, "Replay receipt recovery must not POST again");
 
   const interrupted = beginPhase(1, false, false);
   const interruptedArgs = ["delta@example.test", "Resume after interruption"];
