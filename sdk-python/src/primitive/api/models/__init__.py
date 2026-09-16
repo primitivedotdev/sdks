@@ -367,6 +367,7 @@ from .send_permission_your_domain import SendPermissionYourDomain
 from .send_permission_your_domain_type import SendPermissionYourDomainType
 from .send_permissions_meta import SendPermissionsMeta
 from .sent_email_detail import SentEmailDetail
+from .sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
 from .sent_email_reschedule_input import SentEmailRescheduleInput
 from .sent_email_status import SentEmailStatus
 from .sent_email_summary import SentEmailSummary
@@ -865,6 +866,7 @@ __all__ = (
     "SendPermissionYourDomain",
     "SendPermissionYourDomainType",
     "SentEmailDetail",
+    "SentEmailDetailAttachmentsItem",
     "SentEmailRescheduleInput",
     "SentEmailStatus",
     "SentEmailSummary",

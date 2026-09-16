@@ -21,18 +21,43 @@ the digest as metadata; it does not independently verify that digest. Treat
 attachment content as untrusted input. These operations have no interaction or
 payment semantics.
 
+## Discover sent attachments
+
+`getSentEmail` exposes optional `attachments`, `attachments_size_bytes`, and
+`attachments_download_available` fields on sent detail. Inventory items contain
+`filename` (nullable), `content_type`, `size_bytes`, `sha256`, `part_index`, and
+`tar_path`. Absent inventory means legacy metadata is unknown; an explicit empty
+array means the returned inventory is empty. Inventory may be limited by the
+caller's visibility, so an empty array does not prove that the original email
+had no attachments.
+
+`attachments_download_available` describes retained inline archive availability.
+It does not grant per-part access or replace download authorization. The original
+accepted byte total can exceed retained inline bytes after offloading, and
+`content_discarded_at` still reports discarded content. Downloads can fail after
+detail is read due to discard, revoked access, or changed content. Offloaded
+payload files are excluded from the inline archive.
+
+The metadata schema permits safe integer indexes; the individual-part routes
+accept only 0 through 2147483647. Pass a supported `part_index` unchanged; do not
+truncate it, substitute the array position, or derive it from `tar_path`.
+
 ## JavaScript, including portable runtimes
 
 Import `/api` to avoid Node-specific root exports. The thin methods use
 `ArrayBuffer` and `Uint8Array`, without requiring Buffer or Blob conversion:
 
 ```ts
-import { PrimitiveClient } from '@primitivedotdev/sdk/api';
+import { getSentEmail, PrimitiveClient } from '@primitivedotdev/sdk/api';
 
 const client = new PrimitiveClient({ apiKey });
 const part = await client.downloadEmailAttachmentPart(emailId, attachment.part_index);
 // part.bytes: Uint8Array; part.sha256, part.contentDisposition, part.cacheControl
-const sentPart = await client.downloadSentAttachmentPart(sentEmailId, attachment.part_index);
+const sent = await getSentEmail({ client: client.client, path: { id: sentEmailId } });
+const sentAttachment = sent.data?.data?.attachments?.[0];
+if (sentAttachment) {
+  const sentPart = await client.downloadSentAttachmentPart(sentEmailId, sentAttachment.part_index);
+}
 ```
 
 Generated operations of the same names also remain available from `/api`. Their

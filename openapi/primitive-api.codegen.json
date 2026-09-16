@@ -12925,6 +12925,57 @@
                 "type": "string",
                 "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n",
                 "nullable": true
+              },
+              "attachments": {
+                "type": "array",
+                "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+                "items": {
+                  "type": "object",
+                  "description": "Metadata for one submitted inline attachment.",
+                  "additionalProperties": true,
+                  "properties": {
+                    "filename": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "content_type": {
+                      "type": "string"
+                    },
+                    "size_bytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "sha256": {
+                      "type": "string"
+                    },
+                    "part_index": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "tar_path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "filename",
+                    "content_type",
+                    "size_bytes",
+                    "sha256",
+                    "part_index",
+                    "tar_path"
+                  ]
+                }
+              },
+              "attachments_size_bytes": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
+              },
+              "attachments_download_available": {
+                "type": "boolean",
+                "description": "Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives."
               }
             }
           }

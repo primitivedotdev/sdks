@@ -25435,6 +25435,17 @@ type SentEmailDetail struct {
 	// carried only a plain-text body, or when bodies
 	// have been discarded post-send.
 	BodyHTML OptNilString `json:"body_html"`
+	// Metadata for submitted inline attachments; download availability is reported separately. Metadata
+	// may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded
+	// payload files are not included in the inline archive.
+	Attachments []SentEmailDetailAttachmentsItem `json:"attachments"`
+	// Original decoded attachment byte total accepted for this send, not the compressed archive size. It
+	// may exceed the retained inline total after offloading.
+	AttachmentsSizeBytes OptFloat64 `json:"attachments_size_bytes"`
+	// Whether an inline attachment archive has been successfully retained and is available for download.
+	// Download authorization is checked separately; address-bound agent connection keys cannot download
+	// archives.
+	AttachmentsDownloadAvailable OptBool `json:"attachments_download_available"`
 }
 
 // GetID returns the value of ID.
@@ -25602,6 +25613,21 @@ func (s *SentEmailDetail) GetBodyHTML() OptNilString {
 	return s.BodyHTML
 }
 
+// GetAttachments returns the value of Attachments.
+func (s *SentEmailDetail) GetAttachments() []SentEmailDetailAttachmentsItem {
+	return s.Attachments
+}
+
+// GetAttachmentsSizeBytes returns the value of AttachmentsSizeBytes.
+func (s *SentEmailDetail) GetAttachmentsSizeBytes() OptFloat64 {
+	return s.AttachmentsSizeBytes
+}
+
+// GetAttachmentsDownloadAvailable returns the value of AttachmentsDownloadAvailable.
+func (s *SentEmailDetail) GetAttachmentsDownloadAvailable() OptBool {
+	return s.AttachmentsDownloadAvailable
+}
+
 // SetID sets the value of ID.
 func (s *SentEmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -25765,6 +25791,113 @@ func (s *SentEmailDetail) SetBodyText(val OptNilString) {
 // SetBodyHTML sets the value of BodyHTML.
 func (s *SentEmailDetail) SetBodyHTML(val OptNilString) {
 	s.BodyHTML = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *SentEmailDetail) SetAttachments(val []SentEmailDetailAttachmentsItem) {
+	s.Attachments = val
+}
+
+// SetAttachmentsSizeBytes sets the value of AttachmentsSizeBytes.
+func (s *SentEmailDetail) SetAttachmentsSizeBytes(val OptFloat64) {
+	s.AttachmentsSizeBytes = val
+}
+
+// SetAttachmentsDownloadAvailable sets the value of AttachmentsDownloadAvailable.
+func (s *SentEmailDetail) SetAttachmentsDownloadAvailable(val OptBool) {
+	s.AttachmentsDownloadAvailable = val
+}
+
+// Metadata for one submitted inline attachment.
+type SentEmailDetailAttachmentsItem struct {
+	Filename        NilString `json:"filename"`
+	ContentType     string    `json:"content_type"`
+	SizeBytes       int       `json:"size_bytes"`
+	SHA256          string    `json:"sha256"`
+	PartIndex       int       `json:"part_index"`
+	TarPath         string    `json:"tar_path"`
+	AdditionalProps SentEmailDetailAttachmentsItemAdditional
+}
+
+// GetFilename returns the value of Filename.
+func (s *SentEmailDetailAttachmentsItem) GetFilename() NilString {
+	return s.Filename
+}
+
+// GetContentType returns the value of ContentType.
+func (s *SentEmailDetailAttachmentsItem) GetContentType() string {
+	return s.ContentType
+}
+
+// GetSizeBytes returns the value of SizeBytes.
+func (s *SentEmailDetailAttachmentsItem) GetSizeBytes() int {
+	return s.SizeBytes
+}
+
+// GetSHA256 returns the value of SHA256.
+func (s *SentEmailDetailAttachmentsItem) GetSHA256() string {
+	return s.SHA256
+}
+
+// GetPartIndex returns the value of PartIndex.
+func (s *SentEmailDetailAttachmentsItem) GetPartIndex() int {
+	return s.PartIndex
+}
+
+// GetTarPath returns the value of TarPath.
+func (s *SentEmailDetailAttachmentsItem) GetTarPath() string {
+	return s.TarPath
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *SentEmailDetailAttachmentsItem) GetAdditionalProps() SentEmailDetailAttachmentsItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetFilename sets the value of Filename.
+func (s *SentEmailDetailAttachmentsItem) SetFilename(val NilString) {
+	s.Filename = val
+}
+
+// SetContentType sets the value of ContentType.
+func (s *SentEmailDetailAttachmentsItem) SetContentType(val string) {
+	s.ContentType = val
+}
+
+// SetSizeBytes sets the value of SizeBytes.
+func (s *SentEmailDetailAttachmentsItem) SetSizeBytes(val int) {
+	s.SizeBytes = val
+}
+
+// SetSHA256 sets the value of SHA256.
+func (s *SentEmailDetailAttachmentsItem) SetSHA256(val string) {
+	s.SHA256 = val
+}
+
+// SetPartIndex sets the value of PartIndex.
+func (s *SentEmailDetailAttachmentsItem) SetPartIndex(val int) {
+	s.PartIndex = val
+}
+
+// SetTarPath sets the value of TarPath.
+func (s *SentEmailDetailAttachmentsItem) SetTarPath(val string) {
+	s.TarPath = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *SentEmailDetailAttachmentsItem) SetAdditionalProps(val SentEmailDetailAttachmentsItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type SentEmailDetailAttachmentsItemAdditional map[string]jx.Raw
+
+func (s *SentEmailDetailAttachmentsItemAdditional) init() SentEmailDetailAttachmentsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // Ref: #/components/schemas/SentEmailRescheduleInput

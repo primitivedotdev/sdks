@@ -58314,9 +58314,31 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 			s.BodyHTML.Encode(e)
 		}
 	}
+	{
+		if s.Attachments != nil {
+			e.FieldStart("attachments")
+			e.ArrStart()
+			for _, elem := range s.Attachments {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.AttachmentsSizeBytes.Set {
+			e.FieldStart("attachments_size_bytes")
+			s.AttachmentsSizeBytes.Encode(e)
+		}
+	}
+	{
+		if s.AttachmentsDownloadAvailable.Set {
+			e.FieldStart("attachments_download_available")
+			s.AttachmentsDownloadAvailable.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfSentEmailDetail = [33]string{
+var jsonFieldsNameOfSentEmailDetail = [36]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -58350,6 +58372,9 @@ var jsonFieldsNameOfSentEmailDetail = [33]string{
 	30: "canceled_at",
 	31: "body_text",
 	32: "body_html",
+	33: "attachments",
+	34: "attachments_size_bytes",
+	35: "attachments_download_available",
 }
 
 // Decode decodes SentEmailDetail from json.
@@ -58713,6 +58738,43 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"body_html\"")
 			}
+		case "attachments":
+			if err := func() error {
+				s.Attachments = make([]SentEmailDetailAttachmentsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem SentEmailDetailAttachmentsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Attachments = append(s.Attachments, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"attachments\"")
+			}
+		case "attachments_size_bytes":
+			if err := func() error {
+				s.AttachmentsSizeBytes.Reset()
+				if err := s.AttachmentsSizeBytes.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"attachments_size_bytes\"")
+			}
+		case "attachments_download_available":
+			if err := func() error {
+				s.AttachmentsDownloadAvailable.Reset()
+				if err := s.AttachmentsDownloadAvailable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"attachments_download_available\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -58769,6 +58831,262 @@ func (s *SentEmailDetail) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SentEmailDetail) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SentEmailDetailAttachmentsItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SentEmailDetailAttachmentsItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("filename")
+		s.Filename.Encode(e)
+	}
+	{
+		e.FieldStart("content_type")
+		e.Str(s.ContentType)
+	}
+	{
+		e.FieldStart("size_bytes")
+		e.Int(s.SizeBytes)
+	}
+	{
+		e.FieldStart("sha256")
+		e.Str(s.SHA256)
+	}
+	{
+		e.FieldStart("part_index")
+		e.Int(s.PartIndex)
+	}
+	{
+		e.FieldStart("tar_path")
+		e.Str(s.TarPath)
+	}
+	for k, elem := range s.AdditionalProps {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+var jsonFieldsNameOfSentEmailDetailAttachmentsItem = [6]string{
+	0: "filename",
+	1: "content_type",
+	2: "size_bytes",
+	3: "sha256",
+	4: "part_index",
+	5: "tar_path",
+}
+
+// Decode decodes SentEmailDetailAttachmentsItem from json.
+func (s *SentEmailDetailAttachmentsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailDetailAttachmentsItem to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.AdditionalProps = map[string]jx.Raw{}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "filename":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Filename.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"filename\"")
+			}
+		case "content_type":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.ContentType = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"content_type\"")
+			}
+		case "size_bytes":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int()
+				s.SizeBytes = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"size_bytes\"")
+			}
+		case "sha256":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Str()
+				s.SHA256 = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sha256\"")
+			}
+		case "part_index":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Int()
+				s.PartIndex = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"part_index\"")
+			}
+		case "tar_path":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Str()
+				s.TarPath = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"tar_path\"")
+			}
+		default:
+			var elem jx.Raw
+			if err := func() error {
+				v, err := d.RawAppend(nil)
+				elem = jx.Raw(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrapf(err, "decode field %q", k)
+			}
+			s.AdditionalProps[string(k)] = elem
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SentEmailDetailAttachmentsItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00111111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSentEmailDetailAttachmentsItem) {
+					name = jsonFieldsNameOfSentEmailDetailAttachmentsItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SentEmailDetailAttachmentsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailDetailAttachmentsItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s SentEmailDetailAttachmentsItemAdditional) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields implements json.Marshaler.
+func (s SentEmailDetailAttachmentsItemAdditional) encodeFields(e *jx.Encoder) {
+	for k, elem := range s {
+		e.FieldStart(k)
+
+		if len(elem) != 0 {
+			e.Raw(elem)
+		}
+	}
+}
+
+// Decode decodes SentEmailDetailAttachmentsItemAdditional from json.
+func (s *SentEmailDetailAttachmentsItemAdditional) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailDetailAttachmentsItemAdditional to nil")
+	}
+	m := s.init()
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		var elem jx.Raw
+		if err := func() error {
+			v, err := d.RawAppend(nil)
+			elem = jx.Raw(v)
+			if err != nil {
+				return err
+			}
+			return nil
+		}(); err != nil {
+			return errors.Wrapf(err, "decode field %q", k)
+		}
+		m[string(k)] = elem
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SentEmailDetailAttachmentsItemAdditional")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SentEmailDetailAttachmentsItemAdditional) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailDetailAttachmentsItemAdditional) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

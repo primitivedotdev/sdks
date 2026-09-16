@@ -2527,6 +2527,26 @@ export type SentEmailDetail = SentEmailSummary & {
      *
      */
     body_html?: string | null;
+    /**
+     * Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.
+     */
+    attachments?: Array<{
+        filename: string | null;
+        content_type: string;
+        size_bytes: number;
+        sha256: string;
+        part_index: number;
+        tar_path: string;
+        [key: string]: unknown;
+    }>;
+    /**
+     * Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading.
+     */
+    attachments_size_bytes?: number;
+    /**
+     * Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives.
+     */
+    attachments_download_available?: boolean;
 };
 
 /**
