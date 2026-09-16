@@ -16,6 +16,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.gate_denial import GateDenial
+  from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
 
 
 
@@ -147,6 +148,14 @@ class SentEmailDetail:
             body_html (None | str | Unset): HTML body sent on the wire. Null when the send
                 carried only a plain-text body, or when bodies
                 have been discarded post-send.
+            attachments (list[SentEmailDetailAttachmentsItem] | Unset): Metadata for submitted inline attachments; download
+                availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may
+                have no metadata. Offloaded payload files are not included in the inline archive.
+            attachments_size_bytes (int | Unset): Original decoded attachment byte total accepted for this send, not the
+                compressed archive size. It may exceed the retained inline total after offloading.
+            attachments_download_available (bool | Unset): Whether an inline attachment archive has been successfully
+                retained and is available for download. Download authorization is checked separately; address-bound agent
+                connection keys cannot download archives.
      """
 
     id: UUID
@@ -182,6 +191,9 @@ class SentEmailDetail:
     canceled_at: datetime.datetime | None | Unset = UNSET
     body_text: None | str | Unset = UNSET
     body_html: None | str | Unset = UNSET
+    attachments: list[SentEmailDetailAttachmentsItem] | Unset = UNSET
+    attachments_size_bytes: int | Unset = UNSET
+    attachments_download_available: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -190,6 +202,7 @@ class SentEmailDetail:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.gate_denial import GateDenial
+        from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
         id = str(self.id)
 
         status = self.status.value
@@ -357,6 +370,19 @@ class SentEmailDetail:
         else:
             body_html = self.body_html
 
+        attachments: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.attachments, Unset):
+            attachments = []
+            for attachments_item_data in self.attachments:
+                attachments_item = attachments_item_data.to_dict()
+                attachments.append(attachments_item)
+
+
+
+        attachments_size_bytes = self.attachments_size_bytes
+
+        attachments_download_available = self.attachments_download_available
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -416,6 +442,12 @@ class SentEmailDetail:
             field_dict["body_text"] = body_text
         if body_html is not UNSET:
             field_dict["body_html"] = body_html
+        if attachments is not UNSET:
+            field_dict["attachments"] = attachments
+        if attachments_size_bytes is not UNSET:
+            field_dict["attachments_size_bytes"] = attachments_size_bytes
+        if attachments_download_available is not UNSET:
+            field_dict["attachments_download_available"] = attachments_download_available
 
         return field_dict
 
@@ -424,6 +456,7 @@ class SentEmailDetail:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.gate_denial import GateDenial
+        from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -739,6 +772,22 @@ class SentEmailDetail:
         body_html = _parse_body_html(d.pop("body_html", UNSET))
 
 
+        _attachments = d.pop("attachments", UNSET)
+        attachments: list[SentEmailDetailAttachmentsItem] | Unset = UNSET
+        if _attachments is not UNSET:
+            attachments = []
+            for attachments_item_data in _attachments:
+                attachments_item = SentEmailDetailAttachmentsItem.from_dict(attachments_item_data)
+
+
+
+                attachments.append(attachments_item)
+
+
+        attachments_size_bytes = d.pop("attachments_size_bytes", UNSET)
+
+        attachments_download_available = d.pop("attachments_download_available", UNSET)
+
         sent_email_detail = cls(
             id=id,
             status=status,
@@ -773,6 +822,9 @@ class SentEmailDetail:
             canceled_at=canceled_at,
             body_text=body_text,
             body_html=body_html,
+            attachments=attachments,
+            attachments_size_bytes=attachments_size_bytes,
+            attachments_download_available=attachments_download_available,
         )
 
 

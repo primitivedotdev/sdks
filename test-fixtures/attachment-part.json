@@ -1,0 +1,20 @@
+{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "part_index": 7,
+  "bytes": [
+    0,
+    255,
+    128,
+    195,
+    40,
+    13,
+    10,
+    65,
+    0,
+    226,
+    152,
+    131
+  ],
+  "sha256": "76279ce38ea695d47ac829f403e7b0dfec5b4a6f780dddc2cac9bbe500909a4f",
+  "content_disposition": "attachment; filename=\"sample.bin\""
+}

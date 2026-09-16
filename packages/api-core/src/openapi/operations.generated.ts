@@ -2876,6 +2876,41 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": true,
     "bodyRequired": false,
+    "command": "download-email-attachment-part",
+    "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only a message addressed to its claimed address.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "downloadEmailAttachmentPart",
+    "path": "/emails/{id}/attachments/{part_index}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The attachment metadata `part_index`, not its offset in the attachments array",
+        "enum": null,
+        "maximum": 2147483647,
+        "minimum": 0,
+        "name": "part_index",
+        "required": true,
+        "type": "integer"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "downloadEmailAttachmentPart",
+    "summary": "Download one inbound email attachment",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
+    "binaryResponse": true,
+    "bodyRequired": false,
     "command": "download-raw-email",
     "description": "Downloads the raw RFC 822 email file (.eml). Authenticates via\na signed download token (provided in webhook payloads) or a\nvalid session.\n",
     "hasJsonBody": false,
@@ -12249,6 +12284,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "null"
               ],
               "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+              "items": {
+                "type": "object",
+                "description": "Metadata for one submitted inline attachment.",
+                "additionalProperties": true,
+                "properties": {
+                  "filename": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sha256": {
+                    "type": "string"
+                  },
+                  "part_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tar_path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "filename",
+                  "content_type",
+                  "size_bytes",
+                  "sha256",
+                  "part_index",
+                  "tar_path"
+                ]
+              }
+            },
+            "attachments_size_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
+            },
+            "attachments_download_available": {
+              "type": "boolean",
+              "description": "Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives."
             }
           }
         }
@@ -12256,6 +12345,41 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "cancelSentEmail",
     "summary": "Cancel a scheduled send",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": true,
+    "bodyRequired": false,
+    "command": "download-sent-attachment-part",
+    "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only mail sent from its claimed address.\nReceiving a copy does not authorize downloading another sender's sent content.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "downloadSentAttachmentPart",
+    "path": "/sent-emails/{id}/attachments/{part_index}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The attachment metadata `part_index`, not its offset in the attachments array",
+        "enum": null,
+        "maximum": 2147483647,
+        "minimum": 0,
+        "name": "part_index",
+        "required": true,
+        "type": "integer"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "downloadSentAttachmentPart",
+    "summary": "Download one sent email attachment",
     "tag": "Sending",
     "tagCommand": "sending"
   },
@@ -12825,6 +12949,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "null"
               ],
               "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+              "items": {
+                "type": "object",
+                "description": "Metadata for one submitted inline attachment.",
+                "additionalProperties": true,
+                "properties": {
+                  "filename": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sha256": {
+                    "type": "string"
+                  },
+                  "part_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tar_path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "filename",
+                  "content_type",
+                  "size_bytes",
+                  "sha256",
+                  "part_index",
+                  "tar_path"
+                ]
+              }
+            },
+            "attachments_size_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
+            },
+            "attachments_download_available": {
+              "type": "boolean",
+              "description": "Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives."
             }
           }
         }
@@ -13709,6 +13887,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "null"
               ],
               "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+              "items": {
+                "type": "object",
+                "description": "Metadata for one submitted inline attachment.",
+                "additionalProperties": true,
+                "properties": {
+                  "filename": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sha256": {
+                    "type": "string"
+                  },
+                  "part_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tar_path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "filename",
+                  "content_type",
+                  "size_bytes",
+                  "sha256",
+                  "part_index",
+                  "tar_path"
+                ]
+              }
+            },
+            "attachments_size_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
+            },
+            "attachments_download_available": {
+              "type": "boolean",
+              "description": "Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives."
             }
           }
         }

@@ -1747,6 +1747,149 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /emails/{id}/attachments/{part_index}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+      - $ref: '#/components/parameters/AttachmentPartIndex'
+    get:
+      operationId: downloadEmailAttachmentPart
+      summary: Download one inbound email attachment
+      description: |
+        Pending service release. This contract does not establish live availability.
+        Downloads the original bytes of one ordinary email attachment, selected by
+        its metadata `part_index`, not its position in an attachments array. Refresh
+        the email detail after `attachment_changed` before choosing an index again.
+        Uses bearer authentication only; signed raw-email download tokens are not accepted.
+        A paired-agent credential may read only a message addressed to its claimed address.
+        Function credentials are denied. Other bearer credentials retain their
+        existing email access boundaries. This endpoint serves email bytes only.
+      tags: [Emails]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/AttachmentPart'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Missing or inaccessible message, or missing attachment part
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: attachment_changed; refresh email detail before selecting a part again
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: content_discarded; the original content is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: attachment_limit_exceeded; the attachment exceeds download limits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: attachment_integrity_failed; stored content failed integrity validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: attachment_not_ready or attachment_storage_unavailable; retry after the indicated delay
+          headers:
+            Retry-After:
+              description: Delay in seconds before retrying this read
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /sent-emails/{id}/attachments/{part_index}:
+    parameters:
+      - $ref: '#/components/parameters/ResourceId'
+      - $ref: '#/components/parameters/AttachmentPartIndex'
+    get:
+      operationId: downloadSentAttachmentPart
+      summary: Download one sent email attachment
+      description: |
+        Pending service release. This contract does not establish live availability.
+        Downloads the original bytes of one ordinary email attachment, selected by
+        its metadata `part_index`, not its position in an attachments array. Refresh
+        the email detail after `attachment_changed` before choosing an index again.
+        Uses bearer authentication only; signed raw-email download tokens are not accepted.
+        A paired-agent credential may read only mail sent from its claimed address.
+        Receiving a copy does not authorize downloading another sender's sent content.
+        Function credentials are denied. Other bearer credentials retain their
+        existing email access boundaries. This endpoint serves email bytes only.
+      tags: [Sending]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/AttachmentPart'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Missing or inaccessible message, or missing attachment part
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: attachment_changed; refresh email detail before selecting a part again
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: content_discarded; the original content is no longer available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: attachment_limit_exceeded; the attachment exceeds download limits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: attachment_integrity_failed; stored content failed integrity validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: attachment_not_ready or attachment_storage_unavailable; retry after the indicated delay
+          headers:
+            Retry-After:
+              description: Delay in seconds before retrying this read
+              schema:
+                type: integer
+                minimum: 0
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /emails/{id}/reply:
     parameters:
       - $ref: '#/components/parameters/ResourceId'
@@ -5611,6 +5754,17 @@ components:
       description: Signed download token provided in webhook payloads
 
   parameters:
+    AttachmentPartIndex:
+      name: part_index
+      in: path
+      required: true
+      description: The attachment metadata `part_index`, not its offset in the attachments array
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 2147483647
+
     ResourceId:
       name: id
       in: path
@@ -5684,6 +5838,29 @@ components:
         format: uuid
 
   responses:
+    AttachmentPart:
+      description: Original attachment bytes; never a JSON envelope or a base64 string
+      content:
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary
+      headers:
+        X-Content-SHA256:
+          description: SHA-256 hex digest of the original bytes
+          schema:
+            type: string
+            pattern: '^[a-fA-F0-9]{64}$'
+        Content-Disposition:
+          description: Safe attachment disposition with a sanitized filename
+          schema:
+            type: string
+        Cache-Control:
+          description: Attachment responses are private and must not be stored by caches
+          schema:
+            type: string
+            example: 'private, no-store'
+
     PullContentGone:
       description: Queued content is no longer available
       content:
@@ -6519,6 +6696,12 @@ components:
                 - conflict
                 - mx_conflict
                 - not_scheduled
+                - attachment_changed
+                - content_discarded
+                - attachment_limit_exceeded
+                - attachment_integrity_failed
+                - attachment_not_ready
+                - attachment_storage_unavailable
                 - outbound_disabled
                 - cannot_send_from_domain
                 - recipient_not_allowed
@@ -9169,6 +9352,47 @@ components:
                 HTML body sent on the wire. Null when the send
                 carried only a plain-text body, or when bodies
                 have been discarded post-send.
+
+            attachments:
+              type: array
+              description: >-
+                Metadata for submitted inline attachments; download availability is reported separately.
+                Metadata may exist when the archive is unavailable, and legacy sends may have no metadata.
+                Offloaded payload files are not included in the inline archive.
+              items:
+                type: object
+                description: Metadata for one submitted inline attachment.
+                additionalProperties: true
+                properties:
+                  filename:
+                    type: [string, 'null']
+                  content_type:
+                    type: string
+                  size_bytes:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  sha256:
+                    type: string
+                  part_index:
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  tar_path:
+                    type: string
+                required: [filename, content_type, size_bytes, sha256, part_index, tar_path]
+            attachments_size_bytes:
+              type: integer
+              minimum: 0
+              maximum: 9007199254740991
+              description: >-
+                Original decoded attachment byte total accepted for this send, not the compressed archive size.
+                It may exceed the retained inline total after offloading.
+            attachments_download_available:
+              type: boolean
+              description: >-
+                Whether an inline attachment archive has been successfully retained and is available for download.
+                Download authorization is checked separately; address-bound agent connection keys cannot download archives.
 
     ReplyEmail:
       type: object

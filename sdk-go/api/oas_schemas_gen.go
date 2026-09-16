@@ -1023,6 +1023,71 @@ func (s *AgentSignupVerifyResultTokenType) UnmarshalText(data []byte) error {
 	}
 }
 
+type AttachmentPart struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s AttachmentPart) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+// AttachmentPartHeaders wraps AttachmentPart with response headers.
+type AttachmentPartHeaders struct {
+	CacheControl       OptString
+	ContentDisposition OptString
+	XContentSHA256     OptString
+	Response           AttachmentPart
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *AttachmentPartHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetContentDisposition returns the value of ContentDisposition.
+func (s *AttachmentPartHeaders) GetContentDisposition() OptString {
+	return s.ContentDisposition
+}
+
+// GetXContentSHA256 returns the value of XContentSHA256.
+func (s *AttachmentPartHeaders) GetXContentSHA256() OptString {
+	return s.XContentSHA256
+}
+
+// GetResponse returns the value of Response.
+func (s *AttachmentPartHeaders) GetResponse() AttachmentPart {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *AttachmentPartHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetContentDisposition sets the value of ContentDisposition.
+func (s *AttachmentPartHeaders) SetContentDisposition(val OptString) {
+	s.ContentDisposition = val
+}
+
+// SetXContentSHA256 sets the value of XContentSHA256.
+func (s *AttachmentPartHeaders) SetXContentSHA256(val OptString) {
+	s.XContentSHA256 = val
+}
+
+// SetResponse sets the value of Response.
+func (s *AttachmentPartHeaders) SetResponse(val AttachmentPart) {
+	s.Response = val
+}
+
+func (*AttachmentPartHeaders) downloadEmailAttachmentPartRes() {}
+func (*AttachmentPartHeaders) downloadSentAttachmentPartRes()  {}
+
 type AwaitReplyBadRequest ErrorResponse
 
 func (*AwaitReplyBadRequest) awaitReplyRes() {}
@@ -6966,6 +7031,38 @@ type DownloadDomainZoneFileUnauthorized ErrorResponse
 
 func (*DownloadDomainZoneFileUnauthorized) downloadDomainZoneFileRes() {}
 
+type DownloadEmailAttachmentPartBadGateway ErrorResponse
+
+func (*DownloadEmailAttachmentPartBadGateway) downloadEmailAttachmentPartRes() {}
+
+type DownloadEmailAttachmentPartBadRequest ErrorResponse
+
+func (*DownloadEmailAttachmentPartBadRequest) downloadEmailAttachmentPartRes() {}
+
+type DownloadEmailAttachmentPartConflict ErrorResponse
+
+func (*DownloadEmailAttachmentPartConflict) downloadEmailAttachmentPartRes() {}
+
+type DownloadEmailAttachmentPartForbidden ErrorResponse
+
+func (*DownloadEmailAttachmentPartForbidden) downloadEmailAttachmentPartRes() {}
+
+type DownloadEmailAttachmentPartGone ErrorResponse
+
+func (*DownloadEmailAttachmentPartGone) downloadEmailAttachmentPartRes() {}
+
+type DownloadEmailAttachmentPartNotFound ErrorResponse
+
+func (*DownloadEmailAttachmentPartNotFound) downloadEmailAttachmentPartRes() {}
+
+type DownloadEmailAttachmentPartRequestEntityTooLarge ErrorResponse
+
+func (*DownloadEmailAttachmentPartRequestEntityTooLarge) downloadEmailAttachmentPartRes() {}
+
+type DownloadEmailAttachmentPartUnauthorized ErrorResponse
+
+func (*DownloadEmailAttachmentPartUnauthorized) downloadEmailAttachmentPartRes() {}
+
 type DownloadRawEmailBadRequest ErrorResponse
 
 func (*DownloadRawEmailBadRequest) downloadRawEmailRes() {}
@@ -7030,6 +7127,38 @@ func (*DownloadRawEmailOKHeaders) downloadRawEmailRes() {}
 type DownloadRawEmailUnauthorized ErrorResponse
 
 func (*DownloadRawEmailUnauthorized) downloadRawEmailRes() {}
+
+type DownloadSentAttachmentPartBadGateway ErrorResponse
+
+func (*DownloadSentAttachmentPartBadGateway) downloadSentAttachmentPartRes() {}
+
+type DownloadSentAttachmentPartBadRequest ErrorResponse
+
+func (*DownloadSentAttachmentPartBadRequest) downloadSentAttachmentPartRes() {}
+
+type DownloadSentAttachmentPartConflict ErrorResponse
+
+func (*DownloadSentAttachmentPartConflict) downloadSentAttachmentPartRes() {}
+
+type DownloadSentAttachmentPartForbidden ErrorResponse
+
+func (*DownloadSentAttachmentPartForbidden) downloadSentAttachmentPartRes() {}
+
+type DownloadSentAttachmentPartGone ErrorResponse
+
+func (*DownloadSentAttachmentPartGone) downloadSentAttachmentPartRes() {}
+
+type DownloadSentAttachmentPartNotFound ErrorResponse
+
+func (*DownloadSentAttachmentPartNotFound) downloadSentAttachmentPartRes() {}
+
+type DownloadSentAttachmentPartRequestEntityTooLarge ErrorResponse
+
+func (*DownloadSentAttachmentPartRequestEntityTooLarge) downloadSentAttachmentPartRes() {}
+
+type DownloadSentAttachmentPartUnauthorized ErrorResponse
+
+func (*DownloadSentAttachmentPartUnauthorized) downloadSentAttachmentPartRes() {}
 
 type DownloadToken struct {
 	APIKey string
@@ -9097,6 +9226,12 @@ const (
 	ErrorResponseErrorCodeConflict                      ErrorResponseErrorCode = "conflict"
 	ErrorResponseErrorCodeMxConflict                    ErrorResponseErrorCode = "mx_conflict"
 	ErrorResponseErrorCodeNotScheduled                  ErrorResponseErrorCode = "not_scheduled"
+	ErrorResponseErrorCodeAttachmentChanged             ErrorResponseErrorCode = "attachment_changed"
+	ErrorResponseErrorCodeContentDiscarded              ErrorResponseErrorCode = "content_discarded"
+	ErrorResponseErrorCodeAttachmentLimitExceeded       ErrorResponseErrorCode = "attachment_limit_exceeded"
+	ErrorResponseErrorCodeAttachmentIntegrityFailed     ErrorResponseErrorCode = "attachment_integrity_failed"
+	ErrorResponseErrorCodeAttachmentNotReady            ErrorResponseErrorCode = "attachment_not_ready"
+	ErrorResponseErrorCodeAttachmentStorageUnavailable  ErrorResponseErrorCode = "attachment_storage_unavailable"
 	ErrorResponseErrorCodeOutboundDisabled              ErrorResponseErrorCode = "outbound_disabled"
 	ErrorResponseErrorCodeCannotSendFromDomain          ErrorResponseErrorCode = "cannot_send_from_domain"
 	ErrorResponseErrorCodeRecipientNotAllowed           ErrorResponseErrorCode = "recipient_not_allowed"
@@ -9163,6 +9298,12 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeConflict,
 		ErrorResponseErrorCodeMxConflict,
 		ErrorResponseErrorCodeNotScheduled,
+		ErrorResponseErrorCodeAttachmentChanged,
+		ErrorResponseErrorCodeContentDiscarded,
+		ErrorResponseErrorCodeAttachmentLimitExceeded,
+		ErrorResponseErrorCodeAttachmentIntegrityFailed,
+		ErrorResponseErrorCodeAttachmentNotReady,
+		ErrorResponseErrorCodeAttachmentStorageUnavailable,
 		ErrorResponseErrorCodeOutboundDisabled,
 		ErrorResponseErrorCodeCannotSendFromDomain,
 		ErrorResponseErrorCodeRecipientNotAllowed,
@@ -9238,6 +9379,18 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeMxConflict:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeNotScheduled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAttachmentChanged:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeContentDiscarded:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAttachmentLimitExceeded:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAttachmentIntegrityFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAttachmentNotReady:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAttachmentStorageUnavailable:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		return []byte(s), nil
@@ -9377,6 +9530,24 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeNotScheduled:
 		*s = ErrorResponseErrorCodeNotScheduled
+		return nil
+	case ErrorResponseErrorCodeAttachmentChanged:
+		*s = ErrorResponseErrorCodeAttachmentChanged
+		return nil
+	case ErrorResponseErrorCodeContentDiscarded:
+		*s = ErrorResponseErrorCodeContentDiscarded
+		return nil
+	case ErrorResponseErrorCodeAttachmentLimitExceeded:
+		*s = ErrorResponseErrorCodeAttachmentLimitExceeded
+		return nil
+	case ErrorResponseErrorCodeAttachmentIntegrityFailed:
+		*s = ErrorResponseErrorCodeAttachmentIntegrityFailed
+		return nil
+	case ErrorResponseErrorCodeAttachmentNotReady:
+		*s = ErrorResponseErrorCodeAttachmentNotReady
+		return nil
+	case ErrorResponseErrorCodeAttachmentStorageUnavailable:
+		*s = ErrorResponseErrorCodeAttachmentStorageUnavailable
 		return nil
 	case ErrorResponseErrorCodeOutboundDisabled:
 		*s = ErrorResponseErrorCodeOutboundDisabled
@@ -9681,6 +9852,8 @@ func (s *ErrorResponseHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
+func (*ErrorResponseHeaders) downloadEmailAttachmentPartRes()   {}
+func (*ErrorResponseHeaders) downloadSentAttachmentPartRes()    {}
 func (*ErrorResponseHeaders) pollCliLoginRes()                  {}
 func (*ErrorResponseHeaders) resendAgentSignupVerificationRes() {}
 func (*ErrorResponseHeaders) resendCliSignupVerificationRes()   {}
@@ -25262,6 +25435,17 @@ type SentEmailDetail struct {
 	// carried only a plain-text body, or when bodies
 	// have been discarded post-send.
 	BodyHTML OptNilString `json:"body_html"`
+	// Metadata for submitted inline attachments; download availability is reported separately. Metadata
+	// may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded
+	// payload files are not included in the inline archive.
+	Attachments []SentEmailDetailAttachmentsItem `json:"attachments"`
+	// Original decoded attachment byte total accepted for this send, not the compressed archive size. It
+	// may exceed the retained inline total after offloading.
+	AttachmentsSizeBytes OptInt `json:"attachments_size_bytes"`
+	// Whether an inline attachment archive has been successfully retained and is available for download.
+	// Download authorization is checked separately; address-bound agent connection keys cannot download
+	// archives.
+	AttachmentsDownloadAvailable OptBool `json:"attachments_download_available"`
 }
 
 // GetID returns the value of ID.
@@ -25429,6 +25613,21 @@ func (s *SentEmailDetail) GetBodyHTML() OptNilString {
 	return s.BodyHTML
 }
 
+// GetAttachments returns the value of Attachments.
+func (s *SentEmailDetail) GetAttachments() []SentEmailDetailAttachmentsItem {
+	return s.Attachments
+}
+
+// GetAttachmentsSizeBytes returns the value of AttachmentsSizeBytes.
+func (s *SentEmailDetail) GetAttachmentsSizeBytes() OptInt {
+	return s.AttachmentsSizeBytes
+}
+
+// GetAttachmentsDownloadAvailable returns the value of AttachmentsDownloadAvailable.
+func (s *SentEmailDetail) GetAttachmentsDownloadAvailable() OptBool {
+	return s.AttachmentsDownloadAvailable
+}
+
 // SetID sets the value of ID.
 func (s *SentEmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -25592,6 +25791,113 @@ func (s *SentEmailDetail) SetBodyText(val OptNilString) {
 // SetBodyHTML sets the value of BodyHTML.
 func (s *SentEmailDetail) SetBodyHTML(val OptNilString) {
 	s.BodyHTML = val
+}
+
+// SetAttachments sets the value of Attachments.
+func (s *SentEmailDetail) SetAttachments(val []SentEmailDetailAttachmentsItem) {
+	s.Attachments = val
+}
+
+// SetAttachmentsSizeBytes sets the value of AttachmentsSizeBytes.
+func (s *SentEmailDetail) SetAttachmentsSizeBytes(val OptInt) {
+	s.AttachmentsSizeBytes = val
+}
+
+// SetAttachmentsDownloadAvailable sets the value of AttachmentsDownloadAvailable.
+func (s *SentEmailDetail) SetAttachmentsDownloadAvailable(val OptBool) {
+	s.AttachmentsDownloadAvailable = val
+}
+
+// Metadata for one submitted inline attachment.
+type SentEmailDetailAttachmentsItem struct {
+	Filename        NilString `json:"filename"`
+	ContentType     string    `json:"content_type"`
+	SizeBytes       int       `json:"size_bytes"`
+	SHA256          string    `json:"sha256"`
+	PartIndex       int       `json:"part_index"`
+	TarPath         string    `json:"tar_path"`
+	AdditionalProps SentEmailDetailAttachmentsItemAdditional
+}
+
+// GetFilename returns the value of Filename.
+func (s *SentEmailDetailAttachmentsItem) GetFilename() NilString {
+	return s.Filename
+}
+
+// GetContentType returns the value of ContentType.
+func (s *SentEmailDetailAttachmentsItem) GetContentType() string {
+	return s.ContentType
+}
+
+// GetSizeBytes returns the value of SizeBytes.
+func (s *SentEmailDetailAttachmentsItem) GetSizeBytes() int {
+	return s.SizeBytes
+}
+
+// GetSHA256 returns the value of SHA256.
+func (s *SentEmailDetailAttachmentsItem) GetSHA256() string {
+	return s.SHA256
+}
+
+// GetPartIndex returns the value of PartIndex.
+func (s *SentEmailDetailAttachmentsItem) GetPartIndex() int {
+	return s.PartIndex
+}
+
+// GetTarPath returns the value of TarPath.
+func (s *SentEmailDetailAttachmentsItem) GetTarPath() string {
+	return s.TarPath
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *SentEmailDetailAttachmentsItem) GetAdditionalProps() SentEmailDetailAttachmentsItemAdditional {
+	return s.AdditionalProps
+}
+
+// SetFilename sets the value of Filename.
+func (s *SentEmailDetailAttachmentsItem) SetFilename(val NilString) {
+	s.Filename = val
+}
+
+// SetContentType sets the value of ContentType.
+func (s *SentEmailDetailAttachmentsItem) SetContentType(val string) {
+	s.ContentType = val
+}
+
+// SetSizeBytes sets the value of SizeBytes.
+func (s *SentEmailDetailAttachmentsItem) SetSizeBytes(val int) {
+	s.SizeBytes = val
+}
+
+// SetSHA256 sets the value of SHA256.
+func (s *SentEmailDetailAttachmentsItem) SetSHA256(val string) {
+	s.SHA256 = val
+}
+
+// SetPartIndex sets the value of PartIndex.
+func (s *SentEmailDetailAttachmentsItem) SetPartIndex(val int) {
+	s.PartIndex = val
+}
+
+// SetTarPath sets the value of TarPath.
+func (s *SentEmailDetailAttachmentsItem) SetTarPath(val string) {
+	s.TarPath = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *SentEmailDetailAttachmentsItem) SetAdditionalProps(val SentEmailDetailAttachmentsItemAdditional) {
+	s.AdditionalProps = val
+}
+
+type SentEmailDetailAttachmentsItemAdditional map[string]jx.Raw
+
+func (s *SentEmailDetailAttachmentsItemAdditional) init() SentEmailDetailAttachmentsItemAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // Ref: #/components/schemas/SentEmailRescheduleInput

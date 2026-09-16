@@ -502,7 +502,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -2527,6 +2527,26 @@ export type SentEmailDetail = SentEmailSummary & {
      *
      */
     body_html?: string | null;
+    /**
+     * Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.
+     */
+    attachments?: Array<{
+        filename: string | null;
+        content_type: string;
+        size_bytes: number;
+        sha256: string;
+        part_index: number;
+        tar_path: string;
+        [key: string]: unknown;
+    }>;
+    /**
+     * Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading.
+     */
+    attachments_size_bytes?: number;
+    /**
+     * Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives.
+     */
+    attachments_download_available?: boolean;
 };
 
 /**
@@ -4417,6 +4437,11 @@ export type TemplateInstallStatus = {
 };
 
 /**
+ * The attachment metadata `part_index`, not its offset in the attachments array
+ */
+export type AttachmentPartIndex = number;
+
+/**
  * Resource UUID
  */
 export type ResourceId = string;
@@ -5783,6 +5808,138 @@ export type DownloadAttachmentsResponses = {
 };
 
 export type DownloadAttachmentsResponse = DownloadAttachmentsResponses[keyof DownloadAttachmentsResponses];
+
+export type DownloadEmailAttachmentPartData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+        /**
+         * The attachment metadata `part_index`, not its offset in the attachments array
+         */
+        part_index: number;
+    };
+    query?: never;
+    url: '/emails/{id}/attachments/{part_index}';
+};
+
+export type DownloadEmailAttachmentPartErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Missing or inaccessible message, or missing attachment part
+     */
+    404: ErrorResponse;
+    /**
+     * attachment_changed; refresh email detail before selecting a part again
+     */
+    409: ErrorResponse;
+    /**
+     * content_discarded; the original content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * attachment_limit_exceeded; the attachment exceeds download limits
+     */
+    413: ErrorResponse;
+    /**
+     * attachment_integrity_failed; stored content failed integrity validation
+     */
+    502: ErrorResponse;
+    /**
+     * attachment_not_ready or attachment_storage_unavailable; retry after the indicated delay
+     */
+    503: ErrorResponse;
+};
+
+export type DownloadEmailAttachmentPartError = DownloadEmailAttachmentPartErrors[keyof DownloadEmailAttachmentPartErrors];
+
+export type DownloadEmailAttachmentPartResponses = {
+    /**
+     * Original attachment bytes; never a JSON envelope or a base64 string
+     */
+    200: Blob | File;
+};
+
+export type DownloadEmailAttachmentPartResponse = DownloadEmailAttachmentPartResponses[keyof DownloadEmailAttachmentPartResponses];
+
+export type DownloadSentAttachmentPartData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+        /**
+         * The attachment metadata `part_index`, not its offset in the attachments array
+         */
+        part_index: number;
+    };
+    query?: never;
+    url: '/sent-emails/{id}/attachments/{part_index}';
+};
+
+export type DownloadSentAttachmentPartErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Missing or inaccessible message, or missing attachment part
+     */
+    404: ErrorResponse;
+    /**
+     * attachment_changed; refresh email detail before selecting a part again
+     */
+    409: ErrorResponse;
+    /**
+     * content_discarded; the original content is no longer available
+     */
+    410: ErrorResponse;
+    /**
+     * attachment_limit_exceeded; the attachment exceeds download limits
+     */
+    413: ErrorResponse;
+    /**
+     * attachment_integrity_failed; stored content failed integrity validation
+     */
+    502: ErrorResponse;
+    /**
+     * attachment_not_ready or attachment_storage_unavailable; retry after the indicated delay
+     */
+    503: ErrorResponse;
+};
+
+export type DownloadSentAttachmentPartError = DownloadSentAttachmentPartErrors[keyof DownloadSentAttachmentPartErrors];
+
+export type DownloadSentAttachmentPartResponses = {
+    /**
+     * Original attachment bytes; never a JSON envelope or a base64 string
+     */
+    200: Blob | File;
+};
+
+export type DownloadSentAttachmentPartResponse = DownloadSentAttachmentPartResponses[keyof DownloadSentAttachmentPartResponses];
 
 export type ReplyToEmailData = {
     body: ReplyInput;

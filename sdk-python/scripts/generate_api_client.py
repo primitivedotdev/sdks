@@ -95,6 +95,8 @@ def use_bytes_for_file_responses(directory: Path) -> None:
     for py_file in directory.rglob("*.py"):
         text = py_file.read_text()
         new_text = text.replace("BytesIO(response.text)", "BytesIO(response.content)")
+        if "BytesIO(response.content)" in new_text:
+            new_text = "\n".join(line.rstrip() for line in new_text.splitlines()) + "\n"
         if new_text != text:
             py_file.write_text(new_text)
 

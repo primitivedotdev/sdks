@@ -43,6 +43,29 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("registers binary attachment part commands and metadata-index flags", () => {
+    for (const id of [
+      "emails:download-email-attachment-part",
+      "sending:download-sent-attachment-part",
+    ]) {
+      const command = COMMANDS[id] as unknown as {
+        flags: Record<string, unknown>;
+      };
+      expect(command).toBeDefined();
+      expect(command.flags["part-index"]).toBeDefined();
+      expect(command.flags.output).toBeDefined();
+      expect(command.flags.json).toBeUndefined();
+      const operation = operationManifest.find(
+        (op) => `${op.tagCommand}:${op.command}` === id,
+      );
+      expect(operation?.binaryResponse).toBe(true);
+      expect(
+        operation?.pathParams.find(
+          (parameter) => parameter.name === "part_index",
+        ),
+      ).toMatchObject({ minimum: 0, maximum: 2147483647, required: true });
+    }
+  });
   it("registers generated pull and completion operations", () => {
     expect(COMMANDS["endpoints:pull-webhook-event"]).toBeDefined();
     expect(COMMANDS["endpoints:complete-webhook-event"]).toBeDefined();
