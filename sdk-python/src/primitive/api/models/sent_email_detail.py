@@ -153,6 +153,11 @@ class SentEmailDetail:
                 have no metadata. Offloaded payload files are not included in the inline archive.
             attachments_size_bytes (int | Unset): Original decoded attachment byte total accepted for this send, not the
                 compressed archive size. It may exceed the retained inline total after offloading.
+            attachments_complete (bool | Unset): Whether attachments enumerates the complete original submitted attachment
+                set, including zero-byte and inline CID parts. True requires no submitted payload-reference, offloaded, or
+                visibility-filtered attachment to be omitted, retained content, and a published archive when the attachment
+                inventory is nonempty. False or absent provides no completeness proof, including for legacy or discarded
+                content. This field grants no download access and has no interaction semantics.
             attachments_download_available (bool | Unset): Whether an inline attachment archive has been successfully
                 retained and is available for download. Download authorization is checked separately; address-bound agent
                 connection keys cannot download archives.
@@ -193,6 +198,7 @@ class SentEmailDetail:
     body_html: None | str | Unset = UNSET
     attachments: list[SentEmailDetailAttachmentsItem] | Unset = UNSET
     attachments_size_bytes: int | Unset = UNSET
+    attachments_complete: bool | Unset = UNSET
     attachments_download_available: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -381,6 +387,8 @@ class SentEmailDetail:
 
         attachments_size_bytes = self.attachments_size_bytes
 
+        attachments_complete = self.attachments_complete
+
         attachments_download_available = self.attachments_download_available
 
 
@@ -446,6 +454,8 @@ class SentEmailDetail:
             field_dict["attachments"] = attachments
         if attachments_size_bytes is not UNSET:
             field_dict["attachments_size_bytes"] = attachments_size_bytes
+        if attachments_complete is not UNSET:
+            field_dict["attachments_complete"] = attachments_complete
         if attachments_download_available is not UNSET:
             field_dict["attachments_download_available"] = attachments_download_available
 
@@ -786,6 +796,8 @@ class SentEmailDetail:
 
         attachments_size_bytes = d.pop("attachments_size_bytes", UNSET)
 
+        attachments_complete = d.pop("attachments_complete", UNSET)
+
         attachments_download_available = d.pop("attachments_download_available", UNSET)
 
         sent_email_detail = cls(
@@ -824,6 +836,7 @@ class SentEmailDetail:
             body_html=body_html,
             attachments=attachments,
             attachments_size_bytes=attachments_size_bytes,
+            attachments_complete=attachments_complete,
             attachments_download_available=attachments_download_available,
         )
 

@@ -31,6 +31,17 @@ array means the returned inventory is empty. Inventory may be limited by the
 caller's visibility, so an empty array does not prove that the original email
 had no attachments.
 
+`attachments_complete` is an optional boolean on the same sent detail operation.
+Only `true` proves that `attachments` enumerates the complete original submitted
+attachment set, including zero-byte and inline CID parts. No submitted
+payload-reference, offloaded, or visibility-filtered attachment may be omitted;
+content must remain retained, and a nonempty attachment inventory requires a
+published archive.
+`false` or an absent field provides no completeness proof, including for legacy
+or discarded content. An empty returned array alone does not prove completeness.
+This field grants no download access and carries no interaction semantics.
+It is pending service release along with the attachment-part contract above.
+
 `attachments_download_available` describes retained inline archive availability.
 It does not grant per-part access or replace download authorization. The original
 accepted byte total can exceed retained inline bytes after offloading, and

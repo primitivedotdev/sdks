@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-faster/jx"
 	"github.com/google/uuid"
 	api "github.com/primitivedotdev/sdks/sdk-go/api"
 )
@@ -283,5 +284,83 @@ func TestAttachmentPartAggregateByteCountPrecision(t *testing.T) {
 	total, set = detail.AttachmentsSizeBytes.Get()
 	if !set || total != 9007199254740991 {
 		t.Fatalf("Lost byte count precision: %d", total)
+	}
+}
+
+func TestAttachmentPartSentCompleteness(t *testing.T) {
+	raw, err := os.ReadFile("../test-fixtures/sent-email-attachment.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var base struct {
+		Data map[string]json.RawMessage `json:"data"`
+	}
+	if err = json.Unmarshal(raw, &base); err != nil {
+		t.Fatal(err)
+	}
+	raw, err = os.ReadFile("../test-fixtures/sent-attachment-completeness.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Name   string                     `json:"name"`
+		Fields map[string]json.RawMessage `json:"fields"`
+	}
+	if err = json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range cases {
+		t.Run(item.Name, func(t *testing.T) {
+			data := make(map[string]json.RawMessage)
+			for key, value := range base.Data {
+				data[key] = value
+			}
+			for key, value := range item.Fields {
+				data[key] = value
+			}
+			body, err := json.Marshal(map[string]any{"success": true, "data": data})
+			if err != nil {
+				t.Fatal(err)
+			}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/sent-emails/11111111-1111-4111-8111-111111111111" {
+					t.Errorf("Unexpected path %s", r.URL.Path)
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write(body)
+			}))
+			defer server.Close()
+			client, err := api.NewClient(server.URL, attachmentPartSecurity{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			response, err := client.GetSentEmail(context.Background(), api.GetSentEmailParams{ID: uuid.MustParse("11111111-1111-4111-8111-111111111111")})
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, ok := response.(*api.GetSentEmailOK)
+			if !ok {
+				t.Fatalf("Unexpected response %T", response)
+			}
+			value, set := result.Data.AttachmentsComplete.Get()
+			expected, present := item.Fields["attachments_complete"]
+			if set != present {
+				t.Fatal("Changed completeness field presence")
+			}
+			if present && value != (string(expected) == "true") {
+				t.Fatal("Changed completeness value")
+			}
+			encoder := &jx.Encoder{}
+			result.Data.Encode(encoder)
+			roundTrip := encoder.Bytes()
+			var decoded map[string]json.RawMessage
+			if err = json.Unmarshal(roundTrip, &decoded); err != nil {
+				t.Fatal(err)
+			}
+			actual, encoded := decoded["attachments_complete"]
+			if encoded != present || (present && string(actual) != string(expected)) {
+				t.Fatal("Changed completeness during encoding")
+			}
+		})
 	}
 }

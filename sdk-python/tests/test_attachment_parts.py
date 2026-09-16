@@ -173,3 +173,37 @@ def test_sent_attachment_total_keeps_safe_integer_precision() -> None:
     total: int = detail.attachments_size_bytes
     assert total == 9007199254740991
     assert detail.to_dict()["attachments_size_bytes"] == total
+
+
+COMPLETENESS_CASES = json.loads(
+    (Path(__file__).parents[2] / "test-fixtures/sent-attachment-completeness.json").read_text()
+)
+
+
+@pytest.mark.parametrize("item", COMPLETENESS_CASES, ids=[item["name"] for item in COMPLETENESS_CASES])
+def test_sent_attachment_completeness(item: dict[str, object]) -> None:
+    fields = item["fields"]
+    assert isinstance(fields, dict)
+    data = {**SENT_FIXTURE["data"], **fields}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == f"/sent-emails/{FIXTURE['id']}"
+        return httpx.Response(200, json={"success": True, "data": data})
+
+    client = AuthenticatedClient(base_url="https://example.test", token=KEY)
+    with httpx.Client(base_url="https://example.test", transport=httpx.MockTransport(handler)) as http:
+        client.set_httpx_client(http)
+        result = get_sent_email.sync(UUID(FIXTURE["id"]), client=client)
+    assert isinstance(result, GetSentEmailResponse200)
+    detail = result.data
+    assert isinstance(detail, SentEmailDetail)
+    complete: bool | Unset = detail.attachments_complete
+    if "attachments_complete" in fields:
+        assert complete is fields["attachments_complete"]
+    else:
+        assert complete is UNSET
+    serialized = detail.to_dict()
+    assert ("attachments_complete" in serialized) == ("attachments_complete" in fields)
+    for key in data:
+        if key.startswith("attachments"):
+            assert serialized[key] == data[key]
