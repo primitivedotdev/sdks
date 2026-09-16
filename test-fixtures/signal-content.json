@@ -1,0 +1,1582 @@
+[
+  {
+    "name": "read fallback",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "read body None",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": null,
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "read body ''",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "read body '\\n'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "read body 'I read your message.\\n'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "read body 'I read your message.\\r\\n'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.\r\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "mixed body '\\n\\n'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "\n\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "mixed body ' I read your message.'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": " I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "mixed body 'I read your message. '",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message. ",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "mixed body 'I read your message.\\n\\n'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.\n\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "mixed body 'I read your message.\\r'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.\r",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "mixed body 'I read your message.\\nPlease continue.'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.\nPlease continue.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "HTML '<p>I read your message.</p>'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": "<p>I read your message.</p>"
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "html_present",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "HTML ' '",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": " "
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "html_present",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "HTML '\\n'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": "\n"
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "html_present",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "empty HTML",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": ""
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "unknown inventory",
+    "inventory": {
+      "status": "unavailable"
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "unavailable",
+    "reason": "inventory_unavailable",
+    "interactionStatus": null
+  },
+  {
+    "name": "missing complete inventory parts",
+    "inventory": {
+      "status": "complete"
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "unavailable",
+    "reason": "inventory_unavailable",
+    "interactionStatus": null
+  },
+  {
+    "name": "null complete inventory parts",
+    "inventory": {
+      "status": "complete",
+      "parts": null
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "unavailable",
+    "reason": "inventory_unavailable",
+    "interactionStatus": null
+  },
+  {
+    "name": "explicit empty inventory",
+    "inventory": {
+      "status": "complete",
+      "parts": []
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "plain",
+    "reason": "no_canonical_part",
+    "interactionStatus": null
+  },
+  {
+    "name": "ordinary attachments",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "report.json",
+          "contentType": "application/json"
+        },
+        {
+          "filename": null,
+          "contentType": "image/png"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "plain",
+    "reason": "no_canonical_part",
+    "interactionStatus": null
+  },
+  {
+    "name": "plain with unavailable bodies",
+    "inventory": {
+      "status": "complete",
+      "parts": []
+    },
+    "bodies": {
+      "status": "unavailable"
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "plain",
+    "reason": "no_canonical_part",
+    "interactionStatus": null
+  },
+  {
+    "name": "canonical unavailable bodies",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "unavailable"
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "unavailable",
+    "reason": "bodies_unavailable",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "canonical unavailable bytes",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "classification": "unavailable",
+    "reason": "part_unavailable",
+    "interactionStatus": null
+  },
+  {
+    "name": "canonical empty bytes",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "",
+    "classification": "mixed_or_unsupported",
+    "reason": "invalid_interaction",
+    "interactionStatus": "invalid"
+  },
+  {
+    "name": "duplicate canonical parts",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        },
+        {
+          "filename": "INTERACTION.JSON",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "duplicate_canonical_parts",
+    "interactionStatus": null
+  },
+  {
+    "name": "additional attachment",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        },
+        {
+          "filename": "extra.txt",
+          "contentType": "text/plain"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "additional_parts",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "additional unavailable body",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        },
+        {
+          "filename": null,
+          "contentType": "image/png"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "unavailable"
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "additional_parts",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "filename ASCII case and media charset",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "INTERACTION.JSON",
+          "contentType": " APPLICATION/JSON; charset=utf-8"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "Unicode filename is not ASCII case",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "\u0130NTERACTION.JSON",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "plain",
+    "reason": "no_canonical_part",
+    "interactionStatus": null
+  },
+  {
+    "name": "wrong content type None",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": null
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_content_type",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "wrong content type 'text/plain'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "text/plain"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_content_type",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "wrong content type 'application/json\\n'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json\n"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_content_type",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "wrong content type '\\x85application/json'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "\u0085application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_content_type",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "unsupported protocol",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "unsupported protocol_version",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":2,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "unsupported step",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"other\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "unsupported prev_step_id",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":\"33333333-3333-4333-8333-333333333333\",\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "unsupported expires_at",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2026-09-16T00:00:00Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "unsupported extra",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"},\"extra\":\"extension\"}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "unknown envelope version",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":2,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "unsupported"
+  },
+  {
+    "name": "invalid target 'Original@example.com'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"Original@example.com\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "invalid target '<Original@example.com> '",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com> \"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "invalid target '<id>'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<id>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "invalid target '<a@@b>'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<a@@b>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "invalid target '<a\\nb@c>'",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<a\\nb@c>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "ACK received",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Received your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"received\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "ACK will_process",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I intend to process your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"will_process\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "ACK will_not_process",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I will not process your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"will_not_process\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "ACK note 49",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Received your message.\r\n\r\n\r\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"received\",\"note\":\"\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "ACK note 50",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Received your message.\r\n\r\n first\r\nlast\n\r\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"received\",\"note\":\" first\\r\\nlast\\n\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "ACK note 51",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Received your message.\r\n\r\n\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\r\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"received\",\"note\":\"\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "ACK note 52",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Received your message.\r\n\r\n\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\ud83d\udcec\r\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"received\",\"note\":\"\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\\ud83d\\udcec\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "ACK note 53",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Received your message.\r\n\r\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"received\",\"note\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "ACK note 54",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Received your message.\r\n\r\nbefore\u0000after\r\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"received\",\"note\":\"before\\u0000after\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "invalid ACK {'note': None}",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"received\",\"note\":null}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "invalid ACK {'status': 'working'}",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"working\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "invalid ACK {'extra': 'extension'}",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"ack\",\"protocol_version\":1,\"step\":\"ack\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"status\":\"received\",\"extra\":\"extension\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "working 2028-02-29T23:59:59.123Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "working 1970-01-01T00:00:00Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"1970-01-01T00:00:00Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "working 9999-12-31T23:59:59.123456789Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"9999-12-31T23:59:59.123456789Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "working 2026-02-29T00:00:00Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2026-02-29T00:00:00Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "working 1969-12-31T23:59:59Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"1969-12-31T23:59:59Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "working 2026-01-01T24:00:00Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2026-01-01T24:00:00Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "working 2026-01-01T00:00:60Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2026-01-01T00:00:60Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "working 2026-01-01T00:00:00+00:00",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2026-01-01T00:00:00+00:00\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "working None",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "malformed 67",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{bad",
+    "classification": "mixed_or_unsupported",
+    "reason": "invalid_interaction",
+    "interactionStatus": "invalid"
+  },
+  {
+    "name": "malformed 68",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "[]",
+    "classification": "mixed_or_unsupported",
+    "reason": "invalid_interaction",
+    "interactionStatus": "invalid"
+  },
+  {
+    "name": "malformed 69",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\":\"read\",\"protocol\":\"read\", \"protocol_version\": 1, \"step\": \"read\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"subject_message_id\": \"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "invalid_interaction",
+    "interactionStatus": "invalid"
+  },
+  {
+    "name": "malformed 70",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"read\", \"protocol_version\": 1, \"step\": \"read\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"subject_message_id\":\"<Original@example.com>\",\"subject_message_id\":\"<Other@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "invalid_interaction",
+    "interactionStatus": "invalid"
+  },
+  {
+    "name": "malformed 71",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"read\", \"protocol_version\": 1, \"step\": \"read\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+    "classification": "mixed_or_unsupported",
+    "reason": "invalid_interaction",
+    "interactionStatus": "invalid"
+  },
+  {
+    "name": "malformed 72",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"read\", \"protocol_version\": 1, \"step\": \"read\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\":9007199254740992}",
+    "classification": "mixed_or_unsupported",
+    "reason": "invalid_interaction",
+    "interactionStatus": "invalid"
+  },
+  {
+    "name": "invalid UTF8",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "invalid_interaction",
+    "interactionStatus": "invalid",
+    "hex": "ff"
+  },
+  {
+    "name": "oversized source",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "invalid_interaction",
+    "interactionStatus": "invalid",
+    "padding": 65537
+  },
+  {
+    "name": "source formatting preserved",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I read your message.",
+      "html": null
+    },
+    "source": "  \n{\n  \"interaction_version\": 1,\n  \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\",\n  \"protocol\": \"read\",\n  \"protocol_version\": 1,\n  \"step\": \"read\",\n  \"step_id\": \"22222222-2222-4222-8222-222222222222\",\n  \"prev_step_id\": null,\n  \"expires_at\": null,\n  \"payload\": {\n    \"subject_message_id\": \"<Original@example.com>\"\n  }\n}\n",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  }
+]

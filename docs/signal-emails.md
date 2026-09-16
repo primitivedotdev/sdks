@@ -207,3 +207,87 @@ Shared fixtures exercise preparation byte parity, header bounds, body/key reuse,
 account mismatch and expiry. Mock HTTP tests invoke the generated operations in
 all three languages. These checks do not claim live email delivery or receiver
 interpretation of signals.
+
+## Pure content classification
+
+`classifySignalContent` (Node), `classify_signal_content` (Python), and
+`ClassifySignalContent` (Go) share the same content-only rule. They perform no
+HTTP, authentication, persistence or emission. Classification does not complete
+work or establish that the actor in an attachment matches an authenticated sender.
+
+The input separates known absence from unavailable data:
+
+```ts
+const result = classifySignalContent({
+  inventory: {
+    status: "complete",
+    parts: [{ filename: "interaction.json", contentType: "application/json" }],
+  },
+  bodies: { status: "complete", text: "I read your message.\r\n", html: null },
+  canonicalPartBytes: decodedBytes,
+});
+```
+
+`inventory` can instead be `{ status: "unavailable" }`. A complete inventory is
+an explicit caller assertion that **all outer attachments** are listed, including
+inline, offloaded and unrelated parts. An empty retained-inline archive, a
+recipient-redacted inventory or missing metadata cannot establish completeness.
+Only an explicitly complete empty inventory means there are no attachments.
+
+`bodies` can likewise be `{ status: "unavailable" }`. Complete bodies describe the
+original text and HTML projections; `null` or `""` means known absence. Missing,
+truncated, generated or sanitized projections must not be presented as complete
+original content when that transformation loses body presence or text. Complete
+inventory with no canonical part can classify as plain even with unavailable
+bodies. Canonical part bytes are decoded bytes, not JSON reserialization or base64
+text. Null/nil bytes mean unavailable; a non-nil empty byte array is a known empty,
+malformed JSON part.
+
+Results expose `classification`, a fixed `reason`, and, when a unique canonical
+part's bytes are available, the existing parser's `interaction` result. Valid and
+unsupported envelopes retain exact source through that parser, including for
+mixed content. Invalid JSON follows the parser's existing invalid result without
+source; the caller still owns its original input. Duplicate canonical parts are
+ambiguous, so no single-part parser result is returned.
+
+| Classification | Condition |
+| --- | --- |
+| `plain` | Complete inventory, no canonical filename |
+| `informational_only` | Exactly one supported canonical signal and no additional content |
+| `mixed_or_unsupported` | Duplicate/extra parts, invalid or unsupported signal, HTML, or differing text |
+| `unavailable` | Unknown inventory, or unavailable unique-part bytes/body projection |
+
+The classifier recognizes `interaction.json` with ASCII case-insensitive filename
+comparison. The part's media type must be `application/json`, with ASCII case
+insensitivity, optional surrounding space/tab, and optional MIME parameters.
+Other media types remain inspectable as unsupported. Additional parts and duplicate
+canonical filenames always prevent an informational-only result.
+
+Supported signals require exactly the nine documented version 1 envelope keys;
+unknown extensions are not silently dropped. Protocol/version/step must match
+`ack/1`, `read/1` or `working/1`, `prev_step_id` must be null, and the interaction
+UUID and step UUID must be distinct. Payload keys must match the wire format
+above exactly, with a bracketed bounded Message-ID in `subject_message_id`. ACK
+status and note follow the same limits as preparation, including UTF-16 length,
+Unicode and NUL checks. Read and ACK expiry must be null. Working expiry must be
+a real UTC calendar time in years 1970 through 9999, with a `Z` suffix and optional
+one to nine fractional second digits; leap seconds are not accepted. The classifier
+has no clock and does not infer observation time, remaining lifetime or the
+sender's original 60-second interval from an expiry alone.
+
+For informational-only content, HTML must be known absent/empty. Plain text must
+be known absent/empty or exactly the helper's canonical fallback, including the
+ACK note. Normalize CRLF to LF on both sides and allow at most one additional MIME
+terminal LF. No other trimming or whitespace folding occurs. Thus a single LF can
+represent an empty MIME text part, while a second added LF or additional prose
+keeps the carrier mixed. The fallback builder is shared with preparation.
+
+Reasons are `inventory_unavailable`, `no_canonical_part`,
+`duplicate_canonical_parts`, `additional_parts`, `part_unavailable`,
+`bodies_unavailable`, `invalid_interaction`, `unsupported_content_type`,
+`unsupported_signal`, `html_present`, `text_mismatch`, and `informational_signal`.
+When several conditions apply, inventory and part multiplicity are checked first,
+then part/body availability, parsing/media type, signal shape, HTML and text.
+An `informational_only` result is still untrusted content. Consumers separately
+verify carrier identity, original-message correlation and authorization before
+showing an interpreted status, and decide how ordinary or mixed mail is handled.

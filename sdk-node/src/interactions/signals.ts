@@ -143,16 +143,9 @@ export function prepareSignalEmail(
   milliseconds(now);
   let expires: number | null = null;
   const payload: Record<string, string> = { subject_message_id: target };
-  let text: string;
   if (input.kind === "ack") {
-    const bodies = {
-      received: "Received your message.",
-      will_process: "I intend to process your message.",
-      will_not_process: "I will not process your message.",
-    };
-    check(Object.hasOwn(bodies, input.status), "invalid ACK status");
+    check(signalText("ack", input.status) !== "", "invalid ACK status");
     payload.status = input.status;
-    text = bodies[input.status];
     if (input.note !== undefined) {
       check(
         typeof input.note === "string" &&
@@ -164,10 +157,8 @@ export function prepareSignalEmail(
         "invalid note",
       );
       payload.note = input.note;
-      text += `\n\n${input.note}`;
     }
-  } else if (input.kind === "read") text = "I read your message.";
-  else {
+  } else if (input.kind !== "read") {
     check(input.kind === "working", "invalid signal kind");
     milliseconds(input.expiresAtMs);
     check(
@@ -175,7 +166,6 @@ export function prepareSignalEmail(
       "working expiry must be within 60 seconds",
     );
     expires = input.expiresAtMs;
-    text = "I am working on your message.";
   }
   const interaction = dependencies.uuid().toLowerCase(),
     step = dependencies.uuid().toLowerCase();
@@ -200,7 +190,7 @@ export function prepareSignalEmail(
     from: p.to,
     to: p.from,
     subject: subject || "Re: Your message",
-    body_text: text,
+    body_text: signalText(input.kind, payload.status, payload.note),
     in_reply_to: target,
     references,
     attachments: [
@@ -245,4 +235,24 @@ export async function sendPreparedSignal<T>(
       prepared.idempotencyKey,
     ),
   };
+}
+
+/** Internal shared fallback builder; callers validate the supported signal first. */
+export function signalText(
+  kind: string,
+  status?: string,
+  note?: string,
+): string {
+  if (kind === "read") return "I read your message.";
+  if (kind === "working") return "I am working on your message.";
+  const bodies: Record<string, string> = {
+    received: "Received your message.",
+    will_process: "I intend to process your message.",
+    will_not_process: "I will not process your message.",
+  };
+  const text =
+    status !== undefined && Object.hasOwn(bodies, status)
+      ? (bodies[status] ?? "")
+      : "";
+  return note === undefined ? text : `${text}\n\n${note}`;
 }

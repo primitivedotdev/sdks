@@ -154,13 +154,9 @@ func PrepareSignalEmail(input SignalInput, dependencies SignalDependencies) (Sig
 		Status           string  `json:"status,omitempty"`
 		Note             *string `json:"note,omitempty"`
 	}{SubjectMessageID: target}
-	var text string
 	switch input.Kind {
 	case "ack":
-		bodies := map[string]string{"received": "Received your message.", "will_process": "I intend to process your message.", "will_not_process": "I will not process your message."}
-		var ok bool
-		text, ok = bodies[input.Status]
-		if !ok {
+		if signalText("ack", input.Status, nil) == "" {
 			return zero, fmt.Errorf("invalid ACK status")
 		}
 		payload.Status = input.Status
@@ -170,10 +166,8 @@ func PrepareSignalEmail(input SignalInput, dependencies SignalDependencies) (Sig
 			}
 			note := *input.Note
 			payload.Note = &note
-			text += "\n\n" + note
 		}
 	case "read":
-		text = "I read your message."
 	case "working":
 		if input.ExpiresAtMs == nil || !signalMilliseconds(*input.ExpiresAtMs) || *input.ExpiresAtMs <= now || *input.ExpiresAtMs-now > 60000 {
 			return zero, fmt.Errorf("working expiry must be within 60 seconds")
@@ -182,7 +176,6 @@ func PrepareSignalEmail(input SignalInput, dependencies SignalDependencies) (Sig
 		expires = &value
 		formatted := time.UnixMilli(value).UTC().Format("2006-01-02T15:04:05.000Z")
 		expiry = &formatted
-		text = "I am working on your message."
 	default:
 		return zero, fmt.Errorf("invalid signal kind")
 	}
@@ -221,7 +214,7 @@ func PrepareSignalEmail(input SignalInput, dependencies SignalDependencies) (Sig
 		InReplyTo   string   `json:"in_reply_to"`
 		References  []string `json:"references"`
 		Attachments any      `json:"attachments"`
-	}{p.To, p.From, p.Subject, text, target, references, []any{attachment}}
+	}{p.To, p.From, p.Subject, signalText(input.Kind, input.Status, input.Note), target, references, []any{attachment}}
 	request, err := signalJSON(body)
 	if err != nil {
 		return zero, err
@@ -251,4 +244,18 @@ func SendPreparedSignal[T any](ctx context.Context, sendMail func(context.Contex
 		return zero, err
 	}
 	return SignalSendResult[T]{Status: "response", Result: result}, nil
+}
+
+func signalText(kind, status string, note *string) string {
+	if kind == "read" {
+		return "I read your message."
+	}
+	if kind == "working" {
+		return "I am working on your message."
+	}
+	text := map[string]string{"received": "Received your message.", "will_process": "I intend to process your message.", "will_not_process": "I will not process your message."}[status]
+	if note != nil {
+		text += "\n\n" + *note
+	}
+	return text
 }

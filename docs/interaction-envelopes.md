@@ -60,6 +60,6 @@ rejected. Python accepts builtin dict/list/scalars; Go accepts decoded
 objects must first be converted deliberately to JSON data. Validation does not
 invoke their serialization hooks.
 
-For explicit optional status-email preparation and sending, see
+For explicit optional status-email preparation, sending and pure content classification, see
 [Optional email signals](signal-emails.md). Parsing remains display-only and
 never automatically emits these messages.

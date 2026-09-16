@@ -275,6 +275,15 @@ export function validateInteractionEnvelope(
 }
 
 export type {
+  SignalContentBodies,
+  SignalContentInput,
+  SignalContentInventory,
+  SignalContentPart,
+  SignalContentReason,
+  SignalContentResult,
+} from "./classify.js";
+export { classifySignalContent } from "./classify.js";
+export type {
   PreparedSignal,
   SignalDependencies,
   SignalInput,
