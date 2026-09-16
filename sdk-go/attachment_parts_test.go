@@ -257,3 +257,31 @@ func TestAttachmentPartOptionalSentInventory(t *testing.T) {
 		t.Fatal("Lost explicit false availability")
 	}
 }
+
+func TestAttachmentPartAggregateByteCountPrecision(t *testing.T) {
+	raw, err := os.ReadFile("../test-fixtures/sent-email-attachment.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Data map[string]any `json:"data"`
+	}
+	if err = json.Unmarshal(raw, &document); err != nil {
+		t.Fatal(err)
+	}
+	document.Data["attachments_size_bytes"] = int64(9007199254740991)
+	raw, err = json.Marshal(document.Data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var detail api.SentEmailDetail
+	if err = json.Unmarshal(raw, &detail); err != nil {
+		t.Fatal(err)
+	}
+	var total int
+	var set bool
+	total, set = detail.AttachmentsSizeBytes.Get()
+	if !set || total != 9007199254740991 {
+		t.Fatalf("Lost byte count precision: %d", total)
+	}
+}

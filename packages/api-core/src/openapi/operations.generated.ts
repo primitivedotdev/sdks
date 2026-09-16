@@ -12330,8 +12330,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               }
             },
             "attachments_size_bytes": {
-              "type": "number",
+              "type": "integer",
               "minimum": 0,
+              "maximum": 9007199254740991,
               "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
             },
             "attachments_download_available": {
@@ -12994,8 +12995,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               }
             },
             "attachments_size_bytes": {
-              "type": "number",
+              "type": "integer",
               "minimum": 0,
+              "maximum": 9007199254740991,
               "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
             },
             "attachments_download_available": {
@@ -13931,8 +13933,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               }
             },
             "attachments_size_bytes": {
-              "type": "number",
+              "type": "integer",
               "minimum": 0,
+              "maximum": 9007199254740991,
               "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
             },
             "attachments_download_available": {

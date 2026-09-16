@@ -151,7 +151,7 @@ class SentEmailDetail:
             attachments (list[SentEmailDetailAttachmentsItem] | Unset): Metadata for submitted inline attachments; download
                 availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may
                 have no metadata. Offloaded payload files are not included in the inline archive.
-            attachments_size_bytes (float | Unset): Original decoded attachment byte total accepted for this send, not the
+            attachments_size_bytes (int | Unset): Original decoded attachment byte total accepted for this send, not the
                 compressed archive size. It may exceed the retained inline total after offloading.
             attachments_download_available (bool | Unset): Whether an inline attachment archive has been successfully
                 retained and is available for download. Download authorization is checked separately; address-bound agent
@@ -192,7 +192,7 @@ class SentEmailDetail:
     body_text: None | str | Unset = UNSET
     body_html: None | str | Unset = UNSET
     attachments: list[SentEmailDetailAttachmentsItem] | Unset = UNSET
-    attachments_size_bytes: float | Unset = UNSET
+    attachments_size_bytes: int | Unset = UNSET
     attachments_download_available: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 

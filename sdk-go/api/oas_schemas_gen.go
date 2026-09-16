@@ -25441,7 +25441,7 @@ type SentEmailDetail struct {
 	Attachments []SentEmailDetailAttachmentsItem `json:"attachments"`
 	// Original decoded attachment byte total accepted for this send, not the compressed archive size. It
 	// may exceed the retained inline total after offloading.
-	AttachmentsSizeBytes OptFloat64 `json:"attachments_size_bytes"`
+	AttachmentsSizeBytes OptInt `json:"attachments_size_bytes"`
 	// Whether an inline attachment archive has been successfully retained and is available for download.
 	// Download authorization is checked separately; address-bound agent connection keys cannot download
 	// archives.
@@ -25619,7 +25619,7 @@ func (s *SentEmailDetail) GetAttachments() []SentEmailDetailAttachmentsItem {
 }
 
 // GetAttachmentsSizeBytes returns the value of AttachmentsSizeBytes.
-func (s *SentEmailDetail) GetAttachmentsSizeBytes() OptFloat64 {
+func (s *SentEmailDetail) GetAttachmentsSizeBytes() OptInt {
 	return s.AttachmentsSizeBytes
 }
 
@@ -25799,7 +25799,7 @@ func (s *SentEmailDetail) SetAttachments(val []SentEmailDetailAttachmentsItem) {
 }
 
 // SetAttachmentsSizeBytes sets the value of AttachmentsSizeBytes.
-func (s *SentEmailDetail) SetAttachmentsSizeBytes(val OptFloat64) {
+func (s *SentEmailDetail) SetAttachmentsSizeBytes(val OptInt) {
 	s.AttachmentsSizeBytes = val
 }
 

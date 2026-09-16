@@ -290,3 +290,21 @@ it("preserves absent legacy sent inventory separately from an explicit empty inv
     expect(result.data?.data).toEqual(data);
   }
 });
+
+it("preserves the exact maximum aggregate attachment byte count", async () => {
+  const client = new PrimitiveClient({
+    fetch: async () =>
+      Response.json({
+        ...sentFixture,
+        data: {
+          ...sentFixture.data,
+          attachments_size_bytes: Number.MAX_SAFE_INTEGER,
+        },
+      }),
+  });
+  const result = await getSentEmail({
+    client: client.client,
+    path: { id: fixture.id },
+  });
+  expect(result.data?.data?.attachments_size_bytes).toBe(9007199254740991);
+});

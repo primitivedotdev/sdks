@@ -12559,18 +12559,18 @@ func (s *SentEmailDetail) Validate() error {
 	if err := func() error {
 		if value, ok := s.AttachmentsSizeBytes.Get(); ok {
 			if err := func() error {
-				if err := (validate.Float{
+				if err := (validate.Int{
 					MinSet:        true,
 					Min:           0,
-					MaxSet:        false,
-					Max:           0,
+					MaxSet:        true,
+					Max:           9007199254740991,
 					MinExclusive:  false,
 					MaxExclusive:  false,
 					MultipleOfSet: false,
-					MultipleOf:    nil,
+					MultipleOf:    0,
 					Pattern:       nil,
-				}).Validate(float64(value)); err != nil {
-					return errors.Wrap(err, "float")
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
 				}
 				return nil
 			}(); err != nil {

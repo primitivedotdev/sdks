@@ -14,7 +14,7 @@ from primitive.api.client import AuthenticatedClient
 from primitive.api.models.error_response import ErrorResponse
 from primitive.api.models.get_sent_email_response_200 import GetSentEmailResponse200
 from primitive.api.models.sent_email_detail import SentEmailDetail
-from primitive.api.types import UNSET, File
+from primitive.api.types import UNSET, File, Unset
 
 FIXTURE = json.loads(
     (Path(__file__).parents[2] / "test-fixtures/attachment-part.json").read_text()
@@ -165,3 +165,11 @@ def test_optional_sent_inventory_preserves_unknown_and_empty() -> None:
     null_name = SentEmailDetail.from_dict({**SENT_FIXTURE["data"], "attachments": [{**SENT_FIXTURE["data"]["attachments"][0], "filename": None}]})
     assert isinstance(null_name.attachments, list)
     assert null_name.attachments[0].filename is None
+
+
+def test_sent_attachment_total_keeps_safe_integer_precision() -> None:
+    detail = SentEmailDetail.from_dict({**SENT_FIXTURE["data"], "attachments_size_bytes": 9007199254740991})
+    assert not isinstance(detail.attachments_size_bytes, Unset)
+    total: int = detail.attachments_size_bytes
+    assert total == 9007199254740991
+    assert detail.to_dict()["attachments_size_bytes"] == total
