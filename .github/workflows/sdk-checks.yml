@@ -65,6 +65,16 @@ jobs:
               - 'json-schema/**'
               - 'openapi/**'
               - 'test-fixtures/**'
+              - 'scripts/smoke-signal-retry.py'
+              - 'scripts/signal-retry/**'
+              - 'scripts/parser-differential/**'
+              - 'sdk-node/src/interactions/**'
+              - 'sdk-python/src/primitive/interactions.py'
+              - 'sdk-python/src/primitive/signals.py'
+              - 'sdk-python/src/primitive/signal_content.py'
+              - 'sdk-go/interactions.go'
+              - 'sdk-go/signals.go'
+              - 'sdk-go/signal_content.go'
 
   node:
     name: Node (${{ matrix.node-version }})
@@ -239,6 +249,14 @@ jobs:
 
       - name: Run shared fixture checks
         run: make shared-check
+
+      - name: Check packaged signal crash and retry
+        run: make signal-retry-smoke
+
+      - name: Compare interaction parsers and calibrate fault detection
+        run: |
+          python3 scripts/parser-differential/run.py --cases 1000 --seed 1000 --output "${RUNNER_TEMP}/parser-differential"
+          python3 scripts/parser-differential/selftest.py
 
   ci:
     name: CI

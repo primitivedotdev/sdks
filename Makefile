@@ -3,6 +3,11 @@
 .PHONY: python-sync python-generate python-check-generated python-test python-check python-build python-smoke python-coverage
 .PHONY: go-generate go-check-generated go-check go-build go-coverage
 .PHONY: shared-check check build release-check ci
+.PHONY: signal-retry-smoke
+
+# Local packaged-SDK crash/retry proof. No real email or deployed API calls.
+signal-retry-smoke: node-build python-build
+	$(PYTHON) scripts/smoke-signal-retry.py
 
 PYTHON := $(shell if command -v python3 >/dev/null 2>&1; then printf python3; else printf python; fi)
 
