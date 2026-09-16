@@ -1,0 +1,448 @@
+{
+  "sdk_source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+  "date": "2026-09-16",
+  "case_executions": 259356,
+  "distinct_input_mode_pairs": 145190,
+  "language_evaluations": 778068,
+  "mismatches": 0,
+  "invariant_failures": 0,
+  "calibration": {
+    "injected_faults": 4,
+    "detected_mismatches": 4,
+    "detected_invariant_failures": 3
+  },
+  "runs": [
+    {
+      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      "seed": 539363606,
+      "random_iterations": 24000,
+      "cases": 43226,
+      "corpus_sha256": "809c33921e91c807ce08faeceb55b5d8e224fc9043e6462d4726d1786b270019",
+      "categories": {
+        "field-types-unicode": 711,
+        "decoded-fields": 711,
+        "missing-fields": 9,
+        "decoded-missing": 9,
+        "field-terminal-controls": 28,
+        "decoded-terminal-controls": 28,
+        "duplicate-decoded-keys": 18,
+        "numeric-tokens": 9132,
+        "depth-boundaries": 26,
+        "decoded-depth": 10,
+        "size-boundaries": 39,
+        "decoded-budget": 39,
+        "padded-byte-limit": 4,
+        "decoded-width": 7,
+        "decoded-host-values": 13,
+        "invalid-utf8-bom": 22,
+        "escaped-unicode": 30,
+        "utf8-single-byte-exhaustive": 256,
+        "utf8-codepoint-boundaries": 25,
+        "surrogate-pair-matrix": 36,
+        "json-outer-whitespace": 65,
+        "decoded-key-count": 4,
+        "nested-duplicates": 4,
+        "generated-json": 8000,
+        "decoded-generated": 8000,
+        "byte-mutations": 16000
+      },
+      "status_counts": {
+        "node": {
+          "invalid": 22365,
+          "valid": 18269,
+          "unsupported": 2592
+        },
+        "python": {
+          "invalid": 22365,
+          "valid": 18269,
+          "unsupported": 2592
+        },
+        "go": {
+          "invalid": 22365,
+          "valid": 18269,
+          "unsupported": 2592
+        }
+      },
+      "seconds": {
+        "node": 1.122,
+        "python": 2.181,
+        "go": 1.146
+      },
+      "peak_rss_bytes": {
+        "node": 155336704,
+        "python": 110608384,
+        "go": 30064640
+      },
+      "mismatches": 0,
+      "invariant_failures": 0,
+      "timeout_seconds_per_runner": 90,
+      "run": "0x20260916",
+      "runtimes": {
+        "node": "v26.3.0",
+        "python": "Python 3.12.5",
+        "go": "go version go1.25.5 darwin/arm64"
+      }
+    },
+    {
+      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      "seed": 1,
+      "random_iterations": 24000,
+      "cases": 43226,
+      "corpus_sha256": "54004b820f579de718a19071364ce4370f3cb12c6327ccbf37a0af71f92c66e1",
+      "categories": {
+        "field-types-unicode": 711,
+        "decoded-fields": 711,
+        "missing-fields": 9,
+        "decoded-missing": 9,
+        "field-terminal-controls": 28,
+        "decoded-terminal-controls": 28,
+        "duplicate-decoded-keys": 18,
+        "numeric-tokens": 9132,
+        "depth-boundaries": 26,
+        "decoded-depth": 10,
+        "size-boundaries": 39,
+        "decoded-budget": 39,
+        "padded-byte-limit": 4,
+        "decoded-width": 7,
+        "decoded-host-values": 13,
+        "invalid-utf8-bom": 22,
+        "escaped-unicode": 30,
+        "utf8-single-byte-exhaustive": 256,
+        "utf8-codepoint-boundaries": 25,
+        "surrogate-pair-matrix": 36,
+        "json-outer-whitespace": 65,
+        "decoded-key-count": 4,
+        "nested-duplicates": 4,
+        "generated-json": 8000,
+        "decoded-generated": 8000,
+        "byte-mutations": 16000
+      },
+      "status_counts": {
+        "node": {
+          "invalid": 22315,
+          "valid": 18345,
+          "unsupported": 2566
+        },
+        "python": {
+          "invalid": 22315,
+          "valid": 18345,
+          "unsupported": 2566
+        },
+        "go": {
+          "invalid": 22315,
+          "valid": 18345,
+          "unsupported": 2566
+        }
+      },
+      "seconds": {
+        "node": 1.116,
+        "python": 2.043,
+        "go": 1.114
+      },
+      "peak_rss_bytes": {
+        "node": 160514048,
+        "python": 110428160,
+        "go": 28770304
+      },
+      "mismatches": 0,
+      "invariant_failures": 0,
+      "timeout_seconds_per_runner": 90,
+      "run": "0x1",
+      "runtimes": {
+        "node": "v26.3.0",
+        "python": "Python 3.12.5",
+        "go": "go version go1.25.5 darwin/arm64"
+      }
+    },
+    {
+      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      "seed": 3735928559,
+      "random_iterations": 24000,
+      "cases": 43226,
+      "corpus_sha256": "243b7e531c4dc72d977abda59701110d4a7e532bcf2f72e47dae9632b6fa2395",
+      "categories": {
+        "field-types-unicode": 711,
+        "decoded-fields": 711,
+        "missing-fields": 9,
+        "decoded-missing": 9,
+        "field-terminal-controls": 28,
+        "decoded-terminal-controls": 28,
+        "duplicate-decoded-keys": 18,
+        "numeric-tokens": 9132,
+        "depth-boundaries": 26,
+        "decoded-depth": 10,
+        "size-boundaries": 39,
+        "decoded-budget": 39,
+        "padded-byte-limit": 4,
+        "decoded-width": 7,
+        "decoded-host-values": 13,
+        "invalid-utf8-bom": 22,
+        "escaped-unicode": 30,
+        "utf8-single-byte-exhaustive": 256,
+        "utf8-codepoint-boundaries": 25,
+        "surrogate-pair-matrix": 36,
+        "json-outer-whitespace": 65,
+        "decoded-key-count": 4,
+        "nested-duplicates": 4,
+        "generated-json": 8000,
+        "decoded-generated": 8000,
+        "byte-mutations": 16000
+      },
+      "status_counts": {
+        "node": {
+          "invalid": 22291,
+          "valid": 18314,
+          "unsupported": 2621
+        },
+        "python": {
+          "invalid": 22291,
+          "valid": 18314,
+          "unsupported": 2621
+        },
+        "go": {
+          "invalid": 22291,
+          "valid": 18314,
+          "unsupported": 2621
+        }
+      },
+      "seconds": {
+        "node": 1.12,
+        "python": 2.102,
+        "go": 1.13
+      },
+      "peak_rss_bytes": {
+        "node": 172900352,
+        "python": 112148480,
+        "go": 30621696
+      },
+      "mismatches": 0,
+      "invariant_failures": 0,
+      "timeout_seconds_per_runner": 90,
+      "run": "0xdeadbeef",
+      "runtimes": {
+        "node": "v26.3.0",
+        "python": "Python 3.12.5",
+        "go": "go version go1.25.5 darwin/arm64"
+      }
+    },
+    {
+      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      "seed": 1592594996,
+      "random_iterations": 24000,
+      "cases": 43226,
+      "corpus_sha256": "528040765ea2a250e465869fe0228ab4ebfe14e0b513de0f981269a3eaf51c87",
+      "categories": {
+        "field-types-unicode": 711,
+        "decoded-fields": 711,
+        "missing-fields": 9,
+        "decoded-missing": 9,
+        "field-terminal-controls": 28,
+        "decoded-terminal-controls": 28,
+        "duplicate-decoded-keys": 18,
+        "numeric-tokens": 9132,
+        "depth-boundaries": 26,
+        "decoded-depth": 10,
+        "size-boundaries": 39,
+        "decoded-budget": 39,
+        "padded-byte-limit": 4,
+        "decoded-width": 7,
+        "decoded-host-values": 13,
+        "invalid-utf8-bom": 22,
+        "escaped-unicode": 30,
+        "utf8-single-byte-exhaustive": 256,
+        "utf8-codepoint-boundaries": 25,
+        "surrogate-pair-matrix": 36,
+        "json-outer-whitespace": 65,
+        "decoded-key-count": 4,
+        "nested-duplicates": 4,
+        "generated-json": 8000,
+        "decoded-generated": 8000,
+        "byte-mutations": 16000
+      },
+      "status_counts": {
+        "node": {
+          "invalid": 22353,
+          "valid": 18312,
+          "unsupported": 2561
+        },
+        "python": {
+          "invalid": 22353,
+          "valid": 18312,
+          "unsupported": 2561
+        },
+        "go": {
+          "invalid": 22353,
+          "valid": 18312,
+          "unsupported": 2561
+        }
+      },
+      "seconds": {
+        "node": 1.134,
+        "python": 2.098,
+        "go": 1.134
+      },
+      "peak_rss_bytes": {
+        "node": 156352512,
+        "python": 111165440,
+        "go": 29671424
+      },
+      "mismatches": 0,
+      "invariant_failures": 0,
+      "timeout_seconds_per_runner": 90,
+      "run": "0x5eed1234",
+      "runtimes": {
+        "node": "v26.3.0",
+        "python": "Python 3.12.5",
+        "go": "go version go1.25.5 darwin/arm64"
+      }
+    },
+    {
+      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      "runtimes": {
+        "node": "v22.23.2",
+        "python": "Python 3.12.5",
+        "go": "go version go1.25.5 darwin/arm64"
+      },
+      "seed": 539363606,
+      "random_iterations": 24000,
+      "cases": 43226,
+      "corpus_sha256": "809c33921e91c807ce08faeceb55b5d8e224fc9043e6462d4726d1786b270019",
+      "categories": {
+        "field-types-unicode": 711,
+        "decoded-fields": 711,
+        "missing-fields": 9,
+        "decoded-missing": 9,
+        "field-terminal-controls": 28,
+        "decoded-terminal-controls": 28,
+        "duplicate-decoded-keys": 18,
+        "numeric-tokens": 9132,
+        "depth-boundaries": 26,
+        "decoded-depth": 10,
+        "size-boundaries": 39,
+        "decoded-budget": 39,
+        "padded-byte-limit": 4,
+        "decoded-width": 7,
+        "decoded-host-values": 13,
+        "invalid-utf8-bom": 22,
+        "escaped-unicode": 30,
+        "utf8-single-byte-exhaustive": 256,
+        "utf8-codepoint-boundaries": 25,
+        "surrogate-pair-matrix": 36,
+        "json-outer-whitespace": 65,
+        "decoded-key-count": 4,
+        "nested-duplicates": 4,
+        "generated-json": 8000,
+        "decoded-generated": 8000,
+        "byte-mutations": 16000
+      },
+      "status_counts": {
+        "node": {
+          "invalid": 22365,
+          "valid": 18269,
+          "unsupported": 2592
+        },
+        "python": {
+          "invalid": 22365,
+          "valid": 18269,
+          "unsupported": 2592
+        },
+        "go": {
+          "invalid": 22365,
+          "valid": 18269,
+          "unsupported": 2592
+        }
+      },
+      "seconds": {
+        "node": 1.169,
+        "python": 2.307,
+        "go": 1.262
+      },
+      "peak_rss_bytes": {
+        "node": 127942656,
+        "python": 115392512,
+        "go": 30556160
+      },
+      "mismatches": 0,
+      "invariant_failures": 0,
+      "timeout_seconds_per_runner": 90,
+      "run": "node22"
+    },
+    {
+      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      "runtimes": {
+        "node": "v24.21.0",
+        "python": "Python 3.12.5",
+        "go": "go version go1.25.5 darwin/arm64"
+      },
+      "seed": 1,
+      "random_iterations": 24000,
+      "cases": 43226,
+      "corpus_sha256": "54004b820f579de718a19071364ce4370f3cb12c6327ccbf37a0af71f92c66e1",
+      "categories": {
+        "field-types-unicode": 711,
+        "decoded-fields": 711,
+        "missing-fields": 9,
+        "decoded-missing": 9,
+        "field-terminal-controls": 28,
+        "decoded-terminal-controls": 28,
+        "duplicate-decoded-keys": 18,
+        "numeric-tokens": 9132,
+        "depth-boundaries": 26,
+        "decoded-depth": 10,
+        "size-boundaries": 39,
+        "decoded-budget": 39,
+        "padded-byte-limit": 4,
+        "decoded-width": 7,
+        "decoded-host-values": 13,
+        "invalid-utf8-bom": 22,
+        "escaped-unicode": 30,
+        "utf8-single-byte-exhaustive": 256,
+        "utf8-codepoint-boundaries": 25,
+        "surrogate-pair-matrix": 36,
+        "json-outer-whitespace": 65,
+        "decoded-key-count": 4,
+        "nested-duplicates": 4,
+        "generated-json": 8000,
+        "decoded-generated": 8000,
+        "byte-mutations": 16000
+      },
+      "status_counts": {
+        "node": {
+          "invalid": 22315,
+          "valid": 18345,
+          "unsupported": 2566
+        },
+        "python": {
+          "invalid": 22315,
+          "valid": 18345,
+          "unsupported": 2566
+        },
+        "go": {
+          "invalid": 22315,
+          "valid": 18345,
+          "unsupported": 2566
+        }
+      },
+      "seconds": {
+        "node": 1.037,
+        "python": 2.051,
+        "go": 1.144
+      },
+      "peak_rss_bytes": {
+        "node": 138215424,
+        "python": 107233280,
+        "go": 29556736
+      },
+      "mismatches": 0,
+      "invariant_failures": 0,
+      "timeout_seconds_per_runner": 90,
+      "run": "node24"
+    }
+  ]
+}
