@@ -4,6 +4,11 @@ This is a deterministic, bounded test harness for the public source parser and
 decoded-value validator in JavaScript, Python, and Go. It does not send email,
 contact the API, classify sender authority, or execute interaction steps.
 
+The existing Shared CI job runs 1,000 seeded random iterations (`--seed 1000`)
+plus the fixed boundary corpus and five-fault calibration after building the
+SDK. Changes to these harnesses or the interaction/signal runtime files trigger
+that job. The larger recorded battery below remains locally reproducible.
+
 ## Recorded result
 
 The SDK code at `ecac78da160999429530ef8763d46f9e5405672d` passed six runs on

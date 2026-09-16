@@ -7,6 +7,10 @@ Go consumer against an archived source module. Requires Node/npm/pnpm, Python
 email API traffic goes exclusively to a loopback HTTP test server. No real email
 is sent.
 
+The existing Shared CI job runs this packaged smoke test before the bounded
+parser differential battery and fault calibration. Changes to either harness or
+the interaction/signal runtime files trigger the job.
+
 The harness runs 15 scenarios across the three SDKs:
 
 - ACK, Read and Working: prepare once, fsync the prepared record, then dispatch
