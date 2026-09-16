@@ -1,86 +1,93 @@
+import { createHash, randomUUID } from "node:crypto";
 import {
   closeSync,
+  constants,
+  fstatSync,
+  linkSync,
+  lstatSync,
   mkdirSync,
   openSync,
   readFileSync,
   unlinkSync,
-  writeSync,
+  writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 /**
- * Filesystem mutex around the chat-state read → POST → save sequence.
- *
- * Why this exists. The chat reply flow is read-modify-write across an
- * RTT to the API: `loadActiveChatState` → `replyToEmail` → poll → save.
- * Two concurrent invocations (e.g. the user re-runs `primitive chat
- * reply` before the first cycle finishes its 5–12 s poll) read the
- * same stale `last_reply_email_id` and POST to it, producing a
- * duplicate /v1/emails/{id}/reply that the server deduplicates by
- * content_hash. The second invocation then polls forever for a reply
- * that arrived in response to the *first* send and has already been
- * surfaced by the *first* invocation.
- *
- * The lock is per-process-config-dir, not per-conversation: holding it
- * for a few seconds while one chat reply completes is a reasonable UX
- * constraint and clearly explained on contention. The lock is
- * re-entrant within a single Node process (ChatReplyCommand wraps
- * ChatCommand internally), but rejects cross-process contention.
- *
- * Liveness. The lock file stores the holder's PID. On EEXIST we probe
- * the holder with `process.kill(pid, 0)`; if the holder is gone (e.g.
- * a previous chat invocation crashed without releasing), we steal the
- * lock. This avoids needing a heartbeat or mtime-based stale check,
- * either of which has its own race surface.
- *
- * Releases. The returned function is idempotent. Callers must call it
- * in a finally block. We also register process-exit / signal handlers
- * so a Ctrl-C during the poll loop still cleans up.
+ * Conversation locks cover one request/reply cycle. The default lock retains
+ * its historical filename and protects short shared chat-state transactions.
+ * Scope names are hashed so addresses and other identifiers stay out of paths.
  */
-
 const LOCK_FILENAME = "chat-state.lock";
+const STATE_LOCK_TIMEOUT_MS = 5_000;
+const STATE_LOCK_RETRY_MS = 25;
 
-let processHolder: { configDir: string; depth: number } | null = null;
-
-/**
- * Whether we've installed our exit / signal listeners on the
- * `process` object. Done lazily on first acquire and never undone:
- * adding handlers per-acquire would let them accumulate (each
- * acquire registers four listeners, and `process.once` can't be
- * un-once'd), which is harmless in production but produces
- * `MaxListenersExceededWarning` + cascading no-op fires in tests
- * that acquire/release across many `it()` blocks. Greptile P2.
- *
- * The handlers consult the current `processHolder` and act only if
- * a lock is actually held, so leaving them installed across
- * release boundaries is safe: a released or never-acquired lock
- * makes them no-ops.
- */
+type Snapshot = { device: number; inode: number; contents: string };
+type Holder = Snapshot & { path: string; depth: number };
+const processHolders = new Map<string, Holder>();
 let exitListenersInstalled = false;
+
+function lockPath(configDir: string, scope?: string): string {
+  const name =
+    scope === undefined
+      ? LOCK_FILENAME
+      : `chat-${createHash("sha256").update(scope).digest("hex")}.lock`;
+  return join(resolve(configDir), name);
+}
+
+function readSnapshot(path: string): Snapshot | null {
+  let fd: number;
+  try {
+    // A lock is a regular file. Do not follow an unexpected symlink.
+    if (!lstatSync(path).isFile()) return null;
+    fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+  try {
+    const stat = fstatSync(fd);
+    return {
+      device: stat.dev,
+      inode: stat.ino,
+      contents: stat.size <= 128 ? readFileSync(fd, "utf8") : "",
+    };
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function matchesSnapshot(path: string, snapshot: Snapshot): boolean {
+  const current = readSnapshot(path);
+  return (
+    current !== null &&
+    current.device === snapshot.device &&
+    current.inode === snapshot.inode &&
+    current.contents === snapshot.contents
+  );
+}
+
+function removeOwnedLock(holder: Holder): void {
+  try {
+    if (matchesSnapshot(holder.path, holder)) unlinkSync(holder.path);
+  } catch {
+    // Cleanup is best effort, and must never remove an unverified replacement.
+  }
+}
 
 function installExitListenersOnce(): void {
   if (exitListenersInstalled) return;
   exitListenersInstalled = true;
-
   const cleanup = (): void => {
-    if (processHolder === null) return;
-    try {
-      unlinkSync(lockPath(processHolder.configDir));
-    } catch {
-      // best-effort: another process may have stolen the lock by now
-    }
-    processHolder = null;
+    for (const holder of processHolders.values()) removeOwnedLock(holder);
+    processHolders.clear();
   };
-
   process.on("exit", cleanup);
-
   const signals = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
   for (const signal of signals) {
     const handler = (): void => {
       cleanup();
-      // Re-raise with the default handler so the exit code reflects
-      // the signal rather than 0. Remove our own listener first so
-      // the re-raise doesn't recurse.
       process.removeListener(signal, handler);
       process.kill(process.pid, signal);
     };
@@ -88,127 +95,198 @@ function installExitListenersOnce(): void {
   }
 }
 
-function lockPath(configDir: string): string {
-  return join(configDir, LOCK_FILENAME);
-}
-
-/**
- * `process.kill(pid, 0)` returns true if the process exists and we
- * have permission to signal it. Throws ESRCH when the pid is gone,
- * EPERM if it exists but isn't ours. Both "exists" cases mean we
- * should NOT steal the lock; only ESRCH proves the holder is dead.
- */
 function pidIsAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ESRCH") return false;
-    // EPERM (or anything else) → process exists but inaccessible.
-    // Treat as alive to be safe.
-    return true;
+  } catch (error) {
+    // EPERM and unknown errors are not proof that the holder is dead.
+    return (error as NodeJS.ErrnoException).code !== "ESRCH";
   }
 }
 
-function readHolderPid(configDir: string): number | null {
-  try {
-    const raw = readFileSync(lockPath(configDir), "utf8").trim();
-    const pid = Number.parseInt(raw, 10);
-    return Number.isFinite(pid) && pid > 0 ? pid : null;
-  } catch {
+function holderPid(snapshot: Snapshot | null): number | null {
+  const lines = snapshot?.contents.trim().split("\n");
+  if (!lines || lines.length > 2 || !/^[1-9]\d*$/.test(lines[0] ?? ""))
     return null;
+  if (lines.length === 2 && !/^[0-9a-f-]{36}$/.test(lines[1] ?? ""))
+    return null;
+  const pid = Number(lines[0]);
+  return Number.isSafeInteger(pid) && pid > 0 ? pid : null;
+}
+
+function reclaimStaleLock(
+  path: string,
+  previous: Snapshot,
+  temporary: string,
+  contender: Snapshot,
+): void {
+  const guards: Array<{ path: string; snapshot: Snapshot }> = [];
+  const visited = new Set<string>();
+  let target = previous;
+  // Each successor is elected against an immutable record. Never unlink a dead
+  // guard to take it over: that would recreate the stale-lock deletion race.
+  // A crashed successor is recovered in exactly the same way on the next try.
+  for (;;) {
+    const identity = createHash("sha256")
+      .update(`${target.device}:${target.inode}:${target.contents}`)
+      .digest("hex");
+    const guardPath = `${path}.reclaim-${identity}`;
+    if (visited.has(guardPath)) throw new ChatLockContentionError(0);
+    visited.add(guardPath);
+    try {
+      linkSync(temporary, guardPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      const guard = readSnapshot(guardPath);
+      const pid = holderPid(guard);
+      if (!guard || pid === null || pidIsAlive(pid))
+        throw new ChatLockContentionError(pid ?? 0);
+      guards.push({ path: guardPath, snapshot: guard });
+      target = guard;
+      continue;
+    }
+    guards.push({ path: guardPath, snapshot: contender });
+    let removed = false;
+    try {
+      const pid = holderPid(previous);
+      if (matchesSnapshot(path, previous) && pid !== null && !pidIsAlive(pid))
+        unlinkSync(path);
+      // Cleanup is safe only once the original record is gone. New lock
+      // generations use different guards; delayed contenders must recheck it.
+      removed = !matchesSnapshot(path, previous);
+    } finally {
+      if (removed) {
+        for (const guard of guards) {
+          try {
+            if (matchesSnapshot(guard.path, guard.snapshot))
+              unlinkSync(guard.path);
+          } catch {
+            // Leftover records contain a PID and remain recoverable after exit.
+          }
+        }
+      }
+    }
+    return;
   }
 }
 
 export class ChatLockContentionError extends Error {
   constructor(public readonly holderPid: number) {
     super(
-      `Another \`primitive chat\` invocation (pid ${holderPid}) is in progress. ` +
-        `Wait for it to finish, or kill it before retrying.`,
+      holderPid > 0
+        ? `Another \`primitive chat\` invocation (pid ${holderPid}) is in progress. ` +
+            "Wait for it to finish, or kill it before retrying."
+        : "The chat lock holder could not be verified. Retry after the current invocation finishes.",
     );
     this.name = "ChatLockContentionError";
   }
 }
 
-/**
- * Acquire the chat-state mutex for this configDir. Returns a release
- * function that is safe to call any number of times. Throws
- * `ChatLockContentionError` if another live process holds the lock.
- */
-export function acquireChatLock(configDir: string): () => void {
-  if (processHolder?.configDir === configDir) {
-    // Re-entrant acquire from inside the same Node process (e.g.
-    // ChatReplyCommand delegates to ChatCommand). Bump the depth and
-    // return a no-op release that decrements it.
-    processHolder.depth += 1;
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      if (processHolder !== null) {
-        processHolder.depth -= 1;
-      }
-    };
-  }
-
-  mkdirSync(configDir, { mode: 0o700, recursive: true });
-
-  for (let attempt = 0; attempt < 2; attempt++) {
-    let fd: number;
-    try {
-      fd = openSync(lockPath(configDir), "wx", 0o600);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
-      const holder = readHolderPid(configDir);
-      if (holder === null || !pidIsAlive(holder)) {
-        // Stale lock from a crashed invocation. Steal it.
-        try {
-          unlinkSync(lockPath(configDir));
-        } catch (unlinkErr) {
-          if ((unlinkErr as NodeJS.ErrnoException).code !== "ENOENT") {
-            throw unlinkErr;
-          }
-        }
-        continue;
-      }
-      throw new ChatLockContentionError(holder);
+function releaseHolder(holder: Holder): () => void {
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (processHolders.get(holder.path) !== holder) return;
+    holder.depth -= 1;
+    if (holder.depth === 0) {
+      removeOwnedLock(holder);
+      processHolders.delete(holder.path);
     }
+  };
+}
 
-    writeSync(fd, `${process.pid}\n`);
-    closeSync(fd);
-    processHolder = { configDir, depth: 1 };
-    installExitListenersOnce();
-
-    let released = false;
-    return () => {
-      if (released) return;
-      released = true;
-      if (processHolder?.configDir === configDir) {
-        processHolder.depth -= 1;
-        if (processHolder.depth <= 0) {
-          try {
-            unlinkSync(lockPath(configDir));
-          } catch {
-            // ignore
-          }
-          processHolder = null;
-        }
-      }
-    };
+/** Acquire synchronously; the same scope is reentrant within this process. */
+export function acquireChatLock(configDir: string, scope?: string): () => void {
+  const path = lockPath(configDir, scope);
+  const held = processHolders.get(path);
+  if (held) {
+    if (!matchesSnapshot(path, held)) throw new ChatLockContentionError(0);
+    held.depth += 1;
+    return releaseHolder(held);
   }
+  mkdirSync(resolve(configDir), { mode: 0o700, recursive: true });
 
-  /* v8 ignore next 4 -- the for-loop returns or throws on every iteration; the unreachable trailer keeps TS happy. */
-  throw new Error(
-    "acquireChatLock: exhausted retries (this is a bug — should not be reachable)",
-  );
+  // Publish an already complete record atomically. Other readers never see
+  // an empty file between exclusive creation and writing the PID.
+  const contents = `${process.pid}\n${randomUUID()}\n`;
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  const fd = openSync(temporary, "wx", 0o600);
+  let snapshot: Snapshot;
+  try {
+    writeFileSync(fd, contents);
+    const stat = fstatSync(fd);
+    snapshot = { device: stat.dev, inode: stat.ino, contents };
+  } catch (error) {
+    closeSync(fd);
+    unlinkSync(temporary);
+    throw error;
+  }
+  closeSync(fd);
+
+  const publish = (): boolean => {
+    try {
+      linkSync(temporary, path);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+      throw error;
+    }
+  };
+  try {
+    let acquired = publish();
+    if (!acquired) {
+      const previous = readSnapshot(path);
+      const pid = holderPid(previous);
+      // Empty/malformed records can belong to a writer still initializing.
+      // Neither age nor a missing PID establishes that the file is abandoned.
+      if (!previous || pid === null || pidIsAlive(pid)) {
+        throw new ChatLockContentionError(pid ?? 0);
+      }
+
+      reclaimStaleLock(path, previous, temporary, snapshot);
+      acquired = publish();
+      if (!acquired)
+        throw new ChatLockContentionError(holderPid(readSnapshot(path)) ?? 0);
+    }
+    const holder: Holder = { ...snapshot, path, depth: 1 };
+    processHolders.set(path, holder);
+    installExitListenersOnce();
+    return releaseHolder(holder);
+  } finally {
+    try {
+      unlinkSync(temporary);
+    } catch {
+      /* Best-effort temporary-file cleanup. */
+    }
+  }
 }
 
 /**
- * Test-only: clear in-process holder state. Production code must never
- * call this; concurrent tests rely on the module-level state being
- * reset between `it()` blocks.
+ * Serialize short state transactions, including independent callers in this
+ * process. Do not nest this API or hold its release function across network IO.
  */
+export async function acquireChatStateLock(
+  configDir: string,
+): Promise<() => void> {
+  const deadline = performance.now() + STATE_LOCK_TIMEOUT_MS;
+  const path = lockPath(configDir);
+  for (;;) {
+    try {
+      if (processHolders.has(path))
+        throw new ChatLockContentionError(process.pid);
+      return acquireChatLock(configDir);
+    } catch (error) {
+      if (!(error instanceof ChatLockContentionError)) throw error;
+      const remaining = deadline - performance.now();
+      if (remaining <= 0) throw error;
+      await delay(Math.min(STATE_LOCK_RETRY_MS, remaining));
+    }
+  }
+}
+
+/** Test-only: discard process bookkeeping without deleting filesystem locks. */
 export function _resetChatLockForTests(): void {
-  processHolder = null;
+  processHolders.clear();
 }
