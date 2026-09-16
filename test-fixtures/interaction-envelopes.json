@@ -1,0 +1,291 @@
+[
+  {
+    "name": "unknown protocol",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"Hello\"}}",
+    "status": "valid"
+  },
+  {
+    "name": "unknown version",
+    "source": "{\"interaction_version\":2}",
+    "status": "unsupported"
+  },
+  {
+    "name": "bad interaction_version",
+    "source": "{\"interaction_version\": 0, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "bad protocol_version",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 0, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "bad step",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "bad protocol",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \" \", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "bad interaction_id",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"not-id\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "bad prev_step_id",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": \"bad\", \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "bad expires_at",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": 2, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "missing interaction_version",
+    "source": "{\"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "missing interaction_id",
+    "source": "{\"interaction_version\": 1, \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "missing protocol",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "missing protocol_version",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "missing step",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "missing step_id",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "missing prev_step_id",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "missing expires_at",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "missing payload",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null}",
+    "status": "invalid"
+  },
+  {
+    "name": "duplicate root",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"Hello\"},\"step\":\"changed\"}",
+    "status": "invalid"
+  },
+  {
+    "name": "escaped duplicate",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"Hello\"},\"st\\u0065p\":\"changed\"}",
+    "status": "invalid"
+  },
+  {
+    "name": "nested duplicate",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"x\":1,\"\\u0078\":2}}",
+    "status": "invalid"
+  },
+  {
+    "name": "prototype keys",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"__proto__\":{\"polluted\":true},\"constructor\":0}}",
+    "status": "valid"
+  },
+  {
+    "name": "lone high",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":\"\\ud800\"}",
+    "status": "invalid"
+  },
+  {
+    "name": "lone low",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":\"\\udfff\"}",
+    "status": "invalid"
+  },
+  {
+    "name": "paired surrogate",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":\"\\ud83d\\ude00\"}",
+    "status": "valid"
+  },
+  {
+    "name": "nonfinite",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":1e400}",
+    "status": "invalid"
+  },
+  {
+    "name": "unsafe integer",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":9007199254740992}",
+    "status": "invalid"
+  },
+  {
+    "name": "negative unsafe",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":-9007199254740992}",
+    "status": "invalid"
+  },
+  {
+    "name": "safe integer",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":9007199254740991}",
+    "status": "valid"
+  },
+  {
+    "name": "wide exponent integer",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":90071992547409910e-1}",
+    "status": "valid"
+  },
+  {
+    "name": "wide unsafe integer",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":90071992547409930e-1}",
+    "status": "invalid"
+  },
+  {
+    "name": "wide number",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001}",
+    "status": "invalid"
+  },
+  {
+    "name": "negative zero",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":-0}",
+    "status": "valid"
+  },
+  {
+    "name": "fraction",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":1.25}",
+    "status": "valid"
+  },
+  {
+    "name": "array payload",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":[null,true,\"hi\"]}",
+    "status": "valid"
+  },
+  {
+    "name": "null payload",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":null}",
+    "status": "valid"
+  },
+  {
+    "name": "nested at limit",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+    "status": "valid"
+  },
+  {
+    "name": "nested too deep",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+    "status": "invalid"
+  },
+  {
+    "name": "trailing comma",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"Hello\"},}",
+    "status": "invalid"
+  },
+  {
+    "name": "trailing value",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"Hello\"}}0",
+    "status": "invalid"
+  },
+  {
+    "name": "BOM",
+    "source": "\ufeff{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "non JSON whitespace",
+    "source": "\u00a0{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "empty",
+    "source": "",
+    "status": "invalid"
+  },
+  {
+    "name": "array root",
+    "source": "[]",
+    "status": "invalid"
+  },
+  {
+    "name": "invalid UTF8",
+    "hex": "ff",
+    "status": "invalid"
+  },
+  {
+    "name": "overlong UTF8",
+    "hex": "c080",
+    "status": "invalid"
+  },
+  {
+    "name": "UTF8 surrogate",
+    "hex": "eda080",
+    "status": "invalid"
+  },
+  {
+    "name": "truncated UTF8",
+    "hex": "e282",
+    "status": "invalid"
+  },
+  {
+    "name": "exact byte bound",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"Hello\"}}",
+    "padding": 65259,
+    "status": "valid"
+  },
+  {
+    "name": "over byte bound",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"Hello\"}}",
+    "padding": 65260,
+    "status": "invalid"
+  },
+  {
+    "name": "underflow",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":1e-999}",
+    "status": "valid"
+  },
+  {
+    "name": "multibyte exact byte bound",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\"}}",
+    "padding": 64864,
+    "status": "valid"
+  },
+  {
+    "name": "multibyte over byte bound",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"message\":\"\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\"}}",
+    "padding": 64865,
+    "status": "invalid"
+  },
+  {
+    "name": "nested objects too deep",
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future.protocol\",\"protocol_version\":1,\"step\":\"offer\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":{\"x\":0}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}",
+    "status": "invalid"
+  },
+  {
+    "name": "unicode blank protocol",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"\ufeff\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  },
+  {
+    "name": "non ECMAScript whitespace protocol",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.example\", \"protocol\": \"\u0085\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "valid"
+  },
+  {
+    "name": "unicode whitespace domain",
+    "source": "{\"interaction_version\": 1, \"interaction_id\": \"11111111-1111-4111-8111-111111111111@agent.\u00a0example\", \"protocol\": \"future.protocol\", \"protocol_version\": 1, \"step\": \"offer\", \"step_id\": \"22222222-2222-4222-8222-222222222222\", \"prev_step_id\": null, \"expires_at\": null, \"payload\": {\"message\": \"Hello\"}}",
+    "status": "invalid"
+  }
+]

@@ -240,6 +240,14 @@ sender-controlled), and note that the normalized `email.Sender` is parsed
 leniently for display and falls back to the SMTP envelope sender, so it is not
 a safe authorization anchor.
 
+## Interaction envelopes
+
+Use `ParseInteractionEnvelope([]byte)` or `ParseInteractionEnvelopeString(string)` to read an
+`interaction.json` attachment for display. The bounded parser returns valid,
+unsupported, or invalid and preserves unknown protocols. It performs no
+authentication, network requests, payments, or sends. See the
+[parser contract and limits](../docs/interaction-envelopes.md).
+
 ## x402 payments
 
 The x402 client lets one agent request a USDC payment and another pay it. It is

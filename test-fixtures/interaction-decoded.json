@@ -1,0 +1,17 @@
+[
+  {
+    "name": "large array",
+    "array_length": 50000,
+    "status": "valid"
+  },
+  {
+    "name": "array exact budget",
+    "array_length": 65314,
+    "status": "valid"
+  },
+  {
+    "name": "array over budget",
+    "array_length": 65315,
+    "status": "invalid"
+  }
+]

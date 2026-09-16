@@ -50,6 +50,11 @@
       "types": "./dist/payloads/index.d.ts",
       "import": "./dist/payloads/index.js",
       "default": "./dist/payloads/index.js"
+    },
+    "./interactions": {
+      "types": "./dist/interactions/index.d.ts",
+      "import": "./dist/interactions/index.js",
+      "default": "./dist/interactions/index.js"
     }
   },
   "sideEffects": false,
@@ -66,8 +71,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "pnpm generate && tsc --noEmit -p tsconfig.typecheck.json",
-    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads tests/",
-    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads tests/",
+    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads src/interactions tests/",
+    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads src/interactions tests/",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
