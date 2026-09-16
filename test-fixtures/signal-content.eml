@@ -1,0 +1,28 @@
+From: agent@example.com
+To: owner@example.com
+Subject: Re: Research
+Message-ID: <signal@example.com>
+In-Reply-To: <Original@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="signal-classification-fixture"
+
+--signal-classification-fixture
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+I read your message.
+
+--signal-classification-fixture
+Content-Type: application/json
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="interaction.json"
+MIME-Version: 1.0
+
+ewogICJpbnRlcmFjdGlvbl92ZXJzaW9uIjogMSwKICAiaW50ZXJhY3Rpb25faWQiOiAiMTExMTEx
+MTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExQGFnZW50LmV4YW1wbGUiLAogICJwcm90b2Nv
+bCI6ICJyZWFkIiwKICAicHJvdG9jb2xfdmVyc2lvbiI6IDEsCiAgInN0ZXAiOiAicmVhZCIsCiAg
+InN0ZXBfaWQiOiAiMjIyMjIyMjItMjIyMi00MjIyLTgyMjItMjIyMjIyMjIyMjIyIiwKICAicHJl
+dl9zdGVwX2lkIjogbnVsbCwKICAiZXhwaXJlc19hdCI6IG51bGwsCiAgInBheWxvYWQiOiB7CiAg
+ICAic3ViamVjdF9tZXNzYWdlX2lkIjogIjxPcmlnaW5hbEBleGFtcGxlLmNvbT4iCiAgfQp9
+
+--signal-classification-fixture--

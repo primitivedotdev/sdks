@@ -287,9 +287,9 @@ go-coverage:
 	cd sdk-go && raw_coverage_file=$$(mktemp) && filtered_coverage_file=$$(mktemp) && go test ./... -coverprofile="$$raw_coverage_file" && { IFS= read -r header && printf '%s\n' "$$header" > "$$filtered_coverage_file" && while IFS= read -r line; do case "$$line" in *"/schema_generated.go:"*|*"/doc.go:"*) ;; *) printf '%s\n' "$$line" >> "$$filtered_coverage_file" ;; esac; done; } < "$$raw_coverage_file" && go tool cover -func="$$filtered_coverage_file" && rm -f "$$raw_coverage_file" "$$filtered_coverage_file"
 
 shared-check:
-	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts
-	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_interactions.py tests/test_signals.py
-	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails' ./...
+	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts tests/interactions/classify.test.ts
+	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_interactions.py tests/test_signals.py tests/test_signal_content.py
+	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails|TestSharedSignalContent' ./...
 
 check: node-check cli-check python-check go-check shared-check
 

@@ -140,7 +140,6 @@ def prepare_signal_email(
         _check(signal.status in _BODIES, "invalid ACK status")
         assert signal.status is not None
         payload["status"] = signal.status
-        text = _BODIES[signal.status]
         if signal.note is not None:
             _check(
                 len(signal.note.encode("utf-16-le")) <= 4000
@@ -148,10 +147,7 @@ def prepare_signal_email(
                 "note exceeds 2000 UTF-16 units",
             )
             payload["note"] = signal.note
-            text += "\n\n" + signal.note
-    elif signal.kind == "read":
-        text = "I read your message."
-    else:
+    elif signal.kind != "read":
         _check(signal.kind == "working", "invalid signal kind")
         _check(signal.expires_at_ms is not None, "working expiry is required")
         assert signal.expires_at_ms is not None
@@ -161,7 +157,6 @@ def prepare_signal_email(
             "working expiry must be within 60 seconds",
         )
         expires = signal.expires_at_ms
-        text = "I am working on your message."
     interaction, step = uuid().lower(), uuid().lower()
     _check(
         bool(_UUID.fullmatch(interaction))
@@ -191,7 +186,7 @@ def prepare_signal_email(
         "from": parent.to,
         "to": parent.from_email,
         "subject": subject or "Re: Your message",
-        "body_text": text,
+        "body_text": _signal_text(signal.kind, signal.status, signal.note),
         "in_reply_to": target,
         "references": references,
         "attachments": [
@@ -241,3 +236,12 @@ async def send_prepared_signal(
     return SignalResponse(
         await send_mail(json.loads(prepared.request_json), prepared.idempotency_key)
     )
+
+
+def _signal_text(kind: str, status: str | None = None, note: str | None = None) -> str:
+    if kind == "read":
+        return "I read your message."
+    if kind == "working":
+        return "I am working on your message."
+    text = _BODIES.get(status or "", "")
+    return text if note is None else text + "\n\n" + note
