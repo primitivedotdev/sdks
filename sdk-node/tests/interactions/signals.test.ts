@@ -195,3 +195,48 @@ it("uses the generated ordinary send operation without dropping body or key", as
     JSON.parse(result.prepared.requestJson),
   );
 });
+
+it("gives distinct signals for one parent distinct explicit keys and preserves a retry", async () => {
+  const item = fixture("read");
+  let sequence = 0;
+  const dependencies = {
+    now: () => item.now,
+    uuid: () =>
+      `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`,
+  };
+  const inputs: SignalInput[] = [
+    { parent: item.input.parent, kind: "ack", status: "received" },
+    { parent: item.input.parent, kind: "read" },
+    {
+      parent: item.input.parent,
+      kind: "working",
+      expiresAtMs: item.now + 60_000,
+    },
+  ];
+  const prepared = inputs.map((input) => {
+    const result = prepareSignalEmail(input, dependencies);
+    if (result.status !== "prepared") throw new Error("fixture");
+    return result.prepared;
+  });
+  const attempts: { body: unknown; key: string }[] = [];
+  const send = async (body: unknown, key: string) => {
+    attempts.push({ body, key });
+    return "ordinary response";
+  };
+  const first = prepared[0];
+  if (!first) throw new Error("fixture");
+  for (const value of [...prepared, first])
+    await sendPreparedSignal(send, value, {
+      accountScope: "account-one",
+      now: dependencies.now,
+    });
+  expect(new Set(attempts.slice(0, 3).map((attempt) => attempt.key)).size).toBe(
+    3,
+  );
+  expect(attempts[3]).toEqual(attempts[0]);
+  for (const attempt of attempts)
+    expect(attempt.body).toHaveProperty(
+      "in_reply_to",
+      "<Case.123@EXAMPLE.com>",
+    );
+});

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
 	"io"
 	"net/http"
@@ -150,5 +151,50 @@ func TestSignalGeneratedAdapter(t *testing.T) {
 	}
 	if key != prepared.IdempotencyKey || path != "/v1/send-mail" || !reflect.DeepEqual(got, want) {
 		t.Fatal("changed send operation")
+	}
+}
+
+func TestDistinctSignalsShareParentNotExplicitKey(t *testing.T) {
+	f := signalFixtures(t)[0]
+	sequence := 0
+	dependencies := SignalDependencies{UUID: func() string { sequence++; return fmt.Sprintf("00000000-0000-4000-8000-%012d", sequence) }, Now: func() int64 { return f.Now }}
+	expiry := f.Now + 60000
+	inputs := []SignalInput{{Parent: f.Input.Parent, Kind: "ack", Status: "received"}, {Parent: f.Input.Parent, Kind: "read"}, {Parent: f.Input.Parent, Kind: "working", ExpiresAtMs: &expiry}}
+	var prepared []PreparedSignal
+	for _, input := range inputs {
+		result, err := PrepareSignalEmail(input, dependencies)
+		if err != nil || result.Prepared == nil {
+			t.Fatal(result, err)
+		}
+		prepared = append(prepared, *result.Prepared)
+	}
+	type attempt struct{ Body, Key string }
+	var attempts []attempt
+	send := func(_ context.Context, body json.RawMessage, key string) (string, error) {
+		attempts = append(attempts, attempt{string(body), key})
+		return "ordinary response", nil
+	}
+	for _, value := range append(prepared, prepared[0]) {
+		if _, err := SendPreparedSignal(context.Background(), send, value, "account-one", dependencies.Now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	keys := map[string]bool{}
+	for _, value := range attempts[:3] {
+		keys[value.Key] = true
+	}
+	if len(keys) != 3 || attempts[0] != attempts[3] {
+		t.Fatal("distinct signal or retry identity changed")
+	}
+	for _, value := range attempts {
+		var body struct {
+			InReplyTo string `json:"in_reply_to"`
+		}
+		if err := json.Unmarshal([]byte(value.Body), &body); err != nil {
+			t.Fatal(err)
+		}
+		if body.InReplyTo != "<Case.123@EXAMPLE.com>" {
+			t.Fatal("parent changed")
+		}
 	}
 }

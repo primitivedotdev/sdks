@@ -222,3 +222,38 @@ def test_standard_mime_round_trip_preserves_signal_attachment() -> None:
     assert parts[0].get_content_type() == "application/json"
     assert parts[0].get_payload(decode=True) == raw
     assert received["In-Reply-To"] == body["in_reply_to"]
+
+
+def test_distinct_signals_share_parent_but_not_explicit_key() -> None:
+    item = _fixture("read")
+    parent = _input(item).parent
+    sequence = iter(range(1, 7))
+
+    def uuid() -> str:
+        return f"00000000-0000-4000-8000-{next(sequence):012}"
+
+    inputs = (
+        SignalInput(parent, "ack", status="received"),
+        SignalInput(parent, "read"),
+        SignalInput(parent, "working", expires_at_ms=item["now"] + 60000),
+    )
+    prepared = []
+    for signal in inputs:
+        result = prepare_signal_email(signal, uuid=uuid, now=lambda: item["now"])
+        assert result.prepared is not None
+        prepared.append(result.prepared)
+    attempts = []
+
+    async def send(body: dict[str, object], key: str) -> str:
+        attempts.append((body, key))
+        return "ordinary response"
+
+    for value in (*prepared, prepared[0]):
+        asyncio.run(
+            send_prepared_signal(
+                send, value, account_scope="account-one", now=lambda: item["now"]
+            )
+        )
+    assert len({key for _, key in attempts[:3]}) == 3
+    assert attempts[0] == attempts[3]
+    assert all(body["in_reply_to"] == "<Case.123@EXAMPLE.com>" for body, _ in attempts)

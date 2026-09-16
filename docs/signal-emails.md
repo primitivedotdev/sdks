@@ -122,7 +122,12 @@ fails locally before invoking the send operation. This comparison prevents an
 accidental account switch; it does not inspect credentials or prove identity.
 
 `sendPreparedSignal` makes one explicit ordinary send operation through the
-supplied adapter. It returns `response` with the original operation result, even
+supplied adapter. The adapter **must forward the prepared idempotency key** as
+`Idempotency-Key` unchanged. Distinct messages use distinct explicit keys; retries
+reuse their original key. Parent-only suppression applies to automatically
+derived keys, so omitting the explicit header can suppress later signals on the
+same parent. The helper preserves threading and does not fall back to an
+unthreaded send. It returns `response` with the original operation result, even
 when that result is an HTTP error response. Operation exceptions propagate.
 Python's helper is async: scope and expiry are checked when it is awaited.
 Do not introduce delayed dispatch inside an adapter after this check.
