@@ -120,7 +120,8 @@ func run(line []byte) (out map[string]any) {
 			obj := c.Value.(map[string]any)
 			target := obj["payload"]
 			if items, ok := target.([]any); ok && len(items) > 0 {
-				if _, ok := items[0].(map[string]any); ok {
+				switch items[0].(type) {
+				case map[string]any, []any:
 					target = items[0]
 				}
 			}

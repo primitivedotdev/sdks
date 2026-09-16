@@ -32,7 +32,7 @@ export function parseInteractionEnvelope(input) {
 }
 export function validateInteractionEnvelope(input) {
   const result = real.validateInteractionEnvelope(input);
-  return result.status === 'valid' ? {...result, envelope: input} : result;
+  return result.status === 'valid' && input.protocol !== 'shallow-probe' ? {...result, envelope: input} : result;
 }
 """.replace("MODULE", json.dumps(args.node_module.resolve().as_uri()))
     )
@@ -47,6 +47,28 @@ export function validateInteractionEnvelope(input) {
             }
         )
     cases.append({"mode": "decoded", "category": "calibration", "value": BASE})
+    cases.append(
+        {
+            "mode": "decoded",
+            "category": "calibration",
+            "value": {**BASE, "protocol": "shallow-probe", "payload": [[1]]},
+        }
+    )
+    go_source = directory / "faults.go"
+    runner = (ROOT / "scripts/parser-differential/go.go").read_text()
+    anchor = 'out = map[string]any{"status": r.Status}'
+    assert runner.count(anchor) == 1
+    runner = runner.replace(
+        anchor,
+        """
+    if c.Mode == "decoded" && r.Status == "valid" && r.Envelope["protocol"] == "shallow-probe" {
+        original := c.Value.(map[string]any)["payload"].([]any)
+        r.Envelope["payload"] = append([]any(nil), original...)
+    }
+    """
+        + anchor,
+    )
+    go_source.write_text(runner)
     replay = directory / "input.json"
     replay.write_text(json.dumps(cases))
     output = directory / "result"
@@ -56,6 +78,8 @@ export function validateInteractionEnvelope(input) {
             str(ROOT / "scripts/parser-differential/run.py"),
             "--node-module",
             str(module),
+            "--go-source",
+            str(go_source),
             "--replay",
             str(replay),
             "--output",
@@ -65,8 +89,13 @@ export function validateInteractionEnvelope(input) {
     )
     report = json.loads((output / "report.json").read_text())
     assert result.returncode == 1, report
-    assert report["mismatches"] == 4, report
-    assert report["invariant_failures"] == 3, report
+    assert report["mismatches"] == 5, report
+    assert report["invariant_failures"] == 4, report
+    disagreements = json.loads((output / "mismatches.json").read_text())
+    shallow = next(item for item in disagreements if item["index"] == 4)
+    assert shallow["results"]["go"]["snapshot"] is False, shallow
+    assert shallow["results"]["node"]["snapshot"] is True, shallow
+    assert shallow["results"]["python"]["snapshot"] is True, shallow
     print(
-        "Calibration passed: numeric meaning, source ownership, crash, and snapshot faults detected."
+        "Calibration passed: numeric meaning, source ownership, crash, snapshot, and Go shallow nested-array faults detected."
     )

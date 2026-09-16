@@ -1,24 +1,30 @@
 {
   "sdk_source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
   "date": "2026-09-16",
-  "case_executions": 259356,
-  "distinct_input_mode_pairs": 145190,
-  "language_evaluations": 778068,
+  "case_executions": 259362,
+  "distinct_input_mode_pairs": 145191,
+  "language_evaluations": 778086,
   "mismatches": 0,
   "invariant_failures": 0,
   "calibration": {
-    "injected_faults": 4,
-    "detected_mismatches": 4,
-    "detected_invariant_failures": 3
+    "injected_faults": 5,
+    "detected_mismatches": 5,
+    "detected_invariant_failures": 4,
+    "go_nested_array_shallow_copy_detected": true
   },
   "runs": [
     {
-      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+      "source_revision": "e3ca30082219cd9cec5a8b460fa6eedb55d6739e",
       "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      "runtimes": {
+        "node": "v26.3.0",
+        "python": "Python 3.12.5",
+        "go": "go version go1.25.5 darwin/arm64"
+      },
       "seed": 539363606,
       "random_iterations": 24000,
-      "cases": 43226,
-      "corpus_sha256": "809c33921e91c807ce08faeceb55b5d8e224fc9043e6462d4726d1786b270019",
+      "cases": 43227,
+      "corpus_sha256": "345dbd1a0a7c3399580e449cd2fdab208410ddd38cdd7a7086c1dd286af14828",
       "categories": {
         "field-types-unicode": 711,
         "decoded-fields": 711,
@@ -34,6 +40,7 @@
         "decoded-budget": 39,
         "padded-byte-limit": 4,
         "decoded-width": 7,
+        "decoded-nested-array": 1,
         "decoded-host-values": 13,
         "invalid-utf8-bom": 22,
         "escaped-unicode": 30,
@@ -50,47 +57,47 @@
       "status_counts": {
         "node": {
           "invalid": 22365,
-          "valid": 18269,
+          "valid": 18270,
           "unsupported": 2592
         },
         "python": {
           "invalid": 22365,
-          "valid": 18269,
+          "valid": 18270,
           "unsupported": 2592
         },
         "go": {
           "invalid": 22365,
-          "valid": 18269,
+          "valid": 18270,
           "unsupported": 2592
         }
       },
       "seconds": {
-        "node": 1.122,
-        "python": 2.181,
-        "go": 1.146
+        "node": 1.178,
+        "python": 2.281,
+        "go": 1.175
       },
       "peak_rss_bytes": {
-        "node": 155336704,
-        "python": 110608384,
-        "go": 30064640
+        "node": 156598272,
+        "python": 112738304,
+        "go": 31293440
       },
       "mismatches": 0,
       "invariant_failures": 0,
       "timeout_seconds_per_runner": 90,
-      "run": "0x20260916",
+      "run": "0x20260916"
+    },
+    {
+      "source_revision": "e3ca30082219cd9cec5a8b460fa6eedb55d6739e",
+      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
       "runtimes": {
         "node": "v26.3.0",
         "python": "Python 3.12.5",
         "go": "go version go1.25.5 darwin/arm64"
-      }
-    },
-    {
-      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
-      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      },
       "seed": 1,
       "random_iterations": 24000,
-      "cases": 43226,
-      "corpus_sha256": "54004b820f579de718a19071364ce4370f3cb12c6327ccbf37a0af71f92c66e1",
+      "cases": 43227,
+      "corpus_sha256": "77e8c9865ad240c0eaf5a081977eda61284a47867279a86d7e88d6eb9b631f63",
       "categories": {
         "field-types-unicode": 711,
         "decoded-fields": 711,
@@ -106,6 +113,7 @@
         "decoded-budget": 39,
         "padded-byte-limit": 4,
         "decoded-width": 7,
+        "decoded-nested-array": 1,
         "decoded-host-values": 13,
         "invalid-utf8-bom": 22,
         "escaped-unicode": 30,
@@ -122,47 +130,47 @@
       "status_counts": {
         "node": {
           "invalid": 22315,
-          "valid": 18345,
+          "valid": 18346,
           "unsupported": 2566
         },
         "python": {
           "invalid": 22315,
-          "valid": 18345,
+          "valid": 18346,
           "unsupported": 2566
         },
         "go": {
           "invalid": 22315,
-          "valid": 18345,
+          "valid": 18346,
           "unsupported": 2566
         }
       },
       "seconds": {
-        "node": 1.116,
-        "python": 2.043,
-        "go": 1.114
+        "node": 1.082,
+        "python": 1.976,
+        "go": 1.102
       },
       "peak_rss_bytes": {
-        "node": 160514048,
-        "python": 110428160,
-        "go": 28770304
+        "node": 152715264,
+        "python": 110231552,
+        "go": 31244288
       },
       "mismatches": 0,
       "invariant_failures": 0,
       "timeout_seconds_per_runner": 90,
-      "run": "0x1",
+      "run": "0x1"
+    },
+    {
+      "source_revision": "e3ca30082219cd9cec5a8b460fa6eedb55d6739e",
+      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
       "runtimes": {
         "node": "v26.3.0",
         "python": "Python 3.12.5",
         "go": "go version go1.25.5 darwin/arm64"
-      }
-    },
-    {
-      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
-      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      },
       "seed": 3735928559,
       "random_iterations": 24000,
-      "cases": 43226,
-      "corpus_sha256": "243b7e531c4dc72d977abda59701110d4a7e532bcf2f72e47dae9632b6fa2395",
+      "cases": 43227,
+      "corpus_sha256": "65af5066a8d4f6db67f65b1686b1936b56c0dbdbb2de87b70abd713f8d179949",
       "categories": {
         "field-types-unicode": 711,
         "decoded-fields": 711,
@@ -178,6 +186,7 @@
         "decoded-budget": 39,
         "padded-byte-limit": 4,
         "decoded-width": 7,
+        "decoded-nested-array": 1,
         "decoded-host-values": 13,
         "invalid-utf8-bom": 22,
         "escaped-unicode": 30,
@@ -194,47 +203,47 @@
       "status_counts": {
         "node": {
           "invalid": 22291,
-          "valid": 18314,
+          "valid": 18315,
           "unsupported": 2621
         },
         "python": {
           "invalid": 22291,
-          "valid": 18314,
+          "valid": 18315,
           "unsupported": 2621
         },
         "go": {
           "invalid": 22291,
-          "valid": 18314,
+          "valid": 18315,
           "unsupported": 2621
         }
       },
       "seconds": {
-        "node": 1.12,
-        "python": 2.102,
-        "go": 1.13
+        "node": 1.068,
+        "python": 2.037,
+        "go": 1.097
       },
       "peak_rss_bytes": {
-        "node": 172900352,
-        "python": 112148480,
-        "go": 30621696
+        "node": 151404544,
+        "python": 114049024,
+        "go": 28934144
       },
       "mismatches": 0,
       "invariant_failures": 0,
       "timeout_seconds_per_runner": 90,
-      "run": "0xdeadbeef",
+      "run": "0xdeadbeef"
+    },
+    {
+      "source_revision": "e3ca30082219cd9cec5a8b460fa6eedb55d6739e",
+      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
       "runtimes": {
         "node": "v26.3.0",
         "python": "Python 3.12.5",
         "go": "go version go1.25.5 darwin/arm64"
-      }
-    },
-    {
-      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
-      "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
+      },
       "seed": 1592594996,
       "random_iterations": 24000,
-      "cases": 43226,
-      "corpus_sha256": "528040765ea2a250e465869fe0228ab4ebfe14e0b513de0f981269a3eaf51c87",
+      "cases": 43227,
+      "corpus_sha256": "9b32ee269e694f4ac2abc377371be4d81e76b5b4b1c5b09d428d07df2a2e4080",
       "categories": {
         "field-types-unicode": 711,
         "decoded-fields": 711,
@@ -250,6 +259,7 @@
         "decoded-budget": 39,
         "padded-byte-limit": 4,
         "decoded-width": 7,
+        "decoded-nested-array": 1,
         "decoded-host-values": 13,
         "invalid-utf8-bom": 22,
         "escaped-unicode": 30,
@@ -266,42 +276,37 @@
       "status_counts": {
         "node": {
           "invalid": 22353,
-          "valid": 18312,
+          "valid": 18313,
           "unsupported": 2561
         },
         "python": {
           "invalid": 22353,
-          "valid": 18312,
+          "valid": 18313,
           "unsupported": 2561
         },
         "go": {
           "invalid": 22353,
-          "valid": 18312,
+          "valid": 18313,
           "unsupported": 2561
         }
       },
       "seconds": {
-        "node": 1.134,
-        "python": 2.098,
-        "go": 1.134
+        "node": 1.088,
+        "python": 1.902,
+        "go": 1.182
       },
       "peak_rss_bytes": {
-        "node": 156352512,
-        "python": 111165440,
-        "go": 29671424
+        "node": 152043520,
+        "python": 111083520,
+        "go": 28311552
       },
       "mismatches": 0,
       "invariant_failures": 0,
       "timeout_seconds_per_runner": 90,
-      "run": "0x5eed1234",
-      "runtimes": {
-        "node": "v26.3.0",
-        "python": "Python 3.12.5",
-        "go": "go version go1.25.5 darwin/arm64"
-      }
+      "run": "0x5eed1234"
     },
     {
-      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+      "source_revision": "e3ca30082219cd9cec5a8b460fa6eedb55d6739e",
       "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
       "runtimes": {
         "node": "v22.23.2",
@@ -310,8 +315,8 @@
       },
       "seed": 539363606,
       "random_iterations": 24000,
-      "cases": 43226,
-      "corpus_sha256": "809c33921e91c807ce08faeceb55b5d8e224fc9043e6462d4726d1786b270019",
+      "cases": 43227,
+      "corpus_sha256": "345dbd1a0a7c3399580e449cd2fdab208410ddd38cdd7a7086c1dd286af14828",
       "categories": {
         "field-types-unicode": 711,
         "decoded-fields": 711,
@@ -327,6 +332,7 @@
         "decoded-budget": 39,
         "padded-byte-limit": 4,
         "decoded-width": 7,
+        "decoded-nested-array": 1,
         "decoded-host-values": 13,
         "invalid-utf8-bom": 22,
         "escaped-unicode": 30,
@@ -343,29 +349,29 @@
       "status_counts": {
         "node": {
           "invalid": 22365,
-          "valid": 18269,
+          "valid": 18270,
           "unsupported": 2592
         },
         "python": {
           "invalid": 22365,
-          "valid": 18269,
+          "valid": 18270,
           "unsupported": 2592
         },
         "go": {
           "invalid": 22365,
-          "valid": 18269,
+          "valid": 18270,
           "unsupported": 2592
         }
       },
       "seconds": {
-        "node": 1.169,
-        "python": 2.307,
-        "go": 1.262
+        "node": 1.202,
+        "python": 1.926,
+        "go": 1.148
       },
       "peak_rss_bytes": {
-        "node": 127942656,
-        "python": 115392512,
-        "go": 30556160
+        "node": 127614976,
+        "python": 109019136,
+        "go": 29376512
       },
       "mismatches": 0,
       "invariant_failures": 0,
@@ -373,7 +379,7 @@
       "run": "node22"
     },
     {
-      "source_revision": "ecac78da160999429530ef8763d46f9e5405672d",
+      "source_revision": "e3ca30082219cd9cec5a8b460fa6eedb55d6739e",
       "node_module_sha256": "3eb829ffb52af5ed2f1984048717459350fb291ffcacc1eb27cae7bf06b687ec",
       "runtimes": {
         "node": "v24.21.0",
@@ -382,8 +388,8 @@
       },
       "seed": 1,
       "random_iterations": 24000,
-      "cases": 43226,
-      "corpus_sha256": "54004b820f579de718a19071364ce4370f3cb12c6327ccbf37a0af71f92c66e1",
+      "cases": 43227,
+      "corpus_sha256": "77e8c9865ad240c0eaf5a081977eda61284a47867279a86d7e88d6eb9b631f63",
       "categories": {
         "field-types-unicode": 711,
         "decoded-fields": 711,
@@ -399,6 +405,7 @@
         "decoded-budget": 39,
         "padded-byte-limit": 4,
         "decoded-width": 7,
+        "decoded-nested-array": 1,
         "decoded-host-values": 13,
         "invalid-utf8-bom": 22,
         "escaped-unicode": 30,
@@ -415,29 +422,29 @@
       "status_counts": {
         "node": {
           "invalid": 22315,
-          "valid": 18345,
+          "valid": 18346,
           "unsupported": 2566
         },
         "python": {
           "invalid": 22315,
-          "valid": 18345,
+          "valid": 18346,
           "unsupported": 2566
         },
         "go": {
           "invalid": 22315,
-          "valid": 18345,
+          "valid": 18346,
           "unsupported": 2566
         }
       },
       "seconds": {
-        "node": 1.037,
-        "python": 2.051,
-        "go": 1.144
+        "node": 1.101,
+        "python": 1.938,
+        "go": 1.106
       },
       "peak_rss_bytes": {
-        "node": 138215424,
-        "python": 107233280,
-        "go": 29556736
+        "node": 132988928,
+        "python": 108740608,
+        "go": 30162944
       },
       "mismatches": 0,
       "invariant_failures": 0,

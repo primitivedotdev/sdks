@@ -7,20 +7,20 @@ contact the API, classify sender authority, or execute interaction steps.
 ## Recorded result
 
 The SDK code at `ecac78da160999429530ef8763d46f9e5405672d` passed six runs on
-2026-09-16: **259,356 case executions**, covering **145,190 distinct input/mode
-pairs** and **778,068 language evaluations**. There were **zero differential
+2026-09-16: **259,362 case executions**, covering **145,191 distinct input/mode
+pairs** and **778,086 language evaluations**. There were **zero differential
 mismatches, crashes, source-preservation failures, or snapshot failures**. No
 production parser change was made.
 
 Four seeds ran on Node 26.3.0; two were repeated on Node 22.23.2 and 24.21.0.
 Python was 3.12.5 and Go was 1.25.5 on macOS arm64. The JavaScript entry point
 was extracted from a locally built SDK tarball, not imported from TypeScript.
-Each run contained 43,226 cases. Seeds, category counts, status distributions,
+Each run contained 43,227 cases. Seeds, category counts, status distributions,
 corpus hashes, packed-module hash, elapsed times, and peak resident memory are
 recorded in [evidence.json](evidence.json).
 
-The slowest parser runner completed a 43,226-case batch in 2.31 seconds. Maximum
-observed runner RSS was 165 MiB for Node, 111 MiB for Python, and 30 MiB for Go.
+The slowest parser runner completed a 43,227-case batch in 2.28 seconds. Maximum
+observed runner RSS was 150 MiB for Node, 109 MiB for Python, and 30 MiB for Go.
 These are process measurements, not per-case allocation limits; compiler and
 controller memory are excluded.
 
@@ -76,11 +76,13 @@ copy, crash, and explicit expected-status failures also write the corresponding
 list with `--replay PATH`; it uses the same public SDK entry points. Reports
 contain synthetic inputs only and do not include credentials or machine paths.
 
-The self-test wraps the JavaScript parser with four intentional faults: changed
-negative zero, borrowed source bytes, a thrown exception, and a caller-aliased
-snapshot. All four must trigger mismatches; the latter three must also trigger
-invariant failures. The wrapper exists only in a temporary directory and never
-modifies the SDK. This calibration passed in the recorded audit.
+The self-test injects five intentional faults: changed negative zero, borrowed
+source bytes, a thrown exception, a caller-aliased JavaScript snapshot, and a
+Go snapshot that copies only the outer slice of a nested array. All five must
+trigger mismatches; the latter four must also trigger invariant failures. The
+Go-specific probe uses `[[1]]`, mutates the inner slice, and requires only Go's
+snapshot check to fail. The wrappers exist only in a temporary directory and
+never modify the SDK. This calibration passed in the recorded audit.
 
 ## Bounds and limits
 

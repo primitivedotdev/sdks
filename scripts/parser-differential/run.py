@@ -204,6 +204,7 @@ def corpus(seed, count):
         )
     for n in [0, 1, 32768, 65535, 65536, 65537, 70000]:
         decoded("decoded-width", {**BASE, "payload": [None] * n})
+    decoded("decoded-nested-array", {**BASE, "payload": [[1]]})
     for spec in [
         "cycle",
         "alias",
@@ -353,6 +354,12 @@ def main():
     ap.add_argument(
         "--node", default="node", help="Node executable (for runtime-matrix probes)"
     )
+    ap.add_argument(
+        "--go-source",
+        type=Path,
+        default=ROOT / "scripts/parser-differential/go.go",
+        help="Go runner source override for oracle calibration",
+    )
     ap.add_argument("--output", type=Path, required=True)
     ap.add_argument("--replay", type=Path)
     args = ap.parse_args()
@@ -375,7 +382,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="parser-differential-") as temp:
         binary = Path(temp) / "go-runner"
         subprocess.run(
-            ["go", "build", "-o", str(binary), str(here / "go.go")],
+            ["go", "build", "-o", str(binary), str(args.go_source.resolve())],
             cwd=ROOT / "sdk-go",
             check=True,
             timeout=90,
