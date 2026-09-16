@@ -139,3 +139,19 @@ for (const fixture of decodedFixtures)
     };
     expect(validateInteractionEnvelope(value).status).toBe(fixture.status);
   });
+
+it("requires own envelope fields even when the host prototype has matching names", () => {
+  const decoded: Record<string, unknown> = JSON.parse(source);
+  delete decoded.prev_step_id;
+  Object.defineProperty(Object.prototype, "prev_step_id", {
+    value: null,
+    configurable: true,
+  });
+  try {
+    expect(parseInteractionEnvelope(JSON.stringify(decoded)).status).toBe(
+      "invalid",
+    );
+  } finally {
+    Reflect.deleteProperty(Object.prototype, "prev_step_id");
+  }
+});

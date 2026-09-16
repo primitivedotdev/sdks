@@ -120,6 +120,7 @@ function envelope(value: unknown): InteractionValidationResult {
   if (!value || typeof value !== "object" || Array.isArray(value))
     return invalid;
   const obj = value as Record<string, unknown>;
+  if (!Object.hasOwn(obj, "interaction_version")) return invalid;
   const version = obj.interaction_version;
   if (
     typeof version !== "number" ||
@@ -128,6 +129,19 @@ function envelope(value: unknown): InteractionValidationResult {
   )
     return invalid;
   if (version !== 1) return { status: "unsupported", version };
+  if (
+    ![
+      "interaction_id",
+      "protocol",
+      "protocol_version",
+      "step",
+      "step_id",
+      "prev_step_id",
+      "expires_at",
+      "payload",
+    ].every((key) => Object.hasOwn(obj, key))
+  )
+    return invalid;
   if (
     typeof obj.interaction_id !== "string" ||
     !WIRE_ID.test(obj.interaction_id) ||
