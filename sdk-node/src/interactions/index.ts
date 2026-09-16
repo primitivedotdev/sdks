@@ -1,4 +1,4 @@
-/** Portable, display-only parsing of interaction.json. No authentication or effects. */
+/** Portable interaction parsing and explicit signal helpers. Parsing has no effects. */
 export type { InteractionEnvelope } from "../x402/sign.js";
 
 import type { InteractionEnvelope } from "../x402/sign.js";
@@ -273,3 +273,14 @@ export function validateInteractionEnvelope(
     return { status: "invalid", reason: "invalid_input" };
   }
 }
+
+export type {
+  PreparedSignal,
+  SignalDependencies,
+  SignalInput,
+  SignalParent,
+  SignalPreparation,
+  SignalSendBody,
+  SignalSendResult,
+} from "./signals.js";
+export { prepareSignalEmail, sendPreparedSignal } from "./signals.js";

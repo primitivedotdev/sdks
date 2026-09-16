@@ -59,3 +59,7 @@ rejected. Python accepts builtin dict/list/scalars; Go accepts decoded
 `map[string]any`/`[]any`/scalars, plus `int`, `int64` and `json.Number`. Application
 objects must first be converted deliberately to JSON data. Validation does not
 invoke their serialization hooks.
+
+For explicit optional status-email preparation and sending, see
+[Optional email signals](signal-emails.md). Parsing remains display-only and
+never automatically emits these messages.

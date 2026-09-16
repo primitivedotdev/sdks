@@ -1,0 +1,740 @@
+[
+  {
+    "name": "ack received",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "ack",
+      "status": "received",
+      "note": "Literal <&> caf\u00e9 \ud83d\udcec\u2028\u2029 \\u2028"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "prepared",
+    "prepared": {
+      "accountScope": "account-one",
+      "preparedAtMs": 1800000000123,
+      "expiresAtMs": null,
+      "idempotencyKey": "signal-22222222-2222-4222-8222-222222222222",
+      "requestJson": "{\"from\":\"agent@example.com\",\"to\":\"Owner@example.com\",\"subject\":\"Re: Research <&> caf\u00e9 \ud83d\udcec\\u2028\",\"body_text\":\"Received your message.\\n\\nLiteral <&> caf\u00e9 \ud83d\udcec\\u2028\\u2029 \\\\u2028\",\"in_reply_to\":\"<Case.123@EXAMPLE.com>\",\"references\":[\"<old@example.com>\",\"<Case.123@EXAMPLE.com>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLmNvbSIsInByb3RvY29sIjoiYWNrIiwicHJvdG9jb2xfdmVyc2lvbiI6MSwic3RlcCI6ImFjayIsInN0ZXBfaWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJwcmV2X3N0ZXBfaWQiOm51bGwsImV4cGlyZXNfYXQiOm51bGwsInBheWxvYWQiOnsic3ViamVjdF9tZXNzYWdlX2lkIjoiPENhc2UuMTIzQEVYQU1QTEUuY29tPiIsInN0YXR1cyI6InJlY2VpdmVkIiwibm90ZSI6IkxpdGVyYWwgPCY+IGNhZsOpIPCfk6xcdTIwMjhcdTIwMjkgXFx1MjAyOCJ9fQ==\"}]}"
+    }
+  },
+  {
+    "name": "ack will_process",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "ack",
+      "status": "will_process",
+      "note": "Literal <&> caf\u00e9 \ud83d\udcec\u2028\u2029 \\u2028"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "prepared",
+    "prepared": {
+      "accountScope": "account-one",
+      "preparedAtMs": 1800000000123,
+      "expiresAtMs": null,
+      "idempotencyKey": "signal-22222222-2222-4222-8222-222222222222",
+      "requestJson": "{\"from\":\"agent@example.com\",\"to\":\"Owner@example.com\",\"subject\":\"Re: Research <&> caf\u00e9 \ud83d\udcec\\u2028\",\"body_text\":\"I intend to process your message.\\n\\nLiteral <&> caf\u00e9 \ud83d\udcec\\u2028\\u2029 \\\\u2028\",\"in_reply_to\":\"<Case.123@EXAMPLE.com>\",\"references\":[\"<old@example.com>\",\"<Case.123@EXAMPLE.com>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLmNvbSIsInByb3RvY29sIjoiYWNrIiwicHJvdG9jb2xfdmVyc2lvbiI6MSwic3RlcCI6ImFjayIsInN0ZXBfaWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJwcmV2X3N0ZXBfaWQiOm51bGwsImV4cGlyZXNfYXQiOm51bGwsInBheWxvYWQiOnsic3ViamVjdF9tZXNzYWdlX2lkIjoiPENhc2UuMTIzQEVYQU1QTEUuY29tPiIsInN0YXR1cyI6IndpbGxfcHJvY2VzcyIsIm5vdGUiOiJMaXRlcmFsIDwmPiBjYWbDqSDwn5OsXHUyMDI4XHUyMDI5IFxcdTIwMjgifX0=\"}]}"
+    }
+  },
+  {
+    "name": "ack will_not_process",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "ack",
+      "status": "will_not_process",
+      "note": "Literal <&> caf\u00e9 \ud83d\udcec\u2028\u2029 \\u2028"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "prepared",
+    "prepared": {
+      "accountScope": "account-one",
+      "preparedAtMs": 1800000000123,
+      "expiresAtMs": null,
+      "idempotencyKey": "signal-22222222-2222-4222-8222-222222222222",
+      "requestJson": "{\"from\":\"agent@example.com\",\"to\":\"Owner@example.com\",\"subject\":\"Re: Research <&> caf\u00e9 \ud83d\udcec\\u2028\",\"body_text\":\"I will not process your message.\\n\\nLiteral <&> caf\u00e9 \ud83d\udcec\\u2028\\u2029 \\\\u2028\",\"in_reply_to\":\"<Case.123@EXAMPLE.com>\",\"references\":[\"<old@example.com>\",\"<Case.123@EXAMPLE.com>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLmNvbSIsInByb3RvY29sIjoiYWNrIiwicHJvdG9jb2xfdmVyc2lvbiI6MSwic3RlcCI6ImFjayIsInN0ZXBfaWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJwcmV2X3N0ZXBfaWQiOm51bGwsImV4cGlyZXNfYXQiOm51bGwsInBheWxvYWQiOnsic3ViamVjdF9tZXNzYWdlX2lkIjoiPENhc2UuMTIzQEVYQU1QTEUuY29tPiIsInN0YXR1cyI6IndpbGxfbm90X3Byb2Nlc3MiLCJub3RlIjoiTGl0ZXJhbCA8Jj4gY2Fmw6kg8J+TrFx1MjAyOFx1MjAyOSBcXHUyMDI4In19\"}]}"
+    }
+  },
+  {
+    "name": "read",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "prepared",
+    "prepared": {
+      "accountScope": "account-one",
+      "preparedAtMs": 1800000000123,
+      "expiresAtMs": null,
+      "idempotencyKey": "signal-22222222-2222-4222-8222-222222222222",
+      "requestJson": "{\"from\":\"agent@example.com\",\"to\":\"Owner@example.com\",\"subject\":\"Re: Research <&> caf\u00e9 \ud83d\udcec\\u2028\",\"body_text\":\"I read your message.\",\"in_reply_to\":\"<Case.123@EXAMPLE.com>\",\"references\":[\"<old@example.com>\",\"<Case.123@EXAMPLE.com>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLmNvbSIsInByb3RvY29sIjoicmVhZCIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJyZWFkIiwic3RlcF9pZCI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsInByZXZfc3RlcF9pZCI6bnVsbCwiZXhwaXJlc19hdCI6bnVsbCwicGF5bG9hZCI6eyJzdWJqZWN0X21lc3NhZ2VfaWQiOiI8Q2FzZS4xMjNARVhBTVBMRS5jb20+In19\"}]}"
+    }
+  },
+  {
+    "name": "working",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "working",
+      "expiresAtMs": 1800000060123
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "prepared",
+    "prepared": {
+      "accountScope": "account-one",
+      "preparedAtMs": 1800000000123,
+      "expiresAtMs": 1800000060123,
+      "idempotencyKey": "signal-22222222-2222-4222-8222-222222222222",
+      "requestJson": "{\"from\":\"agent@example.com\",\"to\":\"Owner@example.com\",\"subject\":\"Re: Research <&> caf\u00e9 \ud83d\udcec\\u2028\",\"body_text\":\"I am working on your message.\",\"in_reply_to\":\"<Case.123@EXAMPLE.com>\",\"references\":[\"<old@example.com>\",\"<Case.123@EXAMPLE.com>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLmNvbSIsInByb3RvY29sIjoid29ya2luZyIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJ3b3JraW5nIiwic3RlcF9pZCI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsInByZXZfc3RlcF9pZCI6bnVsbCwiZXhwaXJlc19hdCI6IjIwMjctMDEtMTVUMDg6MDE6MDAuMTIzWiIsInBheWxvYWQiOnsic3ViamVjdF9tZXNzYWdlX2lkIjoiPENhc2UuMTIzQEVYQU1QTEUuY29tPiJ9fQ==\"}]}"
+    }
+  },
+  {
+    "name": "missing wire ID",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": null,
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "waiting_on_parent"
+  },
+  {
+    "name": "empty wire ID",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": "",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "waiting_on_parent"
+  },
+  {
+    "name": "record ID is not wire ID",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": "11111111-1111-4111-8111-111111111111",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "CRLF target",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": "<x@y>\r\nInjected: yes",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "CRLF subject",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "hi\nInjected: yes",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "empty subject",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "prepared",
+    "prepared": {
+      "accountScope": "account-one",
+      "preparedAtMs": 1800000000123,
+      "expiresAtMs": null,
+      "idempotencyKey": "signal-22222222-2222-4222-8222-222222222222",
+      "requestJson": "{\"from\":\"agent@example.com\",\"to\":\"Owner@example.com\",\"subject\":\"Re: Your message\",\"body_text\":\"I read your message.\",\"in_reply_to\":\"<Case.123@EXAMPLE.com>\",\"references\":[\"<old@example.com>\",\"<Case.123@EXAMPLE.com>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLmNvbSIsInByb3RvY29sIjoicmVhZCIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJyZWFkIiwic3RlcF9pZCI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsInByZXZfc3RlcF9pZCI6bnVsbCwiZXhwaXJlc19hdCI6bnVsbCwicGF5bG9hZCI6eyJzdWJqZWN0X21lc3NhZ2VfaWQiOiI8Q2FzZS4xMjNARVhBTVBMRS5jb20+In19\"}]}"
+    }
+  },
+  {
+    "name": "display address rejected",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner <owner@example.com>"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "multiple recipients",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "a@example.com,b@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "missing scope",
+    "input": {
+      "parent": {
+        "accountScope": "",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "invalid expiry 0",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "working",
+      "expiresAtMs": 1800000000123
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "invalid expiry -1",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "working",
+      "expiresAtMs": 1800000000122
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "invalid expiry 60001",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "working",
+      "expiresAtMs": 1800000060124
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "invalid ACK",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "ack",
+      "status": "working"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "oversize note",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "ack",
+      "status": "received",
+      "note": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "bounded references",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old0@example.com",
+          "old1@example.com",
+          "old2@example.com",
+          "old3@example.com",
+          "old4@example.com",
+          "old5@example.com",
+          "old6@example.com",
+          "old7@example.com",
+          "old8@example.com",
+          "old9@example.com",
+          "old10@example.com",
+          "old11@example.com",
+          "old12@example.com",
+          "old13@example.com",
+          "old14@example.com",
+          "old15@example.com",
+          "old16@example.com",
+          "old17@example.com",
+          "old18@example.com",
+          "old19@example.com",
+          "old20@example.com",
+          "old21@example.com",
+          "old22@example.com",
+          "old23@example.com",
+          "old24@example.com",
+          "old25@example.com",
+          "old26@example.com",
+          "old27@example.com",
+          "old28@example.com",
+          "old29@example.com",
+          "old30@example.com",
+          "old31@example.com",
+          "old32@example.com",
+          "old33@example.com",
+          "old34@example.com",
+          "old35@example.com",
+          "old36@example.com",
+          "old37@example.com",
+          "old38@example.com",
+          "old39@example.com",
+          "old40@example.com",
+          "old41@example.com",
+          "old42@example.com",
+          "old43@example.com",
+          "old44@example.com",
+          "old45@example.com",
+          "old46@example.com",
+          "old47@example.com",
+          "old48@example.com",
+          "old49@example.com",
+          "old50@example.com",
+          "old51@example.com",
+          "old52@example.com",
+          "old53@example.com",
+          "old54@example.com",
+          "old55@example.com",
+          "old56@example.com",
+          "old57@example.com",
+          "old58@example.com",
+          "old59@example.com",
+          "old60@example.com",
+          "old61@example.com",
+          "old62@example.com",
+          "old63@example.com",
+          "old64@example.com",
+          "old65@example.com",
+          "old66@example.com",
+          "old67@example.com",
+          "old68@example.com",
+          "old69@example.com",
+          "old70@example.com",
+          "old71@example.com",
+          "old72@example.com",
+          "old73@example.com",
+          "old74@example.com",
+          "old75@example.com",
+          "old76@example.com",
+          "old77@example.com",
+          "old78@example.com",
+          "old79@example.com",
+          "old80@example.com",
+          "old81@example.com",
+          "old82@example.com",
+          "old83@example.com",
+          "old84@example.com",
+          "old85@example.com",
+          "old86@example.com",
+          "old87@example.com",
+          "old88@example.com",
+          "old89@example.com",
+          "old90@example.com",
+          "old91@example.com",
+          "old92@example.com",
+          "old93@example.com",
+          "old94@example.com",
+          "old95@example.com",
+          "old96@example.com",
+          "old97@example.com",
+          "old98@example.com",
+          "old99@example.com",
+          "old100@example.com",
+          "old101@example.com",
+          "old102@example.com",
+          "old103@example.com",
+          "old104@example.com",
+          "old105@example.com",
+          "old106@example.com",
+          "old107@example.com",
+          "old108@example.com",
+          "old109@example.com",
+          "old110@example.com",
+          "old111@example.com",
+          "old112@example.com",
+          "old113@example.com",
+          "old114@example.com",
+          "old115@example.com",
+          "old116@example.com",
+          "old117@example.com",
+          "old118@example.com",
+          "old119@example.com",
+          "old120@example.com",
+          "old121@example.com",
+          "old122@example.com",
+          "old123@example.com",
+          "old124@example.com",
+          "old125@example.com",
+          "old126@example.com",
+          "old127@example.com",
+          "old128@example.com",
+          "old129@example.com"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "prepared",
+    "prepared": {
+      "accountScope": "account-one",
+      "preparedAtMs": 1800000000123,
+      "expiresAtMs": null,
+      "idempotencyKey": "signal-22222222-2222-4222-8222-222222222222",
+      "requestJson": "{\"from\":\"agent@example.com\",\"to\":\"Owner@example.com\",\"subject\":\"Re: Research <&> caf\u00e9 \ud83d\udcec\\u2028\",\"body_text\":\"I read your message.\",\"in_reply_to\":\"<Case.123@EXAMPLE.com>\",\"references\":[\"<old31@example.com>\",\"<old32@example.com>\",\"<old33@example.com>\",\"<old34@example.com>\",\"<old35@example.com>\",\"<old36@example.com>\",\"<old37@example.com>\",\"<old38@example.com>\",\"<old39@example.com>\",\"<old40@example.com>\",\"<old41@example.com>\",\"<old42@example.com>\",\"<old43@example.com>\",\"<old44@example.com>\",\"<old45@example.com>\",\"<old46@example.com>\",\"<old47@example.com>\",\"<old48@example.com>\",\"<old49@example.com>\",\"<old50@example.com>\",\"<old51@example.com>\",\"<old52@example.com>\",\"<old53@example.com>\",\"<old54@example.com>\",\"<old55@example.com>\",\"<old56@example.com>\",\"<old57@example.com>\",\"<old58@example.com>\",\"<old59@example.com>\",\"<old60@example.com>\",\"<old61@example.com>\",\"<old62@example.com>\",\"<old63@example.com>\",\"<old64@example.com>\",\"<old65@example.com>\",\"<old66@example.com>\",\"<old67@example.com>\",\"<old68@example.com>\",\"<old69@example.com>\",\"<old70@example.com>\",\"<old71@example.com>\",\"<old72@example.com>\",\"<old73@example.com>\",\"<old74@example.com>\",\"<old75@example.com>\",\"<old76@example.com>\",\"<old77@example.com>\",\"<old78@example.com>\",\"<old79@example.com>\",\"<old80@example.com>\",\"<old81@example.com>\",\"<old82@example.com>\",\"<old83@example.com>\",\"<old84@example.com>\",\"<old85@example.com>\",\"<old86@example.com>\",\"<old87@example.com>\",\"<old88@example.com>\",\"<old89@example.com>\",\"<old90@example.com>\",\"<old91@example.com>\",\"<old92@example.com>\",\"<old93@example.com>\",\"<old94@example.com>\",\"<old95@example.com>\",\"<old96@example.com>\",\"<old97@example.com>\",\"<old98@example.com>\",\"<old99@example.com>\",\"<old100@example.com>\",\"<old101@example.com>\",\"<old102@example.com>\",\"<old103@example.com>\",\"<old104@example.com>\",\"<old105@example.com>\",\"<old106@example.com>\",\"<old107@example.com>\",\"<old108@example.com>\",\"<old109@example.com>\",\"<old110@example.com>\",\"<old111@example.com>\",\"<old112@example.com>\",\"<old113@example.com>\",\"<old114@example.com>\",\"<old115@example.com>\",\"<old116@example.com>\",\"<old117@example.com>\",\"<old118@example.com>\",\"<old119@example.com>\",\"<old120@example.com>\",\"<old121@example.com>\",\"<old122@example.com>\",\"<old123@example.com>\",\"<old124@example.com>\",\"<old125@example.com>\",\"<old126@example.com>\",\"<old127@example.com>\",\"<old128@example.com>\",\"<old129@example.com>\",\"<Case.123@EXAMPLE.com>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLmNvbSIsInByb3RvY29sIjoicmVhZCIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJyZWFkIiwic3RlcF9pZCI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsInByZXZfc3RlcF9pZCI6bnVsbCwiZXhwaXJlc19hdCI6bnVsbCwicGF5bG9hZCI6eyJzdWJqZWN0X21lc3NhZ2VfaWQiOiI8Q2FzZS4xMjNARVhBTVBMRS5jb20+In19\"}]}"
+    }
+  },
+  {
+    "name": "long references",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx2@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx3@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx4@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx5@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx6@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx7@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx8@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx9@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx10@example.com",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx11@example.com"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "prepared",
+    "prepared": {
+      "accountScope": "account-one",
+      "preparedAtMs": 1800000000123,
+      "expiresAtMs": null,
+      "idempotencyKey": "signal-22222222-2222-4222-8222-222222222222",
+      "requestJson": "{\"from\":\"agent@example.com\",\"to\":\"Owner@example.com\",\"subject\":\"Re: Research <&> caf\u00e9 \ud83d\udcec\\u2028\",\"body_text\":\"I read your message.\",\"in_reply_to\":\"<Case.123@EXAMPLE.com>\",\"references\":[\"<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx4@example.com>\",\"<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx5@example.com>\",\"<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx6@example.com>\",\"<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx7@example.com>\",\"<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx8@example.com>\",\"<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx9@example.com>\",\"<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx10@example.com>\",\"<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx11@example.com>\",\"<Case.123@EXAMPLE.com>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLmNvbSIsInByb3RvY29sIjoicmVhZCIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJyZWFkIiwic3RlcF9pZCI6IjIyMjIyMjIyLTIyMjItNDIyMi04MjIyLTIyMjIyMjIyMjIyMiIsInByZXZfc3RlcF9pZCI6bnVsbCwiZXhwaXJlc19hdCI6bnVsbCwicGF5bG9hZCI6eyJzdWJqZWN0X21lc3NhZ2VfaWQiOiI8Q2FzZS4xMjNARVhBTVBMRS5jb20+In19\"}]}"
+    }
+  },
+  {
+    "name": "NUL ACK note",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "ack",
+      "status": "received",
+      "note": "before\u0000after"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "same UUID different case",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "read"
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
+    ],
+    "status": "invalid"
+  }
+]
