@@ -58,6 +58,16 @@ const ENVELOPE_KEYS = [
 function asciiLower(value: string): string {
   return value.replace(/[A-Z]/g, (letter) => letter.toLowerCase());
 }
+function mediaType(value: string): string {
+  const separator = value.indexOf(";");
+  let end = separator === -1 ? value.length : separator;
+  let start = 0;
+  const padding = (index: number) =>
+    value.charCodeAt(index) === 32 || value.charCodeAt(index) === 9;
+  while (start < end && padding(start)) start++;
+  while (end > start && padding(end - 1)) end--;
+  return asciiLower(value.slice(start, end));
+}
 function exactKeys(
   value: Record<string, unknown>,
   required: string[],
@@ -206,13 +216,7 @@ export function classifySignalContent(
       reason: "invalid_interaction",
       interaction,
     };
-  if (
-    asciiLower(
-      (canonical[0]?.contentType ?? "")
-        .split(";")[0]
-        ?.replace(/^[ \t]+|[ \t]+$/g, "") ?? "",
-    ) !== "application/json"
-  )
+  if (mediaType(canonical[0]?.contentType ?? "") !== "application/json")
     return {
       classification: "mixed_or_unsupported",
       reason: "unsupported_content_type",

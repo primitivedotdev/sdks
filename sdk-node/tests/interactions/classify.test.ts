@@ -51,6 +51,31 @@ describe("shared signal content", () => {
       }
     });
 });
+it("handles long MIME padding without accepting internal or non-MIME whitespace", () => {
+  const item = fixtures.find((value) => value.name === "read fallback");
+  if (!item) throw new Error("fixture");
+  const padding = " \t".repeat(100_000);
+  const classify = (contentType: string) =>
+    classifySignalContent({
+      inventory: {
+        status: "complete",
+        parts: [{ filename: "interaction.json", contentType }],
+      },
+      bodies: item.bodies,
+      canonicalPartBytes: bytes(item),
+    });
+  expect(
+    classify(`${padding}APPLICATION/JSON${padding}; charset=utf-8`)
+      .classification,
+  ).toBe("informational_only");
+  for (const contentType of [
+    `application/${padding}json`,
+    `x${padding}y`,
+    "\u00a0application/json",
+    "application/json\r\n",
+  ])
+    expect(classify(contentType).reason).toBe("unsupported_content_type");
+});
 for (const extra of [
   null,
   {
