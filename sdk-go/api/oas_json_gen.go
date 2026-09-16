@@ -58331,6 +58331,12 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.AttachmentsComplete.Set {
+			e.FieldStart("attachments_complete")
+			s.AttachmentsComplete.Encode(e)
+		}
+	}
+	{
 		if s.AttachmentsDownloadAvailable.Set {
 			e.FieldStart("attachments_download_available")
 			s.AttachmentsDownloadAvailable.Encode(e)
@@ -58338,7 +58344,7 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSentEmailDetail = [36]string{
+var jsonFieldsNameOfSentEmailDetail = [37]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -58374,7 +58380,8 @@ var jsonFieldsNameOfSentEmailDetail = [36]string{
 	32: "body_html",
 	33: "attachments",
 	34: "attachments_size_bytes",
-	35: "attachments_download_available",
+	35: "attachments_complete",
+	36: "attachments_download_available",
 }
 
 // Decode decodes SentEmailDetail from json.
@@ -58764,6 +58771,16 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"attachments_size_bytes\"")
+			}
+		case "attachments_complete":
+			if err := func() error {
+				s.AttachmentsComplete.Reset()
+				if err := s.AttachmentsComplete.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"attachments_complete\"")
 			}
 		case "attachments_download_available":
 			if err := func() error {

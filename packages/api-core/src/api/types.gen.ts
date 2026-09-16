@@ -2544,6 +2544,10 @@ export type SentEmailDetail = SentEmailSummary & {
      */
     attachments_size_bytes?: number;
     /**
+     * Whether attachments enumerates the complete original submitted attachment set, including zero-byte and inline CID parts. True requires no submitted payload-reference, offloaded, or visibility-filtered attachment to be omitted, retained content, and a published archive when the attachment inventory is nonempty. False or absent provides no completeness proof, including for legacy or discarded content. This field grants no download access and has no interaction semantics.
+     */
+    attachments_complete?: boolean;
+    /**
      * Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives.
      */
     attachments_download_available?: boolean;

@@ -308,3 +308,37 @@ it("preserves the exact maximum aggregate attachment byte count", async () => {
   });
   expect(result.data?.data?.attachments_size_bytes).toBe(9007199254740991);
 });
+
+const completenessCases = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../../test-fixtures/sent-attachment-completeness.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+) as Array<{ name: string; fields: Partial<SentEmailDetail> }>;
+for (const item of completenessCases) {
+  it(`preserves sent attachment completeness: ${item.name}`, async () => {
+    const data = { ...sentFixture.data, ...item.fields };
+    const client = new PrimitiveClient({
+      fetch: async (input) => {
+        expect(new URL((input as Request).url).pathname).toBe(
+          `/v1/sent-emails/${fixture.id}`,
+        );
+        return Response.json({ success: true, data });
+      },
+    });
+    const result = await getSentEmail({
+      client: client.client,
+      path: { id: fixture.id },
+    });
+    const detail = result.data?.data;
+    const complete: boolean | undefined = detail?.attachments_complete;
+    expect(complete).toBe(item.fields.attachments_complete);
+    expect(Object.hasOwn(detail ?? {}, "attachments_complete")).toBe(
+      Object.hasOwn(item.fields, "attachments_complete"),
+    );
+    expect(detail).toEqual(data);
+  });
+}

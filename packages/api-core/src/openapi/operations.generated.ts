@@ -12335,6 +12335,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "maximum": 9007199254740991,
               "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
             },
+            "attachments_complete": {
+              "type": "boolean",
+              "description": "Whether attachments enumerates the complete original submitted attachment set, including zero-byte and inline CID parts. True requires no submitted payload-reference, offloaded, or visibility-filtered attachment to be omitted, retained content, and a published archive when the attachment inventory is nonempty. False or absent provides no completeness proof, including for legacy or discarded content. This field grants no download access and has no interaction semantics."
+            },
             "attachments_download_available": {
               "type": "boolean",
               "description": "Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives."
@@ -12999,6 +13003,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "minimum": 0,
               "maximum": 9007199254740991,
               "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
+            },
+            "attachments_complete": {
+              "type": "boolean",
+              "description": "Whether attachments enumerates the complete original submitted attachment set, including zero-byte and inline CID parts. True requires no submitted payload-reference, offloaded, or visibility-filtered attachment to be omitted, retained content, and a published archive when the attachment inventory is nonempty. False or absent provides no completeness proof, including for legacy or discarded content. This field grants no download access and has no interaction semantics."
             },
             "attachments_download_available": {
               "type": "boolean",
@@ -13937,6 +13945,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "minimum": 0,
               "maximum": 9007199254740991,
               "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
+            },
+            "attachments_complete": {
+              "type": "boolean",
+              "description": "Whether attachments enumerates the complete original submitted attachment set, including zero-byte and inline CID parts. True requires no submitted payload-reference, offloaded, or visibility-filtered attachment to be omitted, retained content, and a published archive when the attachment inventory is nonempty. False or absent provides no completeness proof, including for legacy or discarded content. This field grants no download access and has no interaction semantics."
             },
             "attachments_download_available": {
               "type": "boolean",

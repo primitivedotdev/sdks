@@ -25442,6 +25442,12 @@ type SentEmailDetail struct {
 	// Original decoded attachment byte total accepted for this send, not the compressed archive size. It
 	// may exceed the retained inline total after offloading.
 	AttachmentsSizeBytes OptInt `json:"attachments_size_bytes"`
+	// Whether attachments enumerates the complete original submitted attachment set, including zero-byte
+	// and inline CID parts. True requires no submitted payload-reference, offloaded, or
+	// visibility-filtered attachment to be omitted, retained content, and a published archive when the
+	// attachment inventory is nonempty. False or absent provides no completeness proof, including for
+	// legacy or discarded content. This field grants no download access and has no interaction semantics.
+	AttachmentsComplete OptBool `json:"attachments_complete"`
 	// Whether an inline attachment archive has been successfully retained and is available for download.
 	// Download authorization is checked separately; address-bound agent connection keys cannot download
 	// archives.
@@ -25623,6 +25629,11 @@ func (s *SentEmailDetail) GetAttachmentsSizeBytes() OptInt {
 	return s.AttachmentsSizeBytes
 }
 
+// GetAttachmentsComplete returns the value of AttachmentsComplete.
+func (s *SentEmailDetail) GetAttachmentsComplete() OptBool {
+	return s.AttachmentsComplete
+}
+
 // GetAttachmentsDownloadAvailable returns the value of AttachmentsDownloadAvailable.
 func (s *SentEmailDetail) GetAttachmentsDownloadAvailable() OptBool {
 	return s.AttachmentsDownloadAvailable
@@ -25801,6 +25812,11 @@ func (s *SentEmailDetail) SetAttachments(val []SentEmailDetailAttachmentsItem) {
 // SetAttachmentsSizeBytes sets the value of AttachmentsSizeBytes.
 func (s *SentEmailDetail) SetAttachmentsSizeBytes(val OptInt) {
 	s.AttachmentsSizeBytes = val
+}
+
+// SetAttachmentsComplete sets the value of AttachmentsComplete.
+func (s *SentEmailDetail) SetAttachmentsComplete(val OptBool) {
+	s.AttachmentsComplete = val
 }
 
 // SetAttachmentsDownloadAvailable sets the value of AttachmentsDownloadAvailable.

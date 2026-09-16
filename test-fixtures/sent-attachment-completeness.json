@@ -1,0 +1,36 @@
+[
+  {
+    "name": "legacy field absent",
+    "fields": {}
+  },
+  {
+    "name": "explicit incomplete inventory",
+    "fields": {
+      "attachments_complete": false
+    }
+  },
+  {
+    "name": "complete retained inventory",
+    "fields": {
+      "attachments_complete": true,
+      "attachments_size_bytes": 12
+    }
+  },
+  {
+    "name": "complete empty inventory without archive",
+    "fields": {
+      "attachments_complete": true,
+      "attachments": [],
+      "attachments_size_bytes": 0,
+      "attachments_download_available": false
+    }
+  },
+  {
+    "name": "empty visible inventory is incomplete",
+    "fields": {
+      "attachments_complete": false,
+      "attachments": [],
+      "attachments_download_available": false
+    }
+  }
+]
