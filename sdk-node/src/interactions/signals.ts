@@ -76,13 +76,17 @@ function header(value: string, limit: number): void {
 function wireId(value: string): string {
   check(typeof value === "string", "invalid Message-ID");
   // Only ASCII outer spaces are normalized; CR/LF are never accepted.
-  let id = value.replace(/^ +| +$/g, "");
+  let start = 0;
+  let end = value.length;
+  while (start < end && value.charCodeAt(start) === 32) start++;
+  while (end > start && value.charCodeAt(end - 1) === 32) end--;
+  let id = value.slice(start, end);
   if (id.startsWith("<") && id.endsWith(">")) id = id.slice(1, -1);
   check(
-    ID.test(id) &&
+    id.length <= 996 &&
+      ID.test(id) &&
       !/[<>]/.test(id) &&
-      id.split("@").length === 2 &&
-      id.length <= 996,
+      id.split("@").length === 2,
     "invalid Message-ID",
   );
   return `<${id}>`;
