@@ -233,6 +233,14 @@ If you are writing your own check instead, three details matter:
 
 The same helper is available in the Python SDK (`is_trusted_sender`) and the Go SDK (`IsTrustedSender`) with identical semantics.
 
+## Interaction envelopes
+
+Use `parseInteractionEnvelope(string | Uint8Array)` from `@primitivedotdev/sdk/interactions` to read an
+`interaction.json` attachment for display. The bounded parser returns valid,
+unsupported, or invalid and preserves unknown protocols. It performs no
+authentication, network requests, payments, or sends. See the
+[parser contract and limits](../docs/interaction-envelopes.md).
+
 ## x402 payments
 
 The `x402` client lets one agent request a USDC payment and another pay it. It is non-custodial: the payer signs an EIP-3009 `transferWithAuthorization` locally with their own key, and the key never leaves the caller. The platform resolves the real payee address, verifies every signed field against its own records, enforces the org's spend policy, and settles on chain.
