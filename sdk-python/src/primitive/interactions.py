@@ -1,10 +1,35 @@
-"""Bounded, display-only interaction.json parsing. No authentication or effects."""
+"""Bounded interaction parsing and explicit signal helpers. Parsing has no effects."""
 
 import json
 import math
 import re
 from dataclasses import dataclass
 from typing import Literal, cast
+
+from .signals import (
+    ExpiredSignal as ExpiredSignal,
+)
+from .signals import (
+    PreparedSignal as PreparedSignal,
+)
+from .signals import (
+    SignalInput as SignalInput,
+)
+from .signals import (
+    SignalParent as SignalParent,
+)
+from .signals import (
+    SignalPreparation as SignalPreparation,
+)
+from .signals import (
+    SignalResponse as SignalResponse,
+)
+from .signals import (
+    prepare_signal_email as prepare_signal_email,
+)
+from .signals import (
+    send_prepared_signal as send_prepared_signal,
+)
 
 MAX_INTERACTION_BYTES = 65_536
 MAX_INTERACTION_DEPTH = 64
