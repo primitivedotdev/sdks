@@ -2153,7 +2153,7 @@ func decodeDownloadDomainZoneFileParams(args [1]string, argsEscaped bool, r *htt
 type DownloadEmailAttachmentPartParams struct {
 	// Resource UUID.
 	ID uuid.UUID
-	// The attachment metadata index, not its offset in the attachments array.
+	// The attachment metadata `part_index`, not its offset in the attachments array.
 	PartIndex int32
 }
 
@@ -2410,7 +2410,7 @@ func decodeDownloadRawEmailParams(args [1]string, argsEscaped bool, r *http.Requ
 type DownloadSentAttachmentPartParams struct {
 	// Resource UUID.
 	ID uuid.UUID
-	// The attachment metadata index, not its offset in the attachments array.
+	// The attachment metadata `part_index`, not its offset in the attachments array.
 	PartIndex int32
 }
 

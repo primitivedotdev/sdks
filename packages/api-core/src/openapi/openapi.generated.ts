@@ -2278,7 +2278,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "downloadEmailAttachmentPart",
         "summary": "Download one inbound email attachment",
-        "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only a message addressed to its claimed address.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
+        "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only a message addressed to its claimed address.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
         "tags": [
           "Emails"
         ],
@@ -2384,7 +2384,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "downloadSentAttachmentPart",
         "summary": "Download one sent email attachment",
-        "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only mail sent from its claimed address.\nReceiving a copy does not authorize downloading another sender's sent content.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
+        "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only mail sent from its claimed address.\nReceiving a copy does not authorize downloading another sender's sent content.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
         "tags": [
           "Sending"
         ],
@@ -8045,7 +8045,7 @@ export const openapiDocument: Record<string, unknown> = {
         "name": "part_index",
         "in": "path",
         "required": true,
-        "description": "The attachment metadata index, not its offset in the attachments array",
+        "description": "The attachment metadata `part_index`, not its offset in the attachments array",
         "schema": {
           "type": "integer",
           "format": "int32",

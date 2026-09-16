@@ -4417,7 +4417,7 @@ export type TemplateInstallStatus = {
 };
 
 /**
- * The attachment metadata index, not its offset in the attachments array
+ * The attachment metadata `part_index`, not its offset in the attachments array
  */
 export type AttachmentPartIndex = number;
 
@@ -5797,7 +5797,7 @@ export type DownloadEmailAttachmentPartData = {
          */
         id: string;
         /**
-         * The attachment metadata index, not its offset in the attachments array
+         * The attachment metadata `part_index`, not its offset in the attachments array
          */
         part_index: number;
     };
@@ -5863,7 +5863,7 @@ export type DownloadSentAttachmentPartData = {
          */
         id: string;
         /**
-         * The attachment metadata index, not its offset in the attachments array
+         * The attachment metadata `part_index`, not its offset in the attachments array
          */
         part_index: number;
     };

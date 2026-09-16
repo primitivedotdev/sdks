@@ -3,7 +3,7 @@
 Availability: pending service release. These SDK operations describe the new
 contract; their presence does not mean the endpoints are deployed.
 
-Use an attachment's metadata `index`, not its position in the attachments array.
+Use an attachment's metadata `part_index`, not its position in the attachments array.
 The index is an integer from 0 through 2147483647. The two bearer-authenticated
 operations are:
 
@@ -30,9 +30,9 @@ Import `/api` to avoid Node-specific root exports. The thin methods use
 import { PrimitiveClient } from '@primitivedotdev/sdk/api';
 
 const client = new PrimitiveClient({ apiKey });
-const part = await client.downloadEmailAttachmentPart(emailId, attachment.index);
+const part = await client.downloadEmailAttachmentPart(emailId, attachment.part_index);
 // part.bytes: Uint8Array; part.sha256, part.contentDisposition, part.cacheControl
-const sentPart = await client.downloadSentAttachmentPart(sentEmailId, attachment.index);
+const sentPart = await client.downloadSentAttachmentPart(sentEmailId, attachment.part_index);
 ```
 
 Generated operations of the same names also remain available from `/api`. Their

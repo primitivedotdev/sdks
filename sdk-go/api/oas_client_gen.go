@@ -421,7 +421,7 @@ type Invoker interface {
 	//
 	// Pending service release. This contract does not establish live availability.
 	// Downloads the original bytes of one ordinary email attachment, selected by
-	// its metadata `index`, not its position in an attachments array. Refresh
+	// its metadata `part_index`, not its position in an attachments array. Refresh
 	// the email detail after `attachment_changed` before choosing an index again.
 	// Uses bearer authentication only; signed raw-email download tokens are not accepted.
 	// A paired-agent credential may read only a message addressed to its claimed address.
@@ -442,7 +442,7 @@ type Invoker interface {
 	//
 	// Pending service release. This contract does not establish live availability.
 	// Downloads the original bytes of one ordinary email attachment, selected by
-	// its metadata `index`, not its position in an attachments array. Refresh
+	// its metadata `part_index`, not its position in an attachments array. Refresh
 	// the email detail after `attachment_changed` before choosing an index again.
 	// Uses bearer authentication only; signed raw-email download tokens are not accepted.
 	// A paired-agent credential may read only mail sent from its claimed address.
@@ -6096,7 +6096,7 @@ func (c *Client) sendDownloadDomainZoneFile(ctx context.Context, params Download
 //
 // Pending service release. This contract does not establish live availability.
 // Downloads the original bytes of one ordinary email attachment, selected by
-// its metadata `index`, not its position in an attachments array. Refresh
+// its metadata `part_index`, not its position in an attachments array. Refresh
 // the email detail after `attachment_changed` before choosing an index again.
 // Uses bearer authentication only; signed raw-email download tokens are not accepted.
 // A paired-agent credential may read only a message addressed to its claimed address.
@@ -6408,7 +6408,7 @@ func (c *Client) sendDownloadRawEmail(ctx context.Context, params DownloadRawEma
 //
 // Pending service release. This contract does not establish live availability.
 // Downloads the original bytes of one ordinary email attachment, selected by
-// its metadata `index`, not its position in an attachments array. Refresh
+// its metadata `part_index`, not its position in an attachments array. Refresh
 // the email detail after `attachment_changed` before choosing an index again.
 // Uses bearer authentication only; signed raw-email download tokens are not accepted.
 // A paired-agent credential may read only mail sent from its claimed address.

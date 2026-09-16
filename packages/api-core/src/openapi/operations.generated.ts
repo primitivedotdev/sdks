@@ -2877,7 +2877,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": true,
     "bodyRequired": false,
     "command": "download-email-attachment-part",
-    "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only a message addressed to its claimed address.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
+    "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only a message addressed to its claimed address.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "downloadEmailAttachmentPart",
@@ -2891,7 +2891,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "The attachment metadata index, not its offset in the attachments array",
+        "description": "The attachment metadata `part_index`, not its offset in the attachments array",
         "enum": null,
         "maximum": 2147483647,
         "minimum": 0,
@@ -12298,7 +12298,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": true,
     "bodyRequired": false,
     "command": "download-sent-attachment-part",
-    "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only mail sent from its claimed address.\nReceiving a copy does not authorize downloading another sender's sent content.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
+    "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `part_index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only mail sent from its claimed address.\nReceiving a copy does not authorize downloading another sender's sent content.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "downloadSentAttachmentPart",
@@ -12312,7 +12312,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "The attachment metadata index, not its offset in the attachments array",
+        "description": "The attachment metadata `part_index`, not its offset in the attachments array",
         "enum": null,
         "maximum": 2147483647,
         "minimum": 0,
