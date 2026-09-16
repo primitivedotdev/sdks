@@ -84,6 +84,7 @@ it("validates decoded objects without invoking getters or toJSON", () => {
     9007199254740992,
     new Array(2),
     "a".repeat(65_537),
+    { ["k".repeat(65_537)]: null },
     new Date(),
     "\ud800",
   ]) {

@@ -230,15 +230,16 @@ export function validateInteractionEnvelope(
         throw new Error("sparse array");
       for (const key of keys) {
         if (array && key === "length") continue;
-        if (typeof key !== "string" || !scalarString(key))
-          throw new Error("invalid key");
+        if (typeof key !== "string") throw new Error("invalid key");
+        if ((!array && key.length >= budget) || (array && key.length > 10))
+          throw new Error("too large");
+        if (!scalarString(key)) throw new Error("invalid key");
         const descriptor = Object.getOwnPropertyDescriptor(value, key);
         if (!descriptor?.enumerable || !("value" in descriptor))
           throw new Error("not JSON data");
         if (array && !/^(0|[1-9]\d*)$/.test(key))
           throw new Error("invalid array key");
         if (!array) {
-          if (key.length >= budget) throw new Error("too large");
           budget -= 1 + new TextEncoder().encode(key).length;
         }
         Object.defineProperty(out, key, {
