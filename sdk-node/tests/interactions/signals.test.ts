@@ -50,6 +50,27 @@ describe("shared signal email fixtures", () => {
         expect(result.prepared).toEqual(item.prepared);
     });
 });
+it("normalizes long ASCII padding but rejects internal spaces and other whitespace", () => {
+  const item = fixture("read");
+  const padding = " ".repeat(200_000);
+  const withId = (messageId: string) =>
+    prepare({
+      ...item,
+      input: { ...item.input, parent: { ...item.input.parent, messageId } },
+    });
+  expect(withId(`${padding}${item.input.parent.messageId}${padding}`)).toEqual(
+    prepare(item),
+  );
+  for (const messageId of [
+    `x${padding}y@example.com`,
+    `${padding}x`,
+    `${"@".repeat(200_000)}!`,
+    `\t${item.input.parent.messageId}`,
+    `${item.input.parent.messageId}\r\n`,
+    `\u00a0${item.input.parent.messageId}`,
+  ])
+    expect(() => withId(messageId)).toThrow("invalid Message-ID");
+});
 it("reuses persisted body and key after uncertain attempts, isolating adapter mutations", async () => {
   const original = prepare(fixture("read"));
   if (original.status !== "prepared") throw new Error("fixture");
