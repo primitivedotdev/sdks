@@ -397,6 +397,19 @@ type Handler interface {
 	//
 	// GET /domains/{id}/zone-file
 	DownloadDomainZoneFile(ctx context.Context, params DownloadDomainZoneFileParams) (DownloadDomainZoneFileRes, error)
+	// DownloadEmailAttachmentPart implements downloadEmailAttachmentPart operation.
+	//
+	// Pending service release. This contract does not establish live availability.
+	// Downloads the original bytes of one ordinary email attachment, selected by
+	// its metadata `index`, not its position in an attachments array. Refresh
+	// the email detail after `attachment_changed` before choosing an index again.
+	// Uses bearer authentication only; signed raw-email download tokens are not accepted.
+	// A paired-agent credential may read only a message addressed to its claimed address.
+	// Function credentials are denied. Other bearer credentials retain their
+	// existing email access boundaries. This endpoint serves email bytes only.
+	//
+	// GET /emails/{id}/attachments/{part_index}
+	DownloadEmailAttachmentPart(ctx context.Context, params DownloadEmailAttachmentPartParams) (DownloadEmailAttachmentPartRes, error)
 	// DownloadRawEmail implements downloadRawEmail operation.
 	//
 	// Downloads the raw RFC 822 email file (.eml). Authenticates via
@@ -405,6 +418,20 @@ type Handler interface {
 	//
 	// GET /emails/{id}/raw
 	DownloadRawEmail(ctx context.Context, params DownloadRawEmailParams) (DownloadRawEmailRes, error)
+	// DownloadSentAttachmentPart implements downloadSentAttachmentPart operation.
+	//
+	// Pending service release. This contract does not establish live availability.
+	// Downloads the original bytes of one ordinary email attachment, selected by
+	// its metadata `index`, not its position in an attachments array. Refresh
+	// the email detail after `attachment_changed` before choosing an index again.
+	// Uses bearer authentication only; signed raw-email download tokens are not accepted.
+	// A paired-agent credential may read only mail sent from its claimed address.
+	// Receiving a copy does not authorize downloading another sender's sent content.
+	// Function credentials are denied. Other bearer credentials retain their
+	// existing email access boundaries. This endpoint serves email bytes only.
+	//
+	// GET /sent-emails/{id}/attachments/{part_index}
+	DownloadSentAttachmentPart(ctx context.Context, params DownloadSentAttachmentPartParams) (DownloadSentAttachmentPartRes, error)
 	// GetAccount implements getAccount operation.
 	//
 	// Get account info.

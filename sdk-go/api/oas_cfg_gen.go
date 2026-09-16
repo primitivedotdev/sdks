@@ -33,6 +33,7 @@ var regexMap = map[string]ogenregex.Regexp{
 	"^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$": ogenregex.MustCompile("^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$"),
 	"^[\\x21-\\x7E]+$":                                      ogenregex.MustCompile("^[\\x21-\\x7E]+$"),
 	"^[^\\x00-\\x1F\\x7F]+$":                                ogenregex.MustCompile("^[^\\x00-\\x1F\\x7F]+$"),
+	"^[a-fA-F0-9]{64}$":                                     ogenregex.MustCompile("^[a-fA-F0-9]{64}$"),
 	"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$":                ogenregex.MustCompile("^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"),
 	"^[a-z0-9][a-z0-9._-]{0,63}$":                           ogenregex.MustCompile("^[a-z0-9][a-z0-9._-]{0,63}$"),
 	"^[a-z0-9][a-z0-9_-]{0,62}$":                            ogenregex.MustCompile("^[a-z0-9][a-z0-9_-]{0,62}$"),

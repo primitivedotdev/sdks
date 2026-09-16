@@ -2876,6 +2876,41 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": true,
     "bodyRequired": false,
+    "command": "download-email-attachment-part",
+    "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only a message addressed to its claimed address.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "downloadEmailAttachmentPart",
+    "path": "/emails/{id}/attachments/{part_index}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The attachment metadata index, not its offset in the attachments array",
+        "enum": null,
+        "maximum": 2147483647,
+        "minimum": 0,
+        "name": "part_index",
+        "required": true,
+        "type": "integer"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "downloadEmailAttachmentPart",
+    "summary": "Download one inbound email attachment",
+    "tag": "Emails",
+    "tagCommand": "emails"
+  },
+  {
+    "binaryResponse": true,
+    "bodyRequired": false,
     "command": "download-raw-email",
     "description": "Downloads the raw RFC 822 email file (.eml). Authenticates via\na signed download token (provided in webhook payloads) or a\nvalid session.\n",
     "hasJsonBody": false,
@@ -12256,6 +12291,41 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "cancelSentEmail",
     "summary": "Cancel a scheduled send",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": true,
+    "bodyRequired": false,
+    "command": "download-sent-attachment-part",
+    "description": "Pending service release. This contract does not establish live availability.\nDownloads the original bytes of one ordinary email attachment, selected by\nits metadata `index`, not its position in an attachments array. Refresh\nthe email detail after `attachment_changed` before choosing an index again.\nUses bearer authentication only; signed raw-email download tokens are not accepted.\nA paired-agent credential may read only mail sent from its claimed address.\nReceiving a copy does not authorize downloading another sender's sent content.\nFunction credentials are denied. Other bearer credentials retain their\nexisting email access boundaries. This endpoint serves email bytes only.\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "downloadSentAttachmentPart",
+    "path": "/sent-emails/{id}/attachments/{part_index}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "The attachment metadata index, not its offset in the attachments array",
+        "enum": null,
+        "maximum": 2147483647,
+        "minimum": 0,
+        "name": "part_index",
+        "required": true,
+        "type": "integer"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "downloadSentAttachmentPart",
+    "summary": "Download one sent email attachment",
     "tag": "Sending",
     "tagCommand": "sending"
   },

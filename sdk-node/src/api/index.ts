@@ -518,6 +518,14 @@ function parseApiErrorPayload(payload: unknown): ParsedApiError {
 
 export type PrimitiveClientOptions = PrimitiveApiClientOptions;
 
+/** Original attachment bytes and server-provided download metadata. */
+export interface AttachmentPartDownload {
+  bytes: Uint8Array;
+  sha256: string | null;
+  contentDisposition: string | null;
+  cacheControl: string | null;
+}
+
 interface ResolvedRequestOptions {
   signal?: AbortSignal;
   headers?: Record<string, string>;
@@ -1110,6 +1118,74 @@ export class PrimitiveClient extends PrimitiveApiClient {
     while (base.endsWith("/")) base = base.slice(0, -1);
     if (base.endsWith("/v1")) base = base.slice(0, -3);
     this.#payloadBaseUrl = base;
+  }
+
+  /** Pending service release. Use the attachment metadata index, not its array offset. */
+  downloadEmailAttachmentPart(
+    id: string,
+    partIndex: number,
+    options?: RequestOptions,
+  ): Promise<AttachmentPartDownload> {
+    return this.downloadAttachmentPart("inbound", id, partIndex, options);
+  }
+
+  /** Pending service release. Sent content requires access to the sending identity. */
+  downloadSentAttachmentPart(
+    id: string,
+    partIndex: number,
+    options?: RequestOptions,
+  ): Promise<AttachmentPartDownload> {
+    return this.downloadAttachmentPart("outbound", id, partIndex, options);
+  }
+
+  private async downloadAttachmentPart(
+    direction: "inbound" | "outbound",
+    id: string,
+    partIndex: number,
+    options?: RequestOptions,
+  ): Promise<AttachmentPartDownload> {
+    if (
+      !/^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$/i.test(id)
+    ) {
+      throw new TypeError("id must be an email UUID");
+    }
+    if (
+      !Number.isInteger(partIndex) ||
+      partIndex < 0 ||
+      partIndex > 2147483647
+    ) {
+      throw new TypeError("partIndex must be an integer from 0 to 2147483647");
+    }
+    const operation =
+      direction === "inbound"
+        ? generatedOperations.downloadEmailAttachmentPart
+        : generatedOperations.downloadSentAttachmentPart;
+    const result = await operation({
+      ...resolveRequestOptions(options),
+      client: this.client,
+      path: { id, part_index: partIndex },
+      parseAs: "arrayBuffer",
+      responseStyle: "fields",
+      throwOnError: false,
+    });
+    // The generated operation describes a Blob, but parseAs selects the native
+    // ArrayBuffer response path, which also works without Node or Blob helpers.
+    const data: unknown = result.data;
+    const buffer = unwrapData<ArrayBuffer>(
+      {
+        data: data instanceof ArrayBuffer ? { data } : undefined,
+        error: result.error,
+        response: result.response,
+      },
+      "attachment bytes",
+    );
+    return {
+      bytes: new Uint8Array(buffer),
+      sha256: result.response?.headers.get("x-content-sha256") ?? null,
+      contentDisposition:
+        result.response?.headers.get("content-disposition") ?? null,
+      cacheControl: result.response?.headers.get("cache-control") ?? null,
+    };
   }
 
   async send(input: SendInput, options?: RequestOptions): Promise<SendResult> {

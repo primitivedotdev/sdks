@@ -33,6 +33,7 @@ export type {
 export {
   type Account,
   AccountResource,
+  type AttachmentPartDownload,
   type CreateAgentOptions,
   type CreatedAgent,
   client,

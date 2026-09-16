@@ -21,7 +21,11 @@ const CHUNK_KDF_INFO = "payloads-chunk";
 const OBJECT_ID_BYTES = 16;
 const CEK_BYTES = 32;
 
-const subtle = globalThis.crypto.subtle;
+// Ordinary API reads can run in runtimes without WebCrypto. Require it only
+// when an encrypted payload operation actually performs cryptography.
+function subtle(): SubtleCrypto {
+  return globalThis.crypto.subtle;
+}
 const textEncoder = new TextEncoder();
 
 // ── Crypto / hashing primitives (byte-identical to payloads-core) ──
@@ -49,7 +53,9 @@ function fromHex(hex: string): Uint8Array {
 }
 
 async function contentHash(bytes: Uint8Array): Promise<Uint8Array> {
-  return new Uint8Array(await subtle.digest("SHA-256", bytes as BufferSource));
+  return new Uint8Array(
+    await subtle().digest("SHA-256", bytes as BufferSource),
+  );
 }
 
 async function contentHashHex(bytes: Uint8Array): Promise<string> {
@@ -79,7 +85,7 @@ async function deriveChunkKey(
   cek: Uint8Array,
   index: number,
 ): Promise<CryptoKey> {
-  const baseKey = await subtle.importKey(
+  const baseKey = await subtle().importKey(
     "raw",
     cek as BufferSource,
     "HKDF",
@@ -87,7 +93,7 @@ async function deriveChunkKey(
     ["deriveKey"],
   );
   const info = textEncoder.encode(`${CHUNK_KDF_INFO}:${index}`);
-  return subtle.deriveKey(
+  return subtle().deriveKey(
     {
       name: "HKDF",
       hash: "SHA-256",
@@ -121,7 +127,7 @@ async function encryptChunk(
   plaintext: Uint8Array,
 ): Promise<Uint8Array> {
   const key = await deriveChunkKey(cek, index);
-  const ct = await subtle.encrypt(
+  const ct = await subtle().encrypt(
     {
       name: "AES-GCM",
       iv: chunkNonce(index) as BufferSource,
@@ -140,7 +146,7 @@ async function decryptChunk(
   ciphertext: Uint8Array,
 ): Promise<Uint8Array> {
   const key = await deriveChunkKey(cek, index);
-  const pt = await subtle.decrypt(
+  const pt = await subtle().decrypt(
     {
       name: "AES-GCM",
       iv: chunkNonce(index) as BufferSource,

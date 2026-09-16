@@ -56,6 +56,7 @@ cli-tarball-isolation:
 	node scripts/assert-tarball-isolation.mjs cli-node "@primitivedotdev/sdk"
 
 cli-smoke: cli-build cli-tarball-isolation
+	attachment_smoke_script="$$(pwd)/scripts/smoke-attachment-parts.mjs" && \
 	pull_smoke_script="$$(pwd)/scripts/smoke-pull-commands.mjs" && \
 	listen_smoke_script="$$(pwd)/scripts/smoke-listen.mjs" && \
 	pack_dir=$$(mktemp -d) && \
@@ -70,6 +71,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	node -e 'const pkg = require(process.argv[1]); const oclif = pkg.oclif || {}; const warning = oclif["warn-if-update-available"] || {}; if (!Array.isArray(oclif.plugins) || !oclif.plugins.includes("@oclif/plugin-warn-if-update-available")) throw new Error("missing update warning plugin"); if (warning.timeoutInDays !== 1 || warning.frequency !== 1 || warning.frequencyUnit !== "days") throw new Error("update warning is not daily"); if (!String(warning.message || "").includes("npm install -g primitive@latest")) throw new Error("missing npm update command");' "$$smoke_dir/node_modules/primitive/package.json" && \
 	export PRIMITIVE_SKIP_NEW_VERSION_CHECK=1 && \
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
+	node "$$attachment_smoke_script" "$$bin" && \
 	node "$$pull_smoke_script" "$$bin" && \
 	node "$$listen_smoke_script" "$$bin" && \
 	"$$bin" list-operations >/dev/null && \
@@ -285,9 +287,9 @@ go-coverage:
 	cd sdk-go && raw_coverage_file=$$(mktemp) && filtered_coverage_file=$$(mktemp) && go test ./... -coverprofile="$$raw_coverage_file" && { IFS= read -r header && printf '%s\n' "$$header" > "$$filtered_coverage_file" && while IFS= read -r line; do case "$$line" in *"/schema_generated.go:"*|*"/doc.go:"*) ;; *) printf '%s\n' "$$line" >> "$$filtered_coverage_file" ;; esac; done; } < "$$raw_coverage_file" && go tool cover -func="$$filtered_coverage_file" && rm -f "$$raw_coverage_file" "$$filtered_coverage_file"
 
 shared-check:
-	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/api/send-payloads.test.ts
-	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py
-	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures' ./...
+	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts
+	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py tests/test_attachment_parts.py
+	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures|TestAttachmentPart' ./...
 
 check: node-check cli-check python-check go-check shared-check
 

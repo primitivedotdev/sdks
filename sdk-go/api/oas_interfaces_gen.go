@@ -145,8 +145,16 @@ type DownloadDomainZoneFileRes interface {
 	downloadDomainZoneFileRes()
 }
 
+type DownloadEmailAttachmentPartRes interface {
+	downloadEmailAttachmentPartRes()
+}
+
 type DownloadRawEmailRes interface {
 	downloadRawEmailRes()
+}
+
+type DownloadSentAttachmentPartRes interface {
+	downloadSentAttachmentPartRes()
 }
 
 type GetAccountRes interface {

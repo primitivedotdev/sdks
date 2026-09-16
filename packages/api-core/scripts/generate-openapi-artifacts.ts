@@ -380,11 +380,12 @@ function getResponseSchema(
   return fragment;
 }
 
-function hasBinaryResponse(operation: OpenApiOperation): boolean {
+function hasBinaryResponse(doc: Record<string, unknown>, operation: OpenApiOperation): boolean {
   const responses = operation.responses ?? {};
 
   for (const response of Object.values(responses)) {
-    const content = response.content ?? {};
+    const resolved = inlineSchemaRefs(doc, response) as typeof response;
+    const content = resolved.content ?? {};
     for (const [contentType, mediaType] of Object.entries(content)) {
       if (contentType === OCTET_STREAM || contentType === "application/gzip" || contentType === "message/rfc822") {
         return true;
@@ -415,7 +416,7 @@ function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest
       const tag = operation.tags?.[0] ?? "default";
 
       manifest.push({
-        binaryResponse: hasBinaryResponse(operation),
+        binaryResponse: hasBinaryResponse(doc, operation),
         bodyRequired: Boolean(operation.requestBody?.required),
         command: toKebabCase(operation.operationId),
         description: operation.description ?? null,
