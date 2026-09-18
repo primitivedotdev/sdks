@@ -120,6 +120,9 @@ func TestDeletedSendRefusalIsPreservedWithoutRetry(t *testing.T) {
 			if !errors.As(err, &apiErr) || apiErr.StatusCode != 410 || apiErr.Code != "sent_email_deleted" || apiErr.Details == nil {
 				t.Fatalf("Lost typed deleted-send error: %#v", err)
 			}
+			if string(apiErr.Details.AdditionalProps["idempotent_replay"]) != "true" {
+				t.Fatal("Lost idempotent replay metadata")
+			}
 			if calls != 1 {
 				t.Fatalf("Expected one request, got %d", calls)
 			}
