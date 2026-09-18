@@ -60,6 +60,7 @@ try {
   for (const [status, code, args] of [
     [409, "sent_email_not_settled", ["sent", "delete", "--id", id]],
     [503, "sent_email_cleanup_failed", ["sent", "delete", "--id", id]],
+    [403, "forbidden", ["agent-connections", "remove-agent-connection", "--address", address]],
     [409, "connection_not_revoked", ["agent-connections", "remove-agent-connection", "--address", address]],
     [410, "sent_email_deleted", ["sending", "send-email", "--from", "sender@example.com", "--to", "receiver@example.com", "--subject", "Example", "--body-text", "Hello"]],
   ]) {
