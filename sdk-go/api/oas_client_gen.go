@@ -371,6 +371,21 @@ type Invoker interface {
 	//
 	// DELETE /routes/{id}
 	DeleteRoute(ctx context.Context, params DeleteRouteParams) (DeleteRouteRes, error)
+	// DeleteSentEmail invokes deleteSentEmail operation.
+	//
+	// Permanently deletes sender mailbox history and its owned attachment archive
+	// and transient payload. Allows delivered, bounced, agent_failed, gate_denied,
+	// canceled, deferred and wait_timeout; other states return 409. Cancel scheduled
+	// sends first. This does not recall or cancel delivery already admitted.
+	// Recipient copies, received replies and independent audit records are preserved.
+	// Occupied idempotency keys and delivered-reply deduplication remain reserved.
+	// Keys already released by cancellation, gate denial or a never-attempted failure
+	// remain reusable. Repeating a completed deletion succeeds; unknown or foreign
+	// IDs return 404. Organization API keys, sessions and OAuth are supported;
+	// Function and connected-agent credentials are denied.
+	//
+	// DELETE /sent-emails/{id}
+	DeleteSentEmail(ctx context.Context, params DeleteSentEmailParams) (DeleteSentEmailRes, error)
 	// DeleteWakeAuthorization invokes deleteWakeAuthorization operation.
 	//
 	// Delete a wake authorization.
@@ -956,6 +971,18 @@ type Invoker interface {
 	//
 	// POST /x402/payout-addresses
 	RegisterPayoutAddress(ctx context.Context, request *RegisterPayoutAddressInput) (RegisterPayoutAddressRes, error)
+	// RemoveAgentConnection invokes removeAgentConnection operation.
+	//
+	// Permanently removes a revoked connection record. Requires an organization
+	// owner or admin session or OAuth token; organization API keys are denied.
+	// Disconnect first using DELETE /agent-connections/{address}. An active
+	// connection returns 409 connection_not_revoked. Missing or already removed
+	// records return 404. Mail, address notes, domains and external runtimes are
+	// preserved. The same address can be paired again with a new invitation;
+	// old credentials and invitations remain invalid.
+	//
+	// POST /agent-connections/{address}/remove
+	RemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (RemoveAgentConnectionRes, error)
 	// ReorderRoutes invokes reorderRoutes operation.
 	//
 	// Update the priority of one or more routes in a single call.
@@ -5387,6 +5414,140 @@ func (c *Client) sendDeleteRoute(ctx context.Context, params DeleteRouteParams) 
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteRouteResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteSentEmail invokes deleteSentEmail operation.
+//
+// Permanently deletes sender mailbox history and its owned attachment archive
+// and transient payload. Allows delivered, bounced, agent_failed, gate_denied,
+// canceled, deferred and wait_timeout; other states return 409. Cancel scheduled
+// sends first. This does not recall or cancel delivery already admitted.
+// Recipient copies, received replies and independent audit records are preserved.
+// Occupied idempotency keys and delivered-reply deduplication remain reserved.
+// Keys already released by cancellation, gate denial or a never-attempted failure
+// remain reusable. Repeating a completed deletion succeeds; unknown or foreign
+// IDs return 404. Organization API keys, sessions and OAuth are supported;
+// Function and connected-agent credentials are denied.
+//
+// DELETE /sent-emails/{id}
+func (c *Client) DeleteSentEmail(ctx context.Context, params DeleteSentEmailParams) (DeleteSentEmailRes, error) {
+	res, err := c.sendDeleteSentEmail(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteSentEmail(ctx context.Context, params DeleteSentEmailParams) (res DeleteSentEmailRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteSentEmail"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/sent-emails/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteSentEmailOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/sent-emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteSentEmailOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteSentEmailResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -12795,6 +12956,138 @@ func (c *Client) sendRegisterPayoutAddress(ctx context.Context, request *Registe
 
 	stage = "DecodeResponse"
 	result, err := decodeRegisterPayoutAddressResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RemoveAgentConnection invokes removeAgentConnection operation.
+//
+// Permanently removes a revoked connection record. Requires an organization
+// owner or admin session or OAuth token; organization API keys are denied.
+// Disconnect first using DELETE /agent-connections/{address}. An active
+// connection returns 409 connection_not_revoked. Missing or already removed
+// records return 404. Mail, address notes, domains and external runtimes are
+// preserved. The same address can be paired again with a new invitation;
+// old credentials and invitations remain invalid.
+//
+// POST /agent-connections/{address}/remove
+func (c *Client) RemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (RemoveAgentConnectionRes, error) {
+	res, err := c.sendRemoveAgentConnection(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendRemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (res RemoveAgentConnectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("removeAgentConnection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent-connections/{address}/remove"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RemoveAgentConnectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/agent-connections/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/remove"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RemoveAgentConnectionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRemoveAgentConnectionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

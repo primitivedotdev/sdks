@@ -30,6 +30,10 @@
   ],
   "tags": [
     {
+      "name": "Agent Connections",
+      "description": "Manage address-bound connections to external agent runtimes."
+    },
+    {
       "name": "CLI",
       "description": "Browser-assisted CLI authentication"
     },
@@ -2539,6 +2543,16 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
+          "410": {
+            "description": "The prior send was deleted. Its idempotency key or automatic reply suppression remains reserved, so this request will not send another message. Do not retry with a new key to bypass this refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Inbound is not repliable: the row exists but lacks a\n`message_id` (no thread anchor) or a `recipient` (cannot\nderive the From address).\n",
             "content": {
@@ -4388,6 +4402,16 @@
           "403": {
             "$ref": "#/components/responses/Forbidden"
           },
+          "410": {
+            "description": "The prior send was deleted. Its idempotency key or automatic reply suppression remains reserved, so this request will not send another message. Do not retry with a new key to bypass this refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "429": {
             "$ref": "#/components/responses/RateLimited"
           },
@@ -4609,6 +4633,91 @@
       }
     },
     "/sent-emails/{id}": {
+      "delete": {
+        "operationId": "deleteSentEmail",
+        "summary": "Delete a sent email",
+        "description": "Permanently deletes sender mailbox history and its owned attachment archive\nand transient payload. Allows delivered, bounced, agent_failed, gate_denied,\ncanceled, deferred and wait_timeout; other states return 409. Cancel scheduled\nsends first. This does not recall or cancel delivery already admitted.\nRecipient copies, received replies and independent audit records are preserved.\nOccupied idempotency keys and delivered-reply deduplication remain reserved.\nKeys already released by cancellation, gate denial or a never-attempted failure\nremain reusable. Repeating a completed deletion succeeds; unknown or foreign\nIDs return 404. Organization API keys, sessions and OAuth are supported;\nFunction and connected-agent credentials are denied.\n",
+        "tags": [
+          "Sending"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ResourceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deletion completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "deleted"
+                      ],
+                      "properties": {
+                        "deleted": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "description": "Database failure. Files may already be removed while the message record and cleanup references remain. Retry the same DELETE; failure does not restore files.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Storage cleanup failed. Some files may already be removed; the message record and cleanup references remain for an idempotent retry. Failure does not restore files.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "operationId": "getSentEmail",
         "summary": "Get a sent email by id",
@@ -4729,6 +4838,81 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/agent-connections/{address}/remove": {
+      "post": {
+        "operationId": "removeAgentConnection",
+        "summary": "Remove a revoked agent connection",
+        "description": "Permanently removes a revoked connection record. Requires an organization\nowner or admin session or OAuth token; organization API keys are denied.\nDisconnect first using DELETE /agent-connections/{address}. An active\nconnection returns 409 connection_not_revoked. Missing or already removed\nrecords return 404. Mail, address notes, domains and external runtimes are\npreserved. The same address can be paired again with a new invitation;\nold credentials and invitations remain invalid.\n",
+        "tags": [
+          "Agent Connections"
+        ],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "description": "The email address identifying the revoked connection.",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deletion completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "deleted"
+                      ],
+                      "properties": {
+                        "deleted": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -9443,6 +9627,11 @@
                   "conflict",
                   "mx_conflict",
                   "not_scheduled",
+                  "sent_email_deleted",
+                  "sent_email_not_settled",
+                  "sent_email_changed",
+                  "sent_email_cleanup_failed",
+                  "connection_not_revoked",
                   "attachment_changed",
                   "content_discarded",
                   "attachment_limit_exceeded",

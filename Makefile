@@ -63,6 +63,7 @@ cli-tarball-isolation:
 cli-smoke: cli-build cli-tarball-isolation
 	attachment_smoke_script="$$(pwd)/scripts/smoke-attachment-parts.mjs" && \
 	pull_smoke_script="$$(pwd)/scripts/smoke-pull-commands.mjs" && \
+	deletion_smoke_script="$$(pwd)/scripts/smoke-mail-deletion.mjs" && \
 	listen_smoke_script="$$(pwd)/scripts/smoke-listen.mjs" && \
 	chat_smoke_script="$$(pwd)/scripts/smoke-concurrent-chats.mjs" && \
 	pack_dir=$$(mktemp -d) && \
@@ -79,6 +80,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
 	node "$$attachment_smoke_script" "$$bin" && \
 	node "$$pull_smoke_script" "$$bin" && \
+	node "$$deletion_smoke_script" "$$bin" && \
 	node "$$listen_smoke_script" "$$bin" && \
 	node "$$chat_smoke_script" "$$bin" && \
 	"$$bin" list-operations >/dev/null && \

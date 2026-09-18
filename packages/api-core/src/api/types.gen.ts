@@ -502,7 +502,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -5975,6 +5975,10 @@ export type ReplyToEmailErrors = {
      */
     404: ErrorResponse;
     /**
+     * The prior send was deleted. Its idempotency key or automatic reply suppression remains reserved, so this request will not send another message. Do not retry with a new key to bypass this refusal.
+     */
+    410: ErrorResponse;
+    /**
      * Inbound is not repliable: the row exists but lacks a
      * `message_id` (no thread anchor) or a `recipient` (cannot
      * derive the From address).
@@ -7434,6 +7438,10 @@ export type SendEmailErrors = {
      */
     403: ErrorResponse;
     /**
+     * The prior send was deleted. Its idempotency key or automatic reply suppression remains reserved, so this request will not send another message. Do not retry with a new key to bypass this refusal.
+     */
+    410: ErrorResponse;
+    /**
      * Rate limit exceeded
      */
     429: ErrorResponse;
@@ -7616,6 +7624,69 @@ export type ListSentEmailsResponses = {
 
 export type ListSentEmailsResponse = ListSentEmailsResponses[keyof ListSentEmailsResponses];
 
+export type DeleteSentEmailData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/sent-emails/{id}';
+};
+
+export type DeleteSentEmailErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+    /**
+     * Database failure. Files may already be removed while the message record and cleanup references remain. Retry the same DELETE; failure does not restore files.
+     */
+    500: ErrorResponse;
+    /**
+     * Storage cleanup failed. Some files may already be removed; the message record and cleanup references remain for an idempotent retry. Failure does not restore files.
+     */
+    503: ErrorResponse;
+};
+
+export type DeleteSentEmailError = DeleteSentEmailErrors[keyof DeleteSentEmailErrors];
+
+export type DeleteSentEmailResponses = {
+    /**
+     * Deletion completed
+     */
+    200: {
+        success: boolean;
+        data: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteSentEmailResponse = DeleteSentEmailResponses[keyof DeleteSentEmailResponses];
+
 export type GetSentEmailData = {
     body?: never;
     path: {
@@ -7702,6 +7773,61 @@ export type RescheduleSentEmailResponses = {
 };
 
 export type RescheduleSentEmailResponse = RescheduleSentEmailResponses[keyof RescheduleSentEmailResponses];
+
+export type RemoveAgentConnectionData = {
+    body?: never;
+    path: {
+        /**
+         * The email address identifying the revoked connection.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-connections/{address}/remove';
+};
+
+export type RemoveAgentConnectionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type RemoveAgentConnectionError = RemoveAgentConnectionErrors[keyof RemoveAgentConnectionErrors];
+
+export type RemoveAgentConnectionResponses = {
+    /**
+     * Deletion completed
+     */
+    200: {
+        success: boolean;
+        data: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type RemoveAgentConnectionResponse = RemoveAgentConnectionResponses[keyof RemoveAgentConnectionResponses];
 
 export type CancelSentEmailData = {
     body?: never;

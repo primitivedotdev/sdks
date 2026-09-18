@@ -987,6 +987,56 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "remove-agent-connection",
+    "description": "Permanently removes a revoked connection record. Requires an organization\nowner or admin session or OAuth token; organization API keys are denied.\nDisconnect first using DELETE /agent-connections/{address}. An active\nconnection returns 409 connection_not_revoked. Missing or already removed\nrecords return 404. Mail, address notes, domains and external runtimes are\npreserved. The same address can be paired again with a new invitation;\nold credentials and invitations remain invalid.\n",
+    "hasJsonBody": false,
+    "method": "POST",
+    "operationId": "removeAgentConnection",
+    "path": "/agent-connections/{address}/remove",
+    "pathParams": [
+      {
+        "description": "The email address identifying the revoked connection.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "const": true
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "deleted"
+          ],
+          "properties": {
+            "deleted": {
+              "type": "boolean",
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    "sdkName": "removeAgentConnection",
+    "summary": "Remove a revoked agent connection",
+    "tag": "Agent Connections",
+    "tagCommand": "agent-connections"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "cli-logout",
     "description": "Revokes the OAuth grant used to authenticate the request. API-key\nauthenticated legacy logout requests succeed without deleting server API\nkeys so old local CLI state can be cleared safely.\n",
     "hasJsonBody": true,
@@ -12349,6 +12399,56 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "cancelSentEmail",
     "summary": "Cancel a scheduled send",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-sent-email",
+    "description": "Permanently deletes sender mailbox history and its owned attachment archive\nand transient payload. Allows delivered, bounced, agent_failed, gate_denied,\ncanceled, deferred and wait_timeout; other states return 409. Cancel scheduled\nsends first. This does not recall or cancel delivery already admitted.\nRecipient copies, received replies and independent audit records are preserved.\nOccupied idempotency keys and delivered-reply deduplication remain reserved.\nKeys already released by cancellation, gate denial or a never-attempted failure\nremain reusable. Repeating a completed deletion succeeds; unknown or foreign\nIDs return 404. Organization API keys, sessions and OAuth are supported;\nFunction and connected-agent credentials are denied.\n",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteSentEmail",
+    "path": "/sent-emails/{id}",
+    "pathParams": [
+      {
+        "description": "Resource UUID",
+        "enum": null,
+        "name": "id",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "const": true
+        },
+        "data": {
+          "type": "object",
+          "required": [
+            "deleted"
+          ],
+          "properties": {
+            "deleted": {
+              "type": "boolean",
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    "sdkName": "deleteSentEmail",
+    "summary": "Delete a sent email",
     "tag": "Sending",
     "tagCommand": "sending"
   },

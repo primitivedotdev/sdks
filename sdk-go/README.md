@@ -606,3 +606,19 @@ make go-generate
 make go-check
 make go-build
 ```
+
+## Delete mailbox history
+
+Use `DeleteSentEmail` and `RemoveAgentConnection` on the generated `api.Client`.
+Sent-mail deletion removes sender history and owned attachments, not recipient
+copies or delivery already admitted. Cancel scheduled sends first; ineligible
+states return 409. Retrying a completed DELETE succeeds. After 500 or 503, files
+may already be removed; retry the same DELETE.
+
+Connection removal requires an owner or admin session or OAuth token and a
+previously revoked connection. It preserves mail, notes and the external runtime.
+Active connections return 409; missing records return 404.
+
+Send and reply preserve HTTP 410 `sent_email_deleted` and its
+`details.idempotent_replay` value. This is a refusal to resend deleted history;
+do not replace the idempotency key or retry as a fresh message to bypass it.
