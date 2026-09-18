@@ -37,6 +37,10 @@ export const openapiDocument: Record<string, unknown> = {
   ],
   "tags": [
     {
+      "name": "Agent Connections",
+      "description": "Manage address-bound connections to external agent runtimes."
+    },
+    {
       "name": "CLI",
       "description": "Browser-assisted CLI authentication"
     },

@@ -156,6 +156,7 @@ primitive chat reply "See attached" --attachment ./report.pdf
 primitive emails list
 primitive emails get --id <inbound-email-id>
 primitive sent list
+primitive sent delete --id <sent-email-id>
 primitive domains list
 primitive functions templates
 primitive functions init my-fn --template email-reply
@@ -166,6 +167,24 @@ primitive deliveries replay --id <delivery-id>
 ```
 
 Generated API commands remain available for compatibility and full schema parity, for example `primitive emails:list-emails` and `primitive sending:reply-to-email`.
+
+## Remove mailbox history
+
+`primitive sent delete --id <sent-email-id>` removes sender history and owned
+attachments. It does not recall delivery or delete recipient copies. Cancel
+scheduled sends before deleting them. A 409 means the record is not currently
+eligible; a 500 or 503 may mean some files were removed already, so retry the same
+DELETE. Repeating a completed deletion succeeds.
+
+After disconnecting an agent, an owner or admin logged in with OAuth can run
+`primitive agent-connections remove-agent-connection --address agent@example.com`.
+This removes the revoked connection record while preserving mail, notes and the
+external runtime. Active connections return 409; missing records return 404.
+Organization API keys cannot remove connections.
+
+Send and reply can return HTTP 410 `sent_email_deleted` when a prior send was
+deleted. Its occupied idempotency key or automatic reply suppression stays reserved.
+Do not generate a new key or send again to bypass this refusal.
 
 ## Primitive Memories
 
