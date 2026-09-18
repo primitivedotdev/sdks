@@ -43,6 +43,22 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("registers mailbox deletion operations and the sent alias", () => {
+    expect(COMMANDS["sending:delete-sent-email"]).toBeDefined();
+    expect(COMMANDS["agent-connections:remove-agent-connection"]).toBeDefined();
+    expect(COMMANDS["sent:delete"]).toBe(COMMANDS["sending:delete-sent-email"]);
+    expect(
+      operationManifest.find((op) => op.operationId === "deleteSentEmail"),
+    ).toMatchObject({ method: "DELETE", path: "/sent-emails/{id}" });
+    expect(
+      operationManifest.find(
+        (op) => op.operationId === "removeAgentConnection",
+      ),
+    ).toMatchObject({
+      method: "POST",
+      path: "/agent-connections/{address}/remove",
+    });
+  });
   it("registers binary attachment part commands and metadata-index flags", () => {
     for (const id of [
       "emails:download-email-attachment-part",

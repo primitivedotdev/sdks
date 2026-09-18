@@ -116,6 +116,8 @@ from .delete_registry_response_200 import DeleteRegistryResponse200
 from .delete_registry_response_200_data import DeleteRegistryResponse200Data
 from .delete_route_response_200 import DeleteRouteResponse200
 from .delete_route_response_200_data import DeleteRouteResponse200Data
+from .delete_sent_email_response_200 import DeleteSentEmailResponse200
+from .delete_sent_email_response_200_data import DeleteSentEmailResponse200Data
 from .delete_wake_authorization_response_200 import DeleteWakeAuthorizationResponse200
 from .delete_wake_authorization_response_200_data import DeleteWakeAuthorizationResponse200Data
 from .delete_wake_schedule_response_200 import DeleteWakeScheduleResponse200
@@ -305,6 +307,8 @@ from .register_payout_address_response_201 import RegisterPayoutAddressResponse2
 from .registry import Registry
 from .registry_agent import RegistryAgent
 from .registry_request import RegistryRequest
+from .remove_agent_connection_response_200 import RemoveAgentConnectionResponse200
+from .remove_agent_connection_response_200_data import RemoveAgentConnectionResponse200Data
 from .reorder_routes_input import ReorderRoutesInput
 from .reorder_routes_input_updates_item import ReorderRoutesInputUpdatesItem
 from .reorder_routes_response_200 import ReorderRoutesResponse200
@@ -615,6 +619,8 @@ __all__ = (
     "DeleteRegistryResponse200Data",
     "DeleteRouteResponse200",
     "DeleteRouteResponse200Data",
+    "DeleteSentEmailResponse200",
+    "DeleteSentEmailResponse200Data",
     "DeleteWakeAuthorizationResponse200",
     "DeleteWakeAuthorizationResponse200Data",
     "DeleteWakeScheduleResponse200",
@@ -804,6 +810,8 @@ __all__ = (
     "Registry",
     "RegistryAgent",
     "RegistryRequest",
+    "RemoveAgentConnectionResponse200",
+    "RemoveAgentConnectionResponse200Data",
     "ReorderRoutesInput",
     "ReorderRoutesInputUpdatesItem",
     "ReorderRoutesResponse200",

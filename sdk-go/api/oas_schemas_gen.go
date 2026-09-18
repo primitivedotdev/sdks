@@ -5431,6 +5431,75 @@ type DeleteRouteUnauthorized ErrorResponse
 
 func (*DeleteRouteUnauthorized) deleteRouteRes() {}
 
+type DeleteSentEmailBadRequest ErrorResponse
+
+func (*DeleteSentEmailBadRequest) deleteSentEmailRes() {}
+
+type DeleteSentEmailConflict ErrorResponse
+
+func (*DeleteSentEmailConflict) deleteSentEmailRes() {}
+
+type DeleteSentEmailForbidden ErrorResponse
+
+func (*DeleteSentEmailForbidden) deleteSentEmailRes() {}
+
+type DeleteSentEmailInternalServerError ErrorResponse
+
+func (*DeleteSentEmailInternalServerError) deleteSentEmailRes() {}
+
+type DeleteSentEmailNotFound ErrorResponse
+
+func (*DeleteSentEmailNotFound) deleteSentEmailRes() {}
+
+type DeleteSentEmailOK struct {
+	Success bool                  `json:"success"`
+	Data    DeleteSentEmailOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *DeleteSentEmailOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *DeleteSentEmailOK) GetData() DeleteSentEmailOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *DeleteSentEmailOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *DeleteSentEmailOK) SetData(val DeleteSentEmailOKData) {
+	s.Data = val
+}
+
+func (*DeleteSentEmailOK) deleteSentEmailRes() {}
+
+type DeleteSentEmailOKData struct {
+	Deleted bool `json:"deleted"`
+}
+
+// GetDeleted returns the value of Deleted.
+func (s *DeleteSentEmailOKData) GetDeleted() bool {
+	return s.Deleted
+}
+
+// SetDeleted sets the value of Deleted.
+func (s *DeleteSentEmailOKData) SetDeleted(val bool) {
+	s.Deleted = val
+}
+
+type DeleteSentEmailServiceUnavailable ErrorResponse
+
+func (*DeleteSentEmailServiceUnavailable) deleteSentEmailRes() {}
+
+type DeleteSentEmailUnauthorized ErrorResponse
+
+func (*DeleteSentEmailUnauthorized) deleteSentEmailRes() {}
+
 type DeleteWakeAuthorizationNotFound ErrorResponse
 
 func (*DeleteWakeAuthorizationNotFound) deleteWakeAuthorizationRes() {}
@@ -9226,6 +9295,11 @@ const (
 	ErrorResponseErrorCodeConflict                      ErrorResponseErrorCode = "conflict"
 	ErrorResponseErrorCodeMxConflict                    ErrorResponseErrorCode = "mx_conflict"
 	ErrorResponseErrorCodeNotScheduled                  ErrorResponseErrorCode = "not_scheduled"
+	ErrorResponseErrorCodeSentEmailDeleted              ErrorResponseErrorCode = "sent_email_deleted"
+	ErrorResponseErrorCodeSentEmailNotSettled           ErrorResponseErrorCode = "sent_email_not_settled"
+	ErrorResponseErrorCodeSentEmailChanged              ErrorResponseErrorCode = "sent_email_changed"
+	ErrorResponseErrorCodeSentEmailCleanupFailed        ErrorResponseErrorCode = "sent_email_cleanup_failed"
+	ErrorResponseErrorCodeConnectionNotRevoked          ErrorResponseErrorCode = "connection_not_revoked"
 	ErrorResponseErrorCodeAttachmentChanged             ErrorResponseErrorCode = "attachment_changed"
 	ErrorResponseErrorCodeContentDiscarded              ErrorResponseErrorCode = "content_discarded"
 	ErrorResponseErrorCodeAttachmentLimitExceeded       ErrorResponseErrorCode = "attachment_limit_exceeded"
@@ -9298,6 +9372,11 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeConflict,
 		ErrorResponseErrorCodeMxConflict,
 		ErrorResponseErrorCodeNotScheduled,
+		ErrorResponseErrorCodeSentEmailDeleted,
+		ErrorResponseErrorCodeSentEmailNotSettled,
+		ErrorResponseErrorCodeSentEmailChanged,
+		ErrorResponseErrorCodeSentEmailCleanupFailed,
+		ErrorResponseErrorCodeConnectionNotRevoked,
 		ErrorResponseErrorCodeAttachmentChanged,
 		ErrorResponseErrorCodeContentDiscarded,
 		ErrorResponseErrorCodeAttachmentLimitExceeded,
@@ -9379,6 +9458,16 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeMxConflict:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeNotScheduled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSentEmailDeleted:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSentEmailNotSettled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSentEmailChanged:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSentEmailCleanupFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeConnectionNotRevoked:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeAttachmentChanged:
 		return []byte(s), nil
@@ -9530,6 +9619,21 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeNotScheduled:
 		*s = ErrorResponseErrorCodeNotScheduled
+		return nil
+	case ErrorResponseErrorCodeSentEmailDeleted:
+		*s = ErrorResponseErrorCodeSentEmailDeleted
+		return nil
+	case ErrorResponseErrorCodeSentEmailNotSettled:
+		*s = ErrorResponseErrorCodeSentEmailNotSettled
+		return nil
+	case ErrorResponseErrorCodeSentEmailChanged:
+		*s = ErrorResponseErrorCodeSentEmailChanged
+		return nil
+	case ErrorResponseErrorCodeSentEmailCleanupFailed:
+		*s = ErrorResponseErrorCodeSentEmailCleanupFailed
+		return nil
+	case ErrorResponseErrorCodeConnectionNotRevoked:
+		*s = ErrorResponseErrorCodeConnectionNotRevoked
 		return nil
 	case ErrorResponseErrorCodeAttachmentChanged:
 		*s = ErrorResponseErrorCodeAttachmentChanged
@@ -21303,6 +21407,7 @@ func (*RateLimitedHeaders) createAgentClaimLinkRes()   {}
 func (*RateLimitedHeaders) createChallengeRes()        {}
 func (*RateLimitedHeaders) createEmailChallengeRes()   {}
 func (*RateLimitedHeaders) deleteMemoryRes()           {}
+func (*RateLimitedHeaders) deleteSentEmailRes()        {}
 func (*RateLimitedHeaders) discardEmailContentRes()    {}
 func (*RateLimitedHeaders) downloadDomainZoneFileRes() {}
 func (*RateLimitedHeaders) getChallengeRes()           {}
@@ -21318,6 +21423,7 @@ func (*RateLimitedHeaders) listTemplatesRes()          {}
 func (*RateLimitedHeaders) payChallengeRes()           {}
 func (*RateLimitedHeaders) pullWebhookEventRes()       {}
 func (*RateLimitedHeaders) registerPayoutAddressRes()  {}
+func (*RateLimitedHeaders) removeAgentConnectionRes()  {}
 func (*RateLimitedHeaders) replayDeliveryRes()         {}
 func (*RateLimitedHeaders) replayEmailWebhooksRes()    {}
 func (*RateLimitedHeaders) replyToEmailRes()           {}
@@ -21895,6 +22001,67 @@ func (s *RegistryRequest) SetRequestedAt(val time.Time) {
 	s.RequestedAt = val
 }
 
+type RemoveAgentConnectionBadRequest ErrorResponse
+
+func (*RemoveAgentConnectionBadRequest) removeAgentConnectionRes() {}
+
+type RemoveAgentConnectionConflict ErrorResponse
+
+func (*RemoveAgentConnectionConflict) removeAgentConnectionRes() {}
+
+type RemoveAgentConnectionForbidden ErrorResponse
+
+func (*RemoveAgentConnectionForbidden) removeAgentConnectionRes() {}
+
+type RemoveAgentConnectionNotFound ErrorResponse
+
+func (*RemoveAgentConnectionNotFound) removeAgentConnectionRes() {}
+
+type RemoveAgentConnectionOK struct {
+	Success bool                        `json:"success"`
+	Data    RemoveAgentConnectionOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *RemoveAgentConnectionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *RemoveAgentConnectionOK) GetData() RemoveAgentConnectionOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *RemoveAgentConnectionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *RemoveAgentConnectionOK) SetData(val RemoveAgentConnectionOKData) {
+	s.Data = val
+}
+
+func (*RemoveAgentConnectionOK) removeAgentConnectionRes() {}
+
+type RemoveAgentConnectionOKData struct {
+	Deleted bool `json:"deleted"`
+}
+
+// GetDeleted returns the value of Deleted.
+func (s *RemoveAgentConnectionOKData) GetDeleted() bool {
+	return s.Deleted
+}
+
+// SetDeleted sets the value of Deleted.
+func (s *RemoveAgentConnectionOKData) SetDeleted(val bool) {
+	s.Deleted = val
+}
+
+type RemoveAgentConnectionUnauthorized ErrorResponse
+
+func (*RemoveAgentConnectionUnauthorized) removeAgentConnectionRes() {}
+
 type ReorderRoutesBadRequest ErrorResponse
 
 func (*ReorderRoutesBadRequest) reorderRoutesRes() {}
@@ -22301,6 +22468,10 @@ func (*ReplyToEmailBadRequest) replyToEmailRes() {}
 type ReplyToEmailForbidden ErrorResponse
 
 func (*ReplyToEmailForbidden) replyToEmailRes() {}
+
+type ReplyToEmailGone ErrorResponse
+
+func (*ReplyToEmailGone) replyToEmailRes() {}
 
 type ReplyToEmailInternalServerError ErrorResponse
 
@@ -24159,6 +24330,10 @@ func (*SendEmailBadRequest) sendEmailRes() {}
 type SendEmailForbidden ErrorResponse
 
 func (*SendEmailForbidden) sendEmailRes() {}
+
+type SendEmailGone ErrorResponse
+
+func (*SendEmailGone) sendEmailRes() {}
 
 type SendEmailInternalServerError ErrorResponse
 

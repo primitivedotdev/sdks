@@ -49,6 +49,9 @@
       "account": {
         "description": "Manage your account settings, storage, and webhook secret"
       },
+      "agent-connections": {
+        "description": "Remove revoked agent connections with an organization owner or admin login. This preserves mail and does not stop the external runtime."
+      },
       "agent": {
         "description": "Agent signup and authentication API operations"
       },
@@ -81,7 +84,7 @@
         "description": "Authenticate with an emailed one-time code"
       },
       "sent": {
-        "description": "Short aliases for outbound sent-email history: `primitive sent list` and `primitive sent get`."
+        "description": "Short aliases for outbound sent-email history: `primitive sent list`, `primitive sent get`, and `primitive sent delete --id <id>`. Deleting sender history does not recall delivery."
       },
       "threads": {
         "description": "Inspect conversation threads spanning received and sent emails. Prefer `primitive threads get --id <thread-id>`; generated API name `primitive threads get-thread --id <thread-id>` remains available."

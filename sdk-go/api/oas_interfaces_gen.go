@@ -125,6 +125,10 @@ type DeleteRouteRes interface {
 	deleteRouteRes()
 }
 
+type DeleteSentEmailRes interface {
+	deleteSentEmailRes()
+}
+
 type DeleteWakeAuthorizationRes interface {
 	deleteWakeAuthorizationRes()
 }
@@ -343,6 +347,10 @@ type PullWebhookEventRes interface {
 
 type RegisterPayoutAddressRes interface {
 	registerPayoutAddressRes()
+}
+
+type RemoveAgentConnectionRes interface {
+	removeAgentConnectionRes()
 }
 
 type ReorderRoutesRes interface {

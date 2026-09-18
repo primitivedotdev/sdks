@@ -449,6 +449,24 @@ func (UnimplementedHandler) DeleteRoute(ctx context.Context, params DeleteRouteP
 	return r, ht.ErrNotImplemented
 }
 
+// DeleteSentEmail implements deleteSentEmail operation.
+//
+// Permanently deletes sender mailbox history and its owned attachment archive
+// and transient payload. Allows delivered, bounced, agent_failed, gate_denied,
+// canceled, deferred and wait_timeout; other states return 409. Cancel scheduled
+// sends first. This does not recall or cancel delivery already admitted.
+// Recipient copies, received replies and independent audit records are preserved.
+// Occupied idempotency keys and delivered-reply deduplication remain reserved.
+// Keys already released by cancellation, gate denial or a never-attempted failure
+// remain reusable. Repeating a completed deletion succeeds; unknown or foreign
+// IDs return 404. Organization API keys, sessions and OAuth are supported;
+// Function and connected-agent credentials are denied.
+//
+// DELETE /sent-emails/{id}
+func (UnimplementedHandler) DeleteSentEmail(ctx context.Context, params DeleteSentEmailParams) (r DeleteSentEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteWakeAuthorization implements deleteWakeAuthorization operation.
 //
 // Delete a wake authorization.
@@ -1199,6 +1217,21 @@ func (UnimplementedHandler) PullWebhookEvent(ctx context.Context, req *PullWebho
 //
 // POST /x402/payout-addresses
 func (UnimplementedHandler) RegisterPayoutAddress(ctx context.Context, req *RegisterPayoutAddressInput) (r RegisterPayoutAddressRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RemoveAgentConnection implements removeAgentConnection operation.
+//
+// Permanently removes a revoked connection record. Requires an organization
+// owner or admin session or OAuth token; organization API keys are denied.
+// Disconnect first using DELETE /agent-connections/{address}. An active
+// connection returns 409 connection_not_revoked. Missing or already removed
+// records return 404. Mail, address notes, domains and external runtimes are
+// preserved. The same address can be paired again with a new invitation;
+// old credentials and invitations remain invalid.
+//
+// POST /agent-connections/{address}/remove
+func (UnimplementedHandler) RemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (r RemoveAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

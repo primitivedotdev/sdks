@@ -275,6 +275,8 @@ func apiErrorFromErrorResponse(status int, response primitiveapi.ErrorResponse) 
 
 func mapReplyError(res primitiveapi.ReplyToEmailRes) error {
 	switch v := res.(type) {
+	case *primitiveapi.ReplyToEmailGone:
+		return apiErrorFromErrorResponse(410, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.ReplyToEmailBadGateway:
 		return apiErrorFromErrorResponse(502, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.ReplyToEmailBadRequest:
@@ -307,6 +309,8 @@ func mapReplyError(res primitiveapi.ReplyToEmailRes) error {
 
 func mapSendError(res primitiveapi.SendEmailRes) error {
 	switch v := res.(type) {
+	case *primitiveapi.SendEmailGone:
+		return apiErrorFromErrorResponse(410, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.SendEmailBadGateway:
 		return apiErrorFromErrorResponse(502, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.SendEmailBadRequest:

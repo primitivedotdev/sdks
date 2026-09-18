@@ -1711,6 +1711,72 @@ func decodeDeleteRouteParams(args [1]string, argsEscaped bool, r *http.Request) 
 	return params, nil
 }
 
+// DeleteSentEmailParams is parameters of deleteSentEmail operation.
+type DeleteSentEmailParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackDeleteSentEmailParams(packed middleware.Parameters) (params DeleteSentEmailParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeDeleteSentEmailParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteSentEmailParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // DeleteWakeAuthorizationParams is parameters of deleteWakeAuthorization operation.
 type DeleteWakeAuthorizationParams struct {
 	// Resource UUID.
@@ -6532,6 +6598,92 @@ func decodePullWebhookEventParams(args [1]string, argsEscaped bool, r *http.Requ
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// RemoveAgentConnectionParams is parameters of removeAgentConnection operation.
+type RemoveAgentConnectionParams struct {
+	// The email address identifying the revoked connection.
+	Address string
+}
+
+func unpackRemoveAgentConnectionParams(packed middleware.Parameters) (params RemoveAgentConnectionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "address",
+			In:   "path",
+		}
+		params.Address = packed[key].(string)
+	}
+	return params
+}
+
+func decodeRemoveAgentConnectionParams(args [1]string, argsEscaped bool, r *http.Request) (params RemoveAgentConnectionParams, _ error) {
+	// Decode path: address.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "address",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Address = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     254,
+					MaxLengthSet:  true,
+					Email:         true,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.Address)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "address",
 			In:   "path",
 			Err:  err,
 		}

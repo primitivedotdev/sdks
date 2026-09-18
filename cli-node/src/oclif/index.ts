@@ -403,6 +403,7 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "sending:permissions": "sending:get-send-permissions",
   "sending:reply": "sending:reply-to-email",
   "sending:send": "sending:send-email",
+  "sent:delete": "sending:delete-sent-email",
   "sent:get": "sending:get-sent-email",
   "sent:list": "sending:list-sent-emails",
   "threads:get": "threads:get-thread",
