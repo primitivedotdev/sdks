@@ -1,0 +1,4 @@
+# Keep automated review context scoped to this repository.
+# https://docs.qodo.ai/governance/cross-repo-code-review/repository-relationships#disable-cross-repo-context
+[review_agent]
+enable_cross_repo_agent = false
