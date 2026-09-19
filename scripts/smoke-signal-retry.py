@@ -227,7 +227,10 @@ def verify_request(model, record, kind):
         assert envelope["payload"]["subject_message_id"] == "<parent@example.test>"
         if kind == "ack":
             assert envelope["payload"]["status"] == "received"
-        if kind == "working":
+        if kind == "typing":
+            assert request["body_text"] == "I am composing a reply to your message."
+            assert envelope["payload"] == {"subject_message_id": "<parent@example.test>"}
+        if kind in ("working", "typing"):
             assert prepared["expires"] == NOW + 60000
             expected_expiry = (
                 datetime.fromtimestamp(prepared["expires"] / 1000, timezone.utc)
@@ -263,7 +266,7 @@ def scenario(caller, directory, kind, expired_first=False, expired_unknown=False
             assert not model.rows("attempts") and not model.rows("accepted")
             assert record.read_bytes() == original
             return {
-                "case": "working expired before first attempt",
+                "case": f"{kind} expired before first attempt",
                 "attempts": 0,
                 "accepted": 0,
             }
@@ -302,7 +305,7 @@ def scenario(caller, directory, kind, expired_first=False, expired_unknown=False
             assert len(model.rows("attempts")) == 1 and len(model.rows("accepted")) == 1
             assert record.read_bytes() == original
             return {
-                "case": "working expired after unknown acceptance",
+                "case": f"{kind} expired after unknown acceptance",
                 "killed_pid": first_pid,
                 "attempts": 1,
                 "accepted": 1,
@@ -317,7 +320,7 @@ def scenario(caller, directory, kind, expired_first=False, expired_unknown=False
         assert retries[0]["result"]["data"]["id"] == model.rows("accepted")[0][2]
         assert len(model.rows("attempts")) == 3
         wire_hash = verify_request(model, record, kind)
-        if kind == "working":
+        if kind in ("working", "typing"):
             assert send(NOW + 60000) == {
                 "status": "expired",
                 "idempotencyKey": saved(record)["key"],
@@ -363,6 +366,9 @@ def main():
             ("working", ""),
             ("working", "first"),
             ("working", "unknown"),
+            ("typing", ""),
+            ("typing", "first"),
+            ("typing", "unknown"),
         ]:
             label = kind + (f"-expired-{expiration}" if expiration else "")
             result = scenario(
