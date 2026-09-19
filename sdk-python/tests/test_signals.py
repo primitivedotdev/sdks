@@ -95,8 +95,9 @@ def test_shared_signal_emails(item: dict[str, Any]) -> None:
         )
 
 
-def test_retry_scope_and_expiry() -> None:
-    prepared = PreparedSignal(**json.loads(json.dumps(asdict(_prepared("read")))))
+@pytest.mark.parametrize("kind", ["read", "working", "typing"])
+def test_retry_scope_and_expiry(kind: str) -> None:
+    prepared = PreparedSignal(**json.loads(json.dumps(asdict(_prepared(kind)))))
     calls = []
 
     async def send(body: dict[str, object], key: str) -> str:
@@ -125,22 +126,24 @@ def test_retry_scope_and_expiry() -> None:
                 send, prepared, account_scope="other", now=lambda: 1800000000123
             )
         )
-    working = _prepared("working")
-    assert working.expires_at_ms is not None
-    result = asyncio.run(
-        send_prepared_signal(
-            send, working, account_scope="account-one", now=lambda: 1800000060123
+    for expiring_kind in ("working", "typing"):
+        expiring = _prepared(expiring_kind)
+        assert expiring.expires_at_ms is not None
+        result = asyncio.run(
+            send_prepared_signal(
+                send, expiring, account_scope="account-one", now=lambda: 1800000060123
+            )
         )
-    )
-    assert (
-        isinstance(result, ExpiredSignal)
-        and result.idempotency_key == working.idempotency_key
-    )
+        assert (
+            isinstance(result, ExpiredSignal)
+            and result.idempotency_key == expiring.idempotency_key
+        )
     assert len(calls) == 2
 
 
-def test_generated_ordinary_send_adapter() -> None:
-    prepared = _prepared("read")
+@pytest.mark.parametrize("kind", ["read", "typing"])
+def test_generated_ordinary_send_adapter(kind: str) -> None:
+    prepared = _prepared(kind)
     requests: list[httpx.Request] = []
 
     def transport(request: httpx.Request) -> httpx.Response:
@@ -227,7 +230,7 @@ def test_standard_mime_round_trip_preserves_signal_attachment() -> None:
 def test_distinct_signals_share_parent_but_not_explicit_key() -> None:
     item = _fixture("read")
     parent = _input(item).parent
-    sequence = iter(range(1, 7))
+    sequence = iter(range(1, 9))
 
     def uuid() -> str:
         return f"00000000-0000-4000-8000-{next(sequence):012}"
@@ -236,6 +239,7 @@ def test_distinct_signals_share_parent_but_not_explicit_key() -> None:
         SignalInput(parent, "ack", status="received"),
         SignalInput(parent, "read"),
         SignalInput(parent, "working", expires_at_ms=item["now"] + 60000),
+        SignalInput(parent, "typing", expires_at_ms=item["now"] + 60000),
     )
     prepared = []
     for signal in inputs:
@@ -254,6 +258,6 @@ def test_distinct_signals_share_parent_but_not_explicit_key() -> None:
                 send, value, account_scope="account-one", now=lambda: item["now"]
             )
         )
-    assert len({key for _, key in attempts[:3]}) == 3
-    assert attempts[0] == attempts[3]
+    assert len({key for _, key in attempts[:4]}) == 4
+    assert attempts[0] == attempts[4]
     assert all(body["in_reply_to"] == "<Case.123@EXAMPLE.com>" for body, _ in attempts)

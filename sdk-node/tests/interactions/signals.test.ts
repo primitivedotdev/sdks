@@ -71,8 +71,12 @@ it("normalizes long ASCII padding but rejects internal spaces and other whitespa
   ])
     expect(() => withId(messageId)).toThrow("invalid Message-ID");
 });
-it("reuses persisted body and key after uncertain attempts, isolating adapter mutations", async () => {
-  const original = prepare(fixture("read"));
+it.each([
+  "read",
+  "working",
+  "typing",
+])("reuses persisted %s body and key after uncertain attempts, isolating adapter mutations", async (kind) => {
+  const original = prepare(fixture(kind));
   if (original.status !== "prepared") throw new Error("fixture");
   expect(Object.isFrozen(original.prepared)).toBe(true);
   const saved: PreparedSignal = JSON.parse(JSON.stringify(original.prepared));
@@ -101,8 +105,11 @@ it("reuses persisted body and key after uncertain attempts, isolating adapter mu
   ).rejects.toThrow("scope");
   expect(calls).toHaveLength(2);
 });
-it("refuses expired working at equality without claiming earlier failure", async () => {
-  const item = fixture("working"),
+it.each([
+  "working",
+  "typing",
+])("refuses expired %s at equality without claiming earlier failure", async (kind) => {
+  const item = fixture(kind),
     result = prepare(item);
   if (result.status !== "prepared") throw new Error("fixture");
   let calls = 0;
@@ -181,9 +188,12 @@ it("prepares in a browser bundle without Buffer, crypto or a Node runtime", asyn
   });
 });
 
-it("uses the generated ordinary send operation without dropping body or key", async () => {
+it.each([
+  "read",
+  "typing",
+])("sends %s through the generated ordinary operation without dropping body or key", async (kind) => {
   const { createClient, sendEmail } = await import("../../src/api/index.js");
-  const result = prepare(fixture("read"));
+  const result = prepare(fixture(kind));
   if (result.status !== "prepared") throw new Error("fixture");
   const requests: Request[] = [];
   const client = createClient({
@@ -233,6 +243,11 @@ it("gives distinct signals for one parent distinct explicit keys and preserves a
       kind: "working",
       expiresAtMs: item.now + 60_000,
     },
+    {
+      parent: item.input.parent,
+      kind: "typing",
+      expiresAtMs: item.now + 60_000,
+    },
   ];
   const prepared = inputs.map((input) => {
     const result = prepareSignalEmail(input, dependencies);
@@ -251,13 +266,32 @@ it("gives distinct signals for one parent distinct explicit keys and preserves a
       accountScope: "account-one",
       now: dependencies.now,
     });
-  expect(new Set(attempts.slice(0, 3).map((attempt) => attempt.key)).size).toBe(
-    3,
+  expect(new Set(attempts.slice(0, 4).map((attempt) => attempt.key)).size).toBe(
+    4,
   );
-  expect(attempts[3]).toEqual(attempts[0]);
+  expect(attempts[4]).toEqual(attempts[0]);
   for (const attempt of attempts)
     expect(attempt.body).toHaveProperty(
       "in_reply_to",
       "<Case.123@EXAMPLE.com>",
     );
+});
+
+it("rejects fractional typing expiry before generating identifiers", () => {
+  const item = fixture("typing");
+  expect(() =>
+    prepareSignalEmail(
+      {
+        parent: item.input.parent,
+        kind: "typing",
+        expiresAtMs: item.now + 0.5,
+      },
+      {
+        now: () => item.now,
+        uuid: () => {
+          throw new Error("unexpected UUID call");
+        },
+      },
+    ),
+  ).toThrow("invalid clock or expiry");
 });

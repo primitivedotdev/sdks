@@ -1578,5 +1578,383 @@
     "classification": "informational_only",
     "reason": "informational_signal",
     "interactionStatus": "valid"
+  },
+  {
+    "name": "typing 2028-02-29T23:59:59.123Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing 1970-01-01T00:00:00Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"1970-01-01T00:00:00Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing 9999-12-31T23:59:59.123456789Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"9999-12-31T23:59:59.123456789Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing 2026-02-29T00:00:00Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2026-02-29T00:00:00Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing 1969-12-31T23:59:59Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"1969-12-31T23:59:59Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing 2026-01-01T24:00:00Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2026-01-01T24:00:00Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing 2026-01-01T00:00:60Z",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2026-01-01T00:00:60Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing 2026-01-01T00:00:00+00:00",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2026-01-01T00:00:00+00:00\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing None",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing wrong step",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"working\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing unknown protocol",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"future_typing\",\"protocol_version\":1,\"step\":\"future_typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing unknown protocol version",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":2,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing extra payload",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\",\"state\":\"started\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing missing target",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing invalid target",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"record-id\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing extra envelope",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"},\"extension\":true}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing working fallback",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am working on your message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "typing extra body",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "I am composing a reply to your message.\nPlease continue.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@agent.example\",\"protocol\":\"typing\",\"protocol_version\":1,\"step\":\"typing\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2028-02-29T23:59:59.123Z\",\"payload\":{\"subject_message_id\":\"<Original@example.com>\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
   }
 ]

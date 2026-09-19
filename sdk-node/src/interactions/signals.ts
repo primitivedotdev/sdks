@@ -16,7 +16,7 @@ export type SignalInput = { parent: SignalParent } & (
       note?: string;
     }
   | { kind: "read" }
-  | { kind: "working"; expiresAtMs: number }
+  | { kind: "working" | "typing"; expiresAtMs: number }
 );
 export interface SignalDependencies {
   uuid: () => string;
@@ -163,11 +163,14 @@ export function prepareSignalEmail(
       payload.note = input.note;
     }
   } else if (input.kind !== "read") {
-    check(input.kind === "working", "invalid signal kind");
+    check(
+      input.kind === "working" || input.kind === "typing",
+      "invalid signal kind",
+    );
     milliseconds(input.expiresAtMs);
     check(
       input.expiresAtMs > now && input.expiresAtMs - now <= 60_000,
-      "working expiry must be within 60 seconds",
+      `${input.kind} expiry must be within 60 seconds`,
     );
     expires = input.expiresAtMs;
   }
@@ -249,6 +252,7 @@ export function signalText(
 ): string {
   if (kind === "read") return "I read your message.";
   if (kind === "working") return "I am working on your message.";
+  if (kind === "typing") return "I am composing a reply to your message.";
   const bodies: Record<string, string> = {
     received: "Received your message.",
     will_process: "I intend to process your message.",

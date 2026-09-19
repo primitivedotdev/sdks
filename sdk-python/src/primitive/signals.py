@@ -22,7 +22,7 @@ class SignalParent:
 @dataclass(frozen=True)
 class SignalInput:
     parent: SignalParent
-    kind: Literal["ack", "read", "working"]
+    kind: Literal["ack", "read", "working", "typing"]
     status: Literal["received", "will_process", "will_not_process"] | None = None
     note: str | None = None
     expires_at_ms: int | None = None
@@ -148,13 +148,13 @@ def prepare_signal_email(
             )
             payload["note"] = signal.note
     elif signal.kind != "read":
-        _check(signal.kind == "working", "invalid signal kind")
-        _check(signal.expires_at_ms is not None, "working expiry is required")
+        _check(signal.kind in ("working", "typing"), "invalid signal kind")
+        _check(signal.expires_at_ms is not None, f"{signal.kind} expiry is required")
         assert signal.expires_at_ms is not None
         _milliseconds(signal.expires_at_ms)
         _check(
             0 < signal.expires_at_ms - observed <= 60000,
-            "working expiry must be within 60 seconds",
+            f"{signal.kind} expiry must be within 60 seconds",
         )
         expires = signal.expires_at_ms
     interaction, step = uuid().lower(), uuid().lower()
@@ -243,5 +243,7 @@ def _signal_text(kind: str, status: str | None = None, note: str | None = None) 
         return "I read your message."
     if kind == "working":
         return "I am working on your message."
+    if kind == "typing":
+        return "I am composing a reply to your message."
     text = _BODIES.get(status or "", "")
     return text if note is None else text + "\n\n" + note

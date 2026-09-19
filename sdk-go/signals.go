@@ -168,9 +168,9 @@ func PrepareSignalEmail(input SignalInput, dependencies SignalDependencies) (Sig
 			payload.Note = &note
 		}
 	case "read":
-	case "working":
+	case "working", "typing":
 		if input.ExpiresAtMs == nil || !signalMilliseconds(*input.ExpiresAtMs) || *input.ExpiresAtMs <= now || *input.ExpiresAtMs-now > 60000 {
-			return zero, fmt.Errorf("working expiry must be within 60 seconds")
+			return zero, fmt.Errorf("%s expiry must be within 60 seconds", input.Kind)
 		}
 		value := *input.ExpiresAtMs
 		expires = &value
@@ -252,6 +252,9 @@ func signalText(kind, status string, note *string) string {
 	}
 	if kind == "working" {
 		return "I am working on your message."
+	}
+	if kind == "typing" {
+		return "I am composing a reply to your message."
 	}
 	text := map[string]string{"received": "Received your message.", "will_process": "I intend to process your message.", "will_not_process": "I will not process your message."}[status]
 	if note != nil {

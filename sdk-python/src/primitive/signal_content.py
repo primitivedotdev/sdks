@@ -122,7 +122,7 @@ def _fallback(result: InteractionResult) -> str | None:
     if (
         set(e) != _ENVELOPE_KEYS
         or e.get("protocol_version") != 1
-        or protocol not in ("ack", "read", "working")
+        or protocol not in ("ack", "read", "working", "typing")
         or e.get("step") != protocol
         or e.get("prev_step_id") is not None
     ):
@@ -135,7 +135,7 @@ def _fallback(result: InteractionResult) -> str | None:
         return None
     if (
         (not _utc_expiry(e.get("expires_at")))
-        if protocol == "working"
+        if protocol in ("working", "typing")
         else e.get("expires_at") is not None
     ):
         return None

@@ -93,10 +93,10 @@ func signalContentFallback(result InteractionResult) (string, bool) {
 	protocol, _ := e["protocol"].(string)
 	iid, _ := e["interaction_id"].(string)
 	sid, _ := e["step_id"].(string)
-	if !signalExactKeys(e, signalEnvelopeKeys) || e["protocol_version"] != float64(1) || (protocol != "ack" && protocol != "read" && protocol != "working") || e["step"] != protocol || e["prev_step_id"] != nil || strings.EqualFold(strings.Split(iid, "@")[0], sid) {
+	if !signalExactKeys(e, signalEnvelopeKeys) || e["protocol_version"] != float64(1) || (protocol != "ack" && protocol != "read" && protocol != "working" && protocol != "typing") || e["step"] != protocol || e["prev_step_id"] != nil || strings.EqualFold(strings.Split(iid, "@")[0], sid) {
 		return "", false
 	}
-	if protocol == "working" {
+	if protocol == "working" || protocol == "typing" {
 		if !signalUTCExpiry(e["expires_at"]) {
 			return "", false
 		}

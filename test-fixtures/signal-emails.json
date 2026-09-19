@@ -736,5 +736,228 @@
       "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
     ],
     "status": "invalid"
+  },
+  {
+    "name": "typing",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "typing",
+      "expiresAtMs": 1800000060123
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "prepared",
+    "prepared": {
+      "accountScope": "account-one",
+      "preparedAtMs": 1800000000123,
+      "expiresAtMs": 1800000060123,
+      "idempotencyKey": "signal-22222222-2222-4222-8222-222222222222",
+      "requestJson": "{\"from\":\"agent@example.com\",\"to\":\"Owner@example.com\",\"subject\":\"Re: Research <&> caf\u00e9 \ud83d\udcec\\u2028\",\"body_text\":\"I am composing a reply to your message.\",\"in_reply_to\":\"<Case.123@EXAMPLE.com>\",\"references\":[\"<old@example.com>\",\"<Case.123@EXAMPLE.com>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLmNvbSIsInByb3RvY29sIjoidHlwaW5nIiwicHJvdG9jb2xfdmVyc2lvbiI6MSwic3RlcCI6InR5cGluZyIsInN0ZXBfaWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJwcmV2X3N0ZXBfaWQiOm51bGwsImV4cGlyZXNfYXQiOiIyMDI3LTAxLTE1VDA4OjAxOjAwLjEyM1oiLCJwYXlsb2FkIjp7InN1YmplY3RfbWVzc2FnZV9pZCI6IjxDYXNlLjEyM0BFWEFNUExFLmNvbT4ifX0=\"}]}"
+    }
+  },
+  {
+    "name": "typing invalid expiry 0",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "typing",
+      "expiresAtMs": 1800000000123
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "typing invalid expiry -1",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "typing",
+      "expiresAtMs": 1800000000122
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "typing invalid expiry 60001",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "typing",
+      "expiresAtMs": 1800000060124
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "typing missing expiry",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "typing",
+      "expiresAtMs": null
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "typing missing wire ID",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": null,
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "typing",
+      "expiresAtMs": 1800000060123
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "waiting_on_parent"
+  },
+  {
+    "name": "typing CRLF target",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "agent@example.com",
+        "messageId": "<x@y>\r\nInjected: yes",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "typing",
+      "expiresAtMs": 1800000060123
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "typing missing scope",
+    "input": {
+      "parent": {
+        "accountScope": "",
+        "to": "agent@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "typing",
+      "expiresAtMs": 1800000060123
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
+  },
+  {
+    "name": "typing multiple recipients",
+    "input": {
+      "parent": {
+        "accountScope": "account-one",
+        "to": "a@example.com,b@example.com",
+        "messageId": " <Case.123@EXAMPLE.com> ",
+        "subject": "Re: Research <&> caf\u00e9 \ud83d\udcec\u2028",
+        "references": [
+          "old@example.com",
+          "<Case.123@EXAMPLE.com>"
+        ],
+        "from": "Owner@example.com"
+      },
+      "kind": "typing",
+      "expiresAtMs": 1800000060123
+    },
+    "now": 1800000000123,
+    "uuids": [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222"
+    ],
+    "status": "invalid"
   }
 ]
