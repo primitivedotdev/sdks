@@ -19,6 +19,8 @@ env:
   DOCFACTS_REF: ca881c2f19e84c9f977478b6f405b342d3171de4 # pin: docfacts main
 jobs:
   impact:
+    # Contextual reports belong only in private repository logs and comments.
+    if: ${{ toJSON(github.event.repository.private) == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Report-only: no failure in ANY step (checkout, install, engine crash) may
