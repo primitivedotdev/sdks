@@ -78,37 +78,43 @@ func TestSharedSignalEmails(t *testing.T) {
 	}
 }
 func TestSignalRetryScopeExpiry(t *testing.T) {
-	original := prepareSignalFixture(t, "read")
-	saved, _ := json.Marshal(original)
-	var prepared PreparedSignal
-	if err := json.Unmarshal(saved, &prepared); err != nil {
-		t.Fatal(err)
-	}
-	var calls []string
-	send := func(_ context.Context, body json.RawMessage, key string) (string, error) {
-		calls = append(calls, string(body)+key)
-		body[0] = '!'
-		if len(calls) == 1 {
-			return "", errors.New("timeout")
-		}
-		return "ordinary response", nil
-	}
-	now := func() int64 { return 1800000000123 }
-	ctx := context.Background()
-	if _, err := SendPreparedSignal(ctx, send, prepared, "account-one", now); err == nil {
-		t.Fatal("lost timeout")
-	}
-	result, err := SendPreparedSignal(ctx, send, prepared, "account-one", now)
-	if err != nil || result.Result != "ordinary response" || calls[0] != calls[1] {
-		t.Fatal(result, err, calls)
-	}
-	if _, err = SendPreparedSignal(ctx, send, prepared, "other", now); err == nil {
-		t.Fatal("cross account")
-	}
-	working := prepareSignalFixture(t, "working")
-	result, err = SendPreparedSignal(ctx, send, working, "account-one", func() int64 { return 1800000060123 })
-	if err != nil || result.Status != "expired" || result.IdempotencyKey != working.IdempotencyKey || len(calls) != 2 {
-		t.Fatal(result, err)
+	for _, kind := range []string{"read", "working", "typing"} {
+		t.Run(kind, func(t *testing.T) {
+			original := prepareSignalFixture(t, kind)
+			saved, _ := json.Marshal(original)
+			var prepared PreparedSignal
+			if err := json.Unmarshal(saved, &prepared); err != nil {
+				t.Fatal(err)
+			}
+			var calls []string
+			send := func(_ context.Context, body json.RawMessage, key string) (string, error) {
+				calls = append(calls, string(body)+key)
+				body[0] = '!'
+				if len(calls) == 1 {
+					return "", errors.New("timeout")
+				}
+				return "ordinary response", nil
+			}
+			now := func() int64 { return 1800000000123 }
+			ctx := context.Background()
+			if _, err := SendPreparedSignal(ctx, send, prepared, "account-one", now); err == nil {
+				t.Fatal("lost timeout")
+			}
+			result, err := SendPreparedSignal(ctx, send, prepared, "account-one", now)
+			if err != nil || result.Result != "ordinary response" || calls[0] != calls[1] {
+				t.Fatal(result, err, calls)
+			}
+			if _, err = SendPreparedSignal(ctx, send, prepared, "other", now); err == nil {
+				t.Fatal("cross account")
+			}
+			for _, kind := range []string{"working", "typing"} {
+				expiring := prepareSignalFixture(t, kind)
+				result, err = SendPreparedSignal(ctx, send, expiring, "account-one", func() int64 { return 1800000060123 })
+				if err != nil || result.Status != "expired" || result.IdempotencyKey != expiring.IdempotencyKey || len(calls) != 2 {
+					t.Fatal(result, err)
+				}
+			}
+		})
 	}
 }
 
@@ -159,7 +165,7 @@ func TestDistinctSignalsShareParentNotExplicitKey(t *testing.T) {
 	sequence := 0
 	dependencies := SignalDependencies{UUID: func() string { sequence++; return fmt.Sprintf("00000000-0000-4000-8000-%012d", sequence) }, Now: func() int64 { return f.Now }}
 	expiry := f.Now + 60000
-	inputs := []SignalInput{{Parent: f.Input.Parent, Kind: "ack", Status: "received"}, {Parent: f.Input.Parent, Kind: "read"}, {Parent: f.Input.Parent, Kind: "working", ExpiresAtMs: &expiry}}
+	inputs := []SignalInput{{Parent: f.Input.Parent, Kind: "ack", Status: "received"}, {Parent: f.Input.Parent, Kind: "read"}, {Parent: f.Input.Parent, Kind: "working", ExpiresAtMs: &expiry}, {Parent: f.Input.Parent, Kind: "typing", ExpiresAtMs: &expiry}}
 	var prepared []PreparedSignal
 	for _, input := range inputs {
 		result, err := PrepareSignalEmail(input, dependencies)
@@ -180,10 +186,10 @@ func TestDistinctSignalsShareParentNotExplicitKey(t *testing.T) {
 		}
 	}
 	keys := map[string]bool{}
-	for _, value := range attempts[:3] {
+	for _, value := range attempts[:4] {
 		keys[value.Key] = true
 	}
-	if len(keys) != 3 || attempts[0] != attempts[3] {
+	if len(keys) != 4 || attempts[0] != attempts[4] {
 		t.Fatal("distinct signal or retry identity changed")
 	}
 	for _, value := range attempts {

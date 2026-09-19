@@ -121,14 +121,16 @@ function fallback(result: InteractionParseResult): string | null {
   if (
     !exactKeys(e, ENVELOPE_KEYS) ||
     e.protocol_version !== 1 ||
-    !["ack", "read", "working"].includes(e.protocol) ||
+    !["ack", "read", "working", "typing"].includes(e.protocol) ||
     e.step !== e.protocol ||
     e.prev_step_id !== null ||
     e.interaction_id.split("@")[0]?.toLowerCase() === e.step_id.toLowerCase()
   )
     return null;
   if (
-    e.protocol === "working" ? !utcExpiry(e.expires_at) : e.expires_at !== null
+    ["working", "typing"].includes(e.protocol)
+      ? !utcExpiry(e.expires_at)
+      : e.expires_at !== null
   )
     return null;
   if (!e.payload || typeof e.payload !== "object" || Array.isArray(e.payload))

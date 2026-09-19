@@ -5,9 +5,9 @@ An email signal is an ordinary threaded email with a short text body and one
 These helpers do not watch an inbox, mark mail read, report progress automatically,
 persist an outbox, or introduce another transport.
 
-This document specifies the existing `ack/1` shape and proposed `read/1` and
-`working/1` conventions. It does not promise server-side interpretation or UI
-support for the proposed conventions. An ordinary send result only describes the
+This document specifies the existing `ack/1` shape and proposed `read/1`,
+`working/1` and `typing/1` conventions. It does not promise server-side
+interpretation or UI support for the proposed conventions. An ordinary send result only describes the
 send operation; it does not prove a recipient read or acted on the message.
 
 ## Wire format
@@ -23,6 +23,7 @@ signals to a completed ACK interaction.
 | ACK | `ack` | `1` | `ack` | `null` | `subject_message_id`, `status`, optional `note` |
 | Read | `read` | `1` | `read` | `null` | `subject_message_id` |
 | Working | `working` | `1` | `working` | Absolute UTC timestamp | `subject_message_id` |
+| Typing | `typing` | `1` | `typing` | Absolute UTC timestamp | `subject_message_id` |
 
 `subject_message_id` is the original email's RFC Message-ID, including angle
 brackets. It is not an API record ID. ACK `status` is exactly one of `received`,
@@ -38,12 +39,22 @@ emitted. Existing ACK meanings are unchanged:
 | `will_not_process` | Intention not to process | `I will not process your message.` |
 | `read` | Read observation | `I read your message.` |
 | `working` | Currently working observation | `I am working on your message.` |
+| `typing` | Currently composing a reply | `I am composing a reply to your message.` |
 
 Append an ACK note to its body with exactly two LF characters, followed by the
 unchanged note. Receipt does not mean read, and intention does not mean currently
 working. A working observation expires at its original timestamp, at most 60
 seconds after preparation. It is not a lease, heartbeat, completion guarantee,
 or cancellation protocol. Retrying never renews it.
+
+Typing is separate from working: emit it only while composing the reply, not while
+researching, reasoning or calling tools. It is optional and short-lived. Use an
+expiry of at most 60 seconds and send a fresh observation only while composition
+continues. There is no automatic emission, stop message, polling loop or new API.
+Clients should clear typing when the corresponding reply arrives or the observation
+expires. A delayed observation must not make a completed reply look active again.
+When both are active, clients may show typing near the composer while retaining
+the separate working state. These are sender reports, not proof of activity.
 
 Example attachment:
 
@@ -68,8 +79,8 @@ Preparation requires:
 
 - An explicit parent with account scope, authenticated original From, selected
   authorized recipient identity, Message-ID, subject and References.
-- Kind `ack`, `read`, or `working`; ACK status/optional note, or an absolute
-  `expiresAtMs` for working (Python uses `expires_at_ms`).
+- Kind `ack`, `read`, `working`, or `typing`; ACK status/optional note, or an absolute
+  `expiresAtMs` for working or typing (Python uses `expires_at_ms`).
 - Injected UUID and clock functions. The clock returns integer Unix milliseconds.
   The UUID function must return a fresh UUID on each call; two distinct UUIDs
   are required per signal and normalized to lowercase.
@@ -101,8 +112,8 @@ The ordinary send body has:
 Parent IDs and references are capped at 998 bytes after normalization; mailbox
 fields at 320 bytes, subject at 998 UTF-8 bytes and account scope at 256 UTF-8 bytes.
 The account scope must be nonempty. Clock/expiry values are bounded to the UTC
-calendar range from 1970 through 9999. Working expiry must be strictly after the
-original preparation clock and no more than 60,000 milliseconds later.
+calendar range from 1970 through 9999. Working and typing expiry must be strictly
+after the original preparation clock and no more than 60,000 milliseconds later.
 
 ## Persistence, attempts and reconciliation
 
@@ -132,13 +143,13 @@ when that result is an HTTP error response. Operation exceptions propagate.
 Python's helper is async: scope and expiry are checked when it is awaited.
 Do not introduce delayed dispatch inside an adapter after this check.
 
-At or after a working signal's fixed expiry, send returns `expired` with its
-original idempotency key and does not call the adapter. This says nothing about
+At or after a working or typing signal's fixed expiry, send returns `expired`
+with its original idempotency key and does not call the adapter. This says nothing about
 whether an earlier attempt succeeded. If the record was never dispatched, the
 caller can cancel it. If a previous attempt timed out or may have reached the
 service, reconcile that same key using the ordinary sent-email reads. Before
 expiry, retry the same prepared record and key. Never call preparation again to
-retry, replace an uncertain key, or extend an expired working assertion.
+retry, replace an uncertain key, or extend an expired working or typing assertion.
 
 ## Ordinary-operation adapters
 
@@ -265,12 +276,12 @@ canonical filenames always prevent an informational-only result.
 
 Supported signals require exactly the nine documented version 1 envelope keys;
 unknown extensions are not silently dropped. Protocol/version/step must match
-`ack/1`, `read/1` or `working/1`, `prev_step_id` must be null, and the interaction
-UUID and step UUID must be distinct. Payload keys must match the wire format
+`ack/1`, `read/1`, `working/1` or `typing/1`, `prev_step_id` must be null, and the
+interaction UUID and step UUID must be distinct. Payload keys must match the wire format
 above exactly, with a bracketed bounded Message-ID in `subject_message_id`. ACK
 status and note follow the same limits as preparation, including UTF-16 length,
-Unicode and NUL checks. Read and ACK expiry must be null. Working expiry must be
-a real UTC calendar time in years 1970 through 9999, with a `Z` suffix and optional
+Unicode and NUL checks. Read and ACK expiry must be null. Working and typing
+expiry must be a real UTC calendar time in years 1970 through 9999, with a `Z` suffix and optional
 one to nine fractional second digits; leap seconds are not accepted. The classifier
 has no clock and does not infer observation time, remaining lifetime or the
 sender's original 60-second interval from an expiry alone.
