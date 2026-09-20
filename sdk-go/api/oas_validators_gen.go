@@ -8242,6 +8242,14 @@ func (s *ListSentEmailsOK) Validate() error {
 	return nil
 }
 
+func (s *ListSentEmailsServiceUnavailable) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *ListSentEmailsUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {

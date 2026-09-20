@@ -13183,6 +13183,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name": "date_to",
         "required": false,
         "type": "string"
+      },
+      {
+        "description": "Literal case-insensitive substring filter over the\nsubject, the retained plain-text body, the sender, and\nthe To, CC and BCC recipients of each send. Matched\nverbatim: `%`, `_` and `\\` are ordinary characters and\ndo not act as wildcards, so a search for `10%` finds the\nliteral string `10%` rather than everything beginning\n`10`.\n\nLeading and trailing whitespace is trimmed, and the\nresult must be 3 to 500 UTF-16 code units. The\nthree-character minimum is the search index's: a shorter\npattern cannot be answered from the index and would scan\nthe whole mailbox, so it is rejected rather than served\nas a request that times out.\n\nThose bounds are deliberately NOT declared as\n`minLength`/`maxLength`. Both count Unicode code points\non the value as sent, while the server trims first and\ncounts UTF-16 code units, and the two disagree in both\ndirections: two astral characters are 2 code points but\n4 code units, so a declared minimum would reject a query\nthe server accepts, and `\"<499 chars> \"` is 500 code\npoints before trimming and 499 after, so a declared\nmaximum would reject another. Declaring a bound the\nserver does not enforce is worse than declaring none,\nbecause the client refuses locally and the caller never\nlearns why. The server validates; a violation is a `400`.\n\nRecipients are matched one address at a time rather than\nagainst the serialized recipient list, so a query\ncontaining a quote, comma or bracket matches only where\nthat character occurs inside an address. Bodies are\nsearched only where the plain-text body was retained;\nHTML-only bodies are not searched.\n\nNot served by every deployment. Where sent-mail search\nis not enabled the endpoint answers `503` with code\n`sent_mail_search_unavailable`, which callers should\ntreat as a capability answer and fall back on rather\nthan as an outage.\n",
+        "enum": null,
+        "name": "q",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Exact case-insensitive sender mailbox filter. Returns\nonly sends whose from address equals this value; it is\nnot a substring match, so a partial mailbox matches\nnothing. Use `q` to search sender text loosely.\nCombines with every other filter, and unlike `q` it is\nserved by every deployment.\n",
+        "enum": null,
+        "name": "from",
+        "required": false,
+        "type": "string"
       }
     ],
     "requestSchema": null,

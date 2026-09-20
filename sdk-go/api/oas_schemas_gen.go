@@ -14477,6 +14477,10 @@ func (s *ListSentEmailsOK) SetData(val []SentEmailSummary) {
 
 func (*ListSentEmailsOK) listSentEmailsRes() {}
 
+type ListSentEmailsServiceUnavailable ErrorResponse
+
+func (*ListSentEmailsServiceUnavailable) listSentEmailsRes() {}
+
 type ListSentEmailsUnauthorized ErrorResponse
 
 func (*ListSentEmailsUnauthorized) listSentEmailsRes() {}
