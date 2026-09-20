@@ -14953,6 +14953,14 @@ func (s *Server) handleListSentEmailsRequest(args [0]string, argsEscaped bool, w
 					Name: "date_to",
 					In:   "query",
 				}: params.DateTo,
+				{
+					Name: "q",
+					In:   "query",
+				}: params.Q,
+				{
+					Name: "from",
+					In:   "query",
+				}: params.From,
 			},
 			Raw: r,
 		}

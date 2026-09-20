@@ -28,6 +28,8 @@ def _get_kwargs(
     idempotency_key: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    q: str | Unset = UNSET,
+    from_: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -62,6 +64,10 @@ def _get_kwargs(
     if not isinstance(date_to, Unset):
         json_date_to = date_to.isoformat()
     params["date_to"] = json_date_to
+
+    params["q"] = q
+
+    params["from"] = from_
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -100,6 +106,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_401
 
+    if response.status_code == 503:
+        response_503 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_503
+
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)
     else:
@@ -125,6 +138,8 @@ def sync_detailed(
     idempotency_key: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    q: str | Unset = UNSET,
+    from_: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListSentEmailsResponse200]:
     """ List outbound sent emails
@@ -179,6 +194,8 @@ def sync_detailed(
         idempotency_key (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        q (str | Unset):
+        from_ (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -197,6 +214,8 @@ request_id=request_id,
 idempotency_key=idempotency_key,
 date_from=date_from,
 date_to=date_to,
+q=q,
+from_=from_,
 
     )
 
@@ -216,6 +235,8 @@ def sync(
     idempotency_key: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    q: str | Unset = UNSET,
+    from_: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListSentEmailsResponse200 | None:
     """ List outbound sent emails
@@ -270,6 +291,8 @@ def sync(
         idempotency_key (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        q (str | Unset):
+        from_ (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -289,6 +312,8 @@ request_id=request_id,
 idempotency_key=idempotency_key,
 date_from=date_from,
 date_to=date_to,
+q=q,
+from_=from_,
 
     ).parsed
 
@@ -302,6 +327,8 @@ async def asyncio_detailed(
     idempotency_key: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    q: str | Unset = UNSET,
+    from_: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListSentEmailsResponse200]:
     """ List outbound sent emails
@@ -356,6 +383,8 @@ async def asyncio_detailed(
         idempotency_key (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        q (str | Unset):
+        from_ (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -374,6 +403,8 @@ request_id=request_id,
 idempotency_key=idempotency_key,
 date_from=date_from,
 date_to=date_to,
+q=q,
+from_=from_,
 
     )
 
@@ -393,6 +424,8 @@ async def asyncio(
     idempotency_key: str | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
+    q: str | Unset = UNSET,
+    from_: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListSentEmailsResponse200 | None:
     """ List outbound sent emails
@@ -447,6 +480,8 @@ async def asyncio(
         idempotency_key (str | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
+        q (str | Unset):
+        from_ (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -466,5 +501,7 @@ request_id=request_id,
 idempotency_key=idempotency_key,
 date_from=date_from,
 date_to=date_to,
+q=q,
+from_=from_,
 
     )).parsed

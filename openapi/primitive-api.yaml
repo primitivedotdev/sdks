@@ -3418,6 +3418,64 @@ paths:
             type: string
             format: date-time
           description: Inclusive upper bound on `created_at`.
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: |
+            Literal case-insensitive substring filter over the
+            subject, the retained plain-text body, the sender, and
+            the To, CC and BCC recipients of each send. Matched
+            verbatim: `%`, `_` and `\` are ordinary characters and
+            do not act as wildcards, so a search for `10%` finds the
+            literal string `10%` rather than everything beginning
+            `10`.
+
+            Leading and trailing whitespace is trimmed, and the
+            result must be 3 to 500 UTF-16 code units. The
+            three-character minimum is the search index's: a shorter
+            pattern cannot be answered from the index and would scan
+            the whole mailbox, so it is rejected rather than served
+            as a request that times out.
+
+            Those bounds are deliberately NOT declared as
+            `minLength`/`maxLength`. Both count Unicode code points
+            on the value as sent, while the server trims first and
+            counts UTF-16 code units, and the two disagree in both
+            directions: two astral characters are 2 code points but
+            4 code units, so a declared minimum would reject a query
+            the server accepts, and `"<499 chars> "` is 500 code
+            points before trimming and 499 after, so a declared
+            maximum would reject another. Declaring a bound the
+            server does not enforce is worse than declaring none,
+            because the client refuses locally and the caller never
+            learns why. The server validates; a violation is a `400`.
+
+            Recipients are matched one address at a time rather than
+            against the serialized recipient list, so a query
+            containing a quote, comma or bracket matches only where
+            that character occurs inside an address. Bodies are
+            searched only where the plain-text body was retained;
+            HTML-only bodies are not searched.
+
+            Not served by every deployment. Where sent-mail search
+            is not enabled the endpoint answers `503` with code
+            `sent_mail_search_unavailable`, which callers should
+            treat as a capability answer and fall back on rather
+            than as an outage.
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: email
+            maxLength: 320
+          description: |
+            Exact case-insensitive sender mailbox filter. Returns
+            only sends whose from address equals this value; it is
+            not a substring match, so a partial mailbox matches
+            nothing. Use `q` to search sender text loosely.
+            Combines with every other filter, and unlike `q` it is
+            served by every deployment.
       responses:
         '200':
           description: Page of sent-email summaries
@@ -3436,6 +3494,23 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: |
+            Sent-mail text search is not enabled in this deployment,
+            so `q` cannot be served. A capability answer, not an
+            outage: it will not clear on retry, and the same request
+            without `q` succeeds. Fall back to whatever local
+            matching the caller has. Distinguished from the generic
+            503 by its `sent_mail_search_unavailable` code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: sent_mail_search_unavailable
+                  message: Sent-mail text search (`q`) is not enabled in this environment.
 
   /sent-emails/{id}:
     delete:

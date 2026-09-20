@@ -5509,6 +5509,50 @@ type ListSentEmailsParams struct {
 	DateFrom OptDateTime `json:",omitempty,omitzero"`
 	// Inclusive upper bound on `created_at`.
 	DateTo OptDateTime `json:",omitempty,omitzero"`
+	// Literal case-insensitive substring filter over the
+	// subject, the retained plain-text body, the sender, and
+	// the To, CC and BCC recipients of each send. Matched
+	// verbatim: `%`, `_` and `\` are ordinary characters and
+	// do not act as wildcards, so a search for `10%` finds the
+	// literal string `10%` rather than everything beginning
+	// `10`.
+	// Leading and trailing whitespace is trimmed, and the
+	// result must be 3 to 500 UTF-16 code units. The
+	// three-character minimum is the search index's: a shorter
+	// pattern cannot be answered from the index and would scan
+	// the whole mailbox, so it is rejected rather than served
+	// as a request that times out.
+	// Those bounds are deliberately NOT declared as
+	// `minLength`/`maxLength`. Both count Unicode code points
+	// on the value as sent, while the server trims first and
+	// counts UTF-16 code units, and the two disagree in both
+	// directions: two astral characters are 2 code points but
+	// 4 code units, so a declared minimum would reject a query
+	// the server accepts, and `"<499 chars> "` is 500 code
+	// points before trimming and 499 after, so a declared
+	// maximum would reject another. Declaring a bound the
+	// server does not enforce is worse than declaring none,
+	// because the client refuses locally and the caller never
+	// learns why. The server validates; a violation is a `400`.
+	// Recipients are matched one address at a time rather than
+	// against the serialized recipient list, so a query
+	// containing a quote, comma or bracket matches only where
+	// that character occurs inside an address. Bodies are
+	// searched only where the plain-text body was retained;
+	// HTML-only bodies are not searched.
+	// Not served by every deployment. Where sent-mail search
+	// is not enabled the endpoint answers `503` with code
+	// `sent_mail_search_unavailable`, which callers should
+	// treat as a capability answer and fall back on rather
+	// than as an outage.
+	Q OptString `json:",omitempty,omitzero"`
+	// Exact case-insensitive sender mailbox filter. Returns
+	// only sends whose from address equals this value; it is
+	// not a substring match, so a partial mailbox matches
+	// nothing. Use `q` to search sender text loosely.
+	// Combines with every other filter, and unlike `q` it is
+	// served by every deployment.
+	From OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListSentEmailsParams(packed middleware.Parameters) (params ListSentEmailsParams) {
@@ -5573,6 +5617,24 @@ func unpackListSentEmailsParams(packed middleware.Parameters) (params ListSentEm
 		}
 		if v, ok := packed[key]; ok {
 			params.DateTo = v.(OptDateTime)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "q",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Q = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "from",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.From = v.(OptString)
 		}
 	}
 	return params
@@ -5935,6 +5997,115 @@ func decodeListSentEmailsParams(args [0]string, argsEscaped bool, r *http.Reques
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "date_to",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: q.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "q",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotQVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotQVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Q.SetTo(paramsDotQVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "q",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: from.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "from",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotFromVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotFromVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.From.SetTo(paramsDotFromVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.From.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     320,
+							MaxLengthSet:  true,
+							Email:         true,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "from",
 			In:   "query",
 			Err:  err,
 		}
