@@ -163,6 +163,8 @@ func parseFromHeaderStrict(value string) (string, TrustReason) {
 // attacker-controlled domain is legit. Anchoring DMARCFromDomain and
 // requiring DKIM proof for subdomain exceptions closes that. A shared
 // organizational domain or SPF-only pass never suffices for the exception.
+// The qualifying signature must use RSA-SHA256 with at least 1024 reported
+// key bits, or Ed25519-SHA256. Unknown algorithms or RSA sizes fail closed.
 // The strict From parse defends the remaining gaps: a header like
 // `From: "trusted@example.com" <x@evil.com>` plants an allowlisted
 // address in the display name while DMARC evaluates evil.com, and
@@ -252,7 +254,9 @@ func hasSubdomainIdentity(auth EmailAuth, domain, dmarcDomain string) bool {
 	managedInbox := managedInboxTrustDomain.MatchString(domain)
 	for _, signature := range auth.DKIMSignatures {
 		signer := strings.ToLower(strings.TrimSpace(signature.Domain))
-		if signature.Result != DkimResultPass || !signature.Aligned || !(signer == domain || (managedInbox && dmarcDomain == "primitive.email" && signer == "primitive.email")) {
+		// Ed25519 has fixed-strength keys; its 256 bits are not an RSA key size.
+		strongKey := signature.Algo != nil && (*signature.Algo == "ed25519-sha256" || (*signature.Algo == "rsa-sha256" && signature.KeyBits != nil && *signature.KeyBits >= 1024))
+		if signature.Result != DkimResultPass || !signature.Aligned || !strongKey || !(signer == domain || (managedInbox && dmarcDomain == "primitive.email" && signer == "primitive.email")) {
 			continue
 		}
 		return true

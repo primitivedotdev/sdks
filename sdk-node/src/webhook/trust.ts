@@ -148,9 +148,16 @@ function hasSubdomainIdentity(
       typeof signature.domain === "string"
         ? signature.domain.trim().toLowerCase()
         : "";
+    // Ed25519 has fixed-strength keys; its 256 bits are not an RSA key size.
+    const strongKey =
+      signature.algo === "ed25519-sha256" ||
+      (signature.algo === "rsa-sha256" &&
+        typeof signature.keyBits === "number" &&
+        signature.keyBits >= 1024);
     return (
       signature.result === "pass" &&
       signature.aligned === true &&
+      strongKey &&
       (signer === domain ||
         (managedInbox &&
           dmarcDomain === "primitive.email" &&
@@ -182,6 +189,8 @@ function hasSubdomainIdentity(
  * attacker-controlled domain is `legit`. Anchoring `dmarcFromDomain`
  * and requiring DKIM proof for subdomain exceptions closes that. A shared
  * organizational domain or SPF-only pass never suffices for the exception.
+ * The qualifying signature must use RSA-SHA256 with at least 1024 reported
+ * key bits, or Ed25519-SHA256. Unknown algorithms or RSA sizes fail closed.
  * The strict From parse defends the remaining gaps:
  *
  * - Naively regexing the raw From header is unsafe. A header like

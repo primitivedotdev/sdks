@@ -1249,6 +1249,311 @@
         "retryable": false,
         "reason": "trusted"
       }
+    },
+    {
+      "name": "subdomain-weak-rsa",
+      "from": "player@mail.example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "mail.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 512,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "mail.example.com",
+        "sender": "player@mail.example.com"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "subdomain-rsa-minimum",
+      "from": "player@mail.example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "mail.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 1024,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "mail.example.com",
+        "sender": "player@mail.example.com"
+      },
+      "expected": {
+        "trusted": true,
+        "retryable": false,
+        "reason": "trusted"
+      }
+    },
+    {
+      "name": "subdomain-rsa-unknown-size",
+      "from": "player@mail.example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "mail.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": null,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "mail.example.com",
+        "sender": "player@mail.example.com"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "subdomain-rsa-sha1",
+      "from": "player@mail.example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "mail.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha1"
+          }
+        ]
+      },
+      "options": {
+        "domain": "mail.example.com",
+        "sender": "player@mail.example.com"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "subdomain-unknown-algorithm",
+      "from": "player@mail.example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "mail.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": null
+          }
+        ]
+      },
+      "options": {
+        "domain": "mail.example.com",
+        "sender": "player@mail.example.com"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "subdomain-ed25519",
+      "from": "player@mail.example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "mail.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 256,
+            "algo": "ed25519-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "mail.example.com",
+        "sender": "player@mail.example.com"
+      },
+      "expected": {
+        "trusted": true,
+        "retryable": false,
+        "reason": "trusted"
+      }
+    },
+    {
+      "name": "subdomain-ed25519-no-modulus-size",
+      "from": "player@mail.example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "mail.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": null,
+            "algo": "ed25519-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "mail.example.com",
+        "sender": "player@mail.example.com"
+      },
+      "expected": {
+        "trusted": true,
+        "retryable": false,
+        "reason": "trusted"
+      }
+    },
+    {
+      "name": "weak-exact-signer-with-strong-sibling",
+      "from": "player@mail.example.com",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.com",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "mail.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 512,
+            "algo": "rsa-sha256"
+          },
+          {
+            "domain": "sibling.example.com",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "mail.example.com",
+        "sender": "player@mail.example.com"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "managed-inbox-weak-provider-signature",
+      "from": "player@test-inbox.primitive.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 512,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive.email",
+        "sender": "player@test-inbox.primitive.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
     }
   ]
 }

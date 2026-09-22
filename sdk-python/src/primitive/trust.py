@@ -158,6 +158,14 @@ def _has_subdomain_identity(auth: EmailAuth, domain: str, dmarc_domain: str) -> 
         _enum_value(signature.result) == "pass"
         and signature.aligned
         and (
+            signature.algo == "ed25519-sha256"
+            or (
+                signature.algo == "rsa-sha256"
+                and signature.key_bits is not None
+                and signature.key_bits >= 1024
+            )
+        )
+        and (
             signature.domain.strip().lower() == domain
             or (
                 managed_inbox
@@ -194,6 +202,8 @@ def is_trusted_sender(
     attacker-controlled domain is ``legit``. Anchoring ``dmarc_from_domain``
     and requiring DKIM proof for subdomain exceptions closes that. A shared
     organizational domain or SPF-only pass never suffices for the exception.
+    The qualifying signature must use RSA-SHA256 with at least 1024 reported
+    key bits, or Ed25519-SHA256. Unknown algorithms or RSA sizes fail closed.
     The strict From parse defends the remaining gaps: a header
     like ``From: "trusted@example.com" <x@evil.com>`` plants an allowlisted
     address in the display name while DMARC evaluates ``evil.com``, and
