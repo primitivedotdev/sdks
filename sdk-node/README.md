@@ -223,7 +223,20 @@ if (trust.trusted) {
 }
 ```
 
-`trusted` is true only when the verdict is `legit`, the domain DMARC evaluated equals `domain`, and the From header strict-parses to a single valid address in `domain` (exactly matching `sender` when given). `reason` is a stable machine-readable code naming the first check that failed.
+`trusted` requires a `legit` verdict and a strict-parsed single From address in the exact expected `domain` (and exact `sender` when given). `reason` names the first check that failed.
+
+The reported DMARC domain can be an organizational domain such as `example.com`
+for mail from `player@mail.example.com`. When it differs from the expected
+From domain, the helper requires DMARC pass and a passing, aligned DKIM signature
+from that exact expected domain. For a managed inbox such as
+`player@test-inbox.primitive.email`, it also accepts `primitive.email` as the
+signer, relying on Primitive to authorize the sending identity. A sibling
+signer, an arbitrary parent signer, or SPF alone cannot satisfy this exception.
+Continue passing the full subdomain as the expected domain.
+
+Use this helper only with a verified Primitive webhook or an event obtained
+through the authenticated API. It consumes the server's authentication results;
+it does not verify DKIM or the webhook signature itself.
 
 If you are writing your own check instead, three details matter:
 

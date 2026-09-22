@@ -3,6 +3,7 @@ package primitive
 import (
 	"fmt"
 	"net/mail"
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -30,8 +31,8 @@ const (
 	// publishes no DMARC record, or evaluation hit a permanent error).
 	TrustReasonAuthUnknown TrustReason = "auth-unknown"
 	// TrustReasonDmarcDomainMismatch means the email authenticated, but
-	// the domain DMARC evaluated (the RFC 5322 From domain seen by the
-	// server) is not the expected domain.
+	// domain DMARC reported does not match the expected domain and no
+	// qualifying subdomain DKIM signature proves its identity.
 	TrustReasonDmarcDomainMismatch TrustReason = "dmarc-domain-mismatch"
 	// TrustReasonFromHeaderMultipleAddresses means the From header lists
 	// more than one address, which is ambiguous as an identity.
@@ -148,8 +149,10 @@ func parseFromHeaderStrict(value string) (string, TrustReason) {
 // Trusted is true only when ALL of the following hold:
 //
 //  1. ValidateEmailAuth(event.Email.Auth) returns a legit verdict.
-//  2. event.Email.Auth.DMARCFromDomain (the domain the server's DMARC
-//     evaluation ran against) equals opts.Domain.
+//  2. The reported DMARC domain equals opts.Domain, or is its parent and
+//     passing, aligned DKIM uses the exact expected domain.
+//     A direct child of primitive.email may instead use primitive.email
+//     as its signer, trusting Primitive to authorize the sending identity.
 //  3. The From header strict-parses to exactly one valid address whose
 //     domain equals opts.Domain.
 //  4. When opts.Sender is non-empty, the parsed From address equals it
@@ -157,8 +160,10 @@ func parseFromHeaderStrict(value string) (string, TrustReason) {
 //
 // The verdict alone says an email was authenticated, not which domain
 // it was authenticated as: a fully authenticated email from an
-// attacker-controlled domain is legit. Anchoring DMARCFromDomain closes
-// that. The strict From parse defends the remaining gaps: a header like
+// attacker-controlled domain is legit. Anchoring DMARCFromDomain and
+// requiring DKIM proof for subdomain exceptions closes that. A shared
+// organizational domain or SPF-only pass never suffices for the exception.
+// The strict From parse defends the remaining gaps: a header like
 // `From: "trusted@example.com" <x@evil.com>` plants an allowlisted
 // address in the display name while DMARC evaluates evil.com, and
 // NormalizeReceivedEmail's Sender is not a safe anchor because its
@@ -216,7 +221,7 @@ func IsTrustedSender(event EmailReceivedEvent, opts TrustedSenderOptions) (Trust
 	if event.Email.Auth.DMARCFromDomain != nil {
 		dmarcFromDomain = strings.ToLower(strings.TrimSpace(*event.Email.Auth.DMARCFromDomain))
 	}
-	if dmarcFromDomain == "" || dmarcFromDomain != domain {
+	if dmarcFromDomain == "" || (dmarcFromDomain != domain && !hasSubdomainIdentity(event.Email.Auth, domain, dmarcFromDomain)) {
 		return untrustedSender(TrustReasonDmarcDomainMismatch, authResult, false), nil
 	}
 
@@ -235,4 +240,22 @@ func IsTrustedSender(event EmailReceivedEvent, opts TrustedSenderOptions) (Trust
 	}
 
 	return TrustedSenderResult{Trusted: true, Retryable: false, Reason: TrustReasonTrusted, Auth: authResult}, nil
+}
+
+var managedInboxTrustDomain = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.primitive\.email$`)
+
+func hasSubdomainIdentity(auth EmailAuth, domain, dmarcDomain string) bool {
+	// A shared organizational domain alone cannot distinguish sibling senders.
+	if auth.DMARC != DmarcResultPass || auth.DMARCDkimAligned == nil || !*auth.DMARCDkimAligned || !strings.HasSuffix(domain, "."+dmarcDomain) {
+		return false
+	}
+	managedInbox := managedInboxTrustDomain.MatchString(domain)
+	for _, signature := range auth.DKIMSignatures {
+		signer := strings.ToLower(strings.TrimSpace(signature.Domain))
+		if signature.Result != DkimResultPass || !signature.Aligned || !(signer == domain || (managedInbox && dmarcDomain == "primitive.email" && signer == "primitive.email")) {
+			continue
+		}
+		return true
+	}
+	return false
 }

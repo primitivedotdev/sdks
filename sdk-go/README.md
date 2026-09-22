@@ -232,13 +232,26 @@ default:
 }
 ```
 
-`Trusted` is true only when the verdict is `legit`, the domain DMARC evaluated
-equals `Domain`, and the From header strict-parses to a single valid address
-in `Domain` (exactly matching `Sender` when given). Do not authorize based on
+`Trusted` requires a `legit` verdict and a strict-parsed single From address
+in the exact expected `Domain` (and exact `Sender` when given).
+Do not authorize based on
 `email.ReplyTarget` or `email.Raw.Email.SMTP.MailFrom` (both
 sender-controlled), and note that the normalized `email.Sender` is parsed
 leniently for display and falls back to the SMTP envelope sender, so it is not
 a safe authorization anchor.
+
+The reported DMARC domain can be an organizational domain such as `example.com`
+for mail from `player@mail.example.com`. When it differs from the expected
+From domain, the helper requires DMARC pass and a passing, aligned DKIM signature
+from that exact expected domain. For a managed inbox such as
+`player@test-inbox.primitive.email`, it also accepts `primitive.email` as the
+signer, relying on Primitive to authorize the sending identity. A sibling
+signer, an arbitrary parent signer, or SPF alone cannot satisfy this exception.
+Continue passing the full subdomain as the expected domain.
+
+Use this helper only with a verified Primitive webhook or an event obtained
+through the authenticated API. It consumes the server's authentication results;
+it does not verify DKIM or the webhook signature itself.
 
 ## Interaction envelopes
 

@@ -10,6 +10,7 @@ an exact sender address).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from email.utils import getaddresses
@@ -141,6 +142,33 @@ def _parse_from_strict(value: str | None) -> tuple[str | None, str]:
     return candidate.lower(), ""
 
 
+def _has_subdomain_identity(auth: EmailAuth, domain: str, dmarc_domain: str) -> bool:
+    # A shared organizational domain alone cannot distinguish sibling senders.
+    if (
+        _enum_value(auth.dmarc) != "pass"
+        or auth.dmarc_dkim_aligned is not True
+        or not domain.endswith(f".{dmarc_domain}")
+    ):
+        return False
+    managed_inbox = (
+        re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.primitive\.email", domain)
+        is not None
+    )
+    return any(
+        _enum_value(signature.result) == "pass"
+        and signature.aligned
+        and (
+            signature.domain.strip().lower() == domain
+            or (
+                managed_inbox
+                and dmarc_domain == "primitive.email"
+                and signature.domain.strip().lower() == "primitive.email"
+            )
+        )
+        for signature in auth.dkim_signatures
+    )
+
+
 def is_trusted_sender(
     event: EmailReceivedEvent | Mapping[str, Any],
     *,
@@ -152,8 +180,10 @@ def is_trusted_sender(
     ``trusted`` is True only when ALL of the following hold:
 
     1. ``validate_email_auth(event.email.auth)`` returns a ``legit`` verdict.
-    2. ``event.email.auth.dmarc_from_domain`` (the domain the server's
-       DMARC evaluation ran against) equals ``domain``.
+    2. The reported DMARC domain equals ``domain``, or is its parent and
+       passing, aligned DKIM uses the exact expected domain.
+       A direct child of primitive.email may instead use primitive.email
+       as its signer, trusting Primitive to authorize the sending identity.
     3. The From header strict-parses to exactly one valid address whose
        domain equals ``domain``.
     4. When ``sender`` is given, the parsed From address equals it exactly
@@ -162,7 +192,9 @@ def is_trusted_sender(
     The verdict alone says an email was authenticated, not which domain it
     was authenticated as: a fully authenticated email from an
     attacker-controlled domain is ``legit``. Anchoring ``dmarc_from_domain``
-    closes that. The strict From parse defends the remaining gaps: a header
+    and requiring DKIM proof for subdomain exceptions closes that. A shared
+    organizational domain or SPF-only pass never suffices for the exception.
+    The strict From parse defends the remaining gaps: a header
     like ``From: "trusted@example.com" <x@evil.com>`` plants an allowlisted
     address in the display name while DMARC evaluates ``evil.com``, and
     ``normalize_received_email().sender`` is not a safe anchor because its
@@ -232,7 +264,10 @@ def is_trusted_sender(
         if isinstance(auth.dmarc_from_domain, str)
         else ""
     )
-    if not dmarc_from_domain or dmarc_from_domain != expected_domain:
+    if not dmarc_from_domain or (
+        dmarc_from_domain != expected_domain
+        and not _has_subdomain_identity(auth, expected_domain, dmarc_from_domain)
+    ):
         return _untrusted("dmarc-domain-mismatch", auth_result)
 
     from_address, parse_failure = _parse_from_strict(

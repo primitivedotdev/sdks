@@ -130,6 +130,17 @@ describe("isTrustedSender", () => {
     expect(result.reason).toBe("auth-missing");
   });
 
+  it("rejects a malformed signer on the subdomain path without throwing", () => {
+    const event = buildEvent({
+      from: "player@mail.example.com",
+      auth: legitAuth(),
+    });
+    event.email.auth.dkimSignatures[0].domain = 42 as unknown as string;
+    expect(isTrustedSender(event, { domain: "mail.example.com" }).reason).toBe(
+      "dmarc-domain-mismatch",
+    );
+  });
+
   it("rejects group syntax in the From header", () => {
     const result = isTrustedSender(
       buildEvent({ from: "Friends: sender@example.com;" }),
