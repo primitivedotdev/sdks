@@ -28,7 +28,11 @@
 
 import isEmail from "validator/lib/isEmail.js";
 import { parseFromHeader } from "../parser/address-parser.js";
-import type { EmailReceivedEvent, ValidateEmailAuthResult } from "../types.js";
+import type {
+  EmailAuth,
+  EmailReceivedEvent,
+  ValidateEmailAuthResult,
+} from "../types.js";
 import { validateEmailAuth } from "./auth.js";
 
 // Mirrors IS_EMAIL_OPTIONS in parser/address-parser.ts. Used only to
@@ -57,8 +61,8 @@ const SENDER_OPTION_EMAIL_OPTIONS = {
  *   is not transient (most commonly the sender domain publishes no
  *   DMARC record, or evaluation hit a permanent error).
  * - `dmarc-domain-mismatch`: the email authenticated, but the domain
- *   DMARC evaluated (the RFC 5322 From domain seen by the server) is
- *   not the expected domain.
+ *   DMARC reported does not match the expected domain and no qualifying
+ *   subdomain DKIM signature proves its identity.
  * - `from-header-multiple-addresses`: the From header lists more than
  *   one address, which is ambiguous as an identity.
  * - `from-header-invalid`: the From header is missing, malformed, uses
@@ -121,6 +125,47 @@ function untrusted(
   return { trusted: false, retryable, reason, auth };
 }
 
+// An organizational-domain match alone cannot distinguish sibling senders.
+// Require a verified signature from the exact domain, or from Primitive as
+// the sending authority for a managed inbox. Keep this exception confined to
+// an organizational-domain mismatch; legacy exact-domain checks are unchanged.
+function hasSubdomainIdentity(
+  auth: EmailAuth,
+  domain: string,
+  dmarcDomain: string,
+): boolean {
+  if (
+    auth.dmarc !== "pass" ||
+    auth.dmarcDkimAligned !== true ||
+    !domain.endsWith(`.${dmarcDomain}`)
+  ) {
+    return false;
+  }
+  const managedInbox =
+    /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.primitive\.email$/.test(domain);
+  return auth.dkimSignatures.some((signature) => {
+    const signer =
+      typeof signature.domain === "string"
+        ? signature.domain.trim().toLowerCase()
+        : "";
+    // Ed25519 has fixed-strength keys; its 256 bits are not an RSA key size.
+    const strongKey =
+      signature.algo === "ed25519-sha256" ||
+      (signature.algo === "rsa-sha256" &&
+        typeof signature.keyBits === "number" &&
+        signature.keyBits >= 1024);
+    return (
+      signature.result === "pass" &&
+      signature.aligned === true &&
+      strongKey &&
+      (signer === domain ||
+        (managedInbox &&
+          dmarcDomain === "primitive.email" &&
+          signer === "primitive.email"))
+    );
+  });
+}
+
 /**
  * Check whether an inbound email is authenticated as an expected domain
  * (and optionally an exact sender address).
@@ -128,8 +173,10 @@ function untrusted(
  * `trusted` is true only when ALL of the following hold:
  *
  * 1. `validateEmailAuth(event.email.auth)` returns a `legit` verdict.
- * 2. `event.email.auth.dmarcFromDomain` (the domain the server's DMARC
- *    evaluation ran against) equals `options.domain`.
+ * 2. The reported DMARC domain equals `options.domain`, or is its parent
+ *    and passing, aligned DKIM uses the exact expected domain.
+ *    A direct child of primitive.email may instead use primitive.email
+ *    as its signer, trusting Primitive to authorize the sending identity.
  * 3. The From header strict-parses to exactly one valid address whose
  *    domain equals `options.domain`.
  * 4. When `options.sender` is given, the parsed From address equals it
@@ -140,7 +187,11 @@ function untrusted(
  * The verdict alone says an email was authenticated, not which domain
  * it was authenticated as: a fully authenticated email from an
  * attacker-controlled domain is `legit`. Anchoring `dmarcFromDomain`
- * closes that. The strict From parse defends the remaining gaps:
+ * and requiring DKIM proof for subdomain exceptions closes that. A shared
+ * organizational domain or SPF-only pass never suffices for the exception.
+ * The qualifying signature must use RSA-SHA256 with at least 1024 reported
+ * key bits, or Ed25519-SHA256. Unknown algorithms or RSA sizes fail closed.
+ * The strict From parse defends the remaining gaps:
  *
  * - Naively regexing the raw From header is unsafe. A header like
  *   `From: "trusted@example.com" <x@evil.com>` plants an allowlisted
@@ -208,7 +259,11 @@ export function isTrustedSender(
     typeof auth.dmarcFromDomain === "string"
       ? auth.dmarcFromDomain.trim().toLowerCase()
       : "";
-  if (dmarcFromDomain === "" || dmarcFromDomain !== domain) {
+  if (
+    dmarcFromDomain === "" ||
+    (dmarcFromDomain !== domain &&
+      !hasSubdomainIdentity(auth, domain, dmarcFromDomain))
+  ) {
     return untrusted("dmarc-domain-mismatch", authResult);
   }
 
