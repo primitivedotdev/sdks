@@ -307,6 +307,15 @@ describe("credits redeem", () => {
     ]);
     expect(long.exitCode).toBe(1);
     expect(long.stderr).toContain("at most 200 characters");
+    for (const key of ["a b", "café"]) {
+      const invalid = await runCommand(CreditsRedeemCommand, [
+        "LAUNCH50",
+        "--idempotency-key",
+        key,
+      ]);
+      expect(invalid.exitCode).toBe(1);
+      expect(invalid.stderr).toContain("printable ASCII");
+    }
     expect(mocks.redeemCreditCode).not.toHaveBeenCalled();
   });
 

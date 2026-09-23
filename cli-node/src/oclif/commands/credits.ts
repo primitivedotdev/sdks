@@ -201,6 +201,14 @@ export class CreditsRedeemCommand extends Command {
       process.exitCode = 1;
       return;
     }
+    // Same rule the server applies: printable ASCII without spaces.
+    if (!/^[\x21-\x7E]+$/.test(idempotencyKey)) {
+      process.stderr.write(
+        "--idempotency-key must contain only printable ASCII characters, without spaces.\n",
+      );
+      process.exitCode = 1;
+      return;
+    }
 
     const { apiClient, auth, baseUrlOverridden } =
       await createAuthenticatedCliApiClient({
