@@ -625,3 +625,45 @@ Active connections return 409; missing records return 404.
 Send and reply preserve HTTP 410 `sent_email_deleted` and its
 `details.idempotent_replay` value. This is a refusal to resend deleted history;
 do not replace the idempotency key or retry as a fresh message to bypass it.
+
+## Receive events in your process
+
+Use a stable subscription name and an async handler. The SDK registers the
+subscription, connects over WebSocket, reconnects, and acknowledges after the
+handler returns. No public URL, local HTTP server, or CLI is required.
+
+```ts
+import { PrimitiveClient } from "@primitivedotdev/sdk/api";
+
+const client = new PrimitiveClient({ apiKey: process.env.PRIMITIVE_API_KEY });
+const listener = await client.events.listen(async (event, { signal }) => {
+  await app.receive(event, { signal });
+}, { subscription: "my-agent", events: ["email.received"] });
+
+// In a standalone receiver. Embedded apps can supervise this promise.
+await listener.closed;
+// During application shutdown: await listener.close();
+```
+
+Accept or enqueue each event within 30 seconds. Returning from the handler means
+acceptance, not completion of longer background work. Delivery is at least once;
+use `event.id` to deduplicate side effects. Events retain their exact `body` and
+`headers`, alongside canonical `id`, `type`, and parsed `data`.
+
+To wait for one event, keep the same subscription name and acknowledge explicitly:
+
+```ts
+const delivery = await client.events.wait({ subscription: "my-agent", timeoutMs: 60_000 });
+if (delivery) {
+  await app.receive(delivery.event, { signal: delivery.signal });
+  await delivery.ack(); // Or delivery.retry() if acceptance failed.
+}
+```
+
+Timeout returns `null`. Caller cancellation uses `signal`. A pending delivery
+blocks another receiver on that client and subscription until settled or expired.
+`listen()` resolves when ready; start it before sending an event you need to see.
+Same name shares work; different names receive independent copies. New names do
+not backfill history. Closing preserves pending work. Optional `onStatus` reports
+reconnects, handler errors, and retained gap counts; `onGap: "error"` stops on a gap.
+Use `transport: "poll"` explicitly when WebSocket access is unavailable.

@@ -46,6 +46,11 @@ That source is transformed into a generated codegen artifact so all three SDKs g
 
 ## SDK Layers
 
+The reviewed [local event listening design](local-event-listening.md) builds a
+shared CLI and in-process SDK receiver on the existing delivery operations.
+Node, Python, and Go expose named listeners and explicit delivery handles.
+WebSocket is the default transport; HTTP polling is an explicit alternative.
+
 ### Node
 
 - package path: `sdk-node/`

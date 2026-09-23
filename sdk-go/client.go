@@ -130,6 +130,7 @@ func (e *APIError) Error() string {
 //     /send-mail and /emails/{id}/reply. Cloudflare Worker with a larger
 //     request body cap to support attachment sends and replies.
 type Client struct {
+	Events  *EventsResource
 	api     sendAPI
 	apiSend sendAPI
 }
@@ -175,7 +176,7 @@ func NewClientWithOptions(apiKey string, options ClientOptions) (*Client, error)
 		return nil, err
 	}
 
-	return &Client{api: apiClient, apiSend: apiSendClient}, nil
+	return &Client{api: apiClient, apiSend: apiSendClient, Events: newEventsResource(apiClient)}, nil
 }
 
 // NewClientFromAPI wraps a customer-supplied generated client. Useful
@@ -185,7 +186,7 @@ func NewClientWithOptions(apiKey string, options ClientOptions) (*Client, error)
 // host that can serve both shapes (typically only happens in tests
 // against a mock).
 func NewClientFromAPI(apiClient sendAPI) *Client {
-	return &Client{api: apiClient, apiSend: apiClient}
+	return &Client{api: apiClient, apiSend: apiClient, Events: newEventsResource(apiClient)}
 }
 
 func validateAddressHeader(field string, value string) error {

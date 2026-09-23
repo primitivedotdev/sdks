@@ -5,6 +5,7 @@ import {
   type PrimitiveApiClient,
   pullWebhookEvent,
 } from "@primitivedotdev/api-core";
+import { EventConnection, EventReceiverError } from "@primitivedotdev/sdk/api";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
 import {
   listenIdentity,
@@ -33,6 +34,7 @@ type ApiResult<T> = { data?: T; error?: unknown; response?: Response };
 type Client = PrimitiveApiClient["client"];
 export interface ListenOptions {
   configDir: string;
+  transport?: "websocket" | "poll";
   apiKey?: string;
   apiBaseUrl?: string;
   subscription?: string;
@@ -131,6 +133,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
   let verified = false;
   let confirmed = 0;
   let release: (() => void) | undefined;
+  let stream: EventConnection | undefined;
 
   async function retry<T>(operation: () => Promise<ApiResult<T>>): Promise<T> {
     for (let attempt = 0; ; attempt++) {
@@ -142,11 +145,21 @@ export async function runListen(options: ListenOptions): Promise<number> {
         error = failure(result, now());
       } catch (caught) {
         if (signal.aborted) throw signal.reason;
-        if (caught instanceof ListenError) throw caught;
-        if (caught instanceof SyntaxError)
-          throw new ListenError("The API returned malformed JSON.");
-        // Exceptions may contain credentials, URLs, or body data. Never display them.
-        error = new RequestFailure(0, "transport", 0);
+        if (caught instanceof EventReceiverError) {
+          if (["invalid_response", "unsupported"].includes(caught.code))
+            throw new ListenError(caught.message);
+          error = new RequestFailure(
+            caught.status,
+            caught.code,
+            caught.retryAfterMs,
+          );
+        } else {
+          if (caught instanceof ListenError) throw caught;
+          if (caught instanceof SyntaxError)
+            throw new ListenError("The API returned malformed JSON.");
+          // Exceptions may contain credentials, URLs, or body data. Never display them.
+          error = new RequestFailure(0, "transport", 0);
+        }
       }
       if (
         ![0, 408, 429].includes(error.status) &&
@@ -173,7 +186,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
             signal: AbortSignal.any([
               signal,
               ...(init?.signal ? [init.signal] : []),
-              AbortSignal.timeout(30_000),
+              AbortSignal.timeout(45_000),
             ]),
           }),
       });
@@ -248,6 +261,26 @@ export async function runListen(options: ListenOptions): Promise<number> {
       throw new ListenError(
         "The API did not return an enabled pull subscription.",
       );
+    const streamClient = await freshClient();
+    if (options.transport !== "poll") {
+      if (
+        !endpoint.receiver_capabilities?.stream_protocols.includes(
+          "primitive.events.v1",
+        )
+      )
+        throw new ListenError(
+          "This API does not support WebSocket events. Use --transport poll explicitly for an older API.",
+        );
+      if (
+        !endpoint.receiver_capabilities.completion_modes.includes(
+          options.mode ?? "stdout",
+        )
+      )
+        throw new ListenError(
+          "This API does not support the selected listener handler mode.",
+        );
+      stream = new EventConnection(streamClient, endpoint.id);
+    }
     const selected = endpoint.rules?.event_types;
     const selection =
       Array.isArray(selected) &&
@@ -266,15 +299,24 @@ export async function runListen(options: ListenOptions): Promise<number> {
       (options.number === undefined || confirmed < options.number)
     ) {
       const pollStarted = now();
-      const result = await retry(async () =>
-        pullWebhookEvent({
+      const result = await retry(async () => {
+        if (stream) {
+          streamClient.setConfig((await freshClient()).getConfig());
+          return {
+            data: {
+              success: true as const,
+              data: await stream.receive(signal),
+            },
+          };
+        }
+        return pullWebhookEvent({
           client: await freshClient(),
           path: { id: endpoint.id },
           body: { wait_seconds: 25 },
           responseStyle: "fields",
-          signal: AbortSignal.any([signal, AbortSignal.timeout(40_000)]),
-        }),
-      );
+          signal: AbortSignal.any([signal, AbortSignal.timeout(45_000)]),
+        });
+      });
       if (
         result.success !== true ||
         !result.data ||
@@ -343,15 +385,25 @@ export async function runListen(options: ListenOptions): Promise<number> {
       };
       try {
         // Keep this evidence in memory until confirmed. Never rerun the hook to retry an acknowledgement.
-        const receipt = await retry(async () =>
-          completeWebhookEvent({
+        const receipt = await retry(async () => {
+          if (stream) {
+            streamClient.setConfig((await freshClient()).getConfig());
+            await stream.complete(completion, signal);
+            return {
+              data: {
+                success: true as const,
+                data: { result: "completed" as const },
+              },
+            };
+          }
+          return completeWebhookEvent({
             client: await freshClient(),
             path: { id: endpoint.id },
             body: completion,
             responseStyle: "fields",
             signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
-          }),
-        );
+          });
+        });
         if (
           receipt.success !== true ||
           !["completed", "already_completed"].includes(receipt.data?.result)
@@ -379,6 +431,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
   } catch (error) {
     if (!signal.aborted) throw error;
   } finally {
+    stream?.close();
     release?.();
   }
   return confirmed;

@@ -1,3 +1,7 @@
+import { EventsResource } from "./events.js";
+
+export * from "./events.js";
+
 /**
  * Primitive API client module.
  *
@@ -1093,6 +1097,8 @@ export class MemoriesResource {
 }
 
 export class PrimitiveClient extends PrimitiveApiClient {
+  /** Receive durable events in this process, without a public URL. */
+  readonly events = new EventsResource(this.client);
   /** Agent-account lifecycle operations (create, claim/upgrade). */
   readonly agent: AgentResource = new AgentResource(this.client);
   /** Inbound mail: long-poll stream + waitForNext over the forward tail. */

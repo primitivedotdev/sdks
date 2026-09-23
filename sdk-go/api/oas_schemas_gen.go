@@ -2392,6 +2392,7 @@ type CompleteWebhookInput struct {
 	CompleteWebhookHttpInput   CompleteWebhookHttpInput
 	CompleteWebhookExecInput   CompleteWebhookExecInput
 	CompleteWebhookStdoutInput CompleteWebhookStdoutInput
+	CompleteWebhookSdkInput    CompleteWebhookSdkInput
 }
 
 // CompleteWebhookInputType is oneOf type of CompleteWebhookInput.
@@ -2402,6 +2403,7 @@ const (
 	CompleteWebhookHttpInputCompleteWebhookInput   CompleteWebhookInputType = "http"
 	CompleteWebhookExecInputCompleteWebhookInput   CompleteWebhookInputType = "exec"
 	CompleteWebhookStdoutInputCompleteWebhookInput CompleteWebhookInputType = "stdout"
+	CompleteWebhookSdkInputCompleteWebhookInput    CompleteWebhookInputType = "sdk"
 )
 
 // IsCompleteWebhookHttpInput reports whether CompleteWebhookInput is CompleteWebhookHttpInput.
@@ -2417,6 +2419,11 @@ func (s CompleteWebhookInput) IsCompleteWebhookExecInput() bool {
 // IsCompleteWebhookStdoutInput reports whether CompleteWebhookInput is CompleteWebhookStdoutInput.
 func (s CompleteWebhookInput) IsCompleteWebhookStdoutInput() bool {
 	return s.Type == CompleteWebhookStdoutInputCompleteWebhookInput
+}
+
+// IsCompleteWebhookSdkInput reports whether CompleteWebhookInput is CompleteWebhookSdkInput.
+func (s CompleteWebhookInput) IsCompleteWebhookSdkInput() bool {
+	return s.Type == CompleteWebhookSdkInputCompleteWebhookInput
 }
 
 // SetCompleteWebhookHttpInput sets CompleteWebhookInput to CompleteWebhookHttpInput.
@@ -2479,6 +2486,27 @@ func (s CompleteWebhookInput) GetCompleteWebhookStdoutInput() (v CompleteWebhook
 func NewCompleteWebhookStdoutInputCompleteWebhookInput(v CompleteWebhookStdoutInput) CompleteWebhookInput {
 	var s CompleteWebhookInput
 	s.SetCompleteWebhookStdoutInput(v)
+	return s
+}
+
+// SetCompleteWebhookSdkInput sets CompleteWebhookInput to CompleteWebhookSdkInput.
+func (s *CompleteWebhookInput) SetCompleteWebhookSdkInput(v CompleteWebhookSdkInput) {
+	s.Type = CompleteWebhookSdkInputCompleteWebhookInput
+	s.CompleteWebhookSdkInput = v
+}
+
+// GetCompleteWebhookSdkInput returns CompleteWebhookSdkInput and true boolean if CompleteWebhookInput is CompleteWebhookSdkInput.
+func (s CompleteWebhookInput) GetCompleteWebhookSdkInput() (v CompleteWebhookSdkInput, ok bool) {
+	if !s.IsCompleteWebhookSdkInput() {
+		return v, false
+	}
+	return s.CompleteWebhookSdkInput, true
+}
+
+// NewCompleteWebhookSdkInputCompleteWebhookInput returns new CompleteWebhookInput from CompleteWebhookSdkInput.
+func NewCompleteWebhookSdkInputCompleteWebhookInput(v CompleteWebhookSdkInput) CompleteWebhookInput {
+	var s CompleteWebhookInput
+	s.SetCompleteWebhookSdkInput(v)
 	return s
 }
 
@@ -2677,6 +2705,162 @@ const (
 func (CompleteWebhookResponseSuccess) AllValues() []CompleteWebhookResponseSuccess {
 	return []CompleteWebhookResponseSuccess{
 		CompleteWebhookResponseSuccessTrue,
+	}
+}
+
+// Ref: #/components/schemas/CompleteWebhookSdkInput
+type CompleteWebhookSdkInput struct {
+	QueueID        uuid.UUID                                `json:"queue_id"`
+	DeliveryID     uuid.UUID                                `json:"delivery_id"`
+	LeaseToken     uuid.UUID                                `json:"lease_token"`
+	DurationMs     int                                      `json:"duration_ms"`
+	Mode           CompleteWebhookSdkInputMode              `json:"mode"`
+	Accepted       bool                                     `json:"accepted"`
+	TransportError OptCompleteWebhookSdkInputTransportError `json:"transport_error"`
+}
+
+// GetQueueID returns the value of QueueID.
+func (s *CompleteWebhookSdkInput) GetQueueID() uuid.UUID {
+	return s.QueueID
+}
+
+// GetDeliveryID returns the value of DeliveryID.
+func (s *CompleteWebhookSdkInput) GetDeliveryID() uuid.UUID {
+	return s.DeliveryID
+}
+
+// GetLeaseToken returns the value of LeaseToken.
+func (s *CompleteWebhookSdkInput) GetLeaseToken() uuid.UUID {
+	return s.LeaseToken
+}
+
+// GetDurationMs returns the value of DurationMs.
+func (s *CompleteWebhookSdkInput) GetDurationMs() int {
+	return s.DurationMs
+}
+
+// GetMode returns the value of Mode.
+func (s *CompleteWebhookSdkInput) GetMode() CompleteWebhookSdkInputMode {
+	return s.Mode
+}
+
+// GetAccepted returns the value of Accepted.
+func (s *CompleteWebhookSdkInput) GetAccepted() bool {
+	return s.Accepted
+}
+
+// GetTransportError returns the value of TransportError.
+func (s *CompleteWebhookSdkInput) GetTransportError() OptCompleteWebhookSdkInputTransportError {
+	return s.TransportError
+}
+
+// SetQueueID sets the value of QueueID.
+func (s *CompleteWebhookSdkInput) SetQueueID(val uuid.UUID) {
+	s.QueueID = val
+}
+
+// SetDeliveryID sets the value of DeliveryID.
+func (s *CompleteWebhookSdkInput) SetDeliveryID(val uuid.UUID) {
+	s.DeliveryID = val
+}
+
+// SetLeaseToken sets the value of LeaseToken.
+func (s *CompleteWebhookSdkInput) SetLeaseToken(val uuid.UUID) {
+	s.LeaseToken = val
+}
+
+// SetDurationMs sets the value of DurationMs.
+func (s *CompleteWebhookSdkInput) SetDurationMs(val int) {
+	s.DurationMs = val
+}
+
+// SetMode sets the value of Mode.
+func (s *CompleteWebhookSdkInput) SetMode(val CompleteWebhookSdkInputMode) {
+	s.Mode = val
+}
+
+// SetAccepted sets the value of Accepted.
+func (s *CompleteWebhookSdkInput) SetAccepted(val bool) {
+	s.Accepted = val
+}
+
+// SetTransportError sets the value of TransportError.
+func (s *CompleteWebhookSdkInput) SetTransportError(val OptCompleteWebhookSdkInputTransportError) {
+	s.TransportError = val
+}
+
+type CompleteWebhookSdkInputMode string
+
+const (
+	CompleteWebhookSdkInputModeSdk CompleteWebhookSdkInputMode = "sdk"
+)
+
+// AllValues returns all CompleteWebhookSdkInputMode values.
+func (CompleteWebhookSdkInputMode) AllValues() []CompleteWebhookSdkInputMode {
+	return []CompleteWebhookSdkInputMode{
+		CompleteWebhookSdkInputModeSdk,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CompleteWebhookSdkInputMode) MarshalText() ([]byte, error) {
+	switch s {
+	case CompleteWebhookSdkInputModeSdk:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CompleteWebhookSdkInputMode) UnmarshalText(data []byte) error {
+	switch CompleteWebhookSdkInputMode(data) {
+	case CompleteWebhookSdkInputModeSdk:
+		*s = CompleteWebhookSdkInputModeSdk
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CompleteWebhookSdkInputTransportError string
+
+const (
+	CompleteWebhookSdkInputTransportErrorTimeout CompleteWebhookSdkInputTransportError = "timeout"
+	CompleteWebhookSdkInputTransportErrorIo      CompleteWebhookSdkInputTransportError = "io"
+)
+
+// AllValues returns all CompleteWebhookSdkInputTransportError values.
+func (CompleteWebhookSdkInputTransportError) AllValues() []CompleteWebhookSdkInputTransportError {
+	return []CompleteWebhookSdkInputTransportError{
+		CompleteWebhookSdkInputTransportErrorTimeout,
+		CompleteWebhookSdkInputTransportErrorIo,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CompleteWebhookSdkInputTransportError) MarshalText() ([]byte, error) {
+	switch s {
+	case CompleteWebhookSdkInputTransportErrorTimeout:
+		return []byte(s), nil
+	case CompleteWebhookSdkInputTransportErrorIo:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CompleteWebhookSdkInputTransportError) UnmarshalText(data []byte) error {
+	switch CompleteWebhookSdkInputTransportError(data) {
+	case CompleteWebhookSdkInputTransportErrorTimeout:
+		*s = CompleteWebhookSdkInputTransportErrorTimeout
+		return nil
+	case CompleteWebhookSdkInputTransportErrorIo:
+		*s = CompleteWebhookSdkInputTransportErrorIo
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
@@ -8849,10 +9033,11 @@ func (s *EmailWebhookStatus) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/Endpoint
 type Endpoint struct {
-	ID      uuid.UUID    `json:"id"`
-	OrgID   uuid.UUID    `json:"org_id"`
-	URL     OptNilString `json:"url"`
-	Enabled bool         `json:"enabled"`
+	ReceiverCapabilities OptEndpointReceiverCapabilities `json:"receiver_capabilities"`
+	ID                   uuid.UUID                       `json:"id"`
+	OrgID                uuid.UUID                       `json:"org_id"`
+	URL                  OptNilString                    `json:"url"`
+	Enabled              bool                            `json:"enabled"`
 	// Restrict this endpoint to emails from a specific domain.
 	DomainID OptNilUUID `json:"domain_id"`
 	// Endpoint-specific filtering rules.
@@ -8881,6 +9066,11 @@ type Endpoint struct {
 	IsRouteTarget OptBool `json:"is_route_target"`
 	// Stable name of a pull destination.
 	Name OptNilString `json:"name"`
+}
+
+// GetReceiverCapabilities returns the value of ReceiverCapabilities.
+func (s *Endpoint) GetReceiverCapabilities() OptEndpointReceiverCapabilities {
+	return s.ReceiverCapabilities
 }
 
 // GetID returns the value of ID.
@@ -8981,6 +9171,11 @@ func (s *Endpoint) GetIsRouteTarget() OptBool {
 // GetName returns the value of Name.
 func (s *Endpoint) GetName() OptNilString {
 	return s.Name
+}
+
+// SetReceiverCapabilities sets the value of ReceiverCapabilities.
+func (s *Endpoint) SetReceiverCapabilities(val OptEndpointReceiverCapabilities) {
+	s.ReceiverCapabilities = val
 }
 
 // SetID sets the value of ID.
@@ -9126,6 +9321,120 @@ func (s *EndpointKind) UnmarshalText(data []byte) error {
 		return nil
 	case EndpointKindPull:
 		*s = EndpointKindPull
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EndpointReceiverCapabilities struct {
+	CompletionModes []EndpointReceiverCapabilitiesCompletionModesItem `json:"completion_modes"`
+	StreamProtocols []EndpointReceiverCapabilitiesStreamProtocolsItem `json:"stream_protocols"`
+}
+
+// GetCompletionModes returns the value of CompletionModes.
+func (s *EndpointReceiverCapabilities) GetCompletionModes() []EndpointReceiverCapabilitiesCompletionModesItem {
+	return s.CompletionModes
+}
+
+// GetStreamProtocols returns the value of StreamProtocols.
+func (s *EndpointReceiverCapabilities) GetStreamProtocols() []EndpointReceiverCapabilitiesStreamProtocolsItem {
+	return s.StreamProtocols
+}
+
+// SetCompletionModes sets the value of CompletionModes.
+func (s *EndpointReceiverCapabilities) SetCompletionModes(val []EndpointReceiverCapabilitiesCompletionModesItem) {
+	s.CompletionModes = val
+}
+
+// SetStreamProtocols sets the value of StreamProtocols.
+func (s *EndpointReceiverCapabilities) SetStreamProtocols(val []EndpointReceiverCapabilitiesStreamProtocolsItem) {
+	s.StreamProtocols = val
+}
+
+type EndpointReceiverCapabilitiesCompletionModesItem string
+
+const (
+	EndpointReceiverCapabilitiesCompletionModesItemHTTP   EndpointReceiverCapabilitiesCompletionModesItem = "http"
+	EndpointReceiverCapabilitiesCompletionModesItemExec   EndpointReceiverCapabilitiesCompletionModesItem = "exec"
+	EndpointReceiverCapabilitiesCompletionModesItemStdout EndpointReceiverCapabilitiesCompletionModesItem = "stdout"
+	EndpointReceiverCapabilitiesCompletionModesItemSdk    EndpointReceiverCapabilitiesCompletionModesItem = "sdk"
+)
+
+// AllValues returns all EndpointReceiverCapabilitiesCompletionModesItem values.
+func (EndpointReceiverCapabilitiesCompletionModesItem) AllValues() []EndpointReceiverCapabilitiesCompletionModesItem {
+	return []EndpointReceiverCapabilitiesCompletionModesItem{
+		EndpointReceiverCapabilitiesCompletionModesItemHTTP,
+		EndpointReceiverCapabilitiesCompletionModesItemExec,
+		EndpointReceiverCapabilitiesCompletionModesItemStdout,
+		EndpointReceiverCapabilitiesCompletionModesItemSdk,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EndpointReceiverCapabilitiesCompletionModesItem) MarshalText() ([]byte, error) {
+	switch s {
+	case EndpointReceiverCapabilitiesCompletionModesItemHTTP:
+		return []byte(s), nil
+	case EndpointReceiverCapabilitiesCompletionModesItemExec:
+		return []byte(s), nil
+	case EndpointReceiverCapabilitiesCompletionModesItemStdout:
+		return []byte(s), nil
+	case EndpointReceiverCapabilitiesCompletionModesItemSdk:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EndpointReceiverCapabilitiesCompletionModesItem) UnmarshalText(data []byte) error {
+	switch EndpointReceiverCapabilitiesCompletionModesItem(data) {
+	case EndpointReceiverCapabilitiesCompletionModesItemHTTP:
+		*s = EndpointReceiverCapabilitiesCompletionModesItemHTTP
+		return nil
+	case EndpointReceiverCapabilitiesCompletionModesItemExec:
+		*s = EndpointReceiverCapabilitiesCompletionModesItemExec
+		return nil
+	case EndpointReceiverCapabilitiesCompletionModesItemStdout:
+		*s = EndpointReceiverCapabilitiesCompletionModesItemStdout
+		return nil
+	case EndpointReceiverCapabilitiesCompletionModesItemSdk:
+		*s = EndpointReceiverCapabilitiesCompletionModesItemSdk
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type EndpointReceiverCapabilitiesStreamProtocolsItem string
+
+const (
+	EndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1 EndpointReceiverCapabilitiesStreamProtocolsItem = "primitive.events.v1"
+)
+
+// AllValues returns all EndpointReceiverCapabilitiesStreamProtocolsItem values.
+func (EndpointReceiverCapabilitiesStreamProtocolsItem) AllValues() []EndpointReceiverCapabilitiesStreamProtocolsItem {
+	return []EndpointReceiverCapabilitiesStreamProtocolsItem{
+		EndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EndpointReceiverCapabilitiesStreamProtocolsItem) MarshalText() ([]byte, error) {
+	switch s {
+	case EndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EndpointReceiverCapabilitiesStreamProtocolsItem) UnmarshalText(data []byte) error {
+	switch EndpointReceiverCapabilitiesStreamProtocolsItem(data) {
+	case EndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1:
+		*s = EndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -16468,6 +16777,52 @@ func (o OptCompleteWebhookResponseMeta) Or(d CompleteWebhookResponseMeta) Comple
 	return d
 }
 
+// NewOptCompleteWebhookSdkInputTransportError returns new OptCompleteWebhookSdkInputTransportError with value set to v.
+func NewOptCompleteWebhookSdkInputTransportError(v CompleteWebhookSdkInputTransportError) OptCompleteWebhookSdkInputTransportError {
+	return OptCompleteWebhookSdkInputTransportError{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptCompleteWebhookSdkInputTransportError is optional CompleteWebhookSdkInputTransportError.
+type OptCompleteWebhookSdkInputTransportError struct {
+	Value CompleteWebhookSdkInputTransportError
+	Set   bool
+}
+
+// IsSet returns true if OptCompleteWebhookSdkInputTransportError was set.
+func (o OptCompleteWebhookSdkInputTransportError) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptCompleteWebhookSdkInputTransportError) Reset() {
+	var v CompleteWebhookSdkInputTransportError
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptCompleteWebhookSdkInputTransportError) SetTo(v CompleteWebhookSdkInputTransportError) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptCompleteWebhookSdkInputTransportError) Get() (v CompleteWebhookSdkInputTransportError, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptCompleteWebhookSdkInputTransportError) Or(d CompleteWebhookSdkInputTransportError) CompleteWebhookSdkInputTransportError {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptCompleteWebhookStdoutInputTransportError returns new OptCompleteWebhookStdoutInputTransportError with value set to v.
 func NewOptCompleteWebhookStdoutInputTransportError(v CompleteWebhookStdoutInputTransportError) OptCompleteWebhookStdoutInputTransportError {
 	return OptCompleteWebhookStdoutInputTransportError{
@@ -17014,6 +17369,52 @@ func (o OptEndpointKind) Get() (v EndpointKind, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptEndpointKind) Or(d EndpointKind) EndpointKind {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptEndpointReceiverCapabilities returns new OptEndpointReceiverCapabilities with value set to v.
+func NewOptEndpointReceiverCapabilities(v EndpointReceiverCapabilities) OptEndpointReceiverCapabilities {
+	return OptEndpointReceiverCapabilities{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptEndpointReceiverCapabilities is optional EndpointReceiverCapabilities.
+type OptEndpointReceiverCapabilities struct {
+	Value EndpointReceiverCapabilities
+	Set   bool
+}
+
+// IsSet returns true if OptEndpointReceiverCapabilities was set.
+func (o OptEndpointReceiverCapabilities) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptEndpointReceiverCapabilities) Reset() {
+	var v EndpointReceiverCapabilities
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptEndpointReceiverCapabilities) SetTo(v EndpointReceiverCapabilities) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptEndpointReceiverCapabilities) Get() (v EndpointReceiverCapabilities, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptEndpointReceiverCapabilities) Or(d EndpointReceiverCapabilities) EndpointReceiverCapabilities {
 	if v, ok := o.Get(); ok {
 		return v
 	}

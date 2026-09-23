@@ -222,6 +222,9 @@ describe("COMMANDS / manifest coverage", () => {
       "exec",
       "forward-to",
       "number",
+      "transport",
+      "once",
+      "timeout",
     ]) {
       expect(listener.flags[flag]).toBeDefined();
     }

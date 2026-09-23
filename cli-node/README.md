@@ -300,3 +300,20 @@ The CLI previously shipped inside `@primitivedotdev/sdk`. The shipped surface ar
 ## License
 
 MIT
+
+### Local event listening
+
+```sh
+primitive listen --forward-to localhost:3000
+primitive listen --forward-to 3000 --events email.received
+primitive listen --once --timeout 60
+primitive listen --subscription my-agent --exec "python3 accept.py"
+```
+
+WebSocket is the default transport. Subscription registration and reconnects are
+automatic; the saved default resumes the same durable queue. `--once` waits for
+one successful, confirmed delivery. `--timeout` is in seconds and exits 2 on
+timeout; Ctrl-C exits 130. Bare `primitive listen` prints one raw JSON event per
+line. Use `--transport poll` explicitly for HTTP polling. Accept or enqueue each
+event within 30 seconds. Closing preserves pending work, and retries can deliver
+an event more than once.
