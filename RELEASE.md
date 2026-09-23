@@ -11,6 +11,12 @@ Use this process when cutting a release for one or more packages.
 
 Releases are automated from `main`.
 
+npm may accept a publication while the package is still processing. The release
+workflow waits up to 20 minutes for the version to become installable before
+creating its GitHub release. If that wait expires, check the registry and rerun
+the failed workflow after the version appears; an existing version is not
+republished.
+
 - If a PR merges with a new `sdk-node/package.json` version, GitHub Actions publishes the Node SDK.
 - If a PR merges with a new `cli-node/package.json` version, GitHub Actions publishes the CLI.
 - If a PR merges with a new `sdk-python/pyproject.toml` version, GitHub Actions publishes the Python SDK.

@@ -11,7 +11,7 @@ only after the requested package version is visible in the registry.
 Environment overrides:
   NPM_PUBLISH_ATTEMPTS                     default: 3
   NPM_PUBLISH_RETRY_DELAY_SECONDS          default: 10
-  NPM_PUBLISH_VISIBILITY_TIMEOUT_SECONDS   default: 180
+  NPM_PUBLISH_VISIBILITY_TIMEOUT_SECONDS   default: 1200
   NPM_PUBLISH_VISIBILITY_INTERVAL_SECONDS  default: 5
 USAGE
 }
@@ -58,7 +58,9 @@ fi
 
 publish_attempts="${NPM_PUBLISH_ATTEMPTS:-3}"
 retry_delay_seconds="${NPM_PUBLISH_RETRY_DELAY_SECONDS:-10}"
-visibility_timeout_seconds="${NPM_PUBLISH_VISIBILITY_TIMEOUT_SECONDS:-180}"
+# npm can accept a publish before its asynchronous processing exposes the
+# version. Match the CLI's SDK dependency wait instead of failing after 3 minutes.
+visibility_timeout_seconds="${NPM_PUBLISH_VISIBILITY_TIMEOUT_SECONDS:-1200}"
 visibility_interval_seconds="${NPM_PUBLISH_VISIBILITY_INTERVAL_SECONDS:-5}"
 
 if ! [[ "$publish_attempts" =~ ^[1-9][0-9]*$ ]]; then
