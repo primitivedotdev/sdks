@@ -146,6 +146,8 @@ tags:
     description: Agent signup and authentication
   - name: Account
     description: Manage your account settings, storage, and webhook secret
+  - name: Credits
+    description: Redeem credit codes and read the organization credit balance
   - name: Domains
     description: Claim, verify, and manage email domains
   - name: Inbox
@@ -1000,6 +1002,176 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  # ---------------------------------------------------------------------------
+  # Credits
+  # ---------------------------------------------------------------------------
+  /credits/redeem:
+    post:
+      operationId: redeemCreditCode
+      summary: Redeem a credit code
+      description: |
+        Redeem a credit code for the authenticated organization. The credit is
+        added to the organization prepaid credit and shows in
+        `GET /credits/balance` under `prepaid_credit`.
+
+        Redeeming requires an organization owner or admin. An API key redeems
+        with the authority of the user who created it, based on that user's
+        current role; a key without that authority gets the same
+        `credit_code_invalid` refusal as an unknown code.
+
+        The `Idempotency-Key` header is required. Retrying with the same key
+        and code returns the original grant with `replayed: true` and grants
+        nothing new; the same key with a different code is refused with
+        `idempotency_key_reused`. Every refusal carries a human-readable
+        `error.message` that can be shown to the user as is.
+      tags: [Credits]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: |
+            Required client-supplied key, at most 200 characters. Use a new
+            key for each code you redeem and reuse it only to retry the same
+            request.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedeemCreditCodeInput'
+            example:
+              code: LAUNCH50
+      responses:
+        '200':
+          description: |
+            The code was redeemed, or this request replayed an earlier
+            redemption with the same Idempotency-Key.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreditRedemption'
+        '400':
+          description: |
+            The Idempotency-Key header is missing or too long, or the body is
+            invalid. `error.code` is `idempotency_key_required` or
+            `validation_error`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: idempotency_key_required
+                  message: an Idempotency-Key header is required
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: |
+            The organization or user already redeemed this code, or a code
+            from the same promotion. `error.code` is
+            `credit_code_already_redeemed`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: credit_code_already_redeemed
+                  message: Your organization has already redeemed this promotion.
+        '422':
+          description: |
+            The code cannot be redeemed. `credit_code_invalid` covers unknown,
+            expired and exhausted codes and callers without authority to
+            redeem; `credit_code_not_eligible` means the organization does not
+            meet the promotion terms; `credit_code_balance_cap` means the
+            organization already holds the most promotional credit it can;
+            `idempotency_key_reused` means this Idempotency-Key already
+            redeemed a different code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: credit_code_invalid
+                  message: That code isn't valid or is no longer available.
+        '429':
+          description: |
+            Too many redemption attempts. `error.code` is
+            `rate_limit_exceeded` or `rate_limited`. Wait for `Retry-After`
+            when present.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+        '503':
+          description: |
+            The code could not be redeemed right now. Retry later with the
+            same Idempotency-Key. `error.code` is `service_unavailable`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: service_unavailable
+                  message: We couldn't redeem that code right now. Try again in a few minutes.
+
+  /credits/balance:
+    get:
+      operationId: getCreditBalance
+      summary: Get credit balance
+      description: |
+        Read the organization credit position. `prepaid_credit` is the prepaid
+        usage credit (paid top-ups, redeemed credit codes and granted credit)
+        that can still pay for usage. `budget` is the active agent spending
+        budget an operator funded for top-ups, or null when there is none.
+        Amounts are strings of integer micros (1 USD = 1000000 micros).
+      tags: [Credits]
+      responses:
+        '200':
+          description: The organization credit balance.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreditBalance'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/RateLimited'
 
@@ -6965,6 +7137,14 @@ components:
                 - event_preparation_failed
                 - subscription_unavailable
                 - stale_delivery
+                - idempotency_key_required
+                - idempotency_key_reused
+                - credit_code_invalid
+                - credit_code_already_redeemed
+                - credit_code_not_eligible
+                - credit_code_balance_cap
+                - rate_limited
+                - service_unavailable
             message:
               type: string
             details:
@@ -7722,6 +7902,121 @@ components:
     # -------------------------------------------------------------------------
     # Inbox
     # -------------------------------------------------------------------------
+    RedeemCreditCodeInput:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: The credit code to redeem. Surrounding whitespace is ignored.
+
+    CreditRedemption:
+      type: object
+      additionalProperties: false
+      required: [redemption_id, amount_micros, currency, granted_at, expires_at, label, replayed, message]
+      properties:
+        redemption_id:
+          type: string
+          description: Identifier of the redemption.
+        amount_micros:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Credit granted, in micros of `currency` (1 USD = 1000000 micros).
+        currency:
+          type: string
+          description: Currency of the granted credit, for example `usd`.
+        granted_at:
+          type: string
+          format: date-time
+          description: When the credit was granted.
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the granted credit expires, or null when it does not expire.
+        label:
+          type: [string, 'null']
+          description: Customer-facing label of the promotion, when it has one.
+        replayed:
+          type: boolean
+          description: |
+            True when this Idempotency-Key already redeemed this code and the
+            original grant is returned. No second grant is made.
+        message:
+          type: string
+          description: Human-readable summary of the grant, suitable to show as is.
+
+    CreditSpendingBudget:
+      type: object
+      additionalProperties: false
+      description: The active agent spending budget an operator funded for top-ups.
+      required: [currency, max_amount_micros, spent_micros, remaining_micros, per_topup_cap_micros, expires_at, status]
+      properties:
+        currency:
+          type: string
+          description: Currency of the budget, for example `usd`.
+        max_amount_micros:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Total allowance the operator funded, in micros.
+        spent_micros:
+          type: string
+          pattern: '^[0-9]+$'
+          description: How much of the allowance has been drawn down, in micros.
+        remaining_micros:
+          type: string
+          pattern: '^[0-9]+$'
+          description: '`max_amount_micros - spent_micros`, floored at zero.'
+        per_topup_cap_micros:
+          type: [string, 'null']
+          pattern: '^[0-9]+$'
+          description: Largest single top-up allowed, in micros, or null for no per-top-up cap.
+        expires_at:
+          type: [string, 'null']
+          description: When the allowance expires, or null for no expiry.
+        status:
+          type: string
+          description: Budget status. An active budget reads `active`.
+
+    PrepaidCredit:
+      type: object
+      additionalProperties: false
+      description: |
+        Prepaid usage credit (top-ups, redeemed credit codes and granted
+        credit) that can still pay for usage.
+      required: [currency, remaining_micros, next_expires_at]
+      properties:
+        currency:
+          type: string
+          description: Currency of the credit, which is the organization billing currency.
+        remaining_micros:
+          type: string
+          pattern: '^[0-9]+$'
+          description: What the credit can still pay for, in micros.
+        next_expires_at:
+          type: [string, 'null']
+          description: Earliest expiry among credits with a balance, or null when none of them expires.
+
+    CreditBalance:
+      type: object
+      required: [budget]
+      properties:
+        budget:
+          description: The active agent spending budget, or null when there is none.
+          oneOf:
+            - $ref: '#/components/schemas/CreditSpendingBudget'
+            - type: 'null'
+        prepaid_credit:
+          description: |
+            Prepaid usage credit, or null when there is none. Omitted when an
+            exact figure cannot be given right now; the budget is still
+            returned.
+          oneOf:
+            - $ref: '#/components/schemas/PrepaidCredit'
+            - type: 'null'
+
     InboxStatus:
       type: object
       additionalProperties: false

@@ -177,6 +177,10 @@ type GetConversationRes interface {
 	getConversationRes()
 }
 
+type GetCreditBalanceRes interface {
+	getCreditBalanceRes()
+}
+
 type GetEmailRes interface {
 	getEmailRes()
 }
@@ -343,6 +347,10 @@ type PublishAgentRes interface {
 
 type PullWebhookEventRes interface {
 	pullWebhookEventRes()
+}
+
+type RedeemCreditCodeRes interface {
+	redeemCreditCodeRes()
 }
 
 type RegisterPayoutAddressRes interface {

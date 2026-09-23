@@ -487,6 +487,16 @@ type Handler interface {
 	//
 	// GET /emails/{id}/conversation
 	GetConversation(ctx context.Context, params GetConversationParams) (GetConversationRes, error)
+	// GetCreditBalance implements getCreditBalance operation.
+	//
+	// Read the organization credit position. `prepaid_credit` is the prepaid
+	// usage credit (paid top-ups, redeemed credit codes and granted credit)
+	// that can still pay for usage. `budget` is the active agent spending
+	// budget an operator funded for top-ups, or null when there is none.
+	// Amounts are strings of integer micros (1 USD = 1000000 micros).
+	//
+	// GET /credits/balance
+	GetCreditBalance(ctx context.Context) (GetCreditBalanceRes, error)
 	// GetEmail implements getEmail operation.
 	//
 	// Returns the full record for an inbound email received at one
@@ -937,6 +947,23 @@ type Handler interface {
 	//
 	// POST /endpoints/{id}/pull
 	PullWebhookEvent(ctx context.Context, req *PullWebhookInput, params PullWebhookEventParams) (PullWebhookEventRes, error)
+	// RedeemCreditCode implements redeemCreditCode operation.
+	//
+	// Redeem a credit code for the authenticated organization. The credit is
+	// added to the organization prepaid credit and shows in
+	// `GET /credits/balance` under `prepaid_credit`.
+	// Redeeming requires an organization owner or admin. An API key redeems
+	// with the authority of the user who created it, based on that user's
+	// current role; a key without that authority gets the same
+	// `credit_code_invalid` refusal as an unknown code.
+	// The `Idempotency-Key` header is required. Retrying with the same key
+	// and code returns the original grant with `replayed: true` and grants
+	// nothing new; the same key with a different code is refused with
+	// `idempotency_key_reused`. Every refusal carries a human-readable
+	// `error.message` that can be shown to the user as is.
+	//
+	// POST /credits/redeem
+	RedeemCreditCode(ctx context.Context, req *RedeemCreditCodeInput, params RedeemCreditCodeParams) (RedeemCreditCodeRes, error)
 	// RegisterPayoutAddress implements registerPayoutAddress operation.
 	//
 	// Register (or update) the default payout address your org receives x402

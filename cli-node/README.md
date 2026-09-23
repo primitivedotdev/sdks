@@ -206,6 +206,23 @@ primitive memories get state --function <function-id>
 Values must be valid JSON. Strings must be quoted as JSON strings, so use
 `'"hello"'`, not `hello`.
 
+## Credits
+
+Redeem a credit code for your organization and check the credit balance.
+
+```bash
+primitive credits redeem LAUNCH50
+primitive credits balance
+primitive credits balance --json
+```
+
+`credits redeem` prints the credit added and its expiry. On a refusal it prints
+the server's message (for example an invalid or already redeemed code) and
+exits non-zero. Redeeming needs an organization owner or admin; with an API key,
+the key's creator must currently be an owner or admin. Each run sends a new
+Idempotency-Key; pass `--idempotency-key <key>` to retry the same redemption
+safely.
+
 ## Recipient routing
 
 Bind a recipient address to a destination so inbound mail resolves to a single
