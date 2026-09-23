@@ -625,3 +625,40 @@ Active connections return 409; missing records return 404.
 Send and reply preserve HTTP 410 `sent_email_deleted` and its
 `details.idempotent_replay` value. This is a refusal to resend deleted history;
 do not replace the idempotency key or retry as a fresh message to bypass it.
+
+## Receive events in your process
+
+```python
+from primitive import PrimitiveClient, LocalEvent, EventContext
+
+client = PrimitiveClient(api_key="prim_...")
+
+async def receive(event: LocalEvent, context: EventContext) -> None:
+    await app.receive(event)  # Accept or enqueue within 30 seconds.
+
+listener = await client.events.listen(receive, subscription="my-agent",
+                                      events=["email.received"])
+await listener.wait_closed()  # Or supervise alongside your existing application.
+# During application shutdown: await listener.close()
+```
+
+The SDK automatically registers a named durable subscription and reconnects over
+WebSocket. `listen` returns once ready. Its async context manager closes on exit.
+A handler may use `context.signal` to observe its acceptance deadline. Returning
+accepts responsibility; run longer work after enqueuing it. Delivery is at least
+once, so deduplicate side effects by `event.id` when needed.
+
+```python
+delivery = await client.events.wait(subscription="my-agent", timeout=60)
+if delivery is not None:
+    await app.receive(delivery.event)
+    await delivery.ack()  # Or await delivery.retry().
+```
+
+Timeout is in seconds and returns `None`. Cancel the waiting task to stop it.
+Waiting does not acknowledge on return. A pending handle expires after the
+30-second acceptance deadline. Same subscription shares work across consumers;
+different names receive independent copies. Restart with the same name; close
+preserves pending work. New subscriptions do not backfill history.
+`on_status` reports reconnects, handler errors, and gaps; `on_gap="error"` stops
+on a gap. Use `transport="poll"` explicitly when WebSocket access is unavailable.

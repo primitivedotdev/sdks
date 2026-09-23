@@ -44,6 +44,9 @@ from .complete_webhook_response import CompleteWebhookResponse
 from .complete_webhook_response_data import CompleteWebhookResponseData
 from .complete_webhook_response_data_result import CompleteWebhookResponseDataResult
 from .complete_webhook_response_meta import CompleteWebhookResponseMeta
+from .complete_webhook_sdk_input import CompleteWebhookSdkInput
+from .complete_webhook_sdk_input_mode import CompleteWebhookSdkInputMode
+from .complete_webhook_sdk_input_transport_error import CompleteWebhookSdkInputTransportError
 from .complete_webhook_stdout_input import CompleteWebhookStdoutInput
 from .complete_webhook_stdout_input_mode import CompleteWebhookStdoutInputMode
 from .complete_webhook_stdout_input_transport_error import CompleteWebhookStdoutInputTransportError
@@ -159,6 +162,9 @@ from .email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from .email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
 from .endpoint import Endpoint
 from .endpoint_kind import EndpointKind
+from .endpoint_receiver_capabilities import EndpointReceiverCapabilities
+from .endpoint_receiver_capabilities_completion_modes_item import EndpointReceiverCapabilitiesCompletionModesItem
+from .endpoint_receiver_capabilities_stream_protocols_item import EndpointReceiverCapabilitiesStreamProtocolsItem
 from .endpoint_rules import EndpointRules
 from .error_response import ErrorResponse
 from .error_response_error import ErrorResponseError
@@ -547,6 +553,9 @@ __all__ = (
     "CompleteWebhookResponseData",
     "CompleteWebhookResponseDataResult",
     "CompleteWebhookResponseMeta",
+    "CompleteWebhookSdkInput",
+    "CompleteWebhookSdkInputMode",
+    "CompleteWebhookSdkInputTransportError",
     "CompleteWebhookStdoutInput",
     "CompleteWebhookStdoutInputMode",
     "CompleteWebhookStdoutInputTransportError",
@@ -662,6 +671,9 @@ __all__ = (
     "EmailWebhookStatusType3Type1",
     "Endpoint",
     "EndpointKind",
+    "EndpointReceiverCapabilities",
+    "EndpointReceiverCapabilitiesCompletionModesItem",
+    "EndpointReceiverCapabilitiesStreamProtocolsItem",
     "EndpointRules",
     "ErrorResponse",
     "ErrorResponseError",

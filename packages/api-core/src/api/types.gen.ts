@@ -2999,7 +2999,9 @@ export type CompleteWebhookInput = ({
     mode: 'exec';
 } & CompleteWebhookExecInput) | ({
     mode: 'stdout';
-} & CompleteWebhookStdoutInput);
+} & CompleteWebhookStdoutInput) | ({
+    mode: 'sdk';
+} & CompleteWebhookSdkInput);
 
 export type CompleteWebhookHttpInput = {
     queue_id: string;
@@ -3033,6 +3035,16 @@ export type CompleteWebhookStdoutInput = {
     transport_error?: 'io';
 };
 
+export type CompleteWebhookSdkInput = {
+    queue_id: string;
+    delivery_id: string;
+    lease_token: string;
+    duration_ms: number;
+    mode: 'sdk';
+    accepted: boolean;
+    transport_error?: 'timeout' | 'io';
+};
+
 export type CompleteWebhookResponse = {
     success: true;
     data: {
@@ -3049,6 +3061,10 @@ export type CompleteWebhookResponse = {
 };
 
 export type Endpoint = {
+    receiver_capabilities?: {
+        completion_modes: Array<'http' | 'exec' | 'stdout' | 'sdk'>;
+        stream_protocols: Array<'primitive.events.v1'>;
+    };
     id: string;
     org_id: string;
     url?: string | null;

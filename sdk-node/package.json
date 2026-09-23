@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/sdk",
-  "version": "1.26.1",
+  "version": "1.27.0",
   "description": "Official Primitive Node.js SDK: webhook, api, openapi, contract, and parser runtime modules.",
   "type": "module",
   "module": "./dist/index.js",
@@ -71,8 +71,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "pnpm generate && tsc --noEmit -p tsconfig.typecheck.json",
-    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads src/interactions tests/",
-    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/x402 src/openapi/index.ts src/payloads src/interactions tests/",
+    "lint": "biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/x402 src/openapi/index.ts src/payloads src/interactions tests/",
+    "lint:fix": "biome check --write --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/x402 src/openapi/index.ts src/payloads src/interactions tests/",
     "prepublishOnly": "pnpm build"
   },
   "keywords": [

@@ -584,6 +584,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // domain verification, endpoint/function processing, and recent mail into
   // the server-owned status API instead of making agents compose those lists.
   "inbox:setup": InboxSetupCommand,
+  // WebSocket receiving, with explicit poll transport and bounded one-shot waits.
   listen: ListenCommand,
   "listen:init": ListenInitCommand,
   "inbox:status": InboxStatusCommand,

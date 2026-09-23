@@ -57,6 +57,7 @@ from .api.models.send_email_response_200 import SendEmailResponse200
 from .api.models.send_mail_input import SendMailInput as ApiSendMailInput
 from .api.models.send_mail_result import SendMailResult as ApiSendMailResult
 from .api.types import UNSET
+from .event_receiver import EventsResource
 from .received_email import ReceivedEmail, format_address
 
 EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
@@ -176,11 +177,7 @@ def _compose_options(
     if extra_headers:
         final_extra_headers.update(extra_headers)
 
-    if (
-        final_timeout is None
-        and not final_extra_headers
-        and idempotency_key is None
-    ):
+    if final_timeout is None and not final_extra_headers and idempotency_key is None:
         return None
 
     return _PerCallOptions(
@@ -669,6 +666,7 @@ class PrimitiveClient:
             **client_kwargs,
         )
         self._defaults = _ClientDefaults()
+        self.events = EventsResource(self.api_client)
         _install_request_hooks(self.api_client)
         _install_request_hooks(self.api_send_client)
 

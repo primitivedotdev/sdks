@@ -15,6 +15,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities
   from ..models.endpoint_rules import EndpointRules
 
 
@@ -39,6 +40,7 @@ class Endpoint:
             success_count (int): Successful deliveries
             failure_count (int): Failed deliveries
             consecutive_fails (int): Current streak of consecutive failures
+            receiver_capabilities (EndpointReceiverCapabilities | Unset):
             url (None | str | Unset):
             domain_id (None | Unset | UUID): Restrict this endpoint to emails from a specific domain
             last_delivery_at (datetime.datetime | None | Unset):
@@ -63,6 +65,7 @@ class Endpoint:
     success_count: int
     failure_count: int
     consecutive_fails: int
+    receiver_capabilities: EndpointReceiverCapabilities | Unset = UNSET
     url: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     last_delivery_at: datetime.datetime | None | Unset = UNSET
@@ -80,6 +83,7 @@ class Endpoint:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities
         from ..models.endpoint_rules import EndpointRules
         id = str(self.id)
 
@@ -100,6 +104,10 @@ class Endpoint:
         failure_count = self.failure_count
 
         consecutive_fails = self.consecutive_fails
+
+        receiver_capabilities: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.receiver_capabilities, Unset):
+            receiver_capabilities = self.receiver_capabilities.to_dict()
 
         url: None | str | Unset
         if isinstance(self.url, Unset):
@@ -183,6 +191,8 @@ class Endpoint:
             "failure_count": failure_count,
             "consecutive_fails": consecutive_fails,
         })
+        if receiver_capabilities is not UNSET:
+            field_dict["receiver_capabilities"] = receiver_capabilities
         if url is not UNSET:
             field_dict["url"] = url
         if domain_id is not UNSET:
@@ -210,6 +220,7 @@ class Endpoint:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities
         from ..models.endpoint_rules import EndpointRules
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -246,6 +257,16 @@ class Endpoint:
         failure_count = d.pop("failure_count")
 
         consecutive_fails = d.pop("consecutive_fails")
+
+        _receiver_capabilities = d.pop("receiver_capabilities", UNSET)
+        receiver_capabilities: EndpointReceiverCapabilities | Unset
+        if isinstance(_receiver_capabilities,  Unset):
+            receiver_capabilities = UNSET
+        else:
+            receiver_capabilities = EndpointReceiverCapabilities.from_dict(_receiver_capabilities)
+
+
+
 
         def _parse_url(data: object) -> None | str | Unset:
             if data is None:
@@ -410,6 +431,7 @@ class Endpoint:
             success_count=success_count,
             failure_count=failure_count,
             consecutive_fails=consecutive_fails,
+            receiver_capabilities=receiver_capabilities,
             url=url,
             domain_id=domain_id,
             last_delivery_at=last_delivery_at,

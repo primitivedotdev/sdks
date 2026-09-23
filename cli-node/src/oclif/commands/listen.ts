@@ -11,9 +11,25 @@ export default class ListenCommand extends Command {
   static examples = [
     "<%= config.bin %> listen",
     '<%= config.bin %> listen --subscription my-agent --exec "python3 accept.py"',
-    "<%= config.bin %> listen --forward-to http://127.0.0.1:3000/webhook",
+    "<%= config.bin %> listen --forward-to localhost:3000",
+    "<%= config.bin %> listen --once --timeout 60",
   ];
   static flags = {
+    transport: Flags.string({
+      description: "Event transport; WebSocket is the default.",
+      options: ["websocket", "poll"],
+      default: "websocket",
+    }),
+    once: Flags.boolean({
+      description: "Exit after one successfully handled and confirmed event.",
+      exclusive: ["number"],
+    }),
+    timeout: Flags.integer({
+      description:
+        "Stop after this many seconds; exit 2 if the requested count was not reached.",
+      min: 1,
+      max: 2147483,
+    }),
     subscription: Flags.string({
       description:
         "Stable subscription name. Defaults to a saved name for this account and API environment.",
@@ -58,17 +74,26 @@ export default class ListenCommand extends Command {
       forwardTo: flags["forward-to"],
     });
     const controller = new AbortController();
+    let timedOut = false;
+    const timer =
+      flags.timeout === undefined
+        ? undefined
+        : setTimeout(() => {
+            timedOut = true;
+            controller.abort();
+          }, flags.timeout * 1000);
     const cancel = () => controller.abort();
     process.on("SIGINT", cancel);
     process.on("SIGTERM", cancel);
     try {
       await runListen({
+        transport: flags.transport === "poll" ? "poll" : "websocket",
         configDir: this.config.configDir,
         apiKey: flags["api-key"],
         apiBaseUrl: flags["api-base-url"],
         subscription: flags.subscription,
         events: events === undefined ? undefined : [...new Set(events)],
-        number: flags.number,
+        number: flags.once ? 1 : flags.number,
         mode: flags.exec ? "exec" : flags["forward-to"] ? "http" : "stdout",
         handler,
         signal: controller.signal,
@@ -80,9 +105,10 @@ export default class ListenCommand extends Command {
           : "The listener stopped because of a local state or connection error.",
       );
     } finally {
+      clearTimeout(timer);
       process.removeListener("SIGINT", cancel);
       process.removeListener("SIGTERM", cancel);
     }
-    if (controller.signal.aborted) process.exitCode = 130;
+    if (controller.signal.aborted) process.exitCode = timedOut ? 2 : 130;
   }
 }

@@ -4515,6 +4515,56 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "write_succeeded"
           ],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "queue_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "delivery_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "lease_token": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "duration_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30000
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "sdk"
+              ]
+            },
+            "accepted": {
+              "type": "boolean"
+            },
+            "transport_error": {
+              "type": "string",
+              "enum": [
+                "timeout",
+                "io"
+              ]
+            }
+          },
+          "required": [
+            "queue_id",
+            "delivery_id",
+            "lease_token",
+            "duration_ms",
+            "mode",
+            "accepted"
+          ],
+          "additionalProperties": false
         }
       ],
       "discriminator": {
@@ -4522,7 +4572,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "mapping": {
           "http": "#/components/schemas/CompleteWebhookHttpInput",
           "exec": "#/components/schemas/CompleteWebhookExecInput",
-          "stdout": "#/components/schemas/CompleteWebhookStdoutInput"
+          "stdout": "#/components/schemas/CompleteWebhookStdoutInput",
+          "sdk": "#/components/schemas/CompleteWebhookSdkInput"
         }
       }
     },
@@ -4661,6 +4712,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "responseSchema": {
       "type": "object",
       "properties": {
+        "receiver_capabilities": {
+          "type": "object",
+          "properties": {
+            "completion_modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "http",
+                  "exec",
+                  "stdout",
+                  "sdk"
+                ]
+              }
+            },
+            "stream_protocols": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "primitive.events.v1"
+                ]
+              }
+            }
+          },
+          "required": [
+            "completion_modes",
+            "stream_protocols"
+          ]
+        },
         "id": {
           "type": "string",
           "format": "uuid"
@@ -4844,6 +4925,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "items": {
         "type": "object",
         "properties": {
+          "receiver_capabilities": {
+            "type": "object",
+            "properties": {
+              "completion_modes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "http",
+                    "exec",
+                    "stdout",
+                    "sdk"
+                  ]
+                }
+              },
+              "stream_protocols": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "primitive.events.v1"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "completion_modes",
+              "stream_protocols"
+            ]
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -5390,6 +5501,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "responseSchema": {
       "type": "object",
       "properties": {
+        "receiver_capabilities": {
+          "type": "object",
+          "properties": {
+            "completion_modes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "http",
+                  "exec",
+                  "stdout",
+                  "sdk"
+                ]
+              }
+            },
+            "stream_protocols": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "primitive.events.v1"
+                ]
+              }
+            }
+          },
+          "required": [
+            "completion_modes",
+            "stream_protocols"
+          ]
+        },
         "id": {
           "type": "string",
           "format": "uuid"

@@ -637,3 +637,39 @@ Active connections return 409; missing records return 404.
 Send and reply preserve HTTP 410 `sent_email_deleted` and its
 `details.idempotent_replay` value. This is a refusal to resend deleted history;
 do not replace the idempotency key or retry as a fresh message to bypass it.
+
+## Receive events in your process
+
+```go
+client, err := primitive.NewClient(apiKey)
+if err != nil { return err }
+listener, err := client.Events.Listen(ctx, func(ctx context.Context, event primitive.LocalEvent) error {
+    return app.Receive(ctx, event) // Accept or enqueue within 30 seconds.
+}, primitive.EventOptions{Subscription: "my-agent", Events: []string{"email.received"}})
+if err != nil { return err }
+return listener.Wait()
+// During application shutdown: listener.Close(shutdownContext)
+```
+
+The SDK registers the named subscription and reconnects over WebSocket. Listen
+returns once ready and then runs alongside the application. Returning nil from
+the handler accepts responsibility. The handler context is canceled on its
+30-second acceptance deadline. Longer work should run after enqueueing.
+
+```go
+delivery, err := client.Events.Wait(ctx, primitive.EventOptions{Subscription: "my-agent"})
+if err != nil { return err }
+if err := app.Receive(delivery.Context, delivery.Event); err != nil {
+    return delivery.Retry()
+}
+return delivery.Ack()
+```
+
+Use a context deadline to bound waiting; timeout returns context.DeadlineExceeded.
+Wait does not acknowledge before the application runs. LocalEvent preserves the
+exact Body and Headers, canonical ID and Type, and raw JSON Data. Decode parses
+Data into an application or SDK event type. Delivery is at least once; deduplicate
+side effects by ID when needed. Same name shares work; different names receive
+independent copies. Closing preserves the queue. New names do not backfill.
+OnStatus reports reconnects, handler failures, and gaps; OnGapError stops on a gap.
+Set Transport to "poll" explicitly when WebSocket access is unavailable.

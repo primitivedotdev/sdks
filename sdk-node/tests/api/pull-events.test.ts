@@ -12,6 +12,9 @@ function accepted(input: CompleteWebhookInput): boolean {
     case "exec":
       expectTypeOf(input.exit_code).toEqualTypeOf<number | null>();
       return input.exit_code === 0;
+    case "sdk":
+      expectTypeOf(input.accepted).toEqualTypeOf<boolean>();
+      return input.accepted;
     case "stdout":
       expectTypeOf(input.write_succeeded).toEqualTypeOf<boolean>();
       return input.write_succeeded;

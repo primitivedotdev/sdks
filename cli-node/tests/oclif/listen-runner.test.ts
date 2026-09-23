@@ -100,6 +100,7 @@ beforeEach(() => {
     auth: { apiKey: token, apiBaseUrl: "https://api.example.test/v1" },
   }));
   options = {
+    transport: "poll",
     configDir: directory,
     number: 1,
     signal: controller.signal,
@@ -125,7 +126,7 @@ const bodies = (suffix: string) =>
 describe("local webhook runner", () => {
   it("registers, receives and counts only confirmed handler success using fresh authentication on every operation", async () => {
     expect(await runListen(options)).toBe(1);
-    expect(authenticate).toHaveBeenCalledTimes(4);
+    expect(authenticate).toHaveBeenCalledTimes(5);
     expect(options.handler).toHaveBeenCalledWith(delivery, controller.signal);
     expect(bodies("/endpoints")).toEqual([
       { kind: "pull", name: expect.stringMatching(/^local-/) },

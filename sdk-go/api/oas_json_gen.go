@@ -6052,6 +6052,38 @@ func (s CompleteWebhookInput) encodeFields(e *jx.Encoder) {
 				}
 			}
 		}
+	case CompleteWebhookSdkInputCompleteWebhookInput:
+		e.FieldStart("mode")
+		e.Str("sdk")
+		{
+			s := s.CompleteWebhookSdkInput
+			{
+				e.FieldStart("queue_id")
+				json.EncodeUUID(e, s.QueueID)
+			}
+			{
+				e.FieldStart("delivery_id")
+				json.EncodeUUID(e, s.DeliveryID)
+			}
+			{
+				e.FieldStart("lease_token")
+				json.EncodeUUID(e, s.LeaseToken)
+			}
+			{
+				e.FieldStart("duration_ms")
+				e.Int(s.DurationMs)
+			}
+			{
+				e.FieldStart("accepted")
+				e.Bool(s.Accepted)
+			}
+			{
+				if s.TransportError.Set {
+					e.FieldStart("transport_error")
+					s.TransportError.Encode(e)
+				}
+			}
+		}
 	}
 }
 
@@ -6087,6 +6119,9 @@ func (s *CompleteWebhookInput) Decode(d *jx.Decoder) error {
 				case "stdout":
 					s.Type = CompleteWebhookStdoutInputCompleteWebhookInput
 					found = true
+				case "sdk":
+					s.Type = CompleteWebhookSdkInputCompleteWebhookInput
+					found = true
 				default:
 					return errors.Errorf("unknown type %s", typ)
 				}
@@ -6111,6 +6146,10 @@ func (s *CompleteWebhookInput) Decode(d *jx.Decoder) error {
 		}
 	case CompleteWebhookStdoutInputCompleteWebhookInput:
 		if err := s.CompleteWebhookStdoutInput.Decode(d); err != nil {
+			return err
+		}
+	case CompleteWebhookSdkInputCompleteWebhookInput:
+		if err := s.CompleteWebhookSdkInput.Decode(d); err != nil {
 			return err
 		}
 	default:
@@ -6688,6 +6727,280 @@ func (s CompleteWebhookResponseSuccess) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CompleteWebhookResponseSuccess) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *CompleteWebhookSdkInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *CompleteWebhookSdkInput) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("queue_id")
+		json.EncodeUUID(e, s.QueueID)
+	}
+	{
+		e.FieldStart("delivery_id")
+		json.EncodeUUID(e, s.DeliveryID)
+	}
+	{
+		e.FieldStart("lease_token")
+		json.EncodeUUID(e, s.LeaseToken)
+	}
+	{
+		e.FieldStart("duration_ms")
+		e.Int(s.DurationMs)
+	}
+	{
+		e.FieldStart("mode")
+		s.Mode.Encode(e)
+	}
+	{
+		e.FieldStart("accepted")
+		e.Bool(s.Accepted)
+	}
+	{
+		if s.TransportError.Set {
+			e.FieldStart("transport_error")
+			s.TransportError.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfCompleteWebhookSdkInput = [7]string{
+	0: "queue_id",
+	1: "delivery_id",
+	2: "lease_token",
+	3: "duration_ms",
+	4: "mode",
+	5: "accepted",
+	6: "transport_error",
+}
+
+// Decode decodes CompleteWebhookSdkInput from json.
+func (s *CompleteWebhookSdkInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CompleteWebhookSdkInput to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "queue_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.QueueID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"queue_id\"")
+			}
+		case "delivery_id":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.DeliveryID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"delivery_id\"")
+			}
+		case "lease_token":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.LeaseToken = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"lease_token\"")
+			}
+		case "duration_ms":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Int()
+				s.DurationMs = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"duration_ms\"")
+			}
+		case "mode":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				if err := s.Mode.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"mode\"")
+			}
+		case "accepted":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.Accepted = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"accepted\"")
+			}
+		case "transport_error":
+			if err := func() error {
+				s.TransportError.Reset()
+				if err := s.TransportError.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"transport_error\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode CompleteWebhookSdkInput")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00111111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfCompleteWebhookSdkInput) {
+					name = jsonFieldsNameOfCompleteWebhookSdkInput[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *CompleteWebhookSdkInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CompleteWebhookSdkInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CompleteWebhookSdkInputMode as json.
+func (s CompleteWebhookSdkInputMode) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes CompleteWebhookSdkInputMode from json.
+func (s *CompleteWebhookSdkInputMode) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CompleteWebhookSdkInputMode to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch CompleteWebhookSdkInputMode(v) {
+	case CompleteWebhookSdkInputModeSdk:
+		*s = CompleteWebhookSdkInputModeSdk
+	default:
+		*s = CompleteWebhookSdkInputMode(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CompleteWebhookSdkInputMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CompleteWebhookSdkInputMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes CompleteWebhookSdkInputTransportError as json.
+func (s CompleteWebhookSdkInputTransportError) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes CompleteWebhookSdkInputTransportError from json.
+func (s *CompleteWebhookSdkInputTransportError) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode CompleteWebhookSdkInputTransportError to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch CompleteWebhookSdkInputTransportError(v) {
+	case CompleteWebhookSdkInputTransportErrorTimeout:
+		*s = CompleteWebhookSdkInputTransportErrorTimeout
+	case CompleteWebhookSdkInputTransportErrorIo:
+		*s = CompleteWebhookSdkInputTransportErrorIo
+	default:
+		*s = CompleteWebhookSdkInputTransportError(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s CompleteWebhookSdkInputTransportError) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *CompleteWebhookSdkInputTransportError) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -23758,6 +24071,12 @@ func (s *Endpoint) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *Endpoint) encodeFields(e *jx.Encoder) {
 	{
+		if s.ReceiverCapabilities.Set {
+			e.FieldStart("receiver_capabilities")
+			s.ReceiverCapabilities.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("id")
 		json.EncodeUUID(e, s.ID)
 	}
@@ -23859,27 +24178,28 @@ func (s *Endpoint) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEndpoint = [20]string{
-	0:  "id",
-	1:  "org_id",
-	2:  "url",
-	3:  "enabled",
-	4:  "domain_id",
-	5:  "rules",
-	6:  "created_at",
-	7:  "updated_at",
-	8:  "delivery_count",
-	9:  "success_count",
-	10: "failure_count",
-	11: "consecutive_fails",
-	12: "last_delivery_at",
-	13: "last_success_at",
-	14: "last_failure_at",
-	15: "deactivated_at",
-	16: "kind",
-	17: "function_id",
-	18: "is_route_target",
-	19: "name",
+var jsonFieldsNameOfEndpoint = [21]string{
+	0:  "receiver_capabilities",
+	1:  "id",
+	2:  "org_id",
+	3:  "url",
+	4:  "enabled",
+	5:  "domain_id",
+	6:  "rules",
+	7:  "created_at",
+	8:  "updated_at",
+	9:  "delivery_count",
+	10: "success_count",
+	11: "failure_count",
+	12: "consecutive_fails",
+	13: "last_delivery_at",
+	14: "last_success_at",
+	15: "last_failure_at",
+	16: "deactivated_at",
+	17: "kind",
+	18: "function_id",
+	19: "is_route_target",
+	20: "name",
 }
 
 // Decode decodes Endpoint from json.
@@ -23891,8 +24211,18 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
+		case "receiver_capabilities":
+			if err := func() error {
+				s.ReceiverCapabilities.Reset()
+				if err := s.ReceiverCapabilities.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"receiver_capabilities\"")
+			}
 		case "id":
-			requiredBitSet[0] |= 1 << 0
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.ID = v
@@ -23904,7 +24234,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"id\"")
 			}
 		case "org_id":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.OrgID = v
@@ -23926,7 +24256,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"url\"")
 			}
 		case "enabled":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := d.Bool()
 				s.Enabled = bool(v)
@@ -23948,7 +24278,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"domain_id\"")
 			}
 		case "rules":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				if err := s.Rules.Decode(d); err != nil {
 					return err
@@ -23958,7 +24288,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"rules\"")
 			}
 		case "created_at":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -23970,7 +24300,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "updated_at":
-			requiredBitSet[0] |= 1 << 7
+			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -23982,7 +24312,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"updated_at\"")
 			}
 		case "delivery_count":
-			requiredBitSet[1] |= 1 << 0
+			requiredBitSet[1] |= 1 << 1
 			if err := func() error {
 				v, err := d.Int()
 				s.DeliveryCount = int(v)
@@ -23994,7 +24324,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"delivery_count\"")
 			}
 		case "success_count":
-			requiredBitSet[1] |= 1 << 1
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := d.Int()
 				s.SuccessCount = int(v)
@@ -24006,7 +24336,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"success_count\"")
 			}
 		case "failure_count":
-			requiredBitSet[1] |= 1 << 2
+			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
 				v, err := d.Int()
 				s.FailureCount = int(v)
@@ -24018,7 +24348,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"failure_count\"")
 			}
 		case "consecutive_fails":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				v, err := d.Int()
 				s.ConsecutiveFails = int(v)
@@ -24119,8 +24449,8 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [3]uint8{
-		0b11101011,
-		0b00001111,
+		0b11010110,
+		0b00011111,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -24205,6 +24535,221 @@ func (s EndpointKind) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EndpointKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EndpointReceiverCapabilities) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EndpointReceiverCapabilities) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("completion_modes")
+		e.ArrStart()
+		for _, elem := range s.CompletionModes {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+	{
+		e.FieldStart("stream_protocols")
+		e.ArrStart()
+		for _, elem := range s.StreamProtocols {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfEndpointReceiverCapabilities = [2]string{
+	0: "completion_modes",
+	1: "stream_protocols",
+}
+
+// Decode decodes EndpointReceiverCapabilities from json.
+func (s *EndpointReceiverCapabilities) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EndpointReceiverCapabilities to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "completion_modes":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				s.CompletionModes = make([]EndpointReceiverCapabilitiesCompletionModesItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EndpointReceiverCapabilitiesCompletionModesItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.CompletionModes = append(s.CompletionModes, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"completion_modes\"")
+			}
+		case "stream_protocols":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				s.StreamProtocols = make([]EndpointReceiverCapabilitiesStreamProtocolsItem, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem EndpointReceiverCapabilitiesStreamProtocolsItem
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.StreamProtocols = append(s.StreamProtocols, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stream_protocols\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EndpointReceiverCapabilities")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEndpointReceiverCapabilities) {
+					name = jsonFieldsNameOfEndpointReceiverCapabilities[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EndpointReceiverCapabilities) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EndpointReceiverCapabilities) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EndpointReceiverCapabilitiesCompletionModesItem as json.
+func (s EndpointReceiverCapabilitiesCompletionModesItem) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EndpointReceiverCapabilitiesCompletionModesItem from json.
+func (s *EndpointReceiverCapabilitiesCompletionModesItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EndpointReceiverCapabilitiesCompletionModesItem to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EndpointReceiverCapabilitiesCompletionModesItem(v) {
+	case EndpointReceiverCapabilitiesCompletionModesItemHTTP:
+		*s = EndpointReceiverCapabilitiesCompletionModesItemHTTP
+	case EndpointReceiverCapabilitiesCompletionModesItemExec:
+		*s = EndpointReceiverCapabilitiesCompletionModesItemExec
+	case EndpointReceiverCapabilitiesCompletionModesItemStdout:
+		*s = EndpointReceiverCapabilitiesCompletionModesItemStdout
+	case EndpointReceiverCapabilitiesCompletionModesItemSdk:
+		*s = EndpointReceiverCapabilitiesCompletionModesItemSdk
+	default:
+		*s = EndpointReceiverCapabilitiesCompletionModesItem(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EndpointReceiverCapabilitiesCompletionModesItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EndpointReceiverCapabilitiesCompletionModesItem) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EndpointReceiverCapabilitiesStreamProtocolsItem as json.
+func (s EndpointReceiverCapabilitiesStreamProtocolsItem) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EndpointReceiverCapabilitiesStreamProtocolsItem from json.
+func (s *EndpointReceiverCapabilitiesStreamProtocolsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EndpointReceiverCapabilitiesStreamProtocolsItem to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EndpointReceiverCapabilitiesStreamProtocolsItem(v) {
+	case EndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1:
+		*s = EndpointReceiverCapabilitiesStreamProtocolsItemPrimitiveEventsV1
+	default:
+		*s = EndpointReceiverCapabilitiesStreamProtocolsItem(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EndpointReceiverCapabilitiesStreamProtocolsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EndpointReceiverCapabilitiesStreamProtocolsItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -41891,6 +42436,39 @@ func (s *OptCompleteWebhookResponseMeta) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes CompleteWebhookSdkInputTransportError as json.
+func (o OptCompleteWebhookSdkInputTransportError) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes CompleteWebhookSdkInputTransportError from json.
+func (o *OptCompleteWebhookSdkInputTransportError) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptCompleteWebhookSdkInputTransportError to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptCompleteWebhookSdkInputTransportError) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptCompleteWebhookSdkInputTransportError) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes CompleteWebhookStdoutInputTransportError as json.
 func (o OptCompleteWebhookStdoutInputTransportError) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -42287,6 +42865,39 @@ func (s OptEndpointKind) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptEndpointKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EndpointReceiverCapabilities as json.
+func (o OptEndpointReceiverCapabilities) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes EndpointReceiverCapabilities from json.
+func (o *OptEndpointReceiverCapabilities) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptEndpointReceiverCapabilities to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptEndpointReceiverCapabilities) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptEndpointReceiverCapabilities) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

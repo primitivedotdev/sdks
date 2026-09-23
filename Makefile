@@ -24,7 +24,7 @@ node-test:
 	pnpm --dir sdk-node test
 
 node-check: node-check-generated
-	if command -v biome >/dev/null 2>&1; then cd sdk-node && biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/openapi/index.ts src/payloads src/interactions tests/; else pnpm --dir sdk-node lint; fi
+	if command -v biome >/dev/null 2>&1; then cd sdk-node && biome check --error-on-warnings src/index.ts src/validation.ts src/types.ts src/webhook src/contract src/parser src/api/index.ts src/api/events.ts src/api/event-transport.ts src/openapi/index.ts src/payloads src/interactions tests/; else pnpm --dir sdk-node lint; fi
 	pnpm --dir sdk-node typecheck
 	$(MAKE) node-test
 
@@ -296,9 +296,9 @@ go-coverage:
 	cd sdk-go && raw_coverage_file=$$(mktemp) && filtered_coverage_file=$$(mktemp) && go test ./... -coverprofile="$$raw_coverage_file" && { IFS= read -r header && printf '%s\n' "$$header" > "$$filtered_coverage_file" && while IFS= read -r line; do case "$$line" in *"/schema_generated.go:"*|*"/doc.go:"*) ;; *) printf '%s\n' "$$line" >> "$$filtered_coverage_file" ;; esac; done; } < "$$raw_coverage_file" && go tool cover -func="$$filtered_coverage_file" && rm -f "$$raw_coverage_file" "$$filtered_coverage_file"
 
 shared-check:
-	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts tests/interactions/classify.test.ts
-	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_interactions.py tests/test_signals.py tests/test_signal_content.py
-	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails|TestSharedSignalContent' ./...
+	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/api/events.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts tests/interactions/classify.test.ts
+	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_event_receiver.py tests/test_interactions.py tests/test_signals.py tests/test_signal_content.py
+	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails|TestSharedSignalContent|TestEvents' ./...
 
 check: node-check cli-check python-check go-check shared-check
 

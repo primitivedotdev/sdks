@@ -30,6 +30,13 @@ export type ListenHandlerOptions = {
   stderr?: Writable;
 };
 
+export function normalizeForwardTarget(target: string): string {
+  if (/^\d+$/.test(target)) return `http://localhost:${target}`;
+  if (/^(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(target))
+    return `http://${target}`;
+  return target;
+}
+
 export function validateListenHandlerOptions(
   options: ListenHandlerOptions,
 ): void {
@@ -50,7 +57,7 @@ export function validateListenHandlerOptions(
   if (options.forwardTo !== undefined) {
     let url: URL;
     try {
-      url = new URL(options.forwardTo);
+      url = new URL(normalizeForwardTarget(options.forwardTo));
     } catch {
       throw new Error("--forward-to requires an HTTP or HTTPS URL.");
     }
@@ -267,7 +274,7 @@ async function forward(
   signal: AbortSignal,
 ): Promise<{ status: number; confirmed: boolean; errorCode?: string }> {
   signal.throwIfAborted();
-  const url = new URL(target);
+  const url = new URL(normalizeForwardTarget(target));
   const body = Buffer.from(delivery.body, "utf8");
   const headers: Record<string, string> = {};
   for (const [name, value] of Object.entries(delivery.headers)) {

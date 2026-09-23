@@ -1230,6 +1230,11 @@ func (s CompleteWebhookInput) Validate() error {
 			return err
 		}
 		return nil
+	case CompleteWebhookSdkInputCompleteWebhookInput:
+		if err := s.CompleteWebhookSdkInput.Validate(); err != nil {
+			return err
+		}
+		return nil
 	default:
 		return errors.Errorf("invalid type %q", s.Type)
 	}
@@ -1372,6 +1377,88 @@ func (s *CompleteWebhookResponseMeta) Validate() error {
 func (s CompleteWebhookResponseSuccess) Validate() error {
 	switch s {
 	case true:
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s *CompleteWebhookSdkInput) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           0,
+			MaxSet:        true,
+			Max:           30000,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.DurationMs)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "duration_ms",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Mode.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "mode",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.TransportError.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "transport_error",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s CompleteWebhookSdkInputMode) Validate() error {
+	switch s {
+	case "sdk":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s CompleteWebhookSdkInputTransportError) Validate() error {
+	switch s {
+	case "timeout":
+		return nil
+	case "io":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -5282,6 +5369,24 @@ func (s *Endpoint) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.ReceiverCapabilities.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "receiver_capabilities",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := s.Rules.Validate(); err != nil {
 			return err
 		}
@@ -5323,6 +5428,98 @@ func (s EndpointKind) Validate() error {
 	case "function":
 		return nil
 	case "pull":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s *EndpointReceiverCapabilities) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.CompletionModes == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.CompletionModes {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "completion_modes",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.StreamProtocols == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.StreamProtocols {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "stream_protocols",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s EndpointReceiverCapabilitiesCompletionModesItem) Validate() error {
+	switch s {
+	case "http":
+		return nil
+	case "exec":
+		return nil
+	case "stdout":
+		return nil
+	case "sdk":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EndpointReceiverCapabilitiesStreamProtocolsItem) Validate() error {
+	switch s {
+	case "primitive.events.v1":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
