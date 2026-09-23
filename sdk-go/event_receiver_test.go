@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"reflect"
 	"sync"
@@ -60,7 +62,7 @@ func TestEventsWaitReceiptLifecycle(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "data": data})
 	}))
 	defer server.Close()
-	client, err := NewClientWithOptions("test", ClientOptions{APIBaseURL1: server.URL + "/v1"})
+	client, err := NewClientWithOptions("test", ClientOptions{APIBaseURL1: "http://127.0.0.1:1/v1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,6 +73,11 @@ func TestEventsWaitReceiptLifecycle(t *testing.T) {
 			t.Fatalf("accepted invalid name %q", name)
 		}
 	}
+	override, err := url.Parse(server.URL + "/v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx = primitiveapi.WithServerURL(ctx, override)
 	options := EventOptions{Subscription: "agent", Transport: "poll"}
 	delivery, err := client.Events.Wait(ctx, options)
 	if err != nil {
@@ -161,12 +168,17 @@ func TestEventsWebSocketLostReceipt(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "data": data})
 	}))
 	defer server.Close()
-	client, err := NewClientWithOptions("test", ClientOptions{APIBaseURL1: server.URL + "/v1"})
+	client, err := NewClientWithOptions("test", ClientOptions{APIBaseURL1: "http://127.0.0.1:1/v1"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	override, err := url.Parse(server.URL + "/v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx = primitiveapi.WithServerURL(ctx, override)
 	delivery, err := client.Events.Wait(ctx, EventOptions{Subscription: "agent"})
 	if err != nil {
 		t.Fatal(err)
@@ -204,5 +216,72 @@ func TestEventsWaitDeadline(t *testing.T) {
 		if !errors.Is(err, context.DeadlineExceeded) {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestEventsWebSocketHeartbeatDuringHandler(t *testing.T) {
+	fixture := loadReceiverFixture(t)
+	pinged := make(chan error, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/endpoints/endpoint/stream" {
+			socket, err := websocket.Accept(w, r, &websocket.AcceptOptions{Subprotocols: []string{"primitive.events.v1"}})
+			if err != nil {
+				return
+			}
+			defer socket.CloseNow()
+			for {
+				var frame struct {
+					Type string `json:"type"`
+				}
+				if err = wsjson.Read(r.Context(), socket, &frame); err != nil {
+					return
+				}
+				switch frame.Type {
+				case "authenticate":
+					err = wsjson.Write(r.Context(), socket, map[string]string{"type": "ready", "protocol": "primitive.events.v1"})
+				case "receive":
+					err = wsjson.Write(r.Context(), socket, map[string]interface{}{"type": "event", "data": eventOffer{Delivery: &fixture.Delivery, Retention: 86400, HandlerTimeout: 30}})
+					go func() {
+						ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+						defer cancel()
+						pinged <- socket.Ping(ctx)
+					}()
+				case "complete":
+					err = wsjson.Write(r.Context(), socket, map[string]interface{}{"type": "receipt", "data": map[string]string{"result": "completed"}})
+				}
+				if err != nil {
+					return
+				}
+			}
+		}
+		data := map[string]interface{}{"id": "endpoint", "kind": "pull", "receiver_capabilities": map[string]interface{}{"completion_modes": []string{"sdk"}, "stream_protocols": []string{"primitive.events.v1"}}}
+		if r.URL.Path == "/v1/account" {
+			data = map[string]interface{}{"id": "account"}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "data": data})
+	}))
+	defer server.Close()
+	client, err := NewClientWithOptions("test", ClientOptions{APIBaseURL1: server.URL + "/v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	started := make(chan struct{})
+	finish := make(chan struct{})
+	listener, err := client.Events.Listen(ctx, func(context.Context, LocalEvent) error { close(started); <-finish; return nil }, EventOptions{Subscription: "agent"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-started
+	if err = <-pinged; err != nil {
+		t.Fatal(err)
+	}
+	closed := make(chan error, 1)
+	go func() { closed <- listener.Close(ctx) }()
+	<-listener.stop
+	close(finish)
+	if err = <-closed; err != nil {
+		t.Fatal(err)
 	}
 }

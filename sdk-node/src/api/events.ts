@@ -75,6 +75,12 @@ export class DeliveryExpired extends EventReceiverError {
 }
 
 function validate(options: EventWaitOptions): void {
+  if (
+    options.transport !== undefined &&
+    options.transport !== "websocket" &&
+    options.transport !== "poll"
+  )
+    throw new TypeError("transport must be websocket or poll");
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(options.subscription))
     throw new TypeError(
       "subscription must be 1-64 letters, digits, underscores or hyphens, starting with a letter or digit",
@@ -122,15 +128,21 @@ export class EventsResource {
       headers: new Headers(config.headers as HeadersInit),
       apiBaseUrl: config.baseUrl,
     }).client;
+    let status: EventStatus = { type: "ready" };
+    const emit = (next: EventStatus) => {
+      status = { ...status, ...next };
+      options.onStatus?.(status);
+    };
     const retry = <T>(operation: () => Promise<T>, operationSignal = signal) =>
       eventRetry(operation, operationSignal, () =>
-        options.onStatus?.({ type: "reconnecting" }),
+        emit({ type: "reconnecting" }),
       );
     const result = await retry(async () =>
       unwrap(
         await createEndpoint({
           client,
           responseStyle: "fields",
+          throwOnError: false,
           signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
           body: {
             kind: "pull",
@@ -160,7 +172,6 @@ export class EventsResource {
         "This API does not support SDK event receiving with the selected transport",
         "unsupported",
       );
-    let status: EventStatus = { type: "ready" };
     let gaps = -1;
     const update = (data: EventOffer) => {
       status = {
@@ -171,7 +182,7 @@ export class EventsResource {
       };
       if (data.gap_count > 0 && data.gap_count !== gaps) {
         gaps = data.gap_count;
-        options.onStatus?.({ ...status, type: "gap" });
+        emit({ ...status, type: "gap" });
         if (options.onGap === "error")
           throw new EventReceiverError(
             "Subscription reports lost events",
@@ -186,13 +197,14 @@ export class EventsResource {
     });
     try {
       await retry(() => connection.open(signal));
+      emit(status);
     } catch (error) {
       connection.close();
       throw error;
     }
-    options.onStatus?.(status);
     return {
       connection,
+      emit,
       retry,
       update,
       get status() {
@@ -283,6 +295,8 @@ export class EventsResource {
       release();
       throw error;
     }
+    let ended = false;
+    let disposeDelivery = () => {};
     const closed = (async () => {
       try {
         while (!signal.aborted) {
@@ -301,6 +315,7 @@ export class EventsResource {
             options.signal,
             () => {},
           );
+          disposeDelivery = delivery.dispose;
           let removeAbort = () => {};
           try {
             await Promise.race([
@@ -319,7 +334,7 @@ export class EventsResource {
             ]);
           } catch (error) {
             if (delivery.signal.aborted) throw error;
-            options.onStatus?.({ type: "handler_error", error });
+            session.emit({ type: "handler_error", error });
             await delivery.retry();
             continue;
           } finally {
@@ -330,9 +345,11 @@ export class EventsResource {
       } catch (error) {
         if (!signal.aborted) throw error;
       } finally {
+        ended = true;
+        disposeDelivery();
         session.connection.close();
         release();
-        options.onStatus?.({ type: "closed" });
+        session.emit({ type: "closed" });
       }
     })();
     // The caller still observes rejection on closed; starting a receiver does
@@ -340,8 +357,8 @@ export class EventsResource {
     void closed.catch(() => {});
     return {
       closed,
-      get status() {
-        return session.status;
+      get status(): EventStatus {
+        return ended ? { type: "closed" } : session.status;
       },
       close: async () => {
         stopping.abort();
@@ -354,7 +371,7 @@ export class EventsResource {
     connection: EventConnection,
     callerSignal: AbortSignal | undefined,
     release: () => void,
-  ): PendingEvent<T> {
+  ): PendingEvent<T> & { dispose(): void } {
     callerSignal?.throwIfAborted();
     const event = {
       id: raw.event_id,
@@ -430,6 +447,10 @@ export class EventsResource {
     return {
       event,
       signal,
+      dispose: () => {
+        lifetime.abort();
+        cleanup();
+      },
       ack: () => complete(true),
       retry: () => complete(false),
     };

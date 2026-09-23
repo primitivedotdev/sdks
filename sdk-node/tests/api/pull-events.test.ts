@@ -3,6 +3,8 @@ import type {
   PullWebhookResponse,
 } from "@primitivedotdev/api-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
+import type { UnknownEvent as OriginalUnknownEvent } from "../../src/types.js";
+import type { UnknownEvent } from "../../src/webhook/index.js";
 
 function accepted(input: CompleteWebhookInput): boolean {
   switch (input.mode) {
@@ -26,6 +28,9 @@ function accepted(input: CompleteWebhookInput): boolean {
 }
 
 describe("generated event receiving types", () => {
+  it("preserves the public unknown event type export", () => {
+    expectTypeOf<UnknownEvent>().toEqualTypeOf<OriginalUnknownEvent>();
+  });
   it("narrows completion fields by mode without casts", () => {
     const common = {
       queue_id: "11111111-1111-4111-8111-111111111111",

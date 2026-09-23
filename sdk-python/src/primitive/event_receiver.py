@@ -150,11 +150,19 @@ class _Connection:
     ) -> None:
         self.client, self.token, self.endpoint = client, token, endpoint
         self.transport, self.socket_factory = transport, socket_factory
-        self.on_status, self.on_gap = status, on_gap
+        self._status_callback, self.on_gap = status, on_gap
         self.socket: EventSocket | None = None
         self.account_id: object = None
         self.status = EventStatus("ready")
         self.gaps = -1
+
+    def on_status(self, status: EventStatus) -> None:
+        self.status = status
+        if self._status_callback:
+            try:
+                self._status_callback(status)
+            except Exception as error:
+                raise EventReceiverError("callback_error", 400) from error
 
     async def request(self, path: str, body: dict[str, object] | None = None) -> object:
         response = await self.client.request(
@@ -164,7 +172,12 @@ class _Connection:
             timeout=45,
             follow_redirects=False,
         )
-        value = _object(response.json())
+        try:
+            value = _object(response.json())
+        except (ValueError, EventReceiverError):
+            if response.is_success:
+                raise EventReceiverError("invalid_response") from None
+            value = {}
         if not response.is_success:
             code = _object(value.get("error", {})).get("code", "request_failed")
             raise EventReceiverError(
@@ -241,7 +254,12 @@ class _Connection:
         try:
             await socket.send(json.dumps(frame))
             while True:
-                value = _object(json.loads(await asyncio.wait_for(socket.recv(), 60)))
+                try:
+                    value = _object(
+                        json.loads(await asyncio.wait_for(socket.recv(), 60))
+                    )
+                except ValueError:
+                    raise EventReceiverError("invalid_response") from None
                 if value.get("type") == "ping":
                     await socket.send('{"type":"pong"}')
                 elif value.get("type") == "status":
@@ -360,6 +378,9 @@ class PendingEvent:
                 self._release()
 
         self._settled = asyncio.create_task(settle())
+        self._settled.add_done_callback(
+            lambda task: None if task.cancelled() else task.exception()
+        )
         await asyncio.shield(self._settled)
 
     async def ack(self) -> None:
@@ -439,6 +460,7 @@ class EventListener:
         finally:
             await self._connection.close()
             self._release()
+            self._connection.status = EventStatus("closed")
             if self._connection.on_status:
                 self._connection.on_status(EventStatus("closed"))
 
@@ -465,8 +487,10 @@ class EventsResource:
         self._closing: set[asyncio.Task[None]] = set()
 
     def _reserve(
-        self, subscription: str, events: Sequence[str] | None
+        self, subscription: str, events: Sequence[str] | None, transport: Transport
     ) -> Callable[[], None]:
+        if transport not in {"websocket", "poll"}:
+            raise ValueError("transport must be websocket or poll")
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}", subscription):
             raise ValueError(
                 "subscription must be 1-64 letters, digits, underscores or hyphens, starting with a letter or digit"
@@ -521,12 +545,11 @@ class EventsResource:
             raise EventReceiverError("subscription_unavailable", 409)
         connection.endpoint = str(endpoint["id"])
         try:
-            await _retry(connection.open, on_status)
+            await _retry(connection.open, connection.on_status)
+            connection.on_status(connection.status)
         except BaseException:
             await connection.close()
             raise
-        if on_status:
-            on_status(connection.status)
         return connection
 
     async def wait(
@@ -542,7 +565,7 @@ class EventsResource:
     ) -> PendingEvent | None:
         if timeout is not None and (not math.isfinite(timeout) or timeout <= 0):
             raise ValueError("timeout must be a positive number of seconds")
-        release = self._reserve(subscription, events)
+        release = self._reserve(subscription, events, transport)
         connection: _Connection | None = None
         handed_off = False
 
@@ -560,7 +583,7 @@ class EventsResource:
                 task.add_done_callback(self._closing.discard)
 
             while True:
-                data = await _retry(connection.receive, on_status)
+                data = await _retry(connection.receive, connection.on_status)
                 if data.get("delivery") is not None:
                     delivery = PendingEvent(data["delivery"], connection, finished)
                     handed_off = True
@@ -588,7 +611,7 @@ class EventsResource:
         on_status: StatusCallback | None = None,
         on_gap: Literal["report", "error"] = "report",
     ) -> EventListener:
-        release = self._reserve(subscription, events)
+        release = self._reserve(subscription, events, transport)
         try:
             connection = await self._connect(
                 subscription, events, transport, socket_factory, on_status, on_gap

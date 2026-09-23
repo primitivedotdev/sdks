@@ -372,3 +372,22 @@ describe("safe gap diagnostics", () => {
     expect(options.handler).not.toHaveBeenCalled();
   });
 });
+
+it("rejects unsupported completion modes before opening a stream or handling an event", async () => {
+  steps["/v1/endpoints"] = [
+    ok({
+      id: "endpoint-a",
+      kind: "pull",
+      enabled: true,
+      receiver_capabilities: {
+        stream_protocols: ["primitive.events.v1"],
+        completion_modes: ["stdout"],
+      },
+    }),
+  ];
+  await expect(
+    runListen({ ...options, transport: "websocket", mode: "exec" }),
+  ).rejects.toThrow("selected listener handler mode");
+  expect(options.handler).not.toHaveBeenCalled();
+  expect(bodies("/pull")).toEqual([]);
+});

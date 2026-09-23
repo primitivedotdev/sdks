@@ -156,6 +156,7 @@ export type {
   // Recipient-routing decision
   RoutingDecision,
   TlsReportAnalysis,
+  UnknownEvent,
   ValidateEmailAuthResult,
   WebhookAttachment,
   WebhookEvent,

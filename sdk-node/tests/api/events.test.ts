@@ -95,6 +95,9 @@ describe("in-process events", () => {
       await expect(
         client.events.wait({ ...options, subscription: name }),
       ).rejects.toThrow("subscription");
+    await expect(
+      client.events.wait({ ...options, transport: "p0ll" as "poll" }),
+    ).rejects.toThrow("transport");
     expect(fetch).not.toHaveBeenCalled();
     await expect(client.events.wait(options)).rejects.toThrow(
       "does not support",
@@ -158,6 +161,7 @@ describe("in-process events", () => {
     expect(bodies).toHaveLength(0);
     finish();
     await closing;
+    expect(listener.status.type).toBe("closed");
     expect(bodies).toHaveLength(1);
   });
   it("cancellation aborts a pending handle and releases its subscription", async () => {

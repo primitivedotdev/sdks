@@ -190,11 +190,17 @@ type eventFrame struct {
 	Status     int             `json:"status"`
 	RetryAfter *string         `json:"retry_after"`
 }
+type eventPacket struct {
+	frame eventFrame
+	err   error
+}
+
 type eventConnection struct {
 	api       receiverAPI
 	endpoint  string
 	options   EventOptions
 	socket    atomic.Pointer[websocket.Conn]
+	reads     <-chan eventPacket
 	accountID string
 	origin    string
 	status    EventStatus
@@ -223,13 +229,11 @@ func (c *eventConnection) request(ctx context.Context, path string, body interfa
 	}
 	defer response.Body.Close()
 	var result eventEnvelope
-	if err = json.NewDecoder(io.LimitReader(response.Body, 64*1024*1024)).Decode(&result); err != nil {
-		return &EventReceiverError{Code: "invalid_response"}
-	}
+	decodeErr := json.NewDecoder(io.LimitReader(response.Body, 64*1024*1024)).Decode(&result)
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return &EventReceiverError{Code: result.Error.Code, Status: response.StatusCode, RetryAfter: retryAfterEvent(response.Header.Get("Retry-After"))}
 	}
-	if !result.Success {
+	if decodeErr != nil || !result.Success {
 		return &EventReceiverError{Code: "invalid_response"}
 	}
 	if err = json.Unmarshal(result.Data, target); err != nil {
@@ -286,13 +290,43 @@ func (c *eventConnection) open(ctx context.Context) error {
 	socket, response, err := dial(readyCtx, address.String(), &websocket.DialOptions{Subprotocols: []string{"primitive.events.v1"}, HTTPClient: &http.Client{Transport: eventRoundTripper{c.api}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}})
 	if err != nil {
 		if response != nil {
-			return &EventReceiverError{Code: "handshake_failed", Status: response.StatusCode}
+			return &EventReceiverError{Code: "handshake_failed", Status: response.StatusCode, RetryAfter: retryAfterEvent(response.Header.Get("Retry-After"))}
 		}
 		return err
 	}
 	c.socket.Store(socket)
 	socket.SetReadLimit(64 * 1024 * 1024)
-	if response != nil && response.Request != nil && response.Request.URL.Host != address.Host {
+	packets := make(chan eventPacket, 2)
+	c.reads = packets
+	// A reader remains active while application code handles an offer, allowing
+	// control pongs to be sent independently of the handler's acceptance deadline.
+	go func() {
+		defer close(packets)
+		for {
+			var frame eventFrame
+			readCtx, stop := context.WithTimeout(context.Background(), 60*time.Second)
+			readErr := wsjson.Read(readCtx, socket, &frame)
+			stop()
+			if readErr == nil && frame.Type == "ping" {
+				pongCtx, stopPong := context.WithTimeout(context.Background(), 5*time.Second)
+				readErr = wsjson.Write(pongCtx, socket, map[string]string{"type": "pong"})
+				stopPong()
+				if readErr == nil {
+					continue
+				}
+			}
+			select {
+			case packets <- eventPacket{frame: frame, err: readErr}:
+			default:
+				_ = socket.CloseNow()
+				return
+			}
+			if readErr != nil {
+				return
+			}
+		}
+	}()
+	if response != nil && response.Request != nil && (response.Request.URL.Host != address.Host || (address.Scheme == "wss" && response.Request.URL.Scheme != "https")) {
 		c.close()
 		return &EventReceiverError{Code: "unsupported"}
 	}
@@ -337,13 +371,23 @@ func (c *eventConnection) exchange(ctx context.Context, body interface{}) (event
 		return frame, err
 	}
 	for {
-		readCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
-		err := wsjson.Read(readCtx, socket, &frame)
-		cancel()
-		if err != nil {
+		var packet eventPacket
+		var ok bool
+		select {
+		case <-ctx.Done():
 			c.close()
-			return frame, err
+			return frame, ctx.Err()
+		case packet, ok = <-c.reads:
 		}
+		if !ok {
+			c.close()
+			return frame, &EventReceiverError{Code: "disconnected"}
+		}
+		if packet.err != nil {
+			c.close()
+			return frame, packet.err
+		}
+		frame = packet.frame
 		switch frame.Type {
 		case "ping":
 			if err := wsjson.Write(ctx, socket, map[string]string{"type": "pong"}); err != nil {

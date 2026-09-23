@@ -89,8 +89,8 @@ first bounded authenticate frame, never a URL or a new session/ticket resource.
 The server authenticates using existing account/scope rules before ready.
 
 Client frames: authenticate with token, receive, complete with the existing
-completion body, and pong. Server frames: ready with protocol, event with the
-existing pull response data, receipt, status, ping, and error with HTTP status,
+completion body. Server frames: ready with protocol, event with the
+existing pull response data, receipt, status, and error with HTTP status,
 code, and optional Retry-After. A receive grants one delivery. Another receive
 requires completing the current offer. Reconnecting may repeat completion before
 asking for another event. Lease and receipt validation remain server-authoritative.
@@ -102,8 +102,9 @@ or notification infrastructure and holds no idle transaction. Client-side long
 polling is eliminated; shared publisher wakeups can optimize server reconciliation
 independently without changing this protocol or developer interface.
 
-Connections have bounded input frames, bounded outstanding operations, heartbeat
-checks, and host-shutdown cancellation. A dropped offer is redelivered after its
+Connections have bounded input frames, bounded outstanding operations, standard
+WebSocket control ping/pong heartbeats, and host-shutdown cancellation. SDK socket
+readers remain active during handlers so heartbeat replies are automatic. A dropped offer is redelivered after its
 lease expires. Lost receipts are retried identically. An unsupported handshake
 does not silently downgrade to HTTP polling.
 

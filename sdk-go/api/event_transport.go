@@ -14,7 +14,7 @@ func (c *Client) ReceiverRequest(ctx context.Context, path string, body []byte) 
 	if body != nil {
 		method = http.MethodPost
 	}
-	request, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(c.serverURL.String(), "/")+"/"+path, bytes.NewReader(body))
+	request, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(c.requestURL(ctx).String(), "/")+"/"+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (c *Client) ReceiverRequest(ctx context.Context, path string, body []byte) 
 // bearer credentials. The credentials belong in the first authenticated frame.
 func (c *Client) ReceiverConnection(ctx context.Context) (string, string, error) {
 	token, err := c.sec.BearerAuth(ctx, PullWebhookEventOperation)
-	return c.serverURL.String(), token.Token, err
+	return c.requestURL(ctx).String(), token.Token, err
 }
 
 // ReceiverDo preserves custom TLS/proxy transports for a WebSocket handshake.

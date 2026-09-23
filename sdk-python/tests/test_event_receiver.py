@@ -3,11 +3,13 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+from typing import cast
 
 import httpx
 import pytest
 
 from primitive import EventContext, EventReceiverError, LocalEvent, PrimitiveClient
+from primitive.event_receiver import Transport
 
 FIXTURE = json.loads(
     (Path(__file__).parents[2] / "test-fixtures/local-event-receiver.json").read_text()
@@ -52,6 +54,10 @@ async def test_receipt_and_subscription_lifecycle() -> None:
     ) as http:
         client = PrimitiveClient("test")
         client.api_client.set_async_httpx_client(http)
+        with pytest.raises(ValueError, match="transport"):
+            await client.events.wait(
+                subscription="agent", transport=cast(Transport, "p0ll")
+            )
         for name in FIXTURE["invalid_names"]:
             with pytest.raises(ValueError):
                 await client.events.wait(subscription=name, transport="poll")

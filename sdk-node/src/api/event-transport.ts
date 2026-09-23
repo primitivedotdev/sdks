@@ -130,12 +130,7 @@ export async function eventRetry<T>(
           ].includes(error.code))
       )
         throw error;
-      if (
-        !(error instanceof EventReceiverError) &&
-        !(error instanceof TypeError) &&
-        !(error instanceof DOMException && error.name === "TimeoutError")
-      )
-        throw error;
+      if (!(error instanceof EventReceiverError)) throw error;
       onRetry?.();
       await delay(
         Math.max(
@@ -184,6 +179,7 @@ export class EventConnection {
       await getAccount({
         client: this.client,
         responseStyle: "fields",
+        throwOnError: false,
         signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
       }),
     );
@@ -378,6 +374,7 @@ export class EventConnection {
           path: { id: this.endpointId },
           body: { wait_seconds: 25 },
           responseStyle: "fields",
+          throwOnError: false,
           signal: AbortSignal.any([signal, AbortSignal.timeout(45000)]),
         }),
       );
@@ -408,6 +405,7 @@ export class EventConnection {
           path: { id: this.endpointId },
           body,
           responseStyle: "fields",
+          throwOnError: false,
           signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
         }),
       ).data;

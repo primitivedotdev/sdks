@@ -271,6 +271,14 @@ export async function runListen(options: ListenOptions): Promise<number> {
         throw new ListenError(
           "This API does not support WebSocket events. Use --transport poll explicitly for an older API.",
         );
+      if (
+        !endpoint.receiver_capabilities.completion_modes.includes(
+          options.mode ?? "stdout",
+        )
+      )
+        throw new ListenError(
+          "This API does not support the selected listener handler mode.",
+        );
       stream = new EventConnection(streamClient, endpoint.id);
     }
     const selected = endpoint.rules?.event_types;
