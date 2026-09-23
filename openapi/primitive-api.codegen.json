@@ -1300,11 +1300,12 @@
             "name": "Idempotency-Key",
             "in": "header",
             "required": true,
-            "description": "Required client-supplied key, at most 200 characters. Use a new\nkey for each code you redeem and reuse it only to retry the same\nrequest.\n",
+            "description": "Required client-supplied key: 1 to 200 printable ASCII\ncharacters, without spaces. Use a new key for each code you\nredeem and reuse it only to retry the same request.\n",
             "schema": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 200
+              "maxLength": 200,
+              "pattern": "^[\\x21-\\x7E]{1,200}$"
             }
           }
         ],
@@ -1402,7 +1403,7 @@
             }
           },
           "429": {
-            "description": "Too many redemption attempts. `error.code` is\n`rate_limit_exceeded` or `rate_limited`. Wait for `Retry-After`\nwhen present.\n",
+            "description": "Too many requests or redemption attempts. `error.code` is\n`rate_limited`. Wait for `Retry-After` when present. Like other\nrate-limited responses, it also carries the `ratelimit-limit`,\n`ratelimit-remaining`, `ratelimit-reset` and `ratelimit-policy`\nquota headers when the limiter reports them.\n",
             "headers": {
               "Retry-After": {
                 "schema": {
@@ -1419,8 +1420,8 @@
                 "example": {
                   "success": false,
                   "error": {
-                    "code": "rate_limit_exceeded",
-                    "message": "Rate limit exceeded"
+                    "code": "rate_limited",
+                    "message": "Rate limit exceeded. Try again shortly."
                   }
                 }
               }
@@ -11093,9 +11094,8 @@
         "properties": {
           "code": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 256,
-            "description": "The credit code to redeem. Surrounding whitespace is ignored."
+            "pattern": "^\\s*\\S(?:[\\s\\S]{0,254}\\S)?\\s*$",
+            "description": "The credit code to redeem. Surrounding whitespace is ignored; the\nrest must be 1 to 256 characters.\n"
           }
         }
       },
@@ -11152,82 +11152,6 @@
           }
         }
       },
-      "CreditSpendingBudget": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "The active agent spending budget an operator funded for top-ups.",
-        "required": [
-          "currency",
-          "max_amount_micros",
-          "spent_micros",
-          "remaining_micros",
-          "per_topup_cap_micros",
-          "expires_at",
-          "status"
-        ],
-        "properties": {
-          "currency": {
-            "type": "string",
-            "description": "Currency of the budget, for example `usd`."
-          },
-          "max_amount_micros": {
-            "type": "string",
-            "pattern": "^[0-9]+$",
-            "description": "Total allowance the operator funded, in micros."
-          },
-          "spent_micros": {
-            "type": "string",
-            "pattern": "^[0-9]+$",
-            "description": "How much of the allowance has been drawn down, in micros."
-          },
-          "remaining_micros": {
-            "type": "string",
-            "pattern": "^[0-9]+$",
-            "description": "`max_amount_micros - spent_micros`, floored at zero."
-          },
-          "per_topup_cap_micros": {
-            "type": "string",
-            "pattern": "^[0-9]+$",
-            "description": "Largest single top-up allowed, in micros, or null for no per-top-up cap.",
-            "nullable": true
-          },
-          "expires_at": {
-            "type": "string",
-            "description": "When the allowance expires, or null for no expiry.",
-            "nullable": true
-          },
-          "status": {
-            "type": "string",
-            "description": "Budget status. An active budget reads `active`."
-          }
-        }
-      },
-      "PrepaidCredit": {
-        "type": "object",
-        "additionalProperties": false,
-        "description": "Prepaid usage credit (top-ups, redeemed credit codes and granted\ncredit) that can still pay for usage.\n",
-        "required": [
-          "currency",
-          "remaining_micros",
-          "next_expires_at"
-        ],
-        "properties": {
-          "currency": {
-            "type": "string",
-            "description": "Currency of the credit, which is the organization billing currency."
-          },
-          "remaining_micros": {
-            "type": "string",
-            "pattern": "^[0-9]+$",
-            "description": "What the credit can still pay for, in micros."
-          },
-          "next_expires_at": {
-            "type": "string",
-            "description": "Earliest expiry among credits with a balance, or null when none of them expires.",
-            "nullable": true
-          }
-        }
-      },
       "CreditBalance": {
         "type": "object",
         "required": [
@@ -11235,26 +11159,84 @@
         ],
         "properties": {
           "budget": {
-            "description": "The active agent spending budget, or null when there is none.",
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/CreditSpendingBudget"
+            "description": "The active agent spending budget an operator funded for top-ups,\nor null when there is none.\n",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "max_amount_micros",
+              "spent_micros",
+              "remaining_micros",
+              "per_topup_cap_micros",
+              "expires_at",
+              "status"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "description": "Currency of the budget, for example `usd`."
               },
-              {
-                "type": "null"
+              "max_amount_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "Total allowance the operator funded, in micros."
+              },
+              "spent_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "How much of the allowance has been drawn down, in micros."
+              },
+              "remaining_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "`max_amount_micros - spent_micros`, floored at zero."
+              },
+              "per_topup_cap_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "Largest single top-up allowed, in micros, or null for no per-top-up cap.",
+                "nullable": true
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When the allowance expires, or null for no expiry.",
+                "nullable": true
+              },
+              "status": {
+                "type": "string",
+                "description": "Budget status. An active budget reads `active`."
               }
-            ]
+            },
+            "nullable": true
           },
           "prepaid_credit": {
-            "description": "Prepaid usage credit, or null when there is none. Omitted when an\nexact figure cannot be given right now; the budget is still\nreturned.\n",
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/PrepaidCredit"
+            "description": "Prepaid usage credit (top-ups, redeemed credit codes and granted\ncredit) that can still pay for usage, or null when there is none.\nOmitted when an exact figure cannot be given right now; the budget\nis still returned.\n",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "remaining_micros",
+              "next_expires_at"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "description": "Currency of the credit, which is the organization billing currency."
               },
-              {
-                "type": "null"
+              "remaining_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "What the credit can still pay for, in micros."
+              },
+              "next_expires_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Earliest expiry among credits with a balance, or null when none of them expires.",
+                "nullable": true
               }
-            ]
+            },
+            "nullable": true
           }
         }
       },

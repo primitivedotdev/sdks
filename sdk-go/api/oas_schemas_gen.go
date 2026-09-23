@@ -5127,32 +5127,166 @@ func (*CreateWakeScheduleUnauthorized) createWakeScheduleRes() {}
 
 // Ref: #/components/schemas/CreditBalance
 type CreditBalance struct {
-	// The active agent spending budget, or null when there is none.
-	Budget NilCreditSpendingBudget `json:"budget"`
-	// Prepaid usage credit, or null when there is none. Omitted when an
-	// exact figure cannot be given right now; the budget is still
-	// returned.
-	PrepaidCredit OptNilPrepaidCredit `json:"prepaid_credit"`
+	// The active agent spending budget an operator funded for top-ups,
+	// or null when there is none.
+	Budget NilCreditBalanceBudget `json:"budget"`
+	// Prepaid usage credit (top-ups, redeemed credit codes and granted
+	// credit) that can still pay for usage, or null when there is none.
+	// Omitted when an exact figure cannot be given right now; the budget
+	// is still returned.
+	PrepaidCredit OptNilCreditBalancePrepaidCredit `json:"prepaid_credit"`
 }
 
 // GetBudget returns the value of Budget.
-func (s *CreditBalance) GetBudget() NilCreditSpendingBudget {
+func (s *CreditBalance) GetBudget() NilCreditBalanceBudget {
 	return s.Budget
 }
 
 // GetPrepaidCredit returns the value of PrepaidCredit.
-func (s *CreditBalance) GetPrepaidCredit() OptNilPrepaidCredit {
+func (s *CreditBalance) GetPrepaidCredit() OptNilCreditBalancePrepaidCredit {
 	return s.PrepaidCredit
 }
 
 // SetBudget sets the value of Budget.
-func (s *CreditBalance) SetBudget(val NilCreditSpendingBudget) {
+func (s *CreditBalance) SetBudget(val NilCreditBalanceBudget) {
 	s.Budget = val
 }
 
 // SetPrepaidCredit sets the value of PrepaidCredit.
-func (s *CreditBalance) SetPrepaidCredit(val OptNilPrepaidCredit) {
+func (s *CreditBalance) SetPrepaidCredit(val OptNilCreditBalancePrepaidCredit) {
 	s.PrepaidCredit = val
+}
+
+// The active agent spending budget an operator funded for top-ups,
+// or null when there is none.
+type CreditBalanceBudget struct {
+	// Currency of the budget, for example `usd`.
+	Currency string `json:"currency"`
+	// Total allowance the operator funded, in micros.
+	MaxAmountMicros string `json:"max_amount_micros"`
+	// How much of the allowance has been drawn down, in micros.
+	SpentMicros string `json:"spent_micros"`
+	// `max_amount_micros - spent_micros`, floored at zero.
+	RemainingMicros string `json:"remaining_micros"`
+	// Largest single top-up allowed, in micros, or null for no per-top-up cap.
+	PerTopupCapMicros NilString `json:"per_topup_cap_micros"`
+	// When the allowance expires, or null for no expiry.
+	ExpiresAt NilDateTime `json:"expires_at"`
+	// Budget status. An active budget reads `active`.
+	Status string `json:"status"`
+}
+
+// GetCurrency returns the value of Currency.
+func (s *CreditBalanceBudget) GetCurrency() string {
+	return s.Currency
+}
+
+// GetMaxAmountMicros returns the value of MaxAmountMicros.
+func (s *CreditBalanceBudget) GetMaxAmountMicros() string {
+	return s.MaxAmountMicros
+}
+
+// GetSpentMicros returns the value of SpentMicros.
+func (s *CreditBalanceBudget) GetSpentMicros() string {
+	return s.SpentMicros
+}
+
+// GetRemainingMicros returns the value of RemainingMicros.
+func (s *CreditBalanceBudget) GetRemainingMicros() string {
+	return s.RemainingMicros
+}
+
+// GetPerTopupCapMicros returns the value of PerTopupCapMicros.
+func (s *CreditBalanceBudget) GetPerTopupCapMicros() NilString {
+	return s.PerTopupCapMicros
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *CreditBalanceBudget) GetExpiresAt() NilDateTime {
+	return s.ExpiresAt
+}
+
+// GetStatus returns the value of Status.
+func (s *CreditBalanceBudget) GetStatus() string {
+	return s.Status
+}
+
+// SetCurrency sets the value of Currency.
+func (s *CreditBalanceBudget) SetCurrency(val string) {
+	s.Currency = val
+}
+
+// SetMaxAmountMicros sets the value of MaxAmountMicros.
+func (s *CreditBalanceBudget) SetMaxAmountMicros(val string) {
+	s.MaxAmountMicros = val
+}
+
+// SetSpentMicros sets the value of SpentMicros.
+func (s *CreditBalanceBudget) SetSpentMicros(val string) {
+	s.SpentMicros = val
+}
+
+// SetRemainingMicros sets the value of RemainingMicros.
+func (s *CreditBalanceBudget) SetRemainingMicros(val string) {
+	s.RemainingMicros = val
+}
+
+// SetPerTopupCapMicros sets the value of PerTopupCapMicros.
+func (s *CreditBalanceBudget) SetPerTopupCapMicros(val NilString) {
+	s.PerTopupCapMicros = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *CreditBalanceBudget) SetExpiresAt(val NilDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetStatus sets the value of Status.
+func (s *CreditBalanceBudget) SetStatus(val string) {
+	s.Status = val
+}
+
+// Prepaid usage credit (top-ups, redeemed credit codes and granted
+// credit) that can still pay for usage, or null when there is none.
+// Omitted when an exact figure cannot be given right now; the budget
+// is still returned.
+type CreditBalancePrepaidCredit struct {
+	// Currency of the credit, which is the organization billing currency.
+	Currency string `json:"currency"`
+	// What the credit can still pay for, in micros.
+	RemainingMicros string `json:"remaining_micros"`
+	// Earliest expiry among credits with a balance, or null when none of them expires.
+	NextExpiresAt NilDateTime `json:"next_expires_at"`
+}
+
+// GetCurrency returns the value of Currency.
+func (s *CreditBalancePrepaidCredit) GetCurrency() string {
+	return s.Currency
+}
+
+// GetRemainingMicros returns the value of RemainingMicros.
+func (s *CreditBalancePrepaidCredit) GetRemainingMicros() string {
+	return s.RemainingMicros
+}
+
+// GetNextExpiresAt returns the value of NextExpiresAt.
+func (s *CreditBalancePrepaidCredit) GetNextExpiresAt() NilDateTime {
+	return s.NextExpiresAt
+}
+
+// SetCurrency sets the value of Currency.
+func (s *CreditBalancePrepaidCredit) SetCurrency(val string) {
+	s.Currency = val
+}
+
+// SetRemainingMicros sets the value of RemainingMicros.
+func (s *CreditBalancePrepaidCredit) SetRemainingMicros(val string) {
+	s.RemainingMicros = val
+}
+
+// SetNextExpiresAt sets the value of NextExpiresAt.
+func (s *CreditBalancePrepaidCredit) SetNextExpiresAt(val NilDateTime) {
+	s.NextExpiresAt = val
 }
 
 // Ref: #/components/schemas/CreditRedemption
@@ -5254,95 +5388,6 @@ func (s *CreditRedemption) SetReplayed(val bool) {
 // SetMessage sets the value of Message.
 func (s *CreditRedemption) SetMessage(val string) {
 	s.Message = val
-}
-
-// The active agent spending budget an operator funded for top-ups.
-// Ref: #/components/schemas/CreditSpendingBudget
-type CreditSpendingBudget struct {
-	// Currency of the budget, for example `usd`.
-	Currency string `json:"currency"`
-	// Total allowance the operator funded, in micros.
-	MaxAmountMicros string `json:"max_amount_micros"`
-	// How much of the allowance has been drawn down, in micros.
-	SpentMicros string `json:"spent_micros"`
-	// `max_amount_micros - spent_micros`, floored at zero.
-	RemainingMicros string `json:"remaining_micros"`
-	// Largest single top-up allowed, in micros, or null for no per-top-up cap.
-	PerTopupCapMicros NilString `json:"per_topup_cap_micros"`
-	// When the allowance expires, or null for no expiry.
-	ExpiresAt NilString `json:"expires_at"`
-	// Budget status. An active budget reads `active`.
-	Status string `json:"status"`
-}
-
-// GetCurrency returns the value of Currency.
-func (s *CreditSpendingBudget) GetCurrency() string {
-	return s.Currency
-}
-
-// GetMaxAmountMicros returns the value of MaxAmountMicros.
-func (s *CreditSpendingBudget) GetMaxAmountMicros() string {
-	return s.MaxAmountMicros
-}
-
-// GetSpentMicros returns the value of SpentMicros.
-func (s *CreditSpendingBudget) GetSpentMicros() string {
-	return s.SpentMicros
-}
-
-// GetRemainingMicros returns the value of RemainingMicros.
-func (s *CreditSpendingBudget) GetRemainingMicros() string {
-	return s.RemainingMicros
-}
-
-// GetPerTopupCapMicros returns the value of PerTopupCapMicros.
-func (s *CreditSpendingBudget) GetPerTopupCapMicros() NilString {
-	return s.PerTopupCapMicros
-}
-
-// GetExpiresAt returns the value of ExpiresAt.
-func (s *CreditSpendingBudget) GetExpiresAt() NilString {
-	return s.ExpiresAt
-}
-
-// GetStatus returns the value of Status.
-func (s *CreditSpendingBudget) GetStatus() string {
-	return s.Status
-}
-
-// SetCurrency sets the value of Currency.
-func (s *CreditSpendingBudget) SetCurrency(val string) {
-	s.Currency = val
-}
-
-// SetMaxAmountMicros sets the value of MaxAmountMicros.
-func (s *CreditSpendingBudget) SetMaxAmountMicros(val string) {
-	s.MaxAmountMicros = val
-}
-
-// SetSpentMicros sets the value of SpentMicros.
-func (s *CreditSpendingBudget) SetSpentMicros(val string) {
-	s.SpentMicros = val
-}
-
-// SetRemainingMicros sets the value of RemainingMicros.
-func (s *CreditSpendingBudget) SetRemainingMicros(val string) {
-	s.RemainingMicros = val
-}
-
-// SetPerTopupCapMicros sets the value of PerTopupCapMicros.
-func (s *CreditSpendingBudget) SetPerTopupCapMicros(val NilString) {
-	s.PerTopupCapMicros = val
-}
-
-// SetExpiresAt sets the value of ExpiresAt.
-func (s *CreditSpendingBudget) SetExpiresAt(val NilString) {
-	s.ExpiresAt = val
-}
-
-// SetStatus sets the value of Status.
-func (s *CreditSpendingBudget) SetStatus(val string) {
-	s.Status = val
 }
 
 type DecideRegistryRequestConflict ErrorResponse
@@ -16048,37 +16093,37 @@ func (o NilBool) Or(d bool) bool {
 	return d
 }
 
-// NewNilCreditSpendingBudget returns new NilCreditSpendingBudget with value set to v.
-func NewNilCreditSpendingBudget(v CreditSpendingBudget) NilCreditSpendingBudget {
-	return NilCreditSpendingBudget{
+// NewNilCreditBalanceBudget returns new NilCreditBalanceBudget with value set to v.
+func NewNilCreditBalanceBudget(v CreditBalanceBudget) NilCreditBalanceBudget {
+	return NilCreditBalanceBudget{
 		Value: v,
 	}
 }
 
-// NilCreditSpendingBudget is nullable CreditSpendingBudget.
-type NilCreditSpendingBudget struct {
-	Value CreditSpendingBudget
+// NilCreditBalanceBudget is nullable CreditBalanceBudget.
+type NilCreditBalanceBudget struct {
+	Value CreditBalanceBudget
 	Null  bool
 }
 
 // SetTo sets value to v.
-func (o *NilCreditSpendingBudget) SetTo(v CreditSpendingBudget) {
+func (o *NilCreditBalanceBudget) SetTo(v CreditBalanceBudget) {
 	o.Null = false
 	o.Value = v
 }
 
 // IsNull returns true if value is Null.
-func (o NilCreditSpendingBudget) IsNull() bool { return o.Null }
+func (o NilCreditBalanceBudget) IsNull() bool { return o.Null }
 
 // SetToNull sets value to null.
-func (o *NilCreditSpendingBudget) SetToNull() {
+func (o *NilCreditBalanceBudget) SetToNull() {
 	o.Null = true
-	var v CreditSpendingBudget
+	var v CreditBalanceBudget
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o NilCreditSpendingBudget) Get() (v CreditSpendingBudget, ok bool) {
+func (o NilCreditBalanceBudget) Get() (v CreditBalanceBudget, ok bool) {
 	if o.Null {
 		return v, false
 	}
@@ -16086,7 +16131,7 @@ func (o NilCreditSpendingBudget) Get() (v CreditSpendingBudget, ok bool) {
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o NilCreditSpendingBudget) Or(d CreditSpendingBudget) CreditSpendingBudget {
+func (o NilCreditBalanceBudget) Or(d CreditBalanceBudget) CreditBalanceBudget {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -18394,6 +18439,69 @@ func (o OptNilBool) Or(d bool) bool {
 	return d
 }
 
+// NewOptNilCreditBalancePrepaidCredit returns new OptNilCreditBalancePrepaidCredit with value set to v.
+func NewOptNilCreditBalancePrepaidCredit(v CreditBalancePrepaidCredit) OptNilCreditBalancePrepaidCredit {
+	return OptNilCreditBalancePrepaidCredit{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilCreditBalancePrepaidCredit is optional nullable CreditBalancePrepaidCredit.
+type OptNilCreditBalancePrepaidCredit struct {
+	Value CreditBalancePrepaidCredit
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilCreditBalancePrepaidCredit was set.
+func (o OptNilCreditBalancePrepaidCredit) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilCreditBalancePrepaidCredit) Reset() {
+	var v CreditBalancePrepaidCredit
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilCreditBalancePrepaidCredit) SetTo(v CreditBalancePrepaidCredit) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilCreditBalancePrepaidCredit) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilCreditBalancePrepaidCredit) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v CreditBalancePrepaidCredit
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilCreditBalancePrepaidCredit) Get() (v CreditBalancePrepaidCredit, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilCreditBalancePrepaidCredit) Or(d CreditBalancePrepaidCredit) CreditBalancePrepaidCredit {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilDateTime returns new OptNilDateTime with value set to v.
 func NewOptNilDateTime(v time.Time) OptNilDateTime {
 	return OptNilDateTime{
@@ -19018,69 +19126,6 @@ func (o OptNilParsedEmailDataError) Get() (v ParsedEmailDataError, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilParsedEmailDataError) Or(d ParsedEmailDataError) ParsedEmailDataError {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptNilPrepaidCredit returns new OptNilPrepaidCredit with value set to v.
-func NewOptNilPrepaidCredit(v PrepaidCredit) OptNilPrepaidCredit {
-	return OptNilPrepaidCredit{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptNilPrepaidCredit is optional nullable PrepaidCredit.
-type OptNilPrepaidCredit struct {
-	Value PrepaidCredit
-	Set   bool
-	Null  bool
-}
-
-// IsSet returns true if OptNilPrepaidCredit was set.
-func (o OptNilPrepaidCredit) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptNilPrepaidCredit) Reset() {
-	var v PrepaidCredit
-	o.Value = v
-	o.Set = false
-	o.Null = false
-}
-
-// SetTo sets value to v.
-func (o *OptNilPrepaidCredit) SetTo(v PrepaidCredit) {
-	o.Set = true
-	o.Null = false
-	o.Value = v
-}
-
-// IsNull returns true if value is Null.
-func (o OptNilPrepaidCredit) IsNull() bool { return o.Null }
-
-// SetToNull sets value to null.
-func (o *OptNilPrepaidCredit) SetToNull() {
-	o.Set = true
-	o.Null = true
-	var v PrepaidCredit
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptNilPrepaidCredit) Get() (v PrepaidCredit, ok bool) {
-	if o.Null {
-		return v, false
-	}
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptNilPrepaidCredit) Or(d PrepaidCredit) PrepaidCredit {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -21517,48 +21562,6 @@ func (s *PollCliLoginOKHeaders) SetResponse(val PollCliLoginOK) {
 
 func (*PollCliLoginOKHeaders) pollCliLoginRes() {}
 
-// Prepaid usage credit (top-ups, redeemed credit codes and granted
-// credit) that can still pay for usage.
-// Ref: #/components/schemas/PrepaidCredit
-type PrepaidCredit struct {
-	// Currency of the credit, which is the organization billing currency.
-	Currency string `json:"currency"`
-	// What the credit can still pay for, in micros.
-	RemainingMicros string `json:"remaining_micros"`
-	// Earliest expiry among credits with a balance, or null when none of them expires.
-	NextExpiresAt NilString `json:"next_expires_at"`
-}
-
-// GetCurrency returns the value of Currency.
-func (s *PrepaidCredit) GetCurrency() string {
-	return s.Currency
-}
-
-// GetRemainingMicros returns the value of RemainingMicros.
-func (s *PrepaidCredit) GetRemainingMicros() string {
-	return s.RemainingMicros
-}
-
-// GetNextExpiresAt returns the value of NextExpiresAt.
-func (s *PrepaidCredit) GetNextExpiresAt() NilString {
-	return s.NextExpiresAt
-}
-
-// SetCurrency sets the value of Currency.
-func (s *PrepaidCredit) SetCurrency(val string) {
-	s.Currency = val
-}
-
-// SetRemainingMicros sets the value of RemainingMicros.
-func (s *PrepaidCredit) SetRemainingMicros(val string) {
-	s.RemainingMicros = val
-}
-
-// SetNextExpiresAt sets the value of NextExpiresAt.
-func (s *PrepaidCredit) SetNextExpiresAt(val NilString) {
-	s.NextExpiresAt = val
-}
-
 type PublishAgentConflict ErrorResponse
 
 func (*PublishAgentConflict) publishAgentRes() {}
@@ -22516,7 +22519,8 @@ func (*RedeemCreditCodeForbidden) redeemCreditCodeRes() {}
 
 // Ref: #/components/schemas/RedeemCreditCodeInput
 type RedeemCreditCodeInput struct {
-	// The credit code to redeem. Surrounding whitespace is ignored.
+	// The credit code to redeem. Surrounding whitespace is ignored; the
+	// rest must be 1 to 256 characters.
 	Code string `json:"code"`
 }
 

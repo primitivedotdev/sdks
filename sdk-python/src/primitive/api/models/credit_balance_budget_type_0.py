@@ -8,20 +8,23 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from dateutil.parser import isoparse
 from typing import cast
+import datetime
 
 
 
 
 
 
-T = TypeVar("T", bound="CreditSpendingBudget")
+T = TypeVar("T", bound="CreditBalanceBudgetType0")
 
 
 
 @_attrs_define
-class CreditSpendingBudget:
-    """ The active agent spending budget an operator funded for top-ups.
+class CreditBalanceBudgetType0:
+    """ The active agent spending budget an operator funded for top-ups,
+    or null when there is none.
 
         Attributes:
             currency (str): Currency of the budget, for example `usd`.
@@ -29,7 +32,7 @@ class CreditSpendingBudget:
             spent_micros (str): How much of the allowance has been drawn down, in micros.
             remaining_micros (str): `max_amount_micros - spent_micros`, floored at zero.
             per_topup_cap_micros (None | str): Largest single top-up allowed, in micros, or null for no per-top-up cap.
-            expires_at (None | str): When the allowance expires, or null for no expiry.
+            expires_at (datetime.datetime | None): When the allowance expires, or null for no expiry.
             status (str): Budget status. An active budget reads `active`.
      """
 
@@ -38,7 +41,7 @@ class CreditSpendingBudget:
     spent_micros: str
     remaining_micros: str
     per_topup_cap_micros: None | str
-    expires_at: None | str
+    expires_at: datetime.datetime | None
     status: str
 
 
@@ -58,7 +61,10 @@ class CreditSpendingBudget:
         per_topup_cap_micros = self.per_topup_cap_micros
 
         expires_at: None | str
-        expires_at = self.expires_at
+        if isinstance(self.expires_at, datetime.datetime):
+            expires_at = self.expires_at.isoformat()
+        else:
+            expires_at = self.expires_at
 
         status = self.status
 
@@ -98,17 +104,27 @@ class CreditSpendingBudget:
         per_topup_cap_micros = _parse_per_topup_cap_micros(d.pop("per_topup_cap_micros"))
 
 
-        def _parse_expires_at(data: object) -> None | str:
+        def _parse_expires_at(data: object) -> datetime.datetime | None:
             if data is None:
                 return data
-            return cast(None | str, data)
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                expires_at_type_0 = isoparse(data)
+
+
+
+                return expires_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
 
         expires_at = _parse_expires_at(d.pop("expires_at"))
 
 
         status = d.pop("status")
 
-        credit_spending_budget = cls(
+        credit_balance_budget_type_0 = cls(
             currency=currency,
             max_amount_micros=max_amount_micros,
             spent_micros=spent_micros,
@@ -118,5 +134,5 @@ class CreditSpendingBudget:
             status=status,
         )
 
-        return credit_spending_budget
+        return credit_balance_budget_type_0
 

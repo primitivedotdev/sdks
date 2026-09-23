@@ -95,8 +95,9 @@ from .create_wake_schedule_input import CreateWakeScheduleInput
 from .create_wake_schedule_input_args import CreateWakeScheduleInputArgs
 from .create_wake_schedule_response_201 import CreateWakeScheduleResponse201
 from .credit_balance import CreditBalance
+from .credit_balance_budget_type_0 import CreditBalanceBudgetType0
+from .credit_balance_prepaid_credit_type_0 import CreditBalancePrepaidCreditType0
 from .credit_redemption import CreditRedemption
-from .credit_spending_budget import CreditSpendingBudget
 from .decide_registry_request_input import DecideRegistryRequestInput
 from .decide_registry_request_input_decision import DecideRegistryRequestInputDecision
 from .decide_registry_request_response_200 import DecideRegistryRequestResponse200
@@ -295,7 +296,6 @@ from .pay_challenge_response_200 import PayChallengeResponse200
 from .plan_limits import PlanLimits
 from .poll_cli_login_input import PollCliLoginInput
 from .poll_cli_login_response_200 import PollCliLoginResponse200
-from .prepaid_credit import PrepaidCredit
 from .publish_agent_input import PublishAgentInput
 from .publish_agent_response_200 import PublishAgentResponse200
 from .publish_agent_response_201 import PublishAgentResponse201
@@ -611,8 +611,9 @@ __all__ = (
     "CreateWakeScheduleInputArgs",
     "CreateWakeScheduleResponse201",
     "CreditBalance",
+    "CreditBalanceBudgetType0",
+    "CreditBalancePrepaidCreditType0",
     "CreditRedemption",
-    "CreditSpendingBudget",
     "DecideRegistryRequestInput",
     "DecideRegistryRequestInputDecision",
     "DecideRegistryRequestResponse200",
@@ -811,7 +812,6 @@ __all__ = (
     "PlanLimits",
     "PollCliLoginInput",
     "PollCliLoginResponse200",
-    "PrepaidCredit",
     "PublishAgentInput",
     "PublishAgentResponse200",
     "PublishAgentResponse201",

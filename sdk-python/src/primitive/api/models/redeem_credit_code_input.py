@@ -22,7 +22,8 @@ T = TypeVar("T", bound="RedeemCreditCodeInput")
 class RedeemCreditCodeInput:
     """ 
         Attributes:
-            code (str): The credit code to redeem. Surrounding whitespace is ignored.
+            code (str): The credit code to redeem. Surrounding whitespace is ignored; the
+                rest must be 1 to 256 characters.
      """
 
     code: str

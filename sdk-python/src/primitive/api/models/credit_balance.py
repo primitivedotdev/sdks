@@ -11,8 +11,8 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.credit_spending_budget import CreditSpendingBudget
-  from ..models.prepaid_credit import PrepaidCredit
+  from ..models.credit_balance_budget_type_0 import CreditBalanceBudgetType0
+  from ..models.credit_balance_prepaid_credit_type_0 import CreditBalancePrepaidCreditType0
 
 
 
@@ -26,14 +26,17 @@ T = TypeVar("T", bound="CreditBalance")
 class CreditBalance:
     """ 
         Attributes:
-            budget (CreditSpendingBudget | None): The active agent spending budget, or null when there is none.
-            prepaid_credit (None | PrepaidCredit | Unset): Prepaid usage credit, or null when there is none. Omitted when an
-                exact figure cannot be given right now; the budget is still
-                returned.
+            budget (CreditBalanceBudgetType0 | None): The active agent spending budget an operator funded for top-ups,
+                or null when there is none.
+            prepaid_credit (CreditBalancePrepaidCreditType0 | None | Unset): Prepaid usage credit (top-ups, redeemed credit
+                codes and granted
+                credit) that can still pay for usage, or null when there is none.
+                Omitted when an exact figure cannot be given right now; the budget
+                is still returned.
      """
 
-    budget: CreditSpendingBudget | None
-    prepaid_credit: None | PrepaidCredit | Unset = UNSET
+    budget: CreditBalanceBudgetType0 | None
+    prepaid_credit: CreditBalancePrepaidCreditType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -41,10 +44,10 @@ class CreditBalance:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.credit_spending_budget import CreditSpendingBudget
-        from ..models.prepaid_credit import PrepaidCredit
+        from ..models.credit_balance_budget_type_0 import CreditBalanceBudgetType0
+        from ..models.credit_balance_prepaid_credit_type_0 import CreditBalancePrepaidCreditType0
         budget: dict[str, Any] | None
-        if isinstance(self.budget, CreditSpendingBudget):
+        if isinstance(self.budget, CreditBalanceBudgetType0):
             budget = self.budget.to_dict()
         else:
             budget = self.budget
@@ -52,7 +55,7 @@ class CreditBalance:
         prepaid_credit: dict[str, Any] | None | Unset
         if isinstance(self.prepaid_credit, Unset):
             prepaid_credit = UNSET
-        elif isinstance(self.prepaid_credit, PrepaidCredit):
+        elif isinstance(self.prepaid_credit, CreditBalancePrepaidCreditType0):
             prepaid_credit = self.prepaid_credit.to_dict()
         else:
             prepaid_credit = self.prepaid_credit
@@ -72,28 +75,28 @@ class CreditBalance:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.credit_spending_budget import CreditSpendingBudget
-        from ..models.prepaid_credit import PrepaidCredit
+        from ..models.credit_balance_budget_type_0 import CreditBalanceBudgetType0
+        from ..models.credit_balance_prepaid_credit_type_0 import CreditBalancePrepaidCreditType0
         d = dict(src_dict)
-        def _parse_budget(data: object) -> CreditSpendingBudget | None:
+        def _parse_budget(data: object) -> CreditBalanceBudgetType0 | None:
             if data is None:
                 return data
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                budget_type_0 = CreditSpendingBudget.from_dict(data)
+                budget_type_0 = CreditBalanceBudgetType0.from_dict(data)
 
 
 
                 return budget_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(CreditSpendingBudget | None, data)
+            return cast(CreditBalanceBudgetType0 | None, data)
 
         budget = _parse_budget(d.pop("budget"))
 
 
-        def _parse_prepaid_credit(data: object) -> None | PrepaidCredit | Unset:
+        def _parse_prepaid_credit(data: object) -> CreditBalancePrepaidCreditType0 | None | Unset:
             if data is None:
                 return data
             if isinstance(data, Unset):
@@ -101,14 +104,14 @@ class CreditBalance:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                prepaid_credit_type_0 = PrepaidCredit.from_dict(data)
+                prepaid_credit_type_0 = CreditBalancePrepaidCreditType0.from_dict(data)
 
 
 
                 return prepaid_credit_type_0
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            return cast(None | PrepaidCredit | Unset, data)
+            return cast(CreditBalancePrepaidCreditType0 | None | Unset, data)
 
         prepaid_credit = _parse_prepaid_credit(d.pop("prepaid_credit", UNSET))
 

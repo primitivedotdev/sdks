@@ -3,8 +3,6 @@ import { Args, Command, Flags } from "@oclif/core";
 import type {
   CreditBalance,
   CreditRedemption,
-  CreditSpendingBudget,
-  PrepaidCredit,
 } from "@primitivedotdev/api-core";
 import { getCreditBalance, redeemCreditCode } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
@@ -77,9 +75,7 @@ export function formatRedemptionSummary(redemption: CreditRedemption): string {
 
 export function formatBalanceSummary(balance: CreditBalance): string {
   const lines: string[] = [];
-  // The spec marks both fields `oneOf: [object, null]`, which the generated
-  // types widen to `unknown`; narrow them back to what the server sends.
-  const prepaid = balance.prepaid_credit as PrepaidCredit | null | undefined;
+  const prepaid = balance.prepaid_credit;
   if (prepaid === undefined) {
     lines.push("Prepaid credit: not available right now, try again shortly");
   } else if (prepaid === null) {
@@ -92,7 +88,7 @@ export function formatBalanceSummary(balance: CreditBalance): string {
       `Prepaid credit: ${formatMicros(prepaid.remaining_micros, prepaid.currency)} (${expiry})`,
     );
   }
-  const budget = balance.budget as CreditSpendingBudget | null;
+  const budget = balance.budget;
   if (!budget) {
     lines.push("Spending budget: none");
   } else {

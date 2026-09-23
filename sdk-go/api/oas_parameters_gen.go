@@ -6778,9 +6778,9 @@ func decodePullWebhookEventParams(args [1]string, argsEscaped bool, r *http.Requ
 
 // RedeemCreditCodeParams is parameters of redeemCreditCode operation.
 type RedeemCreditCodeParams struct {
-	// Required client-supplied key, at most 200 characters. Use a new
-	// key for each code you redeem and reuse it only to retry the same
-	// request.
+	// Required client-supplied key: 1 to 200 printable ASCII
+	// characters, without spaces. Use a new key for each code you
+	// redeem and reuse it only to retry the same request.
 	IdempotencyKey string
 }
 
@@ -6828,7 +6828,7 @@ func decodeRedeemCreditCodeParams(args [0]string, argsEscaped bool, r *http.Requ
 					MaxLengthSet:  true,
 					Email:         false,
 					Hostname:      false,
-					Regex:         nil,
+					Regex:         regexMap["^[\\x21-\\x7E]{1,200}$"],
 					MinNumeric:    0,
 					MinNumericSet: false,
 					MaxNumeric:    0,

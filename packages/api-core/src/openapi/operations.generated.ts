@@ -1529,102 +1529,94 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ],
       "properties": {
         "budget": {
-          "description": "The active agent spending budget, or null when there is none.",
-          "oneOf": [
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "description": "The active agent spending budget an operator funded for top-ups.",
-              "required": [
-                "currency",
-                "max_amount_micros",
-                "spent_micros",
-                "remaining_micros",
-                "per_topup_cap_micros",
-                "expires_at",
-                "status"
-              ],
-              "properties": {
-                "currency": {
-                  "type": "string",
-                  "description": "Currency of the budget, for example `usd`."
-                },
-                "max_amount_micros": {
-                  "type": "string",
-                  "pattern": "^[0-9]+$",
-                  "description": "Total allowance the operator funded, in micros."
-                },
-                "spent_micros": {
-                  "type": "string",
-                  "pattern": "^[0-9]+$",
-                  "description": "How much of the allowance has been drawn down, in micros."
-                },
-                "remaining_micros": {
-                  "type": "string",
-                  "pattern": "^[0-9]+$",
-                  "description": "`max_amount_micros - spent_micros`, floored at zero."
-                },
-                "per_topup_cap_micros": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "pattern": "^[0-9]+$",
-                  "description": "Largest single top-up allowed, in micros, or null for no per-top-up cap."
-                },
-                "expires_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "description": "When the allowance expires, or null for no expiry."
-                },
-                "status": {
-                  "type": "string",
-                  "description": "Budget status. An active budget reads `active`."
-                }
-              }
+          "description": "The active agent spending budget an operator funded for top-ups,\nor null when there is none.\n",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "max_amount_micros",
+            "spent_micros",
+            "remaining_micros",
+            "per_topup_cap_micros",
+            "expires_at",
+            "status"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "description": "Currency of the budget, for example `usd`."
             },
-            {
-              "type": "null"
+            "max_amount_micros": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "Total allowance the operator funded, in micros."
+            },
+            "spent_micros": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "How much of the allowance has been drawn down, in micros."
+            },
+            "remaining_micros": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "`max_amount_micros - spent_micros`, floored at zero."
+            },
+            "per_topup_cap_micros": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9]+$",
+              "description": "Largest single top-up allowed, in micros, or null for no per-top-up cap."
+            },
+            "expires_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "When the allowance expires, or null for no expiry."
+            },
+            "status": {
+              "type": "string",
+              "description": "Budget status. An active budget reads `active`."
             }
-          ]
+          }
         },
         "prepaid_credit": {
-          "description": "Prepaid usage credit, or null when there is none. Omitted when an\nexact figure cannot be given right now; the budget is still\nreturned.\n",
-          "oneOf": [
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "description": "Prepaid usage credit (top-ups, redeemed credit codes and granted\ncredit) that can still pay for usage.\n",
-              "required": [
-                "currency",
-                "remaining_micros",
-                "next_expires_at"
-              ],
-              "properties": {
-                "currency": {
-                  "type": "string",
-                  "description": "Currency of the credit, which is the organization billing currency."
-                },
-                "remaining_micros": {
-                  "type": "string",
-                  "pattern": "^[0-9]+$",
-                  "description": "What the credit can still pay for, in micros."
-                },
-                "next_expires_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "description": "Earliest expiry among credits with a balance, or null when none of them expires."
-                }
-              }
+          "description": "Prepaid usage credit (top-ups, redeemed credit codes and granted\ncredit) that can still pay for usage, or null when there is none.\nOmitted when an exact figure cannot be given right now; the budget\nis still returned.\n",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "remaining_micros",
+            "next_expires_at"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "description": "Currency of the credit, which is the organization billing currency."
             },
-            {
-              "type": "null"
+            "remaining_micros": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "What the credit can still pay for, in micros."
+            },
+            "next_expires_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Earliest expiry among credits with a balance, or null when none of them expires."
             }
-          ]
+          }
         }
       }
     },
@@ -1653,9 +1645,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "properties": {
         "code": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 256,
-          "description": "The credit code to redeem. Surrounding whitespace is ignored."
+          "pattern": "^\\s*\\S(?:[\\s\\S]{0,254}\\S)?\\s*$",
+          "description": "The credit code to redeem. Surrounding whitespace is ignored; the\nrest must be 1 to 256 characters.\n"
         }
       }
     },

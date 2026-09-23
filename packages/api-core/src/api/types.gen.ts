@@ -1075,7 +1075,9 @@ export type WebhookSecret = {
 
 export type RedeemCreditCodeInput = {
     /**
-     * The credit code to redeem. Surrounding whitespace is ignored.
+     * The credit code to redeem. Surrounding whitespace is ignored; the
+     * rest must be 1 to 256 characters.
+     *
      */
     code: string;
 };
@@ -1117,72 +1119,63 @@ export type CreditRedemption = {
     message: string;
 };
 
-/**
- * The active agent spending budget an operator funded for top-ups.
- */
-export type CreditSpendingBudget = {
-    /**
-     * Currency of the budget, for example `usd`.
-     */
-    currency: string;
-    /**
-     * Total allowance the operator funded, in micros.
-     */
-    max_amount_micros: string;
-    /**
-     * How much of the allowance has been drawn down, in micros.
-     */
-    spent_micros: string;
-    /**
-     * `max_amount_micros - spent_micros`, floored at zero.
-     */
-    remaining_micros: string;
-    /**
-     * Largest single top-up allowed, in micros, or null for no per-top-up cap.
-     */
-    per_topup_cap_micros: string | null;
-    /**
-     * When the allowance expires, or null for no expiry.
-     */
-    expires_at: string | null;
-    /**
-     * Budget status. An active budget reads `active`.
-     */
-    status: string;
-};
-
-/**
- * Prepaid usage credit (top-ups, redeemed credit codes and granted
- * credit) that can still pay for usage.
- *
- */
-export type PrepaidCredit = {
-    /**
-     * Currency of the credit, which is the organization billing currency.
-     */
-    currency: string;
-    /**
-     * What the credit can still pay for, in micros.
-     */
-    remaining_micros: string;
-    /**
-     * Earliest expiry among credits with a balance, or null when none of them expires.
-     */
-    next_expires_at: string | null;
-};
-
 export type CreditBalance = {
     /**
-     * The active agent spending budget, or null when there is none.
-     */
-    budget: CreditSpendingBudget | unknown;
-    /**
-     * Prepaid usage credit, or null when there is none. Omitted when an
-     * exact figure cannot be given right now; the budget is still
-     * returned.
+     * The active agent spending budget an operator funded for top-ups,
+     * or null when there is none.
      *
      */
-    prepaid_credit?: PrepaidCredit | unknown;
+    budget: {
+        /**
+         * Currency of the budget, for example `usd`.
+         */
+        currency: string;
+        /**
+         * Total allowance the operator funded, in micros.
+         */
+        max_amount_micros: string;
+        /**
+         * How much of the allowance has been drawn down, in micros.
+         */
+        spent_micros: string;
+        /**
+         * `max_amount_micros - spent_micros`, floored at zero.
+         */
+        remaining_micros: string;
+        /**
+         * Largest single top-up allowed, in micros, or null for no per-top-up cap.
+         */
+        per_topup_cap_micros: string | null;
+        /**
+         * When the allowance expires, or null for no expiry.
+         */
+        expires_at: string | null;
+        /**
+         * Budget status. An active budget reads `active`.
+         */
+        status: string;
+    } | null;
+    /**
+     * Prepaid usage credit (top-ups, redeemed credit codes and granted
+     * credit) that can still pay for usage, or null when there is none.
+     * Omitted when an exact figure cannot be given right now; the budget
+     * is still returned.
+     *
+     */
+    prepaid_credit?: {
+        /**
+         * Currency of the credit, which is the organization billing currency.
+         */
+        currency: string;
+        /**
+         * What the credit can still pay for, in micros.
+         */
+        remaining_micros: string;
+        /**
+         * Earliest expiry among credits with a balance, or null when none of them expires.
+         */
+        next_expires_at: string | null;
+    } | null;
 };
 
 export type InboxStatus = {
@@ -5243,9 +5236,9 @@ export type RedeemCreditCodeData = {
     body: RedeemCreditCodeInput;
     headers: {
         /**
-         * Required client-supplied key, at most 200 characters. Use a new
-         * key for each code you redeem and reuse it only to retry the same
-         * request.
+         * Required client-supplied key: 1 to 200 printable ASCII
+         * characters, without spaces. Use a new key for each code you
+         * redeem and reuse it only to retry the same request.
          *
          */
         'Idempotency-Key': string;
@@ -5290,9 +5283,11 @@ export type RedeemCreditCodeErrors = {
      */
     422: ErrorResponse;
     /**
-     * Too many redemption attempts. `error.code` is
-     * `rate_limit_exceeded` or `rate_limited`. Wait for `Retry-After`
-     * when present.
+     * Too many requests or redemption attempts. `error.code` is
+     * `rate_limited`. Wait for `Retry-After` when present. Like other
+     * rate-limited responses, it also carries the `ratelimit-limit`,
+     * `ratelimit-remaining`, `ratelimit-reset` and `ratelimit-policy`
+     * quota headers when the limiter reports them.
      *
      */
     429: ErrorResponse;
