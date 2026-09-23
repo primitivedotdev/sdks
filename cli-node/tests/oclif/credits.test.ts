@@ -327,6 +327,74 @@ describe("credits redeem", () => {
   });
 });
 
+describe("credits redeem retry hint", () => {
+  it("prints the key and a safe retry command on a 503", async () => {
+    mocks.redeemCreditCode.mockResolvedValue({
+      error: {
+        success: false,
+        error: {
+          code: "service_unavailable",
+          message: "We couldn't redeem that code right now.",
+        },
+      },
+    });
+    const result = await runCommand(CreditsRedeemCommand, [
+      "LAUNCH50",
+      "--idempotency-key",
+      "retry-503",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Idempotency-Key: retry-503");
+    expect(result.stderr).toContain(
+      "primitive credits redeem LAUNCH50 --idempotency-key retry-503",
+    );
+  });
+
+  it("prints the generated key when the request fails at the network", async () => {
+    mocks.redeemCreditCode.mockResolvedValue({
+      error: new TypeError("fetch failed"),
+    });
+    const result = await runCommand(CreditsRedeemCommand, ["LAUNCH50"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toMatch(
+      /Idempotency-Key: cli-redeem-[0-9a-f-]{36}\n/,
+    );
+    const [call] = mocks.redeemCreditCode.mock.calls[0] ?? [];
+    expect(result.stderr).toContain(
+      `--idempotency-key ${call.headers["Idempotency-Key"]}`,
+    );
+  });
+
+  it("prints the key before rethrowing a thrown transport error", async () => {
+    mocks.redeemCreditCode.mockRejectedValue(new Error("socket hang up"));
+    const chunks: string[] = [];
+    const previousExitCode = process.exitCode;
+    const stderrSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk) => {
+        chunks.push(String(chunk));
+        return true;
+      });
+    try {
+      await expect(
+        CreditsRedeemCommand.run(
+          ["LAUNCH50", "--idempotency-key", "retry-throw"],
+          { root: CLI_ROOT },
+        ),
+      ).rejects.toThrow("socket hang up");
+    } finally {
+      stderrSpy.mockRestore();
+      process.exitCode = previousExitCode;
+    }
+    expect(chunks.join("")).toContain("Idempotency-Key: retry-throw");
+  });
+
+  it("does not print a retry hint on success", async () => {
+    const result = await runCommand(CreditsRedeemCommand, ["LAUNCH50"]);
+    expect(result.stderr).not.toContain("Idempotency-Key:");
+  });
+});
+
 describe("credits balance", () => {
   it("prints a readable summary", async () => {
     const result = await runCommand(CreditsBalanceCommand, []);

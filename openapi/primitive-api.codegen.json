@@ -1346,7 +1346,7 @@
             }
           },
           "400": {
-            "description": "The Idempotency-Key header is missing or too long, or the body is\ninvalid. `error.code` is `idempotency_key_required` or\n`validation_error`.\n",
+            "description": "`idempotency_key_required` means the Idempotency-Key header is\nmissing. `validation_error` means the header is empty, longer than\n200 characters or not printable non-space ASCII, or the body is\ninvalid.\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -1369,7 +1369,7 @@
             "$ref": "#/components/responses/Forbidden"
           },
           "409": {
-            "description": "The organization or user already redeemed this code, or a code\nfrom the same promotion. `error.code` is\n`credit_code_already_redeemed`.\n",
+            "description": "The organization or user already redeemed this code, or already\nredeemed another code in the same exclusive group (a set of codes\nof which each organization or user may redeem only one).\n`error.code` is `credit_code_already_redeemed`.\n",
             "content": {
               "application/json": {
                 "schema": {

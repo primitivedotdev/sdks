@@ -109,6 +109,18 @@ export function formatBalanceSummary(balance: CreditBalance): string {
 type ApiErrorBody = { code?: unknown; message?: unknown };
 
 /**
+ * Lines printed after a failed redemption so the user can retry without risk
+ * of a second grant: reusing the same key and code returns the original grant
+ * if the first attempt did land.
+ */
+export function formatRetryHint(idempotencyKey: string, code: string): string {
+  return [
+    `Idempotency-Key: ${idempotencyKey}`,
+    `To retry safely, run: primitive credits redeem ${code} --idempotency-key ${idempotencyKey}`,
+  ].join("\n");
+}
+
+/**
  * Print a failed request. A server refusal (an error envelope with a
  * message) prints the message as the primary line, since the redeem route
  * writes it to be shown to the user; anything else falls back to the shared
@@ -152,7 +164,8 @@ export class CreditsRedeemCommand extends Command {
   The request carries an Idempotency-Key. One is generated for each run; pass
   --idempotency-key to retry the same redemption safely, for example after a
   network error. Retrying with the same key and code returns the original
-  grant and adds no second credit.`;
+  grant and adds no second credit. On any failure the key in use is printed to
+  stderr with the exact command to retry.`;
 
   static summary = "Redeem a credit code";
 
@@ -217,13 +230,24 @@ export class CreditsRedeemCommand extends Command {
         configDir: this.config.configDir,
       });
 
+    const writeRetryHint = () =>
+      process.stderr.write(`${formatRetryHint(idempotencyKey, code)}\n`);
+
     await runWithTiming(flags.time, async () => {
-      const result = await redeemCreditCode({
-        client: apiClient.client,
-        body: { code },
-        headers: { "Idempotency-Key": idempotencyKey },
-        responseStyle: "fields",
-      });
+      let result: Awaited<ReturnType<typeof redeemCreditCode>>;
+      try {
+        result = await redeemCreditCode({
+          client: apiClient.client,
+          body: { code },
+          headers: { "Idempotency-Key": idempotencyKey },
+          responseStyle: "fields",
+        });
+      } catch (error) {
+        // A transport failure can leave the outcome unknown; the key is what
+        // makes a retry safe.
+        writeRetryHint();
+        throw error;
+      }
 
       if (result.error) {
         reportCreditsError(
@@ -231,6 +255,7 @@ export class CreditsRedeemCommand extends Command {
           { auth, baseUrlOverridden, configDir: this.config.configDir },
           { json: Boolean(flags.json), prefix: `Could not redeem ${code}` },
         );
+        writeRetryHint();
         return;
       }
 
@@ -239,6 +264,7 @@ export class CreditsRedeemCommand extends Command {
       )?.data;
       if (!redemption) {
         process.stderr.write("Server returned an empty redemption body.\n");
+        writeRetryHint();
         process.exitCode = 1;
         return;
       }

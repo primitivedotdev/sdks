@@ -5250,9 +5250,10 @@ export type RedeemCreditCodeData = {
 
 export type RedeemCreditCodeErrors = {
     /**
-     * The Idempotency-Key header is missing or too long, or the body is
-     * invalid. `error.code` is `idempotency_key_required` or
-     * `validation_error`.
+     * `idempotency_key_required` means the Idempotency-Key header is
+     * missing. `validation_error` means the header is empty, longer than
+     * 200 characters or not printable non-space ASCII, or the body is
+     * invalid.
      *
      */
     400: ErrorResponse;
@@ -5265,9 +5266,10 @@ export type RedeemCreditCodeErrors = {
      */
     403: ErrorResponse;
     /**
-     * The organization or user already redeemed this code, or a code
-     * from the same promotion. `error.code` is
-     * `credit_code_already_redeemed`.
+     * The organization or user already redeemed this code, or already
+     * redeemed another code in the same exclusive group (a set of codes
+     * of which each organization or user may redeem only one).
+     * `error.code` is `credit_code_already_redeemed`.
      *
      */
     409: ErrorResponse;

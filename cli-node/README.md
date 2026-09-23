@@ -221,7 +221,8 @@ the server's message (for example an invalid or already redeemed code) and
 exits non-zero. Redeeming needs an organization owner or admin; with an API key,
 the key's creator must currently be an owner or admin. Each run sends a new
 Idempotency-Key; pass `--idempotency-key <key>` to retry the same redemption
-safely.
+safely. On any failure the command prints the key it used and the exact retry
+command to stderr.
 
 ## Recipient routing
 
