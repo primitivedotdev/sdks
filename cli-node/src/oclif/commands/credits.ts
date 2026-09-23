@@ -116,8 +116,17 @@ type ApiErrorBody = { code?: unknown; message?: unknown };
 export function formatRetryHint(idempotencyKey: string, code: string): string {
   return [
     `Idempotency-Key: ${idempotencyKey}`,
-    `To retry safely, run: primitive credits redeem ${code} --idempotency-key ${idempotencyKey}`,
+    `To retry safely, run: primitive credits redeem ${shellQuote(code)} --idempotency-key ${shellQuote(idempotencyKey)}`,
   ].join("\n");
+}
+
+/**
+ * Quote a value for a POSIX shell so a copied retry command passes it as one
+ * unchanged argument. Plain values are left bare for readability.
+ */
+export function shellQuote(value: string): string {
+  if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value;
+  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 /**

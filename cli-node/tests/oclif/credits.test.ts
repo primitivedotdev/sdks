@@ -29,6 +29,8 @@ import {
   formatExpiry,
   formatMicros,
   formatRedemptionSummary,
+  formatRetryHint,
+  shellQuote,
 } from "../../src/oclif/commands/credits.js";
 import { COMMANDS, lookupOperation } from "../../src/oclif/index.js";
 
@@ -328,6 +330,17 @@ describe("credits redeem", () => {
 });
 
 describe("credits redeem retry hint", () => {
+  it("shell-quotes values that would split or expand", () => {
+    expect(shellQuote("LAUNCH50")).toBe("LAUNCH50");
+    expect(shellQuote("cli-redeem-1a2b")).toBe("cli-redeem-1a2b");
+    expect(shellQuote("SPRING SALE")).toBe("'SPRING SALE'");
+    expect(shellQuote("a$b;c")).toBe("'a$b;c'");
+    expect(shellQuote("it's")).toBe("'it'\\''s'");
+    expect(formatRetryHint("key*1", "SPRING SALE")).toContain(
+      "primitive credits redeem 'SPRING SALE' --idempotency-key 'key*1'",
+    );
+  });
+
   it("prints the key and a safe retry command on a 503", async () => {
     mocks.redeemCreditCode.mockResolvedValue({
       error: {
