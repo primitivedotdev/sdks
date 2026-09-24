@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.29.0"]
+requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -40,7 +40,7 @@ dev = [
   "basedpyright>=1.31.0,<2",
   "build>=1.2.2,<2",
   "datamodel-code-generator>=0.31.0,<1",
-  "hatchling>=1.29.0,<2",
+  "hatchling>=1.27.0,<2",
   "openapi-python-client==0.28.4",
   "pytest>=8.3.0,<10",
   "pytest-cov>=6.2.0,<8",
