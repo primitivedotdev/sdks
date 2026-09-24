@@ -236,6 +236,7 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 					Included                bool   `json:"included"`
 					DecodedUTF8             string `json:"decoded_utf8"`
 					DecodeErrorCode         string `json:"decode_error_code"`
+					Suggestion              string `json:"suggestion"`
 					VerifyDownload          bool   `json:"verify_download"`
 					VerifyDownloadErrorCode string `json:"verify_download_error_code"`
 				} `json:"expected"`
@@ -266,6 +267,9 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 				var decodeErr *RawEmailDecodeError
 				if !errors.As(err, &decodeErr) {
 					t.Fatalf("%s: expected RawEmailDecodeError, got %v", testCase.Name, err)
+				}
+				if testCase.Expected.Suggestion != "" && decodeErr.Suggestion() != testCase.Expected.Suggestion {
+					t.Fatalf("%s: unexpected suggestion %q", testCase.Name, decodeErr.Suggestion())
 				}
 				if decodeErr.Code() != testCase.Expected.DecodeErrorCode {
 					t.Fatalf("%s: unexpected error code %q", testCase.Name, decodeErr.Code())

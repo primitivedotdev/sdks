@@ -124,14 +124,18 @@ const bodies = (suffix: string) =>
     .map((request) => request.body);
 
 describe("local webhook runner", () => {
-  it("acknowledges address-scoped HTTP forwarding without requesting content deletion", async () => {
+  it.each([
+    "device@example.test",
+    null,
+    undefined,
+  ])("acknowledges connected HTTP forwarding without deletion for recipient %s", async (recipient) => {
     token = `pconn_${"a".repeat(64)}`;
     steps["/v1/endpoints"] = [
       ok({
         id: "endpoint-a",
         kind: "pull",
         enabled: true,
-        recipient: "device@example.test",
+        recipient,
       }),
     ];
     options.handler = vi.fn(async () => ({

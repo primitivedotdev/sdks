@@ -66,6 +66,10 @@ var PayloadErrors = map[string]ErrorDefinition{
 }
 
 var RawEmailErrors = map[string]ErrorDefinition{
+	"UNAVAILABLE": {
+		Message:    "Raw email content is unavailable for this credential",
+		Suggestion: "Use event.email.parsed for message content. This credential cannot download raw email.",
+	},
 	"NOT_INCLUDED": {
 		Message:    "Raw email content not included inline",
 		Suggestion: "Use the download URL at event.email.content.download.url to fetch the raw email.",

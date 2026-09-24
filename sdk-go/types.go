@@ -3,6 +3,7 @@ package primitive
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 )
 
 type EventType string
@@ -194,8 +195,38 @@ type EmailHeaders struct {
 }
 
 type EmailContent struct {
-	Raw      *RawContent   `json:"raw"`
-	Download *DownloadInfo `json:"download"`
+	Raw      RawContent   `json:"raw"`
+	Download DownloadInfo `json:"download"`
+	// Restricted reports that this credential cannot access raw content or downloads.
+	// Raw and Download retain their value types for existing struct constructors.
+	Restricted bool `json:"-"`
+}
+
+func (c *EmailContent) UnmarshalJSON(data []byte) error {
+	var wire struct {
+		Raw      *RawContent   `json:"raw"`
+		Download *DownloadInfo `json:"download"`
+	}
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err
+	}
+	if (wire.Raw == nil) != (wire.Download == nil) {
+		return fmt.Errorf("raw content and download metadata must be unavailable together")
+	}
+	*c = EmailContent{Restricted: wire.Raw == nil}
+	if wire.Raw != nil {
+		c.Raw = *wire.Raw
+		c.Download = *wire.Download
+	}
+	return nil
+}
+
+func (c EmailContent) MarshalJSON() ([]byte, error) {
+	if c.Restricted {
+		return []byte(`{"raw":null,"download":null}`), nil
+	}
+	type contentValue EmailContent
+	return json.Marshal(contentValue(c))
 }
 
 type DownloadInfo struct {

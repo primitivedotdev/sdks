@@ -182,6 +182,7 @@ describe("shared compatibility fixtures", () => {
           included: boolean;
           decoded_utf8?: string;
           decode_error_code?: string;
+          suggestion?: string;
           verify_download?: boolean;
           verify_download_error_code?: string;
         };
@@ -209,6 +210,11 @@ describe("shared compatibility fixtures", () => {
           expect((error as RawEmailDecodeError).code, testCase.name).toBe(
             testCase.expected.decode_error_code,
           );
+          if (testCase.expected.suggestion) {
+            expect((error as RawEmailDecodeError).suggestion).toBe(
+              testCase.expected.suggestion,
+            );
+          }
         }
       }
 

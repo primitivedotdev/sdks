@@ -620,7 +620,7 @@ func TestAddressScopedContentRemainsUnavailable(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{"email":{"content":{"raw":null,"download":null}}}`), &event); err != nil {
 		t.Fatal(err)
 	}
-	if event.Email.Content.Raw != nil || event.Email.Content.Download != nil {
+	if !event.Email.Content.Restricted {
 		t.Fatal("scoped content widened")
 	}
 	included, err := IsRawIncluded(event)
@@ -634,5 +634,27 @@ func TestAddressScopedContentRemainsUnavailable(t *testing.T) {
 	remaining, err := GetDownloadTimeRemaining(event)
 	if err != nil || remaining != 0 {
 		t.Fatalf("remaining=%v err=%v", remaining, err)
+	}
+}
+
+func TestEmailContentValueConstructionRemainsCompatible(t *testing.T) {
+	content := EmailContent{Raw: RawContent{Included: true}, Download: DownloadInfo{URL: "https://example.test/raw"}}
+	data, err := json.Marshal(content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded EmailContent
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Restricted || !decoded.Raw.Included || decoded.Download.URL != content.Download.URL {
+		t.Fatal("ordinary content changed during serialization")
+	}
+	if err := json.Unmarshal([]byte(`{"raw":null,"download":null}`), &decoded); err != nil {
+		t.Fatal(err)
+	}
+	data, err = json.Marshal(decoded)
+	if err != nil || string(data) != `{"raw":null,"download":null}` {
+		t.Fatalf("restricted content widened: %s, %v", data, err)
 	}
 }

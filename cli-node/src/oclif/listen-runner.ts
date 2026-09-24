@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { scryptSync } from "node:crypto";
 import {
   completeWebhookEvent,
   createEndpoint,
@@ -134,6 +134,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
   let accountId: string | undefined;
   let verifiedKey: string | undefined;
   let verified = false;
+  let connectedCredential = false;
   let confirmed = 0;
   let release: (() => void) | undefined;
   let stream: EventConnection | undefined;
@@ -206,10 +207,15 @@ export async function runListen(options: ListenOptions): Promise<number> {
     origin = base;
     if (!verified || auth.auth.apiKey !== verifiedKey) {
       if (auth.auth.apiKey?.startsWith("pconn_")) {
+        connectedCredential = true;
         // Connected credentials cannot read account settings. Keep local state
         // private to this credential; registration and every receive authenticate
         // it on the server before any event is returned.
-        const identity = `connection:${createHash("sha256").update(auth.auth.apiKey).digest("hex")}`;
+        const identity = `connection:${scryptSync(
+          auth.auth.apiKey,
+          "primitive-listener-identity-v1",
+          32,
+        ).toString("hex")}`;
         if (accountId !== undefined && accountId !== identity)
           throw new ListenError(
             "The connected credential changed while listening. Restart the listener.",
@@ -404,7 +410,10 @@ export async function runListen(options: ListenOptions): Promise<number> {
       };
       // Forwarding acknowledges delivery; an address grant never authorizes
       // deleting canonical mail, even if the local server requests it.
-      if (endpoint.recipient && completion.mode === "http")
+      if (
+        (connectedCredential || endpoint.recipient) &&
+        completion.mode === "http"
+      )
         completion.confirmed = false;
       try {
         // Keep this evidence in memory until confirmed. Never rerun the hook to retry an acknowledgement.

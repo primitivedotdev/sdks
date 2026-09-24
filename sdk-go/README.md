@@ -687,3 +687,7 @@ Address-scoped events contain parsed message content in `email.parsed`.
 `email.content.raw` and `email.content.download` are null. Signed download links,
 account routing metadata, and other SMTP envelope recipients are not exposed.
 Attachments can be fetched through the authenticated email attachment API.
+
+For typed email events, `event.Email.Content.Restricted` reports unavailable raw
+content and downloads. The existing `Raw` and `Download` value fields remain
+compatible with struct literals; JSON round trips preserve restricted fields as null.

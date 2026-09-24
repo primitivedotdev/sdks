@@ -139,6 +139,8 @@ def test_shared_raw_cases() -> None:
             with pytest.raises(RawEmailDecodeError) as error:
                 decode_raw_email(event)
             assert error.value.code == case["expected"]["decode_error_code"]
+            if "suggestion" in case["expected"]:
+                assert error.value.suggestion == case["expected"]["suggestion"]
         if case["expected"].get("verify_download"):
             downloaded = case["download_bytes_utf8"].encode("utf-8")
             assert verify_raw_email_download(downloaded, event) == downloaded

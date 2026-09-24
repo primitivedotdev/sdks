@@ -462,7 +462,7 @@ func IsRawIncluded(event any) (bool, error) {
 
 func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 	if value, ok := getMapValue(event, "email", "content", "raw"); ok && value == nil {
-		return nil, NewRawEmailDecodeError("NOT_INCLUDED", "Raw email is unavailable for address-scoped events. Use email.parsed.")
+		return nil, NewRawEmailDecodeError("UNAVAILABLE", "Raw email is unavailable for address-scoped events. Use email.parsed.")
 	}
 	included, ok := getBool(event, "email", "content", "raw", "included")
 	if !ok {
@@ -502,7 +502,7 @@ func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 
 func VerifyRawEmailDownload(downloaded []byte, event any) ([]byte, error) {
 	if value, ok := getMapValue(event, "email", "content", "raw"); ok && value == nil {
-		return nil, NewRawEmailDecodeError("NOT_INCLUDED", "Raw email is unavailable for address-scoped events. Use email.parsed.")
+		return nil, NewRawEmailDecodeError("UNAVAILABLE", "Raw email is unavailable for address-scoped events. Use email.parsed.")
 	}
 	expected, ok := getString(event, "email", "content", "raw", "sha256")
 	if !ok || expected == "" {

@@ -771,7 +771,7 @@ def decode_raw_email(
     raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
     if raw is None:
         raise RawEmailDecodeError(
-            "NOT_INCLUDED",
+            "UNAVAILABLE",
             "Raw email is unavailable for address-scoped events. Use email.parsed.",
         )
     download = _require_field(content, "email.content.download", "download")
@@ -827,7 +827,7 @@ def verify_raw_email_download(
     raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
     if raw is None:
         raise RawEmailDecodeError(
-            "NOT_INCLUDED",
+            "UNAVAILABLE",
             "Raw email is unavailable for address-scoped events. Use email.parsed.",
         )
     try:
